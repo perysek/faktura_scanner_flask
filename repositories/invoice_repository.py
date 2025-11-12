@@ -1,0 +1,212 @@
+"""
+Repository dla faktur
+"""
+from typing import List, Optional
+from datetime import date, datetime
+import sqlite3
+
+from repositories.base_repository import BaseRepository
+from database.models import Invoice
+
+
+class InvoiceRepository(BaseRepository):
+	"""Repository dla operacji na fakturach"""
+	
+	def __init__(self):
+		super().__init__("invoices")
+	
+	def create(self, invoice: Invoice) -> int:
+		"""
+		Stwórz nową fakturę
+		Returns: ID nowej faktury
+		"""
+		query = """
+            INSERT INTO invoices (
+                seller_name, seller_nip, invoice_number, invoice_date,
+                bank_account, amount, currency, payment_due_date, payment_term, status,
+                pdf_path, ocr_confidence, is_duplicate
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+		params = (
+			invoice.seller_name,
+			invoice.seller_nip,
+			invoice.invoice_number,
+			invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+			invoice.bank_account,
+			invoice.amount,
+			invoice.currency,
+			invoice.payment_due_date.isoformat() if invoice.payment_due_date else None,
+			invoice.payment_term,
+			invoice.status,
+			invoice.pdf_path,
+			invoice.ocr_confidence,
+			invoice.is_duplicate
+			)
+		
+		cursor = self._execute(query, params)
+		return cursor.lastrowid
+	
+	def update(self, invoice_id: int, invoice: Invoice) -> bool:
+		"""Zaktualizuj fakturę"""
+		query = """
+            UPDATE invoices SET
+                seller_name = ?,
+                seller_nip = ?,
+                invoice_number = ?,
+                invoice_date = ?,
+                bank_account = ?,
+                amount = ?,
+                currency = ?,
+                payment_due_date = ?,
+                payment_term = ?,
+                status = ?,
+                pdf_path = ?,
+                ocr_confidence = ?,
+                is_duplicate = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """
+		params = (
+			invoice.seller_name,
+			invoice.seller_nip,
+			invoice.invoice_number,
+			invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+			invoice.bank_account,
+			invoice.amount,
+			invoice.currency,
+			invoice.payment_due_date.isoformat() if invoice.payment_due_date else None,
+			invoice.payment_term,
+			invoice.status,
+			invoice.pdf_path,
+			invoice.ocr_confidence,
+			invoice.is_duplicate,
+			invoice_id
+			)
+		
+		cursor = self._execute(query, params)
+		return cursor.rowcount > 0
+	
+	def find_by_invoice_number(self, invoice_number: str) -> Optional[
+		sqlite3.Row]:
+		"""Znajdź fakturę po numerze"""
+		query = "SELECT * FROM invoices WHERE invoice_number = ?"
+		return self._fetch_one(query, (invoice_number,))
+	
+	def search(self, search_term: str) -> List[sqlite3.Row]:
+		"""Wyszukaj faktury (seller, numer, NIP)"""
+		query = """
+            SELECT * FROM invoices
+            WHERE seller_name LIKE ?
+               OR invoice_number LIKE ?
+               OR seller_nip LIKE ?
+            ORDER BY invoice_date DESC
+        """
+		term = f"%{search_term}%"
+		return self._fetch_all(query, (term, term, term))
+	
+	def get_by_date_range(self, start_date: date, end_date: date) -> List[
+		sqlite3.Row]:
+		"""Pobierz faktury z zakresu dat"""
+		query = """
+            SELECT * FROM invoices
+            WHERE invoice_date BETWEEN ? AND ?
+            ORDER BY invoice_date DESC
+        """
+		return self._fetch_all(
+			query, (start_date.isoformat(), end_date.isoformat())
+			)
+	
+	def get_statistics(self) -> dict:
+		"""Pobierz statystyki faktur z podziałem na status płatności"""
+		# Podstawowe statystyki
+		query_basic = """
+            SELECT
+                COUNT(*) as total_count,
+                COUNT(CASE WHEN status = 'Opłacona' THEN 1 END) as paid_count,
+                COUNT(CASE WHEN status = 'Nieopłacona' THEN 1 END) as unpaid_count
+            FROM invoices
+        """
+		basic_stats = self._fetch_one(query_basic)
+
+		# Statystyki kwot po walutach i statusach
+		query_amounts = """
+            SELECT
+                currency,
+                status,
+                CASE
+                    WHEN status = 'Nieopłacona' AND payment_due_date < date('now') THEN 'overdue'
+                    WHEN status = 'Nieopłacona' THEN 'unpaid'
+                    WHEN status = 'Opłacona' THEN 'paid'
+                    ELSE 'unpaid'
+                END as payment_status,
+                SUM(amount) as total_amount,
+                COUNT(*) as count
+            FROM invoices
+            GROUP BY currency, payment_status
+        """
+		amount_results = self._fetch_all(query_amounts)
+
+		stats = {
+			"total_invoices": basic_stats["total_count"],
+			"paid_invoices": basic_stats["paid_count"],
+			"unpaid_invoices": basic_stats["unpaid_count"],
+			"by_currency": {}
+		}
+
+		# Organizuj dane po walutach
+		for row in amount_results:
+			currency = row["currency"] or "PLN"
+			payment_status = row["payment_status"]
+
+			if currency not in stats["by_currency"]:
+				stats["by_currency"][currency] = {
+					"paid": 0.0,
+					"unpaid": 0.0,
+					"overdue": 0.0,
+					"total": 0.0
+				}
+
+			stats["by_currency"][currency][payment_status] = row["total_amount"] or 0.0
+			stats["by_currency"][currency]["total"] += row["total_amount"] or 0.0
+
+		return stats
+	
+	def row_to_invoice(self, row: sqlite3.Row) -> Invoice:
+		"""Konwertuj Row → Invoice object"""
+		# Safely get payment_term (may not exist in older databases)
+		payment_term = None
+		try:
+			payment_term = row["payment_term"]
+		except (KeyError, IndexError):
+			pass
+
+		# Safely get status (may not exist in older databases)
+		status = "Nieopłacona"
+		try:
+			status = row["status"] or "Nieopłacona"
+		except (KeyError, IndexError):
+			pass
+
+		return Invoice(
+			id=row["id"],
+			seller_name=row["seller_name"],
+			seller_nip=row["seller_nip"],
+			invoice_number=row["invoice_number"],
+			invoice_date=datetime.fromisoformat(row["invoice_date"]).date() if
+			row["invoice_date"] else None,
+			bank_account=row["bank_account"],
+			amount=row["amount"],
+			currency=row["currency"],
+			payment_due_date=datetime.fromisoformat(
+				row["payment_due_date"]
+				).date() if row["payment_due_date"] else None,
+			payment_term=payment_term,
+			status=status,
+			pdf_path=row["pdf_path"],
+			ocr_confidence=row["ocr_confidence"],
+			is_duplicate=bool(row["is_duplicate"]),
+			created_at=datetime.fromisoformat(row["created_at"]) if row[
+				"created_at"] else None,
+			updated_at=datetime.fromisoformat(row["updated_at"]) if row[
+				"updated_at"] else None
+			)
