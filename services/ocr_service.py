@@ -71,6 +71,13 @@ class OCRService:
 				except:
 					pass
 
+		# 3.5. Walidacja dat - sprawdź czy termin płatności jest późniejszy niż data faktury
+		if invoice_date and payment_due_date:
+			if payment_due_date <= invoice_date:
+				print(f"  ⚠️  OSTRZEŻENIE: Termin płatności ({payment_due_date}) "
+				      f"nie jest późniejszy niż data faktury ({invoice_date})!")
+				print(f"  ⚠️  Możliwy błąd w OCR - sprawdź daty ręcznie!")
+
 		# 4. Stwórz Invoice object
 		invoice = Invoice(
 			seller_name=extracted_data['seller_name'] or "Nie wykryto",

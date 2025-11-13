@@ -79,19 +79,27 @@ class PDFProcessor:
 		"""
 		Główna metoda: PDF → tekst
 		Returns: (extracted_text, confidence_score)
+		Dla faktur wielostronicowych: przetwarza max 2 pierwsze strony
 		"""
 		images = self.pdf_to_images(pdf_path)
-		
+
+		# Ogranicz do max 2 stron dla wielostronicowych PDF
+		# (główne dane faktury zawsze na pierwszych 1-2 stronach)
+		max_pages = 2
+		if len(images) > max_pages:
+			print(f"  PDF ma {len(images)} stron, przetwarzanie pierwszych {max_pages}...")
+			images = images[:max_pages]
+
 		all_text = []
 		confidences = []
-		
+
 		for i, image in enumerate(images):
 			print(f"  Przetwarzanie strony {i + 1}/{len(images)}...")
-			
+
 			# OCR
 			text = self.extract_text_from_image(image)
 			all_text.append(text)
-			
+
 			# Confidence (uproszczona wersja - % niepustych linii)
 			lines = [line for line in text.split('\n') if line.strip()]
 			confidence = len(lines) / max(len(text.split('\n')), 1) * 100

@@ -59,7 +59,16 @@ class ValidationService:
 		# OCR confidence
 		if invoice.ocr_confidence and invoice.ocr_confidence < 50:
 			warnings.append(f"Niska pewność OCR: {invoice.ocr_confidence:.1f}%")
-		
+
+		# Date validation - payment due date should be after invoice date
+		if invoice.invoice_date and invoice.payment_due_date:
+			if invoice.payment_due_date <= invoice.invoice_date:
+				warnings.append(
+					f"⚠️ Termin płatności ({invoice.payment_due_date}) "
+					f"nie jest późniejszy niż data faktury ({invoice.invoice_date}) - "
+					f"sprawdź daty ręcznie!"
+				)
+
 		return {
 			'errors': errors,
 			'warnings': warnings

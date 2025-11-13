@@ -12,6 +12,7 @@ from gui.views.main_view import MainView
 from gui.views.upload_view import UploadView
 from gui.views.edit_view import EditView
 from gui.views.history_view import HistoryView
+from gui.views.email_settings_view import EmailSettingsView
 
 
 class FakturaScannerApp:
@@ -65,7 +66,7 @@ class FakturaScannerApp:
 			content=self.content_column,
 			expand=True,
 			bgcolor=AppColors.BACKGROUND,
-			padding=AppSpacing.LG,
+			padding=AppSpacing.MD,
 			)
 		
 		# Layout: Navigation | Content
@@ -74,20 +75,16 @@ class FakturaScannerApp:
 				# Lewy panel
 				ft.Container(
 					content=self.nav_rail,
-					bgcolor=AppColors.SURFACE,
-					border=ft.border.only(
-						right=ft.BorderSide(1, AppColors.BORDER)
-						),
+					bgcolor="#F5F5F5",  # Light grey background
+					border=ft.border.all(1, "#BDBDBD"),  # Dark grey border, no radius
+					border_radius=0,alignment=ft.Alignment(x=0,y=0)
 					),
-				
-				# Separator
-				ft.VerticalDivider(width=1, color=AppColors.DIVIDER),
-				
+
 				# Główna treść
 				self.content_area,
 				],
-			spacing=0,
-			expand=True,
+			alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+			expand=True
 			)
 		
 		# Header
@@ -161,6 +158,7 @@ class FakturaScannerApp:
 			1: UploadView(self.page, self),
 			2: self.create_export_view(),  # Uproszczony view
 			3: HistoryView(self.page, self),
+			4: EmailSettingsView(self.page, self),
 			}
 
 		view = views.get(index)

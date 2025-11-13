@@ -15,7 +15,6 @@ from services.validation_service import ValidationService
 from services.duplicate_detection_service import DuplicateDetectionService
 from database.models import Invoice
 from gui.theme import AppColors, AppIcons, AppSpacing, AppTypography, AppStyles
-from gui.components.progress_dialog import ProgressDialog
 
 
 class UploadView(ft.Column):
@@ -88,20 +87,57 @@ class UploadView(ft.Column):
 			disabled=True,
 			**AppStyles.button_primary()
 			)
-		
+
 		self.clear_button = ft.TextButton(
 			"Wyczyść listę",
 			icon=AppIcons.CANCEL,
 			on_click=self.clear_files,
 			disabled=True,
 			)
-		
+
+		# Progress controls
+		self.progress_counter = ft.Text(
+			"Invoices processed: 0/0",
+			size=AppTypography.BODY,
+			weight=ft.FontWeight.BOLD,
+			color=AppColors.PRIMARY,
+			)
+
+		self.progress_bar = ft.ProgressBar(
+			value=0,
+			width=300,
+			color=AppColors.PRIMARY,
+			bgcolor=AppColors.SURFACE_VARIANT,
+			)
+
+		self.progress_status = ft.Text(
+			"",
+			size=AppTypography.LABEL,
+			color=AppColors.TEXT_SECONDARY,
+			)
+
+		self.progress_container = ft.Container(
+			content=ft.Column(
+				controls=[
+					self.progress_counter,
+					self.progress_bar,
+					self.progress_status,
+					],
+				spacing=AppSpacing.XS,
+				),
+			visible=False,
+			padding=AppSpacing.SM,
+			)
+
 		actions_row = ft.Row(
 			controls=[
 				self.process_button,
 				self.clear_button,
+				ft.Container(expand=True),
+				self.progress_container,
 				],
 			spacing=AppSpacing.SM,
+			alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
 			)
 		
 		# Wyniki przetwarzania
@@ -140,19 +176,31 @@ class UploadView(ft.Column):
 						color=AppColors.TEXT_PRIMARY,
 						),
 					ft.Text(
-						"Możesz wybrać wiele plików naraz",
+						"Możesz wybrać wiele plików naraz lub zaimportować z e-mail",
 						size=AppTypography.BODY,
 						color=AppColors.TEXT_SECONDARY,
 						),
 					ft.Container(height=AppSpacing.MD),
-					ft.ElevatedButton(
-						"Wybierz pliki PDF",
-						icon=ft.Icons.FOLDER_OPEN,
-						on_click=lambda _: self.file_picker.pick_files(
-							allowed_extensions=["pdf"],
-							allow_multiple=True,
-							),
-						**AppStyles.button_primary()
+					ft.Row(
+						controls=[
+							ft.ElevatedButton(
+								"Wybierz pliki PDF",
+								icon=ft.Icons.FOLDER_OPEN,
+								on_click=lambda _: self.file_picker.pick_files(
+									allowed_extensions=["pdf"],
+									allow_multiple=True,
+									),
+								**AppStyles.button_primary()
+								),
+							ft.ElevatedButton(
+								"Import from E-mail",
+								icon=ft.Icons.EMAIL,
+								on_click=self.import_from_email,
+								**AppStyles.button_secondary()
+								),
+							],
+						spacing=AppSpacing.SM,
+						alignment=ft.MainAxisAlignment.CENTER,
 						),
 					],
 				horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -271,63 +319,183 @@ class UploadView(ft.Column):
 		self.process_button.disabled = True
 		self.clear_button.disabled = True
 		self.page.update()
-	
+
+	def import_from_email(self, e):
+		"""Import PDFs from email"""
+		try:
+			# Import services
+			from services.email_service import EmailService
+			from config.email_settings import EmailSettings
+
+			# Load email settings
+			email_settings = EmailSettings()
+			settings = email_settings.get_settings()
+
+			# Validate settings
+			if not settings.get('email_address') or not settings.get('password'):
+				self.show_error(
+					"Email Not Configured",
+					"Please configure email settings first in E-mail Settings view"
+				)
+				return
+
+			# Show progress
+			self.progress_container.visible = True
+			self.progress_counter.value = "Connecting to email server..."
+			self.progress_bar.value = 0
+			self.progress_status.value = "Please wait..."
+			self.page.update()
+
+			# Connect to email
+			email_service = EmailService()
+
+			if not email_service.connect(
+				settings['email_address'],
+				settings['password'],
+				settings['imap_server'],
+				settings['imap_port']
+			):
+				self.progress_container.visible = False
+				self.page.update()
+				self.show_error("Connection Failed", "Could not connect to email server")
+				return
+
+			# Parse dates
+			from_date = None
+			to_date = None
+
+			if settings.get('search_from_date'):
+				try:
+					from datetime import datetime
+					from_date = datetime.strptime(
+						settings['search_from_date'], '%Y-%m-%d'
+					).date()
+				except:
+					pass
+
+			if settings.get('search_to_date'):
+				try:
+					from datetime import datetime
+					to_date = datetime.strptime(
+						settings['search_to_date'], '%Y-%m-%d'
+					).date()
+				except:
+					pass
+
+			# Update progress
+			self.progress_counter.value = "Searching for PDFs in emails..."
+			self.progress_bar.value = 0.5
+			self.page.update()
+
+			# Fetch PDFs
+			pdf_files = email_service.fetch_pdf_attachments(
+				from_date=from_date,
+				to_date=to_date
+			)
+
+			# Disconnect
+			email_service.disconnect()
+
+			# Update progress
+			self.progress_counter.value = f"Found {len(pdf_files)} PDF files"
+			self.progress_bar.value = 1.0
+			self.progress_status.value = "Import complete!"
+			self.page.update()
+
+			# Hide progress after a moment
+			import time
+			time.sleep(1)
+			self.progress_container.visible = False
+			self.page.update()
+
+			if not pdf_files:
+				self.show_info(
+					"No PDFs Found",
+					"No PDF attachments found in the specified date range"
+				)
+				return
+
+			# Add PDFs to selected files list
+			for filename, pdf_path in pdf_files:
+				if pdf_path not in self.selected_files:
+					self.selected_files.append(pdf_path)
+
+			self.update_files_list()
+
+			# Show list and enable buttons
+			self.files_container.visible = True
+			self.process_button.disabled = False
+			self.clear_button.disabled = False
+			self.page.update()
+
+			self.show_success(
+				"Import Successful",
+				f"Imported {len(pdf_files)} PDF files from email"
+			)
+
+		except Exception as ex:
+			self.progress_container.visible = False
+			self.page.update()
+			self.show_error("Import Error", str(ex))
+			import traceback
+			traceback.print_exc()
+
 	def start_processing(self, e):
 		"""Rozpocznij przetwarzanie (Wariant A - Sequential)"""
 		if self.is_processing or not self.selected_files:
 			return
-		
+
 		self.is_processing = True
 		self.process_button.disabled = True
-		
-		# Pokaż progress dialog
-		progress_dialog = ProgressDialog()
-		self.page.dialog = progress_dialog
-		progress_dialog.open = True
+
+		# Pokaż progress controls
+		self.progress_container.visible = True
+		self.progress_counter.value = f"Invoices processed: 0/{len(self.selected_files)}"
+		self.progress_bar.value = 0
+		self.progress_status.value = "Inicjalizacja..."
 		self.page.update()
-		
+
 		# Przetwórz pliki sekwencyjnie
 		self.processed_invoices.clear()
-		
+
 		for i, file_path in enumerate(self.selected_files, 1):
 			filename = Path(file_path).name
-			
+
 			try:
 				# Update progress: Konwersja PDF
-				progress_dialog.update_progress(
-					current=i,
-					total=len(self.selected_files),
-					filename=filename,
-					status="Konwersja PDF..."
-					)
-				
-				# Skopiuj do temp (aby zachować oryginał)
+				self.progress_counter.value = f"Invoices processed: {i}/{len(self.selected_files)}"
+				self.progress_bar.value = i / len(self.selected_files)
+				self.progress_status.value = f"Konwersja PDF: {filename}"
+				self.page.update()
+
+				# Check if file is already in TEMP_DIR (from email import)
+				file_path_obj = Path(file_path)
 				temp_pdf_path = TEMP_DIR / filename
-				shutil.copy2(file_path, temp_pdf_path)
-				
+
+				if file_path_obj.parent == TEMP_DIR:
+					# File is already in TEMP_DIR, use it directly
+					temp_pdf_path = file_path_obj
+					print(f"  File already in temp dir: {filename}")
+				else:
+					# Copy to temp (to preserve original)
+					shutil.copy2(file_path, temp_pdf_path)
+					print(f"  Copied to temp: {filename}")
+
 				# OCR + Ekstrakcja
-				progress_dialog.update_progress(
-					current=i,
-					total=len(self.selected_files),
-					filename=filename,
-					status="Ekstrakcja danych..."
-					)
-				
+				self.progress_status.value = f"Ekstrakcja danych: {filename}"
+				self.page.update()
+
 				invoice, raw_text = self.ocr_service.process_invoice_pdf(
 					str(temp_pdf_path),
 					progress_callback=None  # Internal progress nie potrzebny
 					)
-				
+
 				# Ustawienie ścieżki PDF
 				invoice.pdf_path = str(temp_pdf_path)
-				
+
 				# Walidacja
-				progress_dialog.update_progress(
-					current=i,
-					total=len(self.selected_files),
-					filename=filename,
-					status="Walidacja danych..."
-					)
+				self.progress_status.value = f"Walidacja danych: {filename}"
+				self.page.update()
 				
 				validation = self.validation_service.validate_invoice(invoice)
 				
@@ -355,17 +523,23 @@ class UploadView(ft.Column):
 					'warnings': []
 					}
 				self.processed_invoices.append((error_invoice, validation, ""))
-		
+
 		# Zakończono
-		progress_dialog.set_complete()
+		self.progress_counter.value = f"Invoices processed: {len(self.selected_files)}/{len(self.selected_files)}"
+		self.progress_bar.value = 1.0
+		self.progress_status.value = "Zakończono!"
+		self.progress_counter.color = AppColors.SUCCESS
+		self.progress_status.color = AppColors.SUCCESS
+		self.page.update()
+
 		self.is_processing = False
-		
-		# Zamknij dialog po 1 sekundzie
+
+		# Ukryj progress controls po chwili
 		import time
 		time.sleep(1)
-		progress_dialog.open = False
+		self.progress_container.visible = False
 		self.page.update()
-		
+
 		# Pokaż wyniki
 		self.show_results()
 	

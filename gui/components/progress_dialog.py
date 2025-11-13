@@ -14,6 +14,15 @@ class ProgressDialog(ft.AlertDialog):
 		# Style
 		self.modal = True
 		
+		# Progress counter text
+		self.progress_counter = ft.Text(
+			"Invoices processed: 0/0",
+			size=AppTypography.BODY_LARGE,
+			weight=ft.FontWeight.BOLD,
+			color=AppColors.PRIMARY,
+			text_align=ft.TextAlign.CENTER,
+			)
+
 		# Progress bar
 		self.progress_bar = ft.ProgressBar(
 			value=0,
@@ -21,7 +30,7 @@ class ProgressDialog(ft.AlertDialog):
 			color=AppColors.PRIMARY,
 			bgcolor=AppColors.SURFACE_VARIANT,
 			)
-		
+
 		# Status text
 		self.status_text = ft.Text(
 			"Inicjalizacja...",
@@ -29,7 +38,7 @@ class ProgressDialog(ft.AlertDialog):
 			color=AppColors.TEXT_PRIMARY,
 			text_align=ft.TextAlign.CENTER,
 			)
-		
+
 		# Plik info
 		self.file_info = ft.Text(
 			"",
@@ -54,10 +63,12 @@ class ProgressDialog(ft.AlertDialog):
 		self.content = ft.Container(
 			content=ft.Column(
 				controls=[
+					self.progress_counter,
+					ft.Container(height=AppSpacing.XS),
+					self.progress_bar,
+					ft.Container(height=AppSpacing.SM),
 					self.status_text,
 					self.file_info,
-					ft.Container(height=AppSpacing.MD),
-					self.progress_bar,
 					],
 				horizontal_alignment=ft.CrossAxisAlignment.CENTER,
 				spacing=AppSpacing.SM,
@@ -84,21 +95,24 @@ class ProgressDialog(ft.AlertDialog):
 			status: Status (np. "Konwersja PDF...", "Ekstrakcja danych...")
 		"""
 		progress = current / total if total > 0 else 0
-		
+
+		self.progress_counter.value = f"Invoices processed: {current}/{total}"
 		self.progress_bar.value = progress
 		self.status_text.value = status
-		self.file_info.value = f"Plik {current}/{total}: {filename}"
-		
+		self.file_info.value = f"Plik: {filename}"
+
 		if hasattr(self, 'page') and self.page:
 			self.page.update()
 	
 	def set_complete(self):
 		"""Ustaw jako zakończone"""
 		self.progress_bar.value = 1.0
+		self.progress_counter.color = AppColors.SUCCESS
 		self.status_text.value = "Zakończono!"
 		self.status_text.color = AppColors.SUCCESS
+		self.file_info.value = "Wszystkie faktury przetworzone"
 		self.cancel_button.text = "Zamknij"
-		
+
 		if hasattr(self, 'page') and self.page:
 			self.page.update()
 	

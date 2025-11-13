@@ -215,6 +215,39 @@ class MainView(ft.Column):
 				)
 			)
 
+			# Suma kwot z faktur (PLN)
+			totals = stats.get('totals', {})
+			if totals.get('total_amount', 0) > 0:
+				stat_cards.append(
+					self.create_stat_card(
+						"Suma faktur (PLN)",
+						f"{totals['total_amount']:.2f}",
+						ft.Icons.ACCOUNT_BALANCE_WALLET_ROUNDED,
+						AppColors.INFO
+					)
+				)
+
+				# Suma nieopłaconych (nieopłacone + przeterminowane)
+				if totals.get('total_unpaid', 0) > 0:
+					stat_cards.append(
+						self.create_stat_card(
+							"Do zapłaty (PLN)",
+							f"{totals['total_unpaid']:.2f}",
+							ft.Icons.PAYMENT_ROUNDED,
+							AppColors.ERROR
+						)
+					)
+
+				# VAT 23% z całkowitej kwoty
+				stat_cards.append(
+					self.create_stat_card(
+						"VAT 23% (PLN)",
+						f"{totals['total_vat']:.2f}",
+						ft.Icons.RECEIPT_LONG_ROUNDED,
+						AppColors.WARNING
+					)
+				)
+
 			# Kwoty po walutach
 			for currency, data in stats.get('by_currency', {}).items():
 				# Opłacone
