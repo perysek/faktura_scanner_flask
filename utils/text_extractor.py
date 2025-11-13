@@ -15,8 +15,8 @@ class TextExtractor:
 		'invoice_number': [
 			# Pattern with prefix included (F/, FV/, FA/, etc.) and optional suffix letters
 			r'((?:FV|FA|F|FAKTURA)[\s\-/]*\d+[\-/]\d+(?:[\-/]\d+)?(?:[\-/][A-Z]+)?)',
-			# Pattern after Polish keywords (Faktura nr, Nr faktury, etc.)
-			r'(?:Faktura\s+nr|Nr\s+faktury|Numer\s+faktury|Faktura\s+numer|Nr|Numer|Number)[\s:\.]*([A-Z0-9\-/]+)',
+			# Pattern after Polish keywords (Faktura VAT, Faktura nr, Nr faktury, etc.)
+			r'(?:Faktura\s+VAT|Faktura\s+nr|Nr\s+faktury|Numer\s+faktury|Faktura\s+numer|Nr|Numer|Number)[\s:\.]*([A-Z0-9\-/]+)',
 			# Generic pattern for invoice numbers with letters
 			r'([A-Z]{1,4}[\-/]\d+[\-/]\d+(?:[\-/]\d+)?(?:[\-/][A-Z]+)?)',
 			# Numbers-only pattern (fallback)
@@ -47,8 +47,11 @@ class TextExtractor:
 		# Kwota: 1 234,56 zł lub 1234.56 PLN
 		# Priorytet dla kwot brutto i kwoty do zapłaty
 		'amount': [
-			r'(?:Kwota do zapłaty|Do zapłaty|Amount to pay)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
-			r'(?:Wartość brutto|Brutto|Gross|Razem brutto)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			# Kwota do zapłaty (highest priority) - flexible spacing between words
+			r'(?:Kwota\s+do\s+zapłaty|Do\s+zapłaty|Amount\s+to\s+pay)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			# Wartość brutto
+			r'(?:Wartość\s+brutto|Brutto|Gross|Razem\s+brutto)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			# Razem (lowest priority - often net amount)
 			r'(?:Razem|Suma|Total)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)',
 			],
 		
@@ -295,9 +298,31 @@ class TextExtractor:
 	def _extract_amount(self, text: str) -> Optional[float]:
 		"""
 		Ekstraktuj kwotę i konwertuj na float
-		Strategia: znajdź wszystkie kwoty i weź największą (brutto jest zawsze największe)
+		Strategia: priorytet dla "Kwota do zapłaty" -> wzorce brutto -> największa kwota
+		Dla PDF wielostronicowych: priorytet dla kwot z pierwszej strony
 		"""
-		# Najpierw spróbuj standardowych wzorców (Kwota do zapłaty, Brutto, itp.)
+		# PRIORYTET 1: Szukaj "Kwota do zapłaty" z obsługą wieloliniowych
+		# Szukaj najpierw w kontekście linii (może być na oddzielnych liniach)
+		lines = text.split('\n')
+		for i, line in enumerate(lines):
+			if re.search(r'Kwota\s+do\s+zapłaty|Do\s+zapłaty', line, re.IGNORECASE):
+				# Sprawdź tę linię i następne 2 linie
+				search_context = '\n'.join(lines[i:min(i+3, len(lines))])
+				# Szukaj kwoty w tym kontekście
+				amount_match = re.search(r'(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?', search_context)
+				if amount_match:
+					amount_str = amount_match.group(1)
+					amount_str = amount_str.replace(' ', '').replace('\u00a0', '')
+					amount_str = amount_str.replace(',', '.')
+					try:
+						amount = float(amount_str)
+						if amount > 1.0:  # Ignoruj bardzo małe kwoty
+							print(f"  💰 Znaleziono 'Kwota do zapłaty': {amount:.2f} zł")
+							return amount
+					except ValueError:
+						pass
+
+		# PRIORYTET 2: Spróbuj standardowych wzorców (Brutto, itp.)
 		amount_str = self._extract_field(text, 'amount')
 
 		if amount_str:
@@ -305,11 +330,16 @@ class TextExtractor:
 			amount_str = amount_str.replace(' ', '').replace('\u00a0', '')
 			amount_str = amount_str.replace(',', '.')
 			try:
-				return float(amount_str)
+				amount = float(amount_str)
+				if amount > 1.0:
+					print(f"  💰 Znaleziono kwotę z wzorca: {amount:.2f} zł")
+					return amount
 			except ValueError:
 				pass
 
-		# Jeśli nie znaleziono, szukaj wszystkich kwot w tekście i weź największą
+		# PRIORYTET 3: Szukaj wszystkich kwot w tekście i weź największą
+		# PDF jest już ograniczony do max 2 stron w pdf_processor.py
+
 		# Wzorzec dla kwot: liczba z 2 miejscami po przecinku + zł lub PLN
 		all_amounts_pattern = r'(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)'
 		matches = re.findall(all_amounts_pattern, text, re.IGNORECASE)
@@ -321,13 +351,18 @@ class TextExtractor:
 					# Konwersja na float
 					amount_str = match.replace(' ', '').replace('\u00a0', '')
 					amount_str = amount_str.replace(',', '.')
-					amounts.append(float(amount_str))
+					amount = float(amount_str)
+					# Filtruj bardzo małe kwoty (prawdopodobnie stawki VAT, np. 23%)
+					if amount > 1.0:  # Ignoruj kwoty poniżej 1 zł
+						amounts.append(amount)
 				except ValueError:
 					continue
 
 			if amounts:
 				# Zwróć największą kwotę (brutto)
-				return max(amounts)
+				max_amount = max(amounts)
+				print(f"  💰 Znaleziono największą kwotę: {max_amount:.2f} zł")
+				return max_amount
 
 		return None
 	
@@ -376,14 +411,28 @@ class TextExtractor:
 		return 'PLN'
 	
 	def _extract_invoice_date(self, text: str) -> Optional[str]:
-		"""Ekstraktuj datę wystawienia faktury"""
-		# Szukaj po kontekście
+		"""
+		Ekstraktuj datę wystawienia faktury
+		UWAGA: NIE używa "Data sprzedaży" - to jest data transakcji, nie data faktury
+		"""
+		# Szukaj po kontekście - priorytet dla "Data dokumentu" i "Data faktury"
+		# NIE szukaj po "Data sprzedaży" - to jest data sprzedaży, nie data wystawienia faktury
 		date_keywords = [
-			'Data wystawienia', 'Wystawiono', 'Data sprzedaży', 'Issue date'
+			'Data dokumentu',           # Highest priority
+			'Data faktury',
+			'Data wystawienia faktury',
+			'Data wystawienia dokumentu',
+			'Data wystawienia',
+			'Wystawiono',
+			'Issue date'
 			]
-		
+
 		lines = text.split('\n')
 		for i, line in enumerate(lines):
+			# Sprawdź czy linia NIE zawiera "Data sprzedaży" (ignoruj tę datę)
+			if 'sprzedaż' in line.lower():
+				continue
+
 			if any(
 					keyword.lower() in line.lower() for keyword in date_keywords
 					):
@@ -392,10 +441,19 @@ class TextExtractor:
 					lines[i + 1] if i + 1 < len(lines) else '')
 				date_str = self._extract_date_from_text(search_text)
 				if date_str:
+					print(f"  📅 Znaleziono datę faktury: {date_str}")
 					return date_str
-		
-		# Fallback: pierwsza znaleziona data
-		return self._extract_date_from_text(text)
+
+		# Fallback: pierwsza znaleziona data (ale NIE z linii zawierającej "sprzedaż")
+		for i, line in enumerate(lines):
+			if 'sprzedaż' in line.lower():
+				continue
+			date_str = self._extract_date_from_text(line)
+			if date_str:
+				print(f"  📅 Znaleziono datę faktury (fallback): {date_str}")
+				return date_str
+
+		return None
 	
 	def _extract_payment_due_date(self, text: str) -> Optional[str]:
 		"""Ekstraktuj termin płatności lub wykryj 'za pobraniem'"""

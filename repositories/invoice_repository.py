@@ -150,7 +150,12 @@ class InvoiceRepository(BaseRepository):
 			"total_invoices": basic_stats["total_count"],
 			"paid_invoices": basic_stats["paid_count"],
 			"unpaid_invoices": basic_stats["unpaid_count"],
-			"by_currency": {}
+			"by_currency": {},
+			"totals": {
+				"total_amount": 0.0,
+				"total_unpaid": 0.0,
+				"total_vat": 0.0
+			}
 		}
 
 		# Organizuj dane po walutach
@@ -168,6 +173,15 @@ class InvoiceRepository(BaseRepository):
 
 			stats["by_currency"][currency][payment_status] = row["total_amount"] or 0.0
 			stats["by_currency"][currency]["total"] += row["total_amount"] or 0.0
+
+		# Oblicz sumy globalne (dla walut PLN - główna waluta)
+		# Możesz dostosować to do wszystkich walut jeśli potrzeba
+		if "PLN" in stats["by_currency"]:
+			pln_data = stats["by_currency"]["PLN"]
+			stats["totals"]["total_amount"] = pln_data["total"]
+			stats["totals"]["total_unpaid"] = pln_data["unpaid"] + pln_data["overdue"]
+			# VAT 23% od całkowitej kwoty
+			stats["totals"]["total_vat"] = pln_data["total"] * 0.23
 
 		return stats
 	

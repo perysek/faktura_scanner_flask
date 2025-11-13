@@ -1,26 +1,30 @@
 """
 Lewy panel nawigacji
 """
-from operator import iconcat
 
 import flet as ft
+
 from gui.theme import AppColors, AppIcons, AppSpacing
 
 
 class AppNavigationRail(ft.NavigationRail):
 	"""Komponent lewego panelu nawigacji"""
-	
+
 	def __init__(self, on_change):
 		super().__init__()
-		
+
 		# Style
 		self.selected_index = 0
-		self.label_type = ft.NavigationRailLabelType.ALL
-		self.bgcolor = AppColors.SURFACE
+		self.label_type = ft.NavigationRailLabelType.NONE
+		self.bgcolor = "#F5F5F5"  # Light grey background
 		self.extended = True
-		self.min_width = 200
-		self.min_extended_width = 200
-		
+		self.min_width = 300
+		self.min_extended_width = 300
+		#self.width =300
+		#self.group_alignment=-1.0
+		#self.width=400
+		#self.left=True
+
 		# Callback
 		self.on_change = on_change
 		
@@ -31,47 +35,34 @@ class AppNavigationRail(ft.NavigationRail):
 				selected_icon=ft.Icon(
 					AppIcons.HOME, size=24, color=AppColors.PRIMARY
 					),
-				label_content=ft.Text(
-					"Lista Faktur",
-					size=14,
-					weight=ft.FontWeight.W_500
-					),
-				padding=AppSpacing.SM,
+				label='LISTA FAKTUR'
 				),
 			ft.NavigationRailDestination(
 				icon=ft.Icon(AppIcons.UPLOAD, size=24),
 				selected_icon=ft.Icon(
-					AppIcons.UPLOAD, size=24, color=AppColors.PRIMARY
+					AppIcons.UPLOAD, size=24, color=AppColors.PRIMARY, 
 					),
-				label_content=ft.Text(
-					"Import PDF",
-					size=14,
-					weight=ft.FontWeight.W_500
-					),
-				padding=AppSpacing.SM,
+				label="IMPORT PDF",
 				),
 			ft.NavigationRailDestination(
-				icon=ft.Icon(AppIcons.EXPORT, size=24),
+				icon=ft.Icon(AppIcons.EXPORT, size=24, ),
 				selected_icon=ft.Icon(
-					AppIcons.EXPORT, size=24, color=AppColors.PRIMARY
+					AppIcons.EXPORT, size=24, color=AppColors.PRIMARY, 
 					),
-				label_content=ft.Text(
-					"Eksport",
-					size=14,
-					weight=ft.FontWeight.W_500
-					),
-				padding=AppSpacing.SM,
+				label="EKSPORT",
 				),
 			ft.NavigationRailDestination(
-				icon=ft.Icon(AppIcons.HISTORY, size=24),
+				icon=ft.Icon(AppIcons.HISTORY, size=24, ),
 				selected_icon=ft.Icon(
-					AppIcons.HISTORY, size=24, color=AppColors.PRIMARY
+					AppIcons.HISTORY, size=24, color=AppColors.PRIMARY, 
 					),
-				label_content=ft.Text(
-					"Historia",
-					size=14,
-					weight=ft.FontWeight.W_500
+				label="HISTORIA",
+				),
+			ft.NavigationRailDestination(
+				icon=ft.Icon(ft.Icons.EMAIL_OUTLINED, size=24, ),
+				selected_icon=ft.Icon(
+					ft.Icons.EMAIL, size=24, color=AppColors.PRIMARY, 
 					),
-				padding=AppSpacing.SM,
+				label="USTAWIENIA E-MAIL",
 				),
 			]
