@@ -45,9 +45,11 @@ class TextExtractor:
 			],
 		
 		# Kwota: 1 234,56 zł lub 1234.56 PLN
+		# Priorytet dla kwot brutto i kwoty do zapłaty
 		'amount': [
-			r'(?:Razem|Suma|Total|Do zapłaty)[\s:]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)',
-			r'(?:Brutto|Gross)[\s:]*(\d+[\s\u00a0]?\d*[,\.]\d{2})',
+			r'(?:Kwota do zapłaty|Do zapłaty|Amount to pay)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			r'(?:Wartość brutto|Brutto|Gross|Razem brutto)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			r'(?:Razem|Suma|Total)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)',
 			],
 		
 		# Data: 2024-11-12, 12.11.2024, 12/11/2024
@@ -116,20 +118,167 @@ class TextExtractor:
 	def _extract_seller_name(self, text: str) -> Optional[str]:
 		"""
 		Ekstraktuj nazwę sprzedawcy (zazwyczaj na początku faktury)
+		Uwzględnia przypadki gdy 'Nabywca' jest w kolumnie obok
 		"""
 		lines = text.split('\n')
-		
+
 		# Szukaj po słowach kluczowych
-		keywords = ['Sprzedawca', 'Wystawca', 'Seller', 'Vendor']
-		
+		seller_keywords = ['Sprzedawca', 'Wystawca', 'Seller', 'Vendor']
+		buyer_keywords = ['Nabywca', 'Buyer', 'Płatnik']
+
 		for i, line in enumerate(lines):
-			if any(keyword.lower() in line.lower() for keyword in keywords):
-				# Nazwa sprzedawcy zazwyczaj w następnej linii
-				if i + 1 < len(lines):
-					name = lines[i + 1].strip()
-					if name and len(name) > 3:
-						return name
-		
+			# Sprawdź czy linia zawiera keyword sprzedawcy
+			if any(keyword.lower() in line.lower() for keyword in seller_keywords):
+				# Sprawdź czy w tej samej linii nie ma słowa "Nabywca" po "Sprzedawca"
+				# (co może oznaczać kolumny obok siebie)
+				line_lower = line.lower()
+
+				# Znajdź pozycje słów kluczowych w linii
+				seller_pos = -1
+				buyer_pos = -1
+
+				for keyword in seller_keywords:
+					pos = line_lower.find(keyword.lower())
+					if pos != -1:
+						seller_pos = pos
+						break
+
+				for keyword in buyer_keywords:
+					pos = line_lower.find(keyword.lower())
+					if pos != -1:
+						buyer_pos = pos
+						break
+
+				# Jeśli oba słowa są w tej samej linii (kolumny)
+				if seller_pos != -1 and buyer_pos != -1:
+					# Szukaj nazwy sprzedawcy w następnych liniach
+					# ale tylko do momentu znalezienia buyer keywords
+					for j in range(i + 1, min(i + 10, len(lines))):
+						next_line = lines[j].strip()
+
+						# Pomiń puste linie i linie z samymi separatorami
+						if not next_line or all(c in '=-_|/\\' for c in next_line):
+							continue
+
+						# Sprawdź czy linia zawiera buyer keywords - jeśli tak, przerwij
+						if any(kw.lower() in next_line.lower() for kw in buyer_keywords):
+							break
+
+						# Przypadek gdy obie nazwy są w jednej linii (OCR scalił kolumny)
+						# np. "Łukasz Rybczyński My Way Aneta Kozłowska"
+						# Szukaj separacji po 2-3+ spacjach lub po buyer name patterns
+
+						# Sprawdź czy jest długa sekwencja spacji (typowe dla tabel)
+						if '  ' in next_line:  # Co najmniej 2 spacje
+							# Podziel po długich spacjach i weź pierwszą część
+							parts = re.split(r'\s{2,}', next_line)
+							if parts and len(parts[0].strip()) > 3:
+								return parts[0].strip()
+
+						# Sprawdź czy w linii są oba fragmenty tekstu (seller i buyer)
+						# Jeśli linia jest długa i wygląda na scalenie, spróbuj wyciąć część przed buyer
+						if len(next_line) > 30:  # Długa linia może być scaleniem
+							words = next_line.split()
+
+							# Strategia 1: Szukaj typowych wzorców firmy (Sp. z o.o., S.A., SA, itp.)
+							# Wzorce z kropkami i bez (różne zapisy)
+							company_patterns = [
+								r'Sp\.\s*z\s*o\.?o\.?',  # Sp. z o.o., Sp z oo, Sp. z o.o
+								r'S\.?\s*A\.?',           # S.A., S.A, SA, S A
+								r'P\.?P\.?H\.?',          # P.P.H., PPH
+								r'sp\.\s*j\.',            # sp. j.
+								r's\.?c\.',               # s.c.
+							]
+
+							for pattern in company_patterns:
+								match = re.search(pattern, next_line, re.IGNORECASE)
+								if match:
+									# Weź tekst od początku do końca wzorca firmy
+									end_pos = match.end()
+									seller_candidate = next_line[:end_pos].strip()
+
+									# Usuń seller keywords z początku (np. "Sprzedawca:", "Wystawca:")
+									for kw in seller_keywords:
+										kw_pattern = kw + r'[\s:]*'
+										seller_candidate = re.sub(kw_pattern, '', seller_candidate, flags=re.IGNORECASE).strip()
+
+									# Sprawdź czy po wzorcu nie ma jeszcze części nazwy firmy
+									# (np. "S.A." może być w środku nazwy)
+									remaining = next_line[end_pos:].strip()
+
+									# Jeśli po wzorcu są separatory (|, przecinek) lub buyer keywords lub długi tekst
+									if not remaining or remaining[0] in '|,;' or any(kw.lower() in remaining.lower() for kw in buyer_keywords) or len(remaining) > 20:
+										if len(seller_candidate) > 3:
+											return seller_candidate
+
+							# Strategia 2: Dla osób - weź pierwsze 2 słowa (imię nazwisko)
+							# ale sprawdź czy nie ma formy firmowej
+							if len(words) >= 4 and not any(pattern in next_line for pattern in ['Sp.', 'S.A.', 'P.P.H.']):
+								# Prawdopodobnie dwie osoby/firmy w jednej linii
+								# Weź pierwsze 2 słowa (imię + nazwisko)
+								seller_candidate = ' '.join(words[:2])
+								if len(seller_candidate) > 3:
+									return seller_candidate.strip()
+
+							# Strategia 3: Jeśli są buyer keywords w środku linii
+							for kw in buyer_keywords:
+								if kw in next_line:
+									# Weź tekst przed buyer keyword
+									parts = next_line.split(kw)
+									if parts[0].strip() and len(parts[0].strip()) > 3:
+										return parts[0].strip()
+
+						# Standardowy przypadek - cała linia to seller
+						if len(next_line) > 3 and not next_line.startswith('   '):
+							return next_line
+
+				else:
+					# Standardowy przypadek - słowo tylko "Sprzedawca"
+					# Sprawdź najpierw czy nazwa jest w TEJ SAMEJ linii (np. "Sprzedawca: Axpo Polska sp. z o.o.")
+					current_line = line.strip()
+
+					# Usuń seller keyword z początku linii
+					for kw in seller_keywords:
+						kw_pattern = kw + r'[\s:]*'
+						current_line = re.sub(kw_pattern, '', current_line, flags=re.IGNORECASE).strip()
+
+					# Jeśli po usunięciu keyword coś zostało, sprawdź czy to nazwa firmy
+					if current_line and len(current_line) > 3:
+						# Szukaj wzorców firmy w tej linii
+						company_patterns = [
+							r'Sp\.\s*z\s*o\.?o\.?',
+							r'S\.?\s*A\.?',
+							r'P\.?P\.?H\.?',
+							r'sp\.\s*j\.',
+							r's\.?c\.',
+						]
+
+						for pattern in company_patterns:
+							match = re.search(pattern, current_line, re.IGNORECASE)
+							if match:
+								# Wyciągnij nazwę do końca wzorca
+								end_pos = match.end()
+								seller_candidate = current_line[:end_pos].strip()
+								remaining = current_line[end_pos:].strip()
+
+								# Sprawdź czy po wzorcu jest separator lub długi tekst
+								if not remaining or (remaining and remaining[0] in '|,;') or len(remaining) > 20:
+									return seller_candidate
+
+					# Jeśli nie znaleziono w tej samej linii, sprawdź następną linię
+					if i + 1 < len(lines):
+						name = lines[i + 1].strip()
+
+						# Usuń seller keywords z początku jeśli są
+						for kw in seller_keywords:
+							kw_pattern = kw + r'[\s:]*'
+							name = re.sub(kw_pattern, '', name, flags=re.IGNORECASE).strip()
+
+						if name and len(name) > 3:
+							# Upewnij się że to nie buyer name
+							if not any(kw.lower() in name.lower() for kw in buyer_keywords):
+								return name
+
 		# Fallback: pierwsza linia która wygląda jak firma
 		for line in lines[:10]:
 			line = line.strip()
@@ -137,25 +286,50 @@ class TextExtractor:
 					r'(Sp\.\s*z\s*o\.?o\.?|S\.A\.|P\.P\.H\.)', line,
 					re.IGNORECASE
 					):
-				return line
-		
+				# Upewnij się że to nie linia z "Nabywca"
+				if not any(kw.lower() in line.lower() for kw in buyer_keywords):
+					return line
+
 		return None
 	
 	def _extract_amount(self, text: str) -> Optional[float]:
-		"""Ekstraktuj kwotę i konwertuj na float"""
+		"""
+		Ekstraktuj kwotę i konwertuj na float
+		Strategia: znajdź wszystkie kwoty i weź największą (brutto jest zawsze największe)
+		"""
+		# Najpierw spróbuj standardowych wzorców (Kwota do zapłaty, Brutto, itp.)
 		amount_str = self._extract_field(text, 'amount')
-		
-		if not amount_str:
-			return None
-		
-		# Konwersja: "1 234,56" → 1234.56
-		amount_str = amount_str.replace(' ', '').replace('\u00a0', '')
-		amount_str = amount_str.replace(',', '.')
-		
-		try:
-			return float(amount_str)
-		except ValueError:
-			return None
+
+		if amount_str:
+			# Konwersja: "1 234,56" → 1234.56
+			amount_str = amount_str.replace(' ', '').replace('\u00a0', '')
+			amount_str = amount_str.replace(',', '.')
+			try:
+				return float(amount_str)
+			except ValueError:
+				pass
+
+		# Jeśli nie znaleziono, szukaj wszystkich kwot w tekście i weź największą
+		# Wzorzec dla kwot: liczba z 2 miejscami po przecinku + zł lub PLN
+		all_amounts_pattern = r'(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)'
+		matches = re.findall(all_amounts_pattern, text, re.IGNORECASE)
+
+		if matches:
+			amounts = []
+			for match in matches:
+				try:
+					# Konwersja na float
+					amount_str = match.replace(' ', '').replace('\u00a0', '')
+					amount_str = amount_str.replace(',', '.')
+					amounts.append(float(amount_str))
+				except ValueError:
+					continue
+
+			if amounts:
+				# Zwróć największą kwotę (brutto)
+				return max(amounts)
+
+		return None
 	
 	def _extract_currency(self, text: str, bank_account: Optional[str] = None) -> str:
 		"""

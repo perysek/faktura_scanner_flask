@@ -306,8 +306,37 @@ class MainView(ft.Column):
 	
 	def view_invoice(self, invoice: Invoice):
 		"""Podgląd faktury"""
-		# TODO: Implementacja podglądu PDF
-		self.show_info("Podgląd", f"Podgląd faktury: {invoice.invoice_number}")
+		if not invoice.pdf_path:
+			self.show_error("Błąd", "Brak pliku PDF dla tej faktury")
+			return
+
+		import os
+		from pathlib import Path
+
+		pdf_path = Path(invoice.pdf_path)
+
+		# Check if file exists
+		if not pdf_path.exists():
+			self.show_error(
+				"Błąd",
+				f"Plik PDF nie istnieje:\n{invoice.pdf_path}"
+			)
+			return
+
+		try:
+			# Open PDF in system default viewer
+			if os.name == 'nt':  # Windows
+				os.startfile(str(pdf_path))
+			elif os.name == 'posix':  # macOS/Linux
+				import subprocess
+				if os.uname().sysname == 'Darwin':  # macOS
+					subprocess.run(['open', str(pdf_path)])
+				else:  # Linux
+					subprocess.run(['xdg-open', str(pdf_path)])
+
+			print(f"✅ Otwarto PDF: {invoice.invoice_number}")
+		except Exception as ex:
+			self.show_error("Błąd otwarcia PDF", str(ex))
 	
 	def edit_invoice(self, invoice: Invoice):
 		"""Edytuj fakturę"""
