@@ -10,10 +10,11 @@ from gui.theme import AppColors, AppIcons, AppSpacing, AppTypography, AppStyles
 class EmailSettingsView(ft.Column):
 	"""Email account settings configuration view"""
 
-	def __init__(self, page: ft.Page, app):
+	def __init__(self, page: ft.Page, app, notification_panel=None):
 		super().__init__()
 		self.page = page
 		self.app = app
+		self.notification_panel = notification_panel
 
 		# Email settings manager
 		self.email_settings = EmailSettings()
@@ -275,20 +276,16 @@ class EmailSettingsView(ft.Column):
 
 	def show_success(self, title: str, message: str):
 		"""Show success message"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.SUCCESS,
-		)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"success"
+			)
 
 	def show_error(self, title: str, message: str):
 		"""Show error message"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.ERROR,
-		)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"error"
+			)

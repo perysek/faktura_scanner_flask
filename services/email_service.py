@@ -86,7 +86,8 @@ class EmailService:
 			self,
 			from_date: Optional[date] = None,
 			to_date: Optional[date] = None,
-			save_dir: str = None
+			save_dir: str = None,
+			progress_callback: Optional[callable] = None
 	) -> List[Tuple[str, str]]:
 		"""
 		Fetch PDF attachments from emails
@@ -95,12 +96,15 @@ class EmailService:
 			from_date: Start date for email search
 			to_date: End date for email search
 			save_dir: Directory to save PDFs (if None, uses temp dir)
+			progress_callback: Optional callback function(message, detail) for progress updates
 
 		Returns:
 			List of tuples: (pdf_filename, pdf_path)
 		"""
 		if not self.connected:
 			print("❌ Not connected to email server")
+			if progress_callback:
+				progress_callback("❌ Nie połączono z serwerem email", "", None)
 			return []
 
 		try:
@@ -128,29 +132,45 @@ class EmailService:
 
 			if status != "OK":
 				print("❌ Error searching emails")
+				if progress_callback:
+					progress_callback("❌ Błąd wyszukiwania wiadomości", "", None)
 				return []
 
 			# Get message IDs
 			email_ids = messages[0].split()
 			print(f"📧 Found {len(email_ids)} emails")
+			if progress_callback:
+				progress_callback(f"📧 Znaleziono {len(email_ids)} wiadomości", "Przetwarzanie załączników...", 0.5)
 
 			pdf_files = []
 
 			# Process each email
-			for email_id in email_ids:
-				pdfs = self._process_email(email_id, save_dir)
+			for idx, email_id in enumerate(email_ids, 1):
+				if progress_callback:
+					# Calculate progress (50% after search, 100% after processing all emails)
+					progress = 0.5 + (0.5 * idx / len(email_ids))
+					progress_callback(
+						f"Przetwarzanie wiadomości {idx}/{len(email_ids)}",
+						"Szukanie załączników PDF...",
+						progress
+					)
+				pdfs = self._process_email(email_id, save_dir, progress_callback)
 				pdf_files.extend(pdfs)
 
 			print(f"✅ Downloaded {len(pdf_files)} PDF attachments")
+			if progress_callback:
+				progress_callback(f"✅ Pobrano {len(pdf_files)} plików PDF", "Import zakończony", 1.0)
 			return pdf_files
 
 		except Exception as e:
 			print(f"❌ Error fetching emails: {e}")
 			import traceback
 			traceback.print_exc()
+			if progress_callback:
+				progress_callback(f"❌ Błąd: {str(e)}", "", None)
 			return []
 
-	def _process_email(self, email_id: bytes, save_dir: str = None) -> List[Tuple[str, str]]:
+	def _process_email(self, email_id: bytes, save_dir: str = None, progress_callback: Optional[callable] = None) -> List[Tuple[str, str]]:
 		"""
 		Process a single email and extract PDF attachments
 
@@ -192,6 +212,10 @@ class EmailService:
 
 						# Check if PDF
 						if filename.lower().endswith('.pdf'):
+							# Notify start of download
+							if progress_callback:
+								progress_callback(f"📄 Pobieranie: {filename}", "Zapisywanie załącznika...", None)
+
 							# Get payload data
 							payload_data = part.get_payload(decode=True)
 
@@ -199,18 +223,23 @@ class EmailService:
 							pdf_path = self._save_attachment(
 								payload_data,
 								filename,
-								save_dir
+								save_dir,
+								progress_callback
 							)
 
 							if pdf_path:
 								pdf_files.append((filename, pdf_path))
 								print(f"  📄 Downloaded: {filename}")
+								if progress_callback:
+									progress_callback(f"✅ Pobrano: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
 
 							# Clear payload reference to free memory
 							del payload_data
 
 		except Exception as e:
 			print(f"Error processing email {email_id}: {e}")
+			if progress_callback:
+				progress_callback(f"❌ Błąd przetwarzania wiadomości", str(e), None)
 
 		finally:
 			# Clear message reference to ensure cleanup
@@ -219,7 +248,7 @@ class EmailService:
 
 		return pdf_files
 
-	def _save_attachment(self, data: bytes, filename: str, save_dir: str = None) -> Optional[str]:
+	def _save_attachment(self, data: bytes, filename: str, save_dir: str = None, progress_callback: Optional[callable] = None) -> Optional[str]:
 		"""
 		Save attachment to file
 
@@ -245,6 +274,9 @@ class EmailService:
 				counter += 1
 
 			# Write file and ensure it's fully closed
+			if progress_callback:
+				progress_callback(f"💾 Zapisywanie: {filename}", f"Zapisywanie {len(data) / 1024:.1f} KB na dysk...", None)
+
 			with open(pdf_path, 'wb') as f:
 				f.write(data)
 				f.flush()  # Force write to disk
@@ -268,13 +300,23 @@ class EmailService:
 				except Exception as e:
 					if attempt < max_retries - 1:
 						print(f"  ⚠️ File not yet accessible, retrying... ({attempt + 1}/{max_retries})")
+						if progress_callback:
+							progress_callback(
+								f"⚠️ Weryfikacja dostępu: {filename}",
+								f"Próba {attempt + 1}/{max_retries}...",
+								None
+							)
 						time.sleep(0.5)
 					else:
 						print(f"  ❌ File still locked after {max_retries} attempts")
+						if progress_callback:
+							progress_callback(f"❌ Plik zablokowany: {filename}", "Nie można uzyskać dostępu", None)
 						raise
 
 			return str(pdf_path)
 
 		except Exception as e:
 			print(f"Error saving attachment: {e}")
+			if progress_callback:
+				progress_callback(f"❌ Błąd zapisu: {filename}", str(e), None)
 			return None

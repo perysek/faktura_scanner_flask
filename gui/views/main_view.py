@@ -12,11 +12,12 @@ from gui.components.invoice_table import InvoiceTable
 
 class MainView(ft.Column):
 	"""Widok listy faktur"""
-	
-	def __init__(self, page: ft.Page, app):
+
+	def __init__(self, page: ft.Page, app, notification_panel=None):
 		super().__init__()
 		self.page = page
 		self.app = app
+		self.notification_panel = notification_panel
 		
 		# Repositories & Services
 		self.invoice_repo = InvoiceRepository()
@@ -94,14 +95,50 @@ class MainView(ft.Column):
 			controls=[],
 			spacing=AppSpacing.MD,
 			)
-		
+
+		# Create reusable dialogs
+		self.current_invoice_to_delete = None
+		self.delete_dialog = ft.AlertDialog(
+			modal=True,
+			title=ft.Text("Potwierdzenie", weight=ft.FontWeight.BOLD),
+			content=ft.Text(""),
+			actions=[
+				ft.TextButton(
+					"Anuluj",
+					on_click=self.cancel_delete
+				),
+				ft.TextButton(
+					"Usuń",
+					on_click=self.confirm_delete,
+					style=ft.ButtonStyle(color=AppColors.ERROR)
+				),
+			],
+			actions_alignment=ft.MainAxisAlignment.END,
+		)
+
+		self.info_dialog = ft.AlertDialog(
+			modal=True,
+			title=ft.Text("", weight=ft.FontWeight.BOLD),
+			content=ft.Text(""),
+			actions=[
+				ft.TextButton(
+					"OK",
+					on_click=self.close_info_dialog
+				)
+			],
+			actions_alignment=ft.MainAxisAlignment.END,
+		)
+
+		# Add dialogs to page overlay
+		self.page.overlay.extend([self.delete_dialog, self.info_dialog])
+
 		# Dodaj do widoku
 		self.controls = [
 			header,
 			ft.Divider(height=1, color=AppColors.DIVIDER),
-			self.table_container,
-			ft.Divider(height=1, color=AppColors.DIVIDER),
 			self.stats_row,
+			ft.Divider(height=1, color=AppColors.DIVIDER),
+			self.table_container,
 			]
 	
 	def load_invoices(self):
@@ -208,8 +245,8 @@ class MainView(ft.Column):
 			# Liczba faktur: opłacone / wszystkie
 			stat_cards.append(
 				self.create_stat_card(
-					"Faktury",
-					f"{stats['paid_invoices']} / {stats['total_invoices']}",
+					"Faktury opłacone",
+					f"{stats['paid_invoices']} z {stats['total_invoices']}",
 					AppIcons.INFO,
 					AppColors.PRIMARY
 				)
@@ -241,7 +278,7 @@ class MainView(ft.Column):
 				# VAT 23% z całkowitej kwoty
 				stat_cards.append(
 					self.create_stat_card(
-						"VAT 23% (PLN)",
+						"Suma VAT 23% (PLN)",
 						f"{totals['total_vat']:.2f}",
 						ft.Icons.RECEIPT_LONG_ROUNDED,
 						AppColors.WARNING
@@ -253,7 +290,7 @@ class MainView(ft.Column):
 				# Opłacone
 				stat_cards.append(
 					self.create_stat_card(
-						f"Opłacone ({currency})",
+						f"Suma Opłaconych {currency})",
 						f"{data['paid']:.2f}",
 						ft.Icons.CHECK_CIRCLE_ROUNDED,
 						AppColors.SUCCESS
@@ -264,7 +301,7 @@ class MainView(ft.Column):
 				if data['unpaid'] > 0:
 					stat_cards.append(
 						self.create_stat_card(
-							f"Nieopłacone ({currency})",
+							f"Suma Nieopłaconych ({currency})",
 							f"{data['unpaid']:.2f}",
 							ft.Icons.PENDING_ROUNDED,
 							AppColors.WARNING
@@ -275,7 +312,7 @@ class MainView(ft.Column):
 				if data['overdue'] > 0:
 					stat_cards.append(
 						self.create_stat_card(
-							f"Po terminie ({currency})",
+							f"Suma załegłych ({currency})",
 							f"{data['overdue']:.2f}",
 							ft.Icons.ERROR_ROUNDED,
 							AppColors.ERROR
@@ -375,46 +412,56 @@ class MainView(ft.Column):
 		"""Edytuj fakturę"""
 		# Przejdź do widoku edycji
 		from gui.views.edit_view import EditView
-		edit_view = EditView(self.page, self.app, invoice)
+		edit_view = EditView(self.page, self.app, invoice, self.notification_panel)
 		self.app.content_column.controls.clear()
 		self.app.content_column.controls.append(edit_view)
 		self.page.update()
 	
 	def delete_invoice(self, invoice: Invoice):
 		"""Usuń fakturę"""
-		
-		def confirm_delete(e):
-			try:
-				self.invoice_repo.delete(invoice.id)
-				dialog.open = False
+		# Store the invoice to delete
+		self.current_invoice_to_delete = invoice
+
+		# Update dialog content
+		self.delete_dialog.content = ft.Text(f"Czy na pewno usunąć fakturę {invoice.invoice_number}?")
+
+		# Open dialog
+		self.delete_dialog.open = True
+		self.page.update()
+
+	def cancel_delete(self, e):
+		"""Cancel delete dialog"""
+		self.delete_dialog.open = False
+		self.page.update()
+		self.current_invoice_to_delete = None
+
+	def confirm_delete(self, e):
+		"""Confirm and execute delete"""
+		try:
+			if self.current_invoice_to_delete:
+				invoice_number = self.current_invoice_to_delete.invoice_number
+				self.invoice_repo.delete(self.current_invoice_to_delete.id)
+
+				# Close dialog
+				self.delete_dialog.open = False
+				self.page.update()
+
+				# Reload invoices
 				self.load_invoices()
+
+				# Show success message
 				self.show_success(
 					"Usunięto",
-					f"Faktura {invoice.invoice_number} została usunięta"
-					)
-			except Exception as ex:
-				self.show_error("Błąd", str(ex))
-		
-		dialog = ft.AlertDialog(
-			title=ft.Text("Potwierdzenie", weight=ft.FontWeight.BOLD),
-			content=ft.Text(
-				f"Czy na pewno usunąć fakturę {invoice.invoice_number}?"
-				),
-			actions=[
-				ft.TextButton(
-					"Anuluj", on_click=lambda e: self.close_dialog(dialog)
-					),
-				ft.TextButton(
-					"Usuń",
-					on_click=confirm_delete,
-					style=ft.ButtonStyle(color=AppColors.ERROR)
-					),
-				],
-			)
-		
-		self.page.dialog = dialog
-		dialog.open = True
-		self.page.update()
+					f"Faktura {invoice_number} została usunięta"
+				)
+
+				self.current_invoice_to_delete = None
+		except Exception as ex:
+			# Close dialog on error
+			self.delete_dialog.open = False
+			self.page.update()
+			self.show_error("Błąd", str(ex))
+			self.current_invoice_to_delete = None
 	
 	def export_excel(self, e):
 		"""Eksport do Excel"""
@@ -482,40 +529,31 @@ class MainView(ft.Column):
 	
 	def show_success(self, title: str, message: str):
 		"""Pokaż sukces"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.SUCCESS,
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"success"
 			)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
-	
+
 	def show_error(self, title: str, message: str):
 		"""Pokaż błąd"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.ERROR,
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"error"
 			)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
-	
+
 	def show_info(self, title: str, message: str):
 		"""Pokaż info"""
-		dialog = ft.AlertDialog(
-			title=ft.Text(title, weight=ft.FontWeight.BOLD),
-			content=ft.Text(message),
-			actions=[
-				ft.TextButton(
-					"OK", on_click=lambda e: self.close_dialog(dialog)
-					)
-				],
-			)
-		self.page.dialog = dialog
-		dialog.open = True
+		# Update dialog content
+		self.info_dialog.title = ft.Text(title, weight=ft.FontWeight.BOLD)
+		self.info_dialog.content = ft.Text(message)
+
+		# Open dialog
+		self.info_dialog.open = True
 		self.page.update()
-	
-	def close_dialog(self, dialog):
-		"""Zamknij dialog"""
-		dialog.open = False
+
+	def close_info_dialog(self, e):
+		"""Close info dialog"""
+		self.info_dialog.open = False
 		self.page.update()
