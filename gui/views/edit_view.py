@@ -12,19 +12,20 @@ from gui.theme import AppColors, AppIcons, AppSpacing, AppTypography, AppStyles
 
 class EditView(ft.Column):
 	"""Widok edycji faktury"""
-	
-	def __init__(self, page: ft.Page, app, invoice: Invoice):
+
+	def __init__(self, page: ft.Page, app, invoice: Invoice, notification_panel=None):
 		super().__init__()
 		self.page = page
 		self.app = app
 		self.invoice = invoice
 		self.original_invoice = Invoice(**invoice.__dict__)  # Kopia
-		
+		self.notification_panel = notification_panel
+
 		# Services
 		self.invoice_repo = InvoiceRepository()
 		self.audit_repo = AuditRepository()
 		self.validation_service = ValidationService()
-		
+
 		# Style
 		self.spacing = AppSpacing.LG
 		self.expand = True
@@ -272,20 +273,16 @@ class EditView(ft.Column):
 	
 	def show_success(self, title: str, message: str):
 		"""Pokaż sukces"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.SUCCESS,
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"success"
 			)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
-	
+
 	def show_error(self, title: str, message: str):
 		"""Pokaż błąd"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.ERROR,
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"error"
 			)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()

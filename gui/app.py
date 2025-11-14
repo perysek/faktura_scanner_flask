@@ -1,11 +1,13 @@
 """
 Główna aplikacja Flet z routing i layout
 """
+
 import flet as ft
 from config.settings import APP_TITLE, APP_WIDTH, APP_HEIGHT
 from config.database import initialize_database
 from gui.theme import AppColors, AppStyles, AppSpacing, AppTypography
 from gui.components.navigation_rail import AppNavigationRail
+from gui.components.notification_panel import NotificationPanel
 
 # Views (zaimportujemy po utworzeniu)
 from gui.views.main_view import MainView
@@ -54,7 +56,23 @@ class FakturaScannerApp:
 		"""Zbuduj główny interfejs"""
 		# Navigation Rail (lewy panel)
 		self.nav_rail = AppNavigationRail(on_change=self.on_nav_change)
-		
+
+		# Notification Panel (bottom of nav rail)
+		self.notification_panel = NotificationPanel()
+
+		# Left panel: Navigation Rail + Notification Panel
+		left_panel = ft.Column(
+			controls=[
+				ft.Container(
+					content=self.nav_rail,
+					expand=True,
+				),
+				self.notification_panel,
+			],
+			spacing=0,
+			expand=True,
+		)
+
 		# Content area (prawa strona) - with scrolling
 		self.content_column = ft.Column(
 			controls=[],
@@ -68,16 +86,17 @@ class FakturaScannerApp:
 			bgcolor=AppColors.BACKGROUND,
 			padding=AppSpacing.MD,
 			)
-		
+
 		# Layout: Navigation | Content
 		main_layout = ft.Row(
 			controls=[
-				# Lewy panel
+				# Lewy panel (Navigation + Notifications)
 				ft.Container(
-					content=self.nav_rail,
+					content=left_panel,
 					bgcolor="#F5F5F5",  # Light grey background
 					border=ft.border.all(1, "#BDBDBD"),  # Dark grey border, no radius
-					border_radius=0,alignment=ft.Alignment(x=0,y=0)
+					border_radius=0,
+					alignment=ft.Alignment(x=0,y=0)
 					),
 
 				# Główna treść
@@ -143,7 +162,7 @@ class FakturaScannerApp:
 				),
 			bgcolor=AppColors.SURFACE,
 			padding=AppSpacing.MD,
-			height=64,
+			height=56,
 			)
 	
 	def on_nav_change(self, e):
@@ -154,11 +173,11 @@ class FakturaScannerApp:
 		"""Załaduj widok na podstawie indeksu"""
 		# Mapa indeksów → views
 		views = {
-			0: MainView(self.page, self),
-			1: UploadView(self.page, self),
+			0: MainView(self.page, self, self.notification_panel),
+			1: UploadView(self.page, self, self.notification_panel),
 			2: self.create_export_view(),  # Uproszczony view
-			3: HistoryView(self.page, self),
-			4: EmailSettingsView(self.page, self),
+			3: HistoryView(self.page, self, self.notification_panel),
+			4: EmailSettingsView(self.page, self, self.notification_panel),
 			}
 
 		view = views.get(index)
@@ -200,12 +219,12 @@ class FakturaScannerApp:
 				],
 			)
 		self.page.dialog = dialog
-		dialog.open = True
+		self.page.dialog.open = True
 		self.page.update()
 	
 	def close_dialog(self, dialog):
 		"""Zamknij dialog"""
-		dialog.open = False
+		self.page.dialog.open = False
 		self.page.update()
 	
 	def refresh_main_view(self):

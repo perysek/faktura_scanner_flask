@@ -9,11 +9,12 @@ from gui.theme import AppColors, AppSpacing, AppTypography, AppStyles, AppIcons
 
 class HistoryView(ft.Column):
 	"""Widok historii zmian"""
-	
-	def __init__(self, page: ft.Page, app):
+
+	def __init__(self, page: ft.Page, app, notification_panel=None):
 		super().__init__()
 		self.page = page
 		self.app = app
+		self.notification_panel = notification_panel
 		
 		# Repositories
 		self.invoice_repo = InvoiceRepository()

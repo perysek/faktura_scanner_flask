@@ -15,15 +15,17 @@ from services.validation_service import ValidationService
 from services.duplicate_detection_service import DuplicateDetectionService
 from database.models import Invoice
 from gui.theme import AppColors, AppIcons, AppSpacing, AppTypography, AppStyles
+from gui.components.processing_results_table import ProcessingResultsTable
 
 
 class UploadView(ft.Column):
 	"""Widok uploadu PDF i przetwarzania"""
-	
-	def __init__(self, page: ft.Page, app):
+
+	def __init__(self, page: ft.Page, app, notification_panel=None):
 		super().__init__()
 		self.page = page
 		self.app = app
+		self.notification_panel = notification_panel
 		
 		# Services & Repositories
 		self.invoice_repo = InvoiceRepository()
@@ -37,6 +39,47 @@ class UploadView(ft.Column):
 		self.processed_invoices: List[
 			tuple[Invoice, dict, str]] = []  # (invoice, validation, raw_text)
 		self.is_processing = False
+
+		# Reusable dialogs - create them first before build_ui
+		self.ocr_dialog = ft.AlertDialog(
+			modal=True,
+			title=ft.Text("Surowy tekst OCR", weight=ft.FontWeight.BOLD),
+			content=ft.Container(
+				content=ft.Text(
+					"",
+					size=12,
+					selectable=True,
+				),
+				width=600,
+				height=400,
+				padding=AppSpacing.MD,
+				border=ft.border.all(1, AppColors.BORDER),
+				border_radius=8,
+			),
+			actions=[
+				ft.TextButton(
+					"Zamknij",
+					on_click=self.close_ocr_dialog
+				)
+			],
+			actions_alignment=ft.MainAxisAlignment.END,
+		)
+
+		self.info_dialog = ft.AlertDialog(
+			modal=True,
+			title=ft.Text("", weight=ft.FontWeight.BOLD),
+			content=ft.Text(""),
+			actions=[
+				ft.TextButton(
+					"OK",
+					on_click=self.close_info_dialog
+				)
+			],
+			actions_alignment=ft.MainAxisAlignment.END,
+		)
+
+		# Add dialogs to page overlay
+		self.page.overlay.extend([self.ocr_dialog, self.info_dialog])
 		
 		# Style
 		self.spacing = AppSpacing.LG
@@ -58,12 +101,64 @@ class UploadView(ft.Column):
 					),
 				],
 			)
-		
+
 		# File picker (hidden)
 		self.file_picker = ft.FilePicker(on_result=self.on_files_selected)
 		self.page.overlay.append(self.file_picker)
-		
-		# Dropzone / Upload area
+
+		# Progress controls (created before upload_area so they can be referenced)
+		self.progress_counter = ft.Text(
+			"Invoices processed: 0/0",
+			size=13,
+			weight=ft.FontWeight.BOLD,
+			color=AppColors.PRIMARY,
+			)
+
+		self.progress_bar = ft.ProgressBar(
+			value=0,
+			width=300,
+			height=8,
+			color=AppColors.PRIMARY,
+			bgcolor="white",
+			)
+
+		# Current file being processed
+		self.progress_current_file = ft.Text(
+			"",
+			size=11,
+			weight=ft.FontWeight.W_500,
+			color=AppColors.TEXT_PRIMARY,
+			max_lines=1,
+			overflow=ft.TextOverflow.ELLIPSIS,
+			)
+
+		# Detailed status (e.g., "Konwersja PDF", "Ekstrakcja danych")
+		self.progress_status = ft.Text(
+			"",
+			size=10,
+			color=AppColors.TEXT_SECONDARY,
+			italic=True,
+			)
+
+		self.progress_container = ft.Container(
+			content=ft.Column(
+				controls=[
+					self.progress_counter,
+					self.progress_bar,
+					self.progress_current_file,
+					self.progress_status,
+				],
+				spacing=4,
+				tight=True,
+			),
+			visible=False,
+			padding=ft.padding.all(AppSpacing.SM),
+			bgcolor=AppColors.SURFACE_VARIANT,
+			border_radius=6,
+			width=320,
+		)
+
+		# Dropzone / Upload area (now progress_container exists)
 		self.upload_area = self.create_upload_area()
 		
 		# Lista wybranych plików
@@ -95,55 +190,19 @@ class UploadView(ft.Column):
 			disabled=True,
 			)
 
-		# Progress controls
-		self.progress_counter = ft.Text(
-			"Invoices processed: 0/0",
-			size=AppTypography.BODY,
-			weight=ft.FontWeight.BOLD,
-			color=AppColors.PRIMARY,
-			)
-
-		self.progress_bar = ft.ProgressBar(
-			value=0,
-			width=300,
-			color=AppColors.PRIMARY,
-			bgcolor=AppColors.SURFACE_VARIANT,
-			)
-
-		self.progress_status = ft.Text(
-			"",
-			size=AppTypography.LABEL,
-			color=AppColors.TEXT_SECONDARY,
-			)
-
-		self.progress_container = ft.Container(
-			content=ft.Column(
-				controls=[
-					self.progress_counter,
-					self.progress_bar,
-					self.progress_status,
-					],
-				spacing=AppSpacing.XS,
-				),
-			visible=False,
-			padding=AppSpacing.SM,
-			)
-
 		actions_row = ft.Row(
 			controls=[
 				self.process_button,
 				self.clear_button,
-				ft.Container(expand=True),
-				self.progress_container,
 				],
 			spacing=AppSpacing.SM,
-			alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
 			)
 		
 		# Wyniki przetwarzania
 		self.results_container = ft.Container(
 			content=None,
 			visible=False,
+			expand=True,
 			)
 		
 		# Dodaj do widoku
@@ -198,9 +257,13 @@ class UploadView(ft.Column):
 								on_click=self.import_from_email,
 								**AppStyles.button_secondary()
 								),
+							ft.Container(width=AppSpacing.LG),
+							# Progress controls on the right
+							self.progress_container,
 							],
 						spacing=AppSpacing.SM,
 						alignment=ft.MainAxisAlignment.CENTER,
+						wrap=False,
 						),
 					],
 				horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -341,9 +404,10 @@ class UploadView(ft.Column):
 
 			# Show progress
 			self.progress_container.visible = True
-			self.progress_counter.value = "Connecting to email server..."
+			self.progress_counter.value = "Import z e-mail"
 			self.progress_bar.value = 0
-			self.progress_status.value = "Please wait..."
+			self.progress_current_file.value = "Łączenie z serwerem email..."
+			self.progress_status.value = "Proszę czekać..."
 			self.page.update()
 
 			# Connect to email
@@ -383,23 +447,36 @@ class UploadView(ft.Column):
 					pass
 
 			# Update progress
-			self.progress_counter.value = "Searching for PDFs in emails..."
+			self.progress_counter.value = "Import z e-mail"
 			self.progress_bar.value = 0.5
+			self.progress_current_file.value = "Wyszukiwanie PDF w wiadomościach..."
+			self.progress_status.value = f"Zakres dat: {settings.get('search_from_date', 'brak')} - {settings.get('search_to_date', 'brak')}"
 			self.page.update()
+
+			# Define progress callback
+			def email_progress_callback(current_file: str, status: str, progress: float = None):
+				"""Update progress UI during email import"""
+				self.progress_current_file.value = current_file
+				self.progress_status.value = status
+				if progress is not None:
+					self.progress_bar.value = progress
+				self.page.update()
 
 			# Fetch PDFs
 			pdf_files = email_service.fetch_pdf_attachments(
 				from_date=from_date,
-				to_date=to_date
+				to_date=to_date,
+				progress_callback=email_progress_callback
 			)
 
 			# Disconnect
 			email_service.disconnect()
 
 			# Update progress
-			self.progress_counter.value = f"Found {len(pdf_files)} PDF files"
+			self.progress_counter.value = "Import z e-mail"
 			self.progress_bar.value = 1.0
-			self.progress_status.value = "Import complete!"
+			self.progress_current_file.value = f"✅ Znaleziono {len(pdf_files)} plików PDF"
+			self.progress_status.value = "Import zakończony pomyślnie!"
 			self.page.update()
 
 			# Hide progress after a moment
@@ -452,6 +529,7 @@ class UploadView(ft.Column):
 		self.progress_container.visible = True
 		self.progress_counter.value = f"Invoices processed: 0/{len(self.selected_files)}"
 		self.progress_bar.value = 0
+		self.progress_current_file.value = ""
 		self.progress_status.value = "Inicjalizacja..."
 		self.page.update()
 
@@ -462,10 +540,11 @@ class UploadView(ft.Column):
 			filename = Path(file_path).name
 
 			try:
-				# Update progress: Konwersja PDF
-				self.progress_counter.value = f"Invoices processed: {i}/{len(self.selected_files)}"
-				self.progress_bar.value = i / len(self.selected_files)
-				self.progress_status.value = f"Konwersja PDF: {filename}"
+				# Update progress counter and current file
+				self.progress_counter.value = f"Invoices processed: {i-1}/{len(self.selected_files)}"
+				self.progress_bar.value = (i - 1) / len(self.selected_files)
+				self.progress_current_file.value = f"📄 {filename}"
+				self.progress_status.value = "Konwersja PDF..."
 				self.page.update()
 
 				# Check if file is already in TEMP_DIR (from email import)
@@ -482,7 +561,7 @@ class UploadView(ft.Column):
 					print(f"  Copied to temp: {filename}")
 
 				# OCR + Ekstrakcja
-				self.progress_status.value = f"Ekstrakcja danych: {filename}"
+				self.progress_status.value = "Ekstrakcja danych (OCR)..."
 				self.page.update()
 
 				invoice, raw_text = self.ocr_service.process_invoice_pdf(
@@ -494,11 +573,11 @@ class UploadView(ft.Column):
 				invoice.pdf_path = str(temp_pdf_path)
 
 				# Walidacja
-				self.progress_status.value = f"Walidacja danych: {filename}"
+				self.progress_status.value = "Walidacja i sprawdzanie duplikatów..."
 				self.page.update()
 				
 				validation = self.validation_service.validate_invoice(invoice)
-				
+
 				# Sprawdź duplikaty
 				duplicate_id = self.duplicate_service.check_duplicate(invoice)
 				if duplicate_id:
@@ -506,12 +585,19 @@ class UploadView(ft.Column):
 					validation['warnings'].insert(
 						0, f"⚠️ Możliwy duplikat faktury (ID: {duplicate_id})"
 						)
-				
+
+				# Update completion for this file
+				self.progress_status.value = f"✓ Zakończono ({invoice.seller_name})"
+				self.page.update()
+
 				# Zapisz wyniki
 				self.processed_invoices.append((invoice, validation, raw_text))
 			
 			except Exception as ex:
 				# Błąd przetwarzania
+				self.progress_status.value = f"❌ Błąd: {str(ex)[:50]}..."
+				self.page.update()
+
 				error_invoice = Invoice(
 					seller_name=f"BŁĄD: {filename}",
 					invoice_number="ERROR",
@@ -527,264 +613,184 @@ class UploadView(ft.Column):
 		# Zakończono
 		self.progress_counter.value = f"Invoices processed: {len(self.selected_files)}/{len(self.selected_files)}"
 		self.progress_bar.value = 1.0
-		self.progress_status.value = "Zakończono!"
+		self.progress_current_file.value = f"✅ Przetworzono {len(self.selected_files)} faktur"
+		self.progress_status.value = "Zakończono! Sprawdź wyniki poniżej."
 		self.progress_counter.color = AppColors.SUCCESS
+		self.progress_current_file.color = AppColors.SUCCESS
 		self.progress_status.color = AppColors.SUCCESS
 		self.page.update()
 
 		self.is_processing = False
 
-		# Ukryj progress controls po chwili
-		import time
-		time.sleep(1)
-		self.progress_container.visible = False
-		self.page.update()
-
+		# Don't hide progress controls - they will be shown in results header
 		# Pokaż wyniki
 		self.show_results()
 	
 	def show_results(self):
-		"""Pokaż wyniki przetwarzania"""
-		results_column = ft.Column(
-			controls=[],
-			spacing=AppSpacing.MD,
-			scroll=ft.ScrollMode.AUTO,
-			)
-		
-		# Header
-		results_column.controls.append(
-			ft.Row(
-				controls=[
-					ft.Text(
-						"Wyniki przetwarzania",
-						size=AppTypography.TITLE,
-						weight=ft.FontWeight.BOLD,
+		"""Pokaż wyniki przetwarzania w kompaktowej tabeli"""
+		# Calculate statistics
+		total_count = len(self.processed_invoices)
+		error_count = sum(1 for _, val, _ in self.processed_invoices if len(val['errors']) > 0)
+		warning_count = sum(1 for _, val, _ in self.processed_invoices if len(val['warnings']) > 0 and len(val['errors']) == 0)
+		ok_count = total_count - error_count - warning_count
+
+		# Summary statistics row
+		stats_row = ft.Row(
+			controls=[
+				ft.Container(
+					content=ft.Row(
+						controls=[
+							ft.Icon(AppIcons.CHECK, size=16, color="white" if ok_count > 0 else AppColors.SUCCESS),
+							ft.Text(
+								f"OK: {ok_count}",
+								size=11,
+								weight=ft.FontWeight.W_500,
+								color="white" if ok_count > 0 else AppColors.TEXT_PRIMARY,
+							),
+						],
+						spacing=4,
+						tight=True,
+					),
+					bgcolor=AppColors.SUCCESS if ok_count > 0 else AppColors.SURFACE_VARIANT,
+					padding=ft.padding.symmetric(horizontal=8, vertical=4),
+					border_radius=4,
+				),
+				ft.Container(
+					content=ft.Row(
+						controls=[
+							ft.Icon(AppIcons.WARNING, size=16, color="white" if warning_count > 0 else AppColors.WARNING),
+							ft.Text(
+								f"Ostrzeżenia: {warning_count}",
+								size=11,
+								weight=ft.FontWeight.W_500,
+								color="white" if warning_count > 0 else AppColors.TEXT_PRIMARY,
+							),
+						],
+						spacing=4,
+						tight=True,
+					),
+					bgcolor=AppColors.WARNING if warning_count > 0 else AppColors.SURFACE_VARIANT,
+					padding=ft.padding.symmetric(horizontal=8, vertical=4),
+					border_radius=4,
+				),
+				ft.Container(
+					content=ft.Row(
+						controls=[
+							ft.Icon(AppIcons.ERROR, size=16, color="white" if error_count > 0 else AppColors.ERROR),
+							ft.Text(
+								f"Błędy: {error_count}",
+								size=11,
+								weight=ft.FontWeight.W_500,
+								color="white" if error_count > 0 else AppColors.TEXT_PRIMARY,
+							),
+						],
+						spacing=4,
+						tight=True,
+					),
+					bgcolor=AppColors.ERROR if error_count > 0 else AppColors.SURFACE_VARIANT,
+					padding=ft.padding.symmetric(horizontal=8, vertical=4),
+					border_radius=4,
+				),
+			],
+			spacing=AppSpacing.SM,
+		)
+
+		# Header with stats and save all button
+		header_section = ft.Column(
+			controls=[
+				# Title and stats row
+				ft.Row(
+					controls=[
+						ft.Text(
+							f"Wyniki przetwarzania ({total_count} faktur)",
+							size=AppTypography.TITLE,
+							weight=ft.FontWeight.BOLD,
+							color=AppColors.TEXT_PRIMARY,
 						),
-					ft.Container(expand=True),
-					ft.ElevatedButton(
-						"Zapisz wszystkie",
-						icon=AppIcons.SAVE,
-						on_click=self.save_all_invoices,
-						**AppStyles.button_primary()
+						ft.Container(expand=True),
+						stats_row,
+						ft.ElevatedButton(
+							f"Zapisz wszystkie ({ok_count + warning_count})",
+							icon=AppIcons.SAVE,
+							on_click=self.save_all_invoices,
+							disabled=ok_count + warning_count == 0,
+							**AppStyles.button_primary()
 						),
 					],
-				)
-			)
-		
-		# Karty wyników
-		for i, (invoice, validation, raw_text) in enumerate(
-				self.processed_invoices
-				):
-			card = self.create_result_card(i, invoice, validation, raw_text)
-			results_column.controls.append(card)
-		
-		self.results_container.content = results_column
+					spacing=AppSpacing.SM,
+					alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+				),
+				ft.Divider(height=1, color=AppColors.DIVIDER),
+			],
+			spacing=AppSpacing.SM,
+		)
+
+		# Create compact results table
+		results_table = ProcessingResultsTable(
+			processed_invoices=self.processed_invoices,
+			on_delete=self.remove_processed_invoice,
+			on_save=self.save_single_invoice,
+			on_view_ocr=self.show_ocr_text,
+		)
+
+		# Wrap table in scrollable container
+		table_container = ft.ListView(
+			controls=[results_table],
+			expand=True,
+			spacing=0,
+			padding=AppSpacing.SM,
+		)
+
+		# Combine header and table
+		results_content = ft.Column(
+			controls=[
+				header_section,
+				table_container,
+			],
+			spacing=0,
+			expand=True,
+		)
+
+		self.results_container.content = results_content
 		self.results_container.visible = True
-		
+		self.results_container.expand = True
+
 		# Ukryj upload area
 		self.upload_area.visible = False
 		self.files_container.visible = False
-		
+
 		self.page.update()
 	
-	def create_result_card(
-			self, index: int, invoice: Invoice, validation: dict, raw_text: str
-			) -> ft.Container:
-		"""Stwórz kartę wyniku dla faktury"""
-		# Status color
-		has_errors = len(validation['errors']) > 0
-		status_color = AppColors.ERROR if has_errors else (
-			AppColors.WARNING if len(
-				validation['warnings']
-				) > 0 else AppColors.SUCCESS
-		)
-		
-		# Status icon
-		status_icon = AppIcons.ERROR if has_errors else (
-			AppIcons.WARNING if len(
-				validation['warnings']
-				) > 0 else AppIcons.CHECK
-		)
-		
-		# Validation messages
-		messages = []
-		
-		for error in validation['errors']:
-			messages.append(
-				ft.Row(
-					controls=[
-						ft.Icon(AppIcons.ERROR, size=16, color=AppColors.ERROR),
-						ft.Text(error, size=12, color=AppColors.ERROR),
-						],
-					spacing=AppSpacing.XS,
-					)
-				)
-		
-		for warning in validation['warnings']:
-			messages.append(
-				ft.Row(
-					controls=[
-						ft.Icon(
-							AppIcons.WARNING, size=16, color=AppColors.WARNING
-							),
-						ft.Text(warning, size=12, color=AppColors.WARNING),
-						],
-					spacing=AppSpacing.XS,
-					)
-				)
-		
-		# Główne dane
-		data_grid = ft.Column(
-			controls=[
-				self.create_data_row("Sprzedawca:", invoice.seller_name),
-				self.create_data_row("Nr Faktury:", invoice.invoice_number),
-				self.create_data_row(
-					"Data:", invoice.invoice_date.strftime(
-						'%Y-%m-%d'
-						) if invoice.invoice_date else "-"
-					),
-				self.create_data_row(
-					"Kwota:", f"{invoice.amount:.2f} {invoice.currency}"
-					),
-				self.create_data_row("NIP:", invoice.seller_nip or "-"),
-				self.create_data_row("Konto:", invoice.bank_account or "-"),
-				self.create_data_row(
-					"Termin płatności:", invoice.payment_due_date.strftime(
-						'%Y-%m-%d'
-						) if invoice.payment_due_date else "-"
-					),
-				],
-			spacing=AppSpacing.XS,
-			)
-		
-		# Przyciski
-		actions = ft.Row(
-			controls=[
-				ft.TextButton(
-					"Edytuj",
-					icon=AppIcons.EDIT,
-					on_click=lambda e, idx=index: self.edit_before_save(idx),
-					),
-				ft.TextButton(
-					"Pokaż tekst OCR",
-					icon=AppIcons.VIEW,
-					on_click=lambda e, text=raw_text: self.show_ocr_text(text),
-					),
-				ft.Container(expand=True),
-				ft.ElevatedButton(
-					"Zapisz",
-					icon=AppIcons.SAVE,
-					on_click=lambda e, idx=index: self.save_single_invoice(idx),
-					disabled=has_errors,
-					**AppStyles.button_primary()
-					) if not has_errors else ft.Text(
-					"Nie można zapisać (błędy)",
-					color=AppColors.ERROR,
-					size=12,
-					),
-				],
-			alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-			)
-		
-		# Use card styles but with custom colored border based on status
-		card_styles = AppStyles.card()
-		card_styles['border'] = ft.border.all(2, status_color)
-
-		return ft.Container(
-			content=ft.Column(
-				controls=[
-					# Header z statusem
-					ft.Row(
-						controls=[
-							ft.Icon(status_icon, color=status_color, size=24),
-							ft.Text(
-								f"Faktura {index + 1}/{len(self.processed_invoices)}",
-								size=AppTypography.BODY_LARGE,
-								weight=ft.FontWeight.BOLD,
-								),
-							ft.Container(
-								content=ft.Text(
-									f"OCR: {invoice.ocr_confidence:.1f}%" if invoice.ocr_confidence else "OCR: N/A",
-									size=12,
-									color="white",
-									),
-								bgcolor=AppColors.INFO,
-								padding=ft.padding.symmetric(
-									horizontal=8, vertical=4
-									),
-								border_radius=4,
-								),
-							],
-						spacing=AppSpacing.SM,
-						),
-
-					ft.Divider(height=1, color=AppColors.DIVIDER),
-
-					# Dane
-					data_grid,
-
-					# Walidacja
-					ft.Column(
-						controls=messages, spacing=AppSpacing.XS
-						) if messages else ft.Container(),
-
-					ft.Divider(height=1, color=AppColors.DIVIDER),
-
-					# Akcje
-					actions,
-					],
-				spacing=AppSpacing.SM,
-				),
-			**card_styles,
-			)
-	
-	def create_data_row(self, label: str, value: str) -> ft.Row:
-		"""Stwórz wiersz danych"""
-		return ft.Row(
-			controls=[
-				ft.Text(
-					label, size=12, weight=ft.FontWeight.BOLD,
-					color=AppColors.TEXT_SECONDARY, width=150
-					),
-				ft.Text(value, size=14, color=AppColors.TEXT_PRIMARY),
-				],
-			spacing=AppSpacing.SM,
-			)
-	
-	def edit_before_save(self, index: int):
-		"""Edytuj fakturę przed zapisem"""
+	def remove_processed_invoice(self, index: int):
+		"""Usuń fakturę z listy przetworzonych"""
 		if 0 <= index < len(self.processed_invoices):
-			invoice, validation, raw_text = self.processed_invoices[index]
-			
-			# TODO: Otwórz dialog edycji inline lub przejdź do EditView
-			self.show_info(
-				"Edycja", "Funkcja edycji będzie dostępna w następnym kroku"
-				)
+			self.processed_invoices.pop(index)
+
+			# Odśwież widok
+			if not self.processed_invoices:
+				# Wszystkie usunięte - wróć do głównego widoku
+				self.results_container.visible = False
+				self.upload_area.visible = True
+				self.page.update()
+			else:
+				self.show_results()
 	
 	def show_ocr_text(self, text: str):
 		"""Pokaż surowy tekst OCR"""
-		dialog = ft.AlertDialog(
-			title=ft.Text("Surowy tekst OCR", weight=ft.FontWeight.BOLD),
-			content=ft.Container(
-				content=ft.Text(
-					text,
-					size=12,
-					selectable=True,
-					),
-				width=600,
-				height=400,
-				padding=AppSpacing.MD,
-				border=ft.border.all(1, AppColors.BORDER),
-				border_radius=8,
-				),
-			actions=[
-				ft.TextButton(
-					"Zamknij", on_click=lambda e: self.close_dialog(dialog)
-					)
-				],
-			)
-		self.page.dialog = dialog
-		dialog.open = True
+		# Update content with current text
+		self.ocr_dialog.content.content = ft.Text(
+			text,
+			size=12,
+			selectable=True,
+		)
+
+		# Open dialog
+		self.ocr_dialog.open = True
+		self.page.update()
+
+	def close_ocr_dialog(self, e):
+		"""Close OCR dialog"""
+		self.ocr_dialog.open = False
 		self.page.update()
 	
 	def save_single_invoice(self, index: int):
@@ -797,7 +803,7 @@ class UploadView(ft.Column):
 				self.show_success(
 					"Zapisano",
 					f"Faktura {invoice.invoice_number} zapisana (ID: {invoice_id})"
-					)
+				)
 
 				# Usuń z listy
 				self.processed_invoices.pop(index)
@@ -807,6 +813,7 @@ class UploadView(ft.Column):
 					# Wszystkie zapisane - wróć do głównego widoku
 					self.app.refresh_main_view()
 				else:
+					# Odśwież tabelę wyników
 					self.show_results()
 
 			except Exception as ex:
@@ -863,40 +870,31 @@ class UploadView(ft.Column):
 	
 	def show_success(self, title: str, message: str):
 		"""Pokaż sukces"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.SUCCESS,
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"success"
 			)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
-	
+
 	def show_error(self, title: str, message: str):
 		"""Pokaż błąd"""
-		snackbar = ft.SnackBar(
-			content=ft.Text(f"{title}: {message}"),
-			bgcolor=AppColors.ERROR,
+		if self.notification_panel:
+			self.notification_panel.add_notification(
+				f"{title}: {message}",
+				"error"
 			)
-		self.page.snack_bar = snackbar
-		snackbar.open = True
-		self.page.update()
 	
 	def show_info(self, title: str, message: str):
 		"""Pokaż info"""
-		dialog = ft.AlertDialog(
-			title=ft.Text(title, weight=ft.FontWeight.BOLD),
-			content=ft.Text(message),
-			actions=[
-				ft.TextButton(
-					"OK", on_click=lambda e: self.close_dialog(dialog)
-					)
-				],
-			)
-		self.page.dialog = dialog
-		dialog.open = True
+		# Update dialog content
+		self.info_dialog.title = ft.Text(title, weight=ft.FontWeight.BOLD)
+		self.info_dialog.content = ft.Text(message)
+
+		# Open dialog
+		self.info_dialog.open = True
 		self.page.update()
-	
-	def close_dialog(self, dialog):
-		"""Zamknij dialog"""
-		dialog.open = False
+
+	def close_info_dialog(self, e):
+		"""Close info dialog"""
+		self.info_dialog.open = False
 		self.page.update()

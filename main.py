@@ -5,7 +5,6 @@ Entry point aplikacji
 import flet as ft
 from gui.app import create_app
 
-
 def main():
     """Główna funkcja uruchomieniowa"""
     ft.app(

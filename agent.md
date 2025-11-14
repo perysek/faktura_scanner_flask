@@ -138,6 +138,176 @@ PATTERNS = {
 - **IBAN:** Polish format `PL + 26 digits`, mod-97 algorithm
 - **Errors** block save, **warnings** allow save
 
+### **Flet Modal Dialogs & Snackbars:**
+
+**CRITICAL: Proper Dialog Pattern (Lesson Learned)**
+
+Flet dialogs MUST be implemented correctly or they won't display at all. Here's the working pattern:
+
+#### **✅ CORRECT Pattern:**
+```python
+class MyView(ft.Column):
+    def __init__(self, page: ft.Page):
+        super().__init__()
+        self.page = page
+
+        # 1. Create dialog instance variables (initialized as None)
+        self.delete_dialog = None
+        self.info_dialog = None
+        self.current_item_to_delete = None
+
+    def delete_item(self, item):
+        """Delete confirmation dialog"""
+        # Store item reference
+        self.current_item_to_delete = item
+
+        # 2. Create dialog once (lazy initialization)
+        if self.delete_dialog is None:
+            self.delete_dialog = ft.AlertDialog(
+                modal=True,  # REQUIRED for proper modal behavior
+                title=ft.Text("Confirmation", weight=ft.FontWeight.BOLD),
+                content=ft.Text(""),  # Will be updated dynamically
+                actions=[
+                    ft.TextButton("Cancel", on_click=self.cancel_delete),
+                    ft.TextButton("Delete", on_click=self.confirm_delete,
+                                style=ft.ButtonStyle(color=AppColors.ERROR)),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+
+        # 3. Update content dynamically
+        self.delete_dialog.content = ft.Text(f"Delete {item.name}?")
+
+        # 4. Open dialog (CRITICAL ORDER)
+        self.page.dialog = self.delete_dialog  # Assign to page.dialog
+        self.delete_dialog.open = True          # Set open = True
+        self.page.update()                      # Update page
+
+    def cancel_delete(self, e):
+        """Close dialog"""
+        self.delete_dialog.open = False
+        self.page.update()
+        self.current_item_to_delete = None
+
+    def confirm_delete(self, e):
+        """Execute delete and close dialog"""
+        if self.current_item_to_delete:
+            # Do deletion
+            self.repo.delete(self.current_item_to_delete.id)
+
+            # Close dialog
+            self.delete_dialog.open = False
+            self.page.update()
+
+            # Show success snackbar
+            self.show_success("Deleted", f"Item deleted successfully")
+
+            # Cleanup
+            self.current_item_to_delete = None
+```
+
+#### **✅ Snackbar Pattern:**
+**IMPORTANT**: Snackbars also require the same lazy initialization pattern as dialogs to work reliably.
+
+```python
+class MyView(ft.Column):
+    def __init__(self, page: ft.Page):
+        super().__init__()
+        self.page = page
+
+        # 1. Create snackbar instance variables (initialized as None)
+        self.success_snackbar = None
+        self.error_snackbar = None
+
+def show_success(self, title: str, message: str):
+    """Show success snackbar"""
+    # 2. Lazy initialization
+    if self.success_snackbar is None:
+        self.success_snackbar = ft.SnackBar(
+            content=ft.Text(""),
+            bgcolor=AppColors.SUCCESS,
+        )
+
+    # 3. Update content dynamically
+    self.success_snackbar.content = ft.Text(f"{title}: {message}")
+
+    # 4. Show snackbar
+    self.page.snack_bar = self.success_snackbar
+    self.success_snackbar.open = True
+    self.page.update()
+
+def show_error(self, title: str, message: str):
+    """Show error snackbar"""
+    # Lazy initialization
+    if self.error_snackbar is None:
+        self.error_snackbar = ft.SnackBar(
+            content=ft.Text(""),
+            bgcolor=AppColors.ERROR,
+        )
+
+    # Update content
+    self.error_snackbar.content = ft.Text(f"{title}: {message}")
+
+    # Show snackbar
+    self.page.snack_bar = self.error_snackbar
+    self.error_snackbar.open = True
+    self.page.update()
+```
+
+#### **❌ WRONG Patterns (Will NOT work):**
+```python
+# ❌ Creating dialog inline without storing reference
+dialog = ft.AlertDialog(...)
+self.page.dialog = dialog
+dialog.open = True
+self.page.update()
+# Problem: Dialog object gets garbage collected
+
+# ❌ Creating snackbar inline without storing reference
+snackbar = ft.SnackBar(content=ft.Text("..."), bgcolor=AppColors.SUCCESS)
+self.page.snack_bar = snackbar
+snackbar.open = True
+self.page.update()
+# Problem: Snackbar object gets garbage collected and won't display
+
+# ❌ Missing modal=True
+dialog = ft.AlertDialog(title=..., content=...)  # No modal=True
+# Problem: Dialog may not display properly or backdrop won't work
+
+# ❌ Using page.overlay.append() AND page.dialog
+self.page.overlay.append(dialog)  # Don't do this
+self.page.dialog = dialog          # Only use page.dialog
+# Problem: Creates duplicate modal backdrops
+
+# ❌ Wrong open pattern
+self.page.dialog.open = True  # Don't use page.dialog.open
+# Correct: dialog.open = True (use dialog object reference)
+
+# ❌ Not calling page.update()
+dialog.open = True  # Missing: self.page.update()
+# Problem: Dialog state change won't be reflected in UI
+```
+
+#### **Key Rules:**
+1. **Store dialogs AND snackbars as instance variables** (`self.dialog = None`, `self.success_snackbar = None`)
+2. **Use lazy initialization** (create on first use with `if self.dialog is None`)
+3. **Always include `modal=True`** in AlertDialog constructor
+4. **Update content dynamically** for reusable dialogs and snackbars
+5. **Three-step open (dialogs):** `page.dialog = dialog`, `dialog.open = True`, `page.update()`
+6. **Three-step open (snackbars):** `page.snack_bar = snackbar`, `snackbar.open = True`, `page.update()`
+7. **Two-step close:** `dialog.open = False`, `page.update()`
+8. **Never use `page.overlay.append()`** for AlertDialog (only for page.dialog)
+9. **Store state** if dialog needs to remember context (e.g., `self.current_item_to_delete`)
+
+#### **Why This Pattern?**
+- Flet dialogs and snackbars require persistent object references (can't be garbage collected)
+- `modal=True` enables proper backdrop and focus management for dialogs
+- `page.dialog` is the official way to display dialogs (not overlay)
+- `page.snack_bar` is the official way to display snackbars
+- Lazy initialization allows dynamic content updates while reusing same dialog/snackbar
+- Separate handler methods (cancel/confirm) keep code clean and testable
+- Without persistent references, UI elements may not appear at all
+
 ### **Database Schema:**
 ```sql
 invoices (id, seller_name, seller_nip, invoice_number UNIQUE, 
