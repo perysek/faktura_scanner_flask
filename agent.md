@@ -2,7 +2,7 @@
 
 ## 📌 Project Overview
 
-**FakturaScanner** is a local Python desktop application for OCR processing of Polish PDF invoices. It extracts structured data (seller, invoice number, date, amount, bank account, etc.) using Tesseract OCR and stores results in SQLite database.
+**FakturaScanner** is a local Python desktop application for OCR processing of Polish PDF invoices. It extracts structured data (seller, invoice number, date, amount, bank account, etc.) using Tesseract OCR and stores results in SQLite database. Features email integration for automatic PDF import from IMAP mailboxes.
 
 **Stack:**
 - Python 3.11+
@@ -10,6 +10,7 @@
 - Tesseract OCR + Polish language data
 - SQLite database
 - pdf2image, pytesseract, openpyxl
+- imaplib (email IMAP integration)
 
 **Target Users:** Single local user, no authentication required
 
@@ -36,7 +37,8 @@ faktura_scanner/
 │
 ├── config/                    # Configuration
 │   ├── settings.py            # App settings (paths, OCR params)
-│   └── database.py            # SQLite connection singleton
+│   ├── database.py            # SQLite connection singleton
+│   └── email_settings.py      # Email account settings (IMAP config)
 │
 ├── database/                  # Data layer
 │   ├── models.py              # Dataclass models (Invoice, AuditEntry)
@@ -51,7 +53,8 @@ faktura_scanner/
 │   ├── ocr_service.py         # Orchestrates PDF → text → Invoice
 │   ├── validation_service.py  # NIP, IBAN validation
 │   ├── duplicate_detection_service.py
-│   └── export_service.py      # Excel/CSV export
+│   ├── export_service.py      # Excel/CSV export
+│   └── email_service.py       # IMAP email integration for PDF download
 │
 ├── utils/                     # Helpers
 │   ├── pdf_processor.py       # PDF → images, Tesseract OCR
@@ -64,12 +67,15 @@ faktura_scanner/
     ├── components/
     │   ├── navigation_rail.py # Left sidebar navigation
     │   ├── invoice_table.py   # DataTable for invoices
-    │   └── progress_dialog.py # Processing progress modal
+    │   ├── progress_dialog.py # Processing progress modal
+    │   ├── notification_panel.py       # Bottom notification panel (last 3 notifications)
+    │   └── processing_results_table.py # Compact results table for processed invoices
     └── views/
-        ├── main_view.py       # Invoice list, search, export
-        ├── upload_view.py     # Multi-file PDF upload + sequential processing
+        ├── main_view.py       # Invoice list, search, export, PDF preview
+        ├── upload_view.py     # Multi-file PDF upload + email import + sequential processing
         ├── edit_view.py       # Invoice edit form
-        └── history_view.py    # Audit log viewer (WIP)
+        ├── email_settings_view.py # Email IMAP configuration view
+        └── history_view.py    # Audit log viewer
 ```
 
 ---
@@ -81,7 +87,7 @@ faktura_scanner/
 - **Font:** Roboto (Material Design default)
 - **Colors:** Light grays (#F5F7FA, #E8EDF2) + blue accents (#4472C4)
 - **Style:** Minimal, modern, card-based UI
-- **Responsiveness:** Min width 1000px, expandable
+- **Responsiveness:** Min width 1000px, expandable, app start in maximized window
 
 ### **Key Components:**
 - `AppStyles.card()` returns dict with `bgcolor`, `border_radius`, `padding=AppSpacing.MD`, `shadow` (BoxShadow)
@@ -90,30 +96,110 @@ faktura_scanner/
 - **Never duplicate `padding=` after `**AppStyles.card()`** unless overriding (add comment if so)
 - Use `AppColors`, `AppTypography`, `AppSpacing` constants from `gui/theme.py`
 
+### **Notification System:**
+- **NotificationPanel:** Fixed panel at bottom of navigation rail (260px width)
+- Shows last 3 notifications with icon, message, and timestamp (HH:MM:SS format)
+- 4 types: success (green), error (red), warning (orange), info (blue)
+- Clear all button to remove all notifications
+- Auto-limits to 3 most recent notifications
+- Usage in views: `self.notification_panel.add_notification(message, type)`
+
 ### **Code Style:**
 - **Type hints:** Use for function signatures
 - **Docstrings:** For classes and public methods
-- **Error handling:** Try-except with user-friendly Snackbars
+- **Error handling:** Try-except with user-friendly messages via notification panel
 - **Separation of concerns:** Views call services, services call repositories
+
+---
+
+## 🧭 Navigation Structure
+
+The application uses a left navigation rail with 5 main views:
+
+1. **LISTA FAKTUR** (Main View)
+   - Invoice table with search functionality
+   - Statistics cards (totals, VAT, by currency)
+   - Export to Excel/CSV
+   - Actions: View PDF, Edit, Delete
+   - Refresh button
+
+2. **IMPORT PDF** (Upload View)
+   - File picker for local PDFs
+   - Email import from IMAP mailbox
+   - File list with sizes
+   - Sequential processing with progress bar
+   - ProcessingResultsTable with validation results
+   - Individual or batch save
+
+3. **EKSPORT** (Export View)
+   - Currently placeholder (export functionality in Main View)
+   - Reserved for future batch export features
+
+4. **HISTORIA** (History View)
+   - Audit log viewer
+   - Shows field changes with old/new values
+   - Timestamps for all modifications
+
+5. **USTAWIENIA E-MAIL** (Email Settings View)
+   - IMAP server configuration
+   - Email address and password (or app-specific password)
+   - Port settings (default 993 for SSL)
+   - Date range for email search
+   - Test connection button
+   - Save configuration
 
 ---
 
 ## 🔧 Key Implementation Details
 
-### **OCR Pipeline (Variant A - Sequential Processing):**
+### **OCR Pipeline (Sequential Processing):**
 ```
-1. User selects multiple PDFs
-2. UploadView displays file list
+1. User selects multiple PDFs (via file picker OR email import)
+   - File picker: Select local PDF files
+   - Email import: Connect to IMAP, download PDF attachments from date range
+2. UploadView displays file list with file names and sizes
 3. User clicks "Przetwórz wszystkie"
-4. For each PDF (sequentially):
+4. For each PDF (sequentially with progress bar):
    a. Copy to temp/
    b. PDFProcessor: PDF → images → Tesseract OCR → raw text
    c. TextExtractor: raw text → regex patterns → structured data
    d. ValidationService: validate NIP, IBAN, required fields
    e. DuplicateService: check by invoice_number
-   f. Display result card (green=OK, yellow=warnings, red=errors)
-5. User reviews, edits if needed, saves all or individually
+   f. Add to processing results
+5. Display ProcessingResultsTable with:
+   - Status icons (green=OK, yellow=warnings, red=errors)
+   - Invoice data (seller, number, date, amount, NIP, due date)
+   - OCR confidence badge (color-coded: green≥80%, yellow≥60%, red<60%)
+   - Warnings/errors column with expandable details
+   - Action buttons: View OCR, Delete, Save (disabled if errors)
+6. User reviews, views raw OCR text if needed, saves individually or all at once
 ```
+
+### **Email Import Feature:**
+- IMAP integration via `EmailService` (services/email_service.py)
+- Configuration stored in `config/email_config.json` (via EmailSettings)
+- EmailSettingsView for managing connection settings
+- Supports date range filtering for email search
+- Downloads PDF attachments to TEMP_DIR
+- Progress updates during email processing
+- File handle management for Windows compatibility (delays + retries)
+
+### **ProcessingResultsTable Component:**
+- Compact DataTable showing processed invoices
+- Columns: Status, Sprzedawca, Nr Faktury, Data, Kwota, NIP, Termin, OCR, Ostrzeżenia, Akcje
+- Color-coded OCR confidence:
+  - Green badge (≥80%): High confidence
+  - Yellow badge (60-79%): Medium confidence
+  - Red badge (<60%): Low confidence
+- Warnings/Errors column:
+  - Shows first 2 warnings with ellipsis if more
+  - Error icon (red) for validation errors
+  - Warning icon (orange) for validation warnings
+- Action buttons:
+  - View OCR: Opens modal with raw OCR text
+  - Delete: Removes from processing queue
+  - Save: Saves to database (disabled if validation errors present)
+- Usage: `ProcessingResultsTable(processed_invoices, on_delete, on_save, on_view_ocr)`
 
 ### **Regex Patterns (Polish Invoices):**
 Located in `utils/text_extractor.py`:
@@ -310,15 +396,20 @@ dialog.open = True  # Missing: self.page.update()
 
 ### **Database Schema:**
 ```sql
-invoices (id, seller_name, seller_nip, invoice_number UNIQUE, 
-          invoice_date, bank_account, amount, currency, 
-          payment_due_date, pdf_path, ocr_confidence, 
-          is_duplicate, created_at, updated_at)
+invoices (id, seller_name, seller_nip, invoice_number UNIQUE,
+          invoice_date, bank_account, amount, currency,
+          payment_due_date, payment_term, status DEFAULT 'Nieopłacona',
+          pdf_path, ocr_confidence, is_duplicate,
+          created_at, updated_at)
 
 audit_log (id, invoice_id, field_name, old_value, new_value, changed_at)
 
 duplicate_detection (id, invoice_id, duplicate_of, similarity_score, detected_at)
 ```
+
+**New Fields:**
+- `payment_term`: TEXT - Payment terms (e.g., "7 dni", "14 dni")
+- `status`: TEXT - Payment status ("Nieopłacona", "Opłacona", "Przeterminowana")
 
 ---
 
@@ -352,6 +443,43 @@ print("=== EXTRACTED DATA ===")
 print(extracted_data)
 ```
 
+### **PDF Preview Feature:**
+- Located in `main_view.py::view_invoice()`
+- Opens PDF in system's default viewer (not in-app)
+- Cross-platform support:
+  - Windows: `os.startfile()`
+  - macOS: `subprocess.run(['open', ...])`
+  - Linux: `subprocess.run(['xdg-open', ...])`
+- Checks file existence before opening
+- Shows error notifications if PDF missing or cannot be opened
+
+### **Adding email import to a view:**
+```python
+from services.email_service import EmailService
+from config.email_settings import EmailSettings
+
+# Load settings
+email_settings = EmailSettings()
+settings = email_settings.get_settings()
+
+# Connect and fetch PDFs
+email_service = EmailService()
+if email_service.connect(
+    settings['email_address'],
+    settings['password'],
+    settings['imap_server'],
+    settings['imap_port']
+):
+    pdf_files = email_service.fetch_pdf_attachments(
+        from_date=from_date,  # date object or None
+        to_date=to_date,      # date object or None
+        save_dir=TEMP_DIR,
+        progress_callback=my_progress_handler  # Optional
+    )
+    # pdf_files is list of (filename, path) tuples
+    email_service.disconnect()
+```
+
 ---
 
 ## ⚠️ Important Constraints
@@ -367,11 +495,13 @@ print(extracted_data)
 4. **Never block UI thread** - long operations should show progress dialog
 5. **Never hardcode paths** - use `config/settings.py` constants
 6. **Never skip validation** before saving invoices
+7. **Never commit email credentials** - `config/email_config.json` should be in .gitignore
 
 ### **Dependencies:**
 - Tesseract OCR must be installed system-wide: `C:\Program Files\Tesseract-OCR\`
 - Polish language data: `tessdata/pol.traineddata`
 - Poppler for pdf2image: `C:\poppler\Library\bin`
+- Email settings stored in: `config/email_config.json` (auto-created on first save)
 
 ---
 
@@ -379,11 +509,24 @@ print(extracted_data)
 
 ### **Manual test flow:**
 1. Start: `python main.py` (opens browser at localhost:8550)
-2. Click "Import PDF" → select multiple PDFs
-3. Click "Przetwórz wszystkie" → verify progress dialog
-4. Review extracted data → check validation warnings
-5. Save invoices → verify in "Lista Faktur"
-6. Test edit, delete, search, export Excel/CSV
+2. Configure email settings (optional):
+   - Navigate to "USTAWIENIA E-MAIL"
+   - Enter IMAP credentials
+   - Test connection
+   - Save configuration
+3. Import PDFs (choose one method):
+   - Method A: Click "Import PDF" → "Wybierz pliki PDF" → select multiple PDFs
+   - Method B: Click "Import PDF" → "Import from E-mail" → fetch PDFs from mailbox
+4. Click "Przetwórz wszystkie" → verify progress bar and status updates
+5. Review ProcessingResultsTable:
+   - Check status icons and OCR confidence badges
+   - View raw OCR text if needed
+   - Review validation warnings/errors
+6. Save invoices → verify notifications appear
+7. Navigate to "Lista Faktur" → verify invoices are saved
+8. Test PDF preview (click eye icon) → verify opens in system viewer
+9. Test edit, delete, search, export Excel/CSV
+10. Check notification panel for recent activity
 
 ### **Test data:**
 Create sample Polish invoice PDF with:
@@ -399,16 +542,55 @@ Data: 2024-11-12
 
 ---
 
-## 🔮 Future Enhancements (Variant B)
+## 🔒 Security Considerations
+
+### **Email Credentials Storage:**
+- Stored in plaintext in `config/email_config.json` (local file)
+- **IMPORTANT:** Add `config/email_config.json` to `.gitignore`
+- **NEVER** commit email credentials to version control
+- For production: Consider encryption or OS keyring integration
+- Recommended: Use app-specific passwords (not main email password)
+  - Gmail: Generate at https://myaccount.google.com/apppasswords
+  - Other providers: Check provider-specific app password settings
+
+### **IMAP Security:**
+- Always uses SSL/TLS (IMAP4_SSL) on port 993
+- Validates server certificates
+- Connection test available before saving credentials
+- Timeout handling for network issues
+
+### **File Access:**
+- PDF files stored in `TEMP_DIR` with read/write permissions
+- No arbitrary file access - only user-selected or email-downloaded PDFs
+- File existence checks before opening
+- Cross-platform path handling via `pathlib.Path`
+
+---
+
+## ✅ Recently Implemented Features
+
+**Completed and working:**
+- ✅ Email IMAP integration for automatic PDF import
+- ✅ Notification panel with last 3 notifications
+- ✅ Processing results table with compact view
+- ✅ PDF preview via system default viewer
+- ✅ Payment status tracking (Nieopłacona, Opłacona, Przeterminowana)
+- ✅ Payment terms field
+- ✅ Email settings configuration view
+- ✅ Progress feedback during email import
+- ✅ OCR confidence color-coded badges
+- ✅ Detailed validation warnings/errors display
+
+## 🔮 Future Enhancements
 
 **Not yet implemented but architecture-ready:**
 - Background queue processing (threading/asyncio)
 - Retry mechanism for failed OCR
 - AI/LLM integration (GPT-4 Vision, Claude) for better extraction
-- PDF viewer component (inline preview)
+- In-app PDF viewer component (currently opens in external viewer)
 - Batch operations (bulk edit, bulk delete)
 - Advanced filters (date range, amount range)
-- Full audit log viewer UI
+- Email OAuth2 authentication (currently password-based only)
 
 ---
 
@@ -485,6 +667,6 @@ except:
 
 ---
 
-**Last Updated:** 2024-11-12  
-**Version:** 1.0.0  
-**Status:** MVP complete, ready for testingv
+**Last Updated:** 2025-11-14
+**Version:** 1.1.0
+**Status:** Production-ready with email integration, notification system, and enhanced UIv
