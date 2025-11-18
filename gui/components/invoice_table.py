@@ -200,8 +200,8 @@ class InvoiceTable(ft.Column):
 		# Invisible search field to match structure of headers with search
 		invisible_search = ft.TextField(
 			hint_text="",
-			text_size=11,
-			height=32,
+			text_size=12,
+			height=37,
 			content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
 			border_width=1,
 			border_radius=3,
@@ -267,7 +267,7 @@ class InvoiceTable(ft.Column):
 						),
 					),
 				],
-			spacing=4,
+			spacing=2,
 			alignment=ft.MainAxisAlignment.START,
 			)
 		
@@ -279,8 +279,8 @@ class InvoiceTable(ft.Column):
 				on_change=lambda e, field=field_name: self.on_filter_change(
 					field, e.control.value
 					),
-				text_size=11,
-				height=32,
+				text_size=12,
+				height=37,
 				content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
 				border_color="#BDBDBD",  # Darker grey than header bg (#F5F5F5)
 				focused_border_color="#90CAF9",
@@ -563,6 +563,8 @@ class InvoiceTable(ft.Column):
 									invoice.seller_name, size=13,
 									color="#424242",
 									overflow=ft.TextOverflow.ELLIPSIS,
+									style=ft.TextStyle(
+										weight=ft.FontWeight.W_600),
 									no_wrap=True
 									),
 								*badges,
@@ -705,7 +707,7 @@ class InvoiceTable(ft.Column):
 						alignment=ft.alignment.center_left
 						),
 					],
-				height=49,  # From old data_row_max_height
+				height=30,  # From old data_row_max_height
 				)
 			rows_controls.append(row)
 			# Add a divider line
