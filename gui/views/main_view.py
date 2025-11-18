@@ -31,6 +31,7 @@ class MainView(ft.Column):
 		# Style
 		self.spacing = AppSpacing.LG
 		self.expand = True
+		self.alignment=ft.MainAxisAlignment.START
 		
 		# UI
 		self.build_ui()
@@ -85,7 +86,7 @@ class MainView(ft.Column):
 			content=ft.Column(
 				controls=[ft.ProgressRing()],
 				horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-				alignment=ft.MainAxisAlignment.CENTER,
+				alignment=ft.MainAxisAlignment.START,
 			),
 			expand=True,
 			)
@@ -140,6 +141,7 @@ class MainView(ft.Column):
 			ft.Divider(height=1, color=AppColors.DIVIDER),
 			self.table_container,
 			]
+		self.alignment=ft.MainAxisAlignment.START
 	
 	def load_invoices(self):
 		"""Załaduj faktury z bazy"""
