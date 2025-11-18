@@ -78,6 +78,7 @@ class FakturaScannerAppWebview:
 			controls=[],
 			expand=True,
 			scroll=ft.ScrollMode.AUTO,
+			alignment=ft.MainAxisAlignment.START
 		)
 
 		self.content_area = ft.Container(
@@ -198,6 +199,7 @@ class FakturaScannerAppWebview:
 			# Clear and add new view to scrollable column
 			self.content_column.controls.clear()
 			self.content_column.controls.append(view)
+			self.content_column.alignment=ft.MainAxisAlignment.START
 			self.page.update()
 
 	def create_export_view(self) -> ft.Control:

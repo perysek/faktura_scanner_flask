@@ -136,6 +136,14 @@ class EditView(ft.Column):
 			**dropdown_styles_status
 		)
 
+		self.created_at_field = ft.TextField(
+			label="Data dodania",
+			value=self.invoice.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.invoice.created_at else "-",
+			read_only=True,
+			disabled=True,
+			**AppStyles.text_field()
+		)
+
 		form = ft.Container(
 			content=ft.Column(
 				controls=[
@@ -154,6 +162,7 @@ class EditView(ft.Column):
 					self.payment_due_date_field,
 					self.payment_term_field,
 					self.status_field,
+					self.created_at_field,
 					],
 				spacing=AppSpacing.MD,
 				),

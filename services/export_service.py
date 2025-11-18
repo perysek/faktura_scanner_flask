@@ -22,7 +22,7 @@ class ExportService:
 		headers = [
 			"ID", "Sprzedawca", "NIP", "Nr Faktury", "Data Faktury",
 			"Konto Bankowe", "Kwota", "Waluta", "Termin Płatności", "Status",
-			"Pewność OCR (%)", "Duplikat"
+			"Data dodania", "Pewność OCR (%)", "Duplikat"
 			]
 		
 		# Style dla header
@@ -59,9 +59,13 @@ class ExportService:
 			ws.cell(row, 10, invoice.status)
 			ws.cell(
 				row, 11,
+				invoice.created_at.strftime('%Y-%m-%d %H:%M:%S') if invoice.created_at else ""
+				)
+			ws.cell(
+				row, 12,
 				f"{invoice.ocr_confidence:.1f}" if invoice.ocr_confidence else ""
 				)
-			ws.cell(row, 12, "TAK" if invoice.is_duplicate else "NIE")
+			ws.cell(row, 13, "TAK" if invoice.is_duplicate else "NIE")
 		
 		# Autowidth kolumn
 		for col in ws.columns:
@@ -89,7 +93,7 @@ class ExportService:
 				[
 					"ID", "Sprzedawca", "NIP", "Nr Faktury", "Data Faktury",
 					"Konto Bankowe", "Kwota", "Waluta", "Termin Płatności", "Status",
-					"Pewność OCR (%)", "Duplikat"
+					"Data dodania", "Pewność OCR (%)", "Duplikat"
 					]
 				)
 			
@@ -113,6 +117,7 @@ class ExportService:
 						invoice.currency,
 						payment_display,
 						invoice.status,
+						invoice.created_at.strftime('%Y-%m-%d %H:%M:%S') if invoice.created_at else "",
 						f"{invoice.ocr_confidence:.1f}" if invoice.ocr_confidence else "",
 						"TAK" if invoice.is_duplicate else "NIE"
 						]

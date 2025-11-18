@@ -39,6 +39,7 @@ class UploadView(ft.Column):
 		self.processed_invoices: List[
 			tuple[Invoice, dict, str]] = []  # (invoice, validation, raw_text)
 		self.is_processing = False
+		self.cancel_requested = False  # Flag for cancelling processing
 
 		# Reusable dialogs - create them first before build_ui
 		self.ocr_dialog = ft.AlertDialog(
@@ -140,6 +141,14 @@ class UploadView(ft.Column):
 			italic=True,
 			)
 
+		# Cancel button
+		self.cancel_button = ft.TextButton(
+			"Anuluj",
+			icon=ft.Icons.CANCEL,
+			on_click=self.cancel_processing,
+			style=ft.ButtonStyle(color=AppColors.ERROR),
+		)
+
 		self.progress_container = ft.Container(
 			content=ft.Column(
 				controls=[
@@ -147,6 +156,7 @@ class UploadView(ft.Column):
 					self.progress_bar,
 					self.progress_current_file,
 					self.progress_status,
+					self.cancel_button,
 				],
 				spacing=4,
 				tight=True,
@@ -523,6 +533,7 @@ class UploadView(ft.Column):
 			return
 
 		self.is_processing = True
+		self.cancel_requested = False  # Reset cancel flag
 		self.process_button.disabled = True
 
 		# Pokaż progress controls
@@ -537,6 +548,13 @@ class UploadView(ft.Column):
 		self.processed_invoices.clear()
 
 		for i, file_path in enumerate(self.selected_files, 1):
+			# Check if cancellation was requested
+			if self.cancel_requested:
+				self.progress_status.value = "❌ Anulowano przez użytkownika"
+				self.progress_current_file.value = f"Przetworzono {i-1} z {len(self.selected_files)} plików"
+				self.page.update()
+				break
+
 			filename = Path(file_path).name
 
 			try:
@@ -898,3 +916,10 @@ class UploadView(ft.Column):
 		"""Close info dialog"""
 		self.info_dialog.open = False
 		self.page.update()
+
+	def cancel_processing(self, e):
+		"""Cancel ongoing processing"""
+		if self.is_processing:
+			self.cancel_requested = True
+			self.progress_status.value = "Anulowanie..."
+			self.page.update()

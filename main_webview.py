@@ -3,14 +3,23 @@ FakturaScanner - Webview Entry Point
 Runs the app as a Flet webview application
 """
 import flet as ft
+import os
 from gui.app_webview import create_app_webview
-from config.webview_settings import WEBVIEW_PORT, WEBVIEW_HOST, WEBVIEW_UPLOAD_DIR
+from config.webview_settings import (
+    WEBVIEW_PORT,
+    WEBVIEW_HOST,
+    WEBVIEW_UPLOAD_DIR,
+    WEBVIEW_SECRET_KEY
+)
 
 def main():
     """Główna funkcja uruchomieniowa dla trybu webview"""
     print(f"🌐 Starting FakturaScanner in WEBVIEW mode...")
     print(f"📁 Upload directory: {WEBVIEW_UPLOAD_DIR}")
     print(f"🔗 Server will be available at: http://{WEBVIEW_HOST}:{WEBVIEW_PORT}")
+
+    # Set secret key as environment variable (required for file uploads in webview)
+    os.environ["FLET_SECRET_KEY"] = WEBVIEW_SECRET_KEY
 
     ft.app(
         target=create_app_webview,
