@@ -53,15 +53,15 @@ class InvoiceTable(ft.Column):
 		# These must be consistent between header and data rows
 		# MUST BE INTEGERS for flet's expand property
 		self.column_expansions = {
-			'seller_name': 4,
+			'seller_name': 3,
 			'invoice_number': 3,
 			'invoice_date': 2,
 			'amount': 2,
 			'seller_nip': 2,
 			'bank_account': 3,
 			'payment_due_date': 2,
-			'status': 2,
-			'created_at': 3,
+			'status': 3,
+			'created_at': 2,
 			'ocr_confidence': 1,  # <-- FIX: Was 'ocr' which caused a KeyError
 			'actions': 2,
 			}
@@ -131,7 +131,7 @@ class InvoiceTable(ft.Column):
 				expand=self.column_expansions['bank_account']
 				),
 			self.create_column_header(
-				"Termin płatności", "payment_due_date", with_search=True,
+				"Płatność do:", "payment_due_date", with_search=True,
 				expand=self.column_expansions['payment_due_date']
 				),
 			self.create_column_header(
@@ -139,7 +139,7 @@ class InvoiceTable(ft.Column):
 				expand=self.column_expansions['status']
 				),
 			self.create_column_header(
-				"Data dodania", "created_at", with_search=True,
+				"Dodano:", "created_at", with_search=True,
 				expand=self.column_expansions['created_at']
 				),
 			self.create_simple_header(
@@ -162,28 +162,74 @@ class InvoiceTable(ft.Column):
 		
 		return ft.Container(
 			content=header_row,
-			height=75,  # Adjusted for normal search field height
+			height=80,  # Adjusted for normal search field height
 			bgcolor="#F5F5F5",
 			)
 	
 	@staticmethod
 	def create_simple_header(label: str, expand: int = 1) -> ft.Container:
 		"""Stwórz komórkę nagłówka (zamiast DataColumn)"""
-		return ft.Container(
-			content=ft.Row(
-				controls=[
-					ft.Text(
-						label,
-						weight=ft.FontWeight.W_600,
-						size=12,
-						color="#424242"
-						)
-					],
-				alignment=ft.MainAxisAlignment.CENTER  # Center text in row
+		# Invisible sort button to match structure of sortable headers
+		invisible_sort_button = ft.IconButton(
+			icon=ft.Icons.UNFOLD_MORE,
+			icon_size=14,
+			tooltip="",
+			icon_color="#F5F5F5",
+			style=ft.ButtonStyle(
+				padding=ft.padding.all(4),
 				),
+			#visible=False,  # Hidden to maintain layout structure
+			disabled=True
+			)
+
+		# Header row with label and invisible sort button
+		header_row = ft.Row(
+			controls=[
+				ft.Text(
+					label,
+					weight=ft.FontWeight.W_600,
+					size=12,
+					color="#424242"
+					),
+				invisible_sort_button,
+				],
+			spacing=4,
+			alignment=ft.MainAxisAlignment.START  # Center text in row
+			)
+
+		# Invisible search field to match structure of headers with search
+		invisible_search = ft.TextField(
+			hint_text="",
+			text_size=11,
+			height=32,
+			content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
+			border_width=1,
+			border_radius=3,
+			filled=True,
+			dense=True,
+			visible=False, # Hidden to maintain layout structure
+			)
+
+		# Container for invisible search field
+		search_container = ft.Container(
+			content=invisible_search,
+			padding=ft.padding.symmetric(horizontal=5, vertical=2),
+			)
+
+		# Stack vertically: title + invisible search (matches headers with search)
+		header_column = ft.Column(
+			controls=[header_row, search_container],
+			spacing=2,
+			tight=True,
+			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+			alignment=ft.MainAxisAlignment.START,
+			)
+
+		return ft.Container(
+			content=header_column,
 			expand=expand,
 			padding=ft.padding.symmetric(horizontal=4, vertical=4),
-			alignment=ft.alignment.center,
+			alignment=ft.alignment.top_left,  # Align top-center
 			border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 			)
 	
@@ -222,7 +268,7 @@ class InvoiceTable(ft.Column):
 					),
 				],
 			spacing=4,
-			alignment=ft.MainAxisAlignment.CENTER,
+			alignment=ft.MainAxisAlignment.START,
 			)
 		
 		if with_search:
@@ -250,7 +296,7 @@ class InvoiceTable(ft.Column):
 			# Wrap in container with padding to fit within column
 			search_container = ft.Container(
 				content=search_field,
-				padding=ft.padding.symmetric(horizontal=5, vertical=2),
+				padding=ft.padding.Padding(left=0,top=2,right=5,bottom=2)
 				# expand=True,  <-- REMOVED
 				)
 			
@@ -260,7 +306,7 @@ class InvoiceTable(ft.Column):
 				spacing=2,
 				tight=True,
 				# expand=True,  <-- REMOVED
-				horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+				horizontal_alignment=ft.CrossAxisAlignment.START,
 				# Center horizontally
 				alignment=ft.MainAxisAlignment.START,  # Align to top
 				)
@@ -268,7 +314,7 @@ class InvoiceTable(ft.Column):
 				content=header_column,
 				expand=expand,
 				padding=ft.padding.symmetric(horizontal=4, vertical=4),
-				alignment=ft.alignment.center,
+				alignment=ft.alignment.top_left,  # Align top-left
 				border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 				)
 		else:
@@ -277,7 +323,7 @@ class InvoiceTable(ft.Column):
 				content=header_row,
 				expand=expand,
 				padding=ft.padding.symmetric(horizontal=4, vertical=4),
-				alignment=ft.alignment.center,
+				alignment=ft.alignment.top_left,  # Align top-center
 				border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 				)
 	
@@ -490,7 +536,7 @@ class InvoiceTable(ft.Column):
 						icon_color=AppColors.ERROR,
 						),
 					],
-				spacing=4,
+				spacing=2,
 				alignment=ft.MainAxisAlignment.CENTER  # Center actions
 				)
 			
@@ -541,7 +587,8 @@ class InvoiceTable(ft.Column):
 							size=13,
 							color="#616161"
 							),
-						'invoice_date'
+						'invoice_date',
+						alignment=ft.alignment.center
 						),
 					create_cell(
 						ft.Text(
@@ -606,29 +653,32 @@ class InvoiceTable(ft.Column):
 								ft.dropdown.Option("Nieopłacona"),
 								ft.dropdown.Option("Opłacona"),
 								],
+							dense=True,
 							on_change=lambda e,
 							                 inv=invoice: self.on_status_change(
 								e, inv
 								),
 							text_size=13,
 							content_padding=ft.padding.symmetric(
-								horizontal=8, vertical=2
+								horizontal=0, vertical=2
 								),
 							border_width=0,
-							expand=True  # Make dropdown fill its cell
+							text_align=ft.alignment.center_left,
+							expand=False  # Make dropdown fill its cell
 							),
 						'status',
-						alignment=ft.alignment.center
+						alignment=ft.alignment.center_left
 						),
 					create_cell(
 						ft.Text(
 							invoice.created_at.strftime(
-								'%Y-%m-%d %H:%M'
+								'%Y-%m-%d'
 								) if invoice.created_at else "-",
 							size=13,
 							color="#616161"
 							),
-						'created_at'
+						'created_at',
+						alignment=ft.alignment.center
 						),
 					create_cell(
 						ft.Container(
@@ -644,18 +694,18 @@ class InvoiceTable(ft.Column):
 							padding=ft.padding.symmetric(
 								horizontal=6, vertical=2
 								),
-							border_radius=4,
+							border_radius=3,
 							),
 						'ocr_confidence',
-						alignment=ft.alignment.center
+						alignment=ft.alignment.center_left
 						),
 					create_cell(
 						actions,
 						'actions',
-						alignment=ft.alignment.center
+						alignment=ft.alignment.center_left
 						),
 					],
-				height=44,  # From old data_row_max_height
+				height=49,  # From old data_row_max_height
 				)
 			rows_controls.append(row)
 			# Add a divider line
