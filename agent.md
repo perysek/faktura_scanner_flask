@@ -96,6 +96,191 @@ faktura_scanner/
 - **Never duplicate `padding=` after `**AppStyles.card()`** unless overriding (add comment if so)
 - Use `AppColors`, `AppTypography`, `AppSpacing` constants from `gui/theme.py`
 
+### **Custom Table Component with Search Fields:**
+
+The application uses a **custom table implementation** (not `ft.DataTable`) to support inline search fields in header cells. See `gui/components/invoice_table.py` for the complete implementation.
+
+#### **Architecture:**
+```python
+ft.Column (main table)
+├── Container (header row with grey background)
+│   └── ft.Row (header cells)
+│       ├── Container (column 1 - with search)
+│       │   └── ft.Column
+│       │       ├── ft.Row (column title + sort button)
+│       │       └── Container (search TextField)
+│       ├── Container (column 2 - simple)
+│       │   └── ft.Row (column title + sort button)
+│       └── ...
+└── Container (data rows container)
+    └── ft.Column (scrollable data container)
+        ├── ft.Row (data row 1)
+        ├── Container (divider)
+        ├── ft.Row (data row 2)
+        └── ...
+```
+
+#### **Key Implementation Details:**
+
+1. **Column Width Management:**
+```python
+# MUST use INTEGER values for expand property
+self.column_expansions = {
+    'seller_name': 4,
+    'invoice_number': 3,
+    'invoice_date': 2,
+    'amount': 2,
+    # ... etc
+}
+
+# Apply consistently in BOTH header and data cells
+create_cell(control, 'seller_name')  # Uses column_expansions['seller_name']
+```
+
+2. **Header Cell with Search Field:**
+```python
+def create_column_header(self, label: str, field_name: str,
+                        with_search: bool = False, expand: int = 1):
+    # Column name with sort button
+    header_row = ft.Row(
+        controls=[
+            ft.Text(label, weight=ft.FontWeight.W_600, size=12, color="#424242"),
+            ft.IconButton(icon=sort_icon, icon_size=14, on_click=lambda e: self.toggle_sort(field_name))
+        ],
+        spacing=4,
+        alignment=ft.MainAxisAlignment.CENTER
+    )
+
+    if with_search:
+        # White search field below column name
+        search_field = ft.TextField(
+            hint_text="Search...",
+            value=self.column_filters.get(field_name, ''),
+            on_change=lambda e: self.on_filter_change(field_name, e.control.value),
+            text_size=11,
+            height=32,
+            content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
+            border_color="#BDBDBD",      # Darker grey
+            focused_border_color="#90CAF9",
+            border_width=1,
+            border_radius=3,
+            bgcolor="#FFFFFF",           # White background
+            filled=True,
+            dense=True,
+        )
+
+        # Stack vertically: title + search
+        header_column = ft.Column(
+            controls=[header_row, ft.Container(content=search_field, padding=ft.padding.symmetric(horizontal=5, vertical=2))],
+            spacing=2,
+            tight=True,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.START,
+        )
+
+        return ft.Container(
+            content=header_column,
+            expand=expand,  # INTEGER from column_expansions
+            padding=ft.padding.symmetric(horizontal=4, vertical=4),
+            alignment=ft.alignment.center,
+            border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
+        )
+```
+
+3. **Efficient Filtering (Only Rebuild Data Rows):**
+```python
+def __init__(self):
+    # Persistent container for data rows only
+    self.data_container = ft.Column(scroll=ft.ScrollMode.ADAPTIVE, expand=True)
+
+def on_filter_change(self, field_name: str, value: str):
+    """Handle filter change - ONLY rebuild data rows"""
+    self.column_filters[field_name] = value.lower()
+
+    # Re-apply filters and sorting
+    self.apply_filters()
+    self.apply_sorting()
+
+    # FIX: Only update data rows, NOT entire table
+    # This prevents header from rebuilding and losing focus
+    self.data_container.controls = self.build_data_rows()
+
+    if self.page:
+        self.page.update()
+```
+
+4. **Header Styling:**
+```python
+header_row = ft.Row(controls=cells)
+
+return ft.Container(
+    content=header_row,
+    height=75,              # Accommodates search fields
+    bgcolor="#F5F5F5",      # Light grey background
+)
+```
+
+5. **Data Cell Creation (Matching Expansion Ratios):**
+```python
+def create_cell(control: ft.Control, field_name: str, alignment=ft.alignment.center_left):
+    return ft.Container(
+        content=control,
+        expand=self.column_expansions[field_name],  # MUST match header expand value
+        padding=ft.padding.symmetric(horizontal=6, vertical=4),
+        alignment=alignment,
+        border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
+    )
+```
+
+#### **Critical Rules for Custom Tables:**
+
+1. **Column expansions MUST be integers** - Flet's `expand` property only accepts int, not float
+2. **Expansion values MUST match** between header and data cells - otherwise columns won't align
+3. **Key names MUST be consistent** - If you use `'ocr_confidence'` in expansions dict, use it everywhere (not `'ocr'`)
+4. **Filter updates should only rebuild data rows** - Use persistent `data_container` to avoid rebuilding header
+5. **Header height must accommodate search fields** - Use 75px for header with search, 50px without
+6. **Search fields should be white** - Use `bgcolor="#FFFFFF"` with darker border `#BDBDBD` for contrast against grey header
+7. **Use `tight=True`** on header Column to prevent extra spacing around search fields
+8. **Never use `expand=True` on search TextField** - Let container control width with integer expand value
+
+#### **Common Mistakes:**
+
+❌ **Wrong:** Using float or 'True' for expand
+```python
+self.column_expansions = {'seller_name': 1.5}  # Float not supported
+create_cell(control, expand=True)              # Won't align with numeric expand values
+```
+
+✅ **Correct:** Integer expand values
+```python
+self.column_expansions = {'seller_name': 4}    # Integer only
+create_cell(control, expand=4)                 # Matches header
+```
+
+❌ **Wrong:** Rebuilding entire table on filter change
+```python
+def on_filter_change(self, field, value):
+    self.build_table()  # Rebuilds header too - loses focus
+```
+
+✅ **Correct:** Only rebuild data rows
+```python
+def on_filter_change(self, field, value):
+    self.data_container.controls = self.build_data_rows()  # Header untouched
+```
+
+❌ **Wrong:** Mismatched key names
+```python
+self.column_expansions = {'ocr': 1}           # Key name 'ocr'
+create_cell(control, 'ocr_confidence')         # KeyError!
+```
+
+✅ **Correct:** Consistent key names
+```python
+self.column_expansions = {'ocr_confidence': 1}
+create_cell(control, 'ocr_confidence')
+```
+
 ### **Notification System:**
 - **NotificationPanel:** Fixed panel at bottom of navigation rail (260px width)
 - Shows last 3 notifications with icon, message, and timestamp (HH:MM:SS format)
