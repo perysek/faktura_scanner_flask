@@ -103,22 +103,31 @@ The application uses a **custom table implementation** (not `ft.DataTable`) to s
 #### **Architecture:**
 ```python
 ft.Column (main table)
-├── Container (header row with grey background)
+├── Container (header row with grey background, height=80px)
 │   └── ft.Row (header cells)
-│       ├── Container (column 1 - with search)
-│       │   └── ft.Column
-│       │       ├── ft.Row (column title + sort button)
-│       │       └── Container (search TextField)
-│       ├── Container (column 2 - simple)
-│       │   └── ft.Row (column title + sort button)
+│       ├── Container (column 1 - with search, expand=3)
+│       │   └── ft.Column (tight=True, horizontal_alignment=START)
+│       │       ├── ft.Row (column title + sort button IconButton)
+│       │       └── Container (search TextField, white bg, height=37)
+│       ├── Container (column 2 - simple, expand=2)
+│       │   └── ft.Column (tight=True, horizontal_alignment=CENTER)
+│       │       ├── ft.Row (column title + invisible sort button)
+│       │       └── Container (invisible search TextField, visible=False)
 │       └── ...
-└── Container (data rows container)
-    └── ft.Column (scrollable data container)
-        ├── ft.Row (data row 1)
-        ├── Container (divider)
-        ├── ft.Row (data row 2)
+└── Container (data rows container, border top)
+    └── ft.Column (scrollable data container, self.data_container)
+        ├── ft.Row (data row 1, height=30)
+        ├── Container (divider, height=1)
+        ├── ft.Row (data row 2, height=30)
         └── ...
 ```
+
+**Key differences from standard DataTable:**
+- Custom header cells with embedded search TextFields
+- Simple headers use invisible elements to match searchable header height
+- Persistent `data_container` allows filtering without rebuilding headers
+- Integer-based expand ratios for precise column width control
+- Inline status dropdown for direct editing
 
 #### **Key Implementation Details:**
 
@@ -126,11 +135,17 @@ ft.Column (main table)
 ```python
 # MUST use INTEGER values for expand property
 self.column_expansions = {
-    'seller_name': 4,
+    'seller_name': 3,
     'invoice_number': 3,
     'invoice_date': 2,
     'amount': 2,
-    # ... etc
+    'seller_nip': 2,
+    'bank_account': 3,
+    'payment_due_date': 2,
+    'status': 3,
+    'created_at': 2,
+    'ocr_confidence': 1,
+    'actions': 2,
 }
 
 # Apply consistently in BOTH header and data cells
@@ -157,8 +172,8 @@ def create_column_header(self, label: str, field_name: str,
             hint_text="Search...",
             value=self.column_filters.get(field_name, ''),
             on_change=lambda e: self.on_filter_change(field_name, e.control.value),
-            text_size=11,
-            height=32,
+            text_size=12,
+            height=37,
             content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
             border_color="#BDBDBD",      # Darker grey
             focused_border_color="#90CAF9",
@@ -167,14 +182,21 @@ def create_column_header(self, label: str, field_name: str,
             bgcolor="#FFFFFF",           # White background
             filled=True,
             dense=True,
+            cursor_color="#2196F3",
+        )
+
+        # Wrap in container with padding
+        search_container = ft.Container(
+            content=search_field,
+            padding=ft.padding.Padding(left=0, top=2, right=5, bottom=2)
         )
 
         # Stack vertically: title + search
         header_column = ft.Column(
-            controls=[header_row, ft.Container(content=search_field, padding=ft.padding.symmetric(horizontal=5, vertical=2))],
+            controls=[header_row, search_container],
             spacing=2,
             tight=True,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
             alignment=ft.MainAxisAlignment.START,
         )
 
@@ -182,12 +204,87 @@ def create_column_header(self, label: str, field_name: str,
             content=header_column,
             expand=expand,  # INTEGER from column_expansions
             padding=ft.padding.symmetric(horizontal=4, vertical=4),
-            alignment=ft.alignment.center,
+            alignment=ft.alignment.top_left,
+            border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
+        )
+    else:
+        # Column header without search - simpler structure
+        return ft.Container(
+            content=header_row,
+            expand=expand,
+            padding=ft.padding.symmetric(horizontal=4, vertical=4),
+            alignment=ft.alignment.top_left,
             border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
         )
 ```
 
-3. **Efficient Filtering (Only Rebuild Data Rows):**
+3. **Simple Headers (Maintaining Layout Consistency):**
+
+For columns without search fields (NIP, Konto, OCR, Akcje), use invisible elements to maintain consistent height and alignment:
+
+```python
+@staticmethod
+def create_simple_header(label: str, expand: int = 1) -> ft.Container:
+    """Create header cell with invisible elements to match searchable headers"""
+
+    # Invisible sort button to maintain structure
+    invisible_sort_button = ft.IconButton(
+        icon=ft.Icons.UNFOLD_MORE,
+        icon_size=14,
+        icon_color="#F5F5F5",  # Same as header background
+        disabled=True,
+        style=ft.ButtonStyle(padding=ft.padding.all(4)),
+    )
+
+    # Header row with label and invisible sort button
+    header_row = ft.Row(
+        controls=[
+            ft.Text(label, weight=ft.FontWeight.W_600, size=12, color="#424242"),
+            invisible_sort_button,
+        ],
+        spacing=4,
+        alignment=ft.MainAxisAlignment.START
+    )
+
+    # Invisible search field to match structure of headers with search
+    invisible_search = ft.TextField(
+        hint_text="",
+        text_size=12,
+        height=37,
+        content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
+        border_width=1,
+        border_radius=3,
+        filled=True,
+        dense=True,
+        visible=False,  # Hidden to maintain layout
+    )
+
+    search_container = ft.Container(
+        content=invisible_search,
+        padding=ft.padding.symmetric(horizontal=5, vertical=2),
+    )
+
+    # Stack vertically: title + invisible search (matches searchable headers)
+    header_column = ft.Column(
+        controls=[header_row, search_container],
+        spacing=2,
+        tight=True,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        alignment=ft.MainAxisAlignment.START,
+    )
+
+    return ft.Container(
+        content=header_column,
+        expand=expand,
+        padding=ft.padding.symmetric(horizontal=4, vertical=4),
+        alignment=ft.alignment.top_left,
+        border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
+    )
+```
+
+**Why invisible elements?** This pattern ensures ALL headers have identical height and vertical alignment, preventing misalignment between searchable and non-searchable columns. Without invisible elements, simple headers would be shorter and cause visual inconsistency.
+
+4. **Efficient Filtering (Only Rebuild Data Rows):**
 ```python
 def __init__(self):
     # Persistent container for data rows only
@@ -209,18 +306,18 @@ def on_filter_change(self, field_name: str, value: str):
         self.page.update()
 ```
 
-4. **Header Styling:**
+5. **Header Styling:**
 ```python
 header_row = ft.Row(controls=cells)
 
 return ft.Container(
     content=header_row,
-    height=75,              # Accommodates search fields
+    height=80,              # Accommodates search fields
     bgcolor="#F5F5F5",      # Light grey background
 )
 ```
 
-5. **Data Cell Creation (Matching Expansion Ratios):**
+6. **Data Cell Creation (Matching Expansion Ratios):**
 ```python
 def create_cell(control: ft.Control, field_name: str, alignment=ft.alignment.center_left):
     return ft.Container(
@@ -232,16 +329,31 @@ def create_cell(control: ft.Control, field_name: str, alignment=ft.alignment.cen
     )
 ```
 
+7. **Data Row Styling:**
+```python
+row = ft.Row(
+    controls=[...],
+    height=30,  # Consistent row height
+)
+# Add divider between rows
+rows_controls.append(row)
+rows_controls.append(ft.Container(height=1, bgcolor="#EEEEEE"))
+```
+
 #### **Critical Rules for Custom Tables:**
 
 1. **Column expansions MUST be integers** - Flet's `expand` property only accepts int, not float
 2. **Expansion values MUST match** between header and data cells - otherwise columns won't align
 3. **Key names MUST be consistent** - If you use `'ocr_confidence'` in expansions dict, use it everywhere (not `'ocr'`)
 4. **Filter updates should only rebuild data rows** - Use persistent `data_container` to avoid rebuilding header
-5. **Header height must accommodate search fields** - Use 75px for header with search, 50px without
+5. **Header height must accommodate search fields** - Use 80px for headers (adjusted for 37px search fields)
 6. **Search fields should be white** - Use `bgcolor="#FFFFFF"` with darker border `#BDBDBD` for contrast against grey header
-7. **Use `tight=True`** on header Column to prevent extra spacing around search fields
-8. **Never use `expand=True` on search TextField** - Let container control width with integer expand value
+7. **Search field dimensions** - Use `text_size=12` and `height=37` for consistent appearance
+8. **Use `tight=True`** on header Column to prevent extra spacing around search fields
+9. **Never use `expand=True` on search TextField** - Let container control width with integer expand value
+10. **Use invisible elements in simple headers** - Add invisible sort buttons and search fields to maintain consistent height with searchable columns
+11. **Header alignment** - Use `ft.alignment.top_left` for headers to ensure consistent vertical alignment
+12. **Data row height** - Use `height=30` for data rows with 1px dividers between rows
 
 #### **Common Mistakes:**
 
@@ -280,6 +392,152 @@ create_cell(control, 'ocr_confidence')         # KeyError!
 self.column_expansions = {'ocr_confidence': 1}
 create_cell(control, 'ocr_confidence')
 ```
+
+❌ **Wrong:** Simple headers without invisible elements
+```python
+def create_simple_header(label: str):
+    # Just a text label - will be shorter than searchable headers
+    return ft.Container(content=ft.Text(label))
+```
+
+✅ **Correct:** Simple headers WITH invisible elements
+```python
+def create_simple_header(label: str):
+    # Include invisible sort button AND invisible search field
+    # This matches the height of searchable headers exactly
+    invisible_sort_button = ft.IconButton(..., disabled=True, icon_color="#F5F5F5")
+    invisible_search = ft.TextField(..., visible=False, height=37)
+    # Stack them vertically to match searchable header structure
+```
+
+### **Inline Status Editing in Invoice Table:**
+
+The invoice table includes inline status editing via a dropdown in the Status column:
+
+```python
+# In build_data_rows()
+create_cell(
+    ft.Dropdown(
+        value=invoice.status,
+        options=[
+            ft.dropdown.Option("Nieopłacona"),
+            ft.dropdown.Option("Opłacona"),
+        ],
+        dense=True,
+        on_change=lambda e, inv=invoice: self.on_status_change(e, inv),
+        text_size=13,
+        content_padding=ft.padding.symmetric(horizontal=0, vertical=2),
+        border_width=0,
+        text_align=ft.alignment.center_left,
+        expand=False,
+    ),
+    'status',
+    alignment=ft.alignment.center_left
+)
+
+def on_status_change(self, e, invoice: Invoice):
+    """Handle status change - update database and refresh table"""
+    try:
+        invoice.status = e.control.value
+        self.invoice_repo.update(invoice.id, invoice)
+        # Refresh table to update colors (overdue invoices)
+        if self.on_refresh_callback:
+            self.on_refresh_callback()
+    except Exception as ex:
+        # Revert dropdown on error
+        e.control.value = invoice.status
+        if e.control.page:
+            e.control.page.update()
+```
+
+**Key features:**
+- **Immediate updates** - Changes saved to database on dropdown change
+- **Error handling** - Reverts dropdown value if update fails
+- **Table refresh** - Triggers callback to update row colors (e.g., overdue highlighting)
+- **No borders** - Uses `border_width=0` for cleaner inline appearance
+
+### **Invoice Table Cell Styling Patterns:**
+
+The invoice table uses specific styling for different data types:
+
+```python
+# 1. Seller Name - Bold, dark color
+ft.Text(
+    invoice.seller_name,
+    size=13,
+    color="#424242",
+    style=ft.TextStyle(weight=ft.FontWeight.W_600),  # Bold
+    overflow=ft.TextOverflow.ELLIPSIS,
+    no_wrap=True
+)
+
+# 2. Invoice Number, Dates - Medium grey
+ft.Text(
+    invoice.invoice_number,
+    size=13,
+    color="#616161",
+    overflow=ft.TextOverflow.ELLIPSIS,
+    no_wrap=True
+)
+
+# 3. Amount - Medium bold, right-aligned
+ft.Text(
+    f"{invoice.amount:.2f} {invoice.currency}",
+    size=13,
+    weight=ft.FontWeight.W_500,
+    color="#424242"
+)
+
+# 4. NIP, Bank Account - Light grey
+ft.Text(
+    invoice.seller_nip or "-",
+    size=13,
+    color="#757575"
+)
+
+# 5. Overdue Payment - Red background with white text
+ft.Container(
+    content=ft.Text(
+        invoice.payment_due_date.strftime('%Y-%m-%d'),
+        size=13,
+        color="white" if (overdue and not paid) else AppColors.TEXT_PRIMARY
+    ),
+    bgcolor=AppColors.ERROR if (overdue and not paid) else None,
+    padding=ft.padding.symmetric(horizontal=6, vertical=2),
+    border_radius=4,
+)
+
+# 6. OCR Confidence Badge - Color-coded by threshold
+ft.Container(
+    content=ft.Text(
+        f"{invoice.ocr_confidence:.0f}%",
+        size=13,
+        color="white" if confidence >= 80 else AppColors.TEXT_PRIMARY,
+        weight=ft.FontWeight.BOLD
+    ),
+    bgcolor=AppColors.SUCCESS if confidence >= 80 else (
+        AppColors.WARNING if confidence >= 60 else AppColors.ERROR
+    ),
+    padding=ft.padding.symmetric(horizontal=6, vertical=2),
+    border_radius=3,
+)
+```
+
+**Color coding guide:**
+- **Seller names:** `#424242` (dark grey) with `W_600` weight - emphasizes primary identifier
+- **Regular text:** `#616161` (medium grey) - invoice numbers, dates
+- **Secondary info:** `#757575` (light grey) - NIP, bank accounts
+- **Amount:** `#424242` with `W_500` weight - highlights financial value
+- **Overdue payments:** Red background (`AppColors.ERROR`) with white text - urgent attention
+- **OCR confidence:**
+  - ≥80%: Green background (`AppColors.SUCCESS`) - high confidence
+  - 60-79%: Orange background (`AppColors.WARNING`) - medium confidence
+  - <60%: Red background (`AppColors.ERROR`) - low confidence, review needed
+
+**Alignment patterns:**
+- **Left-aligned** (default): Seller name, invoice number, NIP, bank account, status
+- **Center-aligned:** Invoice date, payment due date, created date, OCR confidence
+- **Right-aligned:** Amount (financial convention)
 
 ### **Notification System:**
 - **NotificationPanel:** Fixed panel at bottom of navigation rail (260px width)
@@ -765,6 +1023,11 @@ Data: 2024-11-12
 - ✅ Progress feedback during email import
 - ✅ OCR confidence color-coded badges
 - ✅ Detailed validation warnings/errors display
+- ✅ Inline status editing with dropdown in invoice table (Nov 2025)
+- ✅ Custom table with search fields and invisible element pattern (Nov 2025)
+- ✅ Enhanced cell styling with color-coded priorities and bold seller names (Nov 2025)
+- ✅ Optimized header alignment and search field dimensions (Nov 2025)
+- ✅ Overdue payment highlighting with red background (Nov 2025)
 
 ## 🔮 Future Enhancements
 
@@ -852,6 +1115,14 @@ except:
 
 ---
 
-**Last Updated:** 2025-11-14
-**Version:** 1.1.0
-**Status:** Production-ready with email integration, notification system, and enhanced UIv
+**Last Updated:** 2025-11-19
+**Version:** 1.1.1
+**Status:** Production-ready with email integration, notification system, enhanced UI with inline editing, and improved table styling
+
+**Latest improvements:**
+- Inline status editing with dropdown in invoice table
+- Enhanced table cell styling with color-coded priorities
+- Improved header alignment with invisible elements for consistent layout
+- Optimized search field dimensions (text_size=12, height=37)
+- Seller name bold styling (FontWeight.W_600) for better readability
+- Color-coded OCR confidence badges and overdue payment highlighting
