@@ -189,7 +189,7 @@ class InvoiceTable(ft.Column):
 					),
 				invisible_sort_button,
 				],
-			spacing=4,
+			spacing=2,
 			alignment=ft.MainAxisAlignment.START
 			)
 		
@@ -197,7 +197,7 @@ class InvoiceTable(ft.Column):
 		invisible_search = ft.TextField(
 			text_size=12,
 			height=37,
-			content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
+			content_padding=ft.padding.symmetric(horizontal=2, vertical=4),
 			border_width=1,
 			visible=False,
 			)
@@ -251,7 +251,7 @@ class InvoiceTable(ft.Column):
 						field
 						),
 					icon_color="#2196F3" if self.sort_column == field_name else "#9E9E9E",
-					style=ft.ButtonStyle(padding=ft.padding.all(4)),
+					style=ft.ButtonStyle(padding=ft.padding.all(2)),
 					),
 				],
 			spacing=2,
@@ -267,13 +267,13 @@ class InvoiceTable(ft.Column):
 					),
 				text_size=12,
 				height=37,
-				content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
+				content_padding=ft.padding.symmetric(horizontal=4, vertical=4),
 				border_color="#BDBDBD",
 				focused_border_color="#90CAF9",
 				border_width=1,
 				border_radius=3,
 				bgcolor="#FFFFFF",
-				filled=True,
+				#filled=True,
 				dense=True,
 				cursor_color="#2196F3",
 				)
@@ -284,7 +284,7 @@ class InvoiceTable(ft.Column):
 					ft.Container(
 						content=search_field,
 						padding=ft.padding.Padding(
-							left=0, top=2, right=5, bottom=2
+							left=0, top=2, right=0, bottom=2
 							)
 						)
 					],
@@ -296,7 +296,7 @@ class InvoiceTable(ft.Column):
 			return ft.Container(
 				content=header_column,
 				expand=expand,
-				padding=ft.padding.symmetric(horizontal=4, vertical=4),
+				padding=ft.padding.symmetric(horizontal=0, vertical=4),
 				alignment=ft.alignment.top_left,
 				border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 				)
@@ -576,7 +576,9 @@ class InvoiceTable(ft.Column):
 						ft.Dropdown(
 							value=invoice.status,
 							options=[
-								ft.dropdown.Option("Nieopłacona"),
+								ft.dropdown.Option("Nieopłacona",
+								                   style=ft.ButtonStyle(
+									                   icon_size=10)),
 								ft.dropdown.Option("Opłacona")
 								],
 							dense=True,
