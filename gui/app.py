@@ -77,7 +77,7 @@ class FakturaScannerApp:
 		self.content_column = ft.Column(
 			controls=[],
 			expand=True,
-			scroll=ft.ScrollMode.AUTO,
+			#scroll=ft.ScrollMode.AUTO,
 			)
 
 		self.content_area = ft.Container(

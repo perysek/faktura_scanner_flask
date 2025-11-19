@@ -10,7 +10,7 @@ from gui.theme import AppColors, AppIcons, AppSpacing, AppTypography
 
 
 class InvoiceTable(ft.Column):
-	"""Tabela faktur z sortowaniem, filtrowaniem i zablokowanym nagłówkiem"""
+	"""Tabela faktur z sortowaniem i filtrowaniem"""
 	
 	def __init__(
 			self,
@@ -50,6 +50,8 @@ class InvoiceTable(ft.Column):
 			}
 		
 		# Expansion ratios for columns
+		# These must be consistent between header and data rows
+		# MUST BE INTEGERS for flet's expand property
 		self.column_expansions = {
 			'seller_name': 3,
 			'invoice_number': 3,
@@ -60,26 +62,19 @@ class InvoiceTable(ft.Column):
 			'payment_due_date': 2,
 			'status': 3,
 			'created_at': 2,
-			'ocr_confidence': 1,
+			'ocr_confidence': 1,  # <-- FIX: Was 'ocr' which caused a KeyError
 			'actions': 2,
 			}
 		
-		# Container to hold just the data rows
-		# This enables the "Fixed Header" effect:
-		# 1. This container scrolls internally (scroll=ADAPTIVE)
-		# 2. This container expands to fill available vertical space (expand=True)
-		# 3. The header is OUTSIDE this container, so it stays top
+		# Container to hold just the data rows, so header isn't rebuilt
 		self.data_container = ft.Column(
 			scroll=ft.ScrollMode.ADAPTIVE,
-			expand=True,
-			spacing=0
+			expand=True
 			)
 		
-		# Main column settings
-		self.spacing = 0
-		self.expand = True  # The Table component itself must expand
-		
 		# Build the table
+		self.spacing = 0
+		self.expand = True
 		self.build_table()
 	
 	def build_table(self):
@@ -91,23 +86,25 @@ class InvoiceTable(ft.Column):
 		# Clear and add to column
 		self.controls.clear()
 		
-		# 1. Add Header Row (Fixed at the top)
+		# 1. Add Header Row
 		self.controls.append(self.build_header_row())
 		
-		# 2. Build Data Rows inside the scrollable container
+		# 2. Add Data Rows (in a vertically scrollable column)
+		# data_rows_list = self.build_data_rows() # <-- Moved
 		self.data_container.controls = self.build_data_rows()
 		
-		# 3. Add the scrollable data container
+		# Add a container with a top border to visually separate header
 		self.controls.append(
 			ft.Container(
 				content=self.data_container,
-				expand=True,  # Fill remaining height
+				# <-- Use the persistent data_container
+				expand=True,
 				border=ft.border.only(top=ft.BorderSide(1, "#E0E0E0"))
 				)
 			)
 	
 	def build_header_row(self) -> ft.Container:
-		"""Zbuduj wiersz nagłówka"""
+		"""Zbuduj wiersz nagłówka z komórkami o określonej szerokości"""
 		cells = [
 			self.create_column_header(
 				"Sprzedawca", "seller_name", with_search=True,
@@ -148,6 +145,7 @@ class InvoiceTable(ft.Column):
 			self.create_simple_header(
 				"OCR",
 				expand=self.column_expansions['ocr_confidence']
+				# <-- FIX: Key name corrected
 				),
 			self.create_simple_header(
 				"Akcje",
@@ -155,9 +153,11 @@ class InvoiceTable(ft.Column):
 				),
 			]
 		
+		# FIX: Wrap the Row in a Container to apply bgcolor
 		header_row = ft.Row(
 			controls=cells,
-			spacing=0
+			# height=75,  <-- Move this to the Container
+			# bgcolor="#F5F5F5", <-- Move this to the Container
 			)
 		
 		return ft.Container(
@@ -168,17 +168,21 @@ class InvoiceTable(ft.Column):
 	
 	@staticmethod
 	def create_simple_header(label: str, expand: int = 1) -> ft.Container:
-		"""Stwórz komórkę nagłówka"""
-		# Invisible sort button to match layout
+		"""Stwórz komórkę nagłówka (zamiast DataColumn)"""
+		# Invisible sort button to match structure of sortable headers
 		invisible_sort_button = ft.IconButton(
 			icon=ft.Icons.UNFOLD_MORE,
 			icon_size=14,
+			tooltip="",
 			icon_color="#F5F5F5",
-			disabled=True,
-			style=ft.ButtonStyle(padding=ft.padding.all(4)),
+			style=ft.ButtonStyle(
+				padding=ft.padding.all(4),
+				),
+			#visible=False,  # Hidden to maintain layout structure
+			disabled=True
 			)
-		
-		# Header row
+
+		# Header row with label and invisible sort button
 		header_row = ft.Row(
 			controls=[
 				ft.Text(
@@ -190,37 +194,42 @@ class InvoiceTable(ft.Column):
 				invisible_sort_button,
 				],
 			spacing=4,
-			alignment=ft.MainAxisAlignment.START
+			alignment=ft.MainAxisAlignment.START  # Center text in row
 			)
-		
-		# Invisible search field to match layout
+
+		# Invisible search field to match structure of headers with search
 		invisible_search = ft.TextField(
+			hint_text="",
 			text_size=12,
 			height=37,
 			content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
 			border_width=1,
-			visible=False,
+			border_radius=3,
+			filled=True,
+			dense=True,
+			visible=False, # Hidden to maintain layout structure
 			)
-		
+
+		# Container for invisible search field
+		search_container = ft.Container(
+			content=invisible_search,
+			padding=ft.padding.symmetric(horizontal=5, vertical=2),
+			)
+
+		# Stack vertically: title + invisible search (matches headers with search)
 		header_column = ft.Column(
-			controls=[
-				header_row,
-				ft.Container(
-					content=invisible_search,
-					padding=ft.padding.symmetric(horizontal=5, vertical=2)
-					)
-				],
+			controls=[header_row, search_container],
 			spacing=2,
 			tight=True,
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
 			alignment=ft.MainAxisAlignment.START,
 			)
-		
+
 		return ft.Container(
 			content=header_column,
 			expand=expand,
 			padding=ft.padding.symmetric(horizontal=4, vertical=4),
-			alignment=ft.alignment.top_left,
+			alignment=ft.alignment.top_left,  # Align top-center
 			border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 			)
 	
@@ -234,24 +243,28 @@ class InvoiceTable(ft.Column):
 		if self.sort_column == field_name:
 			sort_icon = ft.Icons.ARROW_UPWARD if self.sort_ascending else ft.Icons.ARROW_DOWNWARD
 		
-		# Header with sort button
+		# Header with sort button - cleaner style
 		header_row = ft.Row(
 			controls=[
 				ft.Text(
 					label,
-					weight=ft.FontWeight.W_600,
+					weight=ft.FontWeight.W_600,  # Slightly less bold
 					size=12,
-					color="#424242",
+					color="#424242",  # Darker gray text
+					# expand=True,  <-- REMOVED
 					),
 				ft.IconButton(
 					icon=sort_icon,
-					icon_size=14,
+					icon_size=14,  # Smaller icon
 					tooltip=f"Sortuj {label}",
 					on_click=lambda e, field=field_name: self.toggle_sort(
 						field
 						),
 					icon_color="#2196F3" if self.sort_column == field_name else "#9E9E9E",
-					style=ft.ButtonStyle(padding=ft.padding.all(4)),
+					# Blue when active, gray when not
+					style=ft.ButtonStyle(
+						padding=ft.padding.all(4),  # Smaller button padding
+						),
 					),
 				],
 			spacing=2,
@@ -259,6 +272,7 @@ class InvoiceTable(ft.Column):
 			)
 		
 		if with_search:
+			# Search field below column name - white bg with darker grey border
 			search_field = ft.TextField(
 				hint_text="Search...",
 				value=self.column_filters.get(field_name, ''),
@@ -268,55 +282,62 @@ class InvoiceTable(ft.Column):
 				text_size=12,
 				height=37,
 				content_padding=ft.padding.symmetric(horizontal=6, vertical=4),
-				border_color="#BDBDBD",
+				border_color="#BDBDBD",  # Darker grey than header bg (#F5F5F5)
 				focused_border_color="#90CAF9",
 				border_width=1,
 				border_radius=3,
-				bgcolor="#FFFFFF",
+				bgcolor="#FFFFFF",  # White background
 				filled=True,
 				dense=True,
 				cursor_color="#2196F3",
+				# expand=True,  <-- REMOVED
 				)
 			
+			# Wrap in container with padding to fit within column
+			search_container = ft.Container(
+				content=search_field,
+				padding=ft.padding.Padding(left=0,top=2,right=5,bottom=2)
+				# expand=True,  <-- REMOVED
+				)
+			
+			# Column header with search below - aligned top-center
 			header_column = ft.Column(
-				controls=[
-					header_row,
-					ft.Container(
-						content=search_field,
-						padding=ft.padding.Padding(
-							left=0, top=2, right=5, bottom=2
-							)
-						)
-					],
+				controls=[header_row, search_container],
 				spacing=2,
 				tight=True,
+				# expand=True,  <-- REMOVED
 				horizontal_alignment=ft.CrossAxisAlignment.START,
-				alignment=ft.MainAxisAlignment.START,
+				# Center horizontally
+				alignment=ft.MainAxisAlignment.START,  # Align to top
 				)
 			return ft.Container(
 				content=header_column,
 				expand=expand,
 				padding=ft.padding.symmetric(horizontal=4, vertical=4),
-				alignment=ft.alignment.top_left,
+				alignment=ft.alignment.top_left,  # Align top-left
 				border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 				)
 		else:
+			# Column header without search
 			return ft.Container(
 				content=header_row,
 				expand=expand,
 				padding=ft.padding.symmetric(horizontal=4, vertical=4),
-				alignment=ft.alignment.top_left,
+				alignment=ft.alignment.top_left,  # Align top-center
 				border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 				)
 	
 	def toggle_sort(self, field_name: str):
 		"""Przełącz sortowanie dla kolumny"""
 		if self.sort_column == field_name:
+			# Toggle direction if same column
 			self.sort_ascending = not self.sort_ascending
 		else:
+			# New column, default to ascending
 			self.sort_column = field_name
 			self.sort_ascending = True
 		
+		# Rebuild table
 		self.build_table()
 		if self.page:
 			self.page.update()
@@ -325,10 +346,14 @@ class InvoiceTable(ft.Column):
 		"""Obsłuż zmianę filtra"""
 		self.column_filters[field_name] = value.lower()
 		
+		# Re-apply logic
 		self.apply_filters()
 		self.apply_sorting()
 		
-		# Only update the controls in the data_container to keep focus in header
+		# Rebuild table
+		# self.build_table() # <-- THIS WAS THE PROBLEM
+		
+		# FIX: Only update the controls in the data_container
 		self.data_container.controls = self.build_data_rows()
 		
 		if self.page:
@@ -342,40 +367,50 @@ class InvoiceTable(ft.Column):
 			if not filter_text:
 				continue
 			
+			# Filter based on field
 			if field_name == 'seller_name':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.seller_name or '').lower()]
+			
 			elif field_name == 'invoice_number':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.invoice_number or '').lower()]
+			
 			elif field_name == 'invoice_date':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.invoice_date.strftime(
 						'%Y-%m-%d'
 						) if inv.invoice_date else '')]
+			
 			elif field_name == 'amount':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in f"{inv.amount:.2f}"]
+			
 			elif field_name == 'seller_nip':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.seller_nip or '').lower()]
+			
 			elif field_name == 'bank_account':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.bank_account or '').lower()]
+			
 			elif field_name == 'payment_due_date':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.payment_due_date.strftime(
 						'%Y-%m-%d'
 						) if inv.payment_due_date else '') or
 					   filter_text in (inv.payment_term or '').lower()]
+			
 			elif field_name == 'status':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.status or '').lower()]
+			
 			elif field_name == 'created_at':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (inv.created_at.strftime(
 						'%Y-%m-%d %H:%M'
 						) if inv.created_at else '')]
+			
 			elif field_name == 'ocr_confidence':
 				self.filtered_invoices = [inv for inv in self.filtered_invoices
 					if filter_text in (
@@ -386,53 +421,64 @@ class InvoiceTable(ft.Column):
 		if not self.sort_column:
 			return
 		
+		# Sort based on field
 		if self.sort_column == 'seller_name':
 			self.filtered_invoices.sort(
 				key=lambda inv: (inv.seller_name or '').lower(),
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'invoice_number':
 			self.filtered_invoices.sort(
 				key=lambda inv: (inv.invoice_number or '').lower(),
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'invoice_date':
 			self.filtered_invoices.sort(
 				key=lambda
 					inv: inv.invoice_date if inv.invoice_date else date.min,
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'amount':
 			self.filtered_invoices.sort(
-				key=lambda inv: inv.amount, reverse=not self.sort_ascending
+				key=lambda inv: inv.amount,
+				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'seller_nip':
 			self.filtered_invoices.sort(
 				key=lambda inv: (inv.seller_nip or '').lower(),
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'bank_account':
 			self.filtered_invoices.sort(
 				key=lambda inv: (inv.bank_account or '').lower(),
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'payment_due_date':
 			self.filtered_invoices.sort(
 				key=lambda
 					inv: inv.payment_due_date if inv.payment_due_date else date.min,
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'status':
 			self.filtered_invoices.sort(
 				key=lambda inv: (inv.status or '').lower(),
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'created_at':
 			self.filtered_invoices.sort(
 				key=lambda
 					inv: inv.created_at if inv.created_at else datetime.min,
 				reverse=not self.sort_ascending
 				)
+		
 		elif self.sort_column == 'ocr_confidence':
 			self.filtered_invoices.sort(
 				key=lambda inv: inv.ocr_confidence if inv.ocr_confidence else 0,
@@ -440,7 +486,7 @@ class InvoiceTable(ft.Column):
 				)
 	
 	def build_data_rows(self) -> List[ft.Control]:
-		"""Zbuduj wiersze danych"""
+		"""Zbuduj wiersze danych jako listę kontrolek (Row i Container)"""
 		rows_controls = []
 		
 		for invoice in self.filtered_invoices:
@@ -459,24 +505,31 @@ class InvoiceTable(ft.Column):
 						)
 					)
 			
+			# Przyciski akcji
 			actions = ft.Row(
 				controls=[
 					ft.IconButton(
-						icon=AppIcons.VIEW, icon_size=20, tooltip="Podgląd",
+						icon=AppIcons.VIEW,
+						icon_size=20,
+						tooltip="Podgląd",
 						on_click=lambda e, inv=invoice: self.on_view_callback(
 							inv
 							),
 						icon_color=AppColors.PRIMARY,
 						),
 					ft.IconButton(
-						icon=AppIcons.EDIT, icon_size=20, tooltip="Edytuj",
+						icon=AppIcons.EDIT,
+						icon_size=20,
+						tooltip="Edytuj",
 						on_click=lambda e, inv=invoice: self.on_edit_callback(
 							inv
 							),
 						icon_color=AppColors.INFO,
 						),
 					ft.IconButton(
-						icon=AppIcons.DELETE, icon_size=20, tooltip="Usuń",
+						icon=AppIcons.DELETE,
+						icon_size=20,
+						tooltip="Usuń",
 						on_click=lambda e, inv=invoice: self.on_delete_callback(
 							inv
 							),
@@ -484,9 +537,10 @@ class InvoiceTable(ft.Column):
 						),
 					],
 				spacing=2,
-				alignment=ft.MainAxisAlignment.CENTER
+				alignment=ft.MainAxisAlignment.CENTER  # Center actions
 				)
 			
+			# Helper function to create a data cell
 			def create_cell(
 					control: ft.Control, field_name: str,
 					alignment: ft.Alignment = ft.alignment.center_left
@@ -494,6 +548,7 @@ class InvoiceTable(ft.Column):
 				return ft.Container(
 					content=control,
 					expand=self.column_expansions[field_name],
+					# <-- This now receives an INT
 					padding=ft.padding.symmetric(horizontal=6, vertical=4),
 					alignment=alignment,
 					border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
@@ -509,8 +564,8 @@ class InvoiceTable(ft.Column):
 									color="#424242",
 									overflow=ft.TextOverflow.ELLIPSIS,
 									style=ft.TextStyle(
-										weight=ft.FontWeight.W_600
-										), no_wrap=True
+										weight=ft.FontWeight.W_600),
+									no_wrap=True
 									),
 								*badges,
 								],
@@ -523,33 +578,47 @@ class InvoiceTable(ft.Column):
 						ft.Text(
 							invoice.invoice_number, size=13, color="#616161",
 							overflow=ft.TextOverflow.ELLIPSIS, no_wrap=True
-							), 'invoice_number'
+							),
+						'invoice_number'
 						),
 					create_cell(
 						ft.Text(
 							invoice.invoice_date.strftime(
 								'%Y-%m-%d'
-								) if invoice.invoice_date else "-", size=13,
+								) if invoice.invoice_date else "-",
+							size=13,
 							color="#616161"
-							), 'invoice_date', alignment=ft.alignment.center
+							),
+						'invoice_date',
+						alignment=ft.alignment.center
 						),
 					create_cell(
 						ft.Text(
-							f"{invoice.amount:.2f} {invoice.currency}", size=13,
-							weight=ft.FontWeight.W_500, color="#424242"
-							), 'amount', alignment=ft.alignment.center_right
+							f"{invoice.amount:.2f} {invoice.currency}",
+							size=13,
+							weight=ft.FontWeight.W_500,
+							color="#424242"
+							),
+						'amount',
+						alignment=ft.alignment.center_right
 						),
 					create_cell(
 						ft.Text(
-							invoice.seller_nip or "-", size=13, color="#757575"
-							), 'seller_nip'
+							invoice.seller_nip or "-",
+							size=13,
+							color="#757575"
+							),
+						'seller_nip'
 						),
 					create_cell(
 						ft.Text(
-							invoice.bank_account or "-", size=13,
-							color="#757575", overflow=ft.TextOverflow.ELLIPSIS,
+							invoice.bank_account or "-",
+							size=13,
+							color="#757575",
+							overflow=ft.TextOverflow.ELLIPSIS,
 							no_wrap=True
-							), 'bank_account'
+							),
+						'bank_account'
 						),
 					create_cell(
 						ft.Container(
@@ -557,13 +626,20 @@ class InvoiceTable(ft.Column):
 								invoice.payment_term if invoice.payment_term else (
 									invoice.payment_due_date.strftime(
 										'%Y-%m-%d'
-										) if invoice.payment_due_date else "-"),
+										) if invoice.payment_due_date else "-"
+								),
 								size=13,
 								color="white" if (
-											invoice.payment_due_date and invoice.payment_due_date < date.today() and invoice.status != "Opłacona") else AppColors.TEXT_PRIMARY
+										invoice.payment_due_date
+										and invoice.payment_due_date < date.today()
+										and invoice.status != "Opłacona"
+								) else AppColors.TEXT_PRIMARY
 								),
 							bgcolor=AppColors.ERROR if (
-										invoice.payment_due_date and invoice.payment_due_date < date.today() and invoice.status != "Opłacona") else None,
+									invoice.payment_due_date
+									and invoice.payment_due_date < date.today()
+									and invoice.status != "Opłacona"
+							) else None,
 							padding=ft.padding.symmetric(
 								horizontal=6, vertical=2
 								),
@@ -577,7 +653,7 @@ class InvoiceTable(ft.Column):
 							value=invoice.status,
 							options=[
 								ft.dropdown.Option("Nieopłacona"),
-								ft.dropdown.Option("Opłacona")
+								ft.dropdown.Option("Opłacona"),
 								],
 							dense=True,
 							on_change=lambda e,
@@ -590,7 +666,7 @@ class InvoiceTable(ft.Column):
 								),
 							border_width=0,
 							text_align=ft.alignment.center_left,
-							expand=False
+							expand=False  # Make dropdown fill its cell
 							),
 						'status',
 						alignment=ft.alignment.center_left
@@ -598,10 +674,13 @@ class InvoiceTable(ft.Column):
 					create_cell(
 						ft.Text(
 							invoice.created_at.strftime(
-								'%Y-%m-%d %H:%M'
-								) if invoice.created_at else "-", size=13,
+								'%Y-%m-%d'
+								) if invoice.created_at else "-",
+							size=13,
 							color="#616161"
-							), 'created_at', alignment=ft.alignment.center
+							),
+						'created_at',
+						alignment=ft.alignment.center
 						),
 					create_cell(
 						ft.Container(
@@ -612,7 +691,8 @@ class InvoiceTable(ft.Column):
 								weight=ft.FontWeight.BOLD
 								),
 							bgcolor=AppColors.SUCCESS if invoice.ocr_confidence and invoice.ocr_confidence >= 80 else (
-								AppColors.WARNING if invoice.ocr_confidence and invoice.ocr_confidence >= 60 else AppColors.ERROR) if invoice.ocr_confidence else None,
+								AppColors.WARNING if invoice.ocr_confidence and invoice.ocr_confidence >= 60 else AppColors.ERROR
+							) if invoice.ocr_confidence else None,
 							padding=ft.padding.symmetric(
 								horizontal=6, vertical=2
 								),
@@ -622,35 +702,50 @@ class InvoiceTable(ft.Column):
 						alignment=ft.alignment.center_left
 						),
 					create_cell(
-						actions, 'actions', alignment=ft.alignment.center_left
+						actions,
+						'actions',
+						alignment=ft.alignment.center_left
 						),
 					],
-				height=30,
+				height=30,  # From old data_row_max_height
 				)
 			rows_controls.append(row)
+			# Add a divider line
 			rows_controls.append(ft.Container(height=1, bgcolor="#EEEEEE"))
 		
 		return rows_controls
 	
 	def on_status_change(self, e, invoice: Invoice):
-		"""Obsłuż zmianę statusu"""
+		"""Obsłuż zmianę statusu faktury"""
 		try:
+			# Update invoice status
 			invoice.status = e.control.value
+			# Save to database
 			self.invoice_repo.update(invoice.id, invoice)
+			print(
+				f"✅ Status faktury {invoice.invoice_number} zmieniony na: {invoice.status}"
+				)
+			
+			# Refresh table to update colors
 			if self.on_refresh_callback:
 				self.on_refresh_callback()
 		except Exception as ex:
 			print(f"❌ Błąd zmiany statusu: {ex}")
+			# Revert dropdown to previous value on error
 			e.control.value = invoice.status
 			if e.control.page:
 				e.control.page.update()
+
 	
 	def update_data(self, invoices: List[Invoice]):
-		"""Zaktualizuj dane w tabeli"""
+		"""Zaktualuj dane w tabeli"""
 		self.all_invoices = invoices
+		
+		# Re-apply logic
 		self.apply_filters()
 		self.apply_sorting()
 		
+		# FIX: Rebuild header (for sort icons) and data
 		self.controls[0] = self.build_header_row()
 		self.data_container.controls = self.build_data_rows()
 		

@@ -77,7 +77,7 @@ class FakturaScannerAppWebview:
 		self.content_column = ft.Column(
 			controls=[],
 			expand=True,
-			scroll=ft.ScrollMode.AUTO,
+			#scroll=ft.ScrollMode.AUTO,
 			alignment=ft.MainAxisAlignment.START
 		)
 
