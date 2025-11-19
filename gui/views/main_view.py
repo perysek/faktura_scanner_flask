@@ -95,7 +95,7 @@ class MainView(ft.Column):
 		# Statystyki
 		self.stats_row = ft.Row(
 			controls=[],
-			spacing=AppSpacing.MD,
+			spacing=AppSpacing.SM,
 			)
 		
 		# Create reusable dialogs
@@ -281,6 +281,40 @@ class MainView(ft.Column):
 						AppColors.WARNING
 						)
 					)
+			
+			# Kwoty po walutach
+			for currency, data in stats.get('by_currency', {}).items():
+				# Opłacone
+				stat_cards.append(
+					self.create_stat_card(
+						f"Suma Opłaconych {currency})",
+						f"{data['paid']:.2f}",
+						ft.Icons.CHECK_CIRCLE_ROUNDED,
+						AppColors.SUCCESS
+						)
+					)
+				
+				# Nieopłacone (bez przeterminowanych)
+				if data['unpaid'] > 0:
+					stat_cards.append(
+						self.create_stat_card(
+							f"Suma Nieopłaconych ({currency})",
+							f"{data['unpaid']:.2f}",
+							ft.Icons.PENDING_ROUNDED,
+							AppColors.WARNING
+							)
+						)
+				
+				# Przeterminowane
+				if data['overdue'] > 0:
+					stat_cards.append(
+						self.create_stat_card(
+							f"Suma załegłych ({currency})",
+							f"{data['overdue']:.2f}",
+							ft.Icons.ERROR_ROUNDED,
+							AppColors.ERROR
+							)
+						)
 			
 			self.stats_row.controls = stat_cards
 			self.page.update()
