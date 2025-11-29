@@ -162,7 +162,7 @@ class InvoiceTable(ft.Column):
 		
 		return ft.Container(
 			content=header_row,
-			height=80,  # Adjusted for normal search field height
+			height=75,  # Adjusted for normal search field height
 			bgcolor="#F5F5F5",
 			)
 	
@@ -176,6 +176,7 @@ class InvoiceTable(ft.Column):
 			icon_color="#F5F5F5",
 			disabled=True,
 			style=ft.ButtonStyle(padding=ft.padding.all(4)),
+			splash_radius=6
 			)
 		
 		# Header row
@@ -235,28 +236,33 @@ class InvoiceTable(ft.Column):
 			sort_icon = ft.Icons.ARROW_UPWARD if self.sort_ascending else ft.Icons.ARROW_DOWNWARD
 		
 		# Header with sort button
-		header_row = ft.Row(
-			controls=[
-				ft.Text(
-					label,
-					weight=ft.FontWeight.W_600,
-					size=12,
-					color="#424242",
-					),
-				ft.IconButton(
-					icon=sort_icon,
-					icon_size=14,
-					tooltip=f"Sortuj {label}",
-					on_click=lambda e, field=field_name: self.toggle_sort(
-						field
+		header_row = ft.Container(content=
+			ft.Row(
+				controls=[
+					ft.Text(
+						label,
+						weight=ft.FontWeight.W_600,
+						size=12,
+						color="#424242",
 						),
-					icon_color="#2196F3" if self.sort_column == field_name else "#9E9E9E",
-					style=ft.ButtonStyle(padding=ft.padding.all(2)),
-					),
-				],
-			spacing=2,
-			alignment=ft.MainAxisAlignment.START,
-			)
+					ft.IconButton(
+						icon=sort_icon,
+						icon_size=14,
+						tooltip=f"Sortuj {label}",
+						on_click=lambda e, field=field_name: self.toggle_sort(
+							field
+							),
+						icon_color="#2196F3" if self.sort_column == field_name else "#9E9E9E",
+						style=ft.ButtonStyle(padding=ft.padding.all(2)),
+						splash_radius=6
+						),
+					],
+				spacing=2,
+				alignment=ft.MainAxisAlignment.START,
+			),
+			height=20,
+			expand=expand
+		)
 		
 		if with_search:
 			search_field = ft.TextField(
@@ -266,15 +272,15 @@ class InvoiceTable(ft.Column):
 					field, e.control.value
 					),
 				text_size=12,
-				height=37,
-				content_padding=ft.padding.symmetric(horizontal=4, vertical=4),
+				height=30,
+				content_padding=ft.padding.symmetric(horizontal=4, vertical=1),
 				border_color="#BDBDBD",
-				focused_border_color="#90CAF9",
 				border_width=1,
-				border_radius=3,
-				bgcolor="#FFFFFF",
-				#filled=True,
-				dense=True,
+				border_radius=0,
+				bgcolor=ft.Colors.GREY_50,
+				focused_bgcolor=ft.Colors.WHITE,
+				hover_color=ft.Colors.WHITE,
+				#dense=True,
 				cursor_color="#2196F3",
 				)
 			
@@ -285,11 +291,11 @@ class InvoiceTable(ft.Column):
 						content=search_field,
 						padding=ft.padding.Padding(
 							left=0, top=2, right=0, bottom=2
-							)
+							),
 						)
 					],
 				spacing=2,
-				tight=True,
+				#tight=True,
 				horizontal_alignment=ft.CrossAxisAlignment.START,
 				alignment=ft.MainAxisAlignment.START,
 				)
@@ -494,7 +500,7 @@ class InvoiceTable(ft.Column):
 				return ft.Container(
 					content=control,
 					expand=self.column_expansions[field_name],
-					padding=ft.padding.symmetric(horizontal=6, vertical=4),
+					padding=ft.padding.symmetric(horizontal=3, vertical=0),
 					alignment=alignment,
 					border=ft.border.only(right=ft.BorderSide(1, "#EEEEEE"))
 					)
@@ -576,23 +582,26 @@ class InvoiceTable(ft.Column):
 						ft.Dropdown(
 							value=invoice.status,
 							options=[
-								ft.dropdown.Option("Nieopłacona",
-								                   style=ft.ButtonStyle(
-									                   icon_size=10)),
+								ft.dropdown.Option("Nieopłacona"),
 								ft.dropdown.Option("Opłacona")
 								],
 							dense=True,
-							on_change=lambda e,
-							                 inv=invoice: self.on_status_change(
-								e, inv
-								),
+							on_change=lambda e, inv=invoice:
+								self.on_status_change(e, inv),
 							text_size=13,
-							content_padding=ft.padding.symmetric(
-								horizontal=0, vertical=2
-								),
-							border_width=0,
+							border=ft.InputBorder.NONE,
 							text_align=ft.alignment.center_left,
-							expand=False
+							expand=False,
+							icon_size=4,
+							select_icon_size=4,
+							icon_content=ft.IconButton(
+								content=ft.Icon(
+									ft.Icons.ARROW_DROP_DOWN_CIRCLE_ROUNDED
+									),
+								splash_radius=7
+								),
+							select_icon=ft.Icons.ARROW_DROP_DOWN_SHARP,
+							item_height=10
 							),
 						'status',
 						alignment=ft.alignment.center_left
@@ -627,7 +636,7 @@ class InvoiceTable(ft.Column):
 						actions, 'actions', alignment=ft.alignment.center_left
 						),
 					],
-				height=30,
+				height=45,
 				)
 			rows_controls.append(row)
 			rows_controls.append(ft.Container(height=1, bgcolor="#EEEEEE"))

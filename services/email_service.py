@@ -3,11 +3,13 @@ Email service for fetching invoice PDFs via IMAP
 """
 import imaplib
 import email
+import os
+import re
+import time
 from email.header import decode_header
-from datetime import datetime, date
+from datetime import date
 from pathlib import Path
 from typing import List, Tuple, Optional
-import os
 
 
 class EmailService:
@@ -17,7 +19,8 @@ class EmailService:
 		self.imap = None
 		self.connected = False
 
-	def test_connection(self, settings: dict) -> bool:
+	@staticmethod
+	def test_connection(settings: dict) -> bool:
 		"""
 		Test IMAP connection with given settings
 
@@ -64,11 +67,11 @@ class EmailService:
 			self.imap.login(email_address, password)
 
 			self.connected = True
-			print(f"✅ Connected to {imap_server} as {email_address}")
+			print(f"✅ Połączono z {imap_server} jako {email_address}")
 			return True
 
 		except Exception as e:
-			print(f"❌ Connection failed: {e}")
+			print(f"❌ Błąd połączenia: {e}")
 			self.connected = False
 			return False
 
@@ -78,9 +81,46 @@ class EmailService:
 			try:
 				self.imap.logout()
 				self.connected = False
-				print("✅ Disconnected from email server")
+				print("✅ Rozłączono z serwerem email")
 			except:
 				pass
+
+	def _list_folders(self) -> List[str]:
+		"""
+		List all selectable folders in the email account.
+		"""
+		folders = []
+		try:
+			status, folder_list = self.imap.list()
+			if status == "OK":
+				for folder_info in folder_list:
+					# Decode folder info
+					folder_info_decoded = folder_info.decode('utf-8', 'ignore')
+
+					# Check if the folder is selectable
+					if r'\Noselect' not in folder_info_decoded:
+						# Extract folder name using regex
+						match = re.search(r'"/"\s+"?([^"]+)"?', folder_info_decoded)
+						if match:
+							folder_name = match.group(1).strip()
+							folders.append(folder_name)
+		except Exception as e:
+			print(f"❌ Błąd podczas listowania folderów: {e}")
+		return folders
+
+	def _build_search_criteria(self, from_date: Optional[date], to_date: Optional[date]) -> List[str]:
+		"""
+		Build search criteria for email search.
+		"""
+		search_criteria = ["ALL"]
+		if from_date:
+			search_criteria = [f'SINCE {from_date.strftime("%d-%b-%Y")}']
+		if to_date:
+			if from_date:
+				search_criteria.append(f'BEFORE {to_date.strftime("%d-%b-%Y")}')
+			else:
+				search_criteria = [f'BEFORE {to_date.strftime("%d-%b-%Y")}']
+		return search_criteria
 
 	def fetch_pdf_attachments(
 			self,
@@ -90,80 +130,62 @@ class EmailService:
 			progress_callback: Optional[callable] = None
 	) -> List[Tuple[str, str]]:
 		"""
-		Fetch PDF attachments from emails
-
-		Args:
-			from_date: Start date for email search
-			to_date: End date for email search
-			save_dir: Directory to save PDFs (if None, uses temp dir)
-			progress_callback: Optional callback function(message, detail) for progress updates
-
-		Returns:
-			List of tuples: (pdf_filename, pdf_path)
+		Fetch PDF attachments from emails across all folders.
 		"""
 		if not self.connected:
-			print("❌ Not connected to email server")
 			if progress_callback:
 				progress_callback("❌ Nie połączono z serwerem email", "", None)
 			return []
 
+		all_pdf_files = []
 		try:
-			# Select inbox
-			self.imap.select("INBOX")
-
-			# Build search criteria
-			search_criteria = ["ALL"]
-
-			if from_date:
-				search_criteria = [f'SINCE {from_date.strftime("%d-%b-%Y")}']
-
-			if to_date:
-				if from_date:
-					search_criteria = [
-						f'SINCE {from_date.strftime("%d-%b-%Y")}',
-						f'BEFORE {to_date.strftime("%d-%b-%Y")}'
-					]
-				else:
-					search_criteria = [f'BEFORE {to_date.strftime("%d-%b-%Y")}']
-
-			# Search for emails
-			search_string = " ".join(search_criteria)
-			status, messages = self.imap.search(None, *search_criteria)
-
-			if status != "OK":
-				print("❌ Error searching emails")
+			folders = self._list_folders()
+			if not folders:
 				if progress_callback:
-					progress_callback("❌ Błąd wyszukiwania wiadomości", "", None)
+					progress_callback("❌ Nie znaleziono żadnych folderów email", "", None)
 				return []
 
-			# Get message IDs
-			email_ids = messages[0].split()
-			print(f"📧 Found {len(email_ids)} emails")
 			if progress_callback:
-				progress_callback(f"📧 Znaleziono {len(email_ids)} wiadomości", "Przetwarzanie załączników...", 0.5)
+				progress_callback(f"🔎 Znaleziono {len(folders)} folderów", "Rozpoczynanie wyszukiwania emaili...", 0.1)
 
-			pdf_files = []
+			search_criteria = self._build_search_criteria(from_date, to_date)
 
-			# Process each email
-			for idx, email_id in enumerate(email_ids, 1):
-				if progress_callback:
-					# Calculate progress (50% after search, 100% after processing all emails)
-					progress = 0.5 + (0.5 * idx / len(email_ids))
-					progress_callback(
-						f"Przetwarzanie wiadomości {idx}/{len(email_ids)}",
-						"Szukanie załączników PDF...",
-						progress
-					)
-				pdfs = self._process_email(email_id, save_dir, progress_callback)
-				pdf_files.extend(pdfs)
+			for i, folder_name in enumerate(folders):
+				try:
+					if progress_callback:
+						progress_callback(f"📂 Skanowanie folderu: {folder_name}", f"({i + 1}/{len(folders)})", 0.1 + 0.8 * (i / len(folders)))
 
-			print(f"✅ Downloaded {len(pdf_files)} PDF attachments")
+					self.imap.select(f'"{folder_name}"')
+					status, messages = self.imap.search(None, *search_criteria)
+
+					if status != "OK":
+						continue
+
+					email_ids = messages[0].split()
+					if not email_ids:
+						continue
+
+					if progress_callback:
+						progress_callback(f"📧 Znaleziono {len(email_ids)} emaili w {folder_name}", "Przetwarzanie załączników...", None)
+
+					for idx, email_id in enumerate(email_ids, 1):
+						if progress_callback:
+							progress = 0.1 + 0.8 * ((i + (idx / len(email_ids))) / len(folders))
+							progress_callback(f"Przetwarzanie emaila {idx}/{len(email_ids)} w {folder_name}", "Wyszukiwanie załączników PDF...", progress)
+
+						pdfs = self._process_email(email_id, save_dir, progress_callback)
+						all_pdf_files.extend(pdfs)
+
+				except Exception as e:
+					if progress_callback:
+						progress_callback(f"❌ Błąd podczas skanowania folderu {folder_name}", str(e), None)
+					continue
+
 			if progress_callback:
-				progress_callback(f"✅ Pobrano {len(pdf_files)} plików PDF", "Import zakończony", 1.0)
-			return pdf_files
+				progress_callback(f"✅ Pobrani {len(all_pdf_files)} załączników PDF", "Import zakończony", 1.0)
+			return all_pdf_files
 
 		except Exception as e:
-			print(f"❌ Error fetching emails: {e}")
 			import traceback
 			traceback.print_exc()
 			if progress_callback:
@@ -220,7 +242,7 @@ class EmailService:
 							payload_data = part.get_payload(decode=True)
 
 							# Save PDF
-							pdf_path = self._save_attachment(
+							pdf_path = EmailService._save_attachment(
 								payload_data,
 								filename,
 								save_dir,
@@ -229,17 +251,17 @@ class EmailService:
 
 							if pdf_path:
 								pdf_files.append((filename, pdf_path))
-								print(f"  📄 Downloaded: {filename}")
+								print(f"  📄 Pobrani: {filename}")
 								if progress_callback:
-									progress_callback(f"✅ Pobrano: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
+									progress_callback(f"✅ Pobrani: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
 
 							# Clear payload reference to free memory
 							del payload_data
 
 		except Exception as e:
-			print(f"Error processing email {email_id}: {e}")
+			print(f"Błąd podczas przetwarzania emaila {email_id}: {e}")
 			if progress_callback:
-				progress_callback(f"❌ Błąd przetwarzania wiadomości", str(e), None)
+				progress_callback(f"❌ Błąd podczas przetwarzania wiadomości", str(e), None)
 
 		finally:
 			# Clear message reference to ensure cleanup
@@ -248,13 +270,15 @@ class EmailService:
 
 		return pdf_files
 
-	def _save_attachment(self, data: bytes, filename: str, save_dir: str = None, progress_callback: Optional[callable] = None) -> Optional[str]:
+	@staticmethod
+	def _save_attachment(data: bytes, filename: str, save_dir: str = None, progress_callback: Optional[callable] = None) -> Optional[str]:
 		"""
 		Save attachment to file
 
 		Returns:
 			Path to saved file, or None if error
 		"""
+		pdf_path = None
 		try:
 			# Use temp dir if not specified
 			if save_dir is None:
@@ -282,33 +306,22 @@ class EmailService:
 				f.flush()  # Force write to disk
 				os.fsync(f.fileno())  # Ensure OS writes to disk
 
-			# Explicitly close file (redundant but ensures closure)
-			# The 'with' statement already closes it, but being extra safe
-
 			# Longer delay to ensure file handle is released on Windows
-			import time
-			time.sleep(0.3)  # Increased from 0.1 to 0.3 seconds
+			time.sleep(0.3)
 
-			# Verify file is accessible by trying to open it
+			# Verify file is accessible
 			max_retries = 3
 			for attempt in range(max_retries):
 				try:
-					# Try to open file in read mode to verify it's accessible
-					with open(pdf_path, 'rb') as test_f:
+					with open(pdf_path, 'rb') as _:
 						pass
-					break  # File is accessible
-				except Exception as e:
+					break
+				except Exception:
 					if attempt < max_retries - 1:
-						print(f"  ⚠️ File not yet accessible, retrying... ({attempt + 1}/{max_retries})")
 						if progress_callback:
-							progress_callback(
-								f"⚠️ Weryfikacja dostępu: {filename}",
-								f"Próba {attempt + 1}/{max_retries}...",
-								None
-							)
+							progress_callback(f"⚠️ Weryfikacja dostępu: {filename}", f"Próba {attempt + 1}/{max_retries}...", None)
 						time.sleep(0.5)
 					else:
-						print(f"  ❌ File still locked after {max_retries} attempts")
 						if progress_callback:
 							progress_callback(f"❌ Plik zablokowany: {filename}", "Nie można uzyskać dostępu", None)
 						raise
@@ -316,7 +329,7 @@ class EmailService:
 			return str(pdf_path)
 
 		except Exception as e:
-			print(f"Error saving attachment: {e}")
+			print(f"Błąd podczas zapisywania załącznika: {e}")
 			if progress_callback:
 				progress_callback(f"❌ Błąd zapisu: {filename}", str(e), None)
 			return None

@@ -87,6 +87,7 @@ class UploadViewWebview(ft.Column):
 		# Style
 		self.spacing = AppSpacing.LG
 		self.expand = True
+		self.scroll = ft.ScrollMode.ADAPTIVE
 
 		# UI
 		self.build_ui()
@@ -177,10 +178,11 @@ class UploadViewWebview(ft.Column):
 				tight=True,
 			),
 			visible=False,
-			padding=ft.padding.all(AppSpacing.SM),
-			bgcolor=AppColors.SURFACE_VARIANT,
-			border_radius=6,
+			# padding=ft.padding.all(AppSpacing.SM),
+			# bgcolor=AppColors.SURFACE_VARIANT,
+			# border_radius=6,
 			width=320,
+			**AppStyles.card(),
 		)
 
 		# Upload area
@@ -197,6 +199,7 @@ class UploadViewWebview(ft.Column):
 			content=self.files_list_view,
 			visible=False,
 			**AppStyles.card(),
+			expand_loose=True
 		)
 
 		# Przyciski akcji
@@ -215,7 +218,7 @@ class UploadViewWebview(ft.Column):
 			disabled=True,
 		)
 
-		actions_row = ft.Row(
+		self.actions_row = ft.Row(
 			controls=[
 				self.process_button,
 				self.clear_button,
@@ -234,16 +237,28 @@ class UploadViewWebview(ft.Column):
 		self.controls = [
 			header,
 			ft.Divider(height=1, color=AppColors.DIVIDER),
-			self.upload_area,
-			self.files_container,
-			actions_row,
+			ft.Container(
+				content=ft.Row(
+					controls=[ft.Column(
+						controls=[
+							self.upload_area,
+							self.progress_container,
+							ft.Container(width=AppSpacing.MD)
+							],
+					),
+					self.files_container],
+				),
+			),
+			ft.Divider(height=1, color=AppColors.DIVIDER
+			),
+			self.actions_row,
 			self.results_container,
 		]
 
 	def create_upload_area(self) -> ft.Container:
 		"""Stwórz obszar uploadu"""
 		card_styles = AppStyles.card()
-		card_styles['padding'] = AppSpacing.XXL
+		# card_styles['padding'] = AppSpacing.XXL
 		return ft.Container(
 			content=ft.Column(
 				controls=[
@@ -253,21 +268,16 @@ class UploadViewWebview(ft.Column):
 						color=AppColors.PRIMARY,
 					),
 					ft.Text(
-						"Wybierz pliki PDF do przetworzenia",
+						"Import faktur w PDF:",
 						size=AppTypography.TITLE,
 						weight=ft.FontWeight.W_500,
 						color=AppColors.TEXT_PRIMARY,
 					),
-					ft.Text(
-						"Webview mode: pliki zostaną przesłane na serwer lub pobrane z e-mail",
-						size=AppTypography.BODY,
-						color=AppColors.TEXT_SECONDARY,
-					),
 					ft.Container(height=AppSpacing.MD),
-					ft.Row(
+					ft.Column(
 						controls=[
 							ft.ElevatedButton(
-								"Wybierz pliki PDF",
+								"Z folderu",
 								icon=ft.Icons.FOLDER_OPEN,
 								on_click=lambda _: self.file_picker.pick_files(
 									allowed_extensions=["pdf"],
@@ -276,24 +286,25 @@ class UploadViewWebview(ft.Column):
 								**AppStyles.button_primary()
 							),
 							ft.ElevatedButton(
-								"Import from E-mail",
+								"Z poczty e-mail",
 								icon=ft.Icons.EMAIL,
 								on_click=self.import_from_email,
 								**AppStyles.button_secondary()
 							),
 							ft.Container(width=AppSpacing.LG),
-							self.progress_container,
 						],
-						alignment=ft.MainAxisAlignment.CENTER,
+						alignment=ft.MainAxisAlignment.START,
 						spacing=AppSpacing.SM,
 						wrap=False,
 					),
+					ft.Container(width=AppSpacing.MD),
 				],
-				horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+				horizontal_alignment=ft.CrossAxisAlignment.START,
 				spacing=AppSpacing.SM,
 			),
 			**card_styles,
-			alignment=ft.alignment.center,
+			alignment=ft.alignment.top_left,
+			expand=1,
 		)
 
 	def on_files_selected(self, e: ft.FilePickerResultEvent):

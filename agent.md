@@ -89,6 +89,9 @@ faktura_scanner/
 - **Style:** Minimal, modern, card-based UI
 - **Responsiveness:** Min width 1000px, expandable, app start in maximized window
 
+### **Language:**
+- The application's user interface and all user-facing strings must be in **Polish**.
+
 ### **Key Components:**
 - `AppStyles.card()` returns dict with `bgcolor`, `border_radius`, `padding=AppSpacing.MD`, `shadow` (BoxShadow)
   - Note: Uses `shadow` instead of `elevation` because we use `ft.Container` (not `ft.Card`)
