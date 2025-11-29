@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Nie znaleziono - {{ app_name }}{% endblock %}
+
+{% block page_title %}Nie znaleziono{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center py-16">
+    <span class="material-icons text-gray-300" style="font-size: 120px;">error_outline</span>
+    <h1 class="text-6xl font-bold text-gray-900 mt-4">404</h1>
+    <p class="text-xl text-gray-600 mt-4">Strona, której szukasz, nie istnieje</p>
+    <div class="mt-8">
+        <a href="{{ url_for('main.invoices_list') }}" class="btn-primary">
+            <span class="material-icons align-middle mr-2">home</span>
+            Powrót do strony głównej
+        </a>
+    </div>
+</div>
+{% endblock %}

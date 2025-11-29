@@ -52,12 +52,12 @@ def initialize_database():
 		columns = [row[1] for row in cursor.fetchall()]
 
 		if 'payment_term' not in columns:
-			print("🔄 Dodawanie kolumny payment_term do tabeli invoices...")
+			print("Dodawanie kolumny payment_term do tabeli invoices...")
 			cursor.execute("ALTER TABLE invoices ADD COLUMN payment_term TEXT")
 			conn.commit()
-			print("✅ Kolumna payment_term dodana")
+			print("Kolumna payment_term dodana")
 	except Exception as e:
-		print(f"⚠️ Migracja payment_term: {e}")
+		print(f"Ostrzezenie - Migracja payment_term: {e}")
 
 	# Migracja: dodaj status column jeśli nie istnieje
 	try:
@@ -67,11 +67,11 @@ def initialize_database():
 		columns = [row[1] for row in cursor.fetchall()]
 
 		if 'status' not in columns:
-			print("🔄 Dodawanie kolumny status do tabeli invoices...")
-			cursor.execute("ALTER TABLE invoices ADD COLUMN status TEXT DEFAULT 'Nieopłacona'")
+			print("Dodawanie kolumny status do tabeli invoices...")
+			cursor.execute("ALTER TABLE invoices ADD COLUMN status TEXT DEFAULT 'Nieoplacona'")
 			conn.commit()
-			print("✅ Kolumna status dodana")
+			print("Kolumna status dodana")
 	except Exception as e:
-		print(f"⚠️ Migracja status: {e}")
+		print(f"Ostrzezenie - Migracja status: {e}")
 
-	print("✅ Baza danych zainicjalizowana")
+	print("Baza danych zainicjalizowana")

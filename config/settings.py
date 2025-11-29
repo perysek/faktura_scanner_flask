@@ -23,10 +23,20 @@ POPPLER_PATH = r"C:\poppler\Library\bin"
 OCR_DPI = 300  # DPI dla konwersji PDF → obrazy
 OCR_PREPROCESSING = True  # Preprocessing obrazów
 
-# GUI settings
+# GUI settings (legacy)
 APP_TITLE = "FakturaScanner"
 APP_WIDTH = 1200
 APP_HEIGHT = 800
+
+# Web app settings
+APP_NAME = "FakturaScanner"
+VERSION = "2.0.0"
+UPLOAD_FOLDER = BASE_DIR / "uploads"
+PDF_FOLDER = BASE_DIR / "pdfs"
+
+# Create upload directories
+UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+PDF_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Database
 DB_ECHO = False  # SQL logging

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Import PDF - {{ app_name }}{% endblock %}
+
+{% block page_title %}Import PDF{% endblock %}
+
+{% block content %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- File Upload Card -->
+        <div class="card">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-primary mr-2">upload_file</span>
+                Upload plików PDF
+            </h3>
+
+            <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer">
+                <input type="file" id="file-input" accept=".pdf" multiple class="hidden">
+                <span class="material-icons text-gray-400 text-6xl">cloud_upload</span>
+                <p class="text-gray-600 mt-4">Przeciągnij pliki PDF tutaj lub kliknij, aby wybrać</p>
+                <p class="text-sm text-gray-500 mt-2">Możesz wybrać wiele plików jednocześnie</p>
+            </div>
+
+            <div id="selected-files" class="mt-4 space-y-2"></div>
+
+            <div class="mt-6 flex items-center gap-3">
+                <button id="upload-btn" class="btn-primary flex items-center" disabled>
+                    <span class="material-icons text-sm mr-2">upload</span>
+                    Przetwórz pliki
+                </button>
+                <button id="clear-btn" class="btn-secondary" disabled onclick="clearFiles()">
+                    <span class="material-icons text-sm mr-2">clear</span>
+                    Wyczyść
+                </button>
+            </div>
+
+            <!-- Progress -->
+            <div id="upload-progress" class="hidden mt-6">
+                <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                    <span>Przesyłanie...</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progress-bar" class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Import Card -->
+        <div class="card">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-primary mr-2">email</span>
+                Import z e-mail
+            </h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Folder</label>
+                    <input type="text" id="email-folder" value="INBOX" class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data od</label>
+                    <input type="date" id="email-date-from" class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data do</label>
+                    <input type="date" id="email-date-to" class="input">
+                </div>
+
+                <button id="email-import-btn" class="btn-primary w-full flex items-center justify-center">
+                    <span class="material-icons text-sm mr-2">download</span>
+                    Importuj z e-mail
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Results -->
+    <div id="results-section" class="hidden mt-8">
+        <div class="card">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-primary mr-2">assessment</span>
+                Wyniki przetwarzania
+            </h3>
+
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Plik</th>
+                            <th>Status</th>
+                            <th>Nr faktury</th>
+                            <th>Sprzedawca</th>
+                            <th>Kwota</th>
+                            <th>Duplikat</th>
+                            <th>Błędy walidacji</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody"></tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 flex justify-between items-center">
+                <div class="text-sm text-gray-600">
+                    <span id="results-summary"></span>
+                </div>
+                <button onclick="closeResults()" class="btn-secondary">
+                    Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/invoices/upload.js') }}"></script>
+{% endblock %}
