@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+ENV/
+
+# Database
+*.db
+faktury.db
+
+# Node.js
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Claude Code
+.claude/.dirty-files
+
+# Temporary files
+*.tmp
+temp/
+uploads/
+pdfs/
+assets/temp/
+
+# TailwindCSS output (generated)
+static/css/output.css

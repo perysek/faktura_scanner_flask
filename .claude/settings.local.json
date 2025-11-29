@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git -C /c/Projects/faktura_scanner_flask log --oneline -15)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:css:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Skill(auto-memory:memory-processor)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

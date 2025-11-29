@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+
+    <!-- TailwindCSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-surface-secondary">
+    <!-- Main Container -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-white shadow-lg flex flex-col">
+            <!-- Logo & App Info -->
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <span class="material-icons text-primary text-4xl">receipt_long</span>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">{{ app_name }}</h1>
+                        <p class="text-xs text-gray-500">v{{ version }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="flex-1 p-4 overflow-y-auto">
+                <ul class="space-y-2">
+                    <li>
+                        <a href="{{ url_for('main.invoices_list') }}"
+                           class="nav-link {% if request.endpoint == 'main.invoices_list' %}active{% endif %}">
+                            <span class="material-icons text-xl mr-3">list_alt</span>
+                            <span>Lista faktur</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.upload') }}"
+                           class="nav-link {% if request.endpoint == 'main.upload' %}active{% endif %}">
+                            <span class="material-icons text-xl mr-3">upload_file</span>
+                            <span>Import PDF</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.history') }}"
+                           class="nav-link {% if request.endpoint == 'main.history' %}active{% endif %}">
+                            <span class="material-icons text-xl mr-3">history</span>
+                            <span>Historia</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.email_settings') }}"
+                           class="nav-link {% if request.endpoint == 'main.email_settings' %}active{% endif %}">
+                            <span class="material-icons text-xl mr-3">email</span>
+                            <span>Ustawienia e-mail</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Notification Area -->
+            <div id="notification-panel" class="border-t border-gray-200 p-4">
+                <div class="text-xs text-gray-500 text-center">
+                    Powiadomienia pojawią się tutaj
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto">
+            <!-- Page Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200 px-8 py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gray-900">{% block page_title %}{% endblock %}</h2>
+                        {% block page_subtitle %}{% endblock %}
+                    </div>
+                    <div class="flex items-center gap-4">
+                        {% block page_actions %}{% endblock %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="p-8">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-container"></div>
+
+    <!-- Core JavaScript -->
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modals.js') }}"></script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

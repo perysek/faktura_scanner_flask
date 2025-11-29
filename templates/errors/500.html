@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Błąd serwera - {{ app_name }}{% endblock %}
+
+{% block page_title %}Błąd serwera{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center py-16">
+    <span class="material-icons text-red-300" style="font-size: 120px;">report_problem</span>
+    <h1 class="text-6xl font-bold text-gray-900 mt-4">500</h1>
+    <p class="text-xl text-gray-600 mt-4">Wystąpił błąd serwera. Przepraszamy!</p>
+    <div class="mt-8">
+        <a href="{{ url_for('main.invoices_list') }}" class="btn-primary">
+            <span class="material-icons align-middle mr-2">home</span>
+            Powrót do strony głównej
+        </a>
+    </div>
+</div>
+{% endblock %}

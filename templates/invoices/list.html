@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Lista faktur - {{ app_name }}{% endblock %}
+
+{% block page_title %}Lista faktur{% endblock %}
+
+{% block page_actions %}
+    <div class="flex items-center gap-3">
+        <!-- Search -->
+        <div class="relative">
+            <input type="text" id="search-input" placeholder="Szukaj faktury..."
+                   class="input w-64 pl-10">
+            <span class="material-icons absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                search
+            </span>
+        </div>
+
+        <!-- Export -->
+        <div class="relative">
+            <button id="export-btn" class="btn-secondary flex items-center">
+                <span class="material-icons text-sm mr-2">download</span>
+                Eksport
+            </button>
+            <div id="export-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <button onclick="exportToExcel()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center">
+                    <span class="material-icons text-sm mr-2">table_chart</span>
+                    Eksport do Excel
+                </button>
+                <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center">
+                    <span class="material-icons text-sm mr-2">description</span>
+                    Eksport do CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Refresh -->
+        <button id="refresh-btn" class="btn-secondary" onclick="loadInvoices()">
+            <span class="material-icons text-sm">refresh</span>
+        </button>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Wszystkie faktury</p>
+                    <p id="stat-total" class="text-2xl font-bold text-gray-900">0</p>
+                </div>
+                <span class="material-icons text-primary text-4xl">receipt_long</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Zapłacone</p>
+                    <p id="stat-paid" class="text-2xl font-bold text-status-success">0</p>
+                </div>
+                <span class="material-icons text-status-success text-4xl">check_circle</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Niezapłacone</p>
+                    <p id="stat-unpaid" class="text-2xl font-bold text-status-error">0</p>
+                </div>
+                <span class="material-icons text-status-error text-4xl">pending</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Całkowita kwota</p>
+                    <p id="stat-amount" class="text-2xl font-bold text-gray-900">0 zł</p>
+                </div>
+                <span class="material-icons text-primary text-4xl">account_balance</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="card">
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nr faktury</th>
+                        <th>Sprzedawca</th>
+                        <th>NIP</th>
+                        <th>Data wystawienia</th>
+                        <th>Kwota netto</th>
+                        <th>VAT</th>
+                        <th>Kwota brutto</th>
+                        <th>Waluta</th>
+                        <th>Status</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="invoices-tbody">
+                    <tr>
+                        <td colspan="10" class="text-center py-8 text-gray-500">
+                            <span class="material-icons text-6xl text-gray-300">hourglass_empty</span>
+                            <p class="mt-2">Ładowanie...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center py-12">
+            <span class="material-icons text-gray-300" style="font-size: 80px;">description</span>
+            <p class="text-gray-500 mt-4">Brak faktur do wyświetlenia</p>
+            <a href="{{ url_for('main.upload') }}" class="btn-primary mt-4 inline-flex items-center">
+                <span class="material-icons text-sm mr-2">upload</span>
+                Importuj faktury
+            </a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/invoices/list.js') }}"></script>
+{% endblock %}

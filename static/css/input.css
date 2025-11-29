@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  body {
+    @apply bg-surface-secondary font-sans text-gray-900;
+  }
+
+  h1 {
+    @apply text-3xl font-bold text-gray-900;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold text-gray-800;
+  }
+
+  h3 {
+    @apply text-xl font-semibold text-gray-800;
+  }
+}
+
+/* Custom components */
+@layer components {
+  /* Card */
+  .card {
+    @apply bg-white rounded-lg shadow-md p-md;
+  }
+
+  /* Button variants */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-600 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400;
+  }
+
+  .btn-success {
+    @apply btn bg-status-success text-white hover:bg-green-600 focus:ring-status-success;
+  }
+
+  .btn-danger {
+    @apply btn bg-status-error text-white hover:bg-red-600 focus:ring-status-error;
+  }
+
+  .btn-warning {
+    @apply btn bg-status-warning text-gray-900 hover:bg-yellow-500 focus:ring-status-warning;
+  }
+
+  /* Form inputs */
+  .input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+
+  .input-error {
+    @apply input border-status-error focus:ring-status-error;
+  }
+
+  /* Table */
+  .table {
+    @apply w-full border-collapse;
+  }
+
+  .table thead {
+    @apply bg-gray-100 border-b-2 border-gray-300;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider;
+  }
+
+  .table td {
+    @apply px-4 py-3 text-sm text-gray-900 border-b border-gray-200;
+  }
+
+  .table tbody tr:hover {
+    @apply bg-gray-50;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-error {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg;
+  }
+
+  .nav-link.active {
+    @apply bg-primary text-white;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 overflow-hidden;
+  }
+
+  .modal-header {
+    @apply px-6 py-4 border-b border-gray-200 flex items-center justify-between;
+  }
+
+  .modal-body {
+    @apply px-6 py-4;
+  }
+
+  .modal-footer {
+    @apply px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-2;
+  }
+
+  /* Toast notification */
+  .toast {
+    @apply fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 flex items-start gap-3 max-w-sm z-50 animate-slide-in;
+  }
+
+  .toast-success {
+    @apply toast border-l-4 border-status-success;
+  }
+
+  .toast-error {
+    @apply toast border-l-4 border-status-error;
+  }
+
+  .toast-warning {
+    @apply toast border-l-4 border-status-warning;
+  }
+
+  .toast-info {
+    @apply toast border-l-4 border-status-info;
+  }
+}
+
+/* Utilities */
+@layer utilities {
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}

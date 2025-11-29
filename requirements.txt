@@ -1,5 +1,5 @@
-# GUI Framework
-flet==0.28.3
+# Web Framework
+Flask==3.0.0
 
 # OCR i przetwarzanie PDF
 pytesseract==0.3.13

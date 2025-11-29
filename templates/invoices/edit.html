@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Edytuj fakturę - {{ app_name }}{% endblock %}
+
+{% block page_title %}Edytuj fakturę{% endblock %}
+
+{% block page_actions %}
+    <button onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
+        <span class="material-icons text-sm mr-2">arrow_back</span>
+        Powrót
+    </button>
+{% endblock %}
+
+{% block content %}
+    <form id="invoice-form" class="max-w-4xl">
+        <!-- Invoice Details Card -->
+        <div class="card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                <span class="material-icons text-primary mr-2">receipt</span>
+                Dane faktury
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Numer faktury <span class="text-status-error">*</span>
+                    </label>
+                    <input type="text" id="invoice_number" name="invoice_number"
+                           value="{{ invoice.invoice_number or '' }}"
+                           class="input" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Status płatności
+                    </label>
+                    <select id="payment_status" name="payment_status" class="input">
+                        <option value="Niezapłacona" {% if invoice.payment_status == 'Niezapłacona' %}selected{% endif %}>
+                            Niezapłacona
+                        </option>
+                        <option value="Zapłacona" {% if invoice.payment_status == 'Zapłacona' %}selected{% endif %}>
+                            Zapłacona
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Data wystawienia
+                    </label>
+                    <input type="date" id="issue_date" name="issue_date"
+                           value="{{ invoice.issue_date or '' }}"
+                           class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Data sprzedaży
+                    </label>
+                    <input type="date" id="sale_date" name="sale_date"
+                           value="{{ invoice.sale_date or '' }}"
+                           class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Termin płatności
+                    </label>
+                    <input type="date" id="payment_due_date" name="payment_due_date"
+                           value="{{ invoice.payment_due_date or '' }}"
+                           class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Metoda płatności
+                    </label>
+                    <input type="text" id="payment_method" name="payment_method"
+                           value="{{ invoice.payment_method or '' }}"
+                           class="input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Seller Details Card -->
+        <div class="card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                <span class="material-icons text-primary mr-2">business</span>
+                Dane sprzedawcy
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Nazwa sprzedawcy <span class="text-status-error">*</span>
+                    </label>
+                    <input type="text" id="seller_name" name="seller_name"
+                           value="{{ invoice.seller_name or '' }}"
+                           class="input" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        NIP
+                    </label>
+                    <input type="text" id="seller_nip" name="seller_nip"
+                           value="{{ invoice.seller_nip or '' }}"
+                           class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Numer konta bankowego
+                    </label>
+                    <input type="text" id="bank_account" name="bank_account"
+                           value="{{ invoice.bank_account or '' }}"
+                           class="input">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Adres
+                    </label>
+                    <textarea id="seller_address" name="seller_address"
+                              rows="2" class="input">{{ invoice.seller_address or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Amounts Card -->
+        <div class="card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                <span class="material-icons text-primary mr-2">payments</span>
+                Kwoty
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Kwota netto
+                    </label>
+                    <input type="number" step="0.01" id="net_amount" name="net_amount"
+                           value="{{ invoice.net_amount or '' }}"
+                           class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        VAT
+                    </label>
+                    <input type="number" step="0.01" id="vat_amount" name="vat_amount"
+                           value="{{ invoice.vat_amount or '' }}"
+                           class="input">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Kwota brutto <span class="text-status-error">*</span>
+                    </label>
+                    <input type="number" step="0.01" id="total_amount" name="total_amount"
+                           value="{{ invoice.total_amount or '' }}"
+                           class="input" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Waluta
+                    </label>
+                    <select id="currency" name="currency" class="input">
+                        <option value="PLN" {% if invoice.currency == 'PLN' or not invoice.currency %}selected{% endif %}>PLN</option>
+                        <option value="EUR" {% if invoice.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="USD" {% if invoice.currency == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="GBP" {% if invoice.currency == 'GBP' %}selected{% endif %}>GBP</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex items-center gap-4">
+            <button type="submit" class="btn-primary">
+                <span class="material-icons text-sm mr-2">save</span>
+                Zapisz zmiany
+            </button>
+            <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
+                Anuluj
+            </button>
+            {% if invoice.pdf_path %}
+            <button type="button" onclick="viewPDF()" class="btn-secondary ml-auto">
+                <span class="material-icons text-sm mr-2">picture_as_pdf</span>
+                Zobacz PDF
+            </button>
+            {% endif %}
+        </div>
+    </form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const invoiceId = {{ invoice.id }};
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupForm();
+});
+
+function setupForm() {
+    const form = document.getElementById('invoice-form');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        const loadingModal = Modals.loading('Zapisywanie zmian...');
+
+        try {
+            const result = await API.invoices.update(invoiceId, data);
+
+            Modals.close(loadingModal);
+
+            if (result.success) {
+                Notifications.success('Faktura została zaktualizowana');
+                setTimeout(() => {
+                    window.location.href = '{{ url_for('main.invoices_list') }}';
+                }, 1000);
+            } else {
+                if (result.validation_errors) {
+                    Notifications.error('Błędy walidacji: ' + result.validation_errors.join(', '));
+                } else {
+                    Notifications.error('Błąd aktualizacji faktury');
+                }
+            }
+        } catch (error) {
+            Modals.close(loadingModal);
+            console.error('Update error:', error);
+            Notifications.error('Błąd aktualizacji: ' + error.message);
+        }
+    });
+}
+
+function viewPDF() {
+    API.pdf.view(invoiceId);
+}
+</script>
+{% endblock %}
