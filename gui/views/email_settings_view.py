@@ -258,7 +258,6 @@ class EmailSettingsView(ft.Column):
 			from services.email_service import EmailService
 
 			# Test connection
-			email_service = EmailService()
 			settings = {
 				"email_address": self.email_field.value,
 				"password": self.password_field.value,
@@ -266,7 +265,7 @@ class EmailSettingsView(ft.Column):
 				"imap_port": int(self.imap_port_field.value),
 			}
 
-			if email_service.test_connection(settings):
+			if EmailService.test_connection(settings):
 				self.show_success("Success", "Connection successful!")
 			else:
 				self.show_error("Connection Failed", "Could not connect to email server")
