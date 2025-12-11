@@ -171,11 +171,18 @@ def get_statistics():
 @api_bp.route('/upload', methods=['POST'])
 def upload_files():
     """Upload and process PDF files"""
+    import sys
+    import traceback as tb
+    print("=== UPLOAD ENDPOINT CALLED ===", flush=True)
+    sys.stdout.flush()
+
     try:
         if 'files[]' not in request.files:
             return jsonify({'success': False, 'error': 'No files provided'}), 400
 
         files = request.files.getlist('files[]')
+        print(f"Files received: {len(files)}", flush=True)
+        sys.stdout.flush()
         results = []
 
         for file in files:
@@ -189,23 +196,21 @@ def upload_files():
                     # Extract data using OCR
                     extracted_data = current_app.ocr_service.process_pdf(str(file_path))
 
-                    # Create invoice object
+                    # Create invoice object (matching Invoice dataclass fields)
                     invoice = Invoice(
-                        invoice_number=extracted_data.get('invoice_number', ''),
                         seller_name=extracted_data.get('seller_name', ''),
-                        seller_nip=extracted_data.get('seller_nip', ''),
-                        seller_address=extracted_data.get('seller_address', ''),
-                        issue_date=extracted_data.get('issue_date'),
-                        sale_date=extracted_data.get('sale_date'),
-                        payment_due_date=extracted_data.get('payment_due_date'),
-                        payment_method=extracted_data.get('payment_method', ''),
-                        bank_account=extracted_data.get('bank_account', ''),
-                        net_amount=extracted_data.get('net_amount', 0.0),
-                        vat_amount=extracted_data.get('vat_amount', 0.0),
-                        total_amount=extracted_data.get('total_amount', 0.0),
+                        invoice_number=extracted_data.get('invoice_number', ''),
+                        invoice_date=extracted_data.get('issue_date') or datetime.now().date(),
+                        amount=extracted_data.get('total_amount', 0.0),
                         currency=extracted_data.get('currency', 'PLN'),
-                        payment_status='Niezapłacona',
-                        pdf_path=str(file_path)
+                        seller_nip=extracted_data.get('seller_nip'),
+                        bank_account=extracted_data.get('bank_account'),
+                        payment_due_date=extracted_data.get('payment_due_date'),
+                        payment_term=extracted_data.get('payment_method'),
+                        status='Nieopłacona',
+                        pdf_path=str(file_path),
+                        ocr_confidence=extracted_data.get('ocr_confidence'),
+                        is_duplicate=False
                     )
 
                     # Validate
@@ -232,6 +237,11 @@ def upload_files():
                         results[-1]['saved'] = False
 
                 except Exception as e:
+                    # Log the full error with traceback
+                    import traceback
+                    print(f"ERROR processing {filename}: {str(e)}")
+                    print(traceback.format_exc())
+
                     results.append({
                         'filename': filename,
                         'success': False,
@@ -249,6 +259,11 @@ def upload_files():
             'results': results
         })
     except Exception as e:
+        import sys
+        print(f"=== TOP LEVEL ERROR ===", flush=True)
+        print(f"Error: {str(e)}", flush=True)
+        print(tb.format_exc(), flush=True)
+        sys.stdout.flush()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -313,7 +328,23 @@ def import_from_email():
             # Process using OCR
             try:
                 extracted_data = current_app.ocr_service.process_pdf(str(temp_path))
-                invoice = Invoice(**extracted_data, pdf_path=str(temp_path))
+
+                # Create invoice object (matching Invoice dataclass fields)
+                invoice = Invoice(
+                    seller_name=extracted_data.get('seller_name', ''),
+                    invoice_number=extracted_data.get('invoice_number', ''),
+                    invoice_date=extracted_data.get('issue_date') or datetime.now().date(),
+                    amount=extracted_data.get('total_amount', 0.0),
+                    currency=extracted_data.get('currency', 'PLN'),
+                    seller_nip=extracted_data.get('seller_nip'),
+                    bank_account=extracted_data.get('bank_account'),
+                    payment_due_date=extracted_data.get('payment_due_date'),
+                    payment_term=extracted_data.get('payment_method'),
+                    status='Nieopłacona',
+                    pdf_path=str(temp_path),
+                    ocr_confidence=extracted_data.get('ocr_confidence'),
+                    is_duplicate=False
+                )
 
                 validation_errors = current_app.validation_service.validate_invoice(invoice)
                 is_duplicate, duplicate_info = current_app.duplicate_detection.check_duplicate(invoice)

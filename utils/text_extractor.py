@@ -317,7 +317,7 @@ class TextExtractor:
 					try:
 						amount = float(amount_str)
 						if amount > 1.0:  # Ignoruj bardzo małe kwoty
-							print(f"  💰 Znaleziono 'Kwota do zapłaty': {amount:.2f} zł")
+							print(f"  [PLN] Znaleziono 'Kwota do zaplaty': {amount:.2f} zl")
 							return amount
 					except ValueError:
 						pass
@@ -332,7 +332,7 @@ class TextExtractor:
 			try:
 				amount = float(amount_str)
 				if amount > 1.0:
-					print(f"  💰 Znaleziono kwotę z wzorca: {amount:.2f} zł")
+					print(f"  [PLN] Znaleziono kwote z wzorca: {amount:.2f} zl")
 					return amount
 			except ValueError:
 				pass
@@ -361,7 +361,7 @@ class TextExtractor:
 			if amounts:
 				# Zwróć największą kwotę (brutto)
 				max_amount = max(amounts)
-				print(f"  💰 Znaleziono największą kwotę: {max_amount:.2f} zł")
+				print(f"  [PLN] Znaleziono najwieksza kwote: {max_amount:.2f} zl")
 				return max_amount
 
 		return None
@@ -441,7 +441,7 @@ class TextExtractor:
 					lines[i + 1] if i + 1 < len(lines) else '')
 				date_str = self._extract_date_from_text(search_text)
 				if date_str:
-					print(f"  📅 Znaleziono datę faktury: {date_str}")
+					print(f"  [DATE] Znaleziono date faktury: {date_str}")
 					return date_str
 
 		# Fallback: pierwsza znaleziona data (ale NIE z linii zawierającej "sprzedaż")
@@ -450,7 +450,7 @@ class TextExtractor:
 				continue
 			date_str = self._extract_date_from_text(line)
 			if date_str:
-				print(f"  📅 Znaleziono datę faktury (fallback): {date_str}")
+				print(f"  [DATE] Znaleziono date faktury (fallback): {date_str}")
 				return date_str
 
 		return None

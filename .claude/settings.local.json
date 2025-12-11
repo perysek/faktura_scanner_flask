@@ -8,7 +8,11 @@
       "Bash(pip install:*)",
       "Bash(python:*)",
       "Skill(auto-memory:memory-processor)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "mcp__kapture__new_tab",
+      "mcp__kapture__list_tabs"
     ],
     "deny": [],
     "ask": []
