@@ -34,32 +34,26 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Status płatności
                     </label>
-                    <select id="payment_status" name="payment_status" class="input">
-                        <option value="Niezapłacona" {% if invoice.payment_status == 'Niezapłacona' %}selected{% endif %}>
-                            Niezapłacona
+                    <select id="status" name="status" class="input">
+                        <option value="Nieopłacona" {% if invoice.status == 'Nieopłacona' or not invoice.status %}selected{% endif %}>
+                            Nieopłacona
                         </option>
-                        <option value="Zapłacona" {% if invoice.payment_status == 'Zapłacona' %}selected{% endif %}>
-                            Zapłacona
+                        <option value="Opłacona" {% if invoice.status == 'Opłacona' %}selected{% endif %}>
+                            Opłacona
+                        </option>
+                        <option value="Przeterminowana" {% if invoice.status == 'Przeterminowana' %}selected{% endif %}>
+                            Przeterminowana
                         </option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Data wystawienia
+                        Data wystawienia <span class="text-status-error">*</span>
                     </label>
-                    <input type="date" id="issue_date" name="issue_date"
-                           value="{{ invoice.issue_date or '' }}"
-                           class="input">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Data sprzedaży
-                    </label>
-                    <input type="date" id="sale_date" name="sale_date"
-                           value="{{ invoice.sale_date or '' }}"
-                           class="input">
+                    <input type="date" id="invoice_date" name="invoice_date"
+                           value="{{ invoice.invoice_date or '' }}"
+                           class="input" required>
                 </div>
 
                 <div>
@@ -71,13 +65,14 @@
                            class="input">
                 </div>
 
-                <div>
+                <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Metoda płatności
+                        Forma płatności
                     </label>
-                    <input type="text" id="payment_method" name="payment_method"
-                           value="{{ invoice.payment_method or '' }}"
-                           class="input">
+                    <input type="text" id="payment_term" name="payment_term"
+                           value="{{ invoice.payment_term or '' }}"
+                           class="input"
+                           placeholder="np. Przelew, POBRANIE, 7 dni, 14 dni">
                 </div>
             </div>
         </div>
@@ -105,7 +100,8 @@
                     </label>
                     <input type="text" id="seller_nip" name="seller_nip"
                            value="{{ invoice.seller_nip or '' }}"
-                           class="input">
+                           class="input"
+                           placeholder="np. 123-456-78-90">
                 </div>
 
                 <div>
@@ -114,15 +110,8 @@
                     </label>
                     <input type="text" id="bank_account" name="bank_account"
                            value="{{ invoice.bank_account or '' }}"
-                           class="input">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Adres
-                    </label>
-                    <textarea id="seller_address" name="seller_address"
-                              rows="2" class="input">{{ invoice.seller_address or '' }}</textarea>
+                           class="input"
+                           placeholder="np. PL 12 1234 1234 1234 1234 1234 1234">
                 </div>
             </div>
         </div>
@@ -137,29 +126,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Kwota netto
+                        Kwota <span class="text-status-error">*</span>
                     </label>
-                    <input type="number" step="0.01" id="net_amount" name="net_amount"
-                           value="{{ invoice.net_amount or '' }}"
-                           class="input">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        VAT
-                    </label>
-                    <input type="number" step="0.01" id="vat_amount" name="vat_amount"
-                           value="{{ invoice.vat_amount or '' }}"
-                           class="input">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Kwota brutto <span class="text-status-error">*</span>
-                    </label>
-                    <input type="number" step="0.01" id="total_amount" name="total_amount"
-                           value="{{ invoice.total_amount or '' }}"
-                           class="input" required>
+                    <input type="number" step="0.01" id="amount" name="amount"
+                           value="{{ invoice.amount or '' }}"
+                           class="input" required
+                           placeholder="np. 1234.56">
                 </div>
 
                 <div>
@@ -173,6 +145,19 @@
                         <option value="GBP" {% if invoice.currency == 'GBP' %}selected{% endif %}>GBP</option>
                     </select>
                 </div>
+
+                {% if invoice.ocr_confidence %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Pewność OCR
+                    </label>
+                    <div class="input bg-gray-50" style="display: flex; align-items: center;">
+                        <span class="badge {% if invoice.ocr_confidence >= 80 %}badge-success{% elif invoice.ocr_confidence >= 60 %}badge-warning{% else %}badge-error{% endif %}">
+                            {{ "%.0f"|format(invoice.ocr_confidence) }}%
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 

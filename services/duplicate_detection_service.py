@@ -25,15 +25,16 @@ class DuplicateDetectionService:
 		existing = self.invoice_repo.find_by_invoice_number(
 			invoice.invoice_number
 			)
-		
+
 		if existing:
+			# Use bracket notation for sqlite3.Row objects
 			return (True, {
-				'id': existing.get('id'),
-				'invoice_number': existing.get('invoice_number'),
-				'seller_name': existing.get('seller_name'),
-				'amount': existing.get('amount')
+				'id': existing['id'],
+				'invoice_number': existing['invoice_number'],
+				'seller_name': existing['seller_name'],
+				'amount': existing['amount']
 			})
-		
+
 		return (False, None)
 	
 	def calculate_similarity(

@@ -74,6 +74,20 @@ async function loadInvoices(searchQuery = '') {
 }
 
 /**
+ * Calculate net amount (amount / 1.23)
+ */
+function calculateNetAmount(grossAmount) {
+    return grossAmount / 1.23;
+}
+
+/**
+ * Calculate VAT amount (amount * 23/123)
+ */
+function calculateVatAmount(grossAmount) {
+    return grossAmount * (23 / 123);
+}
+
+/**
  * Load statistics from API
  */
 async function loadStatistics() {
@@ -83,10 +97,18 @@ async function loadStatistics() {
         if (data.success) {
             const stats = data.statistics;
 
-            document.getElementById('stat-total').textContent = stats.total_invoices;
-            document.getElementById('stat-paid').textContent = stats.paid_invoices;
-            document.getElementById('stat-unpaid').textContent = stats.unpaid_invoices;
-            document.getElementById('stat-amount').textContent = formatCurrency(stats.total_amount, 'PLN');
+            document.getElementById('stat-total').textContent = stats.total_invoices || 0;
+            document.getElementById('stat-paid').textContent = stats.paid_invoices || 0;
+            document.getElementById('stat-unpaid').textContent = stats.unpaid_invoices || 0;
+
+            // totals.total_amount is nested in the stats object
+            const totalGross = stats.totals?.total_amount || 0;
+            const totalNet = calculateNetAmount(totalGross);
+            const totalVat = calculateVatAmount(totalGross);
+
+            document.getElementById('stat-amount-gross').textContent = formatCurrency(totalGross, 'PLN');
+            document.getElementById('stat-amount-net').textContent = formatCurrency(totalNet, 'PLN');
+            document.getElementById('stat-amount-vat').textContent = formatCurrency(totalVat, 'PLN');
         }
     } catch (error) {
         console.error('Error loading statistics:', error);
@@ -108,44 +130,68 @@ function renderInvoicesTable() {
 
     emptyState.classList.add('hidden');
 
-    tbody.innerHTML = invoicesData.map(invoice => `
-        <tr class="hover:bg-gray-50 transition-colors">
-            <td class="font-medium">${escapeHtml(invoice.invoice_number || '-')}</td>
-            <td>${escapeHtml(invoice.seller_name || '-')}</td>
-            <td>${escapeHtml(invoice.seller_nip || '-')}</td>
-            <td>${formatDate(invoice.issue_date)}</td>
-            <td>${formatCurrency(invoice.net_amount, invoice.currency)}</td>
-            <td>${formatCurrency(invoice.vat_amount, invoice.currency)}</td>
-            <td class="font-semibold">${formatCurrency(invoice.total_amount, invoice.currency)}</td>
-            <td>${escapeHtml(invoice.currency || 'PLN')}</td>
-            <td>
-                <span class="badge ${invoice.payment_status === 'Zapłacona' ? 'badge-success' : 'badge-warning'}">
-                    ${escapeHtml(invoice.payment_status || 'Nieznany')}
-                </span>
-            </td>
-            <td>
-                <div class="flex items-center gap-2">
-                    ${invoice.pdf_path ? `
-                        <button onclick="viewPDF(${invoice.id})"
-                                class="text-primary hover:text-primary-700 transition-colors"
-                                title="Zobacz PDF">
-                            <span class="material-icons text-sm">picture_as_pdf</span>
+    tbody.innerHTML = invoicesData.map(invoice => {
+        // Format OCR confidence badge
+        const ocrConfidence = invoice.ocr_confidence || 0;
+        let ocrBadgeClass = 'badge-error';
+        if (ocrConfidence >= 80) ocrBadgeClass = 'badge-success';
+        else if (ocrConfidence >= 60) ocrBadgeClass = 'badge-warning';
+
+        // Format status badge
+        const statusBadgeClass = invoice.status === 'Opłacona' ? 'badge-success' :
+                                 invoice.status === 'Przeterminowana' ? 'badge-error' :
+                                 'badge-warning';
+
+        // Calculate net and VAT amounts
+        const grossAmount = invoice.amount || 0;
+        const netAmount = calculateNetAmount(grossAmount);
+        const vatAmount = calculateVatAmount(grossAmount);
+
+        return `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="font-medium">${escapeHtml(invoice.invoice_number || '-')}</td>
+                <td>${escapeHtml(invoice.seller_name || '-')}</td>
+                <td>${escapeHtml(invoice.seller_nip || '-')}</td>
+                <td>${formatDate(invoice.invoice_date)}</td>
+                <td>${invoice.payment_due_date ? formatDate(invoice.payment_due_date) :
+                     (invoice.payment_term ? escapeHtml(invoice.payment_term) : '-')}</td>
+                <td class="text-net">${formatCurrency(netAmount, invoice.currency)}</td>
+                <td class="text-vat">${formatCurrency(vatAmount, invoice.currency)}</td>
+                <td class="font-semibold text-gross">${formatCurrency(grossAmount, invoice.currency)}</td>
+                <td>
+                    <span class="badge ${statusBadgeClass}">
+                        ${escapeHtml(invoice.status || 'Nieznany')}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${ocrBadgeClass}">
+                        ${Math.round(ocrConfidence)}%
+                    </span>
+                </td>
+                <td>
+                    <div class="flex items-center gap-2">
+                        ${invoice.pdf_path ? `
+                            <button onclick="viewPDF(${invoice.id})"
+                                    class="text-primary hover:text-primary-700 transition-colors"
+                                    title="Zobacz PDF">
+                                <span class="material-icons text-sm">picture_as_pdf</span>
+                            </button>
+                        ` : ''}
+                        <a href="/invoice/${invoice.id}/edit"
+                           class="text-primary hover:text-primary-600 transition-colors"
+                           title="Edytuj">
+                            <span class="material-icons text-sm">edit</span>
+                        </a>
+                        <button onclick="deleteInvoice(${invoice.id})"
+                                class="text-status-error hover:text-red-700 transition-colors"
+                                title="Usuń">
+                            <span class="material-icons text-sm">delete</span>
                         </button>
-                    ` : ''}
-                    <a href="/invoice/${invoice.id}/edit"
-                       class="text-blue-600 hover:text-blue-800 transition-colors"
-                       title="Edytuj">
-                        <span class="material-icons text-sm">edit</span>
-                    </a>
-                    <button onclick="deleteInvoice(${invoice.id})"
-                            class="text-status-error hover:text-red-700 transition-colors"
-                            title="Usuń">
-                        <span class="material-icons text-sm">delete</span>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 /**

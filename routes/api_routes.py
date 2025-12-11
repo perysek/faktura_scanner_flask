@@ -5,18 +5,49 @@ from flask import Blueprint, jsonify, request, current_app, send_file
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import tempfile
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from database.models import Invoice
+from utils.text_extractor import TextExtractor
 
 api_bp = Blueprint('api', __name__)
+
+# Create TextExtractor instance for date parsing
+_text_extractor = TextExtractor()
 
 
 def allowed_file(filename: str) -> bool:
     """Check if file extension is allowed"""
     ALLOWED_EXTENSIONS = {'pdf'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def parse_date_string(date_str: Optional[str]) -> Optional[date]:
+    """
+    Parse date string to date object using TextExtractor's normalization
+    Handles multiple date formats: YYYY-MM-DD, DD.MM.YYYY, DD/MM/YYYY
+
+    Args:
+        date_str: Date string in various formats or None
+
+    Returns:
+        date object or None
+    """
+    if not date_str:
+        return None
+
+    # Use TextExtractor to normalize the date string to ISO format
+    normalized = _text_extractor._normalize_date(date_str)
+
+    if not normalized:
+        return None
+
+    # Convert normalized ISO string to date object
+    try:
+        return datetime.strptime(normalized, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
 
 
 @api_bp.route('/invoices', methods=['GET'])
@@ -26,11 +57,12 @@ def get_invoices():
 
     try:
         if search_query:
-            invoices = current_app.invoice_repo.search(search_query)
+            rows = current_app.invoice_repo.search(search_query)
         else:
-            invoices = current_app.invoice_repo.get_all()
+            rows = current_app.invoice_repo.get_all()
 
-        # Convert to dict for JSON serialization
+        # Convert Row objects to Invoice objects, then to dicts for JSON serialization
+        invoices = [current_app.invoice_repo.row_to_invoice(row) for row in rows]
         invoices_data = [vars(invoice) for invoice in invoices]
 
         return jsonify({
@@ -46,9 +78,12 @@ def get_invoices():
 def get_invoice(invoice_id: int):
     """Get single invoice by ID"""
     try:
-        invoice = current_app.invoice_repo.get_by_id(invoice_id)
-        if not invoice:
+        row = current_app.invoice_repo.get_by_id(invoice_id)
+        if not row:
             return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+
+        # Convert Row to Invoice object
+        invoice = current_app.invoice_repo.row_to_invoice(row)
 
         return jsonify({
             'success': True,
@@ -63,14 +98,20 @@ def update_invoice(invoice_id: int):
     """Update invoice"""
     try:
         data = request.get_json()
-        invoice = current_app.invoice_repo.get_by_id(invoice_id)
+        row = current_app.invoice_repo.get_by_id(invoice_id)
 
-        if not invoice:
+        if not row:
             return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+
+        # Convert Row to Invoice object
+        invoice = current_app.invoice_repo.row_to_invoice(row)
 
         # Update invoice fields
         for key, value in data.items():
             if hasattr(invoice, key):
+                # Convert date strings to date objects
+                if key in ('invoice_date', 'payment_due_date') and isinstance(value, str):
+                    value = parse_date_string(value)
                 setattr(invoice, key, value)
 
         # Validate
@@ -105,9 +146,12 @@ def update_invoice(invoice_id: int):
 def delete_invoice(invoice_id: int):
     """Delete invoice"""
     try:
-        invoice = current_app.invoice_repo.get_by_id(invoice_id)
-        if not invoice:
+        row = current_app.invoice_repo.get_by_id(invoice_id)
+        if not row:
             return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+
+        # Convert Row to Invoice object for audit log
+        invoice = current_app.invoice_repo.row_to_invoice(row)
 
         current_app.invoice_repo.delete(invoice_id)
         current_app.audit_repo.log_change(
@@ -130,39 +174,12 @@ def delete_invoice(invoice_id: int):
 def get_statistics():
     """Get invoice statistics"""
     try:
-        invoices = current_app.invoice_repo.get_all()
-
-        total_invoices = len(invoices)
-        paid_invoices = sum(1 for inv in invoices if inv.payment_status == 'Zapłacona')
-        unpaid_invoices = total_invoices - paid_invoices
-
-        total_amount = sum(float(inv.total_amount or 0) for inv in invoices)
-        paid_amount = sum(float(inv.total_amount or 0) for inv in invoices if inv.payment_status == 'Zapłacona')
-        unpaid_amount = total_amount - paid_amount
-
-        total_vat = sum(float(inv.vat_amount or 0) for inv in invoices)
-
-        # Currency breakdown
-        currencies = {}
-        for inv in invoices:
-            curr = inv.currency or 'PLN'
-            if curr not in currencies:
-                currencies[curr] = {'count': 0, 'amount': 0}
-            currencies[curr]['count'] += 1
-            currencies[curr]['amount'] += float(inv.total_amount or 0)
+        # Use repository's get_statistics method
+        stats = current_app.invoice_repo.get_statistics()
 
         return jsonify({
             'success': True,
-            'statistics': {
-                'total_invoices': total_invoices,
-                'paid_invoices': paid_invoices,
-                'unpaid_invoices': unpaid_invoices,
-                'total_amount': round(total_amount, 2),
-                'paid_amount': round(paid_amount, 2),
-                'unpaid_amount': round(unpaid_amount, 2),
-                'total_vat': round(total_vat, 2),
-                'currencies': currencies
-            }
+            'statistics': stats
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -196,17 +213,35 @@ def upload_files():
                     # Extract data using OCR
                     extracted_data = current_app.ocr_service.process_pdf(str(file_path))
 
+                    # Parse dates from strings to date objects
+                    invoice_date = parse_date_string(extracted_data.get('issue_date'))
+                    if not invoice_date:
+                        invoice_date = datetime.now().date()
+
+                    # Handle payment_due_date and payment_term
+                    payment_due_date_str = extracted_data.get('payment_due_date')
+                    payment_due_date = None
+                    payment_term = extracted_data.get('payment_method')
+
+                    if payment_due_date_str:
+                        # Check for special payment terms like 'POBRANIE'
+                        if payment_due_date_str == 'POBRANIE':
+                            payment_term = 'POBRANIE'
+                        else:
+                            # Try to parse as date
+                            payment_due_date = parse_date_string(payment_due_date_str)
+
                     # Create invoice object (matching Invoice dataclass fields)
                     invoice = Invoice(
                         seller_name=extracted_data.get('seller_name', ''),
                         invoice_number=extracted_data.get('invoice_number', ''),
-                        invoice_date=extracted_data.get('issue_date') or datetime.now().date(),
+                        invoice_date=invoice_date,
                         amount=extracted_data.get('total_amount', 0.0),
                         currency=extracted_data.get('currency', 'PLN'),
                         seller_nip=extracted_data.get('seller_nip'),
                         bank_account=extracted_data.get('bank_account'),
-                        payment_due_date=extracted_data.get('payment_due_date'),
-                        payment_term=extracted_data.get('payment_method'),
+                        payment_due_date=payment_due_date,
+                        payment_term=payment_term,
                         status='Nieopłacona',
                         pdf_path=str(file_path),
                         ocr_confidence=extracted_data.get('ocr_confidence'),
@@ -214,7 +249,9 @@ def upload_files():
                     )
 
                     # Validate
-                    validation_errors = current_app.validation_service.validate_invoice(invoice)
+                    validation_result = current_app.validation_service.validate_invoice(invoice)
+                    validation_errors = validation_result.get('errors', [])
+                    validation_warnings = validation_result.get('warnings', [])
 
                     # Check for duplicates
                     is_duplicate, duplicate_info = current_app.duplicate_detection.check_duplicate(invoice)
@@ -224,14 +261,15 @@ def upload_files():
                         'success': True,
                         'extracted_data': extracted_data,
                         'validation_errors': validation_errors,
+                        'validation_warnings': validation_warnings,
                         'is_duplicate': is_duplicate,
                         'duplicate_info': duplicate_info
                     })
 
                     # Save if no validation errors and not duplicate
-                    if not validation_errors and not is_duplicate:
-                        saved_invoice = current_app.invoice_repo.create(invoice)
-                        results[-1]['invoice_id'] = saved_invoice.id
+                    if len(validation_errors) == 0 and not is_duplicate:
+                        saved_invoice_id = current_app.invoice_repo.create(invoice)
+                        results[-1]['invoice_id'] = saved_invoice_id
                         results[-1]['saved'] = True
                     else:
                         results[-1]['saved'] = False
@@ -329,39 +367,62 @@ def import_from_email():
             try:
                 extracted_data = current_app.ocr_service.process_pdf(str(temp_path))
 
+                # Parse dates from strings to date objects
+                invoice_date = parse_date_string(extracted_data.get('issue_date'))
+                if not invoice_date:
+                    invoice_date = datetime.now().date()
+
+                # Handle payment_due_date and payment_term
+                payment_due_date_str = extracted_data.get('payment_due_date')
+                payment_due_date = None
+                payment_term = extracted_data.get('payment_method')
+
+                if payment_due_date_str:
+                    # Check for special payment terms like 'POBRANIE'
+                    if payment_due_date_str == 'POBRANIE':
+                        payment_term = 'POBRANIE'
+                    else:
+                        # Try to parse as date
+                        payment_due_date = parse_date_string(payment_due_date_str)
+
                 # Create invoice object (matching Invoice dataclass fields)
                 invoice = Invoice(
                     seller_name=extracted_data.get('seller_name', ''),
                     invoice_number=extracted_data.get('invoice_number', ''),
-                    invoice_date=extracted_data.get('issue_date') or datetime.now().date(),
+                    invoice_date=invoice_date,
                     amount=extracted_data.get('total_amount', 0.0),
                     currency=extracted_data.get('currency', 'PLN'),
                     seller_nip=extracted_data.get('seller_nip'),
                     bank_account=extracted_data.get('bank_account'),
-                    payment_due_date=extracted_data.get('payment_due_date'),
-                    payment_term=extracted_data.get('payment_method'),
+                    payment_due_date=payment_due_date,
+                    payment_term=payment_term,
                     status='Nieopłacona',
                     pdf_path=str(temp_path),
                     ocr_confidence=extracted_data.get('ocr_confidence'),
                     is_duplicate=False
                 )
 
-                validation_errors = current_app.validation_service.validate_invoice(invoice)
+                validation_result = current_app.validation_service.validate_invoice(invoice)
+                validation_errors = validation_result.get('errors', [])
+                validation_warnings = validation_result.get('warnings', [])
                 is_duplicate, duplicate_info = current_app.duplicate_detection.check_duplicate(invoice)
 
-                if not validation_errors and not is_duplicate:
-                    saved_invoice = current_app.invoice_repo.create(invoice)
+                if len(validation_errors) == 0 and not is_duplicate:
+                    saved_invoice_id = current_app.invoice_repo.create(invoice)
                     results.append({
                         'filename': pdf_data['filename'],
                         'success': True,
-                        'invoice_id': saved_invoice.id
+                        'invoice_id': saved_invoice_id,
+                        'saved': True
                     })
                 else:
                     results.append({
                         'filename': pdf_data['filename'],
                         'success': False,
                         'validation_errors': validation_errors,
-                        'is_duplicate': is_duplicate
+                        'validation_warnings': validation_warnings,
+                        'is_duplicate': is_duplicate,
+                        'saved': False
                     })
             except Exception as e:
                 results.append({
@@ -458,8 +519,14 @@ def get_history():
 def view_pdf(invoice_id: int):
     """View PDF file"""
     try:
-        invoice = current_app.invoice_repo.get_by_id(invoice_id)
-        if not invoice or not invoice.pdf_path:
+        row = current_app.invoice_repo.get_by_id(invoice_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+
+        # Convert Row to Invoice object
+        invoice = current_app.invoice_repo.row_to_invoice(row)
+
+        if not invoice.pdf_path:
             return jsonify({'success': False, 'error': 'PDF not found'}), 404
 
         pdf_path = Path(invoice.pdf_path)

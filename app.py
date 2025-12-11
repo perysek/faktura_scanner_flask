@@ -3,13 +3,12 @@ FakturaScanner - Flask Web Application
 Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
 from flask import Flask, render_template, jsonify, request, send_file, send_from_directory
-from werkzeug.utils import secure_filename
 import os
 from pathlib import Path
 
 # Import configuration
 from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
-from config.database import initialize_database, DatabaseConnection
+from config.database import initialize_database
 
 # Import repositories
 from repositories.invoice_repository import InvoiceRepository
