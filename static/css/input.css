@@ -104,6 +104,36 @@
     @apply badge bg-blue-100 text-blue-800;
   }
 
+  /* Invoice amount semantic colors */
+  .text-net {
+    @apply text-primary;
+  }
+
+  .text-vat {
+    @apply text-status-warning;
+  }
+
+  .text-gross {
+    @apply text-gray-900;
+  }
+
+  /* Info card for informational panels */
+  .info-card {
+    @apply card bg-blue-50 border border-status-info;
+  }
+
+  .info-card-title {
+    @apply text-status-info font-semibold;
+  }
+
+  .info-card-text {
+    @apply text-blue-900;
+  }
+
+  .info-card-code {
+    @apply bg-blue-100 px-1 rounded;
+  }
+
   /* Navigation */
   .nav-link {
     @apply flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg;

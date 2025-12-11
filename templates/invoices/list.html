@@ -49,8 +49,8 @@
 
 {% block content %}
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="card">
+    <div class="flex flex-row gap-6 mb-8">
+        <div class="card flex-1">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Wszystkie faktury</p>
@@ -60,7 +60,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card flex-1">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Zapłacone</p>
@@ -70,7 +70,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card flex-1">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Niezapłacone</p>
@@ -80,13 +80,33 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card flex-1">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-600">Całkowita kwota</p>
-                    <p id="stat-amount" class="text-2xl font-bold text-gray-900">0 zł</p>
+                    <p class="text-sm text-gray-600">Kwota brutto</p>
+                    <p id="stat-amount-gross" class="text-2xl font-bold text-gray-900">0 zł</p>
                 </div>
                 <span class="material-icons text-primary text-4xl">account_balance</span>
+            </div>
+        </div>
+
+        <div class="card flex-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Kwota netto</p>
+                    <p id="stat-amount-net" class="text-2xl font-bold text-net">0 zł</p>
+                </div>
+                <span class="material-icons text-net text-4xl">payments</span>
+            </div>
+        </div>
+
+        <div class="card flex-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Kwota VAT</p>
+                    <p id="stat-amount-vat" class="text-2xl font-bold text-vat">0 zł</p>
+                </div>
+                <span class="material-icons text-vat text-4xl">receipt</span>
             </div>
         </div>
     </div>
@@ -101,17 +121,18 @@
                         <th>Sprzedawca</th>
                         <th>NIP</th>
                         <th>Data wystawienia</th>
+                        <th>Termin płatności</th>
                         <th>Kwota netto</th>
-                        <th>VAT</th>
+                        <th>Kwota VAT</th>
                         <th>Kwota brutto</th>
-                        <th>Waluta</th>
                         <th>Status</th>
+                        <th>OCR</th>
                         <th>Akcje</th>
                     </tr>
                 </thead>
                 <tbody id="invoices-tbody">
                     <tr>
-                        <td colspan="10" class="text-center py-8 text-gray-500">
+                        <td colspan="11" class="text-center py-8 text-gray-500">
                             <span class="material-icons text-6xl text-gray-300">hourglass_empty</span>
                             <p class="mt-2">Ładowanie...</p>
                         </td>

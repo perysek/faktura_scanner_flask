@@ -231,13 +231,15 @@ function displayResults(results) {
     const successCount = results.filter(r => r.success && r.saved).length;
     const errorCount = results.filter(r => !r.success).length;
     const duplicateCount = results.filter(r => r.is_duplicate).length;
-    const validationCount = results.filter(r => r.validation_errors && r.validation_errors.length > 0).length;
+    const validationErrorCount = results.filter(r => r.validation_errors && r.validation_errors.length > 0).length;
+    const validationWarningCount = results.filter(r => r.validation_warnings && r.validation_warnings.length > 0).length;
 
     summary.innerHTML = `
         <span class="text-status-success">✓ ${successCount} zapisanych</span> •
         <span class="text-status-warning">⚠ ${duplicateCount} duplikatów</span> •
-        <span class="text-status-warning">⚠ ${validationCount} błędów walidacji</span> •
-        <span class="text-status-error">✗ ${errorCount} błędów</span>
+        <span class="text-status-error">✗ ${validationErrorCount} błędów walidacji</span> •
+        <span class="text-status-warning">⚠ ${validationWarningCount} ostrzeżeń</span> •
+        <span class="text-status-error">✗ ${errorCount} błędów przetwarzania</span>
     `;
 
     tbody.innerHTML = results.map(result => {
@@ -257,8 +259,14 @@ function displayResults(results) {
                 </td>
                 <td>
                     ${result.validation_errors && result.validation_errors.length > 0
-                        ? `<span class="text-status-error text-xs">${result.validation_errors.join(', ')}</span>`
-                        : '-'}
+                        ? `<div class="text-status-error text-xs">${result.validation_errors.join('<br>')}</div>`
+                        : ''}
+                    ${result.validation_warnings && result.validation_warnings.length > 0
+                        ? `<div class="text-status-warning text-xs">${result.validation_warnings.join('<br>')}</div>`
+                        : ''}
+                    ${(!result.validation_errors || result.validation_errors.length === 0) &&
+                      (!result.validation_warnings || result.validation_warnings.length === 0)
+                        ? '-' : ''}
                 </td>
                 <td>
                     ${result.invoice_id

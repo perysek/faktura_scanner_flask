@@ -22,9 +22,13 @@ def upload():
 @main_bp.route('/invoice/<int:invoice_id>/edit')
 def edit_invoice(invoice_id):
     """Edit view - edit invoice data"""
-    invoice = current_app.invoice_repo.get_by_id(invoice_id)
-    if not invoice:
+    row = current_app.invoice_repo.get_by_id(invoice_id)
+    if not row:
         return render_template('errors/404.html'), 404
+
+    # Convert Row to Invoice object
+    invoice = current_app.invoice_repo.row_to_invoice(row)
+
     return render_template('invoices/edit.html', invoice=invoice)
 
 
