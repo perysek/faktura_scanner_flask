@@ -280,6 +280,54 @@ The application uses a left sidebar with 5 main navigation links:
 
 ## 🔧 Key Implementation Details
 
+### **Invoice Data Model:**
+
+**Invoice Dataclass Fields** (database/models.py):
+- `id`: int (optional, auto-generated)
+- `seller_name`: str (required)
+- `invoice_number`: str (required, unique)
+- `seller_nip`: str (optional)
+- `bank_account`: str (optional, formatted with country code)
+- `amount`: float (required - total amount/brutto)
+- `currency`: str (default 'PLN')
+- `invoice_date`: date (required)
+- `payment_due_date`: date (optional)
+- `payment_term`: str (optional - "7 dni", "14 dni", etc.)
+- `status`: str (default 'Nieopłacona', values: 'Nieopłacona', 'Opłacona', 'Przeterminowana')
+- `pdf_path`: str (optional)
+- `ocr_confidence`: float (optional, 0-100%)
+- `is_duplicate`: bool (default False)
+- `created_at`: datetime
+- `updated_at`: datetime
+
+### **OCRService (services/ocr_service.py):**
+
+**Two main methods for different use cases:**
+
+1. **`process_pdf(pdf_path: str) -> Dict`**
+   - Returns dictionary with extracted data (for API responses)
+   - Fields: `invoice_number`, `seller_name`, `seller_nip`, `seller_address`, `issue_date`, `sale_date`, `payment_due_date`, `payment_method`, `bank_account`, `net_amount`, `vat_amount`, `total_amount`, `currency`, `ocr_confidence`, `raw_text`
+   - No progress tracking
+   - Usage: API endpoints that need JSON response
+
+2. **`process_invoice_pdf(pdf_path: str, progress_callback=None) -> tuple[Invoice, str]`**
+   - Returns Invoice dataclass object + raw OCR text
+   - Progress callback: Called at 10% (PDF conversion), 50% (data extraction), 80% (object creation), 100% (complete)
+   - Date parsing: Handles 'POBRANIE' (COD) special term, parses dates with fallback to current date
+   - **Date validation warning:** Logs warning if `payment_due_date <= invoice_date` (possible OCR error)
+   - Usage: Batch processing, file uploads
+
+**Both methods follow same pipeline:** PDF → PDFProcessor (OCR) → TextExtractor (regex patterns) → structured data
+
+**API Route Mapping** (routes/api_routes.py):
+- `POST /api/upload`: Maps extracted data from OCR service to Invoice dataclass fields
+  - Maps `issue_date` → `invoice_date` (or current date if missing)
+  - Maps `total_amount` → `amount`
+  - Maps `payment_method` → `payment_term`
+  - Sets `status='Nieopłacona'`, `is_duplicate=False` by default
+  - Includes debug logging for troubleshooting PDF processing
+- `POST /api/email/import`: Same mapping as upload endpoint
+
 ### **OCR Pipeline (Sequential Processing):**
 ```
 1. User selects multiple PDFs (via file picker OR email import)
@@ -352,175 +400,14 @@ PATTERNS = {
 - **IBAN:** Polish format `PL + 26 digits`, mod-97 algorithm
 - **Errors** block save, **warnings** allow save
 
-### **Flet Modal Dialogs & Snackbars:**
-
-**CRITICAL: Proper Dialog Pattern (Lesson Learned)**
-
-Flet dialogs MUST be implemented correctly or they won't display at all. Here's the working pattern:
-
-#### **✅ CORRECT Pattern:**
-```python
-class MyView(ft.Column):
-    def __init__(self, page: ft.Page):
-        super().__init__()
-        self.page = page
-
-        # 1. Create dialog instance variables (initialized as None)
-        self.delete_dialog = None
-        self.info_dialog = None
-        self.current_item_to_delete = None
-
-    def delete_item(self, item):
-        """Delete confirmation dialog"""
-        # Store item reference
-        self.current_item_to_delete = item
-
-        # 2. Create dialog once (lazy initialization)
-        if self.delete_dialog is None:
-            self.delete_dialog = ft.AlertDialog(
-                modal=True,  # REQUIRED for proper modal behavior
-                title=ft.Text("Confirmation", weight=ft.FontWeight.BOLD),
-                content=ft.Text(""),  # Will be updated dynamically
-                actions=[
-                    ft.TextButton("Cancel", on_click=self.cancel_delete),
-                    ft.TextButton("Delete", on_click=self.confirm_delete,
-                                style=ft.ButtonStyle(color=AppColors.ERROR)),
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
-
-        # 3. Update content dynamically
-        self.delete_dialog.content = ft.Text(f"Delete {item.name}?")
-
-        # 4. Open dialog (CRITICAL ORDER)
-        self.page.dialog = self.delete_dialog  # Assign to page.dialog
-        self.delete_dialog.open = True          # Set open = True
-        self.page.update()                      # Update page
-
-    def cancel_delete(self, e):
-        """Close dialog"""
-        self.delete_dialog.open = False
-        self.page.update()
-        self.current_item_to_delete = None
-
-    def confirm_delete(self, e):
-        """Execute delete and close dialog"""
-        if self.current_item_to_delete:
-            # Do deletion
-            self.repo.delete(self.current_item_to_delete.id)
-
-            # Close dialog
-            self.delete_dialog.open = False
-            self.page.update()
-
-            # Show success snackbar
-            self.show_success("Deleted", f"Item deleted successfully")
-
-            # Cleanup
-            self.current_item_to_delete = None
-```
-
-#### **✅ Snackbar Pattern:**
-**IMPORTANT**: Snackbars also require the same lazy initialization pattern as dialogs to work reliably.
-
-```python
-class MyView(ft.Column):
-    def __init__(self, page: ft.Page):
-        super().__init__()
-        self.page = page
-
-        # 1. Create snackbar instance variables (initialized as None)
-        self.success_snackbar = None
-        self.error_snackbar = None
-
-def show_success(self, title: str, message: str):
-    """Show success snackbar"""
-    # 2. Lazy initialization
-    if self.success_snackbar is None:
-        self.success_snackbar = ft.SnackBar(
-            content=ft.Text(""),
-            bgcolor=AppColors.SUCCESS,
-        )
-
-    # 3. Update content dynamically
-    self.success_snackbar.content = ft.Text(f"{title}: {message}")
-
-    # 4. Show snackbar
-    self.page.snack_bar = self.success_snackbar
-    self.success_snackbar.open = True
-    self.page.update()
-
-def show_error(self, title: str, message: str):
-    """Show error snackbar"""
-    # Lazy initialization
-    if self.error_snackbar is None:
-        self.error_snackbar = ft.SnackBar(
-            content=ft.Text(""),
-            bgcolor=AppColors.ERROR,
-        )
-
-    # Update content
-    self.error_snackbar.content = ft.Text(f"{title}: {message}")
-
-    # Show snackbar
-    self.page.snack_bar = self.error_snackbar
-    self.error_snackbar.open = True
-    self.page.update()
-```
-
-#### **❌ WRONG Patterns (Will NOT work):**
-```python
-# ❌ Creating dialog inline without storing reference
-dialog = ft.AlertDialog(...)
-self.page.dialog = dialog
-dialog.open = True
-self.page.update()
-# Problem: Dialog object gets garbage collected
-
-# ❌ Creating snackbar inline without storing reference
-snackbar = ft.SnackBar(content=ft.Text("..."), bgcolor=AppColors.SUCCESS)
-self.page.snack_bar = snackbar
-snackbar.open = True
-self.page.update()
-# Problem: Snackbar object gets garbage collected and won't display
-
-# ❌ Missing modal=True
-dialog = ft.AlertDialog(title=..., content=...)  # No modal=True
-# Problem: Dialog may not display properly or backdrop won't work
-
-# ❌ Using page.overlay.append() AND page.dialog
-self.page.overlay.append(dialog)  # Don't do this
-self.page.dialog = dialog          # Only use page.dialog
-# Problem: Creates duplicate modal backdrops
-
-# ❌ Wrong open pattern
-self.page.dialog.open = True  # Don't use page.dialog.open
-# Correct: dialog.open = True (use dialog object reference)
-
-# ❌ Not calling page.update()
-dialog.open = True  # Missing: self.page.update()
-# Problem: Dialog state change won't be reflected in UI
-```
-
-#### **Key Rules:**
-1. **Store dialogs AND snackbars as instance variables** (`self.dialog = None`, `self.success_snackbar = None`)
-2. **Use lazy initialization** (create on first use with `if self.dialog is None`)
-3. **Always include `modal=True`** in AlertDialog constructor
-4. **Update content dynamically** for reusable dialogs and snackbars
-5. **Three-step open (dialogs):** `page.dialog = dialog`, `dialog.open = True`, `page.update()`
-6. **Three-step open (snackbars):** `page.snack_bar = snackbar`, `snackbar.open = True`, `page.update()`
-7. **Two-step close:** `dialog.open = False`, `page.update()`
-8. **Never use `page.overlay.append()`** for AlertDialog (only for page.dialog)
-9. **Store state** if dialog needs to remember context (e.g., `self.current_item_to_delete`)
-
-#### **Why This Pattern?**
-- Flet dialogs and snackbars require persistent object references (can't be garbage collected)
-- `modal=True` enables proper backdrop and focus management for dialogs
-- `page.dialog` is the official way to display dialogs (not overlay)
-- `page.snack_bar` is the official way to display snackbars
-- Lazy initialization allows dynamic content updates while reusing same dialog/snackbar
-- Separate handler methods (cancel/confirm) keep code clean and testable
-- Without persistent references, UI elements may not appear at all
+### **Debugging & Logging:**
+- **TextExtractor debug output**: Uses ASCII-compatible print statements (no emoji) for cross-platform compatibility
+  - Example: `print("[PLN] Znaleziono kwote z wzorca: {amount:.2f} zl")` instead of emoji variants
+  - Windows terminal compatibility: Avoids Unicode characters that may cause encoding issues
+- **API Routes debug logging**: Added detailed logging in `routes/api_routes.py`
+  - Upload endpoint logs file count, processing steps, and error tracebacks
+  - Uses `sys.stdout.flush()` to ensure immediate console output in Flask development
+  - Top-level error handling with full traceback for debugging
 
 ### **Database Schema:**
 ```sql
@@ -600,6 +487,17 @@ npm run watch:css
 5. Run `npm run watch:css` to rebuild styles for new template
 
 ### **Debugging PDF/OCR extraction:**
+
+**Method 1: Exception logging with traceback (Used in upload endpoint):**
+```python
+# In routes/api_routes.py, wrap PDF processing in try-except:
+except Exception as e:
+    import traceback
+    print(f"ERROR processing {filename}: {str(e)}")
+    print(traceback.format_exc())  # Full stack trace for debugging
+```
+
+**Method 2: Debug logging:**
 ```python
 # In routes/api_routes.py or services/ocr_service.py, add:
 import logging
@@ -901,6 +799,19 @@ except:
 **Status:** Production-ready Flask web application with full feature parity to Flet version
 **Migration Completed:** From Flet (Python GUI) to Flask (Web application)
 
+**Latest Changes:**
+- Fixed Invoice dataclass field mapping in API routes (api_routes.py)
+  - Maps OCR service output fields to Invoice model fields correctly
+  - `issue_date` -> `invoice_date`, `total_amount` -> `amount`, `payment_method` -> `payment_term`
+  - Supports fallback to current date if invoice_date is missing
+- Added comprehensive debug logging in upload endpoint (routes/api_routes.py)
+  - Logs file count, processing errors with full traceback
+  - Uses `sys.stdout.flush()` for immediate console output in Flask development
+- Updated TextExtractor debug output for Windows compatibility (utils/text_extractor.py)
+  - Replaced emoji characters with ASCII-compatible text markers
+  - Examples: `[PLN]`, `[DATE]` instead of currency/date emoji symbols
+  - Prevents Unicode encoding issues in Windows terminals
+
 **Architecture Changes:**
 - Migrated from Flet 0.28.3 (desktop GUI) to Flask 3.0.0 (web framework)
 - Server-side rendering with Jinja2 templates
@@ -916,6 +827,7 @@ except:
 - Easier to extend with new pages/features
 - Standard web technologies (HTML/CSS/JS) instead of desktop framework
 - TailwindCSS components for consistent UI
+- Modular JavaScript with clear API abstraction and utility patterns
 
 **Preserved Features:**
 - All OCR and PDF processing functionality

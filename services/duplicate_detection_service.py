@@ -12,12 +12,14 @@ class DuplicateDetectionService:
 	def __init__(self, invoice_repo: InvoiceRepository):
 		self.invoice_repo = invoice_repo
 	
-	def check_duplicate(self, invoice: Invoice) -> Optional[int]:
+	def check_duplicate(self, invoice: Invoice) -> tuple[bool, Optional[dict]]:
 		"""
 		Sprawdź czy faktura jest duplikatem
 
 		Returns:
-			ID istniejącej faktury jeśli duplikat, None jeśli nie
+			Tuple of (is_duplicate: bool, duplicate_info: Optional[dict])
+			- is_duplicate: True if duplicate found
+			- duplicate_info: Dict with duplicate invoice details if found, None otherwise
 		"""
 		# Szukaj po numerze faktury
 		existing = self.invoice_repo.find_by_invoice_number(
@@ -25,9 +27,14 @@ class DuplicateDetectionService:
 			)
 		
 		if existing:
-			return existing['id']
+			return (True, {
+				'id': existing.get('id'),
+				'invoice_number': existing.get('invoice_number'),
+				'seller_name': existing.get('seller_name'),
+				'amount': existing.get('amount')
+			})
 		
-		return None
+		return (False, None)
 	
 	def calculate_similarity(
 			self, invoice1: Invoice, invoice2: Invoice

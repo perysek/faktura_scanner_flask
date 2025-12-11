@@ -23,6 +23,18 @@ function setupEventListeners() {
         loadInvoices(currentSearch);
     }, 500));
 
+    // Import PDF button
+    const importPdfBtn = document.getElementById('import-pdf-btn');
+    const quickUploadInput = document.getElementById('quick-upload-input');
+
+    importPdfBtn.addEventListener('click', () => {
+        quickUploadInput.click();
+    });
+
+    quickUploadInput.addEventListener('change', (e) => {
+        handleQuickUpload(e.target.files);
+    });
+
     // Export menu toggle
     const exportBtn = document.getElementById('export-btn');
     const exportMenu = document.getElementById('export-menu');
@@ -199,5 +211,55 @@ function exportToCSV() {
         Notifications.success('Eksportowanie do CSV...');
     } catch (error) {
         Notifications.error('Błąd eksportu: ' + error.message);
+    }
+}
+
+/**
+ * Handle quick upload from main page
+ */
+async function handleQuickUpload(files) {
+    const pdfFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+
+    if (pdfFiles.length === 0) {
+        Notifications.warning('Proszę wybrać pliki PDF');
+        return;
+    }
+
+    const loadingModal = Modals.loading(`Przetwarzanie ${pdfFiles.length} plik(ów)...`);
+
+    try {
+        const result = await API.upload.files(pdfFiles, (percent) => {
+            // Progress callback - could update modal if needed
+            console.log(`Upload progress: ${percent}%`);
+        });
+
+        Modals.close(loadingModal);
+
+        if (result.success) {
+            const successCount = result.results.filter(r => r.success && r.saved).length;
+            const errorCount = result.results.filter(r => !r.success).length;
+
+            if (errorCount === 0) {
+                Notifications.success(`Pomyślnie zaimportowano ${successCount} faktur`);
+            } else {
+                Notifications.warning(`Zaimportowano ${successCount} faktur, ${errorCount} z błędami`);
+            }
+
+            // Reload invoices and statistics
+            loadInvoices(currentSearch);
+            loadStatistics();
+
+            // Clear file input
+            document.getElementById('quick-upload-input').value = '';
+        } else {
+            Notifications.error('Błąd przetwarzania plików');
+        }
+    } catch (error) {
+        Modals.close(loadingModal);
+        console.error('Upload error:', error);
+        Notifications.error('Błąd przesyłania plików: ' + error.message);
+
+        // Clear file input
+        document.getElementById('quick-upload-input').value = '';
     }
 }
