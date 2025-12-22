@@ -7,6 +7,12 @@ from typing import Optional
 from config.settings import DB_PATH
 
 
+def get_database_path() -> str:
+    """Get the database path as string"""
+    return str(DB_PATH)
+
+
+
 class DatabaseConnection:
 	"""Singleton connection do SQLite"""
 	

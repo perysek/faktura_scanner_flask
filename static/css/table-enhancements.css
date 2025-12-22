@@ -1,0 +1,327 @@
+/* QMS Document Control System - Enhanced Table Styles */
+/* Based on scratches/style.css for compact, professional appearance */
+
+:root {
+    --primary-color: #007bff;
+    --background-color: #f8f9fa;
+    --text-color: #333;
+    --border-color: #dee2e6;
+    --header-bg: #ffffff;
+    --hover-bg: #f1f3f5;
+}
+
+/* Enhanced Table Styles - Based on scratches/style.css */
+.table-container {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+    max-height: 80vh;
+    position: relative;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+}
+
+/* Sticky Table Headers */
+thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--header-bg);
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+th,
+td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+/* Make body cells even more compact */
+tbody td {
+    padding: 6px 10px;
+}
+
+th {
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+    vertical-align: top;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+th:hover {
+    background-color: var(--hover-bg);
+}
+
+/* Header Content Layout */
+.th-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    /* Push search field to bottom */
+    align-items: flex-start;
+    /* Align content to top/start */
+    min-height: 80px;
+    /* Ensure consistent height for alignment */
+}
+
+.th-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sort-icon {
+    font-size: 0.8em;
+    color: #999;
+    margin-left: 4px;
+}
+
+/* Allow header text to wrap on whitespace */
+.th-header span {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* Column Search Inputs */
+.column-search {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    font-size: 12px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.column-search:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+select.column-search {
+    background-color: white;
+    cursor: pointer;
+}
+
+/* Table Body Rows */
+tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+tbody td {
+    font-size: 12px;
+}
+
+/* Scrollbar Styling */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 0.25rem;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* Height-Responsive Table Wrapper */
+.table-wrapper {
+    overflow: auto;
+    max-height: calc(100vh - 240px);
+    position: relative;
+}
+
+/* Invoices list page has stats cards above table - adjust height accordingly */
+.invoices-page .table-wrapper {
+    max-height: calc(100vh - 350px);
+    /* Account for header, stats cards, and reduced margins/padding */
+    min-height: 350px;
+    /* Minimum height to prevent too small table */
+}
+
+/* Ensure table wrapper fills height on table list pages */
+.card .table-wrapper {
+    min-height: calc(100vh - 350px);
+}
+
+/* For pages with additional filters/controls above table */
+.has-filters .table-wrapper {
+    max-height: calc(100vh - 350px);
+    min-height: calc(100vh - 350px);
+}
+
+/* Sticky table headers for scrollable tables */
+.table-wrapper table thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--header-bg);
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Scrollbar styling for table wrappers */
+.table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0.25rem;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 0.25rem;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* No sort column */
+th.no-sort {
+    cursor: default !important;
+}
+
+th.no-sort:hover {
+    background-color: transparent !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-container {
+        max-height: 60vh;
+    }
+
+    th,
+    td {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+}
+
+@media (max-height: 700px) {
+    .table-wrapper {
+        max-height: calc(100vh - 520px);
+    }
+
+    .card .table-wrapper {
+        min-height: calc(100vh - 520px);
+    }
+}
+
+@media (max-height: 500px) {
+    .table-wrapper {
+        max-height: calc(100vh - 510px);
+    }
+
+    .card .table-wrapper {
+        min-height: calc(100vh - 510px);
+    }
+}
+
+/* Invoices Table - Responsive Column Widths */
+#invoicesTable {
+    table-layout: fixed;
+    /* Fixed layout for consistent column widths */
+}
+
+#invoicesTable th:nth-child(1),
+/* Nr faktury */
+#invoicesTable td:nth-child(1) {
+    width: 19%;
+    min-width: 120px;
+    white-space: normal !important;
+    word-wrap: break-word;
+}
+
+#invoicesTable th:nth-child(2),
+/* Sprzedawca */
+#invoicesTable td:nth-child(2) {
+    width: 25%;
+    min-width: 150px;
+    white-space: normal !important;
+    word-wrap: break-word;
+}
+
+#invoicesTable th:nth-child(3),
+/* NIP */
+#invoicesTable td:nth-child(3) {
+    width: 7%;
+    min-width: 90px;
+}
+
+#invoicesTable th:nth-child(4),
+/* Data wystawienia */
+#invoicesTable td:nth-child(4) {
+    width: 10%;
+    min-width: 95px;
+}
+
+#invoicesTable th:nth-child(5),
+/* Termin płatności */
+#invoicesTable td:nth-child(5) {
+    width: 10%;
+    min-width: 95px;
+}
+
+
+
+#invoicesTable th:nth-child(6),
+/* Kwota brutto */
+#invoicesTable td:nth-child(6) {
+    width: 12%;
+    min-width: 90px;
+    text-align: right;
+}
+
+#invoicesTable th:nth-child(7),
+/* Status */
+#invoicesTable td:nth-child(7) {
+    width: 8%;
+    min-width: 75px;
+}
+
+#invoicesTable th:nth-child(8),
+/* OCR */
+#invoicesTable td:nth-child(8) {
+    width: 5%;
+    min-width: 50px;
+    text-align: center;
+}
+
+#invoicesTable th:nth-child(9),
+/* Akcje */
+#invoicesTable td:nth-child(9) {
+    width: 8%;
+    min-width: 80px;
+}
+
+/* Remove min-width from table for better responsiveness */
+#invoicesTable {
+    min-width: auto;
+}

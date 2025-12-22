@@ -55,17 +55,11 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Foldery e-mail</label>
-                    <div class="flex gap-2">
-                        <button id="select-folders-btn" type="button" class="input flex-1 text-left flex items-center justify-between" disabled>
-                            <span id="selected-folders-text" class="text-gray-500">Kliknij "Pobierz foldery" aby załadować listę</span>
-                            <span class="material-icons text-gray-400">folder_open</span>
-                        </button>
-                        <button id="get-folders-btn" class="btn-secondary" style="align-self: flex-start;">
-                            <span class="material-icons text-sm">folder</span>
-                            Pobierz foldery
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">Kliknij przycisk aby wybrać foldery do przeszukania</p>
+                    <button id="select-folders-btn" type="button" class="input w-full text-left flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+                        <span id="selected-folders-text" class="text-gray-500">Kliknij aby wybrać foldery</span>
+                        <span class="material-icons text-gray-400">folder_open</span>
+                    </button>
+                    <p class="text-xs text-gray-500 mt-1">Kliknij aby załadować i wybrać foldery do przeszukania</p>
                 </div>
                 
                 <!-- Folder Selection Modal (hidden by default) -->
@@ -101,6 +95,44 @@
         </div>
     </div>
 
+    <!-- Uploaded Files Review Section (Step 2) -->
+    <div id="uploaded-files-section" class="hidden mt-8">
+        <div class="card">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-primary mr-2">checklist</span>
+                Przesłane pliki - przegląd
+            </h3>
+
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Plik PDF</th>
+                            <th>Temat e-mail</th>
+                            <th>Nadawca</th>
+                            <th>Folder</th>
+                            <th>Data e-mail</th>
+                            <th>Rozmiar</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="uploaded-files-tbody"></tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="clear-all-btn" class="btn-secondary flex items-center">
+                    <span class="material-icons text-sm mr-2">delete_sweep</span>
+                    Usuń wszystko
+                </button>
+                <button id="process-documents-btn" class="btn-primary flex items-center">
+                    <span class="material-icons text-sm mr-2">auto_fix_high</span>
+                    Przetwórz documenty
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Processing Results -->
     <div id="results-section" class="hidden mt-8">
         <div class="card">
@@ -120,7 +152,8 @@
                             <th>Kwota</th>
                             <th>Duplikat</th>
                             <th>Błędy walidacji</th>
-                            <th>Akcje</th>
+                            <th>Podgląd PDF</th>
+                            <th>Dodaj do listy</th>
                         </tr>
                     </thead>
                     <tbody id="results-tbody"></tbody>
@@ -131,9 +164,15 @@
                 <div class="text-sm text-gray-600">
                     <span id="results-summary"></span>
                 </div>
-                <button onclick="closeResults()" class="btn-secondary">
-                    Zamknij
-                </button>
+                <div class="flex gap-3">
+                    <button onclick="closeResults()" class="btn-secondary">
+                        Anuluj
+                    </button>
+                    <button id="save-finish-btn" class="btn-primary flex items-center">
+                        <span class="material-icons text-sm mr-2">save</span>
+                        Zapisz i zakończ
+                    </button>
+                </div>
             </div>
         </div>
     </div>

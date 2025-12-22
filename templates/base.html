@@ -7,6 +7,9 @@
 
     <!-- TailwindCSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    
+    <!-- Table Enhancements CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/table-enhancements.css') }}">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,6 +112,7 @@
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modals.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/table-utils.js') }}"></script>
 
     {% block extra_scripts %}{% endblock %}
 </body>

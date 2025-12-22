@@ -1,7 +1,7 @@
 """
 API routes - JSON endpoints for AJAX calls
 """
-from flask import Blueprint, jsonify, request, current_app, send_file
+from flask import Blueprint, jsonify, request, current_app, send_file, session
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import tempfile
@@ -112,26 +112,39 @@ def update_invoice(invoice_id: int):
                 # Convert date strings to date objects
                 if key in ('invoice_date', 'payment_due_date') and isinstance(value, str):
                     value = parse_date_string(value)
+                # Convert amount to float
+                elif key == 'amount':
+                    if isinstance(value, str):
+                        value = float(value) if value and value.strip() else 0.0
+                    elif value is None:
+                        value = 0.0
+                # Convert ocr_confidence to float if present
+                elif key == 'ocr_confidence' and isinstance(value, str):
+                    value = float(value) if value else None
                 setattr(invoice, key, value)
 
         # Validate
-        validation_errors = current_app.validation_service.validate_invoice(invoice)
-        if validation_errors:
+        validation_result = current_app.validation_service.validate_invoice(invoice)
+        
+        # Only fail if there are actual errors (not just warnings)
+        if validation_result.get('errors'):
             return jsonify({
                 'success': False,
                 'error': 'Validation failed',
-                'validation_errors': validation_errors
+                'validation_errors': validation_result
             }), 400
 
         # Save
-        current_app.invoice_repo.update(invoice)
-        current_app.audit_repo.log_change(
-            invoice_id=invoice_id,
-            action='UPDATE',
-            changed_fields=list(data.keys()),
-            old_values={},
-            new_values=data
-        )
+        current_app.invoice_repo.update(invoice_id, invoice)
+        
+        # TODO: Refactor audit logging to log individual field changes
+        # current_app.audit_repo.log_change(
+        #     invoice_id=invoice_id,
+        #     action='UPDATE',
+        #     changed_fields=list(data.keys()),
+        #     old_values={},
+        #     new_values=data
+        # )
 
         return jsonify({
             'success': True,
@@ -340,23 +353,34 @@ def export_invoices(format: str):
 
 @api_bp.route('/email/import', methods=['POST'])
 def import_from_email():
-    """Import PDFs from email with SSE progress streaming"""
+    """Import PDFs from email - Stage files with metadata (NEW WORKFLOW)"""
     import json
+    import uuid
     
     # Get request data BEFORE generator (within request context)
     data = request.get_json()
     
     # Capture app objects BEFORE generator (within app context)
     email_service = current_app.email_service
+    staging_repo = current_app.staging_repo
     upload_folder = current_app.config['UPLOAD_FOLDER']
-    ocr_service = current_app.ocr_service
-    validation_service = current_app.validation_service
-    duplicate_detection = current_app.duplicate_detection
-    invoice_repo = current_app.invoice_repo
+    
+    # Get or create session ID BEFORE generator (within request context)
+    if 'upload_session_id' not in session:
+        session['upload_session_id'] = str(uuid.uuid4())
+        session.modified = True  # Explicitly mark session as modified
+    session_id = session['upload_session_id']
+    
+    # CRITICAL: Force session save before SSE starts
+    # SSE responses don't trigger automatic session saving
+    from flask import current_app as app
+    session_interface = app.session_interface
+    response = app.make_response('')
+    session_interface.save_session(app, session, response)
     
     def generate():
         try:
-
+            
             # Get email settings
             from config.email_settings import load_email_settings
             email_config = load_email_settings()
@@ -386,7 +410,12 @@ def import_from_email():
             # Get folders parameter (optional)
             folders = data.get('folders')  # Expected to be a list of folder names or None
 
-            # Fetch PDFs - returns list of tuples: (filename, filepath)
+            # Create temp directory for this session
+            from pathlib import Path
+            temp_dir = Path(upload_folder) / 'temp' / session_id
+            temp_dir.mkdir(parents=True, exist_ok=True)
+
+            # Fetch PDFs - NOW returns list of dicts with metadata
             yield f"data: {json.dumps({'type': 'progress', 'message': 'Przeszukiwanie folderów...'})}\n\n"
             
             # Progress messages buffer
@@ -410,11 +439,11 @@ def import_from_email():
                 # Store message to be yielded
                 progress_messages.append(f"data: {json.dumps({'type': msg_type, 'message': msg})}\n\n")
             
-            # Fetch PDFs with progress callback
+            # Fetch PDFs with progress callback - returns dicts with metadata
             pdf_files = email_service.fetch_pdf_attachments(
                 from_date=from_date,
                 to_date=to_date,
-                save_dir=upload_folder,
+                save_dir=str(temp_dir),  # Save to temp directory
                 folders=folders,
                 progress_callback=progress_callback
             )
@@ -429,101 +458,52 @@ def import_from_email():
             files_msg = f"📧 Znaleziono {len(pdf_files)} plików PDF"
             yield f"data: {json.dumps({'type': 'success', 'message': files_msg})}\n\n"
 
-            # Process each PDF
-            results = []
+            # Stage each PDF file with email metadata
+            staged_count = 0
             total = len(pdf_files)
             
-            for idx, (pdf_filename, pdf_filepath) in enumerate(pdf_files, 1):
-                # The file is already saved by fetch_pdf_attachments
-                temp_path = Path(pdf_filepath)
-                
-                process_msg = f"Przetwarzanie {idx}/{total}: {pdf_filename}"
-                yield f"data: {json.dumps({'type': 'progress', 'message': process_msg, 'current': idx, 'total': total})}\n\n"
-
-                # Process using OCR
+            for idx, file_data in enumerate(pdf_files, 1):
                 try:
-                    extracted_data = ocr_service.process_pdf(str(temp_path))
-
-                    # Parse dates from strings to date objects
-                    invoice_date = parse_date_string(extracted_data.get('issue_date'))
-                    if not invoice_date:
-                        invoice_date = datetime.now().date()
-
-                    # Handle payment_due_date and payment_term
-                    payment_due_date_str = extracted_data.get('payment_due_date')
-                    payment_due_date = None
-                    payment_term = extracted_data.get('payment_method')
-
-                    if payment_due_date_str:
-                        # Check for special payment terms like 'POBRANIE'
-                        if payment_due_date_str == 'POBRANIE':
-                            payment_term = 'POBRANIE'
-                        else:
-                            # Try to parse as date
-                            payment_due_date = parse_date_string(payment_due_date_str)
-
-                    # Create invoice object (matching Invoice dataclass fields)
-                    invoice = Invoice(
-                        seller_name=extracted_data.get('seller_name', ''),
-                        invoice_number=extracted_data.get('invoice_number', ''),
-                        invoice_date=invoice_date,
-                        amount=extracted_data.get('total_amount', 0.0),
-                        currency=extracted_data.get('currency', 'PLN'),
-                        seller_nip=extracted_data.get('seller_nip'),
-                        bank_account=extracted_data.get('bank_account'),
-                        payment_due_date=payment_due_date,
-                        payment_term=payment_term,
-                        status='Nieopłacona',
-                        pdf_path=str(temp_path),
-                        ocr_confidence=extracted_data.get('ocr_confidence'),
-                        is_duplicate=False
+                    # file_data is a dict with: filename, filepath, folder, email_subject, email_sender, email_date
+                    filename = file_data['filename']
+                    filepath = file_data['filepath']
+                    
+                    stage_msg = f"Zapisywanie {idx}/{total}: {filename}"
+                    yield f"data: {json.dumps({'type': 'progress', 'message': stage_msg, 'current': idx, 'total': total})}\n\n"
+                    
+                    # Get file size
+                    from pathlib import Path
+                    file_size = Path(filepath).stat().st_size
+                    
+                    # Create staging entry with email metadata
+                    from database.models import UploadStaging
+                    staging = UploadStaging(
+                        session_id=session_id,
+                        filename=filename,
+                        file_path=filepath,
+                        file_size=file_size,
+                        email_subject=file_data.get('email_subject'),
+                        email_sender=file_data.get('email_sender'),
+                        email_folder=file_data.get('folder'),  # Note: 'folder' not 'email_folder' in dict
+                        email_date=file_data.get('email_date')
                     )
-
-                    validation_result = validation_service.validate_invoice(invoice)
-                    validation_errors = validation_result.get('errors', [])
-                    validation_warnings = validation_result.get('warnings', [])
-                    is_duplicate, duplicate_info = duplicate_detection.check_duplicate(invoice)
-
-                    if len(validation_errors) == 0 and not is_duplicate:
-                        saved_invoice_id = invoice_repo.create(invoice)
-                        results.append({
-                            'filename': pdf_filename,
-                            'success': True,
-                            'invoice_id': saved_invoice_id,
-                            'saved': True,
-                            'extracted_data': extracted_data
-                        })
-                        success_msg = f"✓ {pdf_filename} - zapisano"
-                        yield f"data: {json.dumps({'type': 'success', 'message': success_msg})}\n\n"
-                    else:
-                        results.append({
-                            'filename': pdf_filename,
-                            'success': True,
-                            'validation_errors': validation_errors,
-                            'validation_warnings': validation_warnings,
-                            'is_duplicate': is_duplicate,
-                            'saved': False,
-                            'extracted_data': extracted_data
-                        })
-                        if is_duplicate:
-                            dup_msg = f"⚠ {pdf_filename} - duplikat"
-                            yield f"data: {json.dumps({'type': 'warning', 'message': dup_msg})}\n\n"
-                        else:
-                            valid_msg = f"⚠ {pdf_filename} - błędy walidacji"
-                            yield f"data: {json.dumps({'type': 'warning', 'message': valid_msg})}\n\n"
+                    
+                    staging_repo.create(staging)
+                    staged_count += 1
+                    
+                    success_msg = f"✓ {filename} - zapisano do przeglądu"
+                    yield f"data: {json.dumps({'type': 'success', 'message': success_msg})}\n\n"
+                    
                 except Exception as e:
-                    results.append({
-                        'filename': pdf_filename,
-                        'success': False,
-                        'error': str(e)
-                    })
-                    error_msg = f"✗ {pdf_filename} - błąd: {str(e)}"
+                    error_msg = f"✗ {file_data.get('filename', 'unknown')} - błąd: {str(e)}"
                     yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
 
             # Send final results
-            yield f"data: {json.dumps({'type': 'complete', 'results': results, 'total_processed': len(results)})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'total_processed': staged_count})}\n\n"
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             error_msg = f"Błąd: {str(e)}"
             yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
     

@@ -13,6 +13,7 @@ from config.database import initialize_database
 # Import repositories
 from repositories.invoice_repository import InvoiceRepository
 from repositories.audit_repository import AuditRepository
+from repositories.upload_staging_repository import UploadStagingRepository
 
 # Import services
 from services.ocr_service import OCRService
@@ -40,8 +41,10 @@ def create_app():
     initialize_database()
 
     # Initialize repositories
+    from config.database import get_database_path
     app.invoice_repo = InvoiceRepository()
     app.audit_repo = AuditRepository()
+    app.staging_repo = UploadStagingRepository(db_path=get_database_path())
 
     # Initialize services
     app.ocr_service = OCRService()
@@ -53,9 +56,11 @@ def create_app():
     # Register blueprints
     from routes.main_routes import main_bp
     from routes.api_routes import api_bp
+    from routes.upload_routes import upload_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(upload_bp, url_prefix='/api/upload')
 
     # Error handlers
     @app.errorhandler(404)

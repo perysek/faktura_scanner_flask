@@ -36,3 +36,18 @@ class AuditEntry:
     new_value: Optional[str]
     changed_at: datetime = field(default_factory=datetime.now)
     id: Optional[int] = None
+
+
+@dataclass
+class UploadStaging:
+    """Model tymczasowego przechowywania uploadowanych plików"""
+    session_id: str
+    filename: str
+    file_path: str
+    file_size: int
+    email_subject: Optional[str] = None
+    email_sender: Optional[str] = None
+    email_folder: Optional[str] = None
+    email_date: Optional[str] = None
+    uploaded_at: datetime = field(default_factory=datetime.now)
+    id: Optional[int] = None

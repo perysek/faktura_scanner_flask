@@ -139,8 +139,8 @@ function renderInvoicesTable() {
 
         // Format status badge
         const statusBadgeClass = invoice.status === 'Opłacona' ? 'badge-success' :
-                                 invoice.status === 'Przeterminowana' ? 'badge-error' :
-                                 'badge-warning';
+            invoice.status === 'Przeterminowana' ? 'badge-error' :
+                'badge-warning';
 
         // Calculate net and VAT amounts
         const grossAmount = invoice.amount || 0;
@@ -154,9 +154,7 @@ function renderInvoicesTable() {
                 <td>${escapeHtml(invoice.seller_nip || '-')}</td>
                 <td>${formatDate(invoice.invoice_date)}</td>
                 <td>${invoice.payment_due_date ? formatDate(invoice.payment_due_date) :
-                     (invoice.payment_term ? escapeHtml(invoice.payment_term) : '-')}</td>
-                <td class="text-net">${formatCurrency(netAmount, invoice.currency)}</td>
-                <td class="text-vat">${formatCurrency(vatAmount, invoice.currency)}</td>
+                (invoice.payment_term ? escapeHtml(invoice.payment_term) : '-')}</td>
                 <td class="font-semibold text-gross">${formatCurrency(grossAmount, invoice.currency)}</td>
                 <td>
                     <span class="badge ${statusBadgeClass}">

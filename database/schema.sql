@@ -46,3 +46,20 @@ CREATE TABLE IF NOT EXISTS duplicate_detection (
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
     FOREIGN KEY (duplicate_of) REFERENCES invoices(id) ON DELETE SET NULL
 );
+
+-- Tabela tymczasowych uploadów (staging)
+CREATE TABLE IF NOT EXISTS upload_staging (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    email_subject TEXT,
+    email_sender TEXT,
+    email_folder TEXT,
+    email_date TEXT,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_staging_session ON upload_staging(session_id);
+CREATE INDEX IF NOT EXISTS idx_staging_uploaded_at ON upload_staging(uploaded_at);
