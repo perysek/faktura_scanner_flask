@@ -462,7 +462,7 @@ class TextExtractor:
 			return 'POBRANIE'  # Special marker for cash on delivery
 
 		keywords = [
-			'Termin płatności', 'Zapłaty do', 'Due date', 'Payment date'
+			'Termin płatności', 'Zapłata do', 'Due date', 'Payment date', 'Płatność do', 'Do zapłaty do', 'Termin płatności do', 'Termin do', 'Termin'
 			]
 
 		lines = text.split('\n')

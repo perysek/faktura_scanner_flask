@@ -312,7 +312,10 @@ def export_invoices(format: str):
         if format not in ['excel', 'csv']:
             return jsonify({'success': False, 'error': 'Invalid format'}), 400
 
-        invoices = current_app.invoice_repo.get_all()
+        rows = current_app.invoice_repo.get_all()
+        
+        # Convert Row objects to Invoice objects
+        invoices = [current_app.invoice_repo.row_to_invoice(row) for row in rows]
 
         # Create temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{format}') as tmp:
@@ -337,107 +340,195 @@ def export_invoices(format: str):
 
 @api_bp.route('/email/import', methods=['POST'])
 def import_from_email():
-    """Import PDFs from email"""
-    try:
-        data = request.get_json()
+    """Import PDFs from email with SSE progress streaming"""
+    import json
+    
+    # Get request data BEFORE generator (within request context)
+    data = request.get_json()
+    
+    # Capture app objects BEFORE generator (within app context)
+    email_service = current_app.email_service
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    ocr_service = current_app.ocr_service
+    validation_service = current_app.validation_service
+    duplicate_detection = current_app.duplicate_detection
+    invoice_repo = current_app.invoice_repo
+    
+    def generate():
+        try:
 
-        # Get email settings
-        from config.email_settings import load_email_settings
-        email_config = load_email_settings()
+            # Get email settings
+            from config.email_settings import load_email_settings
+            email_config = load_email_settings()
 
-        # Connect and fetch PDFs
-        pdf_files = current_app.email_service.fetch_pdfs_from_email(
-            server=email_config.get('imap_server'),
-            username=email_config.get('email'),
-            password=email_config.get('password'),
-            folder=data.get('folder', 'INBOX'),
-            date_from=data.get('date_from'),
-            date_to=data.get('date_to')
-        )
+            # Connect to email service
+            server_msg = f"Łączenie z {email_config.get('imap_server')}..."
+            yield f"data: {json.dumps({'type': 'progress', 'message': server_msg})}\n\n"
+            
+            connected = email_service.connect(
+                email_address=email_config.get('email'),
+                password=email_config.get('password'),
+                imap_server=email_config.get('imap_server'),
+                imap_port=email_config.get('imap_port', 993)
+            )
 
-        # Process each PDF
-        results = []
-        for pdf_data in pdf_files:
-            # Save temporarily
-            temp_path = Path(current_app.config['UPLOAD_FOLDER']) / pdf_data['filename']
-            with open(temp_path, 'wb') as f:
-                f.write(pdf_data['content'])
+            if not connected:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to connect to email server'})}\n\n"
+                return
 
-            # Process using OCR
-            try:
-                extracted_data = current_app.ocr_service.process_pdf(str(temp_path))
+            success_msg = f"✅ Połączono z {email_config.get('imap_server')} jako {email_config.get('email')}"
+            yield f"data: {json.dumps({'type': 'success', 'message': success_msg})}\n\n"
 
-                # Parse dates from strings to date objects
-                invoice_date = parse_date_string(extracted_data.get('issue_date'))
-                if not invoice_date:
-                    invoice_date = datetime.now().date()
+            # Parse date parameters
+            from_date = parse_date_string(data.get('date_from')) if data.get('date_from') else None
+            to_date = parse_date_string(data.get('date_to')) if data.get('date_to') else None
+            
+            # Get folders parameter (optional)
+            folders = data.get('folders')  # Expected to be a list of folder names or None
 
-                # Handle payment_due_date and payment_term
-                payment_due_date_str = extracted_data.get('payment_due_date')
-                payment_due_date = None
-                payment_term = extracted_data.get('payment_method')
+            # Fetch PDFs - returns list of tuples: (filename, filepath)
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'Przeszukiwanie folderów...'})}\n\n"
+            
+            # Progress messages buffer
+            progress_messages = []
+            
+            # Define progress callback to capture messages
+            def progress_callback(main_msg, sub_msg, progress):
+                msg = main_msg
+                if sub_msg:
+                    msg = f"{main_msg} - {sub_msg}"
+                
+                # Determine message type based on content
+                msg_type = 'info'
+                if '✅' in msg or 'Pobrano' in msg or 'zapisano' in msg:
+                    msg_type = 'success'
+                elif '❌' in msg or 'Błąd' in msg:
+                    msg_type = 'error'
+                elif '⚠' in msg:
+                    msg_type = 'warning'
+                
+                # Store message to be yielded
+                progress_messages.append(f"data: {json.dumps({'type': msg_type, 'message': msg})}\n\n")
+            
+            # Fetch PDFs with progress callback
+            pdf_files = email_service.fetch_pdf_attachments(
+                from_date=from_date,
+                to_date=to_date,
+                save_dir=upload_folder,
+                folders=folders,
+                progress_callback=progress_callback
+            )
+            
+            # Yield all captured progress messages
+            for progress_msg in progress_messages:
+                yield progress_msg
 
-                if payment_due_date_str:
-                    # Check for special payment terms like 'POBRANIE'
-                    if payment_due_date_str == 'POBRANIE':
-                        payment_term = 'POBRANIE'
+            # Disconnect from email
+            email_service.disconnect()
+            
+            files_msg = f"📧 Znaleziono {len(pdf_files)} plików PDF"
+            yield f"data: {json.dumps({'type': 'success', 'message': files_msg})}\n\n"
+
+            # Process each PDF
+            results = []
+            total = len(pdf_files)
+            
+            for idx, (pdf_filename, pdf_filepath) in enumerate(pdf_files, 1):
+                # The file is already saved by fetch_pdf_attachments
+                temp_path = Path(pdf_filepath)
+                
+                process_msg = f"Przetwarzanie {idx}/{total}: {pdf_filename}"
+                yield f"data: {json.dumps({'type': 'progress', 'message': process_msg, 'current': idx, 'total': total})}\n\n"
+
+                # Process using OCR
+                try:
+                    extracted_data = ocr_service.process_pdf(str(temp_path))
+
+                    # Parse dates from strings to date objects
+                    invoice_date = parse_date_string(extracted_data.get('issue_date'))
+                    if not invoice_date:
+                        invoice_date = datetime.now().date()
+
+                    # Handle payment_due_date and payment_term
+                    payment_due_date_str = extracted_data.get('payment_due_date')
+                    payment_due_date = None
+                    payment_term = extracted_data.get('payment_method')
+
+                    if payment_due_date_str:
+                        # Check for special payment terms like 'POBRANIE'
+                        if payment_due_date_str == 'POBRANIE':
+                            payment_term = 'POBRANIE'
+                        else:
+                            # Try to parse as date
+                            payment_due_date = parse_date_string(payment_due_date_str)
+
+                    # Create invoice object (matching Invoice dataclass fields)
+                    invoice = Invoice(
+                        seller_name=extracted_data.get('seller_name', ''),
+                        invoice_number=extracted_data.get('invoice_number', ''),
+                        invoice_date=invoice_date,
+                        amount=extracted_data.get('total_amount', 0.0),
+                        currency=extracted_data.get('currency', 'PLN'),
+                        seller_nip=extracted_data.get('seller_nip'),
+                        bank_account=extracted_data.get('bank_account'),
+                        payment_due_date=payment_due_date,
+                        payment_term=payment_term,
+                        status='Nieopłacona',
+                        pdf_path=str(temp_path),
+                        ocr_confidence=extracted_data.get('ocr_confidence'),
+                        is_duplicate=False
+                    )
+
+                    validation_result = validation_service.validate_invoice(invoice)
+                    validation_errors = validation_result.get('errors', [])
+                    validation_warnings = validation_result.get('warnings', [])
+                    is_duplicate, duplicate_info = duplicate_detection.check_duplicate(invoice)
+
+                    if len(validation_errors) == 0 and not is_duplicate:
+                        saved_invoice_id = invoice_repo.create(invoice)
+                        results.append({
+                            'filename': pdf_filename,
+                            'success': True,
+                            'invoice_id': saved_invoice_id,
+                            'saved': True,
+                            'extracted_data': extracted_data
+                        })
+                        success_msg = f"✓ {pdf_filename} - zapisano"
+                        yield f"data: {json.dumps({'type': 'success', 'message': success_msg})}\n\n"
                     else:
-                        # Try to parse as date
-                        payment_due_date = parse_date_string(payment_due_date_str)
-
-                # Create invoice object (matching Invoice dataclass fields)
-                invoice = Invoice(
-                    seller_name=extracted_data.get('seller_name', ''),
-                    invoice_number=extracted_data.get('invoice_number', ''),
-                    invoice_date=invoice_date,
-                    amount=extracted_data.get('total_amount', 0.0),
-                    currency=extracted_data.get('currency', 'PLN'),
-                    seller_nip=extracted_data.get('seller_nip'),
-                    bank_account=extracted_data.get('bank_account'),
-                    payment_due_date=payment_due_date,
-                    payment_term=payment_term,
-                    status='Nieopłacona',
-                    pdf_path=str(temp_path),
-                    ocr_confidence=extracted_data.get('ocr_confidence'),
-                    is_duplicate=False
-                )
-
-                validation_result = current_app.validation_service.validate_invoice(invoice)
-                validation_errors = validation_result.get('errors', [])
-                validation_warnings = validation_result.get('warnings', [])
-                is_duplicate, duplicate_info = current_app.duplicate_detection.check_duplicate(invoice)
-
-                if len(validation_errors) == 0 and not is_duplicate:
-                    saved_invoice_id = current_app.invoice_repo.create(invoice)
+                        results.append({
+                            'filename': pdf_filename,
+                            'success': True,
+                            'validation_errors': validation_errors,
+                            'validation_warnings': validation_warnings,
+                            'is_duplicate': is_duplicate,
+                            'saved': False,
+                            'extracted_data': extracted_data
+                        })
+                        if is_duplicate:
+                            dup_msg = f"⚠ {pdf_filename} - duplikat"
+                            yield f"data: {json.dumps({'type': 'warning', 'message': dup_msg})}\n\n"
+                        else:
+                            valid_msg = f"⚠ {pdf_filename} - błędy walidacji"
+                            yield f"data: {json.dumps({'type': 'warning', 'message': valid_msg})}\n\n"
+                except Exception as e:
                     results.append({
-                        'filename': pdf_data['filename'],
-                        'success': True,
-                        'invoice_id': saved_invoice_id,
-                        'saved': True
-                    })
-                else:
-                    results.append({
-                        'filename': pdf_data['filename'],
+                        'filename': pdf_filename,
                         'success': False,
-                        'validation_errors': validation_errors,
-                        'validation_warnings': validation_warnings,
-                        'is_duplicate': is_duplicate,
-                        'saved': False
+                        'error': str(e)
                     })
-            except Exception as e:
-                results.append({
-                    'filename': pdf_data['filename'],
-                    'success': False,
-                    'error': str(e)
-                })
+                    error_msg = f"✗ {pdf_filename} - błąd: {str(e)}"
+                    yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
 
-        return jsonify({
-            'success': True,
-            'results': results,
-            'total_processed': len(results)
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+            # Send final results
+            yield f"data: {json.dumps({'type': 'complete', 'results': results, 'total_processed': len(results)})}\n\n"
+            
+        except Exception as e:
+            error_msg = f"Błąd: {str(e)}"
+            yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
+    
+    from flask import Response
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @api_bp.route('/email/test', methods=['POST'])
@@ -462,6 +553,42 @@ def test_email_connection():
                 'success': False,
                 'error': 'Connection failed'
             }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/email/folders', methods=['POST'])
+def get_email_folders():
+    """Get list of email folders"""
+    try:
+        # Get email settings
+        from config.email_settings import load_email_settings
+        email_config = load_email_settings()
+
+        # Connect to email service
+        connected = current_app.email_service.connect(
+            email_address=email_config.get('email'),
+            password=email_config.get('password'),
+            imap_server=email_config.get('imap_server'),
+            imap_port=email_config.get('imap_port', 993)
+        )
+
+        if not connected:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to email server'
+            }), 500
+
+        # Get folders
+        folders = current_app.email_service._list_folders()
+
+        # Disconnect
+        current_app.email_service.disconnect()
+
+        return jsonify({
+            'success': True,
+            'folders': folders
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

@@ -82,6 +82,7 @@ class ExportService:
 		
 		# Zapisz
 		wb.save(output_path)
+		return output_path
 	
 	def export_to_csv(self, invoices: List[Invoice], output_path: str):
 		"""Eksportuj faktury do CSV"""
@@ -122,3 +123,4 @@ class ExportService:
 						"TAK" if invoice.is_duplicate else "NIE"
 						]
 					)
+		return output_path
