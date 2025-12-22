@@ -210,8 +210,17 @@ function setupForm() {
                     window.location.href = '{{ url_for('main.invoices_list') }}';
                 }, 1000);
             } else {
+                // Show validation errors if available
                 if (result.validation_errors) {
-                    Notifications.error('Błędy walidacji: ' + result.validation_errors.join(', '));
+                    const errors = result.validation_errors.errors || [];
+                    const warnings = result.validation_errors.warnings || [];
+                    const allMessages = [...errors, ...warnings];
+                    
+                    if (allMessages.length > 0) {
+                        Notifications.error('Błędy walidacji: ' + allMessages.join(', '));
+                    } else {
+                        Notifications.error('Błąd aktualizacji faktury');
+                    }
                 } else {
                     Notifications.error('Błąd aktualizacji faktury');
                 }

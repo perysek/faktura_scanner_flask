@@ -48,8 +48,9 @@
 {% endblock %}
 
 {% block content %}
+<div class="invoices-page">
     <!-- Statistics Cards -->
-    <div class="flex flex-row gap-6 mb-8">
+    <div class="flex flex-row gap-3 mb-4">
         <div class="card flex-1">
             <div class="flex items-center justify-between">
                 <div>
@@ -113,21 +114,85 @@
 
     <!-- Invoices Table -->
     <div class="card">
-        <div class="overflow-x-auto">
-            <table class="table">
+        <div class="table-wrapper">
+            <table class="table table-hover sortable-table" id="invoicesTable">
                 <thead>
                     <tr>
-                        <th>Nr faktury</th>
-                        <th>Sprzedawca</th>
-                        <th>NIP</th>
-                        <th>Data wystawienia</th>
-                        <th>Termin płatności</th>
-                        <th>Kwota netto</th>
-                        <th>Kwota VAT</th>
-                        <th>Kwota brutto</th>
-                        <th>Status</th>
-                        <th>OCR</th>
-                        <th>Akcje</th>
+                        <th onclick="sortTable(0, 'invoicesTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Nr faktury</span>
+                                    <span class="sort-icon">⇅</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(1, 'invoicesTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Sprzedawca</span>
+                                    <span class="sort-icon">⇅</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(2, 'invoicesTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>NIP</span>
+                                    <span class="sort-icon">⇅</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(3, 'invoicesTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Data wystawienia</span>
+                                    <span class="sort-icon">⇅</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(4, 'invoicesTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Termin płatności</span>
+                                    <span class="sort-icon">⇅</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(5, 'invoicesTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Kwota brutto</span>
+                                    <span class="sort-icon">⇅</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th class="no-sort">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Status</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th class="no-sort">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>OCR</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th class="no-sort">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Akcje</span>
+                                </div>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="invoices-tbody">
@@ -151,6 +216,7 @@
             </a>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}

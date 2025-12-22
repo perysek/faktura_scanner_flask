@@ -1,34 +1,14 @@
 /**
- * Upload Page JavaScript - Multi-Step Workflow
- * Author: AI Assistant
- * 
- * Workflow Steps:
- * 1. Upload files (folder or email) → stage without processing  
- * 2. Review uploaded files table → remove unwanted files
- * 3. Process with OCR → extract invoice data
- * 4. Review results → view PDFs, select files to save
- * 5. Save and finish → write to database, redirect to list
+ * Upload Page JavaScript
  */
 
 let selectedFiles = [];
-let uploadedFiles = []; // Staged files from server
-let processedResults = []; // OCR processing results
-
-// Email import state
-let availableFolders = [];
-let selectedFolders = [];
-let isAllFoldersSelected = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     setupFileUpload();
     setupEmailImport();
     setDefaultDates();
-    setupProcessButton();
-    setupSaveFinishButton();
-
-    // Load any existing staged files
-    loadStagedFiles();
 });
 
 /**
@@ -66,8 +46,8 @@ function setupFileUpload() {
         handleFiles(e.dataTransfer.files);
     });
 
-    // Upload button - stages files
-    uploadBtn.addEventListener('click', stageFiles);
+    // Upload button
+    uploadBtn.addEventListener('click', uploadFiles);
 }
 
 /**
@@ -142,17 +122,12 @@ function updateUploadButton() {
 
     uploadBtn.disabled = !hasFiles;
     clearBtn.disabled = !hasFiles;
-
-    uploadBtn.innerHTML = `
-        <span class="material-icons text-sm mr-2">upload</span>
-        Prześlij pliki${hasFiles ? ` (${selectedFiles.length})` : ''}
-    `;
 }
 
 /**
- * Stage files (Step 1) - Upload without processing
+ * Upload and process files
  */
-async function stageFiles() {
+async function uploadFiles() {
     if (selectedFiles.length === 0) return;
 
     const uploadBtn = document.getElementById('upload-btn');
@@ -165,31 +140,17 @@ async function stageFiles() {
     uploadBtn.disabled = true;
 
     try {
-        const formData = new FormData();
-        selectedFiles.forEach(file => {
-            formData.append('files[]', file);
+        const result = await API.upload.files(selectedFiles, (percent) => {
+            progressBar.style.width = `${percent}%`;
+            progressPercent.textContent = `${Math.round(percent)}%`;
         });
-
-        const response = await fetch('/api/upload/stage', {
-            method: 'POST',
-            body: formData,
-            credentials: 'include' // Important for session cookies
-        });
-
-        const result = await response.json();
 
         if (result.success) {
-            Notifications.success(`Przesłano ${result.files.length} plików`);
-
-            // Clear selection
+            Notifications.success(`Przetworzono ${result.results.length} plików`);
+            displayResults(result.results);
             clearFiles();
-
-            // Load staged files and show review section
-            await loadStagedFiles();
-            showUploadedFilesSection();
-            hideUploadControls();
         } else {
-            Notifications.error('Błąd przesyłania plików: ' + (result.error || 'Unknown error'));
+            Notifications.error('Błąd przetwarzania plików');
         }
     } catch (error) {
         console.error('Upload error:', error);
@@ -203,445 +164,20 @@ async function stageFiles() {
 }
 
 /**
- * Load staged files from server
- */
-async function loadStagedFiles() {
-    try {
-        const response = await fetch('/api/upload/staged', {
-            credentials: 'include'
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            uploadedFiles = result.files;
-
-            if (uploadedFiles.length > 0) {
-                displayUploadedFiles();
-                showUploadedFilesSection();
-            }
-        }
-    } catch (error) {
-        console.error('Error loading staged files:', error);
-    }
-}
-
-/**
- * Display uploaded files in review table (Step 2)
- */
-function displayUploadedFiles() {
-    const tbody = document.getElementById('uploaded-files-tbody');
-
-    if (uploadedFiles.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">Brak przesłanych plików</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = uploadedFiles.map(file => `
-        <tr>
-            <td class="font-medium">${escapeHtml(file.filename)}</td>
-            <td>${file.email_subject ? escapeHtml(file.email_subject) : '-'}</td>
-            <td>${file.email_sender ? escapeHtml(file.email_sender) : '-'}</td>
-            <td>${file.email_folder ? escapeHtml(file.email_folder) : '-'}</td>
-            <td>${file.email_date ? escapeHtml(file.email_date) : '-'}</td>
-            <td>${formatFileSize(file.file_size)}</td>
-            <td>
-                <button onclick="removeStagedFile('${escapeHtml(file.filename)}')" 
-                        class="text-status-error hover:underline text-sm">
-                    Usuń
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-/**
- * Remove staged file (Step 2)
- */
-async function removeStagedFile(filename) {
-    if (!confirm(`Czy na pewno usunąć plik "${filename}"?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/upload/staged/${encodeURIComponent(filename)}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            Notifications.success(`Plik ${filename} usunięty`);
-            await loadStagedFiles();
-
-            // If no files left, show upload controls again
-            if (uploadedFiles.length === 0) {
-                hideUploadedFilesSection();
-                showUploadControls();
-            }
-        } else {
-            Notifications.error('Błąd usuwania pliku: ' + (result.error || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Error removing file:', error);
-        Notifications.error('Błąd usuwania pliku: ' + error.message);
-    }
-}
-
-/**
- * Setup process documents button
- */
-function setupProcessButton() {
-    const processBtn = document.getElementById('process-documents-btn');
-    processBtn.addEventListener('click', processDocuments);
-
-    const clearAllBtn = document.getElementById('clear-all-btn');
-    clearAllBtn.addEventListener('click', clearAllStagedFiles);
-}
-
-/**
- * Process staged documents with OCR (Step 3)
- */
-async function processDocuments() {
-    // Check if there are any files to process
-    if (uploadedFiles.length === 0) {
-        // No files to process - just clear and return to upload view
-        await clearAllStagedFiles();
-        return;
-    }
-
-    const processBtn = document.getElementById('process-documents-btn');
-    processBtn.disabled = true;
-    processBtn.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">sync</span>Przetwarzanie...';
-
-    try {
-        const response = await fetch('/api/upload/process', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({})
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            processedResults = result.results;
-            Notifications.success(`Przetworzono ${processedResults.length} plików`);
-
-            // Hide uploaded files section, show results
-            hideUploadedFilesSection();
-            displayProcessingResults();
-        } else {
-            Notifications.error('Błąd przetwarzania: ' + (result.error || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Processing error:', error);
-        Notifications.error('Błąd przetwarzania: ' + error.message);
-    } finally {
-        processBtn.disabled = false;
-        processBtn.innerHTML = '<span class="material-icons text-sm mr-2">auto_fix_high</span>Przetwórz documenty';
-    }
-}
-
-/**
- * Display processing results (Step 4)
- */
-function displayProcessingResults() {
-    const section = document.getElementById('results-section');
-    const tbody = document.getElementById('results-tbody');
-    const summary = document.getElementById('results-summary');
-
-    const successCount = processedResults.filter(r => r.success && !r.validation_errors?.length && !r.is_duplicate).length;
-    const errorCount = processedResults.filter(r => !r.success).length;
-    const duplicateCount = processedResults.filter(r => r.is_duplicate).length;
-    const validationErrorCount = processedResults.filter(r => r.validation_errors && r.validation_errors.length > 0).length;
-
-    summary.innerHTML = `
-        <span class="text-status-success">✓ ${successCount} gotowych do zapisu</span> •
-        <span class="text-status-warning">⚠ ${duplicateCount} duplikatów</span> •
-        <span class="text-status-error">✗ ${validationErrorCount} błędów walidacji</span> •
-        <span class="text-status-error">✗ ${errorCount} błędów przetwarzania</span>
-    `;
-
-    tbody.innerHTML = processedResults.map((result, index) => {
-        const canAdd = result.success && !result.is_duplicate && (!result.validation_errors || result.validation_errors.length === 0);
-        const status = result.success ? (canAdd ? 'success' : 'warning') : 'error';
-        const statusText = result.success ? (canAdd ? 'Gotowe' : 'Wymaga uwagi') : 'Błąd';
-        const statusBadge = `badge-${status}`;
-
-        return `
-            <tr data-result-index="${index}">
-                <td class="font-medium">${escapeHtml(result.filename)}</td>
-                <td><span class="badge ${statusBadge}">${statusText}</span></td>
-                <td>${result.extracted_data?.invoice_number ? escapeHtml(result.extracted_data.invoice_number) : '-'}</td>
-                <td>${result.extracted_data?.seller_name ? escapeHtml(result.extracted_data.seller_name) : '-'}</td>
-                <td>${result.extracted_data?.total_amount ? formatCurrency(result.extracted_data.total_amount, result.extracted_data.currency) : '-'}</td>
-                <td>
-                    ${result.is_duplicate ? '<span class="badge badge-warning">Tak</span>' : '<span class="badge badge-success">Nie</span>'}
-                </td>
-                <td>
-                    ${result.validation_errors && result.validation_errors.length > 0
-                ? `<div class="text-status-error text-xs">${result.validation_errors.join('<br>')}</div>`
-                : ''}
-                    ${result.validation_warnings && result.validation_warnings.length > 0
-                ? `<div class="text-status-warning text-xs">${result.validation_warnings.join('<br>')}</div>`
-                : ''}
-                    ${(!result.validation_errors || result.validation_errors.length === 0) &&
-                (!result.validation_warnings || result.validation_warnings.length === 0)
-                ? '-' : ''}
-                </td>
-                <td>
-                    <button onclick="viewPdf('${escapeHtml(result.filename)}')" 
-                            class="text-primary hover:underline text-sm flex items-center gap-1">
-                        <span class="material-icons text-sm">visibility</span>
-                        Podgląd
-                    </button>
-                </td>
-                <td>
-                    <input type="checkbox" 
-                           class="form-checkbox h-4 w-4 text-primary add-to-list-checkbox" 
-                           data-result-index="${index}"
-                           ${canAdd ? 'checked' : ''}>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    section.classList.remove('hidden');
-}
-
-/**
- * View PDF file
- */
-function viewPdf(filename) {
-    const url = `/api/upload/view-pdf/${encodeURIComponent(filename)}`;
-    window.open(url, '_blank');
-}
-
-/**
- * Setup save and finish button
- */
-function setupSaveFinishButton() {
-    const saveBtn = document.getElementById('save-finish-btn');
-    saveBtn.addEventListener('click', saveAndFinish);
-}
-
-/**
- * Save selected invoices and finish (Step 5)
- */
-async function saveAndFinish() {
-    // Get all checked checkboxes
-    const checkboxes = document.querySelectorAll('.add-to-list-checkbox:checked');
-
-    if (checkboxes.length === 0) {
-        Notifications.warning('Nie wybrano żadnych faktur do zapisu');
-        return;
-    }
-
-    const saveBtn = document.getElementById('save-finish-btn');
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">sync</span>Zapisywanie...';
-
-    try {
-        // Prepare invoices to save
-        const invoicesToSave = [];
-        checkboxes.forEach(checkbox => {
-            const index = parseInt(checkbox.dataset.resultIndex);
-            const result = processedResults[index];
-            invoicesToSave.push(result);
-        });
-
-        const response = await fetch('/api/upload/finalize', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                invoices: invoicesToSave
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            Notifications.success(`Zapisano ${result.count} faktur!`);
-
-            // Reset everything and redirect to list
-            setTimeout(() => {
-                window.location.href = '/invoices';
-            }, 1500);
-        } else {
-            Notifications.error('Błąd zapisu: ' + (result.error || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Save error:', error);
-        Notifications.error('Błąd zapisu: ' + error.message);
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<span class="material-icons text-sm mr-2">save</span>Zapisz i zakończ';
-    }
-}
-
-/**
- * Show/hide UI sections
- */
-function showUploadedFilesSection() {
-    document.getElementById('uploaded-files-section').classList.remove('hidden');
-}
-
-function hideUploadedFilesSection() {
-    document.getElementById('uploaded-files-section').classList.add('hidden');
-}
-
-function showUploadControls() {
-    document.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2').classList.remove('hidden');
-}
-
-function hideUploadControls() {
-    document.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2').classList.add('hidden');
-}
-
-/**
- * Clear all staged files and return to upload view
- */
-async function clearAllStagedFiles() {
-
-    try {
-        const response = await fetch('/api/upload/staged/clear', {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            Notifications.success('Wszystkie pliki usunięte');
-            uploadedFiles = [];
-            hideUploadedFilesSection();
-            showUploadControls();
-        } else {
-            Notifications.error('Błąd usuwania plików: ' + (result.error || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Error clearing files:', error);
-        Notifications.error('Błąd usuwania plików: ' + error.message);
-    }
-}
-
-/**
- * Close results and return to upload
- */
-function closeResults() {
-    // Always clear everything and return to upload view
-    document.getElementById('results-section').classList.add('hidden');
-    // Clear staged files and return to fresh upload view
-    clearAllStagedFilesQuiet();
-}
-
-/**
- * Clear all staged files without confirmation (for internal use)
- */
-async function clearAllStagedFilesQuiet() {
-    try {
-        await fetch('/api/upload/staged/clear', {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        uploadedFiles = [];
-        hideUploadedFilesSection();
-        showUploadControls();
-    } catch (error) {
-        console.error('Error clearing files:', error);
-    }
-}
-
-// ============================================================================
-// EMAIL IMPORT FUNCTIONS
-// ============================================================================
-
-/**
  * Setup email import
  */
 function setupEmailImport() {
     const importBtn = document.getElementById('email-import-btn');
+    const getFoldersBtn = document.getElementById('get-folders-btn');
     const selectFoldersBtn = document.getElementById('select-folders-btn');
 
     importBtn.addEventListener('click', importFromEmail);
-    selectFoldersBtn.addEventListener('click', async () => {
-        // Fetch folders first, then open modal
-        await getFoldersAndOpenModal();
-    });
+    getFoldersBtn.addEventListener('click', getFolders);
+    selectFoldersBtn.addEventListener('click', openFolderModal);
 }
 
-/**
- * Get folders and then open modal
- */
-async function getFoldersAndOpenModal() {
-    const selectFoldersBtn = document.getElementById('select-folders-btn');
-    const folderList = document.getElementById('folder-list');
-
-    // Disable button during fetch
-    const originalContent = selectFoldersBtn.innerHTML;
-    selectFoldersBtn.disabled = true;
-    selectFoldersBtn.innerHTML = '<span class="material-icons text-sm animate-spin">sync</span> Pobieranie folderów...';
-
-    try {
-        const result = await API.email.getFolders();
-
-        if (result.success && result.folders && result.folders.length > 0) {
-            // Store folders globally
-            availableFolders = result.folders;
-
-            // Clear folder list
-            folderList.innerHTML = '';
-
-            // Populate with checkboxes
-            result.folders.forEach((folder, index) => {
-                const checkbox = document.createElement('label');
-                checkbox.className = 'flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded';
-                checkbox.innerHTML = `
-                    <input type="checkbox" class="folder-checkbox form-checkbox h-4 w-4 text-primary" value="${escapeHtml(folder)}" data-folder-index="${index}">
-                    <span class="text-gray-700">${escapeHtml(folder)}</span>
-                `;
-                folderList.appendChild(checkbox);
-            });
-
-            // Setup "All" checkbox handler
-            setupAllCheckboxHandler();
-
-            // Restore button FIRST so text span exists again  
-            selectFoldersBtn.disabled = false;
-            selectFoldersBtn.innerHTML = originalContent;
-
-            // Now safely update the text
-            const textSpan = document.getElementById('selected-folders-text');
-            if (textSpan) {
-                textSpan.textContent = 'Kliknij aby wybrać foldery';
-                textSpan.classList.remove('text-gray-500');
-                textSpan.classList.add('text-gray-700');
-            }
-
-            Notifications.success(`Załadowano ${result.folders.length} folderów`);
-
-            // Open the modal after successful fetch
-            openFolderModal();
-        } else {
-            Notifications.warning('Nie znaleziono folderów e-mail');
-            selectFoldersBtn.disabled = false;
-            selectFoldersBtn.innerHTML = originalContent;
-        }
-    } catch (error) {
-        console.error('Get folders error:', error);
-        Notifications.error('Błąd pobierania folderów: ' + error.message);
-        selectFoldersBtn.disabled = false;
-        selectFoldersBtn.innerHTML = originalContent;
-    }
-}
+// Global variable to store available folders
+let availableFolders = [];
 
 /**
  * Get folders from email server
@@ -803,6 +339,10 @@ function setupModalCheckboxHandlers(modal) {
         });
     });
 }
+
+// Global variable to store selected folders
+let selectedFolders = [];
+let isAllFoldersSelected = false;
 
 /**
  * Restore previous folder selections in modal
@@ -1013,7 +553,7 @@ function updateProgressHeader(action, current, total) {
 }
 
 /**
- * Import from email - Now uses staging workflow
+ * Import from email
  */
 async function importFromEmail() {
     const dateFrom = document.getElementById('email-date-from').value;
@@ -1044,7 +584,6 @@ async function importFromEmail() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            credentials: 'include', // Important for session
             body: JSON.stringify({
                 folders: foldersToSend,
                 date_from: dateFrom,
@@ -1104,7 +643,7 @@ async function importFromEmail() {
 
                             case 'complete':
                                 finalResults = data;
-                                addProgressNotification(`✅ Import zakończony: pobrano ${data.total_processed} plików`, 'success');
+                                addProgressNotification(`✅ Import zakończony: przetworzono ${data.total_processed} plików`, 'success');
                                 break;
                         }
                     } catch (e) {
@@ -1114,18 +653,12 @@ async function importFromEmail() {
             }
         }
 
-        // Close modal after a short delay
-        setTimeout(async () => {
+        // Close modal after a short delay and show results
+        setTimeout(() => {
             Modals.close(progressModal);
-            if (finalResults && finalResults.total_processed > 0) {
-                Notifications.success(`Import zakończony: pobrano ${finalResults.total_processed} plików`);
-
-                // Load staged files and show review section
-                await loadStagedFiles();
-                showUploadedFilesSection();
-                hideUploadControls();
-            } else {
-                Notifications.warning('Nie znaleziono plików PDF w wybranych folderach');
+            if (finalResults && finalResults.results) {
+                Notifications.success(`Import zakończony: przetworzono ${finalResults.total_processed} plików`);
+                displayResults(finalResults.results);
             }
         }, 1000);
 
@@ -1137,4 +670,71 @@ async function importFromEmail() {
             Notifications.error('Błąd importu z e-mail: ' + error.message);
         }, 1000);
     }
+}
+
+/**
+ * Display processing results
+ */
+function displayResults(results) {
+    const section = document.getElementById('results-section');
+    const tbody = document.getElementById('results-tbody');
+    const summary = document.getElementById('results-summary');
+
+    const successCount = results.filter(r => r.success && r.saved).length;
+    const errorCount = results.filter(r => !r.success).length;
+    const duplicateCount = results.filter(r => r.is_duplicate).length;
+    const validationErrorCount = results.filter(r => r.validation_errors && r.validation_errors.length > 0).length;
+    const validationWarningCount = results.filter(r => r.validation_warnings && r.validation_warnings.length > 0).length;
+
+    summary.innerHTML = `
+        <span class="text-status-success">✓ ${successCount} zapisanych</span> •
+        <span class="text-status-warning">⚠ ${duplicateCount} duplikatów</span> •
+        <span class="text-status-error">✗ ${validationErrorCount} błędów walidacji</span> •
+        <span class="text-status-warning">⚠ ${validationWarningCount} ostrzeżeń</span> •
+        <span class="text-status-error">✗ ${errorCount} błędów przetwarzania</span>
+    `;
+
+    tbody.innerHTML = results.map(result => {
+        const status = result.success ? (result.saved ? 'success' : 'warning') : 'error';
+        const statusText = result.success ? (result.saved ? 'Zapisano' : 'Nie zapisano') : 'Błąd';
+        const statusBadge = `badge-${status}`;
+
+        return `
+            <tr>
+                <td class="font-medium">${escapeHtml(result.filename)}</td>
+                <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                <td>${result.extracted_data?.invoice_number ? escapeHtml(result.extracted_data.invoice_number) : '-'}</td>
+                <td>${result.extracted_data?.seller_name ? escapeHtml(result.extracted_data.seller_name) : '-'}</td>
+                <td>${result.extracted_data?.total_amount ? formatCurrency(result.extracted_data.total_amount, result.extracted_data.currency) : '-'}</td>
+                <td>
+                    ${result.is_duplicate ? '<span class="badge badge-warning">Tak</span>' : '<span class="badge badge-success">Nie</span>'}
+                </td>
+                <td>
+                    ${result.validation_errors && result.validation_errors.length > 0
+                ? `<div class="text-status-error text-xs">${result.validation_errors.join('<br>')}</div>`
+                : ''}
+                    ${result.validation_warnings && result.validation_warnings.length > 0
+                ? `<div class="text-status-warning text-xs">${result.validation_warnings.join('<br>')}</div>`
+                : ''}
+                    ${(!result.validation_errors || result.validation_errors.length === 0) &&
+                (!result.validation_warnings || result.validation_warnings.length === 0)
+                ? '-' : ''}
+                </td>
+                <td>
+                    ${result.invoice_id
+                ? `<a href="/invoice/${result.invoice_id}/edit" class="text-primary hover:underline text-sm">Edytuj</a>`
+                : '-'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    section.classList.remove('hidden');
+}
+
+/**
+ * Close results
+ */
+function closeResults() {
+    document.getElementById('results-section').classList.add('hidden');
 }

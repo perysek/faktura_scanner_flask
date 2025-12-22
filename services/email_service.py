@@ -9,7 +9,7 @@ import time
 from email.header import decode_header
 from datetime import date
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 
 
 class EmailService:
@@ -129,7 +129,7 @@ class EmailService:
 			save_dir: str = None,
 			progress_callback: Optional[callable] = None,
 			folders: Optional[List[str]] = None
-	) -> List[Tuple[str, str]]:
+	) -> List[Dict[str, Any]]:
 		"""
 		Fetch PDF attachments from emails across specified folders.
 		
@@ -139,6 +139,9 @@ class EmailService:
 			save_dir: Directory to save PDF attachments
 			progress_callback: Optional callback for progress updates
 			folders: Optional list of folder names to search. If None, searches all folders.
+		
+		Returns:
+			List of dicts with: filename, filepath, folder, email_subject, email_sender, email_date
 		"""
 		if not self.connected:
 			if progress_callback:
@@ -186,7 +189,7 @@ class EmailService:
 							progress = 0.1 + 0.8 * ((i + (idx / len(email_ids))) / len(folders_to_search))
 							progress_callback(f"Przetwarzanie emaila {idx}/{len(email_ids)} w {folder_name}", "Wyszukiwanie załączników PDF...", progress)
 
-						pdfs = self._process_email(email_id, save_dir, progress_callback)
+						pdfs = self._process_email(email_id, save_dir, progress_callback, folder_name)
 						all_pdf_files.extend(pdfs)
 
 				except Exception as e:
@@ -205,12 +208,12 @@ class EmailService:
 				progress_callback(f"❌ Błąd: {str(e)}", "", None)
 			return []
 
-	def _process_email(self, email_id: bytes, save_dir: str = None, progress_callback: Optional[callable] = None) -> List[Tuple[str, str]]:
+	def _process_email(self, email_id: bytes, save_dir: str = None, progress_callback: Optional[callable] = None, folder_name: str = None) -> List[Dict[str, Any]]:
 		"""
 		Process a single email and extract PDF attachments
 
 		Returns:
-			List of tuples: (pdf_filename, pdf_path)
+			List of dicts with PDF metadata: filename, filepath, folder, email_subject, email_sender, email_date
 		"""
 		pdf_files = []
 		message = None
@@ -225,6 +228,11 @@ class EmailService:
 			# Parse email
 			email_body = msg_data[0][1]
 			message = email.message_from_bytes(email_body)
+			
+			# Extract email metadata
+			email_subject = str(message.get('Subject', ''))
+			email_sender = str(message.get('From', ''))
+			email_date = str(message.get('Date', ''))
 
 			# Process attachments
 			if message.is_multipart():
@@ -263,7 +271,14 @@ class EmailService:
 							)
 
 							if pdf_path:
-								pdf_files.append((filename, pdf_path))
+								pdf_files.append({
+									'filename': filename,
+									'filepath': pdf_path,
+									'folder': folder_name,
+									'email_subject': email_subject,
+									'email_sender': email_sender,
+									'email_date': email_date
+								})
 								print(f"  📄 Pobrano: {filename}")
 								if progress_callback:
 									progress_callback(f"✅ Pobrano: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
