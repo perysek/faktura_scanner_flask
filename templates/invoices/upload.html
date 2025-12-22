@@ -54,8 +54,33 @@
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Folder</label>
-                    <input type="text" id="email-folder" value="INBOX" class="input">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Foldery e-mail</label>
+                    <div class="flex gap-2">
+                        <button id="select-folders-btn" type="button" class="input flex-1 text-left flex items-center justify-between" disabled>
+                            <span id="selected-folders-text" class="text-gray-500">Kliknij "Pobierz foldery" aby załadować listę</span>
+                            <span class="material-icons text-gray-400">folder_open</span>
+                        </button>
+                        <button id="get-folders-btn" class="btn-secondary" style="align-self: flex-start;">
+                            <span class="material-icons text-sm">folder</span>
+                            Pobierz foldery
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Kliknij przycisk aby wybrać foldery do przeszukania</p>
+                </div>
+                
+                <!-- Folder Selection Modal (hidden by default) -->
+                <div id="folder-modal" class="hidden">
+                    <div class="space-y-3">
+                        <div class="border-b pb-2">
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                <input type="checkbox" id="folder-all" class="form-checkbox h-4 w-4 text-primary">
+                                <span class="font-semibold text-gray-900">Wszystkie foldery</span>
+                            </label>
+                        </div>
+                        <div id="folder-list" class="space-y-2 max-h-96 overflow-y-auto">
+                            <!-- Checkboxes will be populated here by JavaScript -->
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -68,7 +93,7 @@
                     <input type="date" id="email-date-to" class="input">
                 </div>
 
-                <button id="email-import-btn" class="btn-primary w-full flex items-center justify-center">
+                <button id="email-import-btn" class="btn-primary w-full flex items-center justify-center" disabled>
                     <span class="material-icons text-sm mr-2">download</span>
                     Importuj z e-mail
                 </button>

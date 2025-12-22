@@ -38,6 +38,9 @@ Thumbs.db
 .env
 .env.local
 
+# Email credentials (SENSITIVE)
+config/email_config.json
+
 # Claude Code
 .claude/.dirty-files
 

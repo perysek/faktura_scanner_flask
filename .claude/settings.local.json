@@ -12,7 +12,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "mcp__kapture__new_tab",
-      "mcp__kapture__list_tabs"
+      "mcp__kapture__list_tabs",
+      "Bash(timeout 3 echo:*)",
+      "Bash(pip freeze:*)",
+      "Bash(pipdeptree:*)",
+      "Bash(pip uninstall:*)"
     ],
     "deny": [],
     "ask": []

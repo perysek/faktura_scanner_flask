@@ -126,7 +126,8 @@ const API = {
         import: (options) => API.post('/email/import', options),
         test: (settings) => API.post('/email/test', settings),
         getSettings: () => API.get('/email/settings'),
-        saveSettings: (settings) => API.post('/email/settings', settings)
+        saveSettings: (settings) => API.post('/email/settings', settings),
+        getFolders: () => API.post('/email/folders')
     },
 
     // History endpoints

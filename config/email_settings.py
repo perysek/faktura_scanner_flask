@@ -29,9 +29,9 @@ class EmailSettings:
 	def get_default_settings(self) -> dict:
 		"""Get default email settings"""
 		return {
-			"email_address": "anetulak23@wp.pl",
-			"password": "***REMOVED***",
-			"imap_server": "imap.wp.pl",
+			"email": "",
+			"password": "",
+			"imap_server": "",
 			"imap_port": 993,
 			"search_from_date": "",
 			"search_to_date": date.today().isoformat()
@@ -56,3 +56,27 @@ class EmailSettings:
 		"""Update a specific setting"""
 		self.settings[key] = value
 		return self.save_settings(self.settings)
+
+
+# Singleton instance for easy access
+_email_settings_instance = None
+
+
+def get_email_settings_instance() -> EmailSettings:
+	"""Get or create the EmailSettings singleton instance"""
+	global _email_settings_instance
+	if _email_settings_instance is None:
+		_email_settings_instance = EmailSettings()
+	return _email_settings_instance
+
+
+def load_email_settings() -> dict:
+	"""Load email settings (standalone function for backward compatibility)"""
+	instance = get_email_settings_instance()
+	return instance.get_settings()
+
+
+def save_email_settings(settings: dict) -> bool:
+	"""Save email settings (standalone function for backward compatibility)"""
+	instance = get_email_settings_instance()
+	return instance.save_settings(settings)

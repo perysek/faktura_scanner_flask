@@ -127,10 +127,18 @@ class EmailService:
 			from_date: Optional[date] = None,
 			to_date: Optional[date] = None,
 			save_dir: str = None,
-			progress_callback: Optional[callable] = None
+			progress_callback: Optional[callable] = None,
+			folders: Optional[List[str]] = None
 	) -> List[Tuple[str, str]]:
 		"""
-		Fetch PDF attachments from emails across all folders.
+		Fetch PDF attachments from emails across specified folders.
+		
+		Args:
+			from_date: Start date for email search
+			to_date: End date for email search
+			save_dir: Directory to save PDF attachments
+			progress_callback: Optional callback for progress updates
+			folders: Optional list of folder names to search. If None, searches all folders.
 		"""
 		if not self.connected:
 			if progress_callback:
@@ -139,21 +147,26 @@ class EmailService:
 
 		all_pdf_files = []
 		try:
-			folders = self._list_folders()
-			if not folders:
+			# Get folders to search - either specific folders or all folders
+			if folders is None:
+				folders_to_search = self._list_folders()
+			else:
+				folders_to_search = folders
+			
+			if not folders_to_search:
 				if progress_callback:
 					progress_callback("❌ Nie znaleziono żadnych folderów email", "", None)
 				return []
 
 			if progress_callback:
-				progress_callback(f"🔎 Znaleziono {len(folders)} folderów", "Rozpoczynanie wyszukiwania emaili...", 0.1)
+				progress_callback(f"🔎 Znaleziono {len(folders_to_search)} folderów", "Rozpoczynanie wyszukiwania emaili...", 0.1)
 
 			search_criteria = self._build_search_criteria(from_date, to_date)
 
-			for i, folder_name in enumerate(folders):
+			for i, folder_name in enumerate(folders_to_search):
 				try:
 					if progress_callback:
-						progress_callback(f"📂 Skanowanie folderu: {folder_name}", f"({i + 1}/{len(folders)})", 0.1 + 0.8 * (i / len(folders)))
+						progress_callback(f"📂 Skanowanie folderu: {folder_name}", f"({i + 1}/{len(folders_to_search)})", 0.1 + 0.8 * (i / len(folders_to_search)))
 
 					self.imap.select(f'"{folder_name}"')
 					status, messages = self.imap.search(None, *search_criteria)
@@ -170,7 +183,7 @@ class EmailService:
 
 					for idx, email_id in enumerate(email_ids, 1):
 						if progress_callback:
-							progress = 0.1 + 0.8 * ((i + (idx / len(email_ids))) / len(folders))
+							progress = 0.1 + 0.8 * ((i + (idx / len(email_ids))) / len(folders_to_search))
 							progress_callback(f"Przetwarzanie emaila {idx}/{len(email_ids)} w {folder_name}", "Wyszukiwanie załączników PDF...", progress)
 
 						pdfs = self._process_email(email_id, save_dir, progress_callback)
@@ -251,9 +264,9 @@ class EmailService:
 
 							if pdf_path:
 								pdf_files.append((filename, pdf_path))
-								print(f"  📄 Pobrani: {filename}")
+								print(f"  📄 Pobrano: {filename}")
 								if progress_callback:
-									progress_callback(f"✅ Pobrani: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
+									progress_callback(f"✅ Pobrano: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
 
 							# Clear payload reference to free memory
 							del payload_data
