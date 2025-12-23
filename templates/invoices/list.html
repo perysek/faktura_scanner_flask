@@ -5,47 +5,25 @@
 {% block page_title %}Lista faktur{% endblock %}
 
 {% block page_actions %}
-    <div class="flex items-center gap-3">
-        <!-- Search -->
-        <div class="relative">
-            <input type="text" id="search-input" placeholder="Szukaj faktury..."
-                   class="input w-64 pl-10">
-            <span class="material-icons absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                search
-            </span>
-        </div>
-
-        <!-- Import PDF Button -->
-        <button id="import-pdf-btn" class="btn-primary flex items-center">
-            <span class="material-icons text-sm mr-2">upload_file</span>
-            Import PDF
+    <!-- Export -->
+    <div class="relative">
+        <button id="export-btn" class="btn-secondary flex items-center">
+            <span class="material-icons text-sm mr-2">download</span>
+            Eksport
         </button>
-        <input type="file" id="quick-upload-input" accept=".pdf" multiple class="hidden">
-
-        <!-- Export -->
-        <div class="relative">
-            <button id="export-btn" class="btn-secondary flex items-center">
-                <span class="material-icons text-sm mr-2">download</span>
-                Eksport
+        <div id="export-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+            <button onclick="exportToExcel()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center">
+                <span class="material-icons text-sm mr-2">table_chart</span>
+                Eksport do Excel
             </button>
-            <div id="export-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                <button onclick="exportToExcel()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center">
-                    <span class="material-icons text-sm mr-2">table_chart</span>
-                    Eksport do Excel
-                </button>
-                <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center">
-                    <span class="material-icons text-sm mr-2">description</span>
-                    Eksport do CSV
-                </button>
-            </div>
+            <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center">
+                <span class="material-icons text-sm mr-2">description</span>
+                Eksport do CSV
+            </button>
         </div>
-
-        <!-- Refresh -->
-        <button id="refresh-btn" class="btn-secondary" onclick="loadInvoices()">
-            <span class="material-icons text-sm">refresh</span>
-        </button>
     </div>
 {% endblock %}
+
 
 {% block content %}
 <div class="invoices-page">

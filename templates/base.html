@@ -23,79 +23,69 @@
 </head>
 <body class="min-h-screen bg-surface-secondary">
     <!-- Main Container -->
-    <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar Navigation -->
-        <aside class="w-64 bg-white shadow-lg flex flex-col">
-            <!-- Logo & App Info -->
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <span class="material-icons text-primary text-4xl">receipt_long</span>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-900">{{ app_name }}</h1>
-                        <p class="text-xs text-gray-500">v{{ version }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Navigation Menu -->
-            <nav class="flex-1 p-4 overflow-y-auto">
-                <ul class="space-y-2">
-                    <li>
-                        <a href="{{ url_for('main.invoices_list') }}"
-                           class="nav-link {% if request.endpoint == 'main.invoices_list' %}active{% endif %}">
-                            <span class="material-icons text-xl mr-3">list_alt</span>
-                            <span>Lista faktur</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.upload') }}"
-                           class="nav-link {% if request.endpoint == 'main.upload' %}active{% endif %}">
-                            <span class="material-icons text-xl mr-3">upload_file</span>
-                            <span>Import PDF</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.history') }}"
-                           class="nav-link {% if request.endpoint == 'main.history' %}active{% endif %}">
-                            <span class="material-icons text-xl mr-3">history</span>
-                            <span>Historia</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.email_settings') }}"
-                           class="nav-link {% if request.endpoint == 'main.email_settings' %}active{% endif %}">
-                            <span class="material-icons text-xl mr-3">email</span>
-                            <span>Ustawienia e-mail</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <!-- Notification Area -->
-            <div id="notification-panel" class="border-t border-gray-200 p-4">
-                <div class="text-xs text-gray-500 text-center">
-                    Powiadomienia pojawią się tutaj
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto">
-            <!-- Page Header -->
-            <header class="bg-white shadow-sm border-b border-gray-200 px-8 py-6">
+    <div class="flex flex-col h-screen overflow-hidden">
+        <!-- Top Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="px-8 py-4">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-2xl font-semibold text-gray-900">{% block page_title %}{% endblock %}</h2>
-                        {% block page_subtitle %}{% endblock %}
+                    <!-- Left: Logo, App Name & Navigation -->
+                    <div class="flex items-center gap-4">
+                        <!-- Logo & App Info -->
+                        <div class="flex items-center gap-3">
+                            <span class="material-icons text-primary text-4xl">receipt_long</span>
+                            <div>
+                                <h1 class="text-xl font-bold text-gray-900">{{ app_name }}</h1>
+                                <p class="text-xs text-gray-500">v{{ version }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Horizontal Navigation -->
+                        <nav>
+                            <ul class="flex items-center gap-1">
+                                <li>
+                                    <a href="{{ url_for('main.invoices_list') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.invoices_list' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">list_alt</span>
+                                        <span>Lista faktur</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ url_for('main.upload') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.upload' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">upload_file</span>
+                                        <span>Import PDF</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ url_for('main.history') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.history' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">history</span>
+                                        <span>Historia</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ url_for('main.email_settings') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.email_settings' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">email</span>
+                                        <span>Ustawienia e-mail</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
+
+                    <!-- Right: Page Actions -->
                     <div class="flex items-center gap-4">
                         {% block page_actions %}{% endblock %}
                     </div>
                 </div>
-            </header>
+            </div>
+        </header>
 
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto">
             <!-- Page Content -->
-            <div class="p-8">
+            <div class="p-4">
                 {% block content %}{% endblock %}
             </div>
         </main>

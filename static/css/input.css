@@ -23,6 +23,7 @@
 
 /* Custom components */
 @layer components {
+
   /* Card */
   .card {
     @apply bg-white rounded-lg shadow-md p-md;
@@ -55,7 +56,7 @@
 
   /* Form inputs */
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200;
   }
 
   .input-error {
@@ -72,11 +73,11 @@
   }
 
   .table th {
-    @apply px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider;
+    @apply px-4 py-2 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider;
   }
 
   .table td {
-    @apply px-4 py-3 text-sm text-gray-900 border-b border-gray-200;
+    @apply px-4 py-2 text-sm text-gray-900 border-b border-gray-200;
   }
 
   .table tbody tr:hover {
@@ -136,12 +137,22 @@
 
   /* Navigation */
   .nav-link {
-    @apply flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg;
+    @apply flex items-center px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg;
   }
 
   .nav-link.active {
     @apply bg-primary text-white;
   }
+
+  /* Horizontal Navigation */
+  .nav-link-horizontal {
+    @apply flex items-center px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg font-medium;
+  }
+
+  .nav-link-horizontal.active {
+    @apply bg-primary text-white;
+  }
+
 
   /* Modal */
   .modal-overlay {
@@ -197,6 +208,7 @@
       transform: translateX(100%);
       opacity: 0;
     }
+
     to {
       transform: translateX(0);
       opacity: 1;

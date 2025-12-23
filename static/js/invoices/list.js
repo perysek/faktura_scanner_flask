@@ -16,42 +16,25 @@ document.addEventListener('DOMContentLoaded', () => {
  * Setup event listeners
  */
 function setupEventListeners() {
-    // Search input with debounce
-    const searchInput = document.getElementById('search-input');
-    searchInput.addEventListener('input', debounce((e) => {
-        currentSearch = e.target.value;
-        loadInvoices(currentSearch);
-    }, 500));
-
-    // Import PDF button
-    const importPdfBtn = document.getElementById('import-pdf-btn');
-    const quickUploadInput = document.getElementById('quick-upload-input');
-
-    importPdfBtn.addEventListener('click', () => {
-        quickUploadInput.click();
-    });
-
-    quickUploadInput.addEventListener('change', (e) => {
-        handleQuickUpload(e.target.files);
-    });
-
     // Export menu toggle
     const exportBtn = document.getElementById('export-btn');
     const exportMenu = document.getElementById('export-menu');
 
-    exportBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        exportMenu.classList.toggle('hidden');
-    });
+    if (exportBtn && exportMenu) {
+        exportBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exportMenu.classList.toggle('hidden');
+        });
 
-    // Close export menu when clicking outside
-    document.addEventListener('click', () => {
-        exportMenu.classList.add('hidden');
-    });
+        // Close export menu when clicking outside
+        document.addEventListener('click', () => {
+            exportMenu.classList.add('hidden');
+        });
 
-    exportMenu.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
+        exportMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
 }
 
 /**

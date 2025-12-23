@@ -156,9 +156,9 @@ tbody td {
 
 /* Invoices list page has stats cards above table - adjust height accordingly */
 .invoices-page .table-wrapper {
-    max-height: calc(100vh - 350px);
+    max-height: calc(100vh - 300px);
     /* Account for header, stats cards, and reduced margins/padding */
-    min-height: 350px;
+    min-height: 300px;
     /* Minimum height to prevent too small table */
 }
 
