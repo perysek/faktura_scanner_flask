@@ -208,6 +208,60 @@ class EmailService:
 				progress_callback(f"❌ Błąd: {str(e)}", "", None)
 			return []
 
+	@staticmethod
+	def _contains_invoice_keywords(text: str) -> bool:
+		"""
+		Check if text contains invoice-related keywords.
+		
+		Args:
+			text: Text to search for keywords (email subject or body)
+			
+		Returns:
+			True if any invoice keyword is found (case-insensitive)
+		"""
+		keywords = [
+			'faktura', 'faktury', 'invoice', 'invoices',
+			'do zapłaty', 'do zaplaty', 'zapłać', 'zaplac', 'płatność', 'platnosc', 'payment', 'pay',
+			'zaległość', 'zaleglosc', 'zaległości', 'zaleglosci', 'arrears', 'debt',
+			'należność', 'naleznosc', 'due', 'rachunek', 'bill', 'dokumenty', 'dokument', 'dokumentów', 'dokumentow', 'FV'
+		]
+		text_lower = text.lower()
+		return any(keyword in text_lower for keyword in keywords)
+
+	@staticmethod
+	def _extract_email_body_text(message) -> str:
+		"""
+		Extract plain text content from email message.
+		
+		Args:
+			message: Email message object
+			
+		Returns:
+			Plain text content of email body
+		"""
+		body_text = ''
+		try:
+			if message.is_multipart():
+				for part in message.walk():
+					if part.get_content_type() == 'text/plain':
+						try:
+							payload = part.get_payload(decode=True)
+							if payload:
+								body_text += payload.decode('utf-8', errors='ignore')
+						except:
+							pass
+			else:
+				# Not multipart, try to get payload
+				try:
+					payload = message.get_payload(decode=True)
+					if payload:
+						body_text = payload.decode('utf-8', errors='ignore')
+				except:
+					pass
+		except:
+			pass
+		return body_text
+
 	def _process_email(self, email_id: bytes, save_dir: str = None, progress_callback: Optional[callable] = None, folder_name: str = None) -> List[Dict[str, Any]]:
 		"""
 		Process a single email and extract PDF attachments
@@ -229,10 +283,43 @@ class EmailService:
 			email_body = msg_data[0][1]
 			message = email.message_from_bytes(email_body)
 			
-			# Extract email metadata
-			email_subject = str(message.get('Subject', ''))
-			email_sender = str(message.get('From', ''))
+			# Extract and decode email metadata
+			# Decode subject header (MIME encoded-word syntax)
+			subject_header = message.get('Subject', '')
+			if subject_header:
+				decoded_parts = decode_header(subject_header)
+				email_subject = ''
+				for part, encoding in decoded_parts:
+					if isinstance(part, bytes):
+						email_subject += part.decode(encoding or 'utf-8', errors='ignore')
+					else:
+						email_subject += part
+			else:
+				email_subject = ''
+			
+			# Decode sender header
+			sender_header = message.get('From', '')
+			if sender_header:
+				decoded_parts = decode_header(sender_header)
+				email_sender = ''
+				for part, encoding in decoded_parts:
+					if isinstance(part, bytes):
+						email_sender += part.decode(encoding or 'utf-8', errors='ignore')
+					else:
+						email_sender += part
+			else:
+				email_sender = ''
+			
 			email_date = str(message.get('Date', ''))
+
+			# Extract email body text for keyword filtering
+			body_text = EmailService._extract_email_body_text(message)
+			
+			# Check if email contains invoice-related keywords in subject or body
+			if not (EmailService._contains_invoice_keywords(email_subject) or EmailService._contains_invoice_keywords(body_text)):
+				if progress_callback:
+					progress_callback(f"⏭️ Pominięto email (brak słów kluczowych): {email_subject[:50]}...", "Email nie zawiera słów związanych z fakturami", None)
+				return []
 
 			# Process attachments
 			if message.is_multipart():

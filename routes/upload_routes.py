@@ -379,9 +379,18 @@ def finalize_uploads():
                 else:
                     payment_due_date = parse_date_string(payment_due_date_str)
             
+            # Set default values for missing required fields
+            seller_name = extracted_data.get('seller_name', '').strip()
+            if not seller_name:
+                seller_name = '(brak danych)'
+            
+            invoice_number = extracted_data.get('invoice_number', '').strip()
+            if not invoice_number:
+                invoice_number = '(brak danych)'
+            
             invoice = Invoice(
-                seller_name=extracted_data.get('seller_name', ''),
-                invoice_number=extracted_data.get('invoice_number', ''),
+                seller_name=seller_name,
+                invoice_number=invoice_number,
                 invoice_date=invoice_date,
                 amount=extracted_data.get('total_amount', 0.0),
                 currency=extracted_data.get('currency', 'PLN'),

@@ -12,172 +12,251 @@
 {% endblock %}
 
 {% block content %}
-    <form id="invoice-form" class="max-w-4xl">
-        <!-- Invoice Details Card -->
-        <div class="card mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <span class="material-icons text-primary mr-2">receipt</span>
-                Dane faktury
-            </h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <!-- Left Column: Edit Form (1/2 width) -->
+        <div>
+            <form id="invoice-form">
+                <!-- Invoice Details Card -->
+                <div class="card mb-2">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                        <span class="material-icons text-primary mr-2">receipt</span>
+                        Dane faktury
+                    </h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Numer faktury <span class="text-status-error">*</span>
-                    </label>
-                    <input type="text" id="invoice_number" name="invoice_number"
-                           value="{{ invoice.invoice_number or '' }}"
-                           class="input" required>
-                </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Numer faktury <span class="text-status-error">*</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="invoice_number" name="invoice_number"
+                                       value="{{ invoice.invoice_number or '' }}"
+                                       class="input flex-1" required>
+                                <button type="button" onclick="pasteToField('invoice_number')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Status płatności
-                    </label>
-                    <select id="status" name="status" class="input">
-                        <option value="Nieopłacona" {% if invoice.status == 'Nieopłacona' or not invoice.status %}selected{% endif %}>
-                            Nieopłacona
-                        </option>
-                        <option value="Opłacona" {% if invoice.status == 'Opłacona' %}selected{% endif %}>
-                            Opłacona
-                        </option>
-                        <option value="Przeterminowana" {% if invoice.status == 'Przeterminowana' %}selected{% endif %}>
-                            Przeterminowana
-                        </option>
-                    </select>
-                </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Status płatności
+                            </label>
+                            <select id="status" name="status" class="input">
+                                <option value="Nieopłacona" {% if invoice.status == 'Nieopłacona' or not invoice.status %}selected{% endif %}>
+                                    Nieopłacona
+                                </option>
+                                <option value="Opłacona" {% if invoice.status == 'Opłacona' %}selected{% endif %}>
+                                    Opłacona
+                                </option>
+                                <option value="Przeterminowana" {% if invoice.status == 'Przeterminowana' %}selected{% endif %}>
+                                    Przeterminowana
+                                </option>
+                            </select>
+                        </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Data wystawienia <span class="text-status-error">*</span>
-                    </label>
-                    <input type="date" id="invoice_date" name="invoice_date"
-                           value="{{ invoice.invoice_date or '' }}"
-                           class="input" required>
-                </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Data wystawienia <span class="text-status-error">*</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="date" id="invoice_date" name="invoice_date"
+                                       value="{{ invoice.invoice_date or '' }}"
+                                       class="input flex-1" required>
+                                <button type="button" onclick="pasteToField('invoice_date')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Termin płatności
-                    </label>
-                    <input type="date" id="payment_due_date" name="payment_due_date"
-                           value="{{ invoice.payment_due_date or '' }}"
-                           class="input">
-                </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Termin płatności
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="date" id="payment_due_date" name="payment_due_date"
+                                       value="{{ invoice.payment_due_date or '' }}"
+                                       class="input flex-1">
+                                <button type="button" onclick="pasteToField('payment_due_date')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
 
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Forma płatności
-                    </label>
-                    <input type="text" id="payment_term" name="payment_term"
-                           value="{{ invoice.payment_term or '' }}"
-                           class="input"
-                           placeholder="np. Przelew, POBRANIE, 7 dni, 14 dni">
-                </div>
-            </div>
-        </div>
-
-        <!-- Seller Details Card -->
-        <div class="card mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <span class="material-icons text-primary mr-2">business</span>
-                Dane sprzedawcy
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Nazwa sprzedawcy <span class="text-status-error">*</span>
-                    </label>
-                    <input type="text" id="seller_name" name="seller_name"
-                           value="{{ invoice.seller_name or '' }}"
-                           class="input" required>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        NIP
-                    </label>
-                    <input type="text" id="seller_nip" name="seller_nip"
-                           value="{{ invoice.seller_nip or '' }}"
-                           class="input"
-                           placeholder="np. 123-456-78-90">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Numer konta bankowego
-                    </label>
-                    <input type="text" id="bank_account" name="bank_account"
-                           value="{{ invoice.bank_account or '' }}"
-                           class="input"
-                           placeholder="np. PL 12 1234 1234 1234 1234 1234 1234">
-                </div>
-            </div>
-        </div>
-
-        <!-- Amounts Card -->
-        <div class="card mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <span class="material-icons text-primary mr-2">payments</span>
-                Kwoty
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Kwota <span class="text-status-error">*</span>
-                    </label>
-                    <input type="number" step="0.01" id="amount" name="amount"
-                           value="{{ invoice.amount or '' }}"
-                           class="input" required
-                           placeholder="np. 1234.56">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Waluta
-                    </label>
-                    <select id="currency" name="currency" class="input">
-                        <option value="PLN" {% if invoice.currency == 'PLN' or not invoice.currency %}selected{% endif %}>PLN</option>
-                        <option value="EUR" {% if invoice.currency == 'EUR' %}selected{% endif %}>EUR</option>
-                        <option value="USD" {% if invoice.currency == 'USD' %}selected{% endif %}>USD</option>
-                        <option value="GBP" {% if invoice.currency == 'GBP' %}selected{% endif %}>GBP</option>
-                    </select>
-                </div>
-
-                {% if invoice.ocr_confidence %}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Pewność OCR
-                    </label>
-                    <div class="input bg-gray-50" style="display: flex; align-items: center;">
-                        <span class="badge {% if invoice.ocr_confidence >= 80 %}badge-success{% elif invoice.ocr_confidence >= 60 %}badge-warning{% else %}badge-error{% endif %}">
-                            {{ "%.0f"|format(invoice.ocr_confidence) }}%
-                        </span>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Forma płatności
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="payment_term" name="payment_term"
+                                       value="{{ invoice.payment_term or '' }}"
+                                       class="input flex-1"
+                                       placeholder="np. Przelew, POBRANIE, 7 dni, 14 dni">
+                                <button type="button" onclick="pasteToField('payment_term')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                {% endif %}
-            </div>
+
+                <!-- Seller Details Card -->
+                <div class="card mb-2">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                        <span class="material-icons text-primary mr-2">business</span>
+                        Dane sprzedawcy
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Nazwa sprzedawcy <span class="text-status-error">*</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="seller_name" name="seller_name"
+                                       value="{{ invoice.seller_name or '' }}"
+                                       class="input flex-1" required>
+                                <button type="button" onclick="pasteToField('seller_name')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                NIP
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="seller_nip" name="seller_nip"
+                                       value="{{ invoice.seller_nip or '' }}"
+                                       class="input flex-1"
+                                       placeholder="np. 123-456-78-90">
+                                <button type="button" onclick="pasteToField('seller_nip')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Numer konta bankowego
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="bank_account" name="bank_account"
+                                       value="{{ invoice.bank_account or '' }}"
+                                       class="input flex-1"
+                                       placeholder="np. PL 12 1234 1234 1234 1234 1234 1234">
+                                <button type="button" onclick="pasteToField('bank_account')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amounts Card -->
+                <div class="card mb-2">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                        <span class="material-icons text-primary mr-2">payments</span>
+                        Kwoty
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Kwota <span class="text-status-error">*</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="number" step="0.01" id="amount" name="amount"
+                                       value="{{ invoice.amount or '' }}"
+                                       class="input flex-1" required
+                                       placeholder="np. 1234.56">
+                                <button type="button" onclick="pasteToField('amount')" 
+                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
+                                    <span class="material-icons text-sm">content_paste</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Waluta
+                            </label>
+                            <select id="currency" name="currency" class="input">
+                                <option value="PLN" {% if invoice.currency == 'PLN' or not invoice.currency %}selected{% endif %}>PLN</option>
+                                <option value="EUR" {% if invoice.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                                <option value="USD" {% if invoice.currency == 'USD' %}selected{% endif %}>USD</option>
+                                <option value="GBP" {% if invoice.currency == 'GBP' %}selected{% endif %}>GBP</option>
+                            </select>
+                        </div>
+
+                        {% if invoice.ocr_confidence %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Pewność OCR
+                            </label>
+                            <div class="input bg-gray-50" style="display: flex; align-items: center;">
+                                <span class="badge {% if invoice.ocr_confidence >= 80 %}badge-success{% elif invoice.ocr_confidence >= 60 %}badge-warning{% else %}badge-error{% endif %}">
+                                    {{ "%.0f"|format(invoice.ocr_confidence) }}%
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex items-center gap-4">
+                    <button type="submit" class="btn-primary">
+                        <span class="material-icons text-sm mr-2">save</span>
+                        Zapisz zmiany
+                    </button>
+                    <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
+                        Anuluj
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- Form Actions -->
-        <div class="flex items-center gap-4">
-            <button type="submit" class="btn-primary">
-                <span class="material-icons text-sm mr-2">save</span>
-                Zapisz zmiany
-            </button>
-            <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
-                Anuluj
-            </button>
+        <!-- Right Column: PDF Viewer (1/2 width) -->
+        <div>
             {% if invoice.pdf_path %}
-            <button type="button" onclick="viewPDF()" class="btn-secondary ml-auto">
-                <span class="material-icons text-sm mr-2">picture_as_pdf</span>
-                Zobacz PDF
-            </button>
+            <div class="card p-0 lg:sticky lg:top-4" style="display: flex; flex-direction: column; height: 800px; min-height: 600px; max-height: calc(100vh - 8rem);">
+                <div class="p-2 border-b border-gray-200" style="flex-shrink: 0;">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <span class="material-icons text-primary mr-2">picture_as_pdf</span>
+                        Podgląd PDF
+                    </h3>
+                </div>
+                <div class="bg-gray-100" style="flex: 1; min-height: 700px; overflow: hidden;">
+                    <iframe 
+                        src="/api/pdf/{{ invoice.id }}" 
+                        style="width: 100%; height: 100%; border: 0;"
+                        title="Podgląd PDF faktury">
+                    </iframe>
+                </div>
+                <div class="p-2 border-t border-gray-200 bg-gray-50" style="flex-shrink: 0;">
+                    <button type="button" onclick="viewPDFFullscreen()" class="btn-secondary w-full text-sm">
+                        <span class="material-icons text-sm mr-2">open_in_new</span>
+                        Otwórz w nowej karcie
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="card text-center py-12">
+                <span class="material-icons text-gray-300 text-6xl mb-4">picture_as_pdf</span>
+                <p class="text-gray-500">Brak pliku PDF</p>
+            </div>
             {% endif %}
         </div>
-    </form>
+    </div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -233,8 +312,63 @@ function setupForm() {
     });
 }
 
-function viewPDF() {
+function viewPDFFullscreen() {
     API.pdf.view(invoiceId);
+}
+
+/**
+ * Paste text from clipboard to a specific field
+ */
+async function pasteToField(fieldId) {
+    try {
+        const text = await navigator.clipboard.readText();
+        const field = document.getElementById(fieldId);
+        
+        if (!field) {
+            Notifications.error('Pole nie zostało znalezione');
+            return;
+        }
+
+        // Clean up the text
+        let cleanText = text.trim();
+
+        // Special handling for date fields - convert common formats to YYYY-MM-DD
+        if (field.type === 'date') {
+            // Try to parse common date formats: DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY
+            const datePatterns = [
+                /(\d{2})\.(\d{2})\.(\d{4})/,  // DD.MM.YYYY
+                /(\d{2})-(\d{2})-(\d{4})/,    // DD-MM-YYYY
+                /(\d{2})\/(\d{2})\/(\d{4})/   // DD/MM/YYYY
+            ];
+
+            for (const pattern of datePatterns) {
+                const match = cleanText.match(pattern);
+                if (match) {
+                    const [, day, month, year] = match;
+                    cleanText = `${year}-${month}-${day}`;
+                    break;
+                }
+            }
+        }
+
+        // Special handling for amount field - remove currency symbols and convert comma to dot
+        if (fieldId === 'amount') {
+            cleanText = cleanText
+                .replace(/[^\d,.-]/g, '')  // Remove non-numeric characters except comma, dot, and minus
+                .replace(',', '.');         // Convert comma to dot for decimal separator
+        }
+
+        field.value = cleanText;
+        field.focus();
+        
+        // Trigger input event for any listeners
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        Notifications.success('Wklejono ze schowka');
+    } catch (error) {
+        console.error('Paste error:', error);
+        Notifications.error('Błąd wklejania: ' + error.message);
+    }
 }
 </script>
 {% endblock %}

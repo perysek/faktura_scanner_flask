@@ -259,10 +259,6 @@ function displayUploadedFiles() {
  * Remove staged file (Step 2)
  */
 async function removeStagedFile(filename) {
-    if (!confirm(`Czy na pewno usunąć plik "${filename}"?`)) {
-        return;
-    }
-
     try {
         const response = await fetch(`/api/upload/staged/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
@@ -342,7 +338,7 @@ async function processDocuments() {
         Notifications.error('Błąd przetwarzania: ' + error.message);
     } finally {
         processBtn.disabled = false;
-        processBtn.innerHTML = '<span class="material-icons text-sm mr-2">auto_fix_high</span>Przetwórz documenty';
+        processBtn.innerHTML = '<span class="material-icons text-sm mr-2">auto_fix_high</span>Przetwórz dokumenty';
     }
 }
 
@@ -498,11 +494,11 @@ function hideUploadedFilesSection() {
 }
 
 function showUploadControls() {
-    document.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2').classList.remove('hidden');
+    document.getElementById('upload-cards-grid').classList.remove('hidden');
 }
 
 function hideUploadControls() {
-    document.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2').classList.add('hidden');
+    document.getElementById('upload-cards-grid').classList.add('hidden');
 }
 
 /**

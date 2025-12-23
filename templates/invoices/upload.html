@@ -5,7 +5,7 @@
 {% block page_title %}Import PDF{% endblock %}
 
 {% block content %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div id="upload-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- File Upload Card -->
         <div class="card">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -103,17 +103,59 @@
                 Przesłane pliki - przegląd
             </h3>
 
-            <div class="overflow-x-auto">
-                <table class="table">
+            <div class="table-wrapper">
+                <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Plik PDF</th>
-                            <th>Temat e-mail</th>
-                            <th>Nadawca</th>
-                            <th>Folder</th>
-                            <th>Data e-mail</th>
-                            <th>Rozmiar</th>
-                            <th>Akcje</th>
+                            <th style="width: 25%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Plik PDF</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 20%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Temat e-mail</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 15%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Nadawca</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 12%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Folder</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 10%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Data e-mail</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 10%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Rozmiar</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 8%;" class="no-sort">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Akcje</span>
+                                    </div>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="uploaded-files-tbody"></tbody>
@@ -141,19 +183,73 @@
                 Wyniki przetwarzania
             </h3>
 
-            <div class="overflow-x-auto">
-                <table class="table">
+            <div class="table-wrapper">
+                <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Plik</th>
-                            <th>Status</th>
-                            <th>Nr faktury</th>
-                            <th>Sprzedawca</th>
-                            <th>Kwota</th>
-                            <th>Duplikat</th>
-                            <th>Błędy walidacji</th>
-                            <th>Podgląd PDF</th>
-                            <th>Dodaj do listy</th>
+                            <th style="width: 15%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Plik</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 8%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Status</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 12%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Nr faktury</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 15%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Sprzedawca</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 8%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Kwota</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 8%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Duplikat</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 18%;">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Błędy walidacji</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 8%;" class="no-sort">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Podgląd PDF</span>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 8%;" class="no-sort">
+                                <div class="th-content">
+                                    <div class="th-header">
+                                        <span>Dodaj do listy</span>
+                                    </div>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="results-tbody"></tbody>
