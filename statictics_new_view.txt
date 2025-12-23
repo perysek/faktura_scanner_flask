@@ -1,0 +1,14 @@
+#Task 1:
+## add new view with nav bard option named 'Statistics'
+Statistics would include:
+##1 circle chart showing total amount per seller (top5)
+##2 bar chart of total amount per each month (based on invoice issue date)
+##3 bar chart of total amount to be paid per each month (based on payment due date data)
+### for point 2 and 3: highlight amount already paid (based on status values)
+
+##4 analysis of the payments total amount forecast for next 6 months, beased on current invoices data (the business logic must recognize patterns of repetetive invoices (same seller every month, same invoice amount, same nip)
+##5 bar chart representing the forecast from point 4.
+
+##6 Close button on the bottom
+
+
