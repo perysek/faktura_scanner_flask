@@ -23,6 +23,20 @@ CREATE INDEX IF NOT EXISTS idx_invoice_number ON invoices(invoice_number);
 CREATE INDEX IF NOT EXISTS idx_invoice_date ON invoices(invoice_date);
 CREATE INDEX IF NOT EXISTS idx_seller_name ON invoices(seller_name);
 
+-- Tabela sprzedawców (sellers)
+CREATE TABLE IF NOT EXISTS sellers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    seller_nip TEXT UNIQUE NOT NULL,
+    seller_name TEXT NOT NULL,
+    address TEXT,
+    first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    invoice_count INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_seller_nip ON sellers(seller_nip);
+CREATE INDEX IF NOT EXISTS idx_seller_name_search ON sellers(seller_name);
+
 -- Tabela historii zmian (audit log)
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

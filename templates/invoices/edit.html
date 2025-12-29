@@ -125,6 +125,15 @@
                                     <span class="material-icons text-sm">content_paste</span>
                                 </button>
                             </div>
+                            <!-- Seller warning area -->
+                            <div id="seller-warning" class="hidden mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <div class="flex items-start gap-2">
+                                    <span class="material-icons text-yellow-600 text-sm mt-0.5">warning</span>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-yellow-800" id="seller-warning-message"></p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div>
@@ -261,13 +270,18 @@
 
 {% block extra_scripts %}
 <script>
+console.log('=== INVOICE EDIT SCRIPT LOADED ===');
+console.log('Invoice ID:', {{ invoice.id }});
+
 const invoiceId = {{ invoice.id }};
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DOM CONTENT LOADED ===');
     setupForm();
 });
 
 function setupForm() {
+    console.log('=== SETUP FORM CALLED ===');
     const form = document.getElementById('invoice-form');
 
     form.addEventListener('submit', async (e) => {
@@ -276,20 +290,64 @@ function setupForm() {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
 
-        const loadingModal = Modals.loading('Zapisywanie zmian...');
+        await submitInvoiceUpdate(data, false);
+    });
+}
 
-        try {
-            const result = await API.invoices.update(invoiceId, data);
+/**
+ * Submit invoice update with optional seller confirmation
+ */
+async function submitInvoiceUpdate(data, skipSellerValidation = false) {
+    const loadingModal = Modals.loading('Zapisywanie zmian...');
 
-            Modals.close(loadingModal);
+    try {
+        const result = await API.invoices.update(invoiceId, data);
 
-            if (result.success) {
-                Notifications.success('Faktura została zaktualizowana');
+        Modals.close(loadingModal);
+
+        if (result.success) {
+            console.log('Update successful, checking for warnings and conflicts...', result);
+            
+            // Check for seller conflict (even if no warnings)
+            if (result.seller_conflict) {
+                console.log('Seller conflict detected:', result.seller_conflict);
+                showSellerConflictWarning(result.seller_conflict);
+            }
+            
+            // Check for warnings
+            if (result.warnings && result.warnings.length > 0) {
+                console.log('Warnings detected:', result.warnings);
+                Notifications.warning('Ostrzeżenia: ' + result.warnings.join(', '));
+            }
+            
+            // Still show success but with a delay to allow reading warnings
+            Notifications.success('Faktura została zaktualizowana');
+            
+            // Only redirect if there are no significant conflicts
+            if (!result.seller_conflict || (result.seller_conflict && result.seller_conflict.conflict_type !== 'name_mismatch')) {
                 setTimeout(() => {
                     window.location.href = '{{ url_for('main.invoices_list') }}';
-                }, 1000);
+                }, 1500);
             } else {
-                // Show validation errors if available
+                // If there's a conflict, don't auto-redirect - let user review
+                console.log('Seller conflict detected - staying on page for review');
+            }
+        } else {
+            console.log('Update failed, checking for conflicts...', result);
+            
+            // Check if it's a seller conflict (409 status)
+            if (result.seller_conflict) {
+                console.log('Seller conflict in failed response');
+                // NIP exists with different name - show confirmation
+                await handleSellerConflict(result.seller_conflict, data);
+                return;  // CRITICAL: Stop here, don't show error
+            } else if (result.seller_info && result.seller_info.new_seller) {
+                console.log('New seller needed in failed response');
+                // New seller needs confirmation
+                await handleNewSeller(result.seller_info, data);
+                return;  // CRITICAL: Stop here, don't show error
+            } else {
+                // Other validation errors
                 if (result.validation_errors) {
                     const errors = result.validation_errors.errors || [];
                     const warnings = result.validation_errors.warnings || [];
@@ -298,23 +356,519 @@ function setupForm() {
                     if (allMessages.length > 0) {
                         Notifications.error('Błędy walidacji: ' + allMessages.join(', '));
                     } else {
-                        Notifications.error('Błąd aktualizacji faktury');
+                        Notifications.error(result.error || 'Błąd aktualizacji faktury');
                     }
                 } else {
-                    Notifications.error('Błąd aktualizacji faktury');
+                    Notifications.error(result.error || 'Błąd aktualizacji faktury');
                 }
             }
-        } catch (error) {
-            Modals.close(loadingModal);
-            console.error('Update error:', error);
-            Notifications.error('Błąd aktualizacji: ' + error.message);
         }
+    } catch (error) {
+        Modals.close(loadingModal);
+        console.error('Update error:', error);
+        console.log('Error status:', error.status);
+        console.log('Error responseData:', error.responseData);
+        
+        // Check if it's a 409 conflict from server
+        if (error.status === 409 && error.responseData) {
+            const result = error.responseData;
+            console.log('409 Conflict detected, result:', result);
+            
+            if (result.seller_conflict) {
+                console.log('Handling seller conflict...');
+                await handleSellerConflict(result.seller_conflict, data);
+                return;  // Don't show generic error
+            } else if (result.seller_info) {
+                console.log('Handling new seller...');
+                await handleNewSeller(result.seller_info, data);
+                return;  // Don't show generic error
+            }
+        }
+        
+        // Generic error handling
+        Notifications.error('Błąd aktualizacji: ' + (error.message || 'Unknown error'));
+    }
+}
+
+/**
+ * Handle seller conflict - NIP exists with different name
+ */
+async function handleSellerConflict(conflict, originalData) {
+    console.log('=== handleSellerConflict CALLED ===');
+    console.log('Conflict:', conflict);
+    console.log('Original data:', originalData);
+    
+    const existingSeller = conflict.existing_seller;
+    
+    // Show custom modal with 3 options
+    const action = await showSellerConflictModal({
+        nip: existingSeller.seller_nip,
+        existingName: existingSeller.seller_name,
+        newName: conflict.proposed_name || originalData.seller_name
     });
+    
+    console.log('User selected action:', action);
+    
+    if (action === 'use_existing') {
+        // Option 1: Use existing seller
+        console.log('User chose: Use existing seller');
+        await confirmSellerAction('use_existing', originalData, existingSeller.id);
+    } else if (action === 'update_seller') {
+        // Option 2: Update seller name in sellers table
+        console.log('User chose: Update seller name');
+        await confirmSellerAction('update_seller', originalData, existingSeller.id);
+    } else if (action === 'cancel') {
+        // User cancelled - reload page to restore original values from database
+        console.log('User chose: Cancel - reloading page');
+        Notifications.info('Anulowano zapis - przywracanie oryginalnych wartości...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    }
+}
+
+/**
+ * Show custom seller conflict modal with 3 options
+ */
+function showSellerConflictModal({ nip, existingName, newName }) {
+    return new Promise((resolve) => {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+        `;
+        
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        modal.innerHTML = `
+            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span class="material-icons" style="color: #f59e0b; font-size: 28px;">warning</span>
+                    <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">
+                        Konflikt danych sprzedawcy
+                    </h3>
+                </div>
+                <p style="color: #6b7280; margin: 0; font-size: 14px;">
+                    NIP ${nip} już istnieje w bazie danych z inną nazwą
+                </p>
+            </div>
+            
+            <div style="padding: 24px;">
+                <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px;">
+                            ISTNIEJĄCY SPRZEDAWCA W BAZIE
+                        </div>
+                        <div style="font-size: 15px; color: #111827; font-weight: 500;">
+                            ${existingName}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px;">
+                            WPROWADZONA NAZWA
+                        </div>
+                        <div style="font-size: 15px; color: #059669; font-weight: 500;">
+                            ${newName}
+                        </div>
+                    </div>
+                </div>
+                
+                <p style="color: #374151; margin-bottom: 20px; font-size: 14px;">
+                    Wybierz, co chcesz zrobić:
+                </p>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="btn-use-existing" style="
+                        padding: 12px 16px;
+                        background: #3b82f6;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                        <span class="material-icons" style="font-size: 20px;">check_circle</span>
+                        Użyj istniejącego: "${existingName}"
+                    </button>
+                    
+                    <button id="btn-update-seller" style="
+                        padding: 12px 16px;
+                        background: #059669;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                        <span class="material-icons" style="font-size: 20px;">edit</span>
+                        Zaktualizuj sprzedawcę na: "${newName}"
+                    </button>
+                    
+                    <button id="btn-cancel" style="
+                        padding: 12px 16px;
+                        background: #f3f4f6;
+                        color: #374151;
+                        border: 1px solid #d1d5db;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                        <span class="material-icons" style="font-size: 20px;">cancel</span>
+                        Anuluj (nie zapisuj)
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Add animation keyframes
+        if (!document.getElementById('modal-animations')) {
+            const style = document.createElement('style');
+            style.id = 'modal-animations';
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-20px) scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Button handlers
+        modal.querySelector('#btn-use-existing').onclick = () => {
+            document.body.removeChild(overlay);
+            resolve('use_existing');
+        };
+        
+        modal.querySelector('#btn-update-seller').onclick = () => {
+            document.body.removeChild(overlay);
+            resolve('update_seller');
+        };
+        
+        modal.querySelector('#btn-cancel').onclick = () => {
+            document.body.removeChild(overlay);
+            resolve('cancel');
+        };
+        
+        // Close on overlay click
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                resolve('cancel');
+            }
+        };
+        
+        // Close on Escape key
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                document.body.removeChild(overlay);
+                document.removeEventListener('keydown', escHandler);
+                resolve('cancel');
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    });
+}
+
+/**
+ * Handle new seller creation
+ */
+async function handleNewSeller(sellerInfo, originalData) {
+    console.log('=== handleNewSeller CALLED ===');
+    console.log('Seller info:', sellerInfo);
+    
+    // Show custom modal
+    const action = await showNewSellerModal({
+        nip: sellerInfo.seller_nip,
+        name: sellerInfo.seller_name
+    });
+    
+    console.log('User selected action:', action);
+    
+    if (action === 'create') {
+        // User confirmed - create new seller
+        console.log('User clicked OK - creating new seller');
+        await confirmSellerAction('create_new', originalData, null);
+    } else {
+        // User cancelled - reload page to restore original values from database
+        console.log('User clicked CANCEL - reloading page');
+        Notifications.info('Anulowano zapis - przywracanie oryginalnych wartości...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    }
+}
+
+/**
+ * Show custom new seller modal
+ */
+function showNewSellerModal({ nip, name }) {
+    return new Promise((resolve) => {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+        `;
+        
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        modal.innerHTML = `
+            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span class="material-icons" style="color: #3b82f6; font-size: 28px;">add_business</span>
+                    <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">
+                        Nowy sprzedawca
+                    </h3>
+                </div>
+                <p style="color: #6b7280; margin: 0; font-size: 14px;">
+                    Sprzedawca z tym NIP nie istnieje w bazie danych
+                </p>
+            </div>
+            
+            <div style="padding: 24px;">
+                <div style="background: #eff6ff; border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">
+                            NIP
+                        </div>
+                        <div style="font-size: 15px; color: #1e3a8a; font-weight: 600;">
+                            ${nip}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">
+                            NAZWA SPRZEDAWCY
+                        </div>
+                        <div style="font-size: 15px; color: #1e3a8a; font-weight: 600;">
+                            ${name}
+                        </div>
+                    </div>
+                </div>
+                
+                <p style="color: #374151; margin-bottom: 20px; font-size: 14px;">
+                    Czy chcesz utworzyć nowego sprzedawcę w bazie danych?
+                </p>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="btn-create" style="
+                        padding: 12px 16px;
+                        background: #059669;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                        <span class="material-icons" style="font-size: 20px;">add_circle</span>
+                        Tak, utwórz nowego sprzedawcę
+                    </button>
+                    
+                    <button id="btn-cancel" style="
+                        padding: 12px 16px;
+                        background: #f3f4f6;
+                        color: #374151;
+                        border: 1px solid #d1d5db;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                        <span class="material-icons" style="font-size: 20px;">cancel</span>
+                        Nie, anuluj zapis faktury
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Button handlers
+        modal.querySelector('#btn-create').onclick = () => {
+            document.body.removeChild(overlay);
+            resolve('create');
+        };
+        
+        modal.querySelector('#btn-cancel').onclick = () => {
+            document.body.removeChild(overlay);
+            resolve('cancel');
+        };
+        
+        // Close on overlay click
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                resolve('cancel');
+            }
+        };
+        
+        // Close on Escape key
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                document.body.removeChild(overlay);
+                document.removeEventListener('keydown', escHandler);
+                resolve('cancel');
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    });
+}
+
+/**
+ * Confirm seller action via API
+ */
+async function confirmSellerAction(action, invoiceData, existingSellerId = null) {
+    const loadingModal = Modals.loading('Zapisywanie...');
+    
+    try {
+        const response = await fetch(`/api/invoices/${invoiceId}/confirm-seller`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: action,
+                invoice_data: invoiceData,
+                existing_seller_id: existingSellerId
+            })
+        });
+        
+        const result = await response.json();
+        
+        Modals.close(loadingModal);
+        
+        if (result.success) {
+            Notifications.success(result.message || 'Faktura została zaktualizowana');
+            setTimeout(() => {
+                window.location.href = '{{ url_for('main.invoices_list') }}';
+            }, 1000);
+        } else {
+            Notifications.error(result.error || 'Błąd zapisu');
+        }
+    } catch (error) {
+        Modals.close(loadingModal);
+        console.error('Confirmation error:', error);
+        Notifications.error('Błąd zapisu: ' + error.message);
+    }
+}
+
+/**
+ * Show seller conflict warning in the UI
+ */
+function showSellerConflictWarning(conflict) {
+    console.log('showSellerConflictWarning called with:', conflict);
+    
+    const warningEl = document.getElementById('seller-warning');
+    const messageEl = document.getElementById('seller-warning-message');
+    
+    console.log('Warning element:', warningEl);
+    console.log('Message element:', messageEl);
+    
+    if (warningEl && messageEl) {
+        // Build warning message
+        let message = '⚠️ Konflikt danych sprzedawcy: ';
+        
+        if (conflict.conflict_type === 'name_mismatch') {
+            const existingSeller = conflict.existing_seller || {};
+            message += `NIP ${existingSeller.seller_nip || 'nieznany'} już istnieje w bazie z nazwą "${existingSeller.seller_name || 'nieznana'}". `;
+            message += 'Faktura została zapisana, ale dane sprzedawcy mogą być niespójne.';
+        } else {
+            message += conflict.message || 'Wystąpił konflikt danych.';
+        }
+        
+        console.log('Setting warning message:', message);
+        messageEl.textContent = message;
+        warningEl.classList.remove('hidden');
+        
+        // Scroll to warning
+        setTimeout(() => {
+            warningEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    } else {
+        console.error('Warning elements not found! warningEl:', warningEl, 'messageEl:', messageEl);
+        // Fallback to modal if elements don't exist
+        Modals.alert({
+            title: 'Konflikt danych sprzedawcy',
+            message: conflict.message || JSON.stringify(conflict),
+            type: 'warning'
+        });
+    }
 }
 
 function viewPDFFullscreen() {
     API.pdf.view(invoiceId);
 }
+
 
 /**
  * Paste text from clipboard to a specific field

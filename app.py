@@ -14,6 +14,7 @@ from config.database import initialize_database
 from repositories.invoice_repository import InvoiceRepository
 from repositories.audit_repository import AuditRepository
 from repositories.upload_staging_repository import UploadStagingRepository
+from repositories.seller_repository import SellerRepository
 
 # Import services
 from services.ocr_service import OCRService
@@ -21,6 +22,7 @@ from services.validation_service import ValidationService
 from services.duplicate_detection_service import DuplicateDetectionService
 from services.email_service import EmailService
 from services.export_service import ExportService
+from services.seller_service import SellerService
 
 
 def create_app():
@@ -45,6 +47,7 @@ def create_app():
     app.invoice_repo = InvoiceRepository()
     app.audit_repo = AuditRepository()
     app.staging_repo = UploadStagingRepository(db_path=get_database_path())
+    app.seller_repo = SellerRepository()
 
     # Initialize services
     app.ocr_service = OCRService()
@@ -52,6 +55,7 @@ def create_app():
     app.duplicate_detection = DuplicateDetectionService(app.invoice_repo)
     app.email_service = EmailService()
     app.export_service = ExportService()
+    app.seller_service = SellerService(app.seller_repo, app.invoice_repo)
 
     # Register blueprints
     from routes.main_routes import main_bp

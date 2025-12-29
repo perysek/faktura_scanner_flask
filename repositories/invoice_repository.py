@@ -15,56 +15,19 @@ class InvoiceRepository(BaseRepository):
 	def __init__(self):
 		super().__init__("invoices")
 	
-	def create(self, invoice: Invoice) -> int:
+	def create(self, invoice: Invoice, seller_id: int = None) -> int:
 		"""
 		Stwórz nową fakturę
+		Args:
+			seller_id: Optional seller ID to link invoice to seller
 		Returns: ID nowej faktury
 		"""
 		query = """
             INSERT INTO invoices (
                 seller_name, seller_nip, invoice_number, invoice_date,
                 bank_account, amount, currency, payment_due_date, payment_term, status,
-                pdf_path, ocr_confidence, is_duplicate
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-		params = (
-			invoice.seller_name,
-			invoice.seller_nip,
-			invoice.invoice_number,
-			invoice.invoice_date.isoformat() if invoice.invoice_date else None,
-			invoice.bank_account,
-			invoice.amount,
-			invoice.currency,
-			invoice.payment_due_date.isoformat() if invoice.payment_due_date else None,
-			invoice.payment_term,
-			invoice.status,
-			invoice.pdf_path,
-			invoice.ocr_confidence,
-			invoice.is_duplicate
-			)
-		
-		cursor = self._execute(query, params)
-		return cursor.lastrowid
-	
-	def update(self, invoice_id: int, invoice: Invoice) -> bool:
-		"""Zaktualizuj fakturę"""
-		query = """
-            UPDATE invoices SET
-                seller_name = ?,
-                seller_nip = ?,
-                invoice_number = ?,
-                invoice_date = ?,
-                bank_account = ?,
-                amount = ?,
-                currency = ?,
-                payment_due_date = ?,
-                payment_term = ?,
-                status = ?,
-                pdf_path = ?,
-                ocr_confidence = ?,
-                is_duplicate = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+                pdf_path, ocr_confidence, is_duplicate, seller_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 		params = (
 			invoice.seller_name,
@@ -80,7 +43,85 @@ class InvoiceRepository(BaseRepository):
 			invoice.pdf_path,
 			invoice.ocr_confidence,
 			invoice.is_duplicate,
-			invoice_id
+			seller_id
+			)
+		
+		cursor = self._execute(query, params)
+		return cursor.lastrowid
+	
+	def update(self, invoice_id: int, invoice: Invoice, seller_id: int = None) -> bool:
+		"""Zaktualizuj fakturę"""
+		if seller_id is not None:
+			query = """
+				UPDATE invoices SET
+					seller_name = ?,
+					seller_nip = ?,
+					invoice_number = ?,
+					invoice_date = ?,
+					bank_account = ?,
+					amount = ?,
+					currency = ?,
+					payment_due_date = ?,
+					payment_term = ?,
+					status = ?,
+					pdf_path = ?,
+					ocr_confidence = ?,
+					is_duplicate = ?,
+					seller_id = ?,
+					updated_at = CURRENT_TIMESTAMP
+				WHERE id = ?
+			"""
+			params = (
+				invoice.seller_name,
+				invoice.seller_nip,
+				invoice.invoice_number,
+				invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+				invoice.bank_account,
+				invoice.amount,
+				invoice.currency,
+				invoice.payment_due_date.isoformat() if invoice.payment_due_date else None,
+				invoice.payment_term,
+				invoice.status,
+				invoice.pdf_path,
+				invoice.ocr_confidence,
+				invoice.is_duplicate,
+				seller_id,
+				invoice_id
+			)
+		else:
+			query = """
+				UPDATE invoices SET
+					seller_name = ?,
+					seller_nip = ?,
+					invoice_number = ?,
+					invoice_date = ?,
+					bank_account = ?,
+					amount = ?,
+					currency = ?,
+					payment_due_date = ?,
+					payment_term = ?,
+					status = ?,
+					pdf_path = ?,
+					ocr_confidence = ?,
+					is_duplicate = ?,
+					updated_at = CURRENT_TIMESTAMP
+				WHERE id = ?
+			"""
+			params = (
+				invoice.seller_name,
+				invoice.seller_nip,
+				invoice.invoice_number,
+				invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+				invoice.bank_account,
+				invoice.amount,
+				invoice.currency,
+				invoice.payment_due_date.isoformat() if invoice.payment_due_date else None,
+				invoice.payment_term,
+				invoice.status,
+				invoice.pdf_path,
+				invoice.ocr_confidence,
+				invoice.is_duplicate,
+				invoice_id
 			)
 		
 		cursor = self._execute(query, params)
@@ -115,6 +156,26 @@ class InvoiceRepository(BaseRepository):
 		return self._fetch_all(
 			query, (start_date.isoformat(), end_date.isoformat())
 			)
+	
+	def get_by_seller(self, seller_id: int) -> List[sqlite3.Row]:
+		"""Pobierz wszystkie faktury dla danego sprzedawcy"""
+		query = """
+            SELECT * FROM invoices
+            WHERE seller_id = ?
+            ORDER BY invoice_date DESC
+        """
+		return self._fetch_all(query, (seller_id,))
+	
+	def bulk_update_seller(self, old_seller_id: int, new_seller_id: int) -> int:
+		"""Zmień seller_id dla wszystkich faktur"""
+		query = """
+            UPDATE invoices
+            SET seller_id = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE seller_id = ?
+        """
+		cursor = self._execute(query, (new_seller_id, old_seller_id))
+		return cursor.rowcount
 	
 	def get_statistics(self) -> dict:
 		"""Pobierz statystyki faktur z podziałem na status płatności"""
