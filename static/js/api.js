@@ -23,7 +23,11 @@ const API = {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                // Create error with full response data for conflict handling
+                const error = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+                error.status = response.status;
+                error.responseData = data;  // Include full response
+                throw error;
             }
 
             return data;

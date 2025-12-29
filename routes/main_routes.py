@@ -32,6 +32,12 @@ def edit_invoice(invoice_id):
     return render_template('invoices/edit.html', invoice=invoice)
 
 
+@main_bp.route('/invoice/create')
+def create_invoice():
+    """Create view - manual invoice entry"""
+    return render_template('invoices/create.html')
+
+
 @main_bp.route('/history')
 def history():
     """History view - audit trail"""

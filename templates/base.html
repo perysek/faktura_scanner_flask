@@ -50,6 +50,13 @@
                                     </a>
                                 </li>
                                 <li>
+                                    <a href="{{ url_for('main.create_invoice') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.create_invoice' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">add_circle</span>
+                                        <span>Wprowadź fakturę</span>
+                                    </a>
+                                </li>
+                                <li>
                                     <a href="{{ url_for('main.upload') }}"
                                        class="nav-link-horizontal {% if request.endpoint == 'main.upload' %}active{% endif %}">
                                         <span class="material-icons text-lg mr-2">upload_file</span>

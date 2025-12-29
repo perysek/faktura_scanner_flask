@@ -28,6 +28,18 @@ class Invoice:
 
 
 @dataclass
+class Seller:
+    """Model sprzedawcy"""
+    seller_nip: str  # Unique identifier
+    seller_name: str
+    address: Optional[str] = None
+    first_seen: Optional[datetime] = field(default_factory=datetime.now)
+    last_updated: Optional[datetime] = field(default_factory=datetime.now)
+    invoice_count: int = 0  # Denormalized count for quick stats
+    id: Optional[int] = None
+
+
+@dataclass
 class AuditEntry:
     """Model wpisu historii zmian"""
     invoice_id: int
