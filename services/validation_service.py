@@ -37,7 +37,7 @@ class ValidationService:
 		if not invoice.invoice_date:
 			errors.append("Brak daty faktury")
 		
-		if invoice.amount <= 0:
+		if invoice.amount is None or invoice.amount <= 0:
 			errors.append("Nieprawidłowa kwota")
 		
 		# Walidacja NIP

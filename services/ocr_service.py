@@ -17,18 +17,23 @@ class OCRService:
 		self.pdf_processor = PDFProcessor()
 		self.text_extractor = TextExtractor()
 
-	def process_pdf(self, pdf_path: str) -> Dict:
+	def process_pdf(self, file_path: str) -> Dict:
 		"""
-		Przetworz PDF faktury i zwróć słownik z danymi
+		Przetworz PDF lub obraz faktury i zwróć słownik z danymi
 
 		Args:
-			pdf_path: Ścieżka do PDF
+			file_path: Ścieżka do PDF lub obrazu (JPG, PNG, TIFF, BMP)
 
 		Returns:
 			Dictionary z wyekstraktowanymi danymi
 		"""
-		# 1. PDF → tekst (OCR)
-		raw_text, confidence = self.pdf_processor.extract_text_from_pdf(pdf_path)
+		# 1. Plik → tekst (OCR) - obsługuje zarówno PDF jak i obrazy
+		raw_text, confidence = self.pdf_processor.process_file(file_path)
+
+		# Debug: show raw OCR text (first 2000 chars)
+		import logging
+		logger = logging.getLogger(__name__)
+		logger.debug(f"[OCR RAW TEXT] First 2000 chars:\n{raw_text[:2000]}")
 
 		# 2. Tekst → structured data
 		extracted_data = self.text_extractor.extract_invoice_data(raw_text)
@@ -54,24 +59,24 @@ class OCRService:
 
 		return result
 
-	def process_invoice_pdf(self, pdf_path: str, progress_callback=None) -> \
+	def process_invoice_pdf(self, file_path: str, progress_callback=None) -> \
 	tuple[Invoice, str]:
 		"""
-		Przetworz PDF faktury
+		Przetworz PDF lub obraz faktury
 
 		Args:
-			pdf_path: Ścieżka do PDF
+			file_path: Ścieżka do PDF lub obrazu (JPG, PNG, TIFF, BMP)
 			progress_callback: Funkcja callback(progress_pct, message)
 
 		Returns:
 			(Invoice object, raw_text)
 		"""
 		if progress_callback:
-			progress_callback(10, "Konwersja PDF...")
+			progress_callback(10, "Przetwarzanie pliku...")
 		
-		# 1. PDF → tekst (OCR)
-		raw_text, confidence = self.pdf_processor.extract_text_from_pdf(
-			pdf_path
+		# 1. Plik → tekst (OCR) - obsługuje zarówno PDF jak i obrazy
+		raw_text, confidence = self.pdf_processor.process_file(
+			file_path
 			)
 		
 		if progress_callback:
@@ -126,7 +131,7 @@ class OCRService:
 			currency=extracted_data['currency'],
 			payment_due_date=payment_due_date,
 			payment_term=payment_term,
-			pdf_path=pdf_path,
+			pdf_path=file_path,
 			ocr_confidence=confidence
 			)
 		

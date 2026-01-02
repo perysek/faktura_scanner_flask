@@ -11,22 +11,33 @@ class TextExtractor:
 	
 	# Regex patterns dla polskich faktur
 	PATTERNS = {
-		# Numer faktury: F/006579/25/MG, FV/123/2024, FA-123-2024, itp.
+		# Numer faktury: F/006579/25/MG, FV/123/2024, FA-123-2024, KSeF, S634/F001937/12/2025
 		'invoice_number': [
+			# KSeF format (Polish e-invoice system) - highest priority
+			r'(KSeF[\-/]?\d{10,})',
+			# Store prefix + invoice number (e.g., S634/F001937/12/2025, nr S123/FV/2024/001)
+			r'(?:nr|numer|faktura)[\s:]*([A-Z0-9]{1,6}/[A-Z0-9]+/\d+/\d{4})',
+			r'([A-Z]\d{2,4}/[A-Z]+\d+/\d+/\d{4})',
+			# Electronic invoice formats with long numbers
+			r'([A-Z]{2,4}[\-/]\d{4}[\-/]\d{2}[\-/]\d{4,})',
 			# Pattern with prefix included (F/, FV/, FA/, etc.) and optional suffix letters
 			r'((?:FV|FA|F|FAKTURA)[\s\-/]*\d+[\-/]\d+(?:[\-/]\d+)?(?:[\-/][A-Z]+)?)',
 			# Pattern after Polish keywords (Faktura VAT, Faktura nr, Nr faktury, etc.)
 			r'(?:Faktura\s+VAT|Faktura\s+nr|Nr\s+faktury|Numer\s+faktury|Faktura\s+numer|Nr|Numer|Number)[\s:\.]*([A-Z0-9\-/]+)',
 			# Generic pattern for invoice numbers with letters
 			r'([A-Z]{1,4}[\-/]\d+[\-/]\d+(?:[\-/]\d+)?(?:[\-/][A-Z]+)?)',
+			# Pattern with year prefix (2024/001, 2024-FV-001)
+			r'(\d{4}[\-/](?:FV|FA)?[\-/]?\d{3,})',
 			# Numbers-only pattern (fallback)
 			r'(\d{5,}[\-/]\d{2,}[\-/]?\d*)',
 			],
 		
 		# NIP: 123-456-78-90 lub 1234567890
 		'nip': [
-			r'NIP[\s:]*(\d{3}[-\s]?\d{3}[-\s]?\d{2}[-\s]?\d{2})',
-			r'NIP[\s:]*(\d{10})',
+			r'NIP[\s:]*(?:PL)?[\s]?(\d{3}[-\s]?\d{3}[-\s]?\d{2}[-\s]?\d{2})',
+			r'NIP[\s:]*(?:PL)?[\s]?(\d{10})',
+			# EU VAT format
+			r'(?:VAT|VAT ID|Tax ID)[\s:]*([A-Z]{2}\d{8,12})',
 			],
 		
 		# Numer konta: PL 12 1234 1234 1234 1234 1234 1234
@@ -40,26 +51,41 @@ class TextExtractor:
 			# Just PL followed by numbers (anywhere in text)
 			r'PL[\s]?(\d{26})',
 			r'PL[\s]?(\d{2}(?:\s?\d{4}){6})',
-			# Fallback: just numbers (26 digits for Polish IBAN without PL)
+			# Fallback: standard 26-digit format (2+4+4+4+4+4+4)
 			r'(\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4})',
+			# Flexible format: 26+ digits with any spacing (for OCR errors)
+			r'(\d{2}\s+\d{4,5}\s+\d{4}\s+\d{4}\s+\d{4}\s+\d{6,8})',
+			# After bank name keywords (PKO, ING, etc.)
+			r'(?:PKO|ING|mBank|Santander|BNP|PEKAO|BZ WBK|Alior)[\s\w./]*?(\d{2}[\s]?\d{4,5}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{6,8})',
 			],
 		
 		# Kwota: 1 234,56 zł lub 1234.56 PLN
 		# Priorytet dla kwot brutto i kwoty do zapłaty
 		'amount': [
-			# Kwota do zapłaty (highest priority) - flexible spacing between words
-			r'(?:Kwota\s+do\s+zapłaty|Do\s+zapłaty|Amount\s+to\s+pay)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			# Kwota do zapłaty (highest priority) - flexible, optional currency
+			r'(?:Kwota\s+do\s+zapłaty|Do\s+zapłaty|Amount\s+to\s+pay)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})[\s]*(?:zł|PLN)?',
 			# Wartość brutto
-			r'(?:Wartość\s+brutto|Brutto|Gross|Razem\s+brutto)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
-			# Razem (lowest priority - often net amount)
-			r'(?:Razem|Suma|Total)[\s:.]*(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)',
+			r'(?:Wartość\s+brutto|Brutto|Gross|Razem\s+brutto)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})[\s]*(?:zł|PLN)?',
+			# Suma/Total with currency
+			r'(?:Suma|Total|Łącznie)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})[\s]*(?:zł|PLN|EUR|USD)',
+			# Additional flexible patterns
+			# SUMA / OGÓŁEM patterns
+			r'(?:SUMA|OGÓŁEM|Ogółem)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})',
+			# Amount followed by zł/PLN symbol anywhere
+			r'([\d\s\u00a0]+[,\.]\d{2})\s*(?:zł|PLN)',
+			# Razem (lower priority)
+			r'(?:Razem)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})[\s]*(?:zł|PLN)',
 			],
 		
-		# Data: 2024-11-12, 12.11.2024, 12/11/2024
+		# Data: 2024-11-12, 12.11.2024, 12/11/2024, 12-11-2024, 2024.11.12
 		'date': [
-			r'(\d{4}-\d{2}-\d{2})',
-			r'(\d{2}\.\d{2}\.\d{4})',
-			r'(\d{2}/\d{2}/\d{4})',
+			r'(\d{4}-\d{2}-\d{2})',  # ISO format (YYYY-MM-DD)
+			r'(\d{4}\.\d{2}\.\d{2})',  # ISO-like with dots (YYYY.MM.DD)
+			r'(\d{2}\.\d{2}\.\d{4})',  # European with dots (DD.MM.YYYY)
+			r'(\d{2}/\d{2}/\d{4})',  # European with slashes
+			r'(\d{2}-\d{2}-\d{4})',  # European with dashes
+			# Text month formats (Polish)
+			r'(\d{1,2}\s+(?:stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia)\s+\d{4})',
 			],
 		}
 	
@@ -114,6 +140,12 @@ class TextExtractor:
 		# If it already has country code, return as is (but clean spaces)
 		if re.match(r'^[A-Z]{2}\d{26}$', clean_account):
 			return clean_account
+
+		# Handle OCR errors: 25-28 digits (missing or extra digit)
+		# Still prepend PL but keep the raw digits - validation can catch issues
+		if re.match(r'^\d{25,28}$', clean_account):
+			print(f"  [IBAN] Non-standard digit count: {len(clean_account)}, keeping as-is")
+			return f'PL{clean_account}'
 
 		# Return original if we can't determine the format
 		return account
@@ -488,12 +520,22 @@ class TextExtractor:
 		
 		return None
 	
+	# Polish month names for text date parsing
+	POLISH_MONTHS = {
+		'stycznia': 1, 'lutego': 2, 'marca': 3, 'kwietnia': 4,
+		'maja': 5, 'czerwca': 6, 'lipca': 7, 'sierpnia': 8,
+		'września': 9, 'października': 10, 'listopada': 11, 'grudnia': 12
+	}
+
 	def _normalize_date(self, date_str: str) -> Optional[str]:
 		"""Konwertuj różne formaty dat na ISO (YYYY-MM-DD)"""
+		# Standard formats
 		formats = [
 			'%Y-%m-%d',
+			'%Y.%m.%d',  # YYYY.MM.DD format
 			'%d.%m.%Y',
 			'%d/%m/%Y',
+			'%d-%m-%Y',
 			]
 		
 		for fmt in formats:
@@ -502,5 +544,17 @@ class TextExtractor:
 				return dt.strftime('%Y-%m-%d')
 			except ValueError:
 				continue
+		
+		# Try Polish text month format (e.g., "15 stycznia 2024")
+		try:
+			parts = date_str.lower().split()
+			if len(parts) == 3:
+				day = int(parts[0])
+				month = self.POLISH_MONTHS.get(parts[1])
+				year = int(parts[2])
+				if month and 1 <= day <= 31 and 1900 <= year <= 2100:
+					return f"{year:04d}-{month:02d}-{day:02d}"
+		except (ValueError, AttributeError):
+			pass
 		
 		return None

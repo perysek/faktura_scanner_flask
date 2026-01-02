@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Import PDF - {{ app_name }}{% endblock %}
+{% block title %}Import dokumentów - {{ app_name }}{% endblock %}
 
-{% block page_title %}Import PDF{% endblock %}
+{% block page_title %}Import dokumentów{% endblock %}
 
 {% block content %}
     <div id="upload-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -10,14 +10,14 @@
         <div class="card">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <span class="material-icons text-primary mr-2">upload_file</span>
-                Upload plików PDF
+                Upload plików (PDF, obrazy)
             </h3>
 
             <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer">
-                <input type="file" id="file-input" accept=".pdf" multiple class="hidden">
+                <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp" multiple class="hidden">
                 <span class="material-icons text-gray-400 text-6xl">cloud_upload</span>
-                <p class="text-gray-600 mt-4">Przeciągnij pliki PDF tutaj lub kliknij, aby wybrać</p>
-                <p class="text-sm text-gray-500 mt-2">Możesz wybrać wiele plików jednocześnie</p>
+                <p class="text-gray-600 mt-4">Przeciągnij pliki tutaj lub kliknij, aby wybrać</p>
+                <p class="text-sm text-gray-500 mt-2">Obsługiwane formaty: PDF, JPG, PNG, TIFF, BMP</p>
             </div>
 
             <div id="selected-files" class="mt-4 space-y-2"></div>

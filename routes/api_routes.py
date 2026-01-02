@@ -17,10 +17,19 @@ api_bp = Blueprint('api', __name__)
 _text_extractor = TextExtractor()
 
 
+# Supported file extensions for upload
+ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png', 'tiff', 'tif', 'bmp'}
+IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'tiff', 'tif', 'bmp'}
+
+
 def allowed_file(filename: str) -> bool:
-    """Check if file extension is allowed"""
-    ALLOWED_EXTENSIONS = {'pdf'}
+    """Check if file extension is allowed (PDF or image files)"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def is_image_file(filename: str) -> bool:
+    """Check if file is an image (not PDF)"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in IMAGE_EXTENSIONS
 
 
 def parse_date_string(date_str: Optional[str]) -> Optional[date]:
@@ -1035,7 +1044,7 @@ def get_history():
 
 @api_bp.route('/pdf/<int:invoice_id>', methods=['GET'])
 def view_pdf(invoice_id: int):
-    """View PDF file"""
+    """View PDF or image file for invoice"""
     try:
         row = current_app.invoice_repo.get_by_id(invoice_id)
         if not row:
@@ -1045,15 +1054,30 @@ def view_pdf(invoice_id: int):
         invoice = current_app.invoice_repo.row_to_invoice(row)
 
         if not invoice.pdf_path:
-            return jsonify({'success': False, 'error': 'PDF not found'}), 404
+            return jsonify({'success': False, 'error': 'Document not found'}), 404
 
         pdf_path = Path(invoice.pdf_path)
         if not pdf_path.exists():
-            return jsonify({'success': False, 'error': 'PDF file not found on disk'}), 404
+            return jsonify({'success': False, 'error': 'Document file not found on disk'}), 404
+
+        # Detect file type and set appropriate MIME type
+        file_ext = pdf_path.suffix.lower()
+        mime_types = {
+            '.pdf': 'application/pdf',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.bmp': 'image/bmp',
+            '.tiff': 'image/tiff',
+            '.tif': 'image/tiff',
+            '.webp': 'image/webp',
+        }
+        mimetype = mime_types.get(file_ext, 'application/octet-stream')
 
         return send_file(
             str(pdf_path),
-            mimetype='application/pdf'
+            mimetype=mimetype
         )
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

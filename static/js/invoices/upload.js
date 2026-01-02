@@ -73,15 +73,35 @@ function setupFileUpload() {
 /**
  * Handle selected files
  */
-function handleFiles(files) {
-    const pdfFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+const ALLOWED_TYPES = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/tiff',
+    'image/bmp'
+];
 
-    if (pdfFiles.length === 0) {
-        Notifications.warning('Proszę wybrać pliki PDF');
+const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp'];
+
+function isAllowedFile(file) {
+    // Check MIME type
+    if (ALLOWED_TYPES.includes(file.type)) {
+        return true;
+    }
+    // Fallback: check extension (for files with missing MIME type)
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    return ALLOWED_EXTENSIONS.includes(ext);
+}
+
+function handleFiles(files) {
+    const allowedFiles = Array.from(files).filter(file => isAllowedFile(file));
+
+    if (allowedFiles.length === 0) {
+        Notifications.warning('Proszę wybrać pliki PDF lub obrazy (JPG, PNG, TIFF, BMP)');
         return;
     }
 
-    selectedFiles = [...selectedFiles, ...pdfFiles];
+    selectedFiles = [...selectedFiles, ...allowedFiles];
     displaySelectedFiles();
     updateUploadButton();
 }
@@ -100,7 +120,7 @@ function displaySelectedFiles() {
     container.innerHTML = selectedFiles.map((file, index) => `
         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3">
-                <span class="material-icons text-status-error">picture_as_pdf</span>
+                <span class="material-icons text-gray-500">insert_drive_file</span>
                 <div>
                     <p class="text-sm font-medium text-gray-900">${escapeHtml(file.name)}</p>
                     <p class="text-xs text-gray-500">${formatFileSize(file.size)}</p>

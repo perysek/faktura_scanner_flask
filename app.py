@@ -2,9 +2,22 @@
 FakturaScanner - Flask Web Application
 Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
+import logging
 from flask import Flask, render_template, jsonify, request, send_file, send_from_directory
 import os
 from pathlib import Path
+
+# Configure logging for debugging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Console output
+    ]
+)
+# Set specific loggers to appropriate levels
+logging.getLogger('utils.pdf_processor').setLevel(logging.DEBUG)
+logging.getLogger('services.ocr_service').setLevel(logging.DEBUG)
 
 # Import configuration
 from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
