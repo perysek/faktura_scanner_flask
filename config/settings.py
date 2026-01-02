@@ -23,6 +23,13 @@ POPPLER_PATH = r"C:\poppler\Library\bin"
 OCR_DPI = 300  # DPI dla konwersji PDF → obrazy
 OCR_PREPROCESSING = True  # Preprocessing obrazów
 
+# Enhanced preprocessing settings (requires opencv-python)
+OCR_ENHANCED_PREPROCESSING = True  # Use advanced preprocessing (OpenCV)
+OCR_DENOISE_STRENGTH = 3  # Reduced: phone photos don't need heavy denoising (0-20)
+OCR_DESKEW_ENABLED = True  # Auto-correct document rotation
+OCR_BINARIZATION_MODE = 'otsu'  # Changed to 'otsu' - better for varied lighting
+OCR_CONTRAST_ENHANCEMENT = True  # New: enhance contrast before OCR
+
 # GUI settings (legacy)
 APP_TITLE = "FakturaScanner"
 APP_WIDTH = 1200

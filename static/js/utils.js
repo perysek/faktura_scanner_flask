@@ -117,3 +117,58 @@ function isValidDate(dateString) {
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * Paste text from clipboard to a specific field
+ */
+async function pasteToField(fieldId) {
+    try {
+        const text = await navigator.clipboard.readText();
+        const field = document.getElementById(fieldId);
+
+        if (!field) {
+            Notifications.error('Pole nie zostało znalezione');
+            return;
+        }
+
+        // Clean up the text
+        let cleanText = text.trim();
+
+        // Special handling for date fields - convert common formats to YYYY-MM-DD
+        if (field.type === 'date') {
+            // Try to parse common date formats: DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY
+            const datePatterns = [
+                /(\d{2})\.(\d{2})\.(\d{4})/,  // DD.MM.YYYY
+                /(\d{2})-(\d{2})-(\d{4})/,    // DD-MM-YYYY
+                /(\d{2})\/(\d{2})\/(\d{4})/   // DD/MM/YYYY
+            ];
+
+            for (const pattern of datePatterns) {
+                const match = cleanText.match(pattern);
+                if (match) {
+                    const [, day, month, year] = match;
+                    cleanText = `${year}-${month}-${day}`;
+                    break;
+                }
+            }
+        }
+
+        // Special handling for amount field - remove currency symbols and convert comma to dot
+        if (fieldId === 'amount') {
+            cleanText = cleanText
+                .replace(/[^\d,.-]/g, '')  // Remove non-numeric characters except comma, dot, and minus
+                .replace(',', '.');         // Convert comma to dot for decimal separator
+        }
+
+        field.value = cleanText;
+        field.focus();
+
+        // Trigger input event for any listeners
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+
+        Notifications.success('Wklejono ze schowka');
+    } catch (error) {
+        console.error('Paste error:', error);
+        Notifications.error('Błąd wklejania: ' + error.message);
+    }
+}

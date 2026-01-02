@@ -151,13 +151,19 @@ function renderInvoicesTable() {
                 </td>
                 <td>
                     <div class="flex items-center gap-2">
-                        ${invoice.pdf_path ? `
+                        ${invoice.pdf_path ? (() => {
+                const ext = invoice.pdf_path.split('.').pop().toLowerCase();
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'].includes(ext);
+                const icon = isImage ? 'image' : 'picture_as_pdf';
+                const title = isImage ? 'Zobacz obraz' : 'Zobacz PDF';
+                return `
                             <button onclick="viewPDF(${invoice.id})"
                                     class="text-primary hover:text-primary-700 transition-colors"
-                                    title="Zobacz PDF">
-                                <span class="material-icons text-sm">picture_as_pdf</span>
+                                    title="${title}">
+                                <span class="material-icons text-sm">${icon}</span>
                             </button>
-                        ` : ''}
+                        `;
+            })() : ''}
                         <a href="/invoice/${invoice.id}/edit"
                            class="text-primary hover:text-primary-600 transition-colors"
                            title="Edytuj">

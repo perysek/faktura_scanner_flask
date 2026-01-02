@@ -8,6 +8,9 @@ from datetime import datetime, date
 from typing import Optional
 import uuid
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from database.models import Invoice, UploadStaging
 from utils.text_extractor import TextExtractor
@@ -18,10 +21,19 @@ upload_bp = Blueprint('upload', __name__)
 _text_extractor = TextExtractor()
 
 
+# Supported file extensions for upload
+ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png', 'tiff', 'tif', 'bmp'}
+IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'tiff', 'tif', 'bmp'}
+
+
 def allowed_file(filename: str) -> bool:
-    """Check if file extension is allowed"""
-    ALLOWED_EXTENSIONS = {'pdf'}
+    """Check if file extension is allowed (PDF or image files)"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def is_image_file(filename: str) -> bool:
+    """Check if file is an image (not PDF)"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in IMAGE_EXTENSIONS
 
 
 def parse_date_string(date_str: Optional[str]) -> Optional[date]:
@@ -245,8 +257,20 @@ def process_staged_files():
                 continue
             
             # Process with OCR
+            # Process with OCR
             try:
+                
+                logger.info(f"[PROCESS] Processing file: {staging.filename}")
                 extracted_data = current_app.ocr_service.process_pdf(str(file_path))
+                
+                # Log extracted data
+                logger.info(f"[PROCESS] Extracted data:")
+                logger.info(f"  - invoice_number: {extracted_data.get('invoice_number')}")
+                logger.info(f"  - seller_name: {extracted_data.get('seller_name')}")
+                logger.info(f"  - seller_nip: {extracted_data.get('seller_nip')}")
+                logger.info(f"  - total_amount: {extracted_data.get('total_amount')}")
+                logger.info(f"  - issue_date: {extracted_data.get('issue_date')}")
+                logger.info(f"  - ocr_confidence: {extracted_data.get('ocr_confidence')}")
                 
                 # Parse dates
                 invoice_date = parse_date_string(extracted_data.get('issue_date'))
@@ -285,6 +309,9 @@ def process_staged_files():
                 validation_errors = validation_result.get('errors', [])
                 validation_warnings = validation_result.get('warnings', [])
                 
+                logger.info(f"[PROCESS] Validation errors: {validation_errors}")
+                logger.info(f"[PROCESS] Validation warnings: {validation_warnings}")
+                
                 # Check duplicates
                 is_duplicate, duplicate_info = current_app.duplicate_detection.check_duplicate(invoice)
                 
@@ -302,7 +329,12 @@ def process_staged_files():
                     'email_date': staging.email_date
                 })
                 
+                logger.info(f"[PROCESS] File processed successfully: {staging.filename}")
+                
             except Exception as e:
+                import traceback
+                logger.error(f"[PROCESS] Error processing {staging.filename}: {str(e)}")
+                logger.error(f"[PROCESS] Traceback: {traceback.format_exc()}")
                 results.append({
                     'filename': staging.filename,
                     'success': False,
@@ -380,11 +412,11 @@ def finalize_uploads():
                     payment_due_date = parse_date_string(payment_due_date_str)
             
             # Set default values for missing required fields
-            seller_name = extracted_data.get('seller_name', '').strip()
+            seller_name = (extracted_data.get('seller_name') or '').strip()
             if not seller_name:
                 seller_name = '(brak danych)'
             
-            invoice_number = extracted_data.get('invoice_number', '').strip()
+            invoice_number = (extracted_data.get('invoice_number') or '').strip()
             if not invoice_number:
                 invoice_number = '(brak danych)'
             
@@ -430,6 +462,9 @@ def finalize_uploads():
         })
     
     except Exception as e:
+        import traceback
+        logger.error(f"[FINALIZE] Error: {str(e)}")
+        logger.error(f"[FINALIZE] Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

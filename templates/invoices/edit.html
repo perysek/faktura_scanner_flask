@@ -234,22 +234,33 @@
             </form>
         </div>
 
-        <!-- Right Column: PDF Viewer (1/2 width) -->
+        <!-- Right Column: Document Viewer (1/2 width) -->
         <div>
             {% if invoice.pdf_path %}
+            {% set file_ext = invoice.pdf_path.split('.')[-1].lower() %}
+            {% set is_image = file_ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'] %}
             <div class="card p-0 lg:sticky lg:top-4" style="display: flex; flex-direction: column; height: 800px; min-height: 600px; max-height: calc(100vh - 8rem);">
                 <div class="p-2 border-b border-gray-200" style="flex-shrink: 0;">
                     <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                        <span class="material-icons text-primary mr-2">picture_as_pdf</span>
-                        Podgląd PDF
+                        <span class="material-icons text-primary mr-2">{% if is_image %}image{% else %}picture_as_pdf{% endif %}</span>
+                        Podgląd {% if is_image %}obrazu{% else %}PDF{% endif %}
                     </h3>
                 </div>
-                <div class="bg-gray-100" style="flex: 1; min-height: 700px; overflow: hidden;">
+                <div class="bg-gray-100" style="flex: 1; min-height: 700px; overflow: auto;">
+                    {% if is_image %}
+                    <!-- Image viewer -->
+                    <img 
+                        src="/api/pdf/{{ invoice.id }}" 
+                        alt="Podgląd faktury"
+                        style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+                    {% else %}
+                    <!-- PDF viewer -->
                     <iframe 
                         src="/api/pdf/{{ invoice.id }}" 
                         style="width: 100%; height: 100%; border: 0;"
                         title="Podgląd PDF faktury">
                     </iframe>
+                    {% endif %}
                 </div>
                 <div class="p-2 border-t border-gray-200 bg-gray-50" style="flex-shrink: 0;">
                     <button type="button" onclick="viewPDFFullscreen()" class="btn-secondary w-full text-sm">
@@ -261,7 +272,7 @@
             {% else %}
             <div class="card text-center py-12">
                 <span class="material-icons text-gray-300 text-6xl mb-4">picture_as_pdf</span>
-                <p class="text-gray-500">Brak pliku PDF</p>
+                <p class="text-gray-500">Brak pliku dokumentu</p>
             </div>
             {% endif %}
         </div>
@@ -870,59 +881,6 @@ function viewPDFFullscreen() {
 }
 
 
-/**
- * Paste text from clipboard to a specific field
- */
-async function pasteToField(fieldId) {
-    try {
-        const text = await navigator.clipboard.readText();
-        const field = document.getElementById(fieldId);
-        
-        if (!field) {
-            Notifications.error('Pole nie zostało znalezione');
-            return;
-        }
 
-        // Clean up the text
-        let cleanText = text.trim();
-
-        // Special handling for date fields - convert common formats to YYYY-MM-DD
-        if (field.type === 'date') {
-            // Try to parse common date formats: DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY
-            const datePatterns = [
-                /(\d{2})\.(\d{2})\.(\d{4})/,  // DD.MM.YYYY
-                /(\d{2})-(\d{2})-(\d{4})/,    // DD-MM-YYYY
-                /(\d{2})\/(\d{2})\/(\d{4})/   // DD/MM/YYYY
-            ];
-
-            for (const pattern of datePatterns) {
-                const match = cleanText.match(pattern);
-                if (match) {
-                    const [, day, month, year] = match;
-                    cleanText = `${year}-${month}-${day}`;
-                    break;
-                }
-            }
-        }
-
-        // Special handling for amount field - remove currency symbols and convert comma to dot
-        if (fieldId === 'amount') {
-            cleanText = cleanText
-                .replace(/[^\d,.-]/g, '')  // Remove non-numeric characters except comma, dot, and minus
-                .replace(',', '.');         // Convert comma to dot for decimal separator
-        }
-
-        field.value = cleanText;
-        field.focus();
-        
-        // Trigger input event for any listeners
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        
-        Notifications.success('Wklejono ze schowka');
-    } catch (error) {
-        console.error('Paste error:', error);
-        Notifications.error('Błąd wklejania: ' + error.message);
-    }
-}
 </script>
 {% endblock %}
