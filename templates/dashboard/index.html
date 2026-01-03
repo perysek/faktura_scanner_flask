@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Pulpit - {{ app_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">dashboard</span>
+        <span>Pulpit</span>
+    </span>
+</li>
+{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">
+    <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+    <span id="last-updated-indicator" class="mr-2 hidden md:inline">Aktualizacja...</span>
+    <button onclick="refreshDashboard()" class="p-1 hover:bg-gray-100 rounded-full transition-colors" title="Odśwież teraz">
+        <span id="refresh-icon" class="material-icons text-gray-500 text-sm">refresh</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <div class="card stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Wszystkie faktury</p>
+                    <p id="stat-total" class="text-2xl font-bold text-gray-900">
+                        <span class="skeleton skeleton-text inline-block w-12"></span>
+                    </p>
+                </div>
+                <span class="material-icons text-primary text-4xl">receipt_long</span>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Zapłacone</p>
+                    <p id="stat-paid" class="text-2xl font-bold text-status-success">
+                        <span class="skeleton skeleton-text inline-block w-12"></span>
+                    </p>
+                </div>
+                <span class="material-icons text-status-success text-4xl">check_circle</span>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Niezapłacone</p>
+                    <p id="stat-unpaid" class="text-2xl font-bold text-status-error">
+                        <span class="skeleton skeleton-text inline-block w-12"></span>
+                    </p>
+                </div>
+                <span class="material-icons text-status-error text-4xl">pending</span>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Kwota brutto</p>
+                    <p id="stat-amount-gross" class="text-2xl font-bold text-gray-900">
+                        <span class="skeleton skeleton-text inline-block w-20"></span>
+                    </p>
+                </div>
+                <span class="material-icons text-primary text-4xl">account_balance</span>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Kwota netto</p>
+                    <p id="stat-amount-net" class="text-2xl font-bold text-net">
+                        <span class="skeleton skeleton-text inline-block w-20"></span>
+                    </p>
+                </div>
+                <span class="material-icons text-net text-4xl">payments</span>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Kwota VAT</p>
+                    <p id="stat-amount-vat" class="text-2xl font-bold text-vat">
+                        <span class="skeleton skeleton-text inline-block w-20"></span>
+                    </p>
+                </div>
+                <span class="material-icons text-vat text-4xl">receipt</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Panels -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Invoices -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-primary mr-2">schedule</span>
+                    Ostatnie faktury
+                </h3>
+                <a href="{{ url_for('main.invoices_list') }}" class="text-primary text-sm hover:underline">
+                    Zobacz wszystkie
+                </a>
+            </div>
+            <div id="recent-invoices-container">
+                <!-- Skeleton loader -->
+                <div class="skeleton-list">
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-32 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-24"></div>
+                            </div>
+                            <div class="skeleton skeleton-badge w-20"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-36 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-28"></div>
+                            </div>
+                            <div class="skeleton skeleton-badge w-24"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-row py-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-28 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-20"></div>
+                            </div>
+                            <div class="skeleton skeleton-badge w-16"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue Payments -->
+        <div class="card border-l-4 border-l-status-error">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-status-error mr-2">warning</span>
+                    Przeterminowane płatności
+                </h3>
+            </div>
+            
+            <!-- Summary Card -->
+            <div id="overdue-summary" class="bg-red-50 p-3 rounded-lg mb-3 flex justify-between items-center hidden">
+                <span class="text-status-error font-medium text-sm">Łącznie zaległe:</span>
+                <span class="text-status-error font-bold text-lg" id="overdue-total-amount">0.00 PLN</span>
+            </div>
+
+            <div id="overdue-payments-container">
+                <!-- Skeleton loader -->
+                <div class="skeleton-list">
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-32 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-24"></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="skeleton skeleton-text w-20 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-16"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Payments -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-status-warning mr-2">event</span>
+                    Nadchodzące płatności
+                </h3>
+            </div>
+
+            <!-- Summary Card -->
+            <div id="upcoming-summary" class="bg-yellow-50 p-3 rounded-lg mb-3 flex justify-between items-center hidden">
+                <span class="text-status-warning font-medium text-sm">Łącznie do zapłaty:</span>
+                <span class="text-status-warning font-bold text-lg" id="upcoming-total-amount">0.00 PLN</span>
+            </div>
+
+            <div id="upcoming-payments-container">
+                <!-- Skeleton loader -->
+                <div class="skeleton-list">
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-32 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-24"></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="skeleton skeleton-text w-20 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-16"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-36 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-28"></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="skeleton skeleton-text w-24 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-20"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-row py-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-text w-28 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-20"></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="skeleton skeleton-text w-16 mb-1"></div>
+                                <div class="skeleton skeleton-text-short w-14"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Sellers -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-primary mr-2">trending_up</span>
+                    Najczęstsi dostawcy
+                </h3>
+            </div>
+            <div id="top-sellers-container">
+                <!-- Skeleton loader -->
+                <div class="skeleton-list">
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="skeleton w-8 h-8 rounded-full"></div>
+                                <div>
+                                    <div class="skeleton skeleton-text w-32 mb-1"></div>
+                                    <div class="skeleton skeleton-text-short w-24"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton skeleton-badge w-16"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-row py-3 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="skeleton w-8 h-8 rounded-full"></div>
+                                <div>
+                                    <div class="skeleton skeleton-text w-36 mb-1"></div>
+                                    <div class="skeleton skeleton-text-short w-28"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton skeleton-badge w-20"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-row py-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="skeleton w-8 h-8 rounded-full"></div>
+                                <div>
+                                    <div class="skeleton skeleton-text w-28 mb-1"></div>
+                                    <div class="skeleton skeleton-text-short w-20"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton skeleton-badge w-14"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-primary mr-2">flash_on</span>
+                Szybkie akcje
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="{{ url_for('main.upload') }}" class="quick-action-btn">
+                    <span class="material-icons text-3xl mb-2 text-primary">upload_file</span>
+                    <span class="text-sm font-medium">Import PDF</span>
+                </a>
+                <a href="{{ url_for('main.create_invoice') }}" class="quick-action-btn">
+                    <span class="material-icons text-3xl mb-2 text-status-success">add_circle</span>
+                    <span class="text-sm font-medium">Nowa faktura</span>
+                </a>
+                <a href="{{ url_for('main.invoices_list') }}" class="quick-action-btn">
+                    <span class="material-icons text-3xl mb-2 text-status-info">list_alt</span>
+                    <span class="text-sm font-medium">Lista faktur</span>
+                </a>
+                <a href="{{ url_for('main.email_settings') }}" class="quick-action-btn">
+                    <span class="material-icons text-3xl mb-2 text-status-warning">email</span>
+                    <span class="text-sm font-medium">Import e-mail</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let refreshInterval;
+const REFRESH_RATE = 30000; // 30 seconds
+
+// Load dashboard data on page load
+document.addEventListener('DOMContentLoaded', () => {
+    refreshDashboard();
+    startAutoRefresh();
+});
+
+// Refresh data when tab becomes visible
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        refreshDashboard();
+        startAutoRefresh();
+    } else {
+        stopAutoRefresh();
+    }
+});
+
+// Handle back/forward cache
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        refreshDashboard();
+    }
+});
+
+// Listen for global update events
+document.addEventListener('invoiceUpdated', refreshDashboard);
+document.addEventListener('invoiceCreated', refreshDashboard);
+document.addEventListener('invoiceDeleted', refreshDashboard);
+
+function startAutoRefresh() {
+    stopAutoRefresh(); // Clear existing if any
+    refreshInterval = setInterval(refreshDashboard, REFRESH_RATE);
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+}
+
+/**
+ * Refresh all dashboard widgets
+ */
+async function refreshDashboard() {
+    const icon = document.getElementById('refresh-icon');
+    const indicator = document.getElementById('last-updated-indicator');
+    
+    if (icon) icon.classList.add('animate-spin');
+    
+    try {
+        await Promise.all([
+            loadStatistics(),
+            loadRecentInvoices(),
+            loadUpcomingPayments(),
+            loadOverduePayments(),
+            loadTopSellers()
+        ]);
+        
+        // Update timestamp
+        if (indicator) {
+            const now = new Date();
+            indicator.textContent = `Zaktualizowano: ${now.toLocaleTimeString()}`;
+        }
+    } catch (error) {
+        console.error('Error refreshing dashboard:', error);
+        if (indicator) {
+            indicator.textContent = 'Błąd aktualizacji';
+            indicator.classList.add('text-status-error');
+        }
+    } finally {
+        if (icon) icon.classList.remove('animate-spin');
+    }
+}
+
+/**
+ * Load statistics from API
+ */
+async function loadStatistics() {
+    try {
+        const data = await API.invoices.getStatistics();
+
+        if (data.success) {
+            const stats = data.statistics;
+
+            document.getElementById('stat-total').textContent = stats.total_invoices || 0;
+            document.getElementById('stat-paid').textContent = stats.paid_invoices || 0;
+            document.getElementById('stat-unpaid').textContent = stats.unpaid_invoices || 0;
+
+            // totals.total_amount is nested in the stats object
+            const totalGross = stats.totals?.total_amount || 0;
+            const totalNet = calculateNetAmount(totalGross);
+            const totalVat = calculateVatAmount(totalGross);
+
+            document.getElementById('stat-amount-gross').textContent = formatCurrency(totalGross, 'PLN');
+            document.getElementById('stat-amount-net').textContent = formatCurrency(totalNet, 'PLN');
+            document.getElementById('stat-amount-vat').textContent = formatCurrency(totalVat, 'PLN');
+            
+            // Update Summary Cards for Overdue/Upcoming
+            // Try to find PLN or use first available currency
+            let currencyData = stats.by_currency['PLN'];
+            if (!currencyData && Object.keys(stats.by_currency).length > 0) {
+                 currencyData = stats.by_currency[Object.keys(stats.by_currency)[0]];
+            }
+            
+            if (currencyData) {
+                const overdueAmount = currencyData.overdue || 0;
+                const upcomingAmount = currencyData.unpaid || 0; // 'unpaid' key in by_currency means future unpaid
+                
+                const overdueEl = document.getElementById('overdue-total-amount');
+                const upcomingEl = document.getElementById('upcoming-total-amount');
+                const overdueCard = document.getElementById('overdue-summary');
+                const upcomingCard = document.getElementById('upcoming-summary');
+                
+                if (overdueEl) overdueEl.textContent = formatCurrency(overdueAmount, 'PLN');
+                if (upcomingEl) upcomingEl.textContent = formatCurrency(upcomingAmount, 'PLN');
+                
+                // Show cards if amounts > 0 (or always show? User asked to "add a card", implying visibility)
+                // Let's always show them if we have data, or strictly if > 0.
+                // Usually showing 0.00 is fine too.
+                if (overdueCard) overdueCard.classList.remove('hidden');
+                if (upcomingCard) upcomingCard.classList.remove('hidden');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+    }
+}
+
+/**
+ * Load recent invoices
+ */
+async function loadRecentInvoices() {
+    const container = document.getElementById('recent-invoices-container');
+
+    try {
+        const response = await API.get('/dashboard/recent-invoices?limit=5');
+
+        if (response.success && response.invoices.length > 0) {
+            container.innerHTML = response.invoices.map(invoice => `
+                <a href="/invoice/${invoice.id}/edit" class="block py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors -mx-4 px-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(invoice.seller_name || 'Nieznany')}</p>
+                            <p class="text-xs text-gray-500">${escapeHtml(invoice.invoice_number || '-')}</p>
+                        </div>
+                        <div class="text-right ml-4">
+                            <p class="text-sm font-semibold text-gray-900">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</p>
+                            <span class="badge-${invoice.status === 'Opłacona' ? 'success' : 'warning'} text-xs">
+                                ${escapeHtml(invoice.status || 'Nieopłacona')}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state-small">
+                    <span class="material-icons text-gray-300 text-4xl mb-2">receipt_long</span>
+                    <p class="text-gray-500 text-sm">Brak faktur</p>
+                    <a href="{{ url_for('main.upload') }}" class="text-primary text-sm hover:underline mt-2 inline-block">
+                        Importuj pierwszą fakturę
+                    </a>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading recent invoices:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-status-error">
+                <span class="material-icons text-2xl mb-1">error</span>
+                <p class="text-sm">Błąd ładowania danych</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Load overdue payments
+ */
+async function loadOverduePayments() {
+    const container = document.getElementById('overdue-payments-container');
+
+    try {
+        const response = await API.get('/dashboard/overdue-payments?limit=5');
+
+        if (response.success && response.invoices.length > 0) {
+            container.innerHTML = response.invoices.map(invoice => {
+                const dueDate = invoice.payment_due_date ? new Date(invoice.payment_due_date) : null;
+                const today = new Date();
+                const daysOverdue = dueDate ? Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+
+                return `
+                    <a href="/invoice/${invoice.id}/edit" class="block py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors -mx-4 px-4 bg-red-50/50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(invoice.seller_name || 'Nieznany')}</p>
+                                <p class="text-xs text-status-error font-medium">
+                                    ${daysOverdue} dni po terminie
+                                </p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-sm font-bold text-status-error">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</p>
+                                <p class="text-xs text-gray-500">${formatDate(invoice.payment_due_date)}</p>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state-small">
+                    <span class="material-icons text-gray-300 text-4xl mb-2">check_circle</span>
+                    <p class="text-gray-500 text-sm">Brak przeterminowanych płatności</p>
+                    <p class="text-xs text-green-600 mt-1">Wszystko opłacone na czas!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading overdue payments:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-status-error">
+                <span class="material-icons text-2xl mb-1">error</span>
+                <p class="text-sm">Błąd ładowania danych</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Load upcoming payments
+ */
+async function loadUpcomingPayments() {
+    const container = document.getElementById('upcoming-payments-container');
+
+    try {
+        const response = await API.get('/dashboard/upcoming-payments?limit=5');
+
+        if (response.success && response.invoices.length > 0) {
+            container.innerHTML = response.invoices.map(invoice => {
+                const dueDate = invoice.payment_due_date ? new Date(invoice.payment_due_date) : null;
+                const today = new Date();
+                const daysUntil = dueDate ? Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)) : null;
+
+                let urgencyClass = 'text-gray-600';
+                let urgencyIcon = 'schedule';
+                if (daysUntil !== null) {
+                    if (daysUntil <= 3) {
+                        urgencyClass = 'text-status-error';
+                        urgencyIcon = 'warning';
+                    } else if (daysUntil <= 7) {
+                        urgencyClass = 'text-status-warning';
+                        urgencyIcon = 'notifications';
+                    }
+                }
+
+                return `
+                    <a href="/invoice/${invoice.id}/edit" class="block py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors -mx-4 px-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(invoice.seller_name || 'Nieznany')}</p>
+                                <p class="text-xs text-gray-500">${escapeHtml(invoice.invoice_number || '-')}</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-sm font-semibold text-gray-900">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</p>
+                                <p class="text-xs ${urgencyClass} flex items-center justify-end gap-1">
+                                    <span class="material-icons text-xs">${urgencyIcon}</span>
+                                    ${daysUntil !== null ? (daysUntil === 0 ? 'Dziś' : daysUntil === 1 ? 'Jutro' : `Za ${daysUntil} dni`) : '-'}
+                                </p>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state-small">
+                    <span class="material-icons text-gray-300 text-4xl mb-2">event_available</span>
+                    <p class="text-gray-500 text-sm">Brak nadchodzących płatności</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading upcoming payments:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-status-error">
+                <span class="material-icons text-2xl mb-1">error</span>
+                <p class="text-sm">Błąd ładowania danych</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Load top sellers
+ */
+async function loadTopSellers() {
+    const container = document.getElementById('top-sellers-container');
+
+    try {
+        const response = await API.get('/dashboard/top-sellers?limit=5');
+
+        if (response.success && response.sellers.length > 0) {
+            container.innerHTML = response.sellers.map((seller, index) => {
+                const colors = ['bg-primary', 'bg-status-success', 'bg-status-info', 'bg-status-warning', 'bg-gray-400'];
+                const bgColor = colors[index] || colors[4];
+                const initials = (seller.seller_name || '??').substring(0, 2).toUpperCase();
+
+                return `
+                    <div class="py-3 border-b border-gray-100 last:border-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-white font-semibold text-sm">
+                                    ${initials}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(seller.seller_name || 'Nieznany')}</p>
+                                    <p class="text-xs text-gray-500">NIP: ${escapeHtml(seller.seller_nip || '-')}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-semibold text-gray-900">${seller.invoice_count || 0} faktur</p>
+                                <p class="text-xs text-gray-500">${formatCurrency(seller.total_amount || 0, 'PLN')}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state-small">
+                    <span class="material-icons text-gray-300 text-4xl mb-2">business</span>
+                    <p class="text-gray-500 text-sm">Brak danych o dostawcach</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading top sellers:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-status-error">
+                <span class="material-icons text-2xl mb-1">error</span>
+                <p class="text-sm">Błąd ładowania danych</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Calculate net amount (amount / 1.23)
+ */
+function calculateNetAmount(grossAmount) {
+    return grossAmount / 1.23;
+}
+
+/**
+ * Calculate VAT amount (amount * 23/123)
+ */
+function calculateVatAmount(grossAmount) {
+    return grossAmount * (23 / 123);
+}
+</script>
+{% endblock %}

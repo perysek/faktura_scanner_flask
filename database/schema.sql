@@ -41,6 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_seller_name_search ON sellers(seller_name);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     invoice_id INTEGER NOT NULL,
+    action TEXT DEFAULT 'UPDATE',
     field_name TEXT NOT NULL,
     old_value TEXT,
     new_value TEXT,

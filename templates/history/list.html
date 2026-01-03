@@ -2,7 +2,14 @@
 
 {% block title %}Historia zmian - {{ app_name }}{% endblock %}
 
-{% block page_title %}Historia zmian{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">history</span>
+        <span>Historia zmian</span>
+    </span>
+</li>
+{% endblock %}
 
 {% block page_actions %}
 {% endblock %}
@@ -29,13 +36,14 @@
                         <th>Akcja</th>
                         <th>ID faktury</th>
                         <th>Numer faktury</th>
-                        <th>Zmienione pola</th>
-                        <th>Szczegóły</th>
+                        <th>Pole</th>
+                        <th>Było</th>
+                        <th>Zmieniono na</th>
                     </tr>
                 </thead>
                 <tbody id="history-tbody">
                     <tr>
-                        <td colspan="6" class="text-center py-8 text-gray-500">
+                        <td colspan="7" class="text-center py-8 text-gray-500">
                             <span class="material-icons text-6xl text-gray-300">hourglass_empty</span>
                             <p class="mt-2">Ładowanie...</p>
                         </td>
@@ -45,9 +53,20 @@
         </div>
 
         <!-- Empty state -->
-        <div id="empty-state" class="hidden text-center py-12">
-            <span class="material-icons text-gray-300" style="font-size: 80px;">history</span>
-            <p class="text-gray-500 mt-4">Brak historii zmian</p>
+        <div id="empty-state" class="hidden empty-state">
+            <div class="empty-state-icon">
+                <span class="material-icons" style="font-size: inherit;">history</span>
+            </div>
+            <h3 class="empty-state-title">Brak historii zmian</h3>
+            <p class="empty-state-description">
+                Historia zmian będzie widoczna po dodaniu lub edycji faktur
+            </p>
+            <div class="empty-state-actions">
+                <a href="{{ url_for('main.invoices_list') }}" class="btn-primary inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">list_alt</span>
+                    Zobacz faktury
+                </a>
+            </div>
         </div>
     </div>
 {% endblock %}
@@ -63,6 +82,18 @@ async function loadHistory() {
     const invoiceId = document.getElementById('invoice-filter').value;
     const tbody = document.getElementById('history-tbody');
     const emptyState = document.getElementById('empty-state');
+
+    // Show loading state if it was previously empty or not
+    if (tbody.children.length === 0 || tbody.querySelector('.material-icons') === null) {
+         tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-8 text-gray-500">
+                    <span class="material-icons text-6xl text-gray-300">hourglass_empty</span>
+                    <p class="mt-2">Ładowanie...</p>
+                </td>
+            </tr>
+        `;
+    }
 
     try {
         const data = await API.history.getAll(invoiceId || null);
@@ -83,23 +114,18 @@ async function loadHistory() {
                     'DELETE': 'badge-error'
                 }[entry.action] || 'badge-info';
 
-                const changedFields = entry.changed_fields ? JSON.parse(entry.changed_fields) : [];
-
                 return `
                     <tr>
                         <td>${formatDate(entry.timestamp)}</td>
                         <td><span class="badge ${actionColor}">${entry.action}</span></td>
                         <td>${entry.invoice_id}</td>
                         <td>${entry.invoice_number || '-'}</td>
-                        <td>
-                            ${changedFields.length > 0
-                                ? `<span class="text-xs text-gray-600">${changedFields.join(', ')}</span>`
-                                : '-'}
+                        <td class="font-medium text-gray-700">${entry.field_name || '-'}</td>
+                        <td class="text-gray-500 break-all bg-gray-50/50 text-sm">
+                            ${entry.old_value || '<span class="text-gray-400 italic">brak</span>'}
                         </td>
-                        <td>
-                            <button onclick="viewDetails(${entry.id})" class="text-primary hover:underline text-sm">
-                                Zobacz
-                            </button>
+                        <td class="text-gray-900 break-all text-sm">
+                            ${entry.new_value || '<span class="text-gray-400 italic">brak</span>'}
                         </td>
                     </tr>
                 `;
@@ -108,6 +134,7 @@ async function loadHistory() {
     } catch (error) {
         console.error('Error loading history:', error);
         Notifications.error('Błąd ładowania historii: ' + error.message);
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-status-error">Błąd: ${error.message}</td></tr>`;
     }
 }
 
@@ -116,6 +143,9 @@ async function loadInvoicesForFilter() {
         const data = await API.invoices.getAll();
         if (data.success) {
             const select = document.getElementById('invoice-filter');
+            // Keep the first option ("Wszystkie faktury")
+            select.innerHTML = '<option value="">Wszystkie faktury</option>';
+            
             data.invoices.forEach(invoice => {
                 const option = document.createElement('option');
                 option.value = invoice.id;
@@ -126,14 +156,6 @@ async function loadInvoicesForFilter() {
     } catch (error) {
         console.error('Error loading invoices:', error);
     }
-}
-
-function viewDetails(entryId) {
-    Modals.alert({
-        title: 'Szczegóły zmiany',
-        message: 'Funkcja podglądu szczegółów jest w trakcie implementacji',
-        type: 'info'
-    });
 }
 </script>
 {% endblock %}

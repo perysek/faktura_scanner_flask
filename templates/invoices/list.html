@@ -2,7 +2,14 @@
 
 {% block title %}Lista faktur - {{ app_name }}{% endblock %}
 
-{% block page_title %}Lista faktur{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">list_alt</span>
+        <span>Lista faktur</span>
+    </span>
+</li>
+{% endblock %}
 
 {% block page_actions %}
     <!-- Export -->
@@ -27,69 +34,6 @@
 
 {% block content %}
 <div class="invoices-page">
-    <!-- Statistics Cards -->
-    <div class="flex flex-row gap-3 mb-4">
-        <div class="card flex-1">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Wszystkie faktury</p>
-                    <p id="stat-total" class="text-2xl font-bold text-gray-900">0</p>
-                </div>
-                <span class="material-icons text-primary text-4xl">receipt_long</span>
-            </div>
-        </div>
-
-        <div class="card flex-1">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Zapłacone</p>
-                    <p id="stat-paid" class="text-2xl font-bold text-status-success">0</p>
-                </div>
-                <span class="material-icons text-status-success text-4xl">check_circle</span>
-            </div>
-        </div>
-
-        <div class="card flex-1">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Niezapłacone</p>
-                    <p id="stat-unpaid" class="text-2xl font-bold text-status-error">0</p>
-                </div>
-                <span class="material-icons text-status-error text-4xl">pending</span>
-            </div>
-        </div>
-
-        <div class="card flex-1">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Kwota brutto</p>
-                    <p id="stat-amount-gross" class="text-2xl font-bold text-gray-900">0 zł</p>
-                </div>
-                <span class="material-icons text-primary text-4xl">account_balance</span>
-            </div>
-        </div>
-
-        <div class="card flex-1">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Kwota netto</p>
-                    <p id="stat-amount-net" class="text-2xl font-bold text-net">0 zł</p>
-                </div>
-                <span class="material-icons text-net text-4xl">payments</span>
-            </div>
-        </div>
-
-        <div class="card flex-1">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Kwota VAT</p>
-                    <p id="stat-amount-vat" class="text-2xl font-bold text-vat">0 zł</p>
-                </div>
-                <span class="material-icons text-vat text-4xl">receipt</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Invoices Table -->
     <div class="card">
         <div class="table-wrapper">
@@ -185,13 +129,24 @@
         </div>
 
         <!-- Empty state -->
-        <div id="empty-state" class="hidden text-center py-12">
-            <span class="material-icons text-gray-300" style="font-size: 80px;">description</span>
-            <p class="text-gray-500 mt-4">Brak faktur do wyświetlenia</p>
-            <a href="{{ url_for('main.upload') }}" class="btn-primary mt-4 inline-flex items-center">
-                <span class="material-icons text-sm mr-2">upload</span>
-                Importuj faktury
-            </a>
+        <div id="empty-state" class="hidden empty-state">
+            <div class="empty-state-icon">
+                <span class="material-icons" style="font-size: inherit;">receipt_long</span>
+            </div>
+            <h3 class="empty-state-title">Nie masz jeszcze żadnych faktur</h3>
+            <p class="empty-state-description">
+                Zacznij od zaimportowania PDF lub wprowadź dane faktury ręcznie
+            </p>
+            <div class="empty-state-actions">
+                <a href="{{ url_for('main.upload') }}" class="btn-primary inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">upload_file</span>
+                    Import PDF
+                </a>
+                <a href="{{ url_for('main.create_invoice') }}" class="btn-secondary inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">edit</span>
+                    Wprowadź ręcznie
+                </a>
+            </div>
         </div>
     </div>
 </div>

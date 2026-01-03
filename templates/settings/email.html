@@ -2,7 +2,20 @@
 
 {% block title %}Ustawienia e-mail - {{ app_name }}{% endblock %}
 
-{% block page_title %}Ustawienia e-mail{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">settings</span>
+        <span>Ustawienia</span>
+    </span>
+</li>
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">email</span>
+        <span>Konfiguracja e-mail</span>
+    </span>
+</li>
+{% endblock %}
 
 {% block content %}
     <div class="max-w-2xl">

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List, Tuple
 from PIL import Image
 from pdf2image import convert_from_path
+from pdf2image.exceptions import PDFPageCountError
 import pytesseract
 import os
 import traceback
@@ -65,7 +66,7 @@ class PDFProcessor:
 		ext = Path(file_path).suffix.lower()
 		return ext in IMAGE_EXTENSIONS
 	
-	def pdf_to_images(self, pdf_path: str) -> List[Image.Image]:
+	def pdf_to_images(self, pdf_path: str, userpw: str = None, ownerpw: str = None) -> List[Image.Image]:
 		"""
 		Konwertuj PDF na listę obrazów (PIL Image)
 		"""
@@ -83,12 +84,22 @@ class PDFProcessor:
 				pdf_path,
 				dpi=self.dpi,
 				fmt='jpeg',
-				poppler_path=poppler_path
+				poppler_path=poppler_path,
+				userpw=userpw,
+				ownerpw=ownerpw
 				)
 			logger.info(f"[PDF→Images] Successfully converted: {len(images)} pages")
 			for i, img in enumerate(images):
 				logger.debug(f"[PDF→Images] Page {i+1}: size={img.size}, mode={img.mode}")
 			return images
+		except PDFPageCountError as e:
+			error_msg = str(e)
+			if "Incorrect password" in error_msg:
+				logger.warning(f"[PDF→Images] Password required for {pdf_path}")
+				raise ValueError("Plik PDF jest zabezpieczony hasłem. Usuń zabezpieczenie i spróbuj ponownie.")
+			else:
+				logger.error(f"[PDF→Images] PDFPageCountError: {error_msg}")
+				raise Exception(f"Błąd odczytu PDF (uszkodzony plik?): {error_msg}")
 		except Exception as e:
 			logger.error(f"[PDF→Images] Conversion failed: {str(e)}")
 			logger.error(f"[PDF→Images] Traceback: {traceback.format_exc()}")

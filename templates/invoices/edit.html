@@ -2,13 +2,32 @@
 
 {% block title %}Edytuj fakturę - {{ app_name }}{% endblock %}
 
-{% block page_title %}Edytuj fakturę{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <a href="{{ url_for('main.invoices_list') }}" class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">list_alt</span>
+        <span>Lista faktur</span>
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">edit</span>
+        <span>Edytuj fakturę</span>
+    </span>
+</li>
+{% endblock %}
 
 {% block page_actions %}
-    <button onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
-        <span class="material-icons text-sm mr-2">arrow_back</span>
-        Powrót
-    </button>
+    <div class="flex items-center gap-3">
+        <button type="button" onclick="submitEditForm()" class="btn-primary">
+            <span class="material-icons text-sm mr-2">save</span>
+            Zapisz zmiany
+        </button>
+        <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
+            <span class="material-icons text-sm mr-2">close</span>
+            Anuluj
+        </button>
+    </div>
 {% endblock %}
 
 {% block content %}
@@ -303,6 +322,16 @@ function setupForm() {
 
         await submitInvoiceUpdate(data, false);
     });
+}
+
+/**
+ * Submit edit form (called from sticky action buttons)
+ */
+function submitEditForm() {
+    const form = document.getElementById('invoice-form');
+    if (form) {
+        form.requestSubmit(); // Triggers form validation and submit event
+    }
 }
 
 /**

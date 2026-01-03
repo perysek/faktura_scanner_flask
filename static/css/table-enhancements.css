@@ -154,11 +154,11 @@ tbody td {
     position: relative;
 }
 
-/* Invoices list page has stats cards above table - adjust height accordingly */
+/* Invoices list page - no stats cards, more space for table */
 .invoices-page .table-wrapper {
-    max-height: calc(100vh - 300px);
-    /* Account for header, stats cards, and reduced margins/padding */
-    min-height: 300px;
+    max-height: calc(100vh - 220px);
+    /* Account for header and reduced margins/padding (no stats cards) */
+    min-height: 400px;
     /* Minimum height to prevent too small table */
 }
 
@@ -222,6 +222,63 @@ th.no-sort:hover {
         padding: 6px 10px;
         font-size: 13px;
     }
+
+    /* Hide low-priority columns on tablet */
+    #invoicesTable th:nth-child(3),
+    #invoicesTable td:nth-child(3),
+    /* NIP */
+    #invoicesTable th:nth-child(8),
+    #invoicesTable td:nth-child(8) {
+        /* OCR */
+        display: none;
+    }
+
+    /* Adjust remaining column widths */
+    #invoicesTable th:nth-child(1),
+    #invoicesTable td:nth-child(1) {
+        width: 20%;
+    }
+
+    #invoicesTable th:nth-child(2),
+    #invoicesTable td:nth-child(2) {
+        width: 25%;
+    }
+
+    /* Stack action buttons vertically on mobile */
+    .table-action-btn {
+        padding: 4px 8px;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Hide more columns on mobile */
+    #invoicesTable th:nth-child(5),
+    #invoicesTable td:nth-child(5) {
+        /* Termin płatności */
+        display: none;
+    }
+
+    /* Compact table styling */
+    th,
+    td {
+        padding: 4px 6px;
+        font-size: 12px;
+    }
+
+    /* Hide search inputs on mobile */
+    .column-search {
+        font-size: 11px;
+        padding: 4px 6px;
+    }
+
+    /* Smaller action buttons */
+    .table-action-btn {
+        padding: 3px 6px;
+    }
+
+    .table-action-btn .material-icons {
+        font-size: 14px;
+    }
 }
 
 @media (max-height: 700px) {
@@ -253,8 +310,8 @@ th.no-sort:hover {
 #invoicesTable th:nth-child(1),
 /* Nr faktury */
 #invoicesTable td:nth-child(1) {
-    width: 19%;
-    min-width: 120px;
+    width: 15%;
+    min-width: 110px;
     white-space: normal !important;
     word-wrap: break-word;
 }
@@ -262,8 +319,8 @@ th.no-sort:hover {
 #invoicesTable th:nth-child(2),
 /* Sprzedawca */
 #invoicesTable td:nth-child(2) {
-    width: 25%;
-    min-width: 150px;
+    width: 20%;
+    min-width: 140px;
     white-space: normal !important;
     word-wrap: break-word;
 }
@@ -271,57 +328,106 @@ th.no-sort:hover {
 #invoicesTable th:nth-child(3),
 /* NIP */
 #invoicesTable td:nth-child(3) {
-    width: 7%;
-    min-width: 90px;
+    width: 10%;
+    min-width: 95px;
 }
 
 #invoicesTable th:nth-child(4),
 /* Data wystawienia */
 #invoicesTable td:nth-child(4) {
     width: 10%;
-    min-width: 95px;
+    min-width: 100px;
 }
 
 #invoicesTable th:nth-child(5),
 /* Termin płatności */
 #invoicesTable td:nth-child(5) {
-    width: 10%;
-    min-width: 95px;
+    width: 12%;
+    min-width: 105px;
 }
-
-
 
 #invoicesTable th:nth-child(6),
 /* Kwota brutto */
 #invoicesTable td:nth-child(6) {
     width: 12%;
-    min-width: 90px;
+    min-width: 100px;
     text-align: right;
 }
 
 #invoicesTable th:nth-child(7),
 /* Status */
 #invoicesTable td:nth-child(7) {
-    width: 8%;
-    min-width: 75px;
+    width: 9%;
+    min-width: 85px;
 }
 
 #invoicesTable th:nth-child(8),
 /* OCR */
 #invoicesTable td:nth-child(8) {
-    width: 5%;
-    min-width: 50px;
+    width: 6%;
+    min-width: 60px;
     text-align: center;
 }
 
 #invoicesTable th:nth-child(9),
 /* Akcje */
 #invoicesTable td:nth-child(9) {
-    width: 8%;
-    min-width: 80px;
+    width: 10%;
+    min-width: 100px;
 }
 
 /* Remove min-width from table for better responsiveness */
 #invoicesTable {
     min-width: auto;
+}
+
+/* Table Action Buttons - Enhanced styling */
+.table-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    gap: 4px;
+    text-decoration: none;
+}
+
+.table-action-btn .material-icons {
+    font-size: 16px;
+}
+
+.table-action-btn-view {
+    color: #4472C4;
+    background-color: transparent;
+    border: 1px solid #4472C4;
+}
+
+.table-action-btn-view:hover {
+    background-color: #4472C4;
+    color: white;
+}
+
+.table-action-btn-edit {
+    color: #4472C4;
+    background-color: transparent;
+    border: 1px solid #4472C4;
+}
+
+.table-action-btn-edit:hover {
+    background-color: #4472C4;
+    color: white;
+}
+
+.table-action-btn-delete {
+    color: #DC3545;
+    background-color: transparent;
+    border: 1px solid #DC3545;
+}
+
+.table-action-btn-delete:hover {
+    background-color: #DC3545;
+    color: white;
 }

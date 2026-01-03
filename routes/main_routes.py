@@ -44,6 +44,12 @@ def history():
     return render_template('history/list.html')
 
 
+@main_bp.route('/dashboard')
+def dashboard():
+    """Dashboard view - statistics and overview"""
+    return render_template('dashboard/index.html')
+
+
 @main_bp.route('/settings/email')
 def email_settings():
     """Email settings view - IMAP configuration"""
