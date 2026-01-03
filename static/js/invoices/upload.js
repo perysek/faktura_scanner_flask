@@ -13,6 +13,7 @@
 let selectedFiles = [];
 let uploadedFiles = []; // Staged files from server
 let processedResults = []; // OCR processing results
+let currentWorkflowStep = 1; // Track current workflow step
 
 // Email import state
 let availableFolders = [];
@@ -29,7 +30,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load any existing staged files
     loadStagedFiles();
+
+    // Initialize workflow step indicator
+    updateWorkflowStep(1);
 });
+
+/**
+ * Update workflow step indicator
+ * @param {number} step - Step number (1, 2, or 3)
+ */
+function updateWorkflowStep(step) {
+    currentWorkflowStep = step;
+
+    // Update all step indicators
+    for (let i = 1; i <= 3; i++) {
+        const stepElement = document.querySelector(`.workflow-step[data-step="${i}"]`);
+        const numberElement = stepElement?.querySelector('.workflow-step-number');
+        const connectorBefore = stepElement?.previousElementSibling;
+
+        if (!stepElement || !numberElement) continue;
+
+        // Remove all state classes
+        stepElement.classList.remove('active', 'completed');
+        numberElement.classList.remove('active', 'completed');
+        if (connectorBefore?.classList.contains('workflow-step-connector')) {
+            connectorBefore.classList.remove('active', 'completed');
+        }
+
+        // Add appropriate class based on current step
+        if (i < step) {
+            // Completed steps
+            stepElement.classList.add('completed');
+            numberElement.classList.add('completed');
+            numberElement.innerHTML = '<span class="material-icons text-sm">check</span>';
+            if (connectorBefore?.classList.contains('workflow-step-connector')) {
+                connectorBefore.classList.add('completed');
+            }
+        } else if (i === step) {
+            // Active step
+            stepElement.classList.add('active');
+            numberElement.classList.add('active');
+            numberElement.textContent = i;
+        } else {
+            // Future steps
+            numberElement.textContent = i;
+        }
+    }
+}
 
 /**
  * Setup file upload functionality
@@ -251,23 +298,40 @@ async function loadStagedFiles() {
  */
 function displayUploadedFiles() {
     const tbody = document.getElementById('uploaded-files-tbody');
+    const emailCols = document.querySelectorAll('.email-col');
 
     if (uploadedFiles.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">Brak przesłanych plików</td></tr>';
         return;
     }
 
+    // Check if any file has email metadata
+    const hasEmailData = uploadedFiles.some(f => f.email_subject || f.email_sender || f.email_folder);
+
+    // Toggle header columns
+    emailCols.forEach(col => {
+        if (hasEmailData) {
+            col.classList.remove('hidden');
+        } else {
+            col.classList.add('hidden');
+        }
+    });
+
     tbody.innerHTML = uploadedFiles.map(file => `
-        <tr>
-            <td class="font-medium">${escapeHtml(file.filename)}</td>
-            <td>${file.email_subject ? escapeHtml(file.email_subject) : '-'}</td>
-            <td>${file.email_sender ? escapeHtml(file.email_sender) : '-'}</td>
-            <td>${file.email_folder ? escapeHtml(file.email_folder) : '-'}</td>
-            <td>${file.email_date ? escapeHtml(file.email_date) : '-'}</td>
-            <td>${formatFileSize(file.file_size)}</td>
-            <td>
+        <tr class="hover:bg-gray-50 transition-colors">
+            <td class="py-3 px-4 font-medium text-gray-900 break-all whitespace-normal">
+                ${escapeHtml(file.filename)}
+            </td>
+            ${hasEmailData ? `
+                <td class="py-3 px-2 text-gray-600 break-words whitespace-normal text-xs">${file.email_subject ? escapeHtml(file.email_subject) : '-'}</td>
+                <td class="py-3 px-2 text-gray-600 break-words whitespace-normal text-xs">${file.email_sender ? escapeHtml(file.email_sender) : '-'}</td>
+                <td class="py-3 px-2 text-gray-500 whitespace-nowrap text-xs">${file.email_folder ? escapeHtml(file.email_folder) : '-'}</td>
+                <td class="py-3 px-2 text-gray-500 whitespace-nowrap text-xs">${file.email_date ? escapeHtml(file.email_date) : '-'}</td>
+            ` : ''}
+            <td class="py-3 px-4 text-gray-500 whitespace-nowrap text-xs">${formatFileSize(file.file_size)}</td>
+            <td class="py-3 px-4 text-right">
                 <button onclick="removeStagedFile('${escapeHtml(file.filename)}')" 
-                        class="text-status-error hover:underline text-sm">
+                        class="text-status-error hover:text-red-700 hover:underline text-xs font-medium transition-colors">
                     Usuń
                 </button>
             </td>
@@ -317,7 +381,7 @@ function setupProcessButton() {
 }
 
 /**
- * Process staged documents with OCR (Step 3)
+ * Process staged documents with OCR (Step 3) - Streaming
  */
 async function processDocuments() {
     // Check if there are any files to process
@@ -329,7 +393,13 @@ async function processDocuments() {
 
     const processBtn = document.getElementById('process-documents-btn');
     processBtn.disabled = true;
-    processBtn.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">sync</span>Przetwarzanie...';
+
+    // Show progress modal
+    const progressModal = showProgressModal();
+    updateProgressHeader('Inicjalizacja...', 0, uploadedFiles.length);
+    addProgressNotification('Rozpoczynanie przetwarzania OCR...', 'info');
+
+    processedResults = []; // Reset results
 
     try {
         const response = await fetch('/api/upload/process', {
@@ -341,24 +411,93 @@ async function processDocuments() {
             body: JSON.stringify({})
         });
 
-        const result = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        if (result.success) {
-            processedResults = result.results;
-            Notifications.success(`Przetworzono ${processedResults.length} plików`);
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-            // Hide uploaded files section, show results
-            hideUploadedFilesSection();
-            displayProcessingResults();
-        } else {
-            Notifications.error('Błąd przetwarzania: ' + (result.error || 'Unknown error'));
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop(); // Keep incomplete message
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.substring(6));
+
+                        switch (data.type) {
+                            case 'start':
+                                updateProgressHeader('Przetwarzanie dokumentów', 0, data.total);
+                                break;
+                                
+                            case 'file_start':
+                                updateProgressHeader(`Przetwarzanie ${data.current}/${data.total}`, data.current, data.total);
+                                addProgressNotification(`Rozpoczynanie: ${data.filename}`, 'info');
+                                break;
+
+                            case 'progress':
+                                // We could update a secondary progress bar here if we had one
+                                // For now just log significant steps
+                                if (data.message) {
+                                     // Optional: don't spam notification log with every % update
+                                     // only major steps or errors
+                                     // addProgressNotification(`${data.filename}: ${data.message}`, 'info');
+                                     
+                                     // Update the progress bar fill more smoothly based on percent if provided
+                                     // (This requires updateProgressHeader to accept percent, or we manipulate DOM directly)
+                                }
+                                break;
+
+                            case 'file_complete':
+                                if (data.result.success) {
+                                    addProgressNotification(`✓ Zakończono: ${data.result.filename}`, 'success');
+                                    processedResults.push(data.result);
+                                } else {
+                                    addProgressNotification(`✗ Błąd: ${data.result.filename} - ${data.result.error}`, 'error');
+                                    // Still push to results so we see the error state in list
+                                    processedResults.push(data.result); 
+                                }
+                                break;
+                                
+                            case 'complete':
+                                addProgressNotification('Przetwarzanie zakończone!', 'success');
+                                break;
+                                
+                            case 'error':
+                                addProgressNotification(`Błąd serwera: ${data.message}`, 'error');
+                                break;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing SSE:', e);
+                    }
+                }
+            }
         }
+
+        // Close modal after delay
+        setTimeout(() => {
+            Modals.close(progressModal);
+            
+            // Show results
+            if (processedResults.length > 0) {
+                Notifications.success(`Przetworzono ${processedResults.length} plików`);
+                hideUploadedFilesSection();
+                displayProcessingResults();
+            } else {
+                 Notifications.warning('Nie udało się przetworzyć żadnych plików');
+            }
+        }, 1000);
+
     } catch (error) {
         console.error('Processing error:', error);
+        addProgressNotification(`Błąd komunikacji: ${error.message}`, 'error');
+        setTimeout(() => Modals.close(progressModal), 2000);
         Notifications.error('Błąd przetwarzania: ' + error.message);
     } finally {
         processBtn.disabled = false;
-        processBtn.innerHTML = '<span class="material-icons text-sm mr-2">auto_fix_high</span>Przetwórz dokumenty';
     }
 }
 
@@ -366,6 +505,8 @@ async function processDocuments() {
  * Display processing results (Step 4)
  */
 function displayProcessingResults() {
+    updateWorkflowStep(3); // Move to step 3: Review OCR results
+
     const section = document.getElementById('results-section');
     const tbody = document.getElementById('results-tbody');
     const summary = document.getElementById('results-summary');
@@ -389,36 +530,45 @@ function displayProcessingResults() {
         const statusBadge = `badge-${status}`;
 
         return `
-            <tr data-result-index="${index}">
-                <td class="font-medium">${escapeHtml(result.filename)}</td>
-                <td><span class="badge ${statusBadge}">${statusText}</span></td>
-                <td>${result.extracted_data?.invoice_number ? escapeHtml(result.extracted_data.invoice_number) : '-'}</td>
-                <td>${result.extracted_data?.seller_name ? escapeHtml(result.extracted_data.seller_name) : '-'}</td>
-                <td>${result.extracted_data?.total_amount ? formatCurrency(result.extracted_data.total_amount, result.extracted_data.currency) : '-'}</td>
-                <td>
-                    ${result.is_duplicate ? '<span class="badge badge-warning">Tak</span>' : '<span class="badge badge-success">Nie</span>'}
+            <tr data-result-index="${index}" class="hover:bg-gray-50 transition-colors group">
+                <td class="py-3 px-2 font-medium text-gray-900 break-all whitespace-normal text-xs">
+                    ${escapeHtml(result.filename)}
                 </td>
-                <td>
+                <td class="py-3 px-2">
+                    <span class="badge ${statusBadge} text-[10px] px-1.5 py-0.5">${statusText}</span>
+                </td>
+                <td class="py-3 px-2 text-gray-600 break-all whitespace-normal text-xs">
+                    ${result.extracted_data?.invoice_number ? escapeHtml(result.extracted_data.invoice_number) : '-'}
+                </td>
+                <td class="py-3 px-2 text-gray-600 break-words whitespace-normal text-xs">
+                    ${result.extracted_data?.seller_name ? escapeHtml(result.extracted_data.seller_name) : '-'}
+                </td>
+                <td class="py-3 px-2 text-gray-900 font-medium whitespace-nowrap text-xs">
+                    ${result.extracted_data?.total_amount ? formatCurrency(result.extracted_data.total_amount, result.extracted_data.currency) : '-'}
+                </td>
+                <td class="py-3 px-2">
+                    ${result.is_duplicate ? '<span class="badge badge-warning text-[10px]">Tak</span>' : '<span class="badge badge-success text-[10px]">Nie</span>'}
+                </td>
+                <td class="py-3 px-2 text-xs">
                     ${result.validation_errors && result.validation_errors.length > 0
-                ? `<div class="text-status-error text-xs">${result.validation_errors.join('<br>')}</div>`
+                ? `<div class="text-status-error mb-1 break-words">${result.validation_errors.join('<br>')}</div>`
                 : ''}
                     ${result.validation_warnings && result.validation_warnings.length > 0
-                ? `<div class="text-status-warning text-xs">${result.validation_warnings.join('<br>')}</div>`
+                ? `<div class="text-status-warning break-words">${result.validation_warnings.join('<br>')}</div>`
                 : ''}
                     ${(!result.validation_errors || result.validation_errors.length === 0) &&
                 (!result.validation_warnings || result.validation_warnings.length === 0)
-                ? '-' : ''}
+                ? '<span class="text-gray-400">-</span>' : ''}
                 </td>
-                <td>
+                <td class="py-3 px-2 text-center">
                     <button onclick="viewPdf('${escapeHtml(result.filename)}')" 
-                            class="text-primary hover:underline text-sm flex items-center gap-1">
-                        <span class="material-icons text-sm">visibility</span>
-                        Podgląd
+                            class="text-primary hover:text-primary-700 hover:bg-primary-50 p-1.5 rounded transition-colors" title="Podgląd PDF">
+                        <span class="material-icons text-lg">visibility</span>
                     </button>
                 </td>
-                <td>
+                <td class="py-3 px-2 text-center">
                     <input type="checkbox" 
-                           class="form-checkbox h-4 w-4 text-primary add-to-list-checkbox" 
+                           class="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary add-to-list-checkbox cursor-pointer" 
                            data-result-index="${index}"
                            ${canAdd ? 'checked' : ''}>
                 </td>
@@ -483,20 +633,68 @@ async function saveAndFinish() {
 
         const result = await response.json();
 
-        if (result.success) {
-            Notifications.success(`Zapisano ${result.count} faktur!`);
+        // Handle partial or full success
+        if (result.saved_invoices && result.saved_invoices.length > 0) {
+            const savedCount = result.saved_invoices.length;
+            Notifications.success(`Zapisano ${savedCount} faktur!`);
+            
+            // Mark saved rows in UI
+            result.saved_invoices.forEach(saved => {
+                // Find row by filename
+                const rowIndex = processedResults.findIndex(r => r.filename === saved.filename);
+                if (rowIndex !== -1) {
+                    const row = document.querySelector(`tr[data-result-index="${rowIndex}"]`);
+                    const checkbox = row?.querySelector('.add-to-list-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        checkbox.disabled = true;
+                    }
+                    if (row) {
+                        row.classList.add('opacity-50', 'bg-green-50');
+                        row.querySelector('td:nth-child(2)').innerHTML = '<span class="badge badge-success">Zapisano</span>';
+                    }
+                }
+            });
+        }
 
-            // Reset everything and redirect to list
+        if (result.failed_invoices && result.failed_invoices.length > 0) {
+            Notifications.error(`Nie udało się zapisać ${result.failed_invoices.length} faktur.`);
+            
+            // Highlight failed rows
+            result.failed_invoices.forEach(failed => {
+                const rowIndex = processedResults.findIndex(r => r.filename === failed.filename);
+                if (rowIndex !== -1) {
+                    const row = document.querySelector(`tr[data-result-index="${rowIndex}"]`);
+                    if (row) {
+                        row.classList.add('bg-red-50');
+                        // Add error tooltip or message
+                        const statusCell = row.querySelector('td:nth-child(2)');
+                        statusCell.innerHTML = `<span class="badge badge-error" title="${escapeHtml(failed.error)}">Błąd</span>`;
+                        
+                        // Show error in "Uwagi" column
+                        const notesCell = row.querySelector('td:nth-child(7)'); // 7th column is "Błędy walidacji" / Uwagi
+                        if (notesCell) {
+                            notesCell.innerHTML = `<div class="text-status-error text-xs font-bold">${escapeHtml(failed.error)}</div>` + notesCell.innerHTML;
+                        }
+                    }
+                }
+            });
+        }
+
+        if (result.success) {
+            // Full success - redirect
             setTimeout(() => {
                 window.location.href = '/invoices';
             }, 1500);
         } else {
-            Notifications.error('Błąd zapisu: ' + (result.error || 'Unknown error'));
+            // Partial success or failure - stay on page
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span class="material-icons text-sm mr-2">save</span>Zapisz pozostałe';
         }
+
     } catch (error) {
         console.error('Save error:', error);
         Notifications.error('Błąd zapisu: ' + error.message);
-    } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = '<span class="material-icons text-sm mr-2">save</span>Zapisz i zakończ';
     }
@@ -507,10 +705,12 @@ async function saveAndFinish() {
  */
 function showUploadedFilesSection() {
     document.getElementById('uploaded-files-section').classList.remove('hidden');
+    updateWorkflowStep(2); // Move to step 2: Review files
 }
 
 function hideUploadedFilesSection() {
     document.getElementById('uploaded-files-section').classList.add('hidden');
+    updateWorkflowStep(1); // Return to step 1 if files are cleared
 }
 
 function showUploadControls() {
@@ -522,10 +722,48 @@ function hideUploadControls() {
 }
 
 /**
- * Clear all staged files and return to upload view
+ * Clear all staged files with confirmation dialog
  */
 async function clearAllStagedFiles() {
+    const fileCount = uploadedFiles.length;
 
+    if (fileCount === 0) {
+        return;
+    }
+
+    // Show confirmation modal
+    Modals.show({
+        title: 'Usuń wszystkie pliki',
+        content: `
+            <div class="text-center py-4">
+                <span class="material-icons text-status-warning text-5xl mb-4">warning</span>
+                <p class="text-gray-700 mb-2">Czy na pewno chcesz usunąć <strong>${fileCount}</strong> plik${fileCount === 1 ? '' : fileCount < 5 ? 'i' : 'ów'}?</p>
+                <p class="text-sm text-gray-500">Tej operacji nie można cofnąć.</p>
+            </div>
+        `,
+        size: 'small',
+        buttons: [
+            {
+                label: 'Anuluj',
+                class: 'btn-secondary',
+                onClick: () => Modals.close()
+            },
+            {
+                label: 'Usuń wszystkie',
+                class: 'btn-danger',
+                onClick: async () => {
+                    Modals.close();
+                    await performClearAllStagedFiles();
+                }
+            }
+        ]
+    });
+}
+
+/**
+ * Actually clear all staged files (called after confirmation)
+ */
+async function performClearAllStagedFiles() {
     try {
         const response = await fetch('/api/upload/staged/clear', {
             method: 'DELETE',

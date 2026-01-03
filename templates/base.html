@@ -26,22 +26,34 @@
     <div class="flex flex-col h-screen overflow-hidden">
         <!-- Top Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="px-8 py-4">
+            <div class="px-4 md:px-8 py-4">
                 <div class="flex items-center justify-between">
                     <!-- Left: Logo, App Name & Navigation -->
                     <div class="flex items-center gap-4">
+                        <!-- Mobile Menu Button -->
+                        <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Menu">
+                            <span class="material-icons text-gray-700">menu</span>
+                        </button>
+
                         <!-- Logo & App Info -->
                         <div class="flex items-center gap-3">
-                            <span class="material-icons text-primary text-4xl">receipt_long</span>
-                            <div>
-                                <h1 class="text-xl font-bold text-gray-900">{{ app_name }}</h1>
+                            <span class="material-icons text-primary text-3xl md:text-4xl">receipt_long</span>
+                            <div class="hidden sm:block">
+                                <h1 class="text-lg md:text-xl font-bold text-gray-900">{{ app_name }}</h1>
                                 <p class="text-xs text-gray-500">v{{ version }}</p>
                             </div>
                         </div>
 
-                        <!-- Horizontal Navigation -->
-                        <nav>
+                        <!-- Horizontal Navigation (Desktop) -->
+                        <nav id="desktop-nav" class="hidden lg:block">
                             <ul class="flex items-center gap-1">
+                                <li>
+                                    <a href="{{ url_for('main.dashboard') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">dashboard</span>
+                                        <span>Pulpit</span>
+                                    </a>
+                                </li>
                                 <li>
                                     <a href="{{ url_for('main.invoices_list') }}"
                                        class="nav-link-horizontal {% if request.endpoint == 'main.invoices_list' %}active{% endif %}">
@@ -53,14 +65,15 @@
                                     <a href="{{ url_for('main.create_invoice') }}"
                                        class="nav-link-horizontal {% if request.endpoint == 'main.create_invoice' %}active{% endif %}">
                                         <span class="material-icons text-lg mr-2">add_circle</span>
-                                        <span>Wprowadź fakturę</span>
+                                        <span class="hidden xl:inline">Wprowadź fakturę</span>
+                                        <span class="xl:hidden">Nowa</span>
                                     </a>
                                 </li>
                                 <li>
                                     <a href="{{ url_for('main.upload') }}"
                                        class="nav-link-horizontal {% if request.endpoint == 'main.upload' %}active{% endif %}">
                                         <span class="material-icons text-lg mr-2">upload_file</span>
-                                        <span>Import PDF</span>
+                                        <span>Import</span>
                                     </a>
                                 </li>
                                 <li>
@@ -74,7 +87,7 @@
                                     <a href="{{ url_for('main.email_settings') }}"
                                        class="nav-link-horizontal {% if request.endpoint == 'main.email_settings' %}active{% endif %}">
                                         <span class="material-icons text-lg mr-2">email</span>
-                                        <span>Ustawienia e-mail</span>
+                                        <span class="hidden xl:inline">Ustawienia</span>
                                     </a>
                                 </li>
                             </ul>
@@ -82,15 +95,96 @@
                     </div>
 
                     <!-- Right: Page Actions -->
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 md:gap-4">
                         {% block page_actions %}{% endblock %}
                     </div>
                 </div>
             </div>
         </header>
 
+        <!-- Mobile Navigation Overlay -->
+        <div id="mobile-nav-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="closeMobileNav()"></div>
+
+        <!-- Mobile Navigation Sidebar -->
+        <nav id="mobile-nav" class="fixed top-0 left-0 h-full w-72 bg-white shadow-xl z-50 transform -translate-x-full transition-transform duration-300 lg:hidden">
+            <div class="flex items-center justify-between p-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <span class="material-icons text-primary text-3xl">receipt_long</span>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">{{ app_name }}</h2>
+                        <p class="text-xs text-gray-500">v{{ version }}</p>
+                    </div>
+                </div>
+                <button onclick="closeMobileNav()" class="p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Zamknij">
+                    <span class="material-icons text-gray-700">close</span>
+                </button>
+            </div>
+            <ul class="py-2">
+                <li>
+                    <a href="{{ url_for('main.dashboard') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">dashboard</span>
+                        <span>Pulpit</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.invoices_list') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.invoices_list' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">list_alt</span>
+                        <span>Lista faktur</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.create_invoice') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.create_invoice' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">add_circle</span>
+                        <span>Wprowadź fakturę</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.upload') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.upload' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">upload_file</span>
+                        <span>Import PDF</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.history') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.history' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">history</span>
+                        <span>Historia</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.email_settings') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.email_settings' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">email</span>
+                        <span>Ustawienia e-mail</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500 text-center">Shift+? dla skrótów klawiszowych</p>
+            </div>
+        </nav>
+
         <!-- Main Content Area -->
         <main class="flex-1 overflow-y-auto">
+            <!-- Breadcrumb Navigation -->
+            <div class="breadcrumb-container">
+                <nav class="breadcrumb" aria-label="Breadcrumb">
+                    <ol class="breadcrumb-list">
+                        <li class="breadcrumb-item">
+                            <a href="{{ url_for('main.invoices_list') }}" class="breadcrumb-link">
+                                <span class="material-icons breadcrumb-icon">home</span>
+                                <span>Strona główna</span>
+                            </a>
+                        </li>
+                        {% block breadcrumb %}{% endblock %}
+                    </ol>
+                </nav>
+            </div>
+
             <!-- Page Content -->
             <div class="p-4">
                 {% block content %}{% endblock %}
@@ -110,6 +204,35 @@
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modals.js') }}"></script>
     <script src="{{ url_for('static', filename='js/table-utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
+
+    <!-- Mobile Navigation -->
+    <script>
+        // Mobile navigation toggle functions
+        function openMobileNav() {
+            const nav = document.getElementById('mobile-nav');
+            const overlay = document.getElementById('mobile-nav-overlay');
+            nav.classList.add('mobile-nav-open');
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileNav() {
+            const nav = document.getElementById('mobile-nav');
+            const overlay = document.getElementById('mobile-nav-overlay');
+            nav.classList.remove('mobile-nav-open');
+            overlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Initialize mobile menu button
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            if (menuBtn) {
+                menuBtn.addEventListener('click', openMobileNav);
+            }
+        });
+    </script>
 
     {% block extra_scripts %}{% endblock %}
 </body>

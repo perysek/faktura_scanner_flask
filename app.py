@@ -3,9 +3,8 @@ FakturaScanner - Flask Web Application
 Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
 import logging
-from flask import Flask, render_template, jsonify, request, send_file, send_from_directory
+from flask import Flask, render_template
 import os
-from pathlib import Path
 
 # Configure logging for debugging
 logging.basicConfig(

@@ -80,4 +80,18 @@ def initialize_database():
 	except Exception as e:
 		print(f"Ostrzezenie - Migracja status: {e}")
 
+	# Migracja: dodaj action column do audit_log jeśli nie istnieje
+	try:
+		cursor = conn.cursor()
+		cursor.execute("PRAGMA table_info(audit_log)")
+		columns = [row[1] for row in cursor.fetchall()]
+
+		if 'action' not in columns:
+			print("Dodawanie kolumny action do tabeli audit_log...")
+			cursor.execute("ALTER TABLE audit_log ADD COLUMN action TEXT DEFAULT 'UPDATE'")
+			conn.commit()
+			print("Kolumna action dodana")
+	except Exception as e:
+		print(f"Ostrzezenie - Migracja action: {e}")
+
 	print("Baza danych zainicjalizowana")

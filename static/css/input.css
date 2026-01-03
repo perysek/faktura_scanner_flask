@@ -2,22 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * FakturaScanner Design System
+ *
+ * SPACING SCALE (use these for consistent layouts):
+ * - gap-xs (4px)  : Icon-text gaps, inline elements
+ * - gap-sm (8px)  : Button groups, small element gaps
+ * - gap-md (16px) : Form fields, card content gaps
+ * - gap-lg (24px) : Card margins, section gaps
+ * - gap-xl (32px) : Page section margins
+ * - gap-xxl (48px): Major section separators
+ *
+ * TYPOGRAPHY (use text-* classes):
+ * - text-display    : Hero/landing page titles (36px bold)
+ * - text-heading    : Page titles (24px semibold)
+ * - text-subheading : Section titles (20px semibold)
+ * - text-card-title : Card headers (18px semibold)
+ * - text-body-lg    : Emphasized body (16px)
+ * - text-body       : Default body text (14px)
+ * - text-caption    : Helper/meta text (12px)
+ *
+ * COLORS (semantic usage):
+ * - text-text-primary   : Main content text
+ * - text-text-secondary : Supporting text, labels
+ * - text-text-tertiary  : Disabled, placeholders
+ * - border-border-light : Subtle dividers
+ * - border-border       : Standard borders
+ * - bg-surface-elevated : Hover states, dropdowns
+ */
+
 /* Custom base styles */
 @layer base {
   body {
-    @apply bg-surface-secondary font-sans text-gray-900;
+    @apply bg-surface-secondary font-sans text-text-primary;
   }
 
   h1 {
-    @apply text-3xl font-bold text-gray-900;
+    @apply text-heading text-text-primary;
   }
 
   h2 {
-    @apply text-2xl font-semibold text-gray-800;
+    @apply text-subheading text-text-primary;
   }
 
   h3 {
-    @apply text-xl font-semibold text-gray-800;
+    @apply text-card-title text-text-primary;
+  }
+
+  /* Default paragraph styling */
+  p {
+    @apply text-body text-text-primary;
+  }
+
+  /* Small/helper text */
+  small {
+    @apply text-caption text-text-secondary;
+  }
+
+  /* Links */
+  a {
+    @apply text-primary hover:text-primary-600 transition-colors;
+  }
+
+  /* Focus visible for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-primary outline-offset-2;
   }
 }
 
@@ -146,13 +195,197 @@
 
   /* Horizontal Navigation */
   .nav-link-horizontal {
-    @apply flex items-center px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg font-medium;
+    @apply flex items-center px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200 rounded-lg font-medium text-sm;
   }
 
   .nav-link-horizontal.active {
     @apply bg-primary text-white;
   }
 
+  /* Mobile Navigation */
+  .mobile-nav-link {
+    @apply flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary transition-colors duration-200;
+  }
+
+  .mobile-nav-link.active {
+    @apply bg-primary-50 text-primary border-l-4 border-primary;
+  }
+
+  .mobile-nav-open {
+    @apply translate-x-0;
+  }
+
+  /* Breadcrumb Navigation */
+  .breadcrumb-container {
+    @apply bg-white border-b border-gray-200 px-8 py-3;
+  }
+
+  .breadcrumb-list {
+    @apply flex items-center gap-2 text-sm;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .breadcrumb-item {
+    @apply flex items-center gap-2;
+  }
+
+  .breadcrumb-item:not(:last-child)::after {
+    content: '›';
+    @apply text-gray-400 text-lg;
+  }
+
+  .breadcrumb-link {
+    @apply flex items-center gap-1 text-gray-600 hover:text-primary transition-colors;
+    text-decoration: none;
+  }
+
+  .breadcrumb-link:hover {
+    @apply underline;
+  }
+
+  .breadcrumb-item:last-child .breadcrumb-link {
+    @apply text-gray-900 font-medium pointer-events-none;
+  }
+
+  .breadcrumb-icon {
+    @apply text-base;
+  }
+
+  /* Workflow Steps Indicator */
+  .workflow-steps {
+    @apply bg-white rounded-lg shadow-md p-6 flex items-center justify-center gap-4;
+  }
+
+  .workflow-step {
+    @apply flex flex-col items-center gap-2 min-w-[140px];
+  }
+
+  .workflow-step-number {
+    @apply w-10 h-10 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center font-semibold text-gray-400 transition-all duration-300;
+  }
+
+  .workflow-step-number.active {
+    @apply bg-primary border-primary text-white;
+  }
+
+  .workflow-step-number.completed {
+    @apply bg-status-success border-status-success text-white;
+  }
+
+  .workflow-step-label {
+    @apply flex flex-col items-center text-center;
+  }
+
+  .workflow-step-title {
+    @apply text-sm font-medium text-gray-700;
+  }
+
+  .workflow-step.active .workflow-step-title {
+    @apply text-primary font-semibold;
+  }
+
+  .workflow-step.completed .workflow-step-title {
+    @apply text-status-success;
+  }
+
+  .workflow-step-subtitle {
+    @apply text-xs text-gray-500;
+  }
+
+  .workflow-step-connector {
+    @apply flex-1 h-0.5 bg-gray-300 min-w-[40px] max-w-[80px];
+  }
+
+  .workflow-step-connector.active {
+    @apply bg-primary;
+  }
+
+  .workflow-step-connector.completed {
+    @apply bg-status-success;
+  }
+
+  /* Responsive workflow steps */
+  @media (max-width: 640px) {
+    .workflow-steps {
+      @apply flex-col gap-2;
+    }
+
+    .workflow-step {
+      @apply flex-row gap-3 w-full;
+    }
+
+    .workflow-step-label {
+      @apply items-start text-left;
+    }
+
+    .workflow-step-connector {
+      @apply hidden;
+    }
+  }
+
+  /* Empty States */
+  .empty-state {
+    @apply text-center py-16 px-4;
+  }
+
+  .empty-state-icon {
+    @apply text-gray-300 mb-4;
+    font-size: 96px;
+  }
+
+  .empty-state-title {
+    @apply text-xl font-semibold text-gray-900 mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-gray-600 mb-6 max-w-md mx-auto;
+  }
+
+  .empty-state-actions {
+    @apply flex flex-wrap gap-3 justify-center;
+  }
+
+  /* Small empty state (for dashboard panels) */
+  .empty-state-small {
+    @apply text-center py-8 px-4;
+  }
+
+  /* Skeleton Loaders */
+  .skeleton {
+    @apply bg-gray-200 rounded animate-pulse;
+  }
+
+  .skeleton-text {
+    @apply h-4;
+  }
+
+  .skeleton-text-short {
+    @apply h-3;
+  }
+
+  .skeleton-badge {
+    @apply h-5 rounded-full;
+  }
+
+  .skeleton-row {
+    @apply animate-pulse;
+  }
+
+  /* Quick Action Buttons */
+  .quick-action-btn {
+    @apply flex flex-col items-center justify-center p-4 rounded-lg border-2 border-gray-200 hover:border-primary hover:bg-primary-50 transition-all duration-200 text-gray-700 hover:text-primary;
+  }
+
+  .quick-action-btn:hover .material-icons {
+    @apply transform scale-110 transition-transform duration-200;
+  }
+
+  /* Stat Card Animation */
+  .stat-card {
+    @apply transition-transform duration-200 hover:scale-[1.02] hover:shadow-lg;
+  }
 
   /* Modal */
   .modal-overlay {

@@ -8,7 +8,6 @@ let currentSearch = '';
 // Load invoices on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadInvoices();
-    loadStatistics();
     setupEventListeners();
 });
 
@@ -155,24 +154,24 @@ function renderInvoicesTable() {
                 const ext = invoice.pdf_path.split('.').pop().toLowerCase();
                 const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'].includes(ext);
                 const icon = isImage ? 'image' : 'picture_as_pdf';
-                const title = isImage ? 'Zobacz obraz' : 'Zobacz PDF';
+                const title = isImage ? 'Obraz' : 'PDF';
                 return `
                             <button onclick="viewPDF(${invoice.id})"
-                                    class="text-primary hover:text-primary-700 transition-colors"
+                                    class="table-action-btn table-action-btn-view"
                                     title="${title}">
-                                <span class="material-icons text-sm">${icon}</span>
+                                <span class="material-icons">${icon}</span>
                             </button>
                         `;
             })() : ''}
                         <a href="/invoice/${invoice.id}/edit"
-                           class="text-primary hover:text-primary-600 transition-colors"
+                           class="table-action-btn table-action-btn-edit"
                            title="Edytuj">
-                            <span class="material-icons text-sm">edit</span>
+                            <span class="material-icons">edit</span>
                         </a>
                         <button onclick="deleteInvoice(${invoice.id})"
-                                class="text-status-error hover:text-red-700 transition-colors"
+                                class="table-action-btn table-action-btn-delete"
                                 title="Usuń">
-                            <span class="material-icons text-sm">delete</span>
+                            <span class="material-icons">delete</span>
                         </button>
                     </div>
                 </td>

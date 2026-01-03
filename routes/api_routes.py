@@ -241,6 +241,15 @@ def create_invoice_manual():
         # Save invoice to database
         invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
         
+        # Log creation
+        current_app.audit_repo.log_change(
+            invoice_id=invoice_id,
+            field_name='status',
+            old_value='',
+            new_value=invoice.status,
+            action='CREATE'
+        )
+        
         if seller_id:
             # Increment invoice count for seller
             current_app.seller_repo.increment_invoice_count(seller_id)
@@ -292,10 +301,14 @@ def update_invoice(invoice_id: int):
         old_seller_nip = invoice.seller_nip
         old_seller_name = invoice.seller_name
         seller_fields_changed = False
+        changes_to_log = []
 
         # Update invoice fields
         for key, value in data.items():
             if hasattr(invoice, key):
+                # Capture old value
+                old_val = getattr(invoice, key)
+
                 # Convert date strings to date objects
                 if key in ('invoice_date', 'payment_due_date') and isinstance(value, str):
                     value = parse_date_string(value)
@@ -312,6 +325,14 @@ def update_invoice(invoice_id: int):
                 # Track seller field changes (NIP or name)
                 if key in ('seller_nip', 'seller_name'):
                     seller_fields_changed = True
+                
+                # Record change if value is different
+                if old_val != value:
+                    changes_to_log.append({
+                        'field': key,
+                        'old': str(old_val) if old_val is not None else '',
+                        'new': str(value) if value is not None else ''
+                    })
                 
                 setattr(invoice, key, value)
 
@@ -412,14 +433,15 @@ def update_invoice(invoice_id: int):
         else:
             current_app.invoice_repo.update(invoice_id, invoice)
         
-        # TODO: Refactor audit logging to log individual field changes
-        # current_app.audit_repo.log_change(
-        #     invoice_id=invoice_id,
-        #     action='UPDATE',
-        #     changed_fields=list(data.keys()),
-        #     old_values={},
-        #     new_values=data
-        # )
+        # Log changes
+        for change in changes_to_log:
+            current_app.audit_repo.log_change(
+                invoice_id=invoice_id,
+                field_name=change['field'],
+                old_value=change['old'],
+                new_value=change['new'],
+                action='UPDATE'
+            )
 
         response_data = {
             'success': True,
@@ -557,14 +579,17 @@ def delete_invoice(invoice_id: int):
 
         current_app.invoice_repo.delete(invoice_id)
         
-        # TODO: Refactor audit logging for DELETE action
-        # The current log_change signature doesn't support action-based logging
+        # Log deletion (using special field 'status' or just generic 'deleted')
+        # FIXME: Logging DELETE action causes IntegrityError because audit_log has 
+        # FOREIGN KEY(invoice_id) ON DELETE CASCADE. The log entry is either rejected
+        # (if logged after) or deleted (if logged before).
+        # To fix this, we need soft delete or removing FK constraint.
         # current_app.audit_repo.log_change(
-        #     invoice_id=invoice_id,
-        #     action='DELETE',
-        #     changed_fields=[],
-        #     old_values=vars(invoice),
-        #     new_values={}
+        #    invoice_id=invoice_id,
+        #    field_name='status',
+        #    old_value='active',
+        #    new_value='deleted',
+        #    action='DELETE'
         # )
 
 
@@ -586,6 +611,95 @@ def get_statistics():
         return jsonify({
             'success': True,
             'statistics': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/dashboard/recent-invoices', methods=['GET'])
+def get_recent_invoices():
+    """Get recent invoices for dashboard"""
+    try:
+        limit = request.args.get('limit', 5, type=int)
+        rows = current_app.invoice_repo.get_recent(limit)
+
+        invoices = [current_app.invoice_repo.row_to_invoice(row) for row in rows]
+        invoices_data = [vars(invoice) for invoice in invoices]
+
+        return jsonify({
+            'success': True,
+            'invoices': invoices_data,
+            'count': len(invoices_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/dashboard/upcoming-payments', methods=['GET'])
+def get_upcoming_payments():
+    """Get upcoming payment deadlines for dashboard"""
+    try:
+        limit = request.args.get('limit', 5, type=int)
+        rows = current_app.invoice_repo.get_upcoming_payments(limit)
+
+        invoices = [current_app.invoice_repo.row_to_invoice(row) for row in rows]
+        invoices_data = [vars(invoice) for invoice in invoices]
+
+        return jsonify({
+            'success': True,
+            'invoices': invoices_data,
+            'count': len(invoices_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/dashboard/overdue-payments', methods=['GET'])
+def get_overdue_payments():
+    """Get overdue payments for dashboard"""
+    try:
+        limit = request.args.get('limit', 5, type=int)
+        rows = current_app.invoice_repo.get_overdue_payments(limit)
+
+        invoices = [current_app.invoice_repo.row_to_invoice(row) for row in rows]
+        invoices_data = [vars(invoice) for invoice in invoices]
+
+        return jsonify({
+            'success': True,
+            'invoices': invoices_data,
+            'count': len(invoices_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/dashboard/top-sellers', methods=['GET'])
+def get_top_sellers():
+    """Get top sellers by invoice count for dashboard"""
+    try:
+        limit = request.args.get('limit', 5, type=int)
+        rows = current_app.seller_repo.get_top_sellers(limit)
+
+        sellers_data = []
+        for row in rows:
+            # Use calculated count if available, otherwise fallback to stored count
+            inv_count = row['actual_invoice_count'] if 'actual_invoice_count' in row.keys() else 0
+            if inv_count == 0 and 'invoice_count' in row.keys():
+                inv_count = row['invoice_count']
+                
+            seller_dict = {
+                'id': row['id'],
+                'seller_nip': row['seller_nip'],
+                'seller_name': row['seller_name'],
+                'invoice_count': inv_count,
+                'total_amount': row['total_amount'] if 'total_amount' in row.keys() else 0.0
+            }
+            sellers_data.append(seller_dict)
+
+        return jsonify({
+            'success': True,
+            'sellers': sellers_data,
+            'count': len(sellers_data)
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1026,17 +1140,47 @@ def get_history():
     try:
         invoice_id = request.args.get('invoice_id', type=int)
 
-        if invoice_id:
-            entries = current_app.audit_repo.get_by_invoice_id(invoice_id)
-        else:
-            entries = current_app.audit_repo.get_all()
-
-        entries_data = [vars(entry) for entry in entries]
+        entries = current_app.audit_repo.get_all(invoice_id)
 
         return jsonify({
             'success': True,
-            'entries': entries_data,
-            'count': len(entries_data)
+            'entries': entries,
+            'count': len(entries)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/history/details', methods=['POST'])
+def get_history_details():
+    """Get detailed changes for specific audit entries"""
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+        
+        # If passed as string "1,2,3"
+        if isinstance(ids, str):
+            ids = ids.split(',')
+            
+        if not ids:
+             return jsonify({'success': False, 'error': 'No IDs provided'}), 400
+             
+        # Convert to ints
+        ids_int = []
+        for x in ids:
+            try:
+                ids_int.append(int(x))
+            except (ValueError, TypeError):
+                pass
+        
+        if not ids_int:
+             return jsonify({'success': False, 'error': 'No valid IDs provided'}), 400
+
+        details = current_app.audit_repo.get_details_by_ids(ids_int)
+        
+        return jsonify({
+            'success': True,
+            'details': details
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

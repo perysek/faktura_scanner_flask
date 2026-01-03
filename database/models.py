@@ -46,6 +46,7 @@ class AuditEntry:
     field_name: str
     old_value: Optional[str]
     new_value: Optional[str]
+    action: str = "UPDATE"
     changed_at: datetime = field(default_factory=datetime.now)
     id: Optional[int] = None
 

@@ -117,6 +117,26 @@ class SellerRepository(BaseRepository):
         cursor = self._execute(query, (seller_id,))
         return cursor.rowcount > 0
     
+    def get_top_sellers(self, limit: int = 5) -> List[sqlite3.Row]:
+        """
+        Pobierz najczęstszych sprzedawców na podstawie danych z faktur.
+        Liczy wszystkie faktury, nawet te niepowiązane z tabelą sellers.
+        """
+        query = """
+            SELECT 
+                seller_name, 
+                seller_nip, 
+                COUNT(*) as actual_invoice_count, 
+                SUM(amount) as total_amount,
+                MAX(seller_id) as id
+            FROM invoices
+            WHERE seller_name IS NOT NULL AND seller_name != ''
+            GROUP BY seller_name
+            ORDER BY actual_invoice_count DESC, total_amount DESC
+            LIMIT ?
+        """
+        return self._fetch_all(query, (limit,))
+
     def get_all_with_stats(self) -> List[sqlite3.Row]:
         """Pobierz wszystkich sprzedawców wraz z statystykami"""
         query = """

@@ -41,7 +41,12 @@ const API = {
      * GET request
      */
     async get(endpoint, params = {}) {
-        const query = new URLSearchParams(params).toString();
+        // Add cache-busting timestamp
+        const paramsWithCacheBust = {
+            ...params,
+            '_t': new Date().getTime()
+        };
+        const query = new URLSearchParams(paramsWithCacheBust).toString();
         const url = query ? `${endpoint}?${query}` : endpoint;
         return this.request(url, { method: 'GET' });
     },
@@ -139,7 +144,8 @@ const API = {
         getAll: (invoiceId = null) => {
             const params = invoiceId ? { invoice_id: invoiceId } : {};
             return API.get('/history', params);
-        }
+        },
+        getDetails: (ids) => API.post('/history/details', { ids: ids })
     },
 
     // PDF endpoints

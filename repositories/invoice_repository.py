@@ -177,6 +177,39 @@ class InvoiceRepository(BaseRepository):
 		cursor = self._execute(query, (new_seller_id, old_seller_id))
 		return cursor.rowcount
 	
+	def get_recent(self, limit: int = 5) -> List[sqlite3.Row]:
+		"""Pobierz ostatnio dodane faktury"""
+		query = """
+            SELECT * FROM invoices
+            ORDER BY created_at DESC
+            LIMIT ?
+        """
+		return self._fetch_all(query, (limit,))
+
+	def get_upcoming_payments(self, limit: int = 5) -> List[sqlite3.Row]:
+		"""Pobierz faktury z najbliższymi terminami płatności (nieopłacone, tylko przyszłe)"""
+		query = """
+            SELECT * FROM invoices
+            WHERE status = 'Nieopłacona'
+              AND payment_due_date IS NOT NULL
+              AND payment_due_date >= date('now')
+            ORDER BY payment_due_date ASC
+            LIMIT ?
+        """
+		return self._fetch_all(query, (limit,))
+
+	def get_overdue_payments(self, limit: int = 5) -> List[sqlite3.Row]:
+		"""Pobierz przeterminowane faktury (nieopłacone, termin < dzisiaj)"""
+		query = """
+            SELECT * FROM invoices
+            WHERE status = 'Nieopłacona'
+              AND payment_due_date IS NOT NULL
+              AND payment_due_date < date('now')
+            ORDER BY payment_due_date ASC
+            LIMIT ?
+        """
+		return self._fetch_all(query, (limit,))
+
 	def get_statistics(self) -> dict:
 		"""Pobierz statystyki faktur z podziałem na status płatności"""
 		# Podstawowe statystyki
@@ -223,6 +256,7 @@ class InvoiceRepository(BaseRepository):
 		for row in amount_results:
 			currency = row["currency"] or "PLN"
 			payment_status = row["payment_status"]
+			amount = row["total_amount"] or 0.0
 
 			if currency not in stats["by_currency"]:
 				stats["by_currency"][currency] = {
@@ -232,17 +266,25 @@ class InvoiceRepository(BaseRepository):
 					"total": 0.0
 				}
 
-			stats["by_currency"][currency][payment_status] = row["total_amount"] or 0.0
-			stats["by_currency"][currency]["total"] += row["total_amount"] or 0.0
+			# Accumulate properly
+			stats["by_currency"][currency][payment_status] += amount
+			stats["by_currency"][currency]["total"] += amount
 
 		# Oblicz sumy globalne (dla walut PLN - główna waluta)
-		# Możesz dostosować to do wszystkich walut jeśli potrzeba
 		if "PLN" in stats["by_currency"]:
 			pln_data = stats["by_currency"]["PLN"]
 			stats["totals"]["total_amount"] = pln_data["total"]
 			stats["totals"]["total_unpaid"] = pln_data["unpaid"] + pln_data["overdue"]
-			# VAT 23% od całkowitej kwoty
-			stats["totals"]["total_vat"] = pln_data["total"] * 0.23
+			# VAT z kwoty brutto: amount * 23 / 123
+			stats["totals"]["total_vat"] = pln_data["total"] * 23 / 123
+		elif stats["by_currency"]:
+			# Fallback: if no PLN, take the first available currency for totals
+			# This prevents showing 0.00 when there is data
+			first_curr = list(stats["by_currency"].keys())[0]
+			first_data = stats["by_currency"][first_curr]
+			stats["totals"]["total_amount"] = first_data["total"]
+			stats["totals"]["total_unpaid"] = first_data["unpaid"] + first_data["overdue"]
+			stats["totals"]["total_vat"] = first_data["total"] * 23 / 123
 
 		return stats
 	
