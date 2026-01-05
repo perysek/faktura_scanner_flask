@@ -18,4 +18,23 @@ services:
       - ./uploads:/app/uploads
       # Persist Processed PDFs
       - ./pdfs:/app/pdfs
+    # Memory limits to prevent OOM kills (adjust based on VPS RAM)
+    # For 2GB VPS: use mem_limit: 1500m
+    # For 4GB VPS: use mem_limit: 3000m
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+        reservations:
+          memory: 512M
+    # For Docker Compose v2 compatibility (non-swarm mode)
+    mem_limit: 1500m
+    memswap_limit: 2g
     restart: always
+    # Health check to monitor worker status
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/api/invoices/statistics"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
