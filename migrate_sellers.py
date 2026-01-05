@@ -10,15 +10,25 @@ This script:
 6. Updates invoice counts
 7. Validates the migration
 """
+import os
 import sqlite3
-from pathlib import Path
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+
+
+def get_db_path():
+    """Get the database path from environment or default"""
+    env_path = os.environ.get('DB_PATH')
+    if env_path:
+        return Path(env_path)
+    return Path(__file__).parent / "faktury.db"
 
 
 def connect_db():
     """Connect to the database"""
-    db_path = Path(__file__).parent / "faktury.db"
+    db_path = get_db_path()
+    print(f"🔌 Connecting to database at: {db_path}")
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
@@ -27,8 +37,13 @@ def connect_db():
 def backup_database():
     """Create a backup of the database before migration"""
     import shutil
-    db_path = Path(__file__).parent / "faktury.db"
-    backup_path = Path(__file__).parent / f"faktury.db.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    db_path = get_db_path()
+    
+    if not db_path.exists():
+        print(f"⚠️  Database file not found at {db_path}, skipping backup.")
+        return Path("no_backup")
+
+    backup_path = db_path.parent / f"{db_path.name}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
     print(f"📦 Creating backup: {backup_path.name}")
     shutil.copy2(db_path, backup_path)
