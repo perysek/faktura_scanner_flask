@@ -53,4 +53,20 @@ RUN mkdir -p uploads pdfs assets/temp
 EXPOSE 8083
 
 # Run the application using Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8083", "app:create_app()"]
+# --timeout 300: Allow up to 5 minutes for OCR processing (default 30s is too short)
+# --workers 2: Use 2 worker processes (adjust based on VPS memory: 1 worker ~ 300-500MB)
+# --threads 2: Use 2 threads per worker for I/O operations
+# --worker-class gthread: Use threaded workers for better concurrency
+# --graceful-timeout 120: Allow 2 minutes for graceful shutdown
+# --max-requests 100: Restart workers after 100 requests to prevent memory leaks
+# --max-requests-jitter 10: Add randomness to prevent all workers restarting at once
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:8083", \
+     "--timeout", "300", \
+     "--workers", "2", \
+     "--threads", "2", \
+     "--worker-class", "gthread", \
+     "--graceful-timeout", "120", \
+     "--max-requests", "100", \
+     "--max-requests-jitter", "10", \
+     "app:create_app()"]
