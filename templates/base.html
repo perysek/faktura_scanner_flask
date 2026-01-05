@@ -62,6 +62,13 @@
                                     </a>
                                 </li>
                                 <li>
+                                    <a href="{{ url_for('main.sellers_list') }}"
+                                       class="nav-link-horizontal {% if request.endpoint == 'main.sellers_list' or request.endpoint == 'main.create_seller' or request.endpoint == 'main.edit_seller' %}active{% endif %}">
+                                        <span class="material-icons text-lg mr-2">store</span>
+                                        <span>Sprzedawcy</span>
+                                    </a>
+                                </li>
+                                <li>
                                     <a href="{{ url_for('main.create_invoice') }}"
                                        class="nav-link-horizontal {% if request.endpoint == 'main.create_invoice' %}active{% endif %}">
                                         <span class="material-icons text-lg mr-2">add_circle</span>
@@ -132,6 +139,13 @@
                        class="mobile-nav-link {% if request.endpoint == 'main.invoices_list' %}active{% endif %}">
                         <span class="material-icons text-xl mr-3">list_alt</span>
                         <span>Lista faktur</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.sellers_list') }}"
+                       class="mobile-nav-link {% if request.endpoint == 'main.sellers_list' or request.endpoint == 'main.create_seller' or request.endpoint == 'main.edit_seller' %}active{% endif %}">
+                        <span class="material-icons text-xl mr-3">store</span>
+                        <span>Sprzedawcy</span>
                     </a>
                 </li>
                 <li>

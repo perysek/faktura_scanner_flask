@@ -153,5 +153,22 @@ const API = {
         view: (invoiceId) => {
             window.open(`${API.baseUrl}/pdf/${invoiceId}`, '_blank');
         }
+    },
+
+    // Seller endpoints
+    sellers: {
+        getAll: (search = '') => API.get('/sellers', { search }),
+        getById: (id) => API.get(`/sellers/${id}`),
+        create: (data) => API.post('/sellers', data),
+        update: (id, data) => API.put(`/sellers/${id}`, data),
+        delete: (id) => API.delete(`/sellers/${id}`),
+        getInvoices: (id) => API.get(`/sellers/${id}/invoices`),
+        sync: () => API.post('/sellers/sync'),
+        addMissing: (nip, name) => API.post('/sellers/sync/add-missing', { nip, name }),
+        fixDiscrepancy: (action, invoiceId, sellerId) => API.post('/sellers/sync/fix-discrepancy', {
+            action, invoice_id: invoiceId, seller_id: sellerId
+        }),
+        checkDuplicate: (nip, name) => API.post('/sellers/check-duplicate', { nip, name }),
+        bulkUpdate: (id) => API.post(`/sellers/${id}/bulk-update`)
     }
 };

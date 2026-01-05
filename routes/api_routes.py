@@ -1,12 +1,13 @@
 """
 API routes - JSON endpoints for AJAX calls
 """
-from flask import Blueprint, jsonify, request, current_app, send_file, session
-from werkzeug.utils import secure_filename
-from pathlib import Path
 import tempfile
 from datetime import datetime, date
+from pathlib import Path
 from typing import Optional
+
+from flask import Blueprint, jsonify, request, current_app, send_file, session
+from werkzeug.utils import secure_filename
 
 from database.models import Invoice
 from utils.text_extractor import TextExtractor
@@ -1383,28 +1384,28 @@ def get_seller_conflicts():
     try:
         # This would require querying historical data or audit logs
         # For now, return a simple implementation that checks current state
-        
+
         all_sellers = current_app.seller_repo.get_all()
-        
+
         # Group by NIP to find duplicates (shouldn't happen due to UNIQUE constraint)
         # Instead, we can check invoices that have seller_nip but different seller_name
         # than the linked seller
-        
+
         conflicts = []
-        
+
         for seller_row in all_sellers:
             seller = current_app.seller_repo.row_to_seller(seller_row)
-            
+
             # Get invoices for this seller
             invoice_rows = current_app.invoice_repo.get_by_seller(seller.id)
-            
+
             for inv_row in invoice_rows:
                 invoice = current_app.invoice_repo.row_to_invoice(inv_row)
-                
+
                 # Check if invoice's seller_name differs from seller's name
                 normalized_inv_name = current_app.seller_service.normalize_seller_name(invoice.seller_name)
                 normalized_seller_name = current_app.seller_service.normalize_seller_name(seller.seller_name)
-                
+
                 if normalized_inv_name != normalized_seller_name:
                     conflicts.append({
                         'seller_id': seller.id,
@@ -1415,11 +1416,418 @@ def get_seller_conflicts():
                         'invoice_seller_name': invoice.seller_name,
                         'conflict_type': 'name_mismatch'
                     })
-        
+
         return jsonify({
             'success': True,
             'conflicts': conflicts,
             'count': len(conflicts)
         })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers', methods=['POST'])
+def create_seller():
+    """Create a new seller with duplicate validation"""
+    try:
+        data = request.get_json()
+
+        nip = data.get('seller_nip', '').strip()
+        name = data.get('seller_name', '').strip()
+        address = data.get('address', '').strip() if data.get('address') else None
+
+        if not nip:
+            return jsonify({'success': False, 'error': 'NIP jest wymagany'}), 400
+        if not name:
+            return jsonify({'success': False, 'error': 'Nazwa sprzedawcy jest wymagana'}), 400
+
+        # Normalize data
+        normalized_nip = current_app.seller_service.normalize_nip(nip)
+        normalized_name = current_app.seller_service.normalize_seller_name(name)
+
+        # Check for existing seller by NIP
+        existing_by_nip = current_app.seller_repo.find_by_nip(normalized_nip)
+
+        if existing_by_nip:
+            existing_seller = current_app.seller_repo.row_to_seller(existing_by_nip)
+            existing_name_normalized = current_app.seller_service.normalize_seller_name(existing_seller.seller_name)
+
+            if existing_name_normalized == normalized_name:
+                # Exact match - return existing seller
+                return jsonify({
+                    'success': True,
+                    'message': 'Sprzedawca juz istnieje',
+                    'seller': vars(existing_seller),
+                    'already_exists': True
+                })
+            else:
+                # NIP exists with different name - conflict
+                return jsonify({
+                    'success': False,
+                    'error': 'Konflikt NIP',
+                    'conflict_type': 'nip_exists_different_name',
+                    'existing_seller': {
+                        'id': existing_seller.id,
+                        'seller_nip': existing_seller.seller_nip,
+                        'seller_name': existing_seller.seller_name
+                    },
+                    'proposed_name': normalized_name,
+                    'message': f"NIP {normalized_nip} juz istnieje z nazwa '{existing_seller.seller_name}'."
+                }), 409
+
+        # Check for existing seller by name (different NIP)
+        existing_by_name = current_app.seller_repo.find_by_name(normalized_name)
+        name_conflict = None
+        for row in existing_by_name:
+            seller = current_app.seller_repo.row_to_seller(row)
+            if current_app.seller_service.normalize_seller_name(seller.seller_name) == normalized_name:
+                name_conflict = seller
+                break
+
+        if name_conflict:
+            # Name exists with different NIP - warning (not blocking)
+            return jsonify({
+                'success': False,
+                'error': 'Konflikt nazwy',
+                'conflict_type': 'name_exists_different_nip',
+                'existing_seller': {
+                    'id': name_conflict.id,
+                    'seller_nip': name_conflict.seller_nip,
+                    'seller_name': name_conflict.seller_name
+                },
+                'proposed_nip': normalized_nip,
+                'message': f"Sprzedawca o nazwie '{name_conflict.seller_name}' juz istnieje z innym NIP ({name_conflict.seller_nip})."
+            }), 409
+
+        # No conflicts - create seller
+        from database.models import Seller
+        new_seller = Seller(
+            seller_nip=normalized_nip,
+            seller_name=normalized_name,
+            address=address,
+            invoice_count=0
+        )
+
+        seller_id = current_app.seller_repo.create(new_seller)
+        new_seller.id = seller_id
+
+        return jsonify({
+            'success': True,
+            'message': 'Sprzedawca zostal utworzony',
+            'seller': vars(new_seller)
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/<int:seller_id>', methods=['DELETE'])
+def delete_seller(seller_id: int):
+    """Delete seller with cascade delete of linked invoices"""
+    try:
+        row = current_app.seller_repo.get_by_id(seller_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Sprzedawca nie znaleziony'}), 404
+
+        seller = current_app.seller_repo.row_to_seller(row)
+
+        # Get all linked invoices
+        invoice_rows = current_app.invoice_repo.get_by_seller(seller_id)
+        invoice_count = len(invoice_rows)
+
+        # Collect invoice numbers for response
+        deleted_invoices = []
+
+        # Delete all linked invoices first
+        for inv_row in invoice_rows:
+            invoice = current_app.invoice_repo.row_to_invoice(inv_row)
+            deleted_invoices.append({
+                'id': invoice.id,
+                'invoice_number': invoice.invoice_number
+            })
+            current_app.invoice_repo.delete(invoice.id)
+
+        # Delete the seller
+        current_app.seller_repo.delete(seller_id)
+
+        return jsonify({
+            'success': True,
+            'message': f'Sprzedawca i {invoice_count} faktur zostalo usunietych',
+            'deleted_seller': {
+                'id': seller.id,
+                'seller_nip': seller.seller_nip,
+                'seller_name': seller.seller_name
+            },
+            'deleted_invoices': deleted_invoices,
+            'invoice_count': invoice_count
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/<int:seller_id>/invoices', methods=['GET'])
+def get_seller_invoices(seller_id: int):
+    """Get all invoices linked to a seller (for delete confirmation)"""
+    try:
+        row = current_app.seller_repo.get_by_id(seller_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Sprzedawca nie znaleziony'}), 404
+
+        seller = current_app.seller_repo.row_to_seller(row)
+
+        # Get all linked invoices
+        invoice_rows = current_app.invoice_repo.get_by_seller(seller_id)
+
+        invoices = []
+        for inv_row in invoice_rows:
+            invoice = current_app.invoice_repo.row_to_invoice(inv_row)
+            invoices.append({
+                'id': invoice.id,
+                'invoice_number': invoice.invoice_number,
+                'amount': invoice.amount,
+                'currency': invoice.currency,
+                'invoice_date': str(invoice.invoice_date) if invoice.invoice_date else None,
+                'status': invoice.status
+            })
+
+        return jsonify({
+            'success': True,
+            'seller': vars(seller),
+            'invoices': invoices,
+            'count': len(invoices)
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/sync', methods=['POST'])
+def sync_sellers():
+    """Synchronize seller data with invoices - detect discrepancies"""
+    try:
+        # Get all invoices
+        all_invoice_rows = current_app.invoice_repo.get_all()
+
+        # Get all sellers indexed by NIP
+        all_seller_rows = current_app.seller_repo.get_all()
+        sellers_by_nip = {}
+        for row in all_seller_rows:
+            seller = current_app.seller_repo.row_to_seller(row)
+            sellers_by_nip[seller.seller_nip] = seller
+
+        # Track results
+        missing_sellers = {}  # NIP -> {name, count, invoices}
+        name_discrepancies = []  # List of {seller, invoice, diff}
+
+        for inv_row in all_invoice_rows:
+            invoice = current_app.invoice_repo.row_to_invoice(inv_row)
+
+            if not invoice.seller_nip:
+                continue
+
+            normalized_nip = current_app.seller_service.normalize_nip(invoice.seller_nip)
+
+            if normalized_nip not in sellers_by_nip:
+                # Seller not in database
+                if normalized_nip not in missing_sellers:
+                    missing_sellers[normalized_nip] = {
+                        'nip': normalized_nip,
+                        'name': invoice.seller_name,
+                        'count': 0,
+                        'invoices': []
+                    }
+                missing_sellers[normalized_nip]['count'] += 1
+                missing_sellers[normalized_nip]['invoices'].append({
+                    'id': invoice.id,
+                    'invoice_number': invoice.invoice_number
+                })
+            else:
+                # Check for name discrepancy
+                seller = sellers_by_nip[normalized_nip]
+                normalized_inv_name = current_app.seller_service.normalize_seller_name(invoice.seller_name)
+                normalized_seller_name = current_app.seller_service.normalize_seller_name(seller.seller_name)
+
+                if normalized_inv_name != normalized_seller_name:
+                    name_discrepancies.append({
+                        'seller_id': seller.id,
+                        'seller_nip': seller.seller_nip,
+                        'seller_name': seller.seller_name,
+                        'invoice_id': invoice.id,
+                        'invoice_number': invoice.invoice_number,
+                        'invoice_seller_name': invoice.seller_name
+                    })
+
+        # Summary stats
+        total_sellers = len(sellers_by_nip)
+        total_invoices = len(all_invoice_rows)
+        invoices_without_nip = sum(1 for inv_row in all_invoice_rows
+                                   if not current_app.invoice_repo.row_to_invoice(inv_row).seller_nip)
+
+        return jsonify({
+            'success': True,
+            'missing_sellers': list(missing_sellers.values()),
+            'name_discrepancies': name_discrepancies,
+            'summary': {
+                'total_sellers': total_sellers,
+                'total_invoices': total_invoices,
+                'invoices_without_nip': invoices_without_nip,
+                'missing_sellers_count': len(missing_sellers),
+                'discrepancies_count': len(name_discrepancies)
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/sync/add-missing', methods=['POST'])
+def add_missing_seller():
+    """Add a missing seller from sync results"""
+    try:
+        data = request.get_json()
+
+        nip = data.get('nip', '').strip()
+        name = data.get('name', '').strip()
+
+        if not nip or not name:
+            return jsonify({'success': False, 'error': 'NIP i nazwa sa wymagane'}), 400
+
+        # Normalize
+        normalized_nip = current_app.seller_service.normalize_nip(nip)
+        normalized_name = current_app.seller_service.normalize_seller_name(name)
+
+        # Create seller
+        seller_id, created = current_app.seller_repo.get_or_create(
+            nip=normalized_nip,
+            name=normalized_name,
+            address=None
+        )
+
+        # Link existing invoices with this NIP to the seller
+        linked_count = 0
+        all_invoices = current_app.invoice_repo.get_all()
+        for inv_row in all_invoices:
+            invoice = current_app.invoice_repo.row_to_invoice(inv_row)
+            if invoice.seller_nip:
+                inv_nip = current_app.seller_service.normalize_nip(invoice.seller_nip)
+                if inv_nip == normalized_nip:
+                    # Link this invoice to seller
+                    current_app.invoice_repo.update(invoice.id, invoice, seller_id=seller_id)
+                    linked_count += 1
+
+        # Update invoice count
+        for _ in range(linked_count):
+            current_app.seller_repo.increment_invoice_count(seller_id)
+
+        return jsonify({
+            'success': True,
+            'message': f'Utworzono sprzedawce i powiazano {linked_count} faktur',
+            'seller_id': seller_id,
+            'linked_invoices': linked_count
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/sync/fix-discrepancy', methods=['POST'])
+def fix_discrepancy():
+    """Fix a name discrepancy - update invoice or seller"""
+    try:
+        data = request.get_json()
+
+        action = data.get('action')  # 'use_seller_name' or 'use_invoice_name'
+        invoice_id = data.get('invoice_id')
+        seller_id = data.get('seller_id')
+
+        if not action or not invoice_id or not seller_id:
+            return jsonify({'success': False, 'error': 'Brak wymaganych parametrow'}), 400
+
+        # Get seller and invoice
+        seller_row = current_app.seller_repo.get_by_id(seller_id)
+        if not seller_row:
+            return jsonify({'success': False, 'error': 'Sprzedawca nie znaleziony'}), 404
+
+        invoice_row = current_app.invoice_repo.get_by_id(invoice_id)
+        if not invoice_row:
+            return jsonify({'success': False, 'error': 'Faktura nie znaleziona'}), 404
+
+        seller = current_app.seller_repo.row_to_seller(seller_row)
+        invoice = current_app.invoice_repo.row_to_invoice(invoice_row)
+
+        if action == 'use_seller_name':
+            # Update invoice to use seller's name
+            old_name = invoice.seller_name
+            invoice.seller_name = seller.seller_name
+            current_app.invoice_repo.update(invoice.id, invoice)
+
+            return jsonify({
+                'success': True,
+                'message': f'Zaktualizowano fakture - zmieniono nazwe z "{old_name}" na "{seller.seller_name}"'
+            })
+
+        elif action == 'use_invoice_name':
+            # Update seller to use invoice's name
+            old_name = seller.seller_name
+            new_name = current_app.seller_service.normalize_seller_name(invoice.seller_name)
+            current_app.seller_repo.update_name(seller_id, new_name)
+
+            return jsonify({
+                'success': True,
+                'message': f'Zaktualizowano sprzedawce - zmieniono nazwe z "{old_name}" na "{new_name}"'
+            })
+        else:
+            return jsonify({'success': False, 'error': f'Nieznana akcja: {action}'}), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/check-duplicate', methods=['POST'])
+def check_seller_duplicate():
+    """Check if seller with NIP or name already exists"""
+    try:
+        data = request.get_json()
+
+        nip = data.get('nip', '').strip()
+        name = data.get('name', '').strip()
+
+        result = {
+            'success': True,
+            'nip_exists': False,
+            'name_exists': False,
+            'existing_by_nip': None,
+            'existing_by_name': None
+        }
+
+        if nip:
+            normalized_nip = current_app.seller_service.normalize_nip(nip)
+            existing = current_app.seller_repo.find_by_nip(normalized_nip)
+            if existing:
+                seller = current_app.seller_repo.row_to_seller(existing)
+                result['nip_exists'] = True
+                result['existing_by_nip'] = {
+                    'id': seller.id,
+                    'seller_nip': seller.seller_nip,
+                    'seller_name': seller.seller_name
+                }
+
+        if name:
+            normalized_name = current_app.seller_service.normalize_seller_name(name)
+            existing_list = current_app.seller_repo.find_by_name(normalized_name)
+            for row in existing_list:
+                seller = current_app.seller_repo.row_to_seller(row)
+                if current_app.seller_service.normalize_seller_name(seller.seller_name) == normalized_name:
+                    result['name_exists'] = True
+                    result['existing_by_name'] = {
+                        'id': seller.id,
+                        'seller_nip': seller.seller_nip,
+                        'seller_name': seller.seller_name
+                    }
+                    break
+
+        return jsonify(result)
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

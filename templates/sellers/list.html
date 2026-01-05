@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Sprzedawcy - {{ app_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">store</span>
+        <span>Sprzedawcy</span>
+    </span>
+</li>
+{% endblock %}
+
+{% block page_actions %}
+    <!-- Sync Button -->
+    <button id="sync-btn" class="btn-secondary flex items-center">
+        <span class="material-icons text-sm mr-2">sync</span>
+        Synchronizuj dane
+    </button>
+    <!-- New Seller Button -->
+    <a href="{{ url_for('main.create_seller') }}" class="btn-primary flex items-center">
+        <span class="material-icons text-sm mr-2">add</span>
+        Nowy sprzedawca
+    </a>
+{% endblock %}
+
+
+{% block content %}
+<div class="sellers-page">
+    <!-- Sellers Table -->
+    <div class="card">
+        <div class="table-wrapper">
+            <table class="table table-hover sortable-table" id="sellersTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>NIP</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Szukaj..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(1, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Nazwa</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Szukaj..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(2, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Adres</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                                <input type="text" class="column-search" placeholder="Szukaj..." onclick="event.stopPropagation()">
+                            </div>
+                        </th>
+                        <th onclick="sortTable(3, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Faktury</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th onclick="sortTable(4, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Suma oplaconych</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th onclick="sortTable(5, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Suma nieoplaconych</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th onclick="sortTable(6, 'sellersTable')">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Ostatnia aktualizacja</span>
+                                    <span class="sort-icon">&#8645;</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th class="no-sort">
+                            <div class="th-content">
+                                <div class="th-header">
+                                    <span>Akcje</span>
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="sellers-tbody">
+                    <tr>
+                        <td colspan="8" class="text-center py-8 text-gray-500">
+                            <span class="material-icons text-6xl text-gray-300">hourglass_empty</span>
+                            <p class="mt-2">Ladowanie...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden empty-state">
+            <div class="empty-state-icon">
+                <span class="material-icons" style="font-size: inherit;">store</span>
+            </div>
+            <h3 class="empty-state-title">Nie masz jeszcze zadnych sprzedawcow</h3>
+            <p class="empty-state-description">
+                Dodaj sprzedawcow recznie lub zsynchronizuj dane z faktur
+            </p>
+            <div class="empty-state-actions">
+                <a href="{{ url_for('main.create_seller') }}" class="btn-primary inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">add</span>
+                    Nowy sprzedawca
+                </a>
+                <button onclick="syncSellers()" class="btn-secondary inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">sync</span>
+                    Synchronizuj dane
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sync Results Modal Template -->
+<template id="sync-results-template">
+    <div class="sync-results">
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold mb-2">Podsumowanie</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-primary" id="sync-total-sellers">0</div>
+                    <div class="text-sm text-gray-600">Sprzedawcow w bazie</div>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-gray-700" id="sync-total-invoices">0</div>
+                    <div class="text-sm text-gray-600">Wszystkich faktur</div>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-yellow-600" id="sync-missing-count">0</div>
+                    <div class="text-sm text-gray-600">Brakujacych sprzedawcow</div>
+                </div>
+                <div class="bg-red-50 p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-red-600" id="sync-discrepancies-count">0</div>
+                    <div class="text-sm text-gray-600">Niezgodnosci nazw</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Missing Sellers Section -->
+        <div class="mb-6" id="missing-sellers-section">
+            <h4 class="text-lg font-semibold mb-2 flex items-center">
+                <span class="material-icons text-yellow-600 mr-2">warning</span>
+                Brakujacy sprzedawcy (faktury bez sprzedawcy w bazie)
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="table" id="missing-sellers-table">
+                    <thead>
+                        <tr>
+                            <th>NIP</th>
+                            <th>Nazwa (z faktury)</th>
+                            <th>Liczba faktur</th>
+                            <th>Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody id="missing-sellers-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Name Discrepancies Section -->
+        <div class="mb-4" id="discrepancies-section">
+            <h4 class="text-lg font-semibold mb-2 flex items-center">
+                <span class="material-icons text-red-600 mr-2">error</span>
+                Niezgodnosci nazw (faktura vs sprzedawca)
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="table" id="discrepancies-table">
+                    <thead>
+                        <tr>
+                            <th>Nr faktury</th>
+                            <th>Nazwa w sprzedawcy</th>
+                            <th>Nazwa na fakturze</th>
+                            <th>Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody id="discrepancies-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/sellers/list.js') }}"></script>
+{% endblock %}

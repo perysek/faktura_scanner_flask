@@ -1,11 +1,11 @@
 """
 Repository dla sprzedawców
 """
-from typing import List, Optional
 import sqlite3
+from typing import List, Optional
 
-from repositories.base_repository import BaseRepository
 from database.models import Seller
+from repositories.base_repository import BaseRepository
 
 
 class SellerRepository(BaseRepository):
