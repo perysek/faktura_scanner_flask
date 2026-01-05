@@ -4,6 +4,7 @@ Konfiguracja bazy danych SQLite
 import sqlite3
 from pathlib import Path
 from typing import Optional
+
 from config.settings import DB_PATH
 
 
@@ -93,5 +94,29 @@ def initialize_database():
 			print("Kolumna action dodana")
 	except Exception as e:
 		print(f"Ostrzezenie - Migracja action: {e}")
+
+	# Migracja: sprawdź czy tabela sellers istnieje
+	try:
+		cursor = conn.cursor()
+		cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sellers'")
+		if not cursor.fetchone():
+			print("Tabela sellers nie istnieje - powinna zostać utworzona przez schema.sql")
+	except Exception as e:
+		print(f"Błąd sprawdzania tabeli sellers: {e}")
+
+	# Migracja: dodaj seller_id do invoices jeśli nie istnieje
+	try:
+		cursor = conn.cursor()
+		cursor.execute("PRAGMA table_info(invoices)")
+		columns = [row[1] for row in cursor.fetchall()]
+
+		if 'seller_id' not in columns:
+			print("Dodawanie kolumny seller_id do tabeli invoices...")
+			cursor.execute("ALTER TABLE invoices ADD COLUMN seller_id INTEGER REFERENCES sellers(id)")
+			cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoice_seller ON invoices(seller_id)")
+			conn.commit()
+			print("Kolumna seller_id dodana")
+	except Exception as e:
+		print(f"Ostrzezenie - Migracja seller_id: {e}")
 
 	print("Baza danych zainicjalizowana")
