@@ -16,9 +16,29 @@
       "Bash(timeout 3 echo:*)",
       "Bash(pip freeze:*)",
       "Bash(pipdeptree:*)",
-      "Bash(pip uninstall:*)"
+      "Bash(pip uninstall:*)",
+      "Bash(pip show:*)",
+      "Bash(curl:*)",
+      "Bash(static/js/sellers/ )",
+      "Bash(templates/sellers/ )",
+      "Bash(routes/main_routes.py )",
+      "Bash(routes/api_routes.py )",
+      "Bash(static/js/api.js )",
+      "Bash(templates/base.html )",
+      "Bash(repositories/seller_repository.py )",
+      "Bash(services/seller_service.py )",
+      "Bash(app.py)",
+      "Bash(config/email_settings.py )",
+      "Bash(repositories/*.py)",
+      "Bash(routes/upload_routes.py )",
+      "Bash(scratches/routes.py )",
+      "Bash(services/*.py)",
+      "Bash(utils/*.py)",
+      "Bash(test_*.py)",
+      "Bash(.claude/settings.local.json)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "Explanatory"
 }

@@ -1,8 +1,9 @@
 """
 Bazowa klasa repository z CRUD operations
 """
-from typing import List, Optional, Dict, Any
 import sqlite3
+from typing import List, Optional
+
 from config.database import DatabaseConnection
 
 

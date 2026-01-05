@@ -2,6 +2,7 @@
 Serwis walidacji danych faktur
 """
 from typing import List, Dict
+
 from database.models import Invoice
 from utils.validators import NIPValidator, IBANValidator
 

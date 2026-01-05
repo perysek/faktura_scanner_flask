@@ -2,8 +2,9 @@
 Serwis wykrywania duplikatów faktur
 """
 from typing import Optional
-from repositories.invoice_repository import InvoiceRepository
+
 from database.models import Invoice
+from repositories.invoice_repository import InvoiceRepository
 
 
 class DuplicateDetectionService:
