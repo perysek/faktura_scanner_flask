@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: faktura_scanner
+    ports:
+      - "8083:8083"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change_this_secret_key_in_production}
+      - FLASK_DEBUG=0
+      - DB_PATH=/app/data/faktury.db
+      # Tesseract/Poppler paths are already set correctly in Dockerfile for Linux
+    volumes:
+      # Persist Database
+      - ./data:/app/data
+      # Persist Uploaded Files
+      - ./uploads:/app/uploads
+      # Persist Processed PDFs
+      - ./pdfs:/app/pdfs
+    restart: always

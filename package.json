@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Invoice Scanner Flask Application",
   "scripts": {
+    "build": "npm run build:css",
     "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
     "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch"
   },

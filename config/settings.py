@@ -8,16 +8,16 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "assets"
 TEMP_DIR = ASSETS_DIR / "temp"
-DB_PATH = BASE_DIR / "faktury.db"
+DB_PATH = Path(os.environ.get('DB_PATH', BASE_DIR / "faktury.db"))
 
 # Tesseract
-TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+TESSERACT_CMD = os.environ.get('TESSERACT_CMD', r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 TESSERACT_LANG = "pol"
 
 # Poppler (for pdf2image)
 # Download from: https://github.com/oschwartz10612/poppler-windows/releases/
 # Extract and set path to the bin folder
-POPPLER_PATH = r"C:\poppler\Library\bin"
+POPPLER_PATH = os.environ.get('POPPLER_PATH', r"C:\poppler\Library\bin")
 
 # OCR settings
 OCR_DPI = 300  # DPI dla konwersji PDF → obrazy
