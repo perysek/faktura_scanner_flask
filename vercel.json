@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index.py" }
+  ],
+  "env": {
+    "VERCEL": "1",
+    "PYTHON_VERSION": "3.11"
+  }
+}
