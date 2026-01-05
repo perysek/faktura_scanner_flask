@@ -89,6 +89,11 @@ class TextExtractor:
 			],
 		}
 	
+	# Field importance weights for missing fields calculation
+	CRITICAL_FIELDS = ['invoice_number', 'seller_name', 'amount', 'invoice_date']
+	IMPORTANT_FIELDS = ['seller_nip', 'bank_account']
+	OPTIONAL_FIELDS = ['payment_due_date', 'currency']
+
 	def extract_invoice_data(self, text: str) -> Dict[str, Optional[str]]:
 		"""
 		Ekstraktuj wszystkie dane z tekstu faktury
@@ -108,6 +113,85 @@ class TextExtractor:
 			}
 
 		return data
+
+	def count_missing_fields(self, extracted_data: Dict) -> int:
+		"""
+		Count missing critical and important fields for retry logic.
+
+		Scoring:
+		- Critical fields (invoice_number, seller_name, amount, invoice_date): 1.0 each
+		- Important fields (seller_nip, bank_account): 0.5 each
+		- Optional fields (payment_due_date, currency): not counted
+
+		Returns:
+			int: Weighted count of missing fields (rounded up)
+		"""
+		missing_score = 0.0
+		missing_details = []
+
+		# Check critical fields (full weight)
+		for field in self.CRITICAL_FIELDS:
+			value = extracted_data.get(field)
+			if not value or (isinstance(value, (int, float)) and value == 0):
+				missing_score += 1.0
+				missing_details.append(f"{field} (critical)")
+
+		# Check important fields (half weight)
+		for field in self.IMPORTANT_FIELDS:
+			value = extracted_data.get(field)
+			if not value:
+				missing_score += 0.5
+				missing_details.append(f"{field} (important)")
+
+		# Log missing fields for debugging
+		if missing_details:
+			print(f"  [Fields] Missing: {', '.join(missing_details)} = score {missing_score}")
+		else:
+			print(f"  [Fields] All critical/important fields extracted")
+
+		# Round up to get integer count
+		import math
+		return math.ceil(missing_score)
+
+	def get_extraction_quality(self, extracted_data: Dict) -> Dict:
+		"""
+		Get detailed extraction quality metrics.
+
+		Returns:
+			Dict with:
+			- missing_count: Number of missing fields (weighted)
+			- missing_critical: List of missing critical fields
+			- missing_important: List of missing important fields
+			- quality_score: 0-100 quality score
+			- needs_retry: Boolean if retry is recommended
+		"""
+		missing_critical = []
+		missing_important = []
+
+		for field in self.CRITICAL_FIELDS:
+			value = extracted_data.get(field)
+			if not value or (isinstance(value, (int, float)) and value == 0):
+				missing_critical.append(field)
+
+		for field in self.IMPORTANT_FIELDS:
+			if not extracted_data.get(field):
+				missing_important.append(field)
+
+		# Calculate quality score (0-100)
+		total_fields = len(self.CRITICAL_FIELDS) + len(self.IMPORTANT_FIELDS)
+		found_fields = total_fields - len(missing_critical) - len(missing_important)
+		quality_score = int((found_fields / total_fields) * 100)
+
+		# Calculate weighted missing count
+		missing_count = len(missing_critical) + (len(missing_important) * 0.5)
+
+		return {
+			'missing_count': missing_count,
+			'missing_critical': missing_critical,
+			'missing_important': missing_important,
+			'quality_score': quality_score,
+			'needs_retry': len(missing_critical) > 0 or missing_count > 3,
+		}
 	
 	def _extract_field(self, text: str, field_name: str) -> Optional[str]:
 		"""Ekstraktuj pole używając patterns"""
