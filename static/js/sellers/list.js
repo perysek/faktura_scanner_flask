@@ -232,37 +232,40 @@ async function syncSellers() {
 }
 
 /**
- * Show sync results modal
+ * Show sync results in full page view (not modal)
  */
 function showSyncResults(data) {
-    const template = document.getElementById('sync-results-template');
-    const content = template.content.cloneNode(true);
-    const container = document.createElement('div');
-    container.appendChild(content);
-
     // Update summary stats
-    container.querySelector('#sync-total-sellers').textContent = data.summary.total_sellers;
-    container.querySelector('#sync-total-invoices').textContent = data.summary.total_invoices;
-    container.querySelector('#sync-missing-count').textContent = data.summary.missing_sellers_count;
-    container.querySelector('#sync-discrepancies-count').textContent = data.summary.discrepancies_count;
+    document.getElementById('sync-total-sellers').textContent = data.summary.total_sellers;
+    document.getElementById('sync-total-invoices').textContent = data.summary.total_invoices;
+    document.getElementById('sync-missing-count').textContent = data.summary.missing_sellers_count;
+    document.getElementById('sync-discrepancies-count').textContent = data.summary.discrepancies_count;
+
+    // Reset visibility
+    document.getElementById('sync-all-good').classList.add('hidden');
+    document.getElementById('missing-sellers-card').classList.add('hidden');
+    document.getElementById('discrepancies-card').classList.add('hidden');
 
     // Populate missing sellers table
-    const missingTbody = container.querySelector('#missing-sellers-tbody');
-    const missingSection = container.querySelector('#missing-sellers-section');
+    const missingTbody = document.getElementById('missing-sellers-tbody');
+    const missingCard = document.getElementById('missing-sellers-card');
+    const missingBadge = document.getElementById('missing-sellers-badge');
 
-    if (data.missing_sellers.length === 0) {
-        missingSection.classList.add('hidden');
-    } else {
+    if (data.missing_sellers.length > 0) {
+        missingCard.classList.remove('hidden');
+        missingBadge.textContent = data.missing_sellers.length;
         missingTbody.innerHTML = data.missing_sellers.map(ms => `
-            <tr>
+            <tr class="hover:bg-gray-50">
                 <td class="font-mono">${escapeHtml(ms.nip)}</td>
-                <td>${escapeHtml(ms.name)}</td>
-                <td class="text-center">${ms.count}</td>
-                <td>
+                <td class="font-medium">${escapeHtml(ms.name)}</td>
+                <td class="text-center">
+                    <span class="badge badge-info">${ms.count}</span>
+                </td>
+                <td class="text-center">
                     <button onclick="addMissingSeller('${escapeHtml(ms.nip)}', '${escapeHtml(ms.name)}')"
-                            class="btn-success text-sm py-1 px-2">
+                            class="btn-success">
                         <span class="material-icons text-sm mr-1">add</span>
-                        Dodaj
+                        Dodaj do bazy
                     </button>
                 </td>
             </tr>
@@ -270,26 +273,29 @@ function showSyncResults(data) {
     }
 
     // Populate discrepancies table
-    const discrepanciesTbody = container.querySelector('#discrepancies-tbody');
-    const discrepanciesSection = container.querySelector('#discrepancies-section');
+    const discrepanciesTbody = document.getElementById('discrepancies-tbody');
+    const discrepanciesCard = document.getElementById('discrepancies-card');
+    const discrepanciesBadge = document.getElementById('discrepancies-badge');
 
-    if (data.name_discrepancies.length === 0) {
-        discrepanciesSection.classList.add('hidden');
-    } else {
+    if (data.name_discrepancies.length > 0) {
+        discrepanciesCard.classList.remove('hidden');
+        discrepanciesBadge.textContent = data.name_discrepancies.length;
         discrepanciesTbody.innerHTML = data.name_discrepancies.map(d => `
-            <tr>
+            <tr class="hover:bg-gray-50">
                 <td class="font-mono">${escapeHtml(d.invoice_number)}</td>
-                <td class="text-primary">${escapeHtml(d.seller_name)}</td>
-                <td class="text-status-warning">${escapeHtml(d.invoice_seller_name)}</td>
-                <td>
-                    <div class="flex gap-1">
+                <td class="text-primary font-medium">${escapeHtml(d.seller_name)}</td>
+                <td class="text-yellow-700">${escapeHtml(d.invoice_seller_name)}</td>
+                <td class="text-center">
+                    <div class="flex gap-2 justify-center">
                         <button onclick="fixDiscrepancy('use_seller_name', ${d.invoice_id}, ${d.seller_id})"
-                                class="btn-secondary text-xs py-1 px-2" title="Uzyj nazwy sprzedawcy">
-                            <span class="material-icons text-sm">arrow_back</span>
+                                class="btn-secondary" title="Zmien fakture na nazwe z bazy">
+                            <span class="material-icons text-sm mr-1">arrow_back</span>
+                            Uzyj z bazy
                         </button>
                         <button onclick="fixDiscrepancy('use_invoice_name', ${d.invoice_id}, ${d.seller_id})"
-                                class="btn-secondary text-xs py-1 px-2" title="Uzyj nazwy z faktury">
-                            <span class="material-icons text-sm">arrow_forward</span>
+                                class="btn-warning" title="Zmien baze na nazwe z faktury">
+                            <span class="material-icons text-sm mr-1">arrow_forward</span>
+                            Uzyj z faktury
                         </button>
                     </div>
                 </td>
@@ -297,34 +303,29 @@ function showSyncResults(data) {
         `).join('');
     }
 
-    // Check if everything is in sync
+    // Show "all good" message if everything is synced
     if (data.missing_sellers.length === 0 && data.name_discrepancies.length === 0) {
-        const allGood = document.createElement('div');
-        allGood.className = 'bg-green-50 border border-green-200 p-4 rounded-lg text-center';
-        allGood.innerHTML = `
-            <span class="material-icons text-green-600 text-4xl mb-2">check_circle</span>
-            <p class="text-green-800 font-semibold">Wszystko zsynchronizowane!</p>
-            <p class="text-green-600 text-sm">Dane sprzedawcow sa zgodne z fakturami.</p>
-        `;
-        container.querySelector('.sync-results').appendChild(allGood);
+        document.getElementById('sync-all-good').classList.remove('hidden');
     }
 
-    // Show modal
-    Modals.show({
-        title: 'Wyniki synchronizacji',
-        content: container.innerHTML,
-        size: 'large',
-        buttons: [
-            {
-                text: 'Zamknij',
-                type: 'primary',
-                onClick: (e, overlay) => {
-                    Modals.close(overlay);
-                    loadSellers(); // Reload table
-                }
-            }
-        ]
-    });
+    // Switch views: hide list, show sync results
+    document.getElementById('sellers-list-view').classList.add('hidden');
+    document.getElementById('sync-results-view').classList.remove('hidden');
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Close sync results and return to sellers list
+ */
+function closeSyncResults() {
+    // Switch views: show list, hide sync results
+    document.getElementById('sync-results-view').classList.add('hidden');
+    document.getElementById('sellers-list-view').classList.remove('hidden');
+
+    // Reload sellers data
+    loadSellers();
 }
 
 /**
@@ -340,8 +341,8 @@ async function addMissingSeller(nip, name) {
 
         if (result.success) {
             Notifications.success(result.message);
-            // Re-run sync to update modal
-            syncSellers();
+            // Re-run sync to refresh the inline view
+            await refreshSyncResults();
         } else {
             Notifications.error(result.error || 'Blad dodawania sprzedawcy');
         }
@@ -365,8 +366,8 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
 
         if (result.success) {
             Notifications.success(result.message);
-            // Re-run sync to update modal
-            syncSellers();
+            // Re-run sync to refresh the inline view
+            await refreshSyncResults();
         } else {
             Notifications.error(result.error || 'Blad naprawiania niezgodnosci');
         }
@@ -374,5 +375,19 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
         Modals.close(loadingModal);
         console.error('Error fixing discrepancy:', error);
         Notifications.error('Blad naprawiania niezgodnosci: ' + error.message);
+    }
+}
+
+/**
+ * Refresh sync results without showing loading modal
+ */
+async function refreshSyncResults() {
+    try {
+        const result = await API.sellers.sync();
+        if (result.success) {
+            showSyncResults(result);
+        }
+    } catch (error) {
+        console.error('Error refreshing sync:', error);
     }
 }
