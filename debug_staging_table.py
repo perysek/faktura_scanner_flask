@@ -1,10 +1,18 @@
 """
 Debug script to check what's in the staging table
 """
+import os
 import sqlite3
 from pathlib import Path
 
-db_path = Path('faktury.db')
+# Get DB path from environment or default
+env_path = os.environ.get('DB_PATH')
+if env_path:
+    db_path = Path(env_path)
+else:
+    db_path = Path('faktury.db')
+
+print(f"Checking database at: {db_path}")
 conn = sqlite3.connect(str(db_path))
 conn.row_factory = sqlite3.Row
 cursor = conn.cursor()
