@@ -44,6 +44,28 @@ def history():
     return render_template('history/list.html')
 
 
+@main_bp.route('/sellers')
+def sellers_list():
+    """Sellers list view - manage sellers"""
+    return render_template('sellers/list.html')
+
+
+@main_bp.route('/seller/create')
+def create_seller():
+    """Create new seller form"""
+    return render_template('sellers/create.html')
+
+
+@main_bp.route('/seller/<int:seller_id>/edit')
+def edit_seller(seller_id):
+    """Edit seller form"""
+    row = current_app.seller_repo.get_by_id(seller_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+    seller = current_app.seller_repo.row_to_seller(row)
+    return render_template('sellers/edit.html', seller=seller)
+
+
 @main_bp.route('/dashboard')
 def dashboard():
     """Dashboard view - statistics and overview"""

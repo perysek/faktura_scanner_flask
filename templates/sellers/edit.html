@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Edytuj sprzedawce - {{ app_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <a href="{{ url_for('main.sellers_list') }}" class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">store</span>
+        <span>Sprzedawcy</span>
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <span class="breadcrumb-link">
+        <span class="material-icons breadcrumb-icon">edit</span>
+        <span>Edycja</span>
+    </span>
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Main Edit Card -->
+    <div class="card mb-6">
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <span class="material-icons text-primary mr-2">store</span>
+                Edytuj sprzedawce
+            </h2>
+            <p class="text-gray-600 text-sm mt-1">Zaktualizuj dane sprzedawcy</p>
+        </div>
+
+        <form id="seller-form" onsubmit="return handleSubmit(event)">
+            <input type="hidden" id="seller_id" value="{{ seller.id }}">
+
+            <!-- NIP Field (Read-only) -->
+            <div class="mb-4">
+                <label for="seller_nip" class="block text-sm font-medium text-gray-700 mb-1">
+                    NIP
+                </label>
+                <input type="text"
+                       id="seller_nip"
+                       name="seller_nip"
+                       class="input bg-gray-50"
+                       value="{{ seller.seller_nip }}"
+                       readonly
+                       disabled>
+                <p class="text-xs text-gray-500 mt-1">NIP nie moze byc zmieniony - jest unikalnym identyfikatorem</p>
+            </div>
+
+            <!-- Seller Name Field -->
+            <div class="mb-4">
+                <label for="seller_name" class="block text-sm font-medium text-gray-700 mb-1">
+                    Nazwa sprzedawcy <span class="text-red-500">*</span>
+                </label>
+                <input type="text"
+                       id="seller_name"
+                       name="seller_name"
+                       class="input"
+                       value="{{ seller.seller_name }}"
+                       placeholder="Nazwa firmy Sp. z o.o."
+                       required>
+                <p id="name-warning" class="text-sm text-yellow-600 mt-1 hidden"></p>
+            </div>
+
+            <!-- Address Field -->
+            <div class="mb-6">
+                <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+                    Adres <span class="text-gray-400">(opcjonalny)</span>
+                </label>
+                <input type="text"
+                       id="address"
+                       name="address"
+                       class="input"
+                       value="{{ seller.address or '' }}"
+                       placeholder="ul. Przykladowa 1, 00-000 Warszawa">
+            </div>
+
+            <!-- Stats Row -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                <div>
+                    <p class="text-xs text-gray-500">Liczba faktur</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ seller.invoice_count }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Pierwsza faktura</p>
+                    <p class="text-sm text-gray-700">{{ seller.first_seen.strftime('%Y-%m-%d') if seller.first_seen else '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Ostatnia aktualizacja</p>
+                    <p class="text-sm text-gray-700">{{ seller.last_updated.strftime('%Y-%m-%d %H:%M') if seller.last_updated else '-' }}</p>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{{ url_for('main.sellers_list') }}" class="btn-secondary">
+                    <span class="material-icons text-sm mr-2">arrow_back</span>
+                    Powrot do listy
+                </a>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="propagate-btn" class="btn-warning" onclick="propagateChanges()" title="Zaktualizuj nazwe we wszystkich fakturach">
+                        <span class="material-icons text-sm mr-2">sync</span>
+                        Propaguj zmiany
+                    </button>
+                    <button type="submit" id="submit-btn" class="btn-primary">
+                        <span class="material-icons text-sm mr-2">save</span>
+                        Zapisz zmiany
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Linked Invoices Card -->
+    <div class="card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <span class="material-icons text-gray-600 mr-2">receipt</span>
+                Powiazane faktury
+            </h3>
+            <span id="invoices-count" class="badge badge-info">0</span>
+        </div>
+
+        <!-- Invoices Table -->
+        <div class="table-wrapper">
+            <table class="table table-hover" id="invoicesTable">
+                <thead>
+                    <tr>
+                        <th>Nr faktury</th>
+                        <th>Data</th>
+                        <th>Kwota</th>
+                        <th>Status</th>
+                        <th>Nazwa na fakturze</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="invoices-tbody">
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-gray-500">
+                            <span class="material-icons text-4xl text-gray-300">hourglass_empty</span>
+                            <p class="mt-2">Ladowanie...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty state -->
+        <div id="invoices-empty" class="hidden py-8 text-center text-gray-500">
+            <span class="material-icons text-4xl text-gray-300">receipt_long</span>
+            <p class="mt-2">Brak powiazanych faktur</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/sellers/edit.js') }}"></script>
+{% endblock %}

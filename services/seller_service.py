@@ -1,12 +1,12 @@
 """
 Serwis zarządzania sprzedawcami
 """
-from typing import Optional, Dict, Tuple
 import re
+from typing import Optional, Dict, Tuple
 
-from database.models import Seller, Invoice
-from repositories.seller_repository import SellerRepository
+from database.models import Invoice
 from repositories.invoice_repository import InvoiceRepository
+from repositories.seller_repository import SellerRepository
 
 
 class SellerService:
