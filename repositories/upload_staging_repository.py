@@ -2,8 +2,8 @@
 Upload Staging Repository - Manages temporary file uploads
 """
 import sqlite3
-from typing import List, Optional
-from pathlib import Path
+from typing import List
+
 from database.models import UploadStaging
 
 

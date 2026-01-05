@@ -11,25 +11,27 @@ This module handles all document-related operations:
 - Document listing and search
 """
 
-import logging
 import io
-from datetime import date, datetime
-from flask import render_template, redirect, url_for, flash, request, abort, send_file, jsonify
+import logging
+from datetime import datetime
+
+from app.blueprints.documents import documents_bp
+from app.decorators import role_required
+from app.extensions import db
+from app.models import Document, Revision, User, DocumentType, Language
+from app.services.file_service import FileService
+from app.services.workflow_service import (
+	WorkflowService,
+	InvalidStateTransitionError,
+	UnauthorizedActionError,
+	FileValidationError,
+	RevisionNumberError,
+	RevisionCreationError
+	)
+from flask import render_template, redirect, url_for, flash, request, abort, \
+	send_file, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_
-from app.blueprints.documents import documents_bp
-from app.models import Document, Revision, User, DocumentType, Language
-from app.extensions import db
-from app.decorators import role_required
-from app.services.workflow_service import (
-    WorkflowService,
-    InvalidStateTransitionError,
-    UnauthorizedActionError,
-    FileValidationError,
-    RevisionNumberError,
-    RevisionCreationError
-)
-from app.services.file_service import FileService
 
 logger = logging.getLogger(__name__)
 

@@ -5,17 +5,16 @@ Supports:
 - Retry logic with different preprocessing profiles when extraction quality is low
 """
 import logging
-from pathlib import Path
-from typing import Dict, Optional, Tuple, List
 from datetime import datetime
+from typing import Dict, Tuple
 
-from utils.pdf_processor import PDFProcessor, PYMUPDF_AVAILABLE
-from utils.text_extractor import TextExtractor
-from database.models import Invoice
 from config.settings import (
 	OCR_RETRY_ENABLED, OCR_MAX_RETRIES, OCR_MISSING_FIELDS_THRESHOLD,
 	OCR_RETRY_PROFILE_ORDER
-)
+	)
+from database.models import Invoice
+from utils.pdf_processor import PDFProcessor
+from utils.text_extractor import TextExtractor
 
 logger = logging.getLogger(__name__)
 

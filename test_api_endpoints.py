@@ -2,9 +2,10 @@
 Comprehensive test script for upload staging API endpoints
 Tests: /stage, /staged, /process, /view-pdf/<filename>, /staged/<filename> (delete), /finalize
 """
-import requests
 import json
 from pathlib import Path
+
+import requests
 
 BASE_URL = "http://127.0.0.1:8083/api/upload"
 

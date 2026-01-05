@@ -6,14 +6,15 @@ Supports hybrid processing: direct text extraction for text-based PDFs,
 OCR for scanned/image-based PDFs, with retry logic using different preprocessing profiles.
 """
 import logging
+import os
+import traceback
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple
+
+import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 from pdf2image.exceptions import PDFPageCountError
-import pytesseract
-import os
-import traceback
 
 # Setup logging
 logger = logging.getLogger(__name__)

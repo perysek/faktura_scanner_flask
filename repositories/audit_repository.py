@@ -2,7 +2,7 @@
 Repository dla historii zmian (audit log)
 """
 from typing import List, Optional
-import json
+
 from repositories.base_repository import BaseRepository
 
 

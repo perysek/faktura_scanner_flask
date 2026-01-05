@@ -1,15 +1,15 @@
 """
 Email service for fetching invoice PDFs via IMAP
 """
-import imaplib
 import email
+import imaplib
 import os
 import re
 import time
-from email.header import decode_header
 from datetime import date
+from email.header import decode_header
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Optional, Dict, Any
 
 
 class EmailService:

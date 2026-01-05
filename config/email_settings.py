@@ -2,9 +2,8 @@
 Email account settings configuration
 """
 import json
+from datetime import date
 from pathlib import Path
-from typing import Optional
-from datetime import datetime, date
 
 
 class EmailSettings:

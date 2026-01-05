@@ -1,11 +1,12 @@
 """
 Serwis eksportu danych do Excel/CSV
 """
-from pathlib import Path
-from typing import List
 import csv
+from typing import List
+
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+
 from database.models import Invoice
 
 

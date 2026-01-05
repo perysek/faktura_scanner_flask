@@ -2,8 +2,8 @@
 Ekstrakcja danych z tekstu faktury (regex patterns dla polskich faktur)
 """
 import re
-from typing import Optional, Dict
 from datetime import datetime
+from typing import Optional, Dict
 
 
 class TextExtractor:
