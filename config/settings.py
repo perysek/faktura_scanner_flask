@@ -30,6 +30,52 @@ OCR_DESKEW_ENABLED = True  # Auto-correct document rotation
 OCR_BINARIZATION_MODE = 'otsu'  # Changed to 'otsu' - better for varied lighting
 OCR_CONTRAST_ENHANCEMENT = True  # New: enhance contrast before OCR
 
+# OCR Retry Logic - Preprocessing profiles for retry attempts
+# When >3 critical fields are missing, retry with different profiles
+OCR_RETRY_ENABLED = True
+OCR_MAX_RETRIES = 3  # Max additional attempts after first failure
+OCR_MISSING_FIELDS_THRESHOLD = 3  # Trigger retry if this many fields missing
+
+# Preprocessing profiles for retry logic
+# Each profile optimizes for different document types/conditions
+OCR_PREPROCESSING_PROFILES = {
+    'default': {
+        'dpi': 300,
+        'denoise_strength': 3,
+        'binarization_mode': 'otsu',
+        'clahe_clip_limit': 2.0,
+        'deskew_enabled': True,
+        'description': 'Standard documents, good quality scans',
+    },
+    'high_contrast': {
+        'dpi': 300,
+        'denoise_strength': 0,
+        'binarization_mode': 'adaptive',
+        'clahe_clip_limit': 3.5,
+        'deskew_enabled': True,
+        'description': 'Faded documents, low contrast, washed out text',
+    },
+    'high_resolution': {
+        'dpi': 450,
+        'denoise_strength': 5,
+        'binarization_mode': 'otsu',
+        'clahe_clip_limit': 2.0,
+        'deskew_enabled': True,
+        'description': 'Small text, poor quality scans, detailed documents',
+    },
+    'minimal': {
+        'dpi': 300,
+        'denoise_strength': 0,
+        'binarization_mode': 'none',
+        'clahe_clip_limit': 0,
+        'deskew_enabled': False,
+        'description': 'Already clean PDFs, digital-native documents',
+    },
+}
+
+# Profile order for retry attempts (after default fails)
+OCR_RETRY_PROFILE_ORDER = ['high_contrast', 'high_resolution', 'minimal']
+
 # GUI settings (legacy)
 APP_TITLE = "FakturaScanner"
 APP_WIDTH = 1200

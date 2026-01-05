@@ -2,10 +2,12 @@
 Document processor - Konwersja PDF/obrazów do tekstu przez OCR
 Obsługuje zarówno pliki PDF jak i bezpośrednie obrazy (JPG, PNG, TIFF, BMP)
 Includes enhanced preprocessing with OpenCV for better OCR accuracy.
+Supports hybrid processing: direct text extraction for text-based PDFs,
+OCR for scanned/image-based PDFs, with retry logic using different preprocessing profiles.
 """
 import logging
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict
 from PIL import Image
 from pdf2image import convert_from_path
 from pdf2image.exceptions import PDFPageCountError
@@ -26,10 +28,20 @@ except ImportError as e:
 	OPENCV_AVAILABLE = False
 	logger.warning(f"OpenCV not available: {e}. Enhanced preprocessing disabled.")
 
+# PyMuPDF import for direct text extraction
+try:
+	import fitz  # PyMuPDF
+	PYMUPDF_AVAILABLE = True
+	logger.info("PyMuPDF loaded successfully - hybrid PDF processing enabled")
+except ImportError as e:
+	PYMUPDF_AVAILABLE = False
+	logger.warning(f"PyMuPDF not available: {e}. Direct text extraction disabled.")
+
 from config.settings import (
 	TESSERACT_CMD, OCR_DPI, TEMP_DIR, POPPLER_PATH,
 	OCR_ENHANCED_PREPROCESSING, OCR_DENOISE_STRENGTH,
-	OCR_DESKEW_ENABLED, OCR_BINARIZATION_MODE
+	OCR_DESKEW_ENABLED, OCR_BINARIZATION_MODE,
+	OCR_PREPROCESSING_PROFILES
 )
 
 # Ustaw ścieżkę do Tesseract
@@ -43,13 +55,20 @@ IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp'}
 
 class PDFProcessor:
 	"""Processor do konwersji PDF/obrazów i OCR
-	
+
 	Obsługuje:
 	- Pliki PDF (konwersja stron na obrazy, potem OCR)
 	- Pliki graficzne (JPG, PNG, TIFF, BMP) - bezpośredni OCR
 	- Enhanced preprocessing z OpenCV (opcjonalnie)
+	- Hybrid processing: direct text extraction for text-based PDFs
+	- Profile-based preprocessing for retry logic
 	"""
-	
+
+	# PDF type constants
+	PDF_TYPE_TEXT = 'text'      # Digitally generated PDF with extractable text
+	PDF_TYPE_IMAGE = 'image'    # Scanned/image-based PDF requiring OCR
+	PDF_TYPE_MIXED = 'mixed'    # Contains both text and image pages
+
 	def __init__(self):
 		self.dpi = OCR_DPI
 		self.temp_dir = TEMP_DIR
@@ -57,15 +76,198 @@ class PDFProcessor:
 		self.denoise_strength = OCR_DENOISE_STRENGTH
 		self.deskew_enabled = OCR_DESKEW_ENABLED
 		self.binarization_mode = OCR_BINARIZATION_MODE
+		self.clahe_clip_limit = 2.0  # Default CLAHE clip limit
+		self.preprocessing_profiles = OCR_PREPROCESSING_PROFILES
 		logger.info(f"PDFProcessor initialized: DPI={self.dpi}, enhanced={self.use_enhanced}, "
 		            f"denoise={self.denoise_strength}, deskew={self.deskew_enabled}, "
-		            f"binarization={self.binarization_mode}")
+		            f"binarization={self.binarization_mode}, "
+		            f"hybrid_enabled={PYMUPDF_AVAILABLE}")
 	
 	def is_image_file(self, file_path: str) -> bool:
 		"""Sprawdź czy plik jest obrazem (nie PDF)"""
 		ext = Path(file_path).suffix.lower()
 		return ext in IMAGE_EXTENSIONS
-	
+
+	# =========================================================================
+	# PDF Type Detection and Hybrid Processing
+	# =========================================================================
+
+	def detect_pdf_type(self, pdf_path: str) -> str:
+		"""
+		Detect if PDF has extractable text or needs OCR.
+
+		Returns:
+			'text' - Digitally generated PDF with extractable text (no OCR needed)
+			'image' - Scanned/image-based PDF (OCR required)
+			'mixed' - Contains both text and image pages
+		"""
+		if not PYMUPDF_AVAILABLE:
+			logger.warning("[PDF Type] PyMuPDF not available, defaulting to OCR")
+			return self.PDF_TYPE_IMAGE
+
+		try:
+			doc = fitz.open(pdf_path)
+			total_pages = len(doc)
+			pages_with_text = 0
+			min_text_chars = 100  # Minimum characters to consider page as text-based
+
+			for page_num, page in enumerate(doc):
+				text = page.get_text().strip()
+				text_len = len(text)
+
+				if text_len >= min_text_chars:
+					pages_with_text += 1
+					logger.debug(f"[PDF Type] Page {page_num + 1}: {text_len} chars (text)")
+				else:
+					logger.debug(f"[PDF Type] Page {page_num + 1}: {text_len} chars (image/scan)")
+
+			doc.close()
+
+			# Determine PDF type based on text coverage
+			if pages_with_text == total_pages:
+				logger.info(f"[PDF Type] TEXT-based PDF ({total_pages} pages with text)")
+				return self.PDF_TYPE_TEXT
+			elif pages_with_text == 0:
+				logger.info(f"[PDF Type] IMAGE-based PDF ({total_pages} pages, no text)")
+				return self.PDF_TYPE_IMAGE
+			else:
+				logger.info(f"[PDF Type] MIXED PDF ({pages_with_text}/{total_pages} pages with text)")
+				return self.PDF_TYPE_MIXED
+
+		except Exception as e:
+			logger.error(f"[PDF Type] Detection failed: {e}, defaulting to OCR")
+			return self.PDF_TYPE_IMAGE
+
+	def extract_text_direct(self, pdf_path: str) -> Tuple[str, float]:
+		"""
+		Direct text extraction from text-based PDF (no OCR).
+		Much faster and more accurate for digitally generated PDFs.
+
+		Returns:
+			Tuple[str, float]: (extracted_text, confidence=100.0)
+		"""
+		if not PYMUPDF_AVAILABLE:
+			raise RuntimeError("PyMuPDF not available for direct text extraction")
+
+		logger.info(f"[Direct Extract] Starting extraction: {pdf_path}")
+
+		try:
+			doc = fitz.open(pdf_path)
+			text_parts = []
+			max_pages = 2  # Same limit as OCR processing
+
+			for page_num, page in enumerate(doc):
+				if page_num >= max_pages:
+					logger.info(f"[Direct Extract] Limiting to {max_pages} pages")
+					break
+				text = page.get_text()
+				text_parts.append(text)
+				logger.debug(f"[Direct Extract] Page {page_num + 1}: {len(text)} chars")
+
+			doc.close()
+
+			full_text = "\n\n--- STRONA ---\n\n".join(text_parts)
+			logger.info(f"[Direct Extract] Extracted {len(full_text)} total chars, confidence=100%")
+
+			return full_text, 100.0
+
+		except Exception as e:
+			logger.error(f"[Direct Extract] Failed: {e}")
+			raise Exception(f"Błąd ekstrakcji tekstu z PDF: {str(e)}")
+
+	def process_file_smart(self, file_path: str) -> Tuple[str, float]:
+		"""
+		Smart/hybrid processing: use direct extraction when possible, OCR otherwise.
+
+		For text-based PDFs: Direct extraction (faster, more accurate)
+		For image-based PDFs: OCR processing
+		For mixed PDFs: Try direct extraction, fall back to OCR if insufficient
+
+		Returns:
+			Tuple[str, float]: (extracted_text, confidence_score)
+		"""
+		# Handle image files directly with OCR
+		if self.is_image_file(file_path):
+			logger.info(f"[Smart] Image file detected - using OCR")
+			return self.extract_text_from_image_file(file_path)
+
+		# Detect PDF type
+		pdf_type = self.detect_pdf_type(file_path)
+
+		if pdf_type == self.PDF_TYPE_TEXT:
+			# Text-based PDF - use direct extraction
+			logger.info(f"[Smart] Text-based PDF - using direct extraction")
+			return self.extract_text_direct(file_path)
+
+		elif pdf_type == self.PDF_TYPE_IMAGE:
+			# Image-based PDF - use OCR
+			logger.info(f"[Smart] Image-based PDF - using OCR")
+			return self.extract_text_from_pdf(file_path)
+
+		else:  # PDF_TYPE_MIXED
+			# Mixed PDF - try direct extraction first
+			logger.info(f"[Smart] Mixed PDF - trying direct extraction")
+			try:
+				text, conf = self.extract_text_direct(file_path)
+				# If we got substantial text, use it
+				if len(text.strip()) > 200:
+					logger.info(f"[Smart] Direct extraction successful ({len(text)} chars)")
+					return text, 95.0  # Slightly lower confidence for mixed
+				else:
+					logger.info(f"[Smart] Direct extraction insufficient, falling back to OCR")
+					return self.extract_text_from_pdf(file_path)
+			except Exception as e:
+				logger.warning(f"[Smart] Direct extraction failed: {e}, using OCR")
+				return self.extract_text_from_pdf(file_path)
+
+	# =========================================================================
+	# Profile-based Preprocessing for Retry Logic
+	# =========================================================================
+
+	def apply_profile(self, profile_name: str) -> None:
+		"""
+		Apply a preprocessing profile to change OCR behavior.
+
+		Args:
+			profile_name: Name of profile from OCR_PREPROCESSING_PROFILES
+		"""
+		if profile_name not in self.preprocessing_profiles:
+			logger.warning(f"[Profile] Unknown profile '{profile_name}', using default")
+			profile_name = 'default'
+
+		profile = self.preprocessing_profiles[profile_name]
+		self.dpi = profile.get('dpi', OCR_DPI)
+		self.denoise_strength = profile.get('denoise_strength', OCR_DENOISE_STRENGTH)
+		self.binarization_mode = profile.get('binarization_mode', OCR_BINARIZATION_MODE)
+		self.clahe_clip_limit = profile.get('clahe_clip_limit', 2.0)
+		self.deskew_enabled = profile.get('deskew_enabled', OCR_DESKEW_ENABLED)
+
+		logger.info(f"[Profile] Applied '{profile_name}': DPI={self.dpi}, "
+		           f"denoise={self.denoise_strength}, binarization={self.binarization_mode}, "
+		           f"CLAHE={self.clahe_clip_limit}, deskew={self.deskew_enabled}")
+
+	def process_file_with_profile(
+			self, file_path: str, profile_name: str = 'default'
+		) -> Tuple[str, float]:
+		"""
+		Process file with a specific preprocessing profile.
+		Used by retry logic to attempt OCR with different settings.
+
+		Args:
+			file_path: Path to PDF or image file
+			profile_name: Name of preprocessing profile to use
+
+		Returns:
+			Tuple[str, float]: (extracted_text, confidence_score)
+		"""
+		logger.info(f"[Profile OCR] Processing with profile '{profile_name}'")
+		self.apply_profile(profile_name)
+
+		if self.is_image_file(file_path):
+			return self.extract_text_from_image_file(file_path)
+		else:
+			return self.extract_text_from_pdf(file_path)
+
 	def pdf_to_images(self, pdf_path: str, userpw: str = None, ownerpw: str = None) -> List[Image.Image]:
 		"""
 		Konwertuj PDF na listę obrazów (PIL Image)
@@ -155,9 +357,14 @@ class PDFProcessor:
 		
 		# CLAHE - Contrast Limited Adaptive Histogram Equalization
 		# Greatly improves text visibility in photos with uneven lighting
-		logger.debug("[Preprocess] Applying CLAHE contrast enhancement")
-		clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-		enhanced = clahe.apply(gray)
+		# Skip if clahe_clip_limit is 0 (minimal profile)
+		if self.clahe_clip_limit > 0:
+			logger.debug(f"[Preprocess] Applying CLAHE contrast enhancement (clip={self.clahe_clip_limit})")
+			clahe = cv2.createCLAHE(clipLimit=self.clahe_clip_limit, tileGridSize=(8, 8))
+			enhanced = clahe.apply(gray)
+		else:
+			logger.debug("[Preprocess] Skipping CLAHE (disabled)")
+			enhanced = gray
 		
 		# Denoising - usuwanie szumu (reduced for phone photos)
 		if self.denoise_strength > 0:

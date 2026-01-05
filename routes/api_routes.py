@@ -806,7 +806,8 @@ def upload_files():
                         'is_duplicate': is_duplicate,
                         'duplicate_info': duplicate_info,
                         'seller_id': seller_id,
-                        'seller_conflict': seller_conflict
+                        'seller_conflict': seller_conflict,
+                        'processing_profile': extracted_data.get('processing_profile', 'default')
                     })
 
                     # Save if no validation errors and not duplicate
