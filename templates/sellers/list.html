@@ -27,8 +27,103 @@
 
 {% block content %}
 <div class="sellers-page">
-    <!-- Sellers Table -->
-    <div class="card">
+    <!-- Sync Results View (hidden by default) -->
+    <div id="sync-results-view" class="hidden">
+        <div class="card mb-4">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-primary mr-2">sync</span>
+                    Wyniki synchronizacji
+                </h2>
+                <button onclick="closeSyncResults()" class="btn-secondary">
+                    <span class="material-icons text-sm mr-2">arrow_back</span>
+                    Powrot do listy
+                </button>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold text-primary" id="sync-total-sellers">0</div>
+                    <div class="text-sm text-gray-600">Sprzedawcow w bazie</div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold text-gray-700" id="sync-total-invoices">0</div>
+                    <div class="text-sm text-gray-600">Wszystkich faktur</div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold text-yellow-600" id="sync-missing-count">0</div>
+                    <div class="text-sm text-gray-600">Brakujacych sprzedawcow</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold text-red-600" id="sync-discrepancies-count">0</div>
+                    <div class="text-sm text-gray-600">Niezgodnosci nazw</div>
+                </div>
+            </div>
+
+            <!-- All Synced Message -->
+            <div id="sync-all-good" class="hidden bg-green-50 border border-green-200 p-6 rounded-lg text-center mb-6">
+                <span class="material-icons text-green-600 text-5xl mb-2">check_circle</span>
+                <p class="text-green-800 font-semibold text-lg">Wszystko zsynchronizowane!</p>
+                <p class="text-green-600">Dane sprzedawcow sa zgodne z fakturami.</p>
+            </div>
+        </div>
+
+        <!-- Missing Sellers Card -->
+        <div id="missing-sellers-card" class="card mb-4 hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-yellow-600 mr-2">warning</span>
+                    Brakujacy sprzedawcy
+                </h3>
+                <span id="missing-sellers-badge" class="badge badge-warning">0</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Faktury z NIP-em, dla ktorego nie ma sprzedawcy w bazie</p>
+            <div class="table-wrapper">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>NIP</th>
+                            <th>Nazwa (z faktury)</th>
+                            <th class="text-center">Liczba faktur</th>
+                            <th class="text-center">Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody id="missing-sellers-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Name Discrepancies Card -->
+        <div id="discrepancies-card" class="card hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons text-red-600 mr-2">error</span>
+                    Niezgodnosci nazw
+                </h3>
+                <span id="discrepancies-badge" class="badge badge-error">0</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Faktury gdzie nazwa sprzedawcy rozni sie od nazwy w bazie</p>
+            <div class="table-wrapper">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nr faktury</th>
+                            <th>Nazwa w bazie sprzedawcow</th>
+                            <th>Nazwa na fakturze</th>
+                            <th class="text-center">Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody id="discrepancies-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sellers List View -->
+    <div id="sellers-list-view">
+        <!-- Sellers Table -->
+        <div class="card">
         <div class="table-wrapper">
             <table class="table table-hover sortable-table" id="sellersTable">
                 <thead>
@@ -133,76 +228,8 @@
             </div>
         </div>
     </div>
+    </div><!-- End sellers-list-view -->
 </div>
-
-<!-- Sync Results Modal Template -->
-<template id="sync-results-template">
-    <div class="sync-results">
-        <div class="mb-6">
-            <h4 class="text-lg font-semibold mb-2">Podsumowanie</h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-gray-50 p-3 rounded-lg text-center">
-                    <div class="text-2xl font-bold text-primary" id="sync-total-sellers">0</div>
-                    <div class="text-sm text-gray-600">Sprzedawcow w bazie</div>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg text-center">
-                    <div class="text-2xl font-bold text-gray-700" id="sync-total-invoices">0</div>
-                    <div class="text-sm text-gray-600">Wszystkich faktur</div>
-                </div>
-                <div class="bg-yellow-50 p-3 rounded-lg text-center">
-                    <div class="text-2xl font-bold text-yellow-600" id="sync-missing-count">0</div>
-                    <div class="text-sm text-gray-600">Brakujacych sprzedawcow</div>
-                </div>
-                <div class="bg-red-50 p-3 rounded-lg text-center">
-                    <div class="text-2xl font-bold text-red-600" id="sync-discrepancies-count">0</div>
-                    <div class="text-sm text-gray-600">Niezgodnosci nazw</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Missing Sellers Section -->
-        <div class="mb-6" id="missing-sellers-section">
-            <h4 class="text-lg font-semibold mb-2 flex items-center">
-                <span class="material-icons text-yellow-600 mr-2">warning</span>
-                Brakujacy sprzedawcy (faktury bez sprzedawcy w bazie)
-            </h4>
-            <div class="overflow-x-auto">
-                <table class="table" id="missing-sellers-table">
-                    <thead>
-                        <tr>
-                            <th>NIP</th>
-                            <th>Nazwa (z faktury)</th>
-                            <th>Liczba faktur</th>
-                            <th>Akcja</th>
-                        </tr>
-                    </thead>
-                    <tbody id="missing-sellers-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Name Discrepancies Section -->
-        <div class="mb-4" id="discrepancies-section">
-            <h4 class="text-lg font-semibold mb-2 flex items-center">
-                <span class="material-icons text-red-600 mr-2">error</span>
-                Niezgodnosci nazw (faktura vs sprzedawca)
-            </h4>
-            <div class="overflow-x-auto">
-                <table class="table" id="discrepancies-table">
-                    <thead>
-                        <tr>
-                            <th>Nr faktury</th>
-                            <th>Nazwa w sprzedawcy</th>
-                            <th>Nazwa na fakturze</th>
-                            <th>Akcja</th>
-                        </tr>
-                    </thead>
-                    <tbody id="discrepancies-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</template>
 {% endblock %}
 
 {% block extra_scripts %}
