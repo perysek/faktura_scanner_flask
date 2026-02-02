@@ -1,93 +1,472 @@
 {% extends "base.html" %}
 
-{% block title %}Wprowadź fakturę - {{ app_name }}{% endblock %}
+{% block title %}Wprowadź fakturę — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block page_title %}Wprowadź fakturę{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --color-warning: #9a6700;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-{% block page_actions %}
-    <button onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
-        <span class="material-icons text-sm mr-2">arrow_back</span>
-        Powrót
-    </button>
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.275rem !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .two-column-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+        .two-column-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .card-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin: 0 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-title svg {
+        width: 1.125rem;
+        height: 1.125rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .form-grid-full {
+        grid-column: 1 / -1;
+    }
+
+    .form-field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.3rem;
+        letter-spacing: 0.01em;
+    }
+
+    .form-required {
+        color: var(--color-error);
+    }
+
+    .input-with-button {
+        display: flex;
+        gap: 0.375rem;
+    }
+
+    .form-input {
+        flex: 1;
+        padding: 0.5rem 0.5rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .form-input::placeholder {
+        color: var(--color-ink-subtle);
+        font-weight: 300;
+    }
+
+    .form-select {
+        padding: 0.5rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238a8a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1rem;
+        padding-right: 2rem;
+    }
+
+    .form-select:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .btn-paste {
+        padding: 0.5rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        color: var(--color-ink-subtle);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-paste:hover {
+        background: white;
+        color: var(--color-ink);
+        border-color: var(--color-ink-muted);
+    }
+
+    .btn-paste svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-refined svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined-primary {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-refined-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+    }
+
+    .btn-refined-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-refined-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    /* Upload area */
+    .upload-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+    }
+
+    @media (min-width: 1024px) {
+        .upload-card {
+            position: sticky;
+            top: 6rem;
+            height: calc(100vh - 8rem);
+        }
+    }
+
+    .upload-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .upload-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .upload-title svg {
+        width: 1rem;
+        height: 1rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .upload-content {
+        flex: 1;
+        background: var(--color-surface);
+        position: relative;
+        overflow: hidden;
+        padding: 0.25rem;
+    }
+
+    .upload-placeholder {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        border: 2px dashed var(--color-border);
+        border-radius: 2px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .upload-placeholder:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface-warm);
+    }
+
+    .upload-icon {
+        width: 4rem;
+        height: 4rem;
+        background: var(--color-surface);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .upload-icon svg {
+        width: 2rem;
+        height: 2rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .upload-text {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.25rem;
+    }
+
+    .upload-hint {
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .preview-container {
+        width: 100%;
+        height: 100%;
+        background: white;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .btn-remove-file {
+        font-size: 0.75rem;
+        color: var(--color-error);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: color 0.2s ease;
+        border: none;
+        background: none;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .btn-remove-file:hover {
+        color: #7a1f1f;
+    }
+
+    .btn-remove-file svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
-        <!-- Left Column: Edit Form (1/2 width) -->
+<div class="refined-page">
+    <header class="page-header">
+        <h1 class="page-title">Wprowadź dane nowej faktury</h1>
+        <div class="header-actions">
+            <button onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-refined btn-refined-secondary">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Powrót
+            </button>
+        </div>
+    </header>
+
+    <div class="two-column-layout">
+        <!-- Left Column: Form -->
         <div>
-            <form id="invoice-form">
+            <form id="invoice-form" class="space-y-6">
                 <!-- Invoice Details Card -->
-                <div class="card mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <span class="material-icons text-primary mr-2">receipt</span>
+                <div class="form-card">
+                    <h3 class="card-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         Dane faktury
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Numer faktury <span class="text-status-error">*</span>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label class="form-label">
+                                Numer faktury <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="text" id="invoice_number" name="invoice_number"
-                                       class="input flex-1" required placeholder="FV/2024/01/001">
-                                <button type="button" onclick="pasteToField('invoice_number')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required placeholder="FV/2024/01/001">
+                                <button type="button" onclick="pasteToField('invoice_number')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Status płatności
-                            </label>
-                            <select id="status" name="status" class="input">
+                        <div class="form-field">
+                            <label class="form-label">Status płatności</label>
+                            <select id="status" name="status" class="form-select">
                                 <option value="Nieopłacona" selected>Nieopłacona</option>
                                 <option value="Opłacona">Opłacona</option>
-                                <option value="Przeterminowana">Przeterminowana</option>
                             </select>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Data wystawienia <span class="text-status-error">*</span>
+                        <div class="form-field">
+                            <label class="form-label">
+                                Data wystawienia <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="date" id="invoice_date" name="invoice_date"
-                                       class="input flex-1" required>
-                                <button type="button" onclick="pasteToField('invoice_date')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required>
+                                <button type="button" onclick="pasteToField('invoice_date')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Termin płatności
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field">
+                            <label class="form-label">Termin płatności</label>
+                            <div class="input-with-button">
                                 <input type="date" id="payment_due_date" name="payment_due_date"
-                                       class="input flex-1">
-                                <button type="button" onclick="pasteToField('payment_due_date')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input">
+                                <button type="button" onclick="pasteToField('payment_due_date')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Forma płatności
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field form-grid-full">
+                            <label class="form-label">Forma płatności</label>
+                            <div class="input-with-button">
                                 <input type="text" id="payment_term" name="payment_term"
-                                       class="input flex-1"
+                                       class="form-input"
                                        placeholder="np. Przelew, POBRANIE, 7 dni, 14 dni">
-                                <button type="button" onclick="pasteToField('payment_term')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                <button type="button" onclick="pasteToField('payment_term')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -95,67 +474,71 @@
                 </div>
 
                 <!-- Seller Details Card -->
-                <div class="card mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <span class="material-icons text-primary mr-2">business</span>
+                <div class="form-card">
+                    <h3 class="card-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
                         Dane sprzedawcy
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Nazwa sprzedawcy <span class="text-status-error">*</span>
+                    <div class="form-grid">
+                        <div class="form-field form-grid-full">
+                            <label class="form-label">
+                                Nazwa sprzedawcy <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="text" id="seller_name" name="seller_name"
-                                       class="input flex-1" required>
-                                <button type="button" onclick="pasteToField('seller_name')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required>
+                                <button type="button" onclick="pasteToField('seller_name')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                NIP
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field">
+                            <label class="form-label">NIP</label>
+                            <div class="input-with-button">
                                 <input type="text" id="seller_nip" name="seller_nip"
-                                       class="input flex-1"
+                                       class="form-input"
                                        placeholder="np. 123-456-78-90">
-                                <button type="button" onclick="pasteToField('seller_nip')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                <button type="button" onclick="pasteToField('seller_nip')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Numer konta bankowego
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field">
+                            <label class="form-label">Numer konta bankowego</label>
+                            <div class="input-with-button">
                                 <input type="text" id="bank_account" name="bank_account"
-                                       class="input flex-1"
+                                       class="form-input"
                                        placeholder="np. PL 12 1234 1234 1234 1234 1234 1234">
-                                <button type="button" onclick="pasteToField('bank_account')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                <button type="button" onclick="pasteToField('bank_account')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
-                        
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Adres sprzedawcy
-                            </label>
-                             <div class="flex gap-2">
-                                <textarea id="seller_address" name="seller_address" rows="2"
-                                          class="input flex-1"></textarea>
+
+                        <div class="form-field form-grid-full">
+                            <label class="form-label">Adres sprzedawcy</label>
+                            <div class="input-with-button">
+                                <textarea id="seller_address" name="seller_address" rows="1"
+                                          class="form-input"></textarea>
                                 <button type="button" onclick="pasteToField('seller_address')"
-                                        class="btn-secondary px-2 py-1 h-fit" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                        class="btn-paste" title="Wklej ze schowka" style="align-self: flex-start;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -163,33 +546,35 @@
                 </div>
 
                 <!-- Amounts Card -->
-                <div class="card mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <span class="material-icons text-primary mr-2">payments</span>
+                <div class="form-card">
+                    <h3 class="card-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         Kwoty
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Kwota <span class="text-status-error">*</span>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label class="form-label">
+                                Kwota <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="number" step="0.01" id="amount" name="amount"
-                                       class="input flex-1" required
-                                       placeholder="np. 1234.56">
-                                <button type="button" onclick="pasteToField('amount')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required
+                                       placeholder="np. 1234.56" style="font-weight: 600;">
+                                <button type="button" onclick="pasteToField('amount')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Waluta
-                            </label>
-                            <select id="currency" name="currency" class="input">
+                        <div class="form-field">
+                            <label class="form-label">Waluta</label>
+                            <select id="currency" name="currency" class="form-select">
                                 <option value="PLN" selected>PLN</option>
                                 <option value="EUR">EUR</option>
                                 <option value="USD">USD</option>
@@ -200,55 +585,60 @@
                 </div>
 
                 <!-- Form Actions -->
-                <div class="flex items-center gap-4 mt-4">
-                    <button type="submit" class="btn-primary">
-                        <span class="material-icons text-sm mr-2">save</span>
+                <div class="form-actions">
+                    <button type="submit" class="btn-refined btn-refined-primary">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
                         Zapisz fakturę
                     </button>
-                    <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
+                    <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-refined btn-refined-secondary">
                         Anuluj
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Right Column: Document Upload & Viewer (1/2 width) -->
+        <!-- Right Column: Document Upload -->
         <div>
-            <!-- Sticky container with explicitly calculated height to match view height -->
-            <!-- Styles synced with edit.html (lines 242+) -->
-            <div class="card p-0 lg:sticky lg:top-4" style="display: flex; flex-direction: column; height: 800px; min-height: 600px; max-height: calc(100vh - 8rem);">
-                <div class="p-2 border-b border-gray-200" style="flex-shrink: 0;">
-                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                        <span class="material-icons text-primary mr-2">upload_file</span>
+            <div class="upload-card">
+                <div class="upload-header">
+                    <h3 class="upload-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
                         Plik dokumentu
                     </h3>
-                    <div id="file-actions" class="hidden">
-                        <button type="button" id="remove-file-btn" class="text-sm text-status-error hover:text-red-700 font-medium flex items-center">
-                            <span class="material-icons text-sm mr-1">delete</span>
+                    <div id="file-actions" style="display: none;">
+                        <button type="button" id="remove-file-btn" class="btn-remove-file">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                             Usuń plik
                         </button>
                     </div>
                 </div>
-                
-                <!-- Main Content Area - Flex Grow -->
-                <!-- Styles synced with edit.html (line 249) -->
-                <div class="bg-gray-50 relative rounded-b-lg" style="flex: 1; min-height: 700px; overflow: auto; display: flex; flex-direction: column;">
-                    <!-- Upload State -->
-                    <div id="upload-placeholder" class="flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 m-4 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick="document.getElementById('pdf_file').click()">
-                        <input type="file" id="pdf_file" name="pdf_file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,application/pdf,image/*">
-                        <span class="material-icons text-gray-400 text-6xl mb-4">cloud_upload</span>
-                        <p class="text-lg font-medium text-gray-700 mb-1">Kliknij, aby wybrać plik</p>
-                        <p class="text-sm text-gray-500">PDF, JPG, PNG (max 10MB)</p>
+
+                <div class="upload-content">
+                    <div id="upload-placeholder" class="upload-placeholder" onclick="document.getElementById('pdf_file').click()">
+                        <input type="file" id="pdf_file" name="pdf_file" style="display: none;" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,application/pdf,image/*">
+                        <div class="upload-icon">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                        </div>
+                        <p class="upload-text">Kliknij, aby wybrać plik</p>
+                        <p class="upload-hint">PDF, JPG, PNG (max 10MB)</p>
                     </div>
 
-                    <!-- Preview State - strictly fill parent -->
-                    <div id="preview-container" class="hidden w-full h-full bg-gray-100 p-1">
+                    <div id="preview-container" style="display: none;" class="preview-container">
                         <!-- Content injected via JS -->
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -286,38 +676,33 @@ function setupFileUpload() {
             return;
         }
 
-        // Show preview container, hide placeholder
-        uploadPlaceholder.classList.add('hidden');
-        previewContainer.classList.remove('hidden');
-        fileActions.classList.remove('hidden');
+        uploadPlaceholder.style.display = 'none';
+        previewContainer.style.display = 'block';
+        fileActions.style.display = 'block';
 
-        // Create object URL
         const objectUrl = URL.createObjectURL(file);
         const ext = file.name.split('.').pop().toLowerCase();
-        
+
         previewContainer.innerHTML = '';
-        
-        // Reset classes - NO absolute positioning, just size
-        previewContainer.className = 'w-full h-full bg-gray-100 p-1';
+        previewContainer.style.padding = '0.25rem';
+        previewContainer.style.background = '#f5f5f5';
 
         if (file.type === 'application/pdf' || ext === 'pdf') {
-            // FORCE block display for container to avoid flex sizing issues with iframes
             previewContainer.style.display = 'block';
-            
+
             const iframe = document.createElement('iframe');
             iframe.src = objectUrl;
-            // Explicit styles to force 100% height/width
             iframe.style.width = '100%';
             iframe.style.height = '100%';
             iframe.style.border = '0';
-            iframe.style.display = 'block'; // Critical for removing inline gaps
-            
+            iframe.style.display = 'block';
+
             previewContainer.appendChild(iframe);
         } else if (file.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
-            // Restore flex for images
             previewContainer.style.display = 'flex';
-            previewContainer.classList.add('items-center', 'justify-center');
-            
+            previewContainer.style.alignItems = 'center';
+            previewContainer.style.justifyContent = 'center';
+
             const img = document.createElement('img');
             img.src = objectUrl;
             img.style.maxWidth = '100%';
@@ -328,23 +713,25 @@ function setupFileUpload() {
             img.style.display = 'block';
             previewContainer.appendChild(img);
         } else {
-             // Restore flex for fallback
             previewContainer.style.display = 'flex';
-            previewContainer.classList.add('items-center', 'justify-center');
+            previewContainer.style.alignItems = 'center';
+            previewContainer.style.justifyContent = 'center';
             previewContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full">
-                    <span class="material-icons text-gray-400 text-6xl mb-4">insert_drive_file</span>
-                    <p class="text-gray-700">${file.name}</p>
+                <div style="text-align: center;">
+                    <svg style="width: 4rem; height: 4rem; color: #8a8a8a; margin: 0 auto 1rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p style="color: #525252;">${file.name}</p>
                 </div>
             `;
         }
     }
 
     function clearPreview() {
-        uploadPlaceholder.classList.remove('hidden');
-        previewContainer.classList.add('hidden');
-        previewContainer.style.display = ''; // Clear inline display style
-        fileActions.classList.add('hidden');
+        uploadPlaceholder.style.display = 'flex';
+        previewContainer.style.display = 'none';
+        previewContainer.style.display = '';
+        fileActions.style.display = 'none';
         previewContainer.innerHTML = '';
     }
 }
@@ -354,12 +741,11 @@ function setupForm() {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const loadingModal = Modals.loading('Zapisywanie faktury...');
-        
+
         try {
             const formData = new FormData(form);
-            // Append file if selected (it's already in the form physically, but ensure it's captured)
             const fileInput = document.getElementById('pdf_file');
             if (fileInput.files.length > 0) {
                  // FormData automatically grabs it from the name="pdf_file" input
@@ -369,17 +755,17 @@ function setupForm() {
                 method: 'POST',
                 body: formData
             });
-            
+
             const result = await response.json();
-            
+
             Modals.close(loadingModal);
-            
+
             if (result.success) {
                 Notifications.success('Faktura została zapisana pomyślnie');
                 if (result.warnings && result.warnings.length > 0) {
                     Notifications.warning('Ostrzeżenia: ' + result.warnings.join(', '));
                 }
-                
+
                 setTimeout(() => {
                     window.location.href = '{{ url_for("main.invoices_list") }}';
                 }, 1500);
@@ -387,13 +773,13 @@ function setupForm() {
                 if (response.status === 409) {
                      if (result.seller_conflict) {
                         await handleSellerConflict(result.seller_conflict, formData);
-                        return; 
+                        return;
                     } else if (result.seller_info && result.seller_info.new_seller) {
                         await handleNewSeller(result.seller_info, formData);
                         return;
                     }
                 }
-                
+
                 Notifications.error(result.error || 'Błąd zapisu faktury');
                 if (result.validation_errors) {
                     const errors = result.validation_errors.errors || [];
@@ -410,24 +796,15 @@ function setupForm() {
     });
 }
 
-/**
- * Reuse the seller conflict logic from edit.html (simplified here or copied)
- * Ideally this should be a shared JS helper, but for now copying the specific handlers
- */
-
 async function handleSellerConflict(conflict, originalFormData) {
-    // ... Copy of the modal logic ...
-    // Since this is getting long, I'll rely on the existing logic or the previous implementation
-    // But wait, the previous implementation had it inline. I need to include it.
-    
     const existingSeller = conflict.existing_seller;
-    
+
     const action = await showSellerConflictModal({
         nip: existingSeller.seller_nip,
         existingName: existingSeller.seller_name,
         newName: conflict.proposed_name
     });
-    
+
     if (action === 'use_existing') {
         await confirmSellerAction('use_existing', originalFormData, existingSeller.id);
     } else if (action === 'update_seller') {
@@ -442,7 +819,7 @@ async function handleNewSeller(sellerInfo, originalFormData) {
         nip: sellerInfo.seller_nip,
         name: sellerInfo.seller_name
     });
-    
+
     if (action === 'create') {
         await confirmSellerAction('create_new', originalFormData, null);
     } else {
@@ -452,21 +829,21 @@ async function handleNewSeller(sellerInfo, originalFormData) {
 
 async function confirmSellerAction(action, formData, existingSellerId = null) {
     const loadingModal = Modals.loading('Zapisywanie faktury...');
-    
+
     try {
         formData.append('seller_action', action);
         if (existingSellerId) {
             formData.append('existing_seller_id', existingSellerId);
         }
-        
+
         const response = await fetch('/api/invoices', {
             method: 'POST',
             body: formData
         });
-        
+
         const result = await response.json();
         Modals.close(loadingModal);
-        
+
         if (result.success) {
             Notifications.success(result.message || 'Faktura została zapisana pomyślnie');
             setTimeout(() => {
@@ -481,7 +858,6 @@ async function confirmSellerAction(action, formData, existingSellerId = null) {
     }
 }
 
-// Modal helper functions (Inline to ensure they work without external deps besides base styles)
 function showSellerConflictModal({ nip, existingName, newName }) {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
@@ -490,17 +866,19 @@ function showSellerConflictModal({ nip, existingName, newName }) {
             background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
             justify-content: center; z-index: 9999; backdrop-filter: blur(4px);
         `;
-        
+
         const modal = document.createElement('div');
          modal.style.cssText = `
             background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 500px; width: 90%; animation: slideIn 0.3s ease-out;
         `;
-        
+
         modal.innerHTML = `
             <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <span class="material-icons" style="color: #f59e0b; font-size: 28px;">warning</span>
+                    <svg style="width: 28px; height: 28px; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
                     <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">Konflikt danych sprzedawcy</h3>
                 </div>
                 <p style="color: #6b7280; margin: 0; font-size: 14px;">NIP ${nip} już istnieje w bazie danych z inną nazwą</p>
@@ -523,18 +901,17 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                 </div>
             </div>
         `;
-        
+
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        // Add simple animation style if not exists
         if (!document.getElementById('modal-animations')) {
              const style = document.createElement('style');
              style.id = 'modal-animations';
              style.innerHTML = `@keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }`;
              document.head.appendChild(style);
         }
-        
+
         modal.querySelector('#btn-use-existing').onclick = () => { document.body.removeChild(overlay); resolve('use_existing'); };
         modal.querySelector('#btn-update-seller').onclick = () => { document.body.removeChild(overlay); resolve('update_seller'); };
         modal.querySelector('#btn-cancel').onclick = () => { document.body.removeChild(overlay); resolve('cancel'); };
@@ -554,11 +931,13 @@ function showNewSellerModal({ nip, name }) {
             background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 500px; width: 90%; animation: slideIn 0.3s ease-out;
         `;
-        
+
         modal.innerHTML = `
             <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <span class="material-icons" style="color: #3b82f6; font-size: 28px;">add_business</span>
+                    <svg style="width: 28px; height: 28px; color: #3b82f6;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
                      <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">Nowy sprzedawca</h3>
                 </div>
                 <p style="color: #6b7280; margin: 0; font-size: 14px;">Sprzedawca z tym NIP nie istnieje w bazie danych</p>
@@ -582,9 +961,18 @@ function showNewSellerModal({ nip, name }) {
         `;
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
-        
+
         modal.querySelector('#btn-create').onclick = () => { document.body.removeChild(overlay); resolve('create'); };
         modal.querySelector('#btn-cancel').onclick = () => { document.body.removeChild(overlay); resolve('cancel'); };
+    });
+}
+
+function pasteToField(fieldId) {
+    navigator.clipboard.readText().then(text => {
+        document.getElementById(fieldId).value = text;
+        Notifications.success('Wklejono ze schowka');
+    }).catch(err => {
+        Notifications.error('Nie można odczytać schowka');
     });
 }
 </script>

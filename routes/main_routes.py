@@ -9,8 +9,8 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 @main_bp.route('/invoices')
 def invoices_list():
-    """Main view - invoice list with search and statistics"""
-    return render_template('invoices/list.html')
+    """Main view - invoice list with refined minimal design"""
+    return render_template('invoices/list_refined.html')
 
 
 @main_bp.route('/upload')
@@ -40,14 +40,14 @@ def create_invoice():
 
 @main_bp.route('/history')
 def history():
-    """History view - audit trail"""
-    return render_template('history/list.html')
+    """History view with refined minimal design"""
+    return render_template('history/list_refined.html')
 
 
 @main_bp.route('/sellers')
 def sellers_list():
-    """Sellers list view - manage sellers"""
-    return render_template('sellers/list.html')
+    """Sellers list view with refined minimal design"""
+    return render_template('sellers/list_refined.html')
 
 
 @main_bp.route('/seller/create')

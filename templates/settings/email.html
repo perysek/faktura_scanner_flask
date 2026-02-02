@@ -1,123 +1,376 @@
 {% extends "base.html" %}
 
-{% block title %}Ustawienia e-mail - {{ app_name }}{% endblock %}
+{% block title %}Ustawienia e-mail — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item">
-    <span class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">settings</span>
-        <span>Ustawienia</span>
-    </span>
-</li>
-<li class="breadcrumb-item">
-    <span class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">email</span>
-        <span>Konfiguracja e-mail</span>
-    </span>
-</li>
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-info: #1e6091;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.5rem !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .page-subtitle {
+        font-size: 0.875rem;
+        color: var(--color-ink-muted);
+        font-weight: 300;
+    }
+
+    .form-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-field {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-field:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.375rem;
+        letter-spacing: 0.01em;
+    }
+
+    .form-required {
+        color: var(--color-error);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .form-input::placeholder {
+        color: var(--color-ink-subtle);
+        font-weight: 300;
+    }
+
+    .form-hint {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.25rem;
+    }
+
+    .input-with-toggle {
+        position: relative;
+    }
+
+    .input-toggle {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-ink-subtle);
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+
+    .input-toggle:hover {
+        color: var(--color-ink);
+    }
+
+    .input-toggle svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        border: none;
+    }
+
+    .btn-refined svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined-primary {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-refined-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+    }
+
+    .btn-refined-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-refined-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    .info-card {
+        background: rgba(30, 96, 145, 0.04);
+        border: 1px solid rgba(30, 96, 145, 0.15);
+        border-radius: 2px;
+        padding: 1.5rem;
+    }
+
+    .info-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .info-header svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        color: var(--color-info);
+    }
+
+    .info-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .info-section {
+        margin-bottom: 1.25rem;
+    }
+
+    .info-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .info-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .info-list li {
+        font-size: 0.75rem;
+        color: var(--color-ink-muted);
+        padding-left: 1rem;
+        position: relative;
+        margin-bottom: 0.375rem;
+    }
+
+    .info-list li:before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: var(--color-info);
+    }
+
+    .info-code {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 0.6875rem;
+        background: rgba(30, 96, 145, 0.08);
+        padding: 0.125rem 0.375rem;
+        border-radius: 2px;
+    }
+
+    .info-link {
+        color: var(--color-info);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .info-link:hover {
+        color: var(--color-ink);
+        text-decoration: underline;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="max-w-2xl">
-        <div class="card">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <span class="material-icons text-primary mr-2">mail_outline</span>
-                Konfiguracja IMAP
-            </h3>
+<div class="refined-page">
+    <header class="page-header">
+        <h1 class="page-title">Ustawienia e-mail</h1>
+        <p class="page-subtitle">Konfiguracja IMAP dla automatycznego importu</p>
+    </header>
 
-            <form id="email-settings-form" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Serwer IMAP <span class="text-status-error">*</span>
-                    </label>
-                    <input type="text" id="imap_server" name="imap_server"
-                           placeholder="np. imap.gmail.com"
-                           class="input" required>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Adres serwera IMAP (np. imap.gmail.com, outlook.office365.com)
-                    </p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Port IMAP
-                    </label>
-                    <input type="number" id="imap_port" name="imap_port"
-                           value="993"
-                           class="input">
-                    <p class="text-xs text-gray-500 mt-1">
-                        Domyślnie 993 (SSL)
-                    </p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Adres e-mail <span class="text-status-error">*</span>
-                    </label>
-                    <input type="email" id="email" name="email"
-                           placeholder="twoj@email.com"
-                           class="input" required>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Hasło <span class="text-status-error">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="password" id="password" name="password"
-                               class="input pr-10" required>
-                        <button type="button" onclick="togglePassword()"
-                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                            <span class="material-icons text-sm" id="password-icon">visibility</span>
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Dla Gmaila użyj hasła aplikacji, nie głównego hasła konta
-                    </p>
-                </div>
-
-                <div class="flex items-center gap-4 pt-4 border-t border-gray-200">
-                    <button type="button" onclick="testConnection()" class="btn-secondary">
-                        <span class="material-icons text-sm mr-2">check_circle</span>
-                        Testuj połączenie
-                    </button>
-                    <button type="submit" class="btn-primary">
-                        <span class="material-icons text-sm mr-2">save</span>
-                        Zapisz ustawienia
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Instructions Card -->
-        <div class="info-card mt-6">
-            <h3 class="text-lg mb-4 flex items-center info-card-title">
-                <span class="material-icons mr-2">info</span>
-                Instrukcja konfiguracji
-            </h3>
-
-            <div class="space-y-4 text-sm info-card-text">
-                <div>
-                    <h4 class="font-semibold mb-2">Gmail:</h4>
-                    <ul class="list-disc list-inside space-y-1 ml-2">
-                        <li>Serwer: <code class="info-card-code">imap.gmail.com</code></li>
-                        <li>Port: <code class="info-card-code">993</code></li>
-                        <li>Włącz weryfikację dwuetapową w ustawieniach konta Google</li>
-                        <li>Wygeneruj hasło aplikacji w <a href="https://myaccount.google.com/apppasswords" target="_blank" class="underline">myaccount.google.com/apppasswords</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="font-semibold mb-2">Outlook/Office 365:</h4>
-                    <ul class="list-disc list-inside space-y-1 ml-2">
-                        <li>Serwer: <code class="info-card-code">outlook.office365.com</code></li>
-                        <li>Port: <code class="info-card-code">993</code></li>
-                        <li>Użyj hasła do konta Microsoft</li>
-                    </ul>
+    <div class="form-card">
+        <form id="email-settings-form">
+            <div class="form-field">
+                <label class="form-label">
+                    Serwer IMAP <span class="form-required">*</span>
+                </label>
+                <input type="text" id="imap_server" name="imap_server"
+                       placeholder="np. imap.gmail.com"
+                       class="form-input" required>
+                <div class="form-hint">
+                    Adres serwera IMAP (np. imap.gmail.com, outlook.office365.com)
                 </div>
             </div>
+
+            <div class="form-field">
+                <label class="form-label">Port IMAP</label>
+                <input type="number" id="imap_port" name="imap_port"
+                       value="993"
+                       class="form-input">
+                <div class="form-hint">
+                    Domyslnie 993 (SSL)
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label class="form-label">
+                    Adres e-mail <span class="form-required">*</span>
+                </label>
+                <input type="email" id="email" name="email"
+                       placeholder="twoj@email.com"
+                       class="form-input" required>
+            </div>
+
+            <div class="form-field">
+                <label class="form-label">
+                    Haslo <span class="form-required">*</span>
+                </label>
+                <div class="input-with-toggle">
+                    <input type="password" id="password" name="password"
+                           class="form-input" required>
+                    <span class="input-toggle" onclick="togglePassword()" id="password-toggle">
+                        <svg id="password-icon-show" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg id="password-icon-hide" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="form-hint">
+                    Dla Gmaila uzyj hasla aplikacji, nie glownego hasla konta
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-refined btn-refined-primary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Zapisz ustawienia
+                </button>
+                <button type="button" onclick="testConnection()" class="btn-refined btn-refined-secondary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Testuj polaczenie
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-card">
+        <div class="info-header">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="info-title">Instrukcja konfiguracji</h3>
+        </div>
+
+        <div class="info-section">
+            <h4 class="info-section-title">Gmail:</h4>
+            <ul class="info-list">
+                <li>Serwer: <span class="info-code">imap.gmail.com</span></li>
+                <li>Port: <span class="info-code">993</span></li>
+                <li>Wlacz weryfikacje dwuetapowa w ustawieniach konta Google</li>
+                <li>Wygeneruj haslo aplikacji w <a href="https://myaccount.google.com/apppasswords" target="_blank" class="info-link">myaccount.google.com/apppasswords</a></li>
+            </ul>
+        </div>
+
+        <div class="info-section">
+            <h4 class="info-section-title">Outlook/Office 365:</h4>
+            <ul class="info-list">
+                <li>Serwer: <span class="info-code">outlook.office365.com</span></li>
+                <li>Port: <span class="info-code">993</span></li>
+                <li>Uzyj hasla do konta Microsoft</li>
+            </ul>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -150,7 +403,7 @@ function setupForm() {
         const formData = new FormData(form);
         const settings = Object.fromEntries(formData.entries());
 
-        const loadingModal = Modals.loading('Zapisywanie ustawień...');
+        const loadingModal = Modals.loading('Zapisywanie ustawien...');
 
         try {
             const result = await API.email.saveSettings(settings);
@@ -158,14 +411,14 @@ function setupForm() {
             Modals.close(loadingModal);
 
             if (result.success) {
-                Notifications.success('Ustawienia zostały zapisane');
+                Notifications.success('Ustawienia zostaly zapisane');
             } else {
-                Notifications.error('Błąd zapisywania ustawień');
+                Notifications.error('Blad zapisywania ustawien');
             }
         } catch (error) {
             Modals.close(loadingModal);
             console.error('Save error:', error);
-            Notifications.error('Błąd zapisywania: ' + error.message);
+            Notifications.error('Blad zapisywania: ' + error.message);
         }
     });
 }
@@ -177,11 +430,11 @@ async function testConnection() {
     const password = document.getElementById('password').value;
 
     if (!server || !email || !password) {
-        Notifications.warning('Proszę wypełnić wszystkie wymagane pola');
+        Notifications.warning('Prosze wypelnic wszystkie wymagane pola');
         return;
     }
 
-    const loadingModal = Modals.loading('Testowanie połączenia...');
+    const loadingModal = Modals.loading('Testowanie polaczenia...');
 
     try {
         const result = await API.email.test({
@@ -194,39 +447,30 @@ async function testConnection() {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Modals.alert({
-                title: 'Sukces',
-                message: 'Połączenie z serwerem IMAP zostało nawiązane pomyślnie!',
-                type: 'success'
-            });
+            Notifications.success('Polaczenie z serwerem IMAP zostalo nawiazane pomyslnie!');
         } else {
-            Modals.alert({
-                title: 'Błąd połączenia',
-                message: 'Nie udało się połączyć z serwerem. Sprawdź ustawienia i spróbuj ponownie.',
-                type: 'error'
-            });
+            Notifications.error('Nie udalo sie polaczyc z serwerem. Sprawdz ustawienia i sprobuj ponownie.');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Test error:', error);
-        Modals.alert({
-            title: 'Błąd',
-            message: 'Błąd testowania połączenia: ' + error.message,
-            type: 'error'
-        });
+        Notifications.error('Blad testowania polaczenia: ' + error.message);
     }
 }
 
 function togglePassword() {
     const input = document.getElementById('password');
-    const icon = document.getElementById('password-icon');
+    const iconShow = document.getElementById('password-icon-show');
+    const iconHide = document.getElementById('password-icon-hide');
 
     if (input.type === 'password') {
         input.type = 'text';
-        icon.textContent = 'visibility_off';
+        iconShow.style.display = 'none';
+        iconHide.style.display = 'block';
     } else {
         input.type = 'password';
-        icon.textContent = 'visibility';
+        iconShow.style.display = 'block';
+        iconHide.style.display = 'none';
     }
 }
 </script>

@@ -1,14 +1,19 @@
 /**
  * Invoice List Page JavaScript
+ * Enhanced with collapsible search and micro-interactions
  */
 
 let invoicesData = [];
+let filteredData = [];
 let currentSearch = '';
+let searchFilters = {};
+let isSearchVisible = false;
 
 // Load invoices on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadInvoices();
     setupEventListeners();
+    restoreSearchState();
 });
 
 /**
@@ -33,6 +38,262 @@ function setupEventListeners() {
         exportMenu.addEventListener('click', (e) => {
             e.stopPropagation();
         });
+    }
+
+    // Keyboard shortcut for search toggle (Ctrl+F or /)
+    document.addEventListener('keydown', (e) => {
+        // Skip if user is typing in an input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            // Allow Escape to close search even when in input
+            if (e.key === 'Escape' && isSearchVisible) {
+                toggleTableSearch();
+            }
+            return;
+        }
+
+        if (e.key === '/' || (e.ctrlKey && e.key === 'f')) {
+            e.preventDefault();
+            toggleTableSearch();
+            // Focus first search input if showing
+            if (isSearchVisible) {
+                setTimeout(() => {
+                    const firstInput = document.getElementById('search-invoice-number');
+                    if (firstInput) firstInput.focus();
+                }, 100);
+            }
+        }
+    });
+}
+
+/**
+ * Toggle table search row visibility
+ */
+function toggleTableSearch() {
+    const searchRow = document.getElementById('table-search-row');
+    const toggleBtn = document.getElementById('toggle-search-btn');
+
+    if (!searchRow) return;
+
+    isSearchVisible = !isSearchVisible;
+
+    if (isSearchVisible) {
+        // Show search row with animation
+        searchRow.classList.remove('hidden', 'search-row-exit');
+        searchRow.classList.add('search-row-enter');
+
+        // Update button state
+        if (toggleBtn) {
+            toggleBtn.classList.add('bg-primary-50', 'text-primary-600');
+            toggleBtn.classList.remove('text-slate-600');
+        }
+
+        // Focus first input
+        setTimeout(() => {
+            const firstInput = document.getElementById('search-invoice-number');
+            if (firstInput) firstInput.focus();
+        }, 50);
+    } else {
+        // Hide search row with animation
+        searchRow.classList.remove('search-row-enter');
+        searchRow.classList.add('search-row-exit');
+
+        setTimeout(() => {
+            searchRow.classList.add('hidden');
+            searchRow.classList.remove('search-row-exit');
+        }, 200);
+
+        // Update button state
+        if (toggleBtn) {
+            toggleBtn.classList.remove('bg-primary-50', 'text-primary-600');
+            toggleBtn.classList.add('text-slate-600');
+        }
+    }
+
+    // Save state to localStorage
+    localStorage.setItem('invoiceListSearchVisible', isSearchVisible);
+}
+
+/**
+ * Restore search state from localStorage
+ */
+function restoreSearchState() {
+    const savedVisible = localStorage.getItem('invoiceListSearchVisible');
+    const savedFilters = localStorage.getItem('invoiceListFilters');
+
+    if (savedVisible === 'true') {
+        toggleTableSearch();
+    }
+
+    if (savedFilters) {
+        try {
+            searchFilters = JSON.parse(savedFilters);
+            // Restore filter values to inputs
+            Object.keys(searchFilters).forEach(key => {
+                const input = document.getElementById(key);
+                if (input && searchFilters[key]) {
+                    input.value = searchFilters[key];
+                }
+            });
+        } catch (e) {
+            console.error('Error restoring filters:', e);
+        }
+    }
+}
+
+/**
+ * Filter table by column
+ * @param {HTMLElement} input - The input element
+ * @param {number} columnIndex - Column index to filter
+ */
+function filterTableColumn(input, columnIndex) {
+    const value = input.value.trim();
+    const inputId = input.id;
+
+    // Store filter value
+    if (value) {
+        searchFilters[inputId] = value;
+    } else {
+        delete searchFilters[inputId];
+    }
+
+    // Save to localStorage
+    localStorage.setItem('invoiceListFilters', JSON.stringify(searchFilters));
+
+    // Apply all filters
+    applyFilters();
+
+    // Update active filters badge
+    updateActiveFiltersBadge();
+}
+
+/**
+ * Apply all active filters to the data
+ */
+function applyFilters() {
+    const tbody = document.getElementById('invoices-tbody');
+    const rows = tbody.querySelectorAll('tr[data-invoice-id]');
+
+    rows.forEach(row => {
+        let visible = true;
+
+        // Check each filter
+        Object.keys(searchFilters).forEach(filterId => {
+            const filterValue = searchFilters[filterId].toLowerCase();
+            if (!filterValue) return;
+
+            // Map filter ID to column index
+            const columnMap = {
+                'search-invoice-number': 0,
+                'search-seller': 1,
+                'search-nip': 2,
+                'search-date': 3,
+                'search-due-date': 4,
+                'search-amount': 5,
+                'search-status': 6
+            };
+
+            const colIndex = columnMap[filterId];
+            if (colIndex === undefined) return;
+
+            const cells = row.querySelectorAll('td');
+            const cellText = cells[colIndex]?.textContent?.toLowerCase() || '';
+
+            if (!cellText.includes(filterValue)) {
+                visible = false;
+            }
+        });
+
+        // Show/hide row with animation
+        if (visible) {
+            row.classList.remove('hidden');
+            row.style.opacity = '1';
+        } else {
+            row.classList.add('hidden');
+            row.style.opacity = '0';
+        }
+    });
+
+    // Update visible count
+    updateVisibleCount();
+}
+
+/**
+ * Clear all filters
+ */
+function clearAllFilters() {
+    searchFilters = {};
+    localStorage.removeItem('invoiceListFilters');
+
+    // Clear all search inputs
+    const searchInputs = document.querySelectorAll('#table-search-row input, #table-search-row select');
+    searchInputs.forEach(input => {
+        input.value = '';
+    });
+
+    // Show all rows
+    const tbody = document.getElementById('invoices-tbody');
+    const rows = tbody.querySelectorAll('tr[data-invoice-id]');
+    rows.forEach(row => {
+        row.classList.remove('hidden');
+        row.style.opacity = '1';
+    });
+
+    // Update badge and count
+    updateActiveFiltersBadge();
+    updateInvoiceCountBadge(invoicesData.length);
+
+    Notifications.info('Filtry zostały wyczyszczone');
+}
+
+/**
+ * Update active filters badge
+ */
+function updateActiveFiltersBadge() {
+    const badge = document.getElementById('active-filters-badge');
+    const countEl = document.getElementById('active-filters-count');
+    const activeCount = Object.keys(searchFilters).filter(k => searchFilters[k]).length;
+
+    if (badge && countEl) {
+        if (activeCount > 0) {
+            countEl.textContent = activeCount;
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+        } else {
+            badge.classList.add('hidden');
+            badge.classList.remove('flex');
+        }
+    }
+}
+
+/**
+ * Update visible row count
+ */
+function updateVisibleCount() {
+    const tbody = document.getElementById('invoices-tbody');
+    const visibleRows = tbody.querySelectorAll('tr[data-invoice-id]:not(.hidden)').length;
+    const totalRows = invoicesData.length;
+
+    if (Object.keys(searchFilters).length > 0) {
+        updateInvoiceCountBadge(visibleRows, totalRows);
+    } else {
+        updateInvoiceCountBadge(totalRows);
+    }
+}
+
+/**
+ * Update invoice count badge
+ */
+function updateInvoiceCountBadge(count, total = null) {
+    const badge = document.getElementById('invoice-count-badge');
+    if (badge) {
+        if (total !== null && count !== total) {
+            badge.innerHTML = `<span class="text-primary-600 font-semibold">${count}</span> / ${total} faktur`;
+        } else {
+            badge.textContent = `${count} faktur`;
+        }
+        // Add subtle animation
+        badge.classList.add('counter-animate');
+        setTimeout(() => badge.classList.remove('counter-animate'), 300);
     }
 }
 
@@ -104,6 +365,9 @@ function renderInvoicesTable() {
     const tbody = document.getElementById('invoices-tbody');
     const emptyState = document.getElementById('empty-state');
 
+    // Update count badge
+    updateInvoiceCountBadge(invoicesData.length);
+
     if (invoicesData.length === 0) {
         tbody.innerHTML = '';
         emptyState.classList.remove('hidden');
@@ -112,44 +376,67 @@ function renderInvoicesTable() {
 
     emptyState.classList.add('hidden');
 
-    tbody.innerHTML = invoicesData.map(invoice => {
+    tbody.innerHTML = invoicesData.map((invoice, index) => {
         // Format OCR confidence badge
         const ocrConfidence = invoice.ocr_confidence || 0;
-        let ocrBadgeClass = 'badge-error';
-        if (ocrConfidence >= 80) ocrBadgeClass = 'badge-success';
-        else if (ocrConfidence >= 60) ocrBadgeClass = 'badge-warning';
+        let ocrBadgeClass = 'bg-red-100 text-red-700';
+        let ocrIcon = 'error_outline';
+        if (ocrConfidence >= 80) {
+            ocrBadgeClass = 'bg-emerald-100 text-emerald-700';
+            ocrIcon = 'check_circle';
+        } else if (ocrConfidence >= 60) {
+            ocrBadgeClass = 'bg-amber-100 text-amber-700';
+            ocrIcon = 'warning';
+        }
 
-        // Format status badge
-        const statusBadgeClass = invoice.status === 'Opłacona' ? 'badge-success' :
-            invoice.status === 'Przeterminowana' ? 'badge-error' :
-                'badge-warning';
+        // Format status badge with icon
+        let statusBadgeClass, statusIcon;
+        switch(invoice.status) {
+            case 'Opłacona':
+                statusBadgeClass = 'bg-emerald-100 text-emerald-700';
+                statusIcon = 'check_circle';
+                break;
+            case 'Przeterminowana':
+                statusBadgeClass = 'bg-red-100 text-red-700';
+                statusIcon = 'warning';
+                break;
+            default:
+                statusBadgeClass = 'bg-amber-100 text-amber-700';
+                statusIcon = 'schedule';
+        }
 
         // Calculate net and VAT amounts
         const grossAmount = invoice.amount || 0;
-        const netAmount = calculateNetAmount(grossAmount);
-        const vatAmount = calculateVatAmount(grossAmount);
+
+        // Stagger animation delay (max 10 items)
+        const staggerDelay = Math.min(index, 10) * 0.02;
 
         return `
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="font-medium">${escapeHtml(invoice.invoice_number || '-')}</td>
-                <td>${escapeHtml(invoice.seller_name || '-')}</td>
-                <td>${escapeHtml(invoice.seller_nip || '-')}</td>
-                <td>${formatDate(invoice.invoice_date)}</td>
-                <td>${invoice.payment_due_date ? formatDate(invoice.payment_due_date) :
-                (invoice.payment_term ? escapeHtml(invoice.payment_term) : '-')}</td>
-                <td class="font-semibold text-gross">${formatCurrency(grossAmount, invoice.currency)}</td>
-                <td>
-                    <span class="badge ${statusBadgeClass}">
+            <tr class="table-row-hover transition-colors border-b border-slate-100 last:border-0 group stagger-item"
+                data-invoice-id="${invoice.id}"
+                style="animation-delay: ${staggerDelay}s">
+                <td class="px-6 py-3 font-medium text-slate-900">${escapeHtml(invoice.invoice_number || '-')}</td>
+                <td class="px-6 py-3">
+                    <div class="font-medium text-slate-700 truncate max-w-[200px]" title="${escapeHtml(invoice.seller_name || '')}">${escapeHtml(invoice.seller_name || '-')}</div>
+                </td>
+                <td class="px-6 py-3 text-slate-500 hidden md:table-cell font-mono text-xs">${escapeHtml(invoice.seller_nip || '-')}</td>
+                <td class="px-6 py-3 text-slate-500">${formatDate(invoice.invoice_date)}</td>
+                <td class="px-6 py-3 text-slate-500 hidden lg:table-cell">${invoice.payment_due_date ? formatDate(invoice.payment_due_date) :
+                (invoice.payment_term ? `<span class="text-slate-400">${escapeHtml(invoice.payment_term)}</span>` : '-')}</td>
+                <td class="px-6 py-3 font-semibold text-slate-900">${formatCurrency(grossAmount, invoice.currency)}</td>
+                <td class="px-6 py-3">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium ${statusBadgeClass}">
+                        <span class="material-icons text-xs">${statusIcon}</span>
                         ${escapeHtml(invoice.status || 'Nieznany')}
                     </span>
                 </td>
-                <td>
-                    <span class="badge ${ocrBadgeClass}">
+                <td class="px-6 py-3 hidden xl:table-cell">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${ocrBadgeClass}">
                         ${Math.round(ocrConfidence)}%
                     </span>
                 </td>
-                <td>
-                    <div class="flex items-center gap-2">
+                <td class="px-6 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         ${invoice.pdf_path ? (() => {
                 const ext = invoice.pdf_path.split('.').pop().toLowerCase();
                 const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'].includes(ext);
@@ -157,27 +444,32 @@ function renderInvoicesTable() {
                 const title = isImage ? 'Obraz' : 'PDF';
                 return `
                             <button onclick="viewPDF(${invoice.id})"
-                                    class="table-action-btn table-action-btn-view"
+                                    class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors btn-press"
                                     title="${title}">
-                                <span class="material-icons">${icon}</span>
+                                <span class="material-icons text-lg">${icon}</span>
                             </button>
                         `;
             })() : ''}
                         <a href="/invoice/${invoice.id}/edit"
-                           class="table-action-btn table-action-btn-edit"
+                           class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors btn-press"
                            title="Edytuj">
-                            <span class="material-icons">edit</span>
+                            <span class="material-icons text-lg">edit</span>
                         </a>
                         <button onclick="deleteInvoice(${invoice.id})"
-                                class="table-action-btn table-action-btn-delete"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors btn-press"
                                 title="Usuń">
-                            <span class="material-icons">delete</span>
+                            <span class="material-icons text-lg">delete</span>
                         </button>
                     </div>
                 </td>
             </tr>
         `;
     }).join('');
+
+    // Re-apply filters if any are active
+    if (Object.keys(searchFilters).length > 0) {
+        applyFilters();
+    }
 }
 
 /**

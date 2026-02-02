@@ -1,0 +1,1277 @@
+{% extends "base.html" %}
+
+{% block title %}Faktury — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+
+{% block extra_head %}
+<!-- Uses Inter from base.html -->
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* =============================================
+       REFINED MINIMAL - Custom Design System
+       Elegant restraint with precise typography
+       ============================================= */
+
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-accent: #c9a227;
+        --color-accent-muted: rgba(201, 162, 39, 0.12);
+        --color-success: #2d6a4f;
+        --color-warning: #9a6700;
+        --color-error: #9b2c2c;
+
+        --font-display: 'Inter', system-ui, sans-serif;
+        --font-body: 'Inter', system-ui, sans-serif;
+
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Override body background for this page */
+    body {
+        background: var(--color-surface-warm) !important;
+    }
+
+    /* Main content area override */
+    #main-content {
+        background: var(--color-surface-warm);
+    }
+
+    /* Page Container - Full width, flex column to fill viewport */
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* Page Header - Compact */
+    .page-header {
+        margin-bottom: 1rem;
+        flex-shrink: 0;
+    }
+
+    .page-title {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    /* Statistics Bar - Compact */
+    .stats-bar {
+        display: flex;
+        gap: 2.5rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem 0;
+        flex-shrink: 0;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--color-ink-subtle);
+        margin-top: 0.25rem;
+        font-weight: 400;
+    }
+
+    /* Actions Bar - Compact */
+    .actions-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        gap: 1rem;
+        flex-shrink: 0;
+    }
+
+    .search-wrapper {
+        position: relative;
+        flex: 1;
+        max-width: 400px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.5rem 1rem 0.5rem 2.5rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 300;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.3s var(--ease-out-expo);
+    }
+
+    .search-input::placeholder {
+        color: var(--color-ink-subtle);
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-ink-subtle);
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* Refined Buttons - Compact */
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn-refined-primary {
+        background: var(--color-ink);
+        color: white;
+        border: none;
+    }
+
+    .btn-refined-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-refined-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-refined-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    .btn-refined-ghost {
+        background: transparent;
+        color: var(--color-ink-muted);
+        border: none;
+        padding: 0.5rem;
+    }
+
+    .btn-refined-ghost:hover {
+        color: var(--color-ink);
+        background: var(--color-surface);
+    }
+
+    /* Table Container - Fills remaining space */
+    .table-container {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* Table Wrapper for scrolling */
+    .table-scroll-wrapper {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Header table needs right padding to account for scrollbar */
+    .table-scroll-wrapper > table:first-child {
+        padding-right: 6px;
+    }
+
+    /* Refined Table */
+    .refined-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .refined-table thead {
+        background: var(--color-surface);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .refined-table th {
+        padding: 0.5rem 1rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--color-ink-subtle);
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+        white-space: nowrap;
+    }
+
+    .refined-table th.sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.2s ease;
+    }
+
+    .refined-table th.sortable:hover {
+        color: var(--color-ink);
+    }
+
+    .refined-table th.sortable .sort-icon {
+        opacity: 0;
+        margin-left: 0.25rem;
+        transition: opacity 0.2s ease;
+    }
+
+    .refined-table th.sortable:hover .sort-icon {
+        opacity: 0.5;
+    }
+
+    .refined-table th.sorted .sort-icon {
+        opacity: 1;
+    }
+
+    .refined-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .refined-table tbody tr:hover {
+        background: var(--color-surface);
+    }
+
+    .refined-table td {
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        border-bottom: 1px solid var(--color-border-subtle);
+        vertical-align: middle;
+    }
+
+    .refined-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Scrollable tbody wrapper */
+    .tbody-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .tbody-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .tbody-scroll::-webkit-scrollbar-track {
+        background: var(--color-surface);
+    }
+
+    .tbody-scroll::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 3px;
+    }
+
+    .tbody-scroll::-webkit-scrollbar-thumb:hover {
+        background: var(--color-ink-subtle);
+    }
+
+    /* Column Widths */
+    .col-number { width: 14%; }
+    .col-seller { width: 22%; }
+    .col-nip { width: 12%; }
+    .col-date { width: 10%; }
+    .col-due { width: 10%; }
+    .col-amount { width: 12%; }
+    .col-status { width: 10%; }
+    .col-actions { width: 10%; }
+
+    /* Invoice Number - Primary identifier */
+    .invoice-number {
+        font-family: var(--font-display);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        letter-spacing: -0.01em;
+    }
+
+    /* Seller Name */
+    .seller-name {
+        font-weight: 400;
+        color: var(--color-ink);
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* NIP - Monospace */
+    .nip-number {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 0.75rem;
+        color: var(--color-ink-muted);
+        letter-spacing: 0.02em;
+    }
+
+    /* Dates */
+    .date-value {
+        color: var(--color-ink-muted);
+        font-weight: 300;
+    }
+
+    /* Amount - Emphasized */
+    .amount-value {
+        font-family: var(--font-display);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        white-space: nowrap;
+    }
+
+    .currency-code {
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: var(--color-ink-subtle);
+        margin-left: 0.25rem;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-radius: 1px;
+    }
+
+    .status-paid {
+        background: rgba(45, 106, 79, 0.08);
+        color: var(--color-success);
+    }
+
+    .status-unpaid {
+        background: var(--color-accent-muted);
+        color: var(--color-warning);
+    }
+
+    .status-overdue {
+        background: rgba(155, 44, 44, 0.08);
+        color: var(--color-error);
+    }
+
+    /* Row Actions */
+    .row-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.25rem;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .refined-table tbody tr:hover .row-actions {
+        opacity: 1;
+    }
+
+    .action-btn {
+        padding: 0.5rem;
+        color: var(--color-ink-subtle);
+        background: transparent;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+        color: var(--color-ink);
+        background: var(--color-surface);
+    }
+
+    .action-btn.delete:hover {
+        color: var(--color-error);
+        background: rgba(155, 44, 44, 0.06);
+    }
+
+    .action-btn svg {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+        padding: 3rem 2rem;
+        text-align: center;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .empty-icon {
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto 1.5rem;
+        color: var(--color-ink-subtle);
+        opacity: 0.3;
+    }
+
+    .empty-title {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+        color: var(--color-ink-subtle);
+        font-size: 0.9375rem;
+        font-weight: 300;
+        max-width: 320px;
+        margin: 0 auto 2rem;
+        line-height: 1.6;
+    }
+
+    /* Loading Skeleton */
+    .skeleton-row td {
+        padding: 0.5rem 1rem;
+    }
+
+    .skeleton-bar {
+        height: 0.75rem;
+        background: linear-gradient(
+            90deg,
+            var(--color-border-subtle) 0%,
+            var(--color-surface) 50%,
+            var(--color-border-subtle) 100%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.8s ease-in-out infinite;
+        border-radius: 1px;
+    }
+
+    @keyframes skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Fade in animation */
+    .fade-in {
+        animation: fadeIn 0.4s var(--ease-out-expo) forwards;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Stagger animation for rows */
+    .stagger-row {
+        opacity: 0;
+        animation: fadeIn 0.35s var(--ease-out-expo) forwards;
+    }
+
+    /* Pagination - Compact */
+    .pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 1rem;
+        border-top: 1px solid var(--color-border-subtle);
+        background: var(--color-surface);
+        font-size: 0.75rem;
+        color: var(--color-ink-muted);
+        flex-shrink: 0;
+    }
+
+    .pagination-info {
+        font-weight: 300;
+    }
+
+    .pagination-count {
+        font-weight: 500;
+        color: var(--color-ink);
+    }
+
+    /* Filter Pills - Compact */
+    .filter-pills {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .filter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.6875rem;
+        font-weight: 400;
+        color: var(--color-ink-muted);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-pill:hover {
+        border-color: var(--color-ink-muted);
+    }
+
+    .filter-pill.active {
+        background: var(--color-ink);
+        color: white;
+        border-color: var(--color-ink);
+    }
+
+    .filter-pill .count {
+        font-weight: 500;
+    }
+
+    /* Dropdown Menu */
+    .dropdown {
+        position: relative;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 0.5rem;
+        min-width: 180px;
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-4px);
+        transition: all 0.2s var(--ease-out-expo);
+        z-index: 50;
+    }
+
+    .dropdown.open .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: none;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+    .dropdown-item:hover {
+        background: var(--color-surface);
+    }
+
+    .dropdown-item svg {
+        width: 1rem;
+        height: 1rem;
+        color: var(--color-ink-muted);
+    }
+
+    /* Override main content padding for full-width layout */
+    #main-content {
+        padding: 1rem 1.5rem !important;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+        .col-nip, .col-due { display: none; }
+        .page-title { font-size: 1.25rem; }
+        .stats-bar { gap: 1.5rem; }
+    }
+
+    @media (max-width: 768px) {
+        .stats-bar {
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .stat-item { min-width: 80px; }
+        .actions-bar { flex-wrap: wrap; }
+        .search-wrapper { max-width: none; order: 3; width: 100%; }
+        .row-actions { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}{% endblock %}
+
+{% block content %}
+<div class="refined-page fade-in">
+    <!-- Page Header -->
+    <header class="page-header">
+        <h1 class="page-title">Faktury</h1>
+    </header>
+
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-value" id="stat-total">—</span>
+            <span class="stat-label">Wszystkie</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="stat-paid">—</span>
+            <span class="stat-label">Opłacone</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="stat-unpaid">—</span>
+            <span class="stat-label">Nieopłacone</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="stat-amount">—</span>
+            <span class="stat-label">Suma brutto</span>
+        </div>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="filter-pills" id="filter-pills">
+        <button class="filter-pill active" data-filter="all">
+            Wszystkie <span class="count" id="filter-count-all">0</span>
+        </button>
+        <button class="filter-pill" data-filter="paid">
+            Opłacone <span class="count" id="filter-count-paid">0</span>
+        </button>
+        <button class="filter-pill" data-filter="unpaid">
+            Nieopłacone <span class="count" id="filter-count-unpaid">0</span>
+        </button>
+        <button class="filter-pill" data-filter="overdue">
+            Przeterminowane <span class="count" id="filter-count-overdue">0</span>
+        </button>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+        <div class="search-wrapper">
+            <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="text"
+                   class="search-input"
+                   id="search-input"
+                   placeholder="Szukaj po numerze, sprzedawcy lub NIP..."
+                   autocomplete="off">
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <!-- Export Dropdown -->
+            <div class="dropdown" id="export-dropdown">
+                <button class="btn-refined btn-refined-secondary" onclick="toggleDropdown('export-dropdown')">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Eksport
+                </button>
+                <div class="dropdown-menu">
+                    <button class="dropdown-item" onclick="exportToExcel()">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Eksport do Excel
+                    </button>
+                    <button class="dropdown-item" onclick="exportToCSV()">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Eksport do CSV
+                    </button>
+                </div>
+            </div>
+
+            <a href="{{ url_for('main.create_invoice') }}" class="btn-refined btn-refined-primary">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+                </svg>
+                Nowa faktura
+            </a>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+        <div class="table-scroll-wrapper">
+            <!-- Fixed Header Table -->
+            <table class="refined-table" style="flex-shrink: 0;">
+                <colgroup>
+                    <col class="col-number">
+                    <col class="col-seller">
+                    <col class="col-nip">
+                    <col class="col-date">
+                    <col class="col-due">
+                    <col class="col-amount">
+                    <col class="col-status">
+                    <col class="col-actions">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="col-number sortable" onclick="sortTable('invoice_number')">
+                            Nr faktury
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </th>
+                        <th class="col-seller sortable" onclick="sortTable('seller_name')">
+                            Sprzedawca
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </th>
+                        <th class="col-nip">NIP</th>
+                        <th class="col-date sortable" onclick="sortTable('invoice_date')">
+                            Data wyst.
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </th>
+                        <th class="col-due">Termin</th>
+                        <th class="col-amount sortable" onclick="sortTable('amount')">
+                            Kwota
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </th>
+                        <th class="col-status">Status</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+            </table>
+
+            <!-- Scrollable Body -->
+            <div class="tbody-scroll">
+                <table class="refined-table" id="invoicesTable">
+                    <colgroup>
+                        <col class="col-number">
+                        <col class="col-seller">
+                        <col class="col-nip">
+                        <col class="col-date">
+                        <col class="col-due">
+                        <col class="col-amount">
+                        <col class="col-status">
+                        <col class="col-actions">
+                    </colgroup>
+                    <tbody id="invoices-tbody">
+                <!-- Loading skeleton -->
+                <tr class="skeleton-row">
+                    <td><div class="skeleton-bar" style="width: 80%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 90%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 70%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 60%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 60%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 50%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 70%"></div></td>
+                    <td></td>
+                </tr>
+                <tr class="skeleton-row">
+                    <td><div class="skeleton-bar" style="width: 70%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 85%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 75%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 55%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 65%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 55%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 65%"></div></td>
+                    <td></td>
+                </tr>
+                <tr class="skeleton-row">
+                    <td><div class="skeleton-bar" style="width: 85%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 75%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 65%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 70%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 55%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 60%"></div></td>
+                    <td><div class="skeleton-bar" style="width: 75%"></div></td>
+                    <td></td>
+                </tr>
+                    </tbody>
+                </table>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="empty-title">Brak faktur</h3>
+                    <p class="empty-text">
+                        Rozpocznij od zaimportowania dokumentu PDF lub dodaj fakturę ręcznie.
+                    </p>
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <a href="{{ url_for('main.upload') }}" class="btn-refined btn-refined-primary">
+                            Import PDF
+                        </a>
+                        <a href="{{ url_for('main.create_invoice') }}" class="btn-refined btn-refined-secondary">
+                            Dodaj ręcznie
+                        </a>
+                    </div>
+                </div>
+            </div><!-- .tbody-scroll -->
+        </div><!-- .table-scroll-wrapper -->
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar" id="pagination-bar">
+            <span class="pagination-info">
+                Wyświetlono <span class="pagination-count" id="visible-count">0</span> z <span class="pagination-count" id="total-count">0</span> faktur
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/**
+ * Refined Invoice List - JavaScript
+ * Elegant interactions with smooth animations
+ */
+
+let invoicesData = [];
+let filteredData = [];
+let currentFilter = 'all';
+let currentSort = { field: 'invoice_date', direction: 'desc' };
+let searchQuery = '';
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    loadInvoices();
+    setupEventListeners();
+});
+
+/**
+ * Setup event listeners
+ */
+function setupEventListeners() {
+    // Search input with debounce
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce((e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            applyFiltersAndRender();
+        }, 300));
+    }
+
+    // Filter pills
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            e.target.closest('.filter-pill').classList.add('active');
+            currentFilter = e.target.closest('.filter-pill').dataset.filter;
+            applyFiltersAndRender();
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+        }
+    });
+
+    // Keyboard shortcut for search
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+            e.preventDefault();
+            document.getElementById('search-input').focus();
+        }
+        if (e.key === 'Escape') {
+            document.getElementById('search-input').blur();
+            document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+        }
+    });
+}
+
+/**
+ * Toggle dropdown
+ */
+function toggleDropdown(id) {
+    event.stopPropagation();
+    const dropdown = document.getElementById(id);
+    dropdown.classList.toggle('open');
+}
+
+/**
+ * Load invoices from API
+ */
+async function loadInvoices() {
+    try {
+        const data = await API.invoices.getAll();
+
+        if (data.success) {
+            invoicesData = data.invoices;
+            updateStatistics();
+            updateFilterCounts();
+            applyFiltersAndRender();
+        } else {
+            Notifications.error('Błąd ładowania faktur');
+        }
+    } catch (error) {
+        console.error('Error loading invoices:', error);
+        Notifications.error('Błąd ładowania faktur');
+    }
+}
+
+/**
+ * Update statistics display
+ */
+function updateStatistics() {
+    const total = invoicesData.length;
+    const paid = invoicesData.filter(inv => inv.status === 'Opłacona').length;
+    const unpaid = invoicesData.filter(inv => inv.status !== 'Opłacona').length;
+    const totalAmount = invoicesData.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-paid').textContent = paid;
+    document.getElementById('stat-unpaid').textContent = unpaid;
+    document.getElementById('stat-amount').textContent = formatAmountShort(totalAmount);
+}
+
+/**
+ * Format amount in short form
+ */
+function formatAmountShort(amount) {
+    if (amount >= 1000000) {
+        return (amount / 1000000).toFixed(1) + ' M';
+    } else if (amount >= 1000) {
+        return (amount / 1000).toFixed(1) + ' K';
+    }
+    return amount.toFixed(0);
+}
+
+/**
+ * Update filter counts
+ */
+function updateFilterCounts() {
+    const all = invoicesData.length;
+    const paid = invoicesData.filter(inv => inv.status === 'Opłacona').length;
+    const unpaid = invoicesData.filter(inv => inv.status === 'Nieopłacona').length;
+    const overdue = invoicesData.filter(inv => inv.status === 'Przeterminowana').length;
+
+    document.getElementById('filter-count-all').textContent = all;
+    document.getElementById('filter-count-paid').textContent = paid;
+    document.getElementById('filter-count-unpaid').textContent = unpaid;
+    document.getElementById('filter-count-overdue').textContent = overdue;
+}
+
+/**
+ * Apply filters and search, then render
+ */
+function applyFiltersAndRender() {
+    // Start with all data
+    filteredData = [...invoicesData];
+
+    // Apply status filter
+    if (currentFilter !== 'all') {
+        const statusMap = {
+            'paid': 'Opłacona',
+            'unpaid': 'Nieopłacona',
+            'overdue': 'Przeterminowana'
+        };
+        filteredData = filteredData.filter(inv => inv.status === statusMap[currentFilter]);
+    }
+
+    // Apply search
+    if (searchQuery) {
+        filteredData = filteredData.filter(inv => {
+            const searchable = [
+                inv.invoice_number,
+                inv.seller_name,
+                inv.seller_nip,
+                inv.amount?.toString()
+            ].filter(Boolean).join(' ').toLowerCase();
+            return searchable.includes(searchQuery);
+        });
+    }
+
+    // Apply sort
+    filteredData.sort((a, b) => {
+        let aVal = a[currentSort.field];
+        let bVal = b[currentSort.field];
+
+        if (currentSort.field === 'amount') {
+            aVal = aVal || 0;
+            bVal = bVal || 0;
+        } else if (currentSort.field === 'invoice_date') {
+            aVal = new Date(aVal || 0);
+            bVal = new Date(bVal || 0);
+        } else {
+            aVal = (aVal || '').toString().toLowerCase();
+            bVal = (bVal || '').toString().toLowerCase();
+        }
+
+        if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    renderTable();
+}
+
+/**
+ * Sort table by field
+ */
+function sortTable(field) {
+    if (currentSort.field === field) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.field = field;
+        currentSort.direction = 'asc';
+    }
+
+    // Update sort indicators
+    document.querySelectorAll('.refined-table th').forEach(th => th.classList.remove('sorted'));
+    event.target.closest('th').classList.add('sorted');
+
+    applyFiltersAndRender();
+}
+
+/**
+ * Render the table
+ */
+function renderTable() {
+    const tbody = document.getElementById('invoices-tbody');
+    const emptyState = document.getElementById('empty-state');
+    const paginationBar = document.getElementById('pagination-bar');
+
+    // Update counts
+    document.getElementById('visible-count').textContent = filteredData.length;
+    document.getElementById('total-count').textContent = invoicesData.length;
+
+    if (filteredData.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        paginationBar.style.display = 'none';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    paginationBar.style.display = 'flex';
+
+    tbody.innerHTML = filteredData.map((invoice, index) => {
+        const statusClass = getStatusClass(invoice.status);
+        const delay = Math.min(index * 0.03, 0.3);
+
+        return `
+            <tr class="stagger-row" style="animation-delay: ${delay}s" data-invoice-id="${invoice.id}">
+                <td>
+                    <span class="invoice-number">${escapeHtml(invoice.invoice_number || '—')}</span>
+                </td>
+                <td>
+                    <span class="seller-name" title="${escapeHtml(invoice.seller_name || '')}">
+                        ${escapeHtml(invoice.seller_name || '—')}
+                    </span>
+                </td>
+                <td>
+                    <span class="nip-number">${escapeHtml(invoice.seller_nip || '—')}</span>
+                </td>
+                <td>
+                    <span class="date-value">${formatDateShort(invoice.invoice_date)}</span>
+                </td>
+                <td>
+                    <span class="date-value">${formatDateShort(invoice.payment_due_date)}</span>
+                </td>
+                <td>
+                    <span class="amount-value">${formatAmountDisplay(invoice.amount)}</span>
+                    <span class="currency-code">${invoice.currency || 'PLN'}</span>
+                </td>
+                <td>
+                    <span class="status-badge ${statusClass}">${escapeHtml(invoice.status || 'Nieznany')}</span>
+                </td>
+                <td>
+                    <div class="row-actions">
+                        ${invoice.pdf_path ? `
+                        <button class="action-btn" onclick="viewPDF(${invoice.id})" title="Podgląd">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                        ` : ''}
+                        <a href="/invoice/${invoice.id}/edit" class="action-btn" title="Edytuj">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </a>
+                        <button class="action-btn delete" onclick="deleteInvoice(${invoice.id})" title="Usuń">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Get status badge class
+ */
+function getStatusClass(status) {
+    switch (status) {
+        case 'Opłacona': return 'status-paid';
+        case 'Przeterminowana': return 'status-overdue';
+        default: return 'status-unpaid';
+    }
+}
+
+/**
+ * Format date in short format
+ */
+function formatDateShort(dateString) {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}.${month}.${year}`;
+}
+
+/**
+ * Format amount for display
+ */
+function formatAmountDisplay(amount) {
+    if (amount === null || amount === undefined) return '—';
+    return new Intl.NumberFormat('pl-PL', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+/**
+ * View PDF
+ */
+function viewPDF(invoiceId) {
+    API.pdf.view(invoiceId);
+}
+
+/**
+ * Delete invoice
+ */
+function deleteInvoice(invoiceId) {
+    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+
+    Modals.confirm({
+        title: 'Usuń fakturę',
+        message: `Czy na pewno chcesz usunąć fakturę ${invoice?.invoice_number || invoiceId}?`,
+        confirmText: 'Usuń',
+        cancelText: 'Anuluj',
+        onConfirm: async () => {
+            const loadingModal = Modals.loading('Usuwanie...');
+
+            try {
+                const result = await API.invoices.delete(invoiceId);
+                Modals.close(loadingModal);
+
+                if (result.success) {
+                    Notifications.success('Faktura została usunięta');
+                    loadInvoices();
+                } else {
+                    Notifications.error('Błąd usuwania faktury');
+                }
+            } catch (error) {
+                Modals.close(loadingModal);
+                Notifications.error('Błąd usuwania faktury');
+            }
+        }
+    });
+}
+
+/**
+ * Export to Excel
+ */
+function exportToExcel() {
+    try {
+        API.export.toExcel();
+        Notifications.success('Eksportowanie do Excel...');
+        toggleDropdown('export-dropdown');
+    } catch (error) {
+        Notifications.error('Błąd eksportu');
+    }
+}
+
+/**
+ * Export to CSV
+ */
+function exportToCSV() {
+    try {
+        API.export.toCSV();
+        Notifications.success('Eksportowanie do CSV...');
+        toggleDropdown('export-dropdown');
+    } catch (error) {
+        Notifications.error('Błąd eksportu');
+    }
+}
+</script>
+{% endblock %}

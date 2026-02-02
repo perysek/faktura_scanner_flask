@@ -1,68 +1,441 @@
 {% extends "base.html" %}
 
-{% block title %}Edytuj fakturę - {{ app_name }}{% endblock %}
+{% block title %}Edytuj fakturę — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item">
-    <a href="{{ url_for('main.invoices_list') }}" class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">list_alt</span>
-        <span>Lista faktur</span>
-    </a>
-</li>
-<li class="breadcrumb-item">
-    <span class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">edit</span>
-        <span>Edytuj fakturę</span>
-    </span>
-</li>
-{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --color-warning: #9a6700;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-{% block page_actions %}
-    <div class="flex items-center gap-3">
-        <button type="button" onclick="submitEditForm()" class="btn-primary">
-            <span class="material-icons text-sm mr-2">save</span>
-            Zapisz zmiany
-        </button>
-        <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
-            <span class="material-icons text-sm mr-2">close</span>
-            Anuluj
-        </button>
-    </div>
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.5rem !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .page-subtitle {
+        font-size: 0.75rem;
+        color: var(--color-ink-muted);
+        font-weight: 300;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .two-column-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+        .two-column-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .card-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin: 0 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-title svg {
+        width: 1.125rem;
+        height: 1.125rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .form-grid-full {
+        grid-column: 1 / -1;
+    }
+
+    .form-field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.375rem;
+        letter-spacing: 0.01em;
+    }
+
+    .form-required {
+        color: var(--color-error);
+    }
+
+    .input-with-button {
+        display: flex;
+        gap: 0.375rem;
+    }
+
+    .form-input {
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .form-input::placeholder {
+        color: var(--color-ink-subtle);
+        font-weight: 300;
+    }
+
+    .form-select {
+        padding: 0.5rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238a8a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1rem;
+        padding-right: 2rem;
+    }
+
+    .form-select:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .btn-paste {
+        padding: 0.5rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        color: var(--color-ink-subtle);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-paste:hover {
+        background: white;
+        color: var(--color-ink);
+        border-color: var(--color-ink-muted);
+    }
+
+    .btn-paste svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-refined svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined-primary {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-refined-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+    }
+
+    .btn-refined-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-refined-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    .seller-warning {
+        display: none;
+        padding: 0.75rem;
+        background: rgba(154, 103, 0, 0.08);
+        border: 1px solid rgba(154, 103, 0, 0.2);
+        border-radius: 2px;
+        margin-top: 0.75rem;
+    }
+
+    .seller-warning.visible {
+        display: flex;
+    }
+
+    .seller-warning svg {
+        width: 1rem;
+        height: 1rem;
+        color: var(--color-warning);
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+    }
+
+    .seller-warning-text {
+        flex: 1;
+        font-size: 0.75rem;
+        color: var(--color-warning);
+        font-weight: 500;
+        margin-left: 0.75rem;
+    }
+
+    .ocr-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.625rem;
+        font-weight: 600;
+        border-radius: 2px;
+    }
+
+    .ocr-high { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
+    .ocr-medium { background: rgba(154, 103, 0, 0.12); color: var(--color-warning); }
+    .ocr-low { background: rgba(155, 44, 44, 0.1); color: var(--color-error); }
+
+    /* Viewer */
+    .viewer-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+    }
+
+    @media (min-width: 1024px) {
+        .viewer-card {
+            position: sticky;
+            top: 6rem;
+            height: calc(100vh - 8rem);
+        }
+    }
+
+    .viewer-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface);
+        flex-shrink: 0;
+    }
+
+    .viewer-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .viewer-title svg {
+        width: 1rem;
+        height: 1rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .viewer-content {
+        flex: 1;
+        background: var(--color-surface);
+        position: relative;
+        overflow: hidden;
+        padding: 0.25rem;
+    }
+
+    .viewer-footer {
+        padding: 1rem;
+        border-top: 1px solid var(--color-border);
+        background: white;
+        flex-shrink: 0;
+    }
+
+    .empty-viewer {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        width: 4rem;
+        height: 4rem;
+        background: var(--color-surface);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .empty-icon svg {
+        width: 2rem;
+        height: 2rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .empty-text {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--color-ink-muted);
+        margin-bottom: 0.25rem;
+    }
+
+    .empty-hint {
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
-        <!-- Left Column: Edit Form (1/2 width) -->
+<div class="refined-page">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Edycja faktury nr {{ invoice.invoice_number }}</h1>
+        </div>
+        <div class="header-actions">
+            <button type="button" onclick="submitEditForm()" class="btn-refined btn-refined-primary">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Zapisz zmiany
+            </button>
+            <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-refined btn-refined-secondary">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Anuluj
+            </button>
+        </div>
+    </header>
+
+    <div class="two-column-layout">
+        <!-- Left Column: Form -->
         <div>
             <form id="invoice-form">
                 <!-- Invoice Details Card -->
-                <div class="card mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <span class="material-icons text-primary mr-2">receipt</span>
+                <div class="form-card">
+                    <h3 class="card-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         Dane faktury
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Numer faktury <span class="text-status-error">*</span>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label class="form-label">
+                                Numer faktury <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="text" id="invoice_number" name="invoice_number"
                                        value="{{ invoice.invoice_number or '' }}"
-                                       class="input flex-1" required>
-                                <button type="button" onclick="pasteToField('invoice_number')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required>
+                                <button type="button" onclick="pasteToField('invoice_number')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Status płatności
-                            </label>
-                            <select id="status" name="status" class="input">
+                        <div class="form-field">
+                            <label class="form-label">Status płatności</label>
+                            <select id="status" name="status" class="form-select">
                                 <option value="Nieopłacona" {% if invoice.status == 'Nieopłacona' or not invoice.status %}selected{% endif %}>
                                     Nieopłacona
                                 </option>
@@ -75,48 +448,50 @@
                             </select>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Data wystawienia <span class="text-status-error">*</span>
+                        <div class="form-field">
+                            <label class="form-label">
+                                Data wystawienia <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="date" id="invoice_date" name="invoice_date"
                                        value="{{ invoice.invoice_date or '' }}"
-                                       class="input flex-1" required>
-                                <button type="button" onclick="pasteToField('invoice_date')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required>
+                                <button type="button" onclick="pasteToField('invoice_date')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Termin płatności
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field">
+                            <label class="form-label">Termin płatności</label>
+                            <div class="input-with-button">
                                 <input type="date" id="payment_due_date" name="payment_due_date"
                                        value="{{ invoice.payment_due_date or '' }}"
-                                       class="input flex-1">
-                                <button type="button" onclick="pasteToField('payment_due_date')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input">
+                                <button type="button" onclick="pasteToField('payment_due_date')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Forma płatności
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field form-grid-full">
+                            <label class="form-label">Forma płatności</label>
+                            <div class="input-with-button">
                                 <input type="text" id="payment_term" name="payment_term"
                                        value="{{ invoice.payment_term or '' }}"
-                                       class="input flex-1"
+                                       class="form-input"
                                        placeholder="np. Przelew, POBRANIE, 7 dni, 14 dni">
-                                <button type="button" onclick="pasteToField('payment_term')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                <button type="button" onclick="pasteToField('payment_term')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -124,65 +499,66 @@
                 </div>
 
                 <!-- Seller Details Card -->
-                <div class="card mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <span class="material-icons text-primary mr-2">business</span>
+                <div class="form-card">
+                    <h3 class="card-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
                         Dane sprzedawcy
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Nazwa sprzedawcy <span class="text-status-error">*</span>
+                    <div class="form-grid">
+                        <div class="form-field form-grid-full">
+                            <label class="form-label">
+                                Nazwa sprzedawcy <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="text" id="seller_name" name="seller_name"
                                        value="{{ invoice.seller_name or '' }}"
-                                       class="input flex-1" required>
-                                <button type="button" onclick="pasteToField('seller_name')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required>
+                                <button type="button" onclick="pasteToField('seller_name')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
-                            <!-- Seller warning area -->
-                            <div id="seller-warning" class="hidden mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <div class="flex items-start gap-2">
-                                    <span class="material-icons text-yellow-600 text-sm mt-0.5">warning</span>
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-yellow-800" id="seller-warning-message"></p>
-                                    </div>
-                                </div>
+                            <div id="seller-warning" class="seller-warning">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <p class="seller-warning-text" id="seller-warning-message"></p>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                NIP
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field">
+                            <label class="form-label">NIP</label>
+                            <div class="input-with-button">
                                 <input type="text" id="seller_nip" name="seller_nip"
                                        value="{{ invoice.seller_nip or '' }}"
-                                       class="input flex-1"
+                                       class="form-input"
                                        placeholder="np. 123-456-78-90">
-                                <button type="button" onclick="pasteToField('seller_nip')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                <button type="button" onclick="pasteToField('seller_nip')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Numer konta bankowego
-                            </label>
-                            <div class="flex gap-2">
+                        <div class="form-field">
+                            <label class="form-label">Numer konta bankowego</label>
+                            <div class="input-with-button">
                                 <input type="text" id="bank_account" name="bank_account"
                                        value="{{ invoice.bank_account or '' }}"
-                                       class="input flex-1"
+                                       class="form-input"
                                        placeholder="np. PL 12 1234 1234 1234 1234 1234 1234">
-                                <button type="button" onclick="pasteToField('bank_account')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                <button type="button" onclick="pasteToField('bank_account')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -190,34 +566,36 @@
                 </div>
 
                 <!-- Amounts Card -->
-                <div class="card mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <span class="material-icons text-primary mr-2">payments</span>
+                <div class="form-card">
+                    <h3 class="card-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         Kwoty
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Kwota <span class="text-status-error">*</span>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label class="form-label">
+                                Kwota <span class="form-required">*</span>
                             </label>
-                            <div class="flex gap-2">
+                            <div class="input-with-button">
                                 <input type="number" step="0.01" id="amount" name="amount"
                                        value="{{ invoice.amount or '' }}"
-                                       class="input flex-1" required
-                                       placeholder="np. 1234.56">
-                                <button type="button" onclick="pasteToField('amount')" 
-                                        class="btn-secondary px-2 py-1" title="Wklej ze schowka">
-                                    <span class="material-icons text-sm">content_paste</span>
+                                       class="form-input" required
+                                       placeholder="np. 1234.56" style="font-weight: 600;">
+                                <button type="button" onclick="pasteToField('amount')"
+                                        class="btn-paste" title="Wklej ze schowka">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Waluta
-                            </label>
-                            <select id="currency" name="currency" class="input">
+                        <div class="form-field">
+                            <label class="form-label">Waluta</label>
+                            <select id="currency" name="currency" class="form-select">
                                 <option value="PLN" {% if invoice.currency == 'PLN' or not invoice.currency %}selected{% endif %}>PLN</option>
                                 <option value="EUR" {% if invoice.currency == 'EUR' %}selected{% endif %}>EUR</option>
                                 <option value="USD" {% if invoice.currency == 'USD' %}selected{% endif %}>USD</option>
@@ -226,12 +604,10 @@
                         </div>
 
                         {% if invoice.ocr_confidence %}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Pewność OCR
-                            </label>
-                            <div class="input bg-gray-50" style="display: flex; align-items: center;">
-                                <span class="badge {% if invoice.ocr_confidence >= 80 %}badge-success{% elif invoice.ocr_confidence >= 60 %}badge-warning{% else %}badge-error{% endif %}">
+                        <div class="form-field">
+                            <label class="form-label">Pewność OCR</label>
+                            <div style="padding: 0.5rem 0.75rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; display: flex; align-items: center;">
+                                <span class="ocr-badge {% if invoice.ocr_confidence >= 80 %}ocr-high{% elif invoice.ocr_confidence >= 60 %}ocr-medium{% else %}ocr-low{% endif %}">
                                     {{ "%.0f"|format(invoice.ocr_confidence) }}%
                                 </span>
                             </div>
@@ -239,63 +615,75 @@
                         {% endif %}
                     </div>
                 </div>
-
-                <!-- Form Actions -->
-                <div class="flex items-center gap-4">
-                    <button type="submit" class="btn-primary">
-                        <span class="material-icons text-sm mr-2">save</span>
-                        Zapisz zmiany
-                    </button>
-                    <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-secondary">
-                        Anuluj
-                    </button>
-                </div>
             </form>
         </div>
 
-        <!-- Right Column: Document Viewer (1/2 width) -->
+        <!-- Right Column: Document Viewer -->
         <div>
             {% if invoice.pdf_path %}
             {% set file_ext = invoice.pdf_path.split('.')[-1].lower() %}
             {% set is_image = file_ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'] %}
-            <div class="card p-0 lg:sticky lg:top-4" style="display: flex; flex-direction: column; height: 800px; min-height: 600px; max-height: calc(100vh - 8rem);">
-                <div class="p-2 border-b border-gray-200" style="flex-shrink: 0;">
-                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                        <span class="material-icons text-primary mr-2">{% if is_image %}image{% else %}picture_as_pdf{% endif %}</span>
+            <div class="viewer-card">
+                <div class="viewer-header">
+                    <h3 class="viewer-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            {% if is_image %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            {% else %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            {% endif %}
+                        </svg>
                         Podgląd {% if is_image %}obrazu{% else %}PDF{% endif %}
                     </h3>
                 </div>
-                <div class="bg-gray-100" style="flex: 1; min-height: 700px; overflow: auto;">
+
+                <div class="viewer-content">
                     {% if is_image %}
-                    <!-- Image viewer -->
-                    <img 
-                        src="/api/pdf/{{ invoice.id }}" 
-                        alt="Podgląd faktury"
-                        style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: auto;">
+                        <img src="/api/pdf/{{ invoice.id }}"
+                             alt="Podgląd faktury"
+                             style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    </div>
                     {% else %}
-                    <!-- PDF viewer -->
-                    <iframe 
-                        src="/api/pdf/{{ invoice.id }}" 
-                        style="width: 100%; height: 100%; border: 0;"
-                        title="Podgląd PDF faktury">
-                    </iframe>
+                    <iframe src="/api/pdf/{{ invoice.id }}"
+                            style="width: 100%; height: 100%; border: 0; display: block;"
+                            title="Podgląd PDF faktury"></iframe>
                     {% endif %}
                 </div>
-                <div class="p-2 border-t border-gray-200 bg-gray-50" style="flex-shrink: 0;">
-                    <button type="button" onclick="viewPDFFullscreen()" class="btn-secondary w-full text-sm">
-                        <span class="material-icons text-sm mr-2">open_in_new</span>
+
+                <div class="viewer-footer">
+                    <button type="button" onclick="viewPDFFullscreen()" class="btn-refined btn-refined-secondary" style="width: 100%; justify-content: center;">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
                         Otwórz w nowej karcie
                     </button>
                 </div>
             </div>
             {% else %}
-            <div class="card text-center py-12">
-                <span class="material-icons text-gray-300 text-6xl mb-4">picture_as_pdf</span>
-                <p class="text-gray-500">Brak pliku dokumentu</p>
+            <div class="viewer-card">
+                <div class="viewer-header">
+                    <h3 class="viewer-title">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Podgląd dokumentu
+                    </h3>
+                </div>
+                <div class="empty-viewer">
+                    <div class="empty-icon">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <p class="empty-text">Brak pliku dokumentu</p>
+                    <p class="empty-hint">Ta faktura nie ma załączonego pliku</p>
+                </div>
             </div>
             {% endif %}
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -324,19 +712,13 @@ function setupForm() {
     });
 }
 
-/**
- * Submit edit form (called from sticky action buttons)
- */
 function submitEditForm() {
     const form = document.getElementById('invoice-form');
     if (form) {
-        form.requestSubmit(); // Triggers form validation and submit event
+        form.requestSubmit();
     }
 }
 
-/**
- * Submit invoice update with optional seller confirmation
- */
 async function submitInvoiceUpdate(data, skipSellerValidation = false) {
     const loadingModal = Modals.loading('Zapisywanie zmian...');
 
@@ -347,52 +729,43 @@ async function submitInvoiceUpdate(data, skipSellerValidation = false) {
 
         if (result.success) {
             console.log('Update successful, checking for warnings and conflicts...', result);
-            
-            // Check for seller conflict (even if no warnings)
+
             if (result.seller_conflict) {
                 console.log('Seller conflict detected:', result.seller_conflict);
                 showSellerConflictWarning(result.seller_conflict);
             }
-            
-            // Check for warnings
+
             if (result.warnings && result.warnings.length > 0) {
                 console.log('Warnings detected:', result.warnings);
                 Notifications.warning('Ostrzeżenia: ' + result.warnings.join(', '));
             }
-            
-            // Still show success but with a delay to allow reading warnings
+
             Notifications.success('Faktura została zaktualizowana');
-            
-            // Only redirect if there are no significant conflicts
+
             if (!result.seller_conflict || (result.seller_conflict && result.seller_conflict.conflict_type !== 'name_mismatch')) {
                 setTimeout(() => {
                     window.location.href = '{{ url_for('main.invoices_list') }}';
                 }, 1500);
             } else {
-                // If there's a conflict, don't auto-redirect - let user review
                 console.log('Seller conflict detected - staying on page for review');
             }
         } else {
             console.log('Update failed, checking for conflicts...', result);
-            
-            // Check if it's a seller conflict (409 status)
+
             if (result.seller_conflict) {
                 console.log('Seller conflict in failed response');
-                // NIP exists with different name - show confirmation
                 await handleSellerConflict(result.seller_conflict, data);
-                return;  // CRITICAL: Stop here, don't show error
+                return;
             } else if (result.seller_info && result.seller_info.new_seller) {
                 console.log('New seller needed in failed response');
-                // New seller needs confirmation
                 await handleNewSeller(result.seller_info, data);
-                return;  // CRITICAL: Stop here, don't show error
+                return;
             } else {
-                // Other validation errors
                 if (result.validation_errors) {
                     const errors = result.validation_errors.errors || [];
                     const warnings = result.validation_errors.warnings || [];
                     const allMessages = [...errors, ...warnings];
-                    
+
                     if (allMessages.length > 0) {
                         Notifications.error('Błędy walidacji: ' + allMessages.join(', '));
                     } else {
@@ -408,57 +781,48 @@ async function submitInvoiceUpdate(data, skipSellerValidation = false) {
         console.error('Update error:', error);
         console.log('Error status:', error.status);
         console.log('Error responseData:', error.responseData);
-        
-        // Check if it's a 409 conflict from server
+
         if (error.status === 409 && error.responseData) {
             const result = error.responseData;
             console.log('409 Conflict detected, result:', result);
-            
+
             if (result.seller_conflict) {
                 console.log('Handling seller conflict...');
                 await handleSellerConflict(result.seller_conflict, data);
-                return;  // Don't show generic error
+                return;
             } else if (result.seller_info) {
                 console.log('Handling new seller...');
                 await handleNewSeller(result.seller_info, data);
-                return;  // Don't show generic error
+                return;
             }
         }
-        
-        // Generic error handling
+
         Notifications.error('Błąd aktualizacji: ' + (error.message || 'Unknown error'));
     }
 }
 
-/**
- * Handle seller conflict - NIP exists with different name
- */
 async function handleSellerConflict(conflict, originalData) {
     console.log('=== handleSellerConflict CALLED ===');
     console.log('Conflict:', conflict);
     console.log('Original data:', originalData);
-    
+
     const existingSeller = conflict.existing_seller;
-    
-    // Show custom modal with 3 options
+
     const action = await showSellerConflictModal({
         nip: existingSeller.seller_nip,
         existingName: existingSeller.seller_name,
         newName: conflict.proposed_name || originalData.seller_name
     });
-    
+
     console.log('User selected action:', action);
-    
+
     if (action === 'use_existing') {
-        // Option 1: Use existing seller
         console.log('User chose: Use existing seller');
         await confirmSellerAction('use_existing', originalData, existingSeller.id);
     } else if (action === 'update_seller') {
-        // Option 2: Update seller name in sellers table
         console.log('User chose: Update seller name');
         await confirmSellerAction('update_seller', originalData, existingSeller.id);
     } else if (action === 'cancel') {
-        // User cancelled - reload page to restore original values from database
         console.log('User chose: Cancel - reloading page');
         Notifications.info('Anulowano zapis - przywracanie oryginalnych wartości...');
         setTimeout(() => {
@@ -467,12 +831,8 @@ async function handleSellerConflict(conflict, originalData) {
     }
 }
 
-/**
- * Show custom seller conflict modal with 3 options
- */
 function showSellerConflictModal({ nip, existingName, newName }) {
     return new Promise((resolve) => {
-        // Create modal overlay
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed;
@@ -487,8 +847,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
             z-index: 9999;
             backdrop-filter: blur(4px);
         `;
-        
-        // Create modal content
+
         const modal = document.createElement('div');
         modal.style.cssText = `
             background: white;
@@ -498,11 +857,13 @@ function showSellerConflictModal({ nip, existingName, newName }) {
             width: 90%;
             animation: slideIn 0.3s ease-out;
         `;
-        
+
         modal.innerHTML = `
             <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <span class="material-icons" style="color: #f59e0b; font-size: 28px;">warning</span>
+                    <svg style="width: 28px; height: 28px; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
                     <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">
                         Konflikt danych sprzedawcy
                     </h3>
@@ -511,7 +872,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                     NIP ${nip} już istnieje w bazie danych z inną nazwą
                 </p>
             </div>
-            
+
             <div style="padding: 24px;">
                 <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                     <div style="margin-bottom: 12px;">
@@ -531,11 +892,11 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         </div>
                     </div>
                 </div>
-                
+
                 <p style="color: #374151; margin-bottom: 20px; font-size: 14px;">
                     Wybierz, co chcesz zrobić:
                 </p>
-                
+
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <button id="btn-use-existing" style="
                         padding: 12px 16px;
@@ -551,10 +912,12 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         gap: 8px;
                         transition: background 0.2s;
                     " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
-                        <span class="material-icons" style="font-size: 20px;">check_circle</span>
+                        <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         Użyj istniejącego: "${existingName}"
                     </button>
-                    
+
                     <button id="btn-update-seller" style="
                         padding: 12px 16px;
                         background: #059669;
@@ -569,10 +932,12 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         gap: 8px;
                         transition: background 0.2s;
                     " onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
-                        <span class="material-icons" style="font-size: 20px;">edit</span>
+                        <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                         Zaktualizuj sprzedawcę na: "${newName}"
                     </button>
-                    
+
                     <button id="btn-cancel" style="
                         padding: 12px 16px;
                         background: #f3f4f6;
@@ -587,17 +952,18 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         gap: 8px;
                         transition: background 0.2s;
                     " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                        <span class="material-icons" style="font-size: 20px;">cancel</span>
+                        <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                         Anuluj (nie zapisuj)
                     </button>
                 </div>
             </div>
         `;
-        
+
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
-        
-        // Add animation keyframes
+
         if (!document.getElementById('modal-animations')) {
             const style = document.createElement('style');
             style.id = 'modal-animations';
@@ -615,32 +981,29 @@ function showSellerConflictModal({ nip, existingName, newName }) {
             `;
             document.head.appendChild(style);
         }
-        
-        // Button handlers
+
         modal.querySelector('#btn-use-existing').onclick = () => {
             document.body.removeChild(overlay);
             resolve('use_existing');
         };
-        
+
         modal.querySelector('#btn-update-seller').onclick = () => {
             document.body.removeChild(overlay);
             resolve('update_seller');
         };
-        
+
         modal.querySelector('#btn-cancel').onclick = () => {
             document.body.removeChild(overlay);
             resolve('cancel');
         };
-        
-        // Close on overlay click
+
         overlay.onclick = (e) => {
             if (e.target === overlay) {
                 document.body.removeChild(overlay);
                 resolve('cancel');
             }
         };
-        
-        // Close on Escape key
+
         const escHandler = (e) => {
             if (e.key === 'Escape') {
                 document.body.removeChild(overlay);
@@ -652,27 +1015,21 @@ function showSellerConflictModal({ nip, existingName, newName }) {
     });
 }
 
-/**
- * Handle new seller creation
- */
 async function handleNewSeller(sellerInfo, originalData) {
     console.log('=== handleNewSeller CALLED ===');
     console.log('Seller info:', sellerInfo);
-    
-    // Show custom modal
+
     const action = await showNewSellerModal({
         nip: sellerInfo.seller_nip,
         name: sellerInfo.seller_name
     });
-    
+
     console.log('User selected action:', action);
-    
+
     if (action === 'create') {
-        // User confirmed - create new seller
         console.log('User clicked OK - creating new seller');
         await confirmSellerAction('create_new', originalData, null);
     } else {
-        // User cancelled - reload page to restore original values from database
         console.log('User clicked CANCEL - reloading page');
         Notifications.info('Anulowano zapis - przywracanie oryginalnych wartości...');
         setTimeout(() => {
@@ -681,12 +1038,8 @@ async function handleNewSeller(sellerInfo, originalData) {
     }
 }
 
-/**
- * Show custom new seller modal
- */
 function showNewSellerModal({ nip, name }) {
     return new Promise((resolve) => {
-        // Create modal overlay
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed;
@@ -701,8 +1054,7 @@ function showNewSellerModal({ nip, name }) {
             z-index: 9999;
             backdrop-filter: blur(4px);
         `;
-        
-        // Create modal content
+
         const modal = document.createElement('div');
         modal.style.cssText = `
             background: white;
@@ -712,11 +1064,13 @@ function showNewSellerModal({ nip, name }) {
             width: 90%;
             animation: slideIn 0.3s ease-out;
         `;
-        
+
         modal.innerHTML = `
             <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <span class="material-icons" style="color: #3b82f6; font-size: 28px;">add_business</span>
+                    <svg style="width: 28px; height: 28px; color: #3b82f6;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
                     <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">
                         Nowy sprzedawca
                     </h3>
@@ -725,7 +1079,7 @@ function showNewSellerModal({ nip, name }) {
                     Sprzedawca z tym NIP nie istnieje w bazie danych
                 </p>
             </div>
-            
+
             <div style="padding: 24px;">
                 <div style="background: #eff6ff; border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
                     <div style="margin-bottom: 12px;">
@@ -745,11 +1099,11 @@ function showNewSellerModal({ nip, name }) {
                         </div>
                     </div>
                 </div>
-                
+
                 <p style="color: #374151; margin-bottom: 20px; font-size: 14px;">
                     Czy chcesz utworzyć nowego sprzedawcę w bazie danych?
                 </p>
-                
+
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <button id="btn-create" style="
                         padding: 12px 16px;
@@ -765,10 +1119,12 @@ function showNewSellerModal({ nip, name }) {
                         gap: 8px;
                         transition: background 0.2s;
                     " onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
-                        <span class="material-icons" style="font-size: 20px;">add_circle</span>
+                        <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         Tak, utwórz nowego sprzedawcę
                     </button>
-                    
+
                     <button id="btn-cancel" style="
                         padding: 12px 16px;
                         background: #f3f4f6;
@@ -783,36 +1139,35 @@ function showNewSellerModal({ nip, name }) {
                         gap: 8px;
                         transition: background 0.2s;
                     " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                        <span class="material-icons" style="font-size: 20px;">cancel</span>
+                        <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                         Nie, anuluj zapis faktury
                     </button>
                 </div>
             </div>
         `;
-        
+
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
-        
-        // Button handlers
+
         modal.querySelector('#btn-create').onclick = () => {
             document.body.removeChild(overlay);
             resolve('create');
         };
-        
+
         modal.querySelector('#btn-cancel').onclick = () => {
             document.body.removeChild(overlay);
             resolve('cancel');
         };
-        
-        // Close on overlay click
+
         overlay.onclick = (e) => {
             if (e.target === overlay) {
                 document.body.removeChild(overlay);
                 resolve('cancel');
             }
         };
-        
-        // Close on Escape key
+
         const escHandler = (e) => {
             if (e.key === 'Escape') {
                 document.body.removeChild(overlay);
@@ -824,12 +1179,9 @@ function showNewSellerModal({ nip, name }) {
     });
 }
 
-/**
- * Confirm seller action via API
- */
 async function confirmSellerAction(action, invoiceData, existingSellerId = null) {
     const loadingModal = Modals.loading('Zapisywanie...');
-    
+
     try {
         const response = await fetch(`/api/invoices/${invoiceId}/confirm-seller`, {
             method: 'PUT',
@@ -842,11 +1194,11 @@ async function confirmSellerAction(action, invoiceData, existingSellerId = null)
                 existing_seller_id: existingSellerId
             })
         });
-        
+
         const result = await response.json();
-        
+
         Modals.close(loadingModal);
-        
+
         if (result.success) {
             Notifications.success(result.message || 'Faktura została zaktualizowana');
             setTimeout(() => {
@@ -862,22 +1214,18 @@ async function confirmSellerAction(action, invoiceData, existingSellerId = null)
     }
 }
 
-/**
- * Show seller conflict warning in the UI
- */
 function showSellerConflictWarning(conflict) {
     console.log('showSellerConflictWarning called with:', conflict);
-    
+
     const warningEl = document.getElementById('seller-warning');
     const messageEl = document.getElementById('seller-warning-message');
-    
+
     console.log('Warning element:', warningEl);
     console.log('Message element:', messageEl);
-    
+
     if (warningEl && messageEl) {
-        // Build warning message
         let message = '⚠️ Konflikt danych sprzedawcy: ';
-        
+
         if (conflict.conflict_type === 'name_mismatch') {
             const existingSeller = conflict.existing_seller || {};
             message += `NIP ${existingSeller.seller_nip || 'nieznany'} już istnieje w bazie z nazwą "${existingSeller.seller_name || 'nieznana'}". `;
@@ -885,18 +1233,16 @@ function showSellerConflictWarning(conflict) {
         } else {
             message += conflict.message || 'Wystąpił konflikt danych.';
         }
-        
+
         console.log('Setting warning message:', message);
         messageEl.textContent = message;
-        warningEl.classList.remove('hidden');
-        
-        // Scroll to warning
+        warningEl.classList.add('visible');
+
         setTimeout(() => {
             warningEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
     } else {
         console.error('Warning elements not found! warningEl:', warningEl, 'messageEl:', messageEl);
-        // Fallback to modal if elements don't exist
         Modals.alert({
             title: 'Konflikt danych sprzedawcy',
             message: conflict.message || JSON.stringify(conflict),
@@ -909,7 +1255,13 @@ function viewPDFFullscreen() {
     API.pdf.view(invoiceId);
 }
 
-
-
+function pasteToField(fieldId) {
+    navigator.clipboard.readText().then(text => {
+        document.getElementById(fieldId).value = text;
+        Notifications.success('Wklejono ze schowka');
+    }).catch(err => {
+        Notifications.error('Nie można odczytać schowka');
+    });
+}
 </script>
 {% endblock %}

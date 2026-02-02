@@ -4,50 +4,156 @@
 
 {% block extra_css %}
 <style>
-    /* More compact table - reduced padding while maintaining readability */
-    .table thead th {
-        white-space: normal !important;
-        word-wrap: normal;
-        vertical-align: middle;
-        min-width: 70px;
-        max-width: 360px;
-        padding: 8px 10px !important; /* Reduced from default 12px 15px */
-    }
+    /* =============================================
+       FIXED TABLE LAYOUT - Separate Search Row
+       ============================================= */
 
-    .table tbody td {
-        padding: 6px 10px !important; /* Reduced from default 12px 15px */
-        word-wrap: normal;
-        overflow-wrap: normal;
-    }
-
-    /* Specific column widths for optimal display */
-    .table thead th:nth-child(1) { max-width: 110px; } /* Document Number */
-    .table thead th:nth-child(2) { max-width: 180px; } /* Title */
-    .table thead th:nth-child(3) { max-width: 70px; }  /* Revision */
-    .table thead th:nth-child(4) { max-width: 130px; } /* Revision Date */
-    .table thead th:nth-child(5) { max-width: 360px; min-width: 300px; } /* Change Note - wider for more text */
-    .table thead th:nth-child(6) { max-width: 120px; } /* Type */
-    .table thead th:nth-child(7) { max-width: 90px; }  /* Language */
-    .table thead th:nth-child(8) { max-width: 90px; }  /* Status */
-    .table thead th:nth-child(9) { max-width: 130px; }  /* Updated */
-    .table thead th:nth-child(10) { max-width: 200px; } /* Actions */
-
-    /* Prevent wrapping in date columns (keep dates like 28.11.2025 on one line) */
-    .table thead th:nth-child(4),
-    .table thead th:nth-child(9),
-    .table tbody td:nth-child(4),
-    .table tbody td:nth-child(9) {
-        white-space: nowrap !important;
-    }
-
-    /* Make table fill available width */
     .table-wrapper {
-        width: 100%;
+        overflow-x: auto;
+        overflow-y: auto;
     }
 
-    .table {
-        width: 100%;
-        table-layout: auto; /* Allow columns to adjust based on content and constraints */
+    #documentsTable {
+        table-layout: fixed !important;
+        width: 1340px !important;
+        border-collapse: collapse !important;
+    }
+
+    /* Apply column widths to BOTH search row and header row */
+    #documentsTable thead tr th:nth-child(1) {
+        width: 110px !important;
+        min-width: 110px !important;
+        max-width: 110px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(2) {
+        width: 180px !important;
+        min-width: 180px !important;
+        max-width: 180px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(3) {
+        width: 50px !important;
+        min-width: 50px !important;
+        max-width: 50px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(4) {
+        width: 90px !important;
+        min-width: 90px !important;
+        max-width: 90px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(5) {
+        width: 300px !important;
+        min-width: 300px !important;
+        max-width: 300px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(6) {
+        width: 100px !important;
+        min-width: 100px !important;
+        max-width: 100px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(7) {
+        width: 80px !important;
+        min-width: 80px !important;
+        max-width: 80px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(8) {
+        width: 90px !important;
+        min-width: 90px !important;
+        max-width: 90px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(9) {
+        width: 90px !important;
+        min-width: 90px !important;
+        max-width: 90px !important;
+    }
+
+    #documentsTable thead tr th:nth-child(10) {
+        width: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
+    }
+
+    /* Body cells use same widths */
+    #documentsTable tbody td:nth-child(1) { width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
+    #documentsTable tbody td:nth-child(2) { width: 180px !important; min-width: 180px !important; max-width: 180px !important; }
+    #documentsTable tbody td:nth-child(3) { width: 50px !important; min-width: 50px !important; max-width: 50px !important; }
+    #documentsTable tbody td:nth-child(4) { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+    #documentsTable tbody td:nth-child(5) { width: 300px !important; min-width: 300px !important; max-width: 300px !important; }
+    #documentsTable tbody td:nth-child(6) { width: 100px !important; min-width: 100px !important; max-width: 100px !important; }
+    #documentsTable tbody td:nth-child(7) { width: 80px !important; min-width: 80px !important; max-width: 80px !important; }
+    #documentsTable tbody td:nth-child(8) { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+    #documentsTable tbody td:nth-child(9) { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+    #documentsTable tbody td:nth-child(10) { width: 160px !important; min-width: 160px !important; max-width: 160px !important; }
+
+    /* Cell padding and overflow */
+    #documentsTable th,
+    #documentsTable td {
+        padding: 8px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    #documentsTable td {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Wrapping exceptions for title and change note */
+    #documentsTable td:nth-child(2),
+    #documentsTable td:nth-child(5) {
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* Search row styling */
+    #documentsTable tr.search-row th {
+        background-color: #f8f9fa !important;
+        border-bottom: 2px solid #dee2e6 !important;
+        padding: 6px 8px !important;
+    }
+
+    /* Header styling */
+    #documentsTable .th-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    #documentsTable .th-header > span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+    }
+
+    #documentsTable .sort-icon {
+        font-size: 0.8em;
+        color: #999;
+        margin-left: 4px;
+        flex-shrink: 0;
+    }
+
+    /* Search inputs - constrained to cell width */
+    #documentsTable .column-search {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 4px 6px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        font-size: 11px !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 4px !important;
     }
 </style>
 {% endblock %}
@@ -68,113 +174,107 @@
 <div class="card shadow-sm">
     <div class="card-body">
         {% if documents %}
+        <div class="mb-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSearchRow()">
+                <i class="bi bi-search"></i> <span id="searchToggleText">Show Search Filters</span>
+            </button>
+        </div>
         <div class="table-wrapper">
             <table class="table table-hover sortable-table" id="documentsTable">
                 <thead>
+                    <tr class="search-row" id="searchRow" style="display: none;">
+                        <th><input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()"></th>
+                        <th><input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()"></th>
+                        <th><input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()"></th>
+                        <th><input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()"></th>
+                        <th><input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()"></th>
+                        <th>
+                            <select class="column-search" onclick="event.stopPropagation()">
+                                <option value="">All</option>
+                                {% for doc_type in doc_types %}
+                                <option value="{{ doc_type }}">{{ doc_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="column-search" onclick="event.stopPropagation()">
+                                <option value="">All</option>
+                                {% for lang in languages %}
+                                <option value="{{ lang }}">{{ lang }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="column-search" onclick="event.stopPropagation()">
+                                <option value="">All</option>
+                                <option value="DRAFT">DRAFT</option>
+                                <option value="SUBMISSION">SUBMISSION</option>
+                                <option value="APPROVED">APPROVED</option>
+                                <option value="VALID">VALID</option>
+                                <option value="REJECTED">REJECTED</option>
+                            </select>
+                        </th>
+                        <th><input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()"></th>
+                        <th></th>
+                    </tr>
                     <tr>
                         <th onclick="sortTable(0, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Document Number</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            <div class="th-header">
+                                <span>Document Number</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(1, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Document Title</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            <div class="th-header">
+                                <span>Document Title</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(2, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Rev</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            <div class="th-header">
+                                <span>Rev</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(3, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Dated</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            <div class="th-header">
+                                <span>Dated</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(4, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Change Note</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            <div class="th-header">
+                                <span>Change Note</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(5, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Type</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <select class="column-search" onclick="event.stopPropagation()">
-                                    <option value="">All</option>
-                                    {% for doc_type in doc_types %}
-                                    <option value="{{ doc_type }}">{{ doc_type }}</option>
-                                    {% endfor %}
-                                </select>
+                            <div class="th-header">
+                                <span>Type</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(6, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Language</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <select class="column-search" onclick="event.stopPropagation()">
-                                    <option value="">All</option>
-                                    {% for lang in languages %}
-                                    <option value="{{ lang }}">{{ lang }}</option>
-                                    {% endfor %}
-                                </select>
+                            <div class="th-header">
+                                <span>Language</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(7, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Status</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <select class="column-search" onclick="event.stopPropagation()">
-                                    <option value="">All</option>
-                                    <option value="DRAFT">DRAFT</option>
-                                    <option value="SUBMISSION">SUBMISSION</option>
-                                    <option value="APPROVED">APPROVED</option>
-                                    <option value="VALID">VALID</option>
-                                    <option value="REJECTED">REJECTED</option>
-                                </select>
+                            <div class="th-header">
+                                <span>Status</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th onclick="sortTable(8, 'documentsTable')">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Updated</span>
-                                    <span class="sort-icon">⇅</span>
-                                </div>
-                                <input type="text" class="column-search" placeholder="Search..." onclick="event.stopPropagation()">
+                            <div class="th-header">
+                                <span>Updated</span>
+                                <span class="sort-icon">⇅</span>
                             </div>
                         </th>
                         <th class="no-sort">
-                            <div class="th-content">
-                                <div class="th-header">
-                                    <span>Actions</span>
-                                </div>
+                            <div class="th-header">
+                                <span>Actions</span>
                             </div>
                         </th>
                     </tr>
@@ -357,5 +457,19 @@
     document.addEventListener('DOMContentLoaded', function() {
         initializeTable('documentsTable');
     });
+
+    // Toggle search row visibility
+    function toggleSearchRow() {
+        const searchRow = document.getElementById('searchRow');
+        const toggleText = document.getElementById('searchToggleText');
+
+        if (searchRow.style.display === 'none') {
+            searchRow.style.display = '';
+            toggleText.textContent = 'Hide Search Filters';
+        } else {
+            searchRow.style.display = 'none';
+            toggleText.textContent = 'Show Search Filters';
+        }
+    }
 </script>
 {% endblock %}

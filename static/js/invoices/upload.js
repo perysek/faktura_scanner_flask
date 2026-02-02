@@ -44,36 +44,45 @@ function updateWorkflowStep(step) {
 
     // Update all step indicators
     for (let i = 1; i <= 3; i++) {
-        const stepElement = document.querySelector(`.workflow-step[data-step="${i}"]`);
-        const numberElement = stepElement?.querySelector('.workflow-step-number');
-        const connectorBefore = stepElement?.previousElementSibling;
+        // Find the step container by data-step attribute
+        const stepContainer = document.querySelector(`div[data-step="${i}"]`);
+        if (!stepContainer) continue;
 
-        if (!stepElement || !numberElement) continue;
+        const circle = stepContainer.querySelector('div.rounded-full'); // The circle container
+        const numberSpan = circle?.querySelector('span'); // The number or icon/text inside
+        const label = stepContainer.querySelector('div.absolute span'); // The label text below
 
-        // Remove all state classes
-        stepElement.classList.remove('active', 'completed');
-        numberElement.classList.remove('active', 'completed');
-        if (connectorBefore?.classList.contains('workflow-step-connector')) {
-            connectorBefore.classList.remove('active', 'completed');
-        }
+        if (!circle || !numberSpan) continue;
 
-        // Add appropriate class based on current step
+        // Reset base classes
+        stepContainer.classList.remove('opacity-50');
+
+        // Remove specific state classes
+        circle.className = 'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white shadow-sm';
+        numberSpan.className = 'font-bold text-sm';
+
         if (i < step) {
-            // Completed steps
-            stepElement.classList.add('completed');
-            numberElement.classList.add('completed');
-            numberElement.innerHTML = '<span class="material-icons text-sm">check</span>';
-            if (connectorBefore?.classList.contains('workflow-step-connector')) {
-                connectorBefore.classList.add('completed');
+            // Completed step
+            circle.classList.add('bg-emerald-500', 'text-white', 'shadow-emerald-500/30');
+            numberSpan.innerHTML = '<span class="material-icons text-sm">check</span>';
+            if (label) {
+                label.className = 'block text-xs font-semibold text-emerald-600 uppercase tracking-wide';
             }
         } else if (i === step) {
             // Active step
-            stepElement.classList.add('active');
-            numberElement.classList.add('active');
-            numberElement.textContent = i;
+            circle.classList.add('bg-primary-600', 'text-white', 'shadow-lg', 'shadow-primary-500/30');
+            numberSpan.textContent = i;
+            if (label) {
+                label.className = 'block text-xs font-bold text-primary-700 uppercase tracking-wide';
+            }
         } else {
-            // Future steps
-            numberElement.textContent = i;
+            // Future step
+            stepContainer.classList.add('opacity-50');
+            circle.classList.add('bg-slate-200', 'text-slate-500');
+            numberSpan.textContent = i;
+            if (label) {
+                label.className = 'block text-xs font-medium text-slate-500 uppercase tracking-wide';
+            }
         }
     }
 }
@@ -432,7 +441,7 @@ async function processDocuments() {
                             case 'start':
                                 updateProgressHeader('Przetwarzanie dokumentów', 0, data.total);
                                 break;
-                                
+
                             case 'file_start':
                                 updateProgressHeader(`Przetwarzanie ${data.current}/${data.total}`, data.current, data.total);
                                 addProgressNotification(`Rozpoczynanie: ${data.filename}`, 'info');
@@ -442,12 +451,12 @@ async function processDocuments() {
                                 // We could update a secondary progress bar here if we had one
                                 // For now just log significant steps
                                 if (data.message) {
-                                     // Optional: don't spam notification log with every % update
-                                     // only major steps or errors
-                                     // addProgressNotification(`${data.filename}: ${data.message}`, 'info');
-                                     
-                                     // Update the progress bar fill more smoothly based on percent if provided
-                                     // (This requires updateProgressHeader to accept percent, or we manipulate DOM directly)
+                                    // Optional: don't spam notification log with every % update
+                                    // only major steps or errors
+                                    // addProgressNotification(`${data.filename}: ${data.message}`, 'info');
+
+                                    // Update the progress bar fill more smoothly based on percent if provided
+                                    // (This requires updateProgressHeader to accept percent, or we manipulate DOM directly)
                                 }
                                 break;
 
@@ -458,14 +467,14 @@ async function processDocuments() {
                                 } else {
                                     addProgressNotification(`✗ Błąd: ${data.result.filename} - ${data.result.error}`, 'error');
                                     // Still push to results so we see the error state in list
-                                    processedResults.push(data.result); 
+                                    processedResults.push(data.result);
                                 }
                                 break;
-                                
+
                             case 'complete':
                                 addProgressNotification('Przetwarzanie zakończone!', 'success');
                                 break;
-                                
+
                             case 'error':
                                 addProgressNotification(`Błąd serwera: ${data.message}`, 'error');
                                 break;
@@ -480,14 +489,14 @@ async function processDocuments() {
         // Close modal after delay
         setTimeout(() => {
             Modals.close(progressModal);
-            
+
             // Show results
             if (processedResults.length > 0) {
                 Notifications.success(`Przetworzono ${processedResults.length} plików`);
                 hideUploadedFilesSection();
                 displayProcessingResults();
             } else {
-                 Notifications.warning('Nie udało się przetworzyć żadnych plików');
+                Notifications.warning('Nie udało się przetworzyć żadnych plików');
             }
         }, 1000);
 
@@ -502,7 +511,7 @@ async function processDocuments() {
 }
 
 /**
- * Display processing results (Step 4)
+ * Display processing results (Step 4) - With Editable Fields
  */
 function displayProcessingResults() {
     updateWorkflowStep(3); // Move to step 3: Review OCR results
@@ -529,37 +538,78 @@ function displayProcessingResults() {
         const statusText = result.success ? (canAdd ? 'Gotowe' : 'Wymaga uwagi') : 'Błąd';
         const statusBadge = `badge-${status}`;
 
+        // Prepare values for inputs
+        const invoiceNumber = result.extracted_data?.invoice_number || '';
+        const sellerName = result.extracted_data?.seller_name || '';
+        const amount = result.extracted_data?.total_amount || '';
+        const currency = result.extracted_data?.currency || 'PLN';
+        
+        // Date handling
+        let issueDate = result.extracted_data?.issue_date || result.extracted_data?.invoice_date || '';
+        if (issueDate && issueDate.length > 10) issueDate = issueDate.substring(0, 10); // Handle ISO strings if any
+
         return `
             <tr data-result-index="${index}" class="hover:bg-gray-50 transition-colors group">
                 <td class="py-3 px-2 font-medium text-gray-900 break-all whitespace-normal text-xs">
                     ${escapeHtml(result.filename)}
                 </td>
                 <td class="py-3 px-2">
-                    <span class="badge ${statusBadge} text-[10px] px-1.5 py-0.5">${statusText}</span>
+                    <span class="badge ${statusBadge} text-[10px] px-1.5 py-0.5 whitespace-nowrap">${statusText}</span>
                 </td>
-                <td class="py-3 px-2 text-gray-600 break-all whitespace-normal text-xs">
-                    ${result.extracted_data?.invoice_number ? escapeHtml(result.extracted_data.invoice_number) : '-'}
+                
+                <!-- Editable: Invoice Number -->
+                <td class="py-3 px-2">
+                    <input type="text" 
+                           class="w-full px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
+                           value="${escapeHtml(invoiceNumber)}"
+                           onchange="updateResult(${index}, 'invoice_number', this.value)">
                 </td>
-                <td class="py-3 px-2 text-gray-600 break-words whitespace-normal text-xs">
-                    ${result.extracted_data?.seller_name ? escapeHtml(result.extracted_data.seller_name) : '-'}
+
+                <!-- Editable: Date -->
+                <td class="py-3 px-2">
+                    <input type="date" 
+                           class="w-full px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
+                           value="${escapeHtml(issueDate)}"
+                           onchange="updateResult(${index}, 'issue_date', this.value)">
                 </td>
-                <td class="py-3 px-2 text-gray-900 font-medium whitespace-nowrap text-xs">
-                    ${result.extracted_data?.total_amount ? formatCurrency(result.extracted_data.total_amount, result.extracted_data.currency) : '-'}
+
+                <!-- Editable: Seller -->
+                <td class="py-3 px-2">
+                    <input type="text" 
+                           class="w-full px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
+                           value="${escapeHtml(sellerName)}"
+                           onchange="updateResult(${index}, 'seller_name', this.value)">
                 </td>
+
+                <!-- Editable: Amount -->
+                <td class="py-3 px-2">
+                    <div class="flex items-center gap-1">
+                        <input type="number" step="0.01" 
+                               class="w-20 px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white text-right font-medium"
+                               value="${amount}"
+                               onchange="updateResult(${index}, 'total_amount', this.value)">
+                        <span class="text-xs text-gray-500">${escapeHtml(currency)}</span>
+                    </div>
+                </td>
+
+                <!-- Duplicate Status -->
                 <td class="py-3 px-2">
                     ${result.is_duplicate ? '<span class="badge badge-warning text-[10px]">Tak</span>' : '<span class="badge badge-success text-[10px]">Nie</span>'}
                 </td>
+
+                <!-- Warnings/Errors -->
                 <td class="py-3 px-2 text-xs">
                     ${result.validation_errors && result.validation_errors.length > 0
-                ? `<div class="text-status-error mb-1 break-words">${result.validation_errors.join('<br>')}</div>`
+                ? `<div class="text-status-error mb-1 break-words leading-tight">${result.validation_errors.join('<br>')}</div>`
                 : ''}
                     ${result.validation_warnings && result.validation_warnings.length > 0
-                ? `<div class="text-status-warning break-words">${result.validation_warnings.join('<br>')}</div>`
+                ? `<div class="text-status-warning break-words leading-tight">${result.validation_warnings.join('<br>')}</div>`
                 : ''}
                     ${(!result.validation_errors || result.validation_errors.length === 0) &&
                 (!result.validation_warnings || result.validation_warnings.length === 0)
                 ? '<span class="text-gray-400">-</span>' : ''}
                 </td>
+
                 <td class="py-3 px-2 text-center">
                     <button onclick="viewPdf('${escapeHtml(result.filename)}')" 
                             class="text-primary hover:text-primary-700 hover:bg-primary-50 p-1.5 rounded transition-colors" title="Podgląd PDF">
@@ -578,6 +628,35 @@ function displayProcessingResults() {
 
     section.classList.remove('hidden');
 }
+
+/**
+ * Update processed result data when user edits inputs
+ */
+function updateResult(index, field, value) {
+    if (processedResults[index] && processedResults[index].extracted_data) {
+        processedResults[index].extracted_data[field] = value;
+        
+        // Sync issue_date and invoice_date as backend might use either
+        if (field === 'issue_date') {
+            processedResults[index].extracted_data['invoice_date'] = value;
+        }
+        
+        // Optional: Update row status (e.g. remove error if user fixed it)
+        // This would require client-side validation logic or just assuming user is right
+        // For now, let's just mark the row as "Modified" visually?
+        // Or better - if it had validation errors, we can't clear them easily without re-running rules.
+        // But we can ensure the checkbox is checked if it was unchecked due to errors (user overriding)
+        
+        const row = document.querySelector(`tr[data-result-index="${index}"]`);
+        if (row) {
+             const checkbox = row.querySelector('.add-to-list-checkbox');
+             if (checkbox && !checkbox.checked) {
+                 checkbox.checked = true; // Auto-check on edit
+             }
+        }
+    }
+}
+
 
 /**
  * View PDF file
@@ -637,7 +716,7 @@ async function saveAndFinish() {
         if (result.saved_invoices && result.saved_invoices.length > 0) {
             const savedCount = result.saved_invoices.length;
             Notifications.success(`Zapisano ${savedCount} faktur!`);
-            
+
             // Mark saved rows in UI
             result.saved_invoices.forEach(saved => {
                 // Find row by filename
@@ -659,7 +738,7 @@ async function saveAndFinish() {
 
         if (result.failed_invoices && result.failed_invoices.length > 0) {
             Notifications.error(`Nie udało się zapisać ${result.failed_invoices.length} faktur.`);
-            
+
             // Highlight failed rows
             result.failed_invoices.forEach(failed => {
                 const rowIndex = processedResults.findIndex(r => r.filename === failed.filename);
@@ -670,7 +749,7 @@ async function saveAndFinish() {
                         // Add error tooltip or message
                         const statusCell = row.querySelector('td:nth-child(2)');
                         statusCell.innerHTML = `<span class="badge badge-error" title="${escapeHtml(failed.error)}">Błąd</span>`;
-                        
+
                         // Show error in "Uwagi" column
                         const notesCell = row.querySelector('td:nth-child(7)'); // 7th column is "Błędy walidacji" / Uwagi
                         if (notesCell) {
@@ -1065,6 +1144,24 @@ function restoreFolderSelections(modal) {
     const allCheckbox = modal.querySelector('#folder-all');
     const folderCheckboxes = modal.querySelectorAll('.folder-checkbox');
 
+    // Try to load from localStorage if global state is empty/default
+    if (!isAllFoldersSelected && selectedFolders.length === 0) {
+        try {
+            const saved = localStorage.getItem('email_import_preferences');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                isAllFoldersSelected = parsed.isAll;
+                selectedFolders = parsed.folders || [];
+                
+                // Also update the display text since we just loaded preferences
+                updateSelectedFoldersDisplay();
+                updateImportButtonState();
+            }
+        } catch (e) {
+            console.error('Error loading email preferences:', e);
+        }
+    }
+
     if (isAllFoldersSelected) {
         allCheckbox.checked = true;
         folderCheckboxes.forEach(cb => cb.checked = true);
@@ -1077,7 +1174,7 @@ function restoreFolderSelections(modal) {
 
         // Update "All" checkbox state
         const allChecked = Array.from(folderCheckboxes).every(checkbox => checkbox.checked);
-        if (allChecked) {
+        if (allChecked && folderCheckboxes.length > 0) {
             allCheckbox.checked = true;
         }
     }
@@ -1108,6 +1205,13 @@ function applyFolderSelection(overlay) {
 
     // Update import button state
     updateImportButtonState();
+
+    // Save to localStorage
+    const storageData = {
+        isAll: isAllFoldersSelected,
+        folders: selectedFolders
+    };
+    localStorage.setItem('email_import_preferences', JSON.stringify(storageData));
 
     // Close modal
     Modals.close(overlay);

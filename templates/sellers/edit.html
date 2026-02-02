@@ -1,154 +1,457 @@
 {% extends "base.html" %}
 
-{% block title %}Edytuj sprzedawce - {{ app_name }}{% endblock %}
+{% block title %}Edytuj sprzedawce — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item">
-    <a href="{{ url_for('main.sellers_list') }}" class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">store</span>
-        <span>Sprzedawcy</span>
-    </a>
-</li>
-<li class="breadcrumb-item">
-    <span class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">edit</span>
-        <span>Edycja</span>
-    </span>
-</li>
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --color-warning: #9a6700;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.5rem !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .page-subtitle {
+        font-size: 0.875rem;
+        color: var(--color-ink-muted);
+        font-weight: 300;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .form-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-field {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-field:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.375rem;
+        letter-spacing: 0.01em;
+    }
+
+    .form-required {
+        color: var(--color-error);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .form-input:disabled {
+        background: var(--color-surface);
+        color: var(--color-ink-subtle);
+        cursor: not-allowed;
+    }
+
+    .form-hint {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.25rem;
+    }
+
+    .form-warning {
+        padding: 0.75rem;
+        background: rgba(154, 103, 0, 0.08);
+        border: 1px solid rgba(154, 103, 0, 0.2);
+        border-radius: 2px;
+        margin-top: 0.75rem;
+        display: none;
+    }
+
+    .form-warning.visible {
+        display: block;
+    }
+
+    .form-warning-text {
+        font-size: 0.75rem;
+        color: var(--color-warning);
+        font-weight: 500;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--color-surface);
+        border-radius: 2px;
+        margin-bottom: 1.25rem;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .stat-label {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.125rem;
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-refined svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined-primary {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-refined-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+    }
+
+    .btn-refined-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-refined-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    .btn-refined-warning {
+        background: var(--color-warning);
+        color: white;
+    }
+
+    .btn-refined-warning:hover {
+        background: #7d5500;
+        transform: translateY(-1px);
+    }
+
+    .table-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .table-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .table-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .table-count {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        padding: 0.25rem 0.5rem;
+        background: var(--color-surface);
+        border-radius: 999px;
+    }
+
+    .refined-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .refined-table thead {
+        background: var(--color-surface);
+    }
+
+    .refined-table th {
+        padding: 0.5rem 1rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--color-ink-subtle);
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .refined-table td {
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .refined-table tbody tr { transition: background 0.2s ease; }
+    .refined-table tbody tr:hover { background: var(--color-surface); }
+    .refined-table tbody tr:last-child td { border-bottom: none; }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.125rem 0.375rem;
+        font-size: 0.625rem;
+        font-weight: 500;
+        border-radius: 2px;
+    }
+
+    .status-paid { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
+    .status-unpaid { background: rgba(201, 162, 39, 0.12); color: var(--color-warning); }
+
+    .invoice-number {
+        font-weight: 500;
+    }
+
+    .seller-name-mismatch {
+        color: var(--color-warning);
+        font-size: 0.75rem;
+    }
+
+    .empty-state {
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        width: 2rem;
+        height: 2rem;
+        color: var(--color-ink-subtle);
+        opacity: 0.3;
+        margin: 0 auto 0.5rem;
+    }
+
+    .empty-text {
+        font-size: 0.8125rem;
+        color: var(--color-ink-subtle);
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .header-actions { flex-direction: column; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <!-- Main Edit Card -->
-    <div class="card mb-6">
-        <div class="mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-                <span class="material-icons text-primary mr-2">store</span>
-                Edytuj sprzedawce
-            </h2>
-            <p class="text-gray-600 text-sm mt-1">Zaktualizuj dane sprzedawcy</p>
+<div class="refined-page">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Edytuj sprzedawce</h1>
+            <p class="page-subtitle">Zaktualizuj dane sprzedawcy</p>
         </div>
+    </header>
 
+    <div class="form-card">
         <form id="seller-form" onsubmit="return handleSubmit(event)">
             <input type="hidden" id="seller_id" value="{{ seller.id }}">
 
-            <!-- NIP Field (Read-only) -->
-            <div class="mb-4">
-                <label for="seller_nip" class="block text-sm font-medium text-gray-700 mb-1">
-                    NIP
-                </label>
+            <div class="form-field">
+                <label for="seller_nip" class="form-label">NIP</label>
                 <input type="text"
                        id="seller_nip"
                        name="seller_nip"
-                       class="input bg-gray-50"
+                       class="form-input"
                        value="{{ seller.seller_nip }}"
                        readonly
                        disabled>
-                <p class="text-xs text-gray-500 mt-1">NIP nie moze byc zmieniony - jest unikalnym identyfikatorem</p>
+                <div class="form-hint">NIP nie moze byc zmieniony - jest unikalnym identyfikatorem</div>
             </div>
 
-            <!-- Seller Name Field -->
-            <div class="mb-4">
-                <label for="seller_name" class="block text-sm font-medium text-gray-700 mb-1">
-                    Nazwa sprzedawcy <span class="text-red-500">*</span>
+            <div class="form-field">
+                <label for="seller_name" class="form-label">
+                    Nazwa sprzedawcy <span class="form-required">*</span>
                 </label>
                 <input type="text"
                        id="seller_name"
                        name="seller_name"
-                       class="input"
+                       class="form-input"
                        value="{{ seller.seller_name }}"
                        placeholder="Nazwa firmy Sp. z o.o."
                        required>
-                <p id="name-warning" class="text-sm text-yellow-600 mt-1 hidden"></p>
+                <div id="name-warning" class="form-warning">
+                    <p class="form-warning-text" id="name-warning-text"></p>
+                </div>
             </div>
 
-            <!-- Address Field -->
-            <div class="mb-6">
-                <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
-                    Adres <span class="text-gray-400">(opcjonalny)</span>
+            <div class="form-field">
+                <label for="address" class="form-label">
+                    Adres <span style="color: var(--color-ink-subtle); font-weight: 300;">(opcjonalny)</span>
                 </label>
                 <input type="text"
                        id="address"
                        name="address"
-                       class="input"
+                       class="form-input"
                        value="{{ seller.address or '' }}"
                        placeholder="ul. Przykladowa 1, 00-000 Warszawa">
             </div>
 
-            <!-- Stats Row -->
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                <div>
-                    <p class="text-xs text-gray-500">Liczba faktur</p>
-                    <p class="text-lg font-semibold text-gray-900">{{ seller.invoice_count }}</p>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value">{{ seller.invoice_count }}</span>
+                    <span class="stat-label">Liczba faktur</span>
                 </div>
-                <div>
-                    <p class="text-xs text-gray-500">Pierwsza faktura</p>
-                    <p class="text-sm text-gray-700">{{ seller.first_seen.strftime('%Y-%m-%d') if seller.first_seen else '-' }}</p>
+                <div class="stat-item">
+                    <span class="stat-value">{{ seller.first_seen.strftime('%d.%m.%Y') if seller.first_seen else '—' }}</span>
+                    <span class="stat-label">Pierwsza faktura</span>
                 </div>
-                <div>
-                    <p class="text-xs text-gray-500">Ostatnia aktualizacja</p>
-                    <p class="text-sm text-gray-700">{{ seller.last_updated.strftime('%Y-%m-%d %H:%M') if seller.last_updated else '-' }}</p>
+                <div class="stat-item">
+                    <span class="stat-value">{{ seller.last_updated.strftime('%d.%m.%Y') if seller.last_updated else '—' }}</span>
+                    <span class="stat-label">Ostatnia aktualizacja</span>
                 </div>
             </div>
 
-            <!-- Submit Buttons -->
-            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                <a href="{{ url_for('main.sellers_list') }}" class="btn-secondary">
-                    <span class="material-icons text-sm mr-2">arrow_back</span>
+            <div class="form-actions">
+                <button type="submit" id="submit-btn" class="btn-refined btn-refined-primary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Zapisz zmiany
+                </button>
+                <button type="button" id="propagate-btn" class="btn-refined btn-refined-warning" onclick="propagateChanges()" title="Zaktualizuj nazwe we wszystkich fakturach">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Propaguj zmiany
+                </button>
+                <a href="{{ url_for('main.sellers_list') }}" class="btn-refined btn-refined-secondary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
                     Powrot do listy
                 </a>
-                <div class="flex items-center gap-2">
-                    <button type="button" id="propagate-btn" class="btn-warning" onclick="propagateChanges()" title="Zaktualizuj nazwe we wszystkich fakturach">
-                        <span class="material-icons text-sm mr-2">sync</span>
-                        Propaguj zmiany
-                    </button>
-                    <button type="submit" id="submit-btn" class="btn-primary">
-                        <span class="material-icons text-sm mr-2">save</span>
-                        Zapisz zmiany
-                    </button>
-                </div>
             </div>
         </form>
     </div>
 
-    <!-- Linked Invoices Card -->
-    <div class="card">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                <span class="material-icons text-gray-600 mr-2">receipt</span>
-                Powiazane faktury
-            </h3>
-            <span id="invoices-count" class="badge badge-info">0</span>
+    <div class="table-card">
+        <div class="table-header">
+            <h3 class="table-title">Powiazane faktury</h3>
+            <span class="table-count" id="invoices-count">0</span>
         </div>
-
-        <!-- Invoices Table -->
-        <div class="table-wrapper">
-            <table class="table table-hover" id="invoicesTable">
-                <thead>
-                    <tr>
-                        <th>Nr faktury</th>
-                        <th>Data</th>
-                        <th>Kwota</th>
-                        <th>Status</th>
-                        <th>Nazwa na fakturze</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead>
-                <tbody id="invoices-tbody">
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-gray-500">
-                            <span class="material-icons text-4xl text-gray-300">hourglass_empty</span>
-                            <p class="mt-2">Ladowanie...</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Empty state -->
-        <div id="invoices-empty" class="hidden py-8 text-center text-gray-500">
-            <span class="material-icons text-4xl text-gray-300">receipt_long</span>
-            <p class="mt-2">Brak powiazanych faktur</p>
+        <table class="refined-table" id="invoicesTable">
+            <thead>
+                <tr>
+                    <th>Nr faktury</th>
+                    <th>Data</th>
+                    <th>Kwota</th>
+                    <th>Status</th>
+                    <th>Nazwa na fakturze</th>
+                </tr>
+            </thead>
+            <tbody id="invoices-tbody">
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="empty-text">Ladowanie...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="invoices-empty" class="empty-state" style="display: none;">
+            <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="empty-text">Brak powiazanych faktur</p>
         </div>
     </div>
 </div>

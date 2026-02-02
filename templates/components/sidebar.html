@@ -1,0 +1,100 @@
+<aside class="w-64 bg-slate-900 text-white flex flex-col shadow-xl">
+    <!-- Logo Section -->
+    <div class="px-6 py-5 border-b border-slate-700/50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        </div>
+        <div>
+            <h1 class="font-bold text-lg tracking-tight">FakturaScanner</h1>
+            <p class="text-xs text-slate-400">v{{ version|default('2.0.0') }}</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <div class="px-2 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Menu Główne</div>
+        
+        <a href="{{ url_for('main.dashboard') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.dashboard' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.dashboard' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            Pulpit
+        </a>
+
+        <a href="{{ url_for('main.invoices_list') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.invoices_list' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.invoices_list' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Faktury
+        </a>
+
+        <a href="{{ url_for('main.sellers_list') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.sellers_list' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.sellers_list' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Sprzedawcy
+        </a>
+
+        <div class="px-2 mt-6 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Operacje</div>
+
+        <a href="{{ url_for('main.create_invoice') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.create_invoice' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.create_invoice' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Dodaj Fakturę
+        </a>
+
+        <a href="{{ url_for('main.upload') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.upload' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.upload' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Import PDF
+        </a>
+        
+        <div class="px-2 mt-6 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">System</div>
+
+        <a href="{{ url_for('main.history') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.history' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.history' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Historia
+        </a>
+
+        <a href="{{ url_for('main.email_settings') }}" 
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+           {% if request.endpoint == 'main.email_settings' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg class="w-5 h-5 {% if request.endpoint == 'main.email_settings' %}text-primary-400{% else %}text-slate-500 group-hover:text-white{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Ustawienia
+        </a>
+    </nav>
+
+    <!-- Bottom Section -->
+    <div class="p-4 border-t border-slate-700/50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold transform transition-transform hover:scale-110 cursor-pointer">
+                JS
+            </div>
+            <div>
+                <p class="text-sm font-medium text-white">Użytkownik</p>
+                <p class="text-xs text-slate-500">Admin</p>
+            </div>
+        </div>
+    </div>
+</aside>

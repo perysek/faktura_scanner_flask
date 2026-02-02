@@ -1,315 +1,488 @@
 {% extends "base.html" %}
 
-{% block title %}Pulpit - {{ app_name }}{% endblock %}
+{% block title %}Pulpit — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
+{% block page_actions %}{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item">
-    <span class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">dashboard</span>
-        <span>Pulpit</span>
-    </span>
-</li>
-{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-accent: #c9a227;
+        --color-success: #2d6a4f;
+        --color-warning: #9a6700;
+        --color-error: #9b2c2c;
+        --color-info: #1e6091;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-{% block page_actions %}
-<div class="flex items-center text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">
-    <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
-    <span id="last-updated-indicator" class="mr-2 hidden md:inline">Aktualizacja...</span>
-    <button onclick="refreshDashboard()" class="p-1 hover:bg-gray-100 rounded-full transition-colors" title="Odśwież teraz">
-        <span id="refresh-icon" class="material-icons text-gray-500 text-sm">refresh</span>
-    </button>
-</div>
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.5rem !important;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        flex-shrink: 0;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .refresh-btn:hover {
+        color: var(--color-ink);
+        border-color: var(--color-ink-muted);
+    }
+    .refresh-btn svg { width: 0.875rem; height: 0.875rem; }
+    .refresh-btn.loading svg { animation: spin 1s linear infinite; }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        flex-shrink: 0;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--color-ink-subtle);
+        margin-top: 0.25rem;
+    }
+
+    .panels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 0.75rem;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding-bottom: 0.75rem;
+    }
+
+    .panel {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .panel-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+
+    .panel-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .panel-title svg { width: 1rem; height: 1rem; color: var(--color-ink-muted); }
+
+    .panel-link {
+        font-size: 0.6875rem;
+        color: var(--color-ink-muted);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+    .panel-link:hover { color: var(--color-ink); text-decoration: underline; }
+
+    .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .panel-content::-webkit-scrollbar { width: 4px; }
+    .panel-content::-webkit-scrollbar-track { background: var(--color-surface); }
+    .panel-content::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+    .list-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        transition: background 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+    .list-item:hover { background: var(--color-surface); }
+    .list-item:last-child { border-bottom: none; }
+
+    .list-item-main {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .list-item-title {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .list-item-subtitle {
+        font-size: 0.6875rem;
+        color: var(--color-ink-muted);
+        margin-top: 0.125rem;
+    }
+
+    .list-item-side {
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .list-item-amount {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .list-item-meta {
+        font-size: 0.6875rem;
+        color: var(--color-ink-muted);
+        margin-top: 0.125rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.125rem 0.375rem;
+        font-size: 0.625rem;
+        font-weight: 500;
+        border-radius: 2px;
+    }
+
+    .status-paid { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
+    .status-unpaid { background: rgba(201, 162, 39, 0.12); color: var(--color-warning); }
+    .status-overdue { background: rgba(155, 44, 44, 0.1); color: var(--color-error); }
+
+    .urgency-high { color: var(--color-error); font-weight: 500; }
+    .urgency-medium { color: var(--color-warning); font-weight: 500; }
+    .urgency-low { color: var(--color-ink-muted); }
+
+    .empty-panel {
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        width: 2rem;
+        height: 2rem;
+        color: var(--color-ink-subtle);
+        opacity: 0.3;
+        margin: 0 auto 0.5rem;
+    }
+
+    .empty-title {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.25rem;
+    }
+
+    .empty-text {
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .quick-actions {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        border: none;
+        min-height: 150px;
+    }
+
+    .quick-actions .panel-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .quick-actions .panel-title {
+        color: white;
+    }
+    .quick-actions .panel-title svg { color: rgba(255, 255, 255, 0.7); }
+
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    .quick-action {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .quick-action:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .quick-action svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .quick-action-label {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    .seller-initial {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        .panels-grid { grid-template-columns: 1fr; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-page">
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        <div class="card stat-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Wszystkie faktury</p>
-                    <p id="stat-total" class="text-2xl font-bold text-gray-900">
-                        <span class="skeleton skeleton-text inline-block w-12"></span>
-                    </p>
-                </div>
-                <span class="material-icons text-primary text-4xl">receipt_long</span>
-            </div>
+<div class="refined-page">
+    <header class="page-header">
+        <h1 class="page-title">Pulpit</h1>
+        <div class="header-actions">
+            <button class="refresh-btn" onclick="refreshDashboard()" id="refresh-btn" title="Odswiez dane">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span id="refresh-label">Odswiez</span>
+            </button>
         </div>
+    </header>
 
-        <div class="card stat-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Zapłacone</p>
-                    <p id="stat-paid" class="text-2xl font-bold text-status-success">
-                        <span class="skeleton skeleton-text inline-block w-12"></span>
-                    </p>
-                </div>
-                <span class="material-icons text-status-success text-4xl">check_circle</span>
-            </div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-value" id="stat-total">—</span>
+            <span class="stat-label">Wszystkie</span>
         </div>
-
-        <div class="card stat-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Niezapłacone</p>
-                    <p id="stat-unpaid" class="text-2xl font-bold text-status-error">
-                        <span class="skeleton skeleton-text inline-block w-12"></span>
-                    </p>
-                </div>
-                <span class="material-icons text-status-error text-4xl">pending</span>
-            </div>
+        <div class="stat-card">
+            <span class="stat-value" id="stat-paid">—</span>
+            <span class="stat-label">Oplacone</span>
         </div>
-
-        <div class="card stat-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Kwota brutto</p>
-                    <p id="stat-amount-gross" class="text-2xl font-bold text-gray-900">
-                        <span class="skeleton skeleton-text inline-block w-20"></span>
-                    </p>
-                </div>
-                <span class="material-icons text-primary text-4xl">account_balance</span>
-            </div>
+        <div class="stat-card">
+            <span class="stat-value" id="stat-unpaid">—</span>
+            <span class="stat-label">Nieoplacone</span>
         </div>
-
-        <div class="card stat-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Kwota netto</p>
-                    <p id="stat-amount-net" class="text-2xl font-bold text-net">
-                        <span class="skeleton skeleton-text inline-block w-20"></span>
-                    </p>
-                </div>
-                <span class="material-icons text-net text-4xl">payments</span>
-            </div>
+        <div class="stat-card">
+            <span class="stat-value" id="stat-amount-gross">—</span>
+            <span class="stat-label">Brutto</span>
         </div>
-
-        <div class="card stat-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600">Kwota VAT</p>
-                    <p id="stat-amount-vat" class="text-2xl font-bold text-vat">
-                        <span class="skeleton skeleton-text inline-block w-20"></span>
-                    </p>
-                </div>
-                <span class="material-icons text-vat text-4xl">receipt</span>
-            </div>
+        <div class="stat-card">
+            <span class="stat-value" id="stat-amount-net">—</span>
+            <span class="stat-label">Netto</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="stat-amount-vat">—</span>
+            <span class="stat-label">VAT</span>
         </div>
     </div>
 
-    <!-- Dashboard Panels -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="panels-grid">
         <!-- Recent Invoices -->
-        <div class="card">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <span class="material-icons text-primary mr-2">schedule</span>
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     Ostatnie faktury
-                </h3>
-                <a href="{{ url_for('main.invoices_list') }}" class="text-primary text-sm hover:underline">
-                    Zobacz wszystkie
-                </a>
-            </div>
-            <div id="recent-invoices-container">
-                <!-- Skeleton loader -->
-                <div class="skeleton-list">
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-32 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-24"></div>
-                            </div>
-                            <div class="skeleton skeleton-badge w-20"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-36 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-28"></div>
-                            </div>
-                            <div class="skeleton skeleton-badge w-24"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-row py-3">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-28 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-20"></div>
-                            </div>
-                            <div class="skeleton skeleton-badge w-16"></div>
-                        </div>
-                    </div>
                 </div>
+                <a href="{{ url_for('main.invoices_list') }}" class="panel-link">Zobacz wszystkie →</a>
+            </div>
+            <div class="panel-content" id="recent-invoices-container">
+                <div class="empty-panel">Ladowanie...</div>
             </div>
         </div>
 
         <!-- Overdue Payments -->
-        <div class="card border-l-4 border-l-status-error">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <span class="material-icons text-status-error mr-2">warning</span>
-                    Przeterminowane płatności
-                </h3>
-            </div>
-            
-            <!-- Summary Card -->
-            <div id="overdue-summary" class="bg-red-50 p-3 rounded-lg mb-3 flex justify-between items-center hidden">
-                <span class="text-status-error font-medium text-sm">Łącznie zaległe:</span>
-                <span class="text-status-error font-bold text-lg" id="overdue-total-amount">0.00 PLN</span>
-            </div>
-
-            <div id="overdue-payments-container">
-                <!-- Skeleton loader -->
-                <div class="skeleton-list">
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-32 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-24"></div>
-                            </div>
-                            <div class="text-right">
-                                <div class="skeleton skeleton-text w-20 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-16"></div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Przeterminowane
                 </div>
+                <span class="panel-link" id="overdue-summary" style="font-weight: 600;">—</span>
+            </div>
+            <div class="panel-content" id="overdue-payments-container">
+                <div class="empty-panel">Ladowanie...</div>
             </div>
         </div>
 
         <!-- Upcoming Payments -->
-        <div class="card">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <span class="material-icons text-status-warning mr-2">event</span>
-                    Nadchodzące płatności
-                </h3>
-            </div>
-
-            <!-- Summary Card -->
-            <div id="upcoming-summary" class="bg-yellow-50 p-3 rounded-lg mb-3 flex justify-between items-center hidden">
-                <span class="text-status-warning font-medium text-sm">Łącznie do zapłaty:</span>
-                <span class="text-status-warning font-bold text-lg" id="upcoming-total-amount">0.00 PLN</span>
-            </div>
-
-            <div id="upcoming-payments-container">
-                <!-- Skeleton loader -->
-                <div class="skeleton-list">
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-32 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-24"></div>
-                            </div>
-                            <div class="text-right">
-                                <div class="skeleton skeleton-text w-20 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-16"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-36 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-28"></div>
-                            </div>
-                            <div class="text-right">
-                                <div class="skeleton skeleton-text w-24 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-20"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="skeleton-row py-3">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="skeleton skeleton-text w-28 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-20"></div>
-                            </div>
-                            <div class="text-right">
-                                <div class="skeleton skeleton-text w-16 mb-1"></div>
-                                <div class="skeleton skeleton-text-short w-14"></div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Nadchodzace platnosci
                 </div>
+                <span class="panel-link" id="upcoming-summary" style="font-weight: 600;">—</span>
+            </div>
+            <div class="panel-content" id="upcoming-payments-container">
+                <div class="empty-panel">Ladowanie...</div>
             </div>
         </div>
 
         <!-- Top Sellers -->
-        <div class="card">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <span class="material-icons text-primary mr-2">trending_up</span>
-                    Najczęstsi dostawcy
-                </h3>
-            </div>
-            <div id="top-sellers-container">
-                <!-- Skeleton loader -->
-                <div class="skeleton-list">
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="skeleton w-8 h-8 rounded-full"></div>
-                                <div>
-                                    <div class="skeleton skeleton-text w-32 mb-1"></div>
-                                    <div class="skeleton skeleton-text-short w-24"></div>
-                                </div>
-                            </div>
-                            <div class="skeleton skeleton-badge w-16"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-row py-3 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="skeleton w-8 h-8 rounded-full"></div>
-                                <div>
-                                    <div class="skeleton skeleton-text w-36 mb-1"></div>
-                                    <div class="skeleton skeleton-text-short w-28"></div>
-                                </div>
-                            </div>
-                            <div class="skeleton skeleton-badge w-20"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-row py-3">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="skeleton w-8 h-8 rounded-full"></div>
-                                <div>
-                                    <div class="skeleton skeleton-text w-28 mb-1"></div>
-                                    <div class="skeleton skeleton-text-short w-20"></div>
-                                </div>
-                            </div>
-                            <div class="skeleton skeleton-badge w-14"></div>
-                        </div>
-                    </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    Najczestsi dostawcy
                 </div>
+            </div>
+            <div class="panel-content" id="top-sellers-container">
+                <div class="empty-panel">Ladowanie...</div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="card">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <span class="material-icons text-primary mr-2">flash_on</span>
-                Szybkie akcje
-            </h3>
-            <div class="grid grid-cols-2 gap-3">
-                <a href="{{ url_for('main.upload') }}" class="quick-action-btn">
-                    <span class="material-icons text-3xl mb-2 text-primary">upload_file</span>
-                    <span class="text-sm font-medium">Import PDF</span>
+        <div class="panel quick-actions" style="grid-column: span 2;">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Szybkie akcje
+                </div>
+            </div>
+            <div class="quick-actions-grid">
+                <a href="{{ url_for('main.upload') }}" class="quick-action">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span class="quick-action-label">Import PDF</span>
                 </a>
-                <a href="{{ url_for('main.create_invoice') }}" class="quick-action-btn">
-                    <span class="material-icons text-3xl mb-2 text-status-success">add_circle</span>
-                    <span class="text-sm font-medium">Nowa faktura</span>
+                <a href="{{ url_for('main.create_invoice') }}" class="quick-action">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span class="quick-action-label">Nowa faktura</span>
                 </a>
-                <a href="{{ url_for('main.invoices_list') }}" class="quick-action-btn">
-                    <span class="material-icons text-3xl mb-2 text-status-info">list_alt</span>
-                    <span class="text-sm font-medium">Lista faktur</span>
+                <a href="{{ url_for('main.invoices_list') }}" class="quick-action">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="quick-action-label">Lista faktur</span>
                 </a>
-                <a href="{{ url_for('main.email_settings') }}" class="quick-action-btn">
-                    <span class="material-icons text-3xl mb-2 text-status-warning">email</span>
-                    <span class="text-sm font-medium">Import e-mail</span>
+                <a href="{{ url_for('main.email_settings') }}" class="quick-action">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span class="quick-action-label">Import e-mail</span>
                 </a>
             </div>
         </div>
@@ -320,15 +493,13 @@
 {% block extra_scripts %}
 <script>
 let refreshInterval;
-const REFRESH_RATE = 30000; // 30 seconds
+const REFRESH_RATE = 30000;
 
-// Load dashboard data on page load
 document.addEventListener('DOMContentLoaded', () => {
     refreshDashboard();
     startAutoRefresh();
 });
 
-// Refresh data when tab becomes visible
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         refreshDashboard();
@@ -338,20 +509,16 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Handle back/forward cache
 window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-        refreshDashboard();
-    }
+    if (event.persisted) refreshDashboard();
 });
 
-// Listen for global update events
 document.addEventListener('invoiceUpdated', refreshDashboard);
 document.addEventListener('invoiceCreated', refreshDashboard);
 document.addEventListener('invoiceDeleted', refreshDashboard);
 
 function startAutoRefresh() {
-    stopAutoRefresh(); // Clear existing if any
+    stopAutoRefresh();
     refreshInterval = setInterval(refreshDashboard, REFRESH_RATE);
 }
 
@@ -362,15 +529,13 @@ function stopAutoRefresh() {
     }
 }
 
-/**
- * Refresh all dashboard widgets
- */
 async function refreshDashboard() {
-    const icon = document.getElementById('refresh-icon');
-    const indicator = document.getElementById('last-updated-indicator');
-    
-    if (icon) icon.classList.add('animate-spin');
-    
+    const btn = document.getElementById('refresh-btn');
+    const label = document.getElementById('refresh-label');
+
+    if (btn) btn.classList.add('loading');
+    if (label) label.textContent = 'Ladowanie...';
+
     try {
         await Promise.all([
             loadStatistics(),
@@ -379,307 +544,182 @@ async function refreshDashboard() {
             loadOverduePayments(),
             loadTopSellers()
         ]);
-        
-        // Update timestamp
-        if (indicator) {
-            const now = new Date();
-            indicator.textContent = `Zaktualizowano: ${now.toLocaleTimeString()}`;
-        }
+
+        if (label) label.textContent = 'Odswiezono';
+        setTimeout(() => { if (label) label.textContent = 'Odswiez'; }, 2000);
     } catch (error) {
         console.error('Error refreshing dashboard:', error);
-        if (indicator) {
-            indicator.textContent = 'Błąd aktualizacji';
-            indicator.classList.add('text-status-error');
-        }
+        if (label) label.textContent = 'Blad';
     } finally {
-        if (icon) icon.classList.remove('animate-spin');
+        if (btn) btn.classList.remove('loading');
     }
 }
 
-/**
- * Load statistics from API
- */
 async function loadStatistics() {
     try {
         const data = await API.invoices.getStatistics();
-
         if (data.success) {
             const stats = data.statistics;
-
             document.getElementById('stat-total').textContent = stats.total_invoices || 0;
             document.getElementById('stat-paid').textContent = stats.paid_invoices || 0;
             document.getElementById('stat-unpaid').textContent = stats.unpaid_invoices || 0;
 
-            // totals.total_amount is nested in the stats object
             const totalGross = stats.totals?.total_amount || 0;
-            const totalNet = calculateNetAmount(totalGross);
-            const totalVat = calculateVatAmount(totalGross);
+            const totalNet = totalGross / 1.23;
+            const totalVat = totalGross * (23 / 123);
 
-            document.getElementById('stat-amount-gross').textContent = formatCurrency(totalGross, 'PLN');
-            document.getElementById('stat-amount-net').textContent = formatCurrency(totalNet, 'PLN');
-            document.getElementById('stat-amount-vat').textContent = formatCurrency(totalVat, 'PLN');
-            
-            // Update Summary Cards for Overdue/Upcoming
-            // Try to find PLN or use first available currency
-            let currencyData = stats.by_currency['PLN'];
-            if (!currencyData && Object.keys(stats.by_currency).length > 0) {
-                 currencyData = stats.by_currency[Object.keys(stats.by_currency)[0]];
-            }
-            
-            if (currencyData) {
-                const overdueAmount = currencyData.overdue || 0;
-                const upcomingAmount = currencyData.unpaid || 0; // 'unpaid' key in by_currency means future unpaid
-                
-                const overdueEl = document.getElementById('overdue-total-amount');
-                const upcomingEl = document.getElementById('upcoming-total-amount');
-                const overdueCard = document.getElementById('overdue-summary');
-                const upcomingCard = document.getElementById('upcoming-summary');
-                
-                if (overdueEl) overdueEl.textContent = formatCurrency(overdueAmount, 'PLN');
-                if (upcomingEl) upcomingEl.textContent = formatCurrency(upcomingAmount, 'PLN');
-                
-                // Show cards if amounts > 0 (or always show? User asked to "add a card", implying visibility)
-                // Let's always show them if we have data, or strictly if > 0.
-                // Usually showing 0.00 is fine too.
-                if (overdueCard) overdueCard.classList.remove('hidden');
-                if (upcomingCard) upcomingCard.classList.remove('hidden');
-            }
+            document.getElementById('stat-amount-gross').textContent = formatAmountShort(totalGross);
+            document.getElementById('stat-amount-net').textContent = formatAmountShort(totalNet);
+            document.getElementById('stat-amount-vat').textContent = formatAmountShort(totalVat);
         }
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
 }
 
-/**
- * Load recent invoices
- */
+function formatAmountShort(amount) {
+    if (amount >= 1000000) return (amount / 1000000).toFixed(1) + ' M';
+    if (amount >= 1000) return (amount / 1000).toFixed(1) + ' K';
+    return amount.toFixed(0);
+}
+
 async function loadRecentInvoices() {
     const container = document.getElementById('recent-invoices-container');
-
     try {
         const response = await API.get('/dashboard/recent-invoices?limit=5');
-
         if (response.success && response.invoices.length > 0) {
             container.innerHTML = response.invoices.map(invoice => `
-                <a href="/invoice/${invoice.id}/edit" class="block py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors -mx-4 px-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(invoice.seller_name || 'Nieznany')}</p>
-                            <p class="text-xs text-gray-500">${escapeHtml(invoice.invoice_number || '-')}</p>
-                        </div>
-                        <div class="text-right ml-4">
-                            <p class="text-sm font-semibold text-gray-900">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</p>
-                            <span class="badge-${invoice.status === 'Opłacona' ? 'success' : 'warning'} text-xs">
-                                ${escapeHtml(invoice.status || 'Nieopłacona')}
-                            </span>
-                        </div>
+                <a href="/invoice/${invoice.id}/edit" class="list-item">
+                    <div class="list-item-main">
+                        <div class="list-item-title">${escapeHtml(invoice.seller_name || 'Nieznany')}</div>
+                        <div class="list-item-subtitle">${escapeHtml(invoice.invoice_number || '—')}</div>
+                    </div>
+                    <div class="list-item-side">
+                        <div class="list-item-amount">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</div>
+                        <div class="list-item-meta"><span class="status-badge ${invoice.status === 'Opłacona' ? 'status-paid' : 'status-unpaid'}">${escapeHtml(invoice.status || 'Nieoplacona')}</span></div>
                     </div>
                 </a>
             `).join('');
         } else {
-            container.innerHTML = `
-                <div class="empty-state-small">
-                    <span class="material-icons text-gray-300 text-4xl mb-2">receipt_long</span>
-                    <p class="text-gray-500 text-sm">Brak faktur</p>
-                    <a href="{{ url_for('main.upload') }}" class="text-primary text-sm hover:underline mt-2 inline-block">
-                        Importuj pierwszą fakturę
-                    </a>
-                </div>
-            `;
+            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><div class="empty-title">Brak faktur</div></div>';
         }
     } catch (error) {
         console.error('Error loading recent invoices:', error);
-        container.innerHTML = `
-            <div class="text-center py-4 text-status-error">
-                <span class="material-icons text-2xl mb-1">error</span>
-                <p class="text-sm">Błąd ładowania danych</p>
-            </div>
-        `;
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
     }
 }
 
-/**
- * Load overdue payments
- */
 async function loadOverduePayments() {
     const container = document.getElementById('overdue-payments-container');
-
+    const summary = document.getElementById('overdue-summary');
     try {
         const response = await API.get('/dashboard/overdue-payments?limit=5');
-
         if (response.success && response.invoices.length > 0) {
+            const total = response.invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+            if (summary) summary.textContent = formatAmountShort(total);
+
             container.innerHTML = response.invoices.map(invoice => {
                 const dueDate = invoice.payment_due_date ? new Date(invoice.payment_due_date) : null;
-                const today = new Date();
-                const daysOverdue = dueDate ? Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24)) : 0;
-
+                const daysOverdue = dueDate ? Math.ceil((new Date() - dueDate) / (1000 * 60 * 60 * 24)) : 0;
                 return `
-                    <a href="/invoice/${invoice.id}/edit" class="block py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors -mx-4 px-4 bg-red-50/50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(invoice.seller_name || 'Nieznany')}</p>
-                                <p class="text-xs text-status-error font-medium">
-                                    ${daysOverdue} dni po terminie
-                                </p>
-                            </div>
-                            <div class="text-right ml-4">
-                                <p class="text-sm font-bold text-status-error">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</p>
-                                <p class="text-xs text-gray-500">${formatDate(invoice.payment_due_date)}</p>
-                            </div>
+                    <a href="/invoice/${invoice.id}/edit" class="list-item">
+                        <div class="list-item-main">
+                            <div class="list-item-title">${escapeHtml(invoice.seller_name || 'Nieznany')}</div>
+                            <div class="list-item-subtitle urgency-high">${daysOverdue} dni po terminie</div>
+                        </div>
+                        <div class="list-item-side">
+                            <div class="list-item-amount urgency-high">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</div>
+                            <div class="list-item-meta">${formatDate(invoice.payment_due_date)}</div>
                         </div>
                     </a>
                 `;
             }).join('');
         } else {
-            container.innerHTML = `
-                <div class="empty-state-small">
-                    <span class="material-icons text-gray-300 text-4xl mb-2">check_circle</span>
-                    <p class="text-gray-500 text-sm">Brak przeterminowanych płatności</p>
-                    <p class="text-xs text-green-600 mt-1">Wszystko opłacone na czas!</p>
-                </div>
-            `;
+            if (summary) summary.textContent = '0';
+            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><div class="empty-title">Brak zagleglosci</div><div class="empty-text">Wszystko oplacone na czas!</div></div>';
         }
     } catch (error) {
-        console.error('Error loading overdue payments:', error);
-        container.innerHTML = `
-            <div class="text-center py-4 text-status-error">
-                <span class="material-icons text-2xl mb-1">error</span>
-                <p class="text-sm">Błąd ładowania danych</p>
-            </div>
-        `;
+        console.error('Error loading overdue:', error);
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
     }
 }
 
-/**
- * Load upcoming payments
- */
 async function loadUpcomingPayments() {
     const container = document.getElementById('upcoming-payments-container');
-
+    const summary = document.getElementById('upcoming-summary');
     try {
         const response = await API.get('/dashboard/upcoming-payments?limit=5');
-
         if (response.success && response.invoices.length > 0) {
+            const total = response.invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+            if (summary) summary.textContent = formatAmountShort(total);
+
             container.innerHTML = response.invoices.map(invoice => {
                 const dueDate = invoice.payment_due_date ? new Date(invoice.payment_due_date) : null;
-                const today = new Date();
-                const daysUntil = dueDate ? Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)) : null;
+                const daysUntil = dueDate ? Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
 
-                let urgencyClass = 'text-gray-600';
-                let urgencyIcon = 'schedule';
+                let urgencyClass = 'urgency-low';
                 if (daysUntil !== null) {
-                    if (daysUntil <= 3) {
-                        urgencyClass = 'text-status-error';
-                        urgencyIcon = 'warning';
-                    } else if (daysUntil <= 7) {
-                        urgencyClass = 'text-status-warning';
-                        urgencyIcon = 'notifications';
-                    }
+                    if (daysUntil <= 3) urgencyClass = 'urgency-high';
+                    else if (daysUntil <= 7) urgencyClass = 'urgency-medium';
                 }
 
+                const daysText = daysUntil === 0 ? 'Dzis' : daysUntil === 1 ? 'Jutro' : `Za ${daysUntil} dni`;
+
                 return `
-                    <a href="/invoice/${invoice.id}/edit" class="block py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors -mx-4 px-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(invoice.seller_name || 'Nieznany')}</p>
-                                <p class="text-xs text-gray-500">${escapeHtml(invoice.invoice_number || '-')}</p>
-                            </div>
-                            <div class="text-right ml-4">
-                                <p class="text-sm font-semibold text-gray-900">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</p>
-                                <p class="text-xs ${urgencyClass} flex items-center justify-end gap-1">
-                                    <span class="material-icons text-xs">${urgencyIcon}</span>
-                                    ${daysUntil !== null ? (daysUntil === 0 ? 'Dziś' : daysUntil === 1 ? 'Jutro' : `Za ${daysUntil} dni`) : '-'}
-                                </p>
-                            </div>
+                    <a href="/invoice/${invoice.id}/edit" class="list-item">
+                        <div class="list-item-main">
+                            <div class="list-item-title">${escapeHtml(invoice.seller_name || 'Nieznany')}</div>
+                            <div class="list-item-subtitle">${escapeHtml(invoice.invoice_number || '—')}</div>
+                        </div>
+                        <div class="list-item-side">
+                            <div class="list-item-amount">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</div>
+                            <div class="list-item-meta ${urgencyClass}">${daysText}</div>
                         </div>
                     </a>
                 `;
             }).join('');
         } else {
-            container.innerHTML = `
-                <div class="empty-state-small">
-                    <span class="material-icons text-gray-300 text-4xl mb-2">event_available</span>
-                    <p class="text-gray-500 text-sm">Brak nadchodzących płatności</p>
-                </div>
-            `;
+            if (summary) summary.textContent = '0';
+            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><div class="empty-title">Brak nadchodzacych platnosci</div></div>';
         }
     } catch (error) {
-        console.error('Error loading upcoming payments:', error);
-        container.innerHTML = `
-            <div class="text-center py-4 text-status-error">
-                <span class="material-icons text-2xl mb-1">error</span>
-                <p class="text-sm">Błąd ładowania danych</p>
-            </div>
-        `;
+        console.error('Error loading upcoming:', error);
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
     }
 }
 
-/**
- * Load top sellers
- */
 async function loadTopSellers() {
     const container = document.getElementById('top-sellers-container');
-
     try {
         const response = await API.get('/dashboard/top-sellers?limit=5');
-
         if (response.success && response.sellers.length > 0) {
+            const colors = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#94a3b8'];
             container.innerHTML = response.sellers.map((seller, index) => {
-                const colors = ['bg-primary', 'bg-status-success', 'bg-status-info', 'bg-status-warning', 'bg-gray-400'];
                 const bgColor = colors[index] || colors[4];
                 const initials = (seller.seller_name || '??').substring(0, 2).toUpperCase();
-
                 return `
-                    <div class="py-3 border-b border-gray-100 last:border-0">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-white font-semibold text-sm">
-                                    ${initials}
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(seller.seller_name || 'Nieznany')}</p>
-                                    <p class="text-xs text-gray-500">NIP: ${escapeHtml(seller.seller_nip || '-')}</p>
-                                </div>
+                    <div class="list-item">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0;">
+                            <span class="seller-initial" style="background: ${bgColor};">${initials}</span>
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="list-item-title">${escapeHtml(seller.seller_name || 'Nieznany')}</div>
+                                <div class="list-item-subtitle">NIP: ${escapeHtml(seller.seller_nip || '—')}</div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm font-semibold text-gray-900">${seller.invoice_count || 0} faktur</p>
-                                <p class="text-xs text-gray-500">${formatCurrency(seller.total_amount || 0, 'PLN')}</p>
-                            </div>
+                        </div>
+                        <div class="list-item-side">
+                            <div class="list-item-amount">${seller.invoice_count || 0} faktur</div>
+                            <div class="list-item-meta">${formatAmountShort(seller.total_amount || 0)}</div>
                         </div>
                     </div>
                 `;
             }).join('');
         } else {
-            container.innerHTML = `
-                <div class="empty-state-small">
-                    <span class="material-icons text-gray-300 text-4xl mb-2">business</span>
-                    <p class="text-gray-500 text-sm">Brak danych o dostawcach</p>
-                </div>
-            `;
+            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg><div class="empty-title">Brak danych o dostawcach</div></div>';
         }
     } catch (error) {
         console.error('Error loading top sellers:', error);
-        container.innerHTML = `
-            <div class="text-center py-4 text-status-error">
-                <span class="material-icons text-2xl mb-1">error</span>
-                <p class="text-sm">Błąd ładowania danych</p>
-            </div>
-        `;
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
     }
-}
-
-/**
- * Calculate net amount (amount / 1.23)
- */
-function calculateNetAmount(grossAmount) {
-    return grossAmount / 1.23;
-}
-
-/**
- * Calculate VAT amount (amount * 23/123)
- */
-function calculateVatAmount(grossAmount) {
-    return grossAmount * (23 / 123);
 }
 </script>
 {% endblock %}
