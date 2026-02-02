@@ -1,94 +1,280 @@
 {% extends "base.html" %}
 
-{% block title %}Nowy sprzedawca - {{ app_name }}{% endblock %}
+{% block title %}Nowy sprzedawca — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item">
-    <a href="{{ url_for('main.sellers_list') }}" class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">store</span>
-        <span>Sprzedawcy</span>
-    </a>
-</li>
-<li class="breadcrumb-item">
-    <span class="breadcrumb-link">
-        <span class="material-icons breadcrumb-icon">add</span>
-        <span>Nowy sprzedawca</span>
-    </span>
-</li>
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.5rem !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .page-subtitle {
+        font-size: 0.875rem;
+        color: var(--color-ink-muted);
+        font-weight: 300;
+    }
+
+    .form-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.5rem;
+    }
+
+    .form-field {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-field:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.375rem;
+        letter-spacing: 0.01em;
+    }
+
+    .form-required {
+        color: var(--color-error);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .form-input::placeholder {
+        color: var(--color-ink-subtle);
+        font-weight: 300;
+    }
+
+    .form-hint {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.25rem;
+    }
+
+    .form-error {
+        font-size: 0.6875rem;
+        color: var(--color-error);
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+    .form-error.visible {
+        display: block;
+    }
+
+    .input-with-status {
+        position: relative;
+    }
+
+    .input-status {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .input-status svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .status-valid { color: var(--color-success); }
+    .status-invalid { color: var(--color-error); }
+    .status-checking {
+        color: var(--color-ink-subtle);
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: translateY(-50%) rotate(0deg); }
+        to { transform: translateY(-50%) rotate(360deg); }
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-refined svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    .btn-refined-primary {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-refined-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-refined-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-refined-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="card">
-        <div class="mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-                <span class="material-icons text-primary mr-2">store</span>
-                Nowy sprzedawca
-            </h2>
-            <p class="text-gray-600 text-sm mt-1">Wprowadz dane nowego sprzedawcy</p>
-        </div>
+<div class="refined-page">
+    <header class="page-header">
+        <h1 class="page-title">Nowy sprzedawca</h1>
+        <p class="page-subtitle">Wprowadz dane nowego sprzedawcy</p>
+    </header>
 
+    <div class="form-card">
         <form id="seller-form" onsubmit="return handleSubmit(event)">
-            <!-- NIP Field -->
-            <div class="mb-4">
-                <label for="seller_nip" class="block text-sm font-medium text-gray-700 mb-1">
-                    NIP <span class="text-red-500">*</span>
+            <div class="form-field">
+                <label for="seller_nip" class="form-label">
+                    NIP <span class="form-required">*</span>
                 </label>
-                <div class="relative">
+                <div class="input-with-status">
                     <input type="text"
                            id="seller_nip"
                            name="seller_nip"
-                           class="input"
+                           class="form-input"
                            placeholder="1234567890"
                            maxlength="15"
                            required
                            onblur="validateNIP()">
-                    <span id="nip-status" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
-                        <span class="material-icons text-green-500 nip-valid hidden">check_circle</span>
-                        <span class="material-icons text-red-500 nip-invalid hidden">error</span>
-                        <span class="material-icons text-yellow-500 nip-checking hidden animate-spin">sync</span>
+                    <span id="nip-status" class="input-status" style="display: none;">
+                        <svg class="status-valid" style="display: none;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg class="status-invalid" style="display: none;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg class="status-checking" style="display: none;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
                     </span>
                 </div>
-                <p id="nip-error" class="text-sm text-red-600 mt-1 hidden"></p>
-                <p class="text-xs text-gray-500 mt-1">Format: 10 cyfr (np. 1234567890 lub 123-456-78-90)</p>
+                <div id="nip-error" class="form-error"></div>
+                <div class="form-hint">Format: 10 cyfr (np. 1234567890 lub 123-456-78-90)</div>
             </div>
 
-            <!-- Seller Name Field -->
-            <div class="mb-4">
-                <label for="seller_name" class="block text-sm font-medium text-gray-700 mb-1">
-                    Nazwa sprzedawcy <span class="text-red-500">*</span>
+            <div class="form-field">
+                <label for="seller_name" class="form-label">
+                    Nazwa sprzedawcy <span class="form-required">*</span>
                 </label>
                 <input type="text"
                        id="seller_name"
                        name="seller_name"
-                       class="input"
+                       class="form-input"
                        placeholder="Nazwa firmy Sp. z o.o."
                        required>
-                <p id="name-warning" class="text-sm text-yellow-600 mt-1 hidden"></p>
+                <div id="name-warning" class="form-error"></div>
             </div>
 
-            <!-- Address Field -->
-            <div class="mb-6">
-                <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
-                    Adres <span class="text-gray-400">(opcjonalny)</span>
+            <div class="form-field">
+                <label for="address" class="form-label">
+                    Adres <span style="color: var(--color-ink-subtle); font-weight: 300;">(opcjonalny)</span>
                 </label>
                 <input type="text"
                        id="address"
                        name="address"
-                       class="input"
+                       class="form-input"
                        placeholder="ul. Przykladowa 1, 00-000 Warszawa">
             </div>
 
-            <!-- Submit Buttons -->
-            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                <a href="{{ url_for('main.sellers_list') }}" class="btn-secondary">
-                    <span class="material-icons text-sm mr-2">arrow_back</span>
-                    Anuluj
-                </a>
-                <button type="submit" id="submit-btn" class="btn-primary">
-                    <span class="material-icons text-sm mr-2">save</span>
+            <div class="form-actions">
+                <button type="submit" id="submit-btn" class="btn-refined btn-refined-primary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
                     Zapisz sprzedawce
                 </button>
+                <a href="{{ url_for('main.sellers_list') }}" class="btn-refined btn-refined-secondary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Anuluj
+                </a>
             </div>
         </form>
     </div>

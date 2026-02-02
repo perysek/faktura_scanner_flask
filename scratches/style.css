@@ -82,6 +82,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     min-width: 1000px;
+    table-layout: fixed; /* Locks column widths - prevents shifting */
 }
 
 /* Sticky Table Headers */
@@ -122,27 +123,46 @@ th:hover {
     background-color: var(--hover-bg);
 }
 
-/* Header Content Layout */
+/* Header Content Layout - FIXED to prevent column width changes */
 .th-content {
+    display: block; /* Block layout, not flex */
+    overflow: hidden;
+}
+
+/* Header row with label and sort icon */
+.th-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+
+.th-header > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
 .sort-icon {
     font-size: 0.8em;
     color: #999;
     margin-left: 4px;
+    flex-shrink: 0;
 }
 
-/* Column Search Inputs */
+/* Column Search Inputs - Constrained to not affect column width */
 .column-search {
+    display: block;
     width: 100%;
-    padding: 6px;
+    min-width: 0 !important; /* Override browser default min-width */
+    max-width: 100%;
+    padding: 4px 6px;
     border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    font-size: 12px;
+    border-radius: 4px;
+    font-size: 11px;
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -156,6 +176,7 @@ th:hover {
 select.column-search {
     background-color: white;
     cursor: pointer;
+    padding: 3px 4px;
 }
 
 /* Table Body Rows */

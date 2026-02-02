@@ -1,19 +1,121 @@
 {% extends "base.html" %}
 
-{% block title %}500 - Błąd serwera - {{ app_name }}{% endblock %}
+{% block title %}500 - Błąd serwera — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block page_title %}Błąd serwera{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface-warm: #f7f6f3;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .error-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        text-align: center;
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .error-icon {
+        width: 7.5rem;
+        height: 7.5rem;
+        color: var(--color-error);
+        opacity: 0.4;
+        margin: 0 auto 1.5rem;
+    }
+
+    .error-code {
+        font-size: 4rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--color-ink);
+        margin: 0 0 1rem 0;
+        line-height: 1;
+    }
+
+    .error-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .error-message {
+        font-size: 0.875rem;
+        color: var(--color-ink-muted);
+        font-weight: 300;
+        margin: 0 0 2rem 0;
+        line-height: 1.5;
+    }
+
+    .btn-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        border-radius: 2px;
+        transition: all 0.25s var(--ease-out-expo);
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-refined:hover {
+        background: #333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-refined svg {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto text-center py-16">
-    <span class="material-icons text-status-error opacity-40" style="font-size: 120px;">report_problem</span>
-    <h1 class="text-6xl font-bold text-gray-900 mt-4">500</h1>
-    <p class="text-xl text-gray-600 mt-4">Wystąpił błąd serwera. Przepraszamy!</p>
-    <div class="mt-8">
-        <a href="{{ url_for('main.invoices_list') }}" class="btn-primary">
-            <span class="material-icons align-middle mr-2">home</span>
-            Powrót do strony głównej
-        </a>
-    </div>
+<div class="error-page">
+    <svg class="error-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+
+    <h1 class="error-code">500</h1>
+    <h2 class="error-title">Błąd serwera</h2>
+    <p class="error-message">
+        Wystąpił nieoczekiwany błąd. Nasz zespół został powiadomiony i pracuje nad rozwiązaniem problemu.
+    </p>
+
+    <a href="{{ url_for('main.invoices_list') }}" class="btn-refined">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        Powrót do strony głównej
+    </a>
 </div>
 {% endblock %}

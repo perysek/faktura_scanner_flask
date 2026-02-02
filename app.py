@@ -4,6 +4,7 @@ Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
 import logging
 import os
+from datetime import datetime
 
 from flask import Flask, render_template
 
@@ -93,7 +94,8 @@ def create_app():
     def inject_globals():
         return {
             'app_name': APP_NAME,
-            'version': VERSION
+            'version': VERSION,
+            'now': datetime.now
         }
 
     return app
