@@ -28,11 +28,58 @@ document.addEventListener('DOMContentLoaded', () => {
     setupProcessButton();
     setupSaveFinishButton();
 
-    // Load any existing staged files
-    loadStagedFiles();
+    // Check for unsaved processing results in localStorage
+    const restoredResults = tryRestoreResults();
+    if (restoredResults && restoredResults.length > 0) {
+        // Ask user if they want to restore
+        Modals.show({
+            title: 'Przywrócić poprzednią sesję?',
+            content: `
+                <div class="text-center py-4">
+                    <span class="material-icons text-primary text-5xl mb-4">restore</span>
+                    <p class="text-gray-700 mb-2">Znaleziono <strong>${restoredResults.length}</strong> niezapisanych faktur z poprzedniej sesji.</p>
+                    <p class="text-sm text-gray-500">Czy chcesz kontynuować pracę?</p>
+                </div>
+            `,
+            size: 'small',
+            buttons: [
+                {
+                    text: 'Zacznij od nowa',
+                    type: 'secondary',
+                    onClick: (e, overlay) => {
+                        // Clear all session data
+                        clearSavedResults();
+                        processedResults = []; // Clear in-memory results
+                        uploadedFiles = [];    // Clear staged files list
 
-    // Initialize workflow step indicator
-    updateWorkflowStep(1);
+                        // Reset UI to initial state
+                        document.getElementById('results-section').classList.add('hidden');
+                        document.getElementById('uploaded-files-section').classList.add('hidden');
+                        document.getElementById('upload-cards-grid').classList.remove('hidden');
+
+                        Modals.close(overlay);
+                        loadStagedFiles();
+                        updateWorkflowStep(1);
+                    }
+                },
+                {
+                    text: 'Przywróć',
+                    type: 'primary',
+                    onClick: (e, overlay) => {
+                        processedResults = restoredResults;
+                        Modals.close(overlay);
+                        displayProcessingResults();
+                        Notifications.success(`Przywrócono ${restoredResults.length} faktur`);
+                    }
+                }
+            ]
+        });
+    } else {
+        // Load any existing staged files
+        loadStagedFiles();
+        // Initialize workflow step indicator
+        updateWorkflowStep(1);
+    }
 });
 
 /**
@@ -512,6 +559,7 @@ async function processDocuments() {
 
 /**
  * Display processing results (Step 4) - With Editable Fields
+ * UX Improvements: OCR confidence badges, email context, all fields editable
  */
 function displayProcessingResults() {
     updateWorkflowStep(3); // Move to step 3: Review OCR results
@@ -525,11 +573,24 @@ function displayProcessingResults() {
     const duplicateCount = processedResults.filter(r => r.is_duplicate).length;
     const validationErrorCount = processedResults.filter(r => r.validation_errors && r.validation_errors.length > 0).length;
 
+    // Check if any result has email metadata
+    const hasEmailData = processedResults.some(r => r.email_subject || r.email_sender || r.email_folder);
+
     summary.innerHTML = `
-        <span class="text-status-success">✓ ${successCount} gotowych do zapisu</span> •
-        <span class="text-status-warning">⚠ ${duplicateCount} duplikatów</span> •
-        <span class="text-status-error">✗ ${validationErrorCount} błędów walidacji</span> •
-        <span class="text-status-error">✗ ${errorCount} błędów przetwarzania</span>
+        <div class="flex flex-wrap items-center gap-3">
+            <span class="text-status-success">✓ ${successCount} gotowych do zapisu</span>
+            <span class="text-gray-300">•</span>
+            <span class="text-status-warning">⚠ ${duplicateCount} duplikatów</span>
+            <span class="text-gray-300">•</span>
+            <span class="text-status-error">✗ ${validationErrorCount + errorCount} błędów</span>
+            <span class="flex-grow"></span>
+            <button onclick="selectAllValid()" class="text-xs text-primary hover:text-primary-700 hover:underline font-medium">
+                Zaznacz wszystkie poprawne
+            </button>
+            <button onclick="deselectAll()" class="text-xs text-gray-500 hover:text-gray-700 hover:underline">
+                Odznacz wszystkie
+            </button>
+        </div>
     `;
 
     tbody.innerHTML = processedResults.map((result, index) => {
@@ -541,25 +602,40 @@ function displayProcessingResults() {
         // Prepare values for inputs
         const invoiceNumber = result.extracted_data?.invoice_number || '';
         const sellerName = result.extracted_data?.seller_name || '';
+        const sellerNip = result.extracted_data?.seller_nip || '';
+        const bankAccount = result.extracted_data?.bank_account || '';
         const amount = result.extracted_data?.total_amount || '';
         const currency = result.extracted_data?.currency || 'PLN';
-        
+        const ocrConfidence = result.extracted_data?.ocr_confidence;
+
         // Date handling
         let issueDate = result.extracted_data?.issue_date || result.extracted_data?.invoice_date || '';
-        if (issueDate && issueDate.length > 10) issueDate = issueDate.substring(0, 10); // Handle ISO strings if any
+        if (issueDate && issueDate.length > 10) issueDate = issueDate.substring(0, 10);
+
+        // OCR Confidence badge with color coding
+        const confidenceBadge = getOcrConfidenceBadge(ocrConfidence);
+
+        // Email context (if available)
+        const emailContext = hasEmailData ? `
+            <div class="text-[10px] text-gray-400 mt-1 leading-tight">
+                ${result.email_sender ? `<span title="Nadawca">📧 ${escapeHtml(result.email_sender.substring(0, 25))}${result.email_sender.length > 25 ? '...' : ''}</span>` : ''}
+                ${result.email_folder ? `<span class="ml-1" title="Folder">📁 ${escapeHtml(result.email_folder)}</span>` : ''}
+            </div>
+        ` : '';
 
         return `
             <tr data-result-index="${index}" class="hover:bg-gray-50 transition-colors group">
                 <td class="py-3 px-2 font-medium text-gray-900 break-all whitespace-normal text-xs">
                     ${escapeHtml(result.filename)}
+                    ${emailContext}
                 </td>
                 <td class="py-3 px-2">
                     <span class="badge ${statusBadge} text-[10px] px-1.5 py-0.5 whitespace-nowrap">${statusText}</span>
                 </td>
-                
+
                 <!-- Editable: Invoice Number -->
                 <td class="py-3 px-2">
-                    <input type="text" 
+                    <input type="text"
                            class="w-full px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
                            value="${escapeHtml(invoiceNumber)}"
                            onchange="updateResult(${index}, 'invoice_number', this.value)">
@@ -567,58 +643,80 @@ function displayProcessingResults() {
 
                 <!-- Editable: Date -->
                 <td class="py-3 px-2">
-                    <input type="date" 
+                    <input type="date"
                            class="w-full px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
                            value="${escapeHtml(issueDate)}"
                            onchange="updateResult(${index}, 'issue_date', this.value)">
                 </td>
 
-                <!-- Editable: Seller -->
+                <!-- Editable: Seller Name -->
                 <td class="py-3 px-2">
-                    <input type="text" 
+                    <input type="text"
                            class="w-full px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
                            value="${escapeHtml(sellerName)}"
-                           onchange="updateResult(${index}, 'seller_name', this.value)">
+                           onchange="updateResult(${index}, 'seller_name', this.value)"
+                           placeholder="Nazwa sprzedawcy">
                 </td>
 
-                <!-- Editable: Amount -->
+                <!-- Editable: Seller NIP -->
+                <td class="py-3 px-2">
+                    <input type="text"
+                           class="w-24 px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white font-mono"
+                           value="${escapeHtml(sellerNip)}"
+                           onchange="updateResult(${index}, 'seller_nip', this.value)"
+                           placeholder="NIP"
+                           maxlength="13">
+                </td>
+
+                <!-- Editable: Amount + Currency -->
                 <td class="py-3 px-2">
                     <div class="flex items-center gap-1">
-                        <input type="number" step="0.01" 
+                        <input type="number" step="0.01"
                                class="w-20 px-2 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white text-right font-medium"
                                value="${amount}"
                                onchange="updateResult(${index}, 'total_amount', this.value)">
-                        <span class="text-xs text-gray-500">${escapeHtml(currency)}</span>
+                        <select class="px-1 py-1 text-xs border rounded border-slate-300 focus:border-primary-500 bg-white"
+                                onchange="updateResult(${index}, 'currency', this.value)">
+                            <option value="PLN" ${currency === 'PLN' ? 'selected' : ''}>PLN</option>
+                            <option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>EUR</option>
+                            <option value="USD" ${currency === 'USD' ? 'selected' : ''}>USD</option>
+                            <option value="GBP" ${currency === 'GBP' ? 'selected' : ''}>GBP</option>
+                        </select>
                     </div>
                 </td>
 
+                <!-- OCR Confidence -->
+                <td class="py-3 px-2 text-center">
+                    ${confidenceBadge}
+                </td>
+
                 <!-- Duplicate Status -->
-                <td class="py-3 px-2">
-                    ${result.is_duplicate ? '<span class="badge badge-warning text-[10px]">Tak</span>' : '<span class="badge badge-success text-[10px]">Nie</span>'}
+                <td class="py-3 px-2 text-center">
+                    ${result.is_duplicate ? '<span class="badge badge-warning text-[10px]" title="Duplikat">Tak</span>' : '<span class="text-gray-300">-</span>'}
                 </td>
 
                 <!-- Warnings/Errors -->
-                <td class="py-3 px-2 text-xs">
+                <td class="py-3 px-2 text-xs max-w-[150px]">
                     ${result.validation_errors && result.validation_errors.length > 0
-                ? `<div class="text-status-error mb-1 break-words leading-tight">${result.validation_errors.join('<br>')}</div>`
+                ? `<div class="text-status-error mb-1 break-words leading-tight text-[10px]">${result.validation_errors.slice(0, 2).join('<br>')}${result.validation_errors.length > 2 ? '<br>...' : ''}</div>`
                 : ''}
                     ${result.validation_warnings && result.validation_warnings.length > 0
-                ? `<div class="text-status-warning break-words leading-tight">${result.validation_warnings.join('<br>')}</div>`
+                ? `<div class="text-status-warning break-words leading-tight text-[10px]">${result.validation_warnings.slice(0, 2).join('<br>')}${result.validation_warnings.length > 2 ? '<br>...' : ''}</div>`
                 : ''}
                     ${(!result.validation_errors || result.validation_errors.length === 0) &&
                 (!result.validation_warnings || result.validation_warnings.length === 0)
-                ? '<span class="text-gray-400">-</span>' : ''}
+                ? '<span class="text-gray-300">-</span>' : ''}
                 </td>
 
                 <td class="py-3 px-2 text-center">
-                    <button onclick="viewPdf('${escapeHtml(result.filename)}')" 
+                    <button onclick="viewPdf('${escapeHtml(result.filename)}')"
                             class="text-primary hover:text-primary-700 hover:bg-primary-50 p-1.5 rounded transition-colors" title="Podgląd PDF">
                         <span class="material-icons text-lg">visibility</span>
                     </button>
                 </td>
                 <td class="py-3 px-2 text-center">
-                    <input type="checkbox" 
-                           class="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary add-to-list-checkbox cursor-pointer" 
+                    <input type="checkbox"
+                           class="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary add-to-list-checkbox cursor-pointer"
                            data-result-index="${index}"
                            ${canAdd ? 'checked' : ''}>
                 </td>
@@ -627,6 +725,98 @@ function displayProcessingResults() {
     }).join('');
 
     section.classList.remove('hidden');
+
+    // Save results to localStorage for recovery
+    saveResultsToStorage();
+}
+
+/**
+ * Get OCR confidence badge with color coding
+ */
+function getOcrConfidenceBadge(confidence) {
+    if (confidence === null || confidence === undefined) {
+        return '<span class="text-gray-400 text-[10px]">-</span>';
+    }
+
+    const conf = parseFloat(confidence);
+    let badgeClass, icon;
+
+    if (conf >= 80) {
+        badgeClass = 'bg-emerald-100 text-emerald-700';
+        icon = '✓';
+    } else if (conf >= 60) {
+        badgeClass = 'bg-amber-100 text-amber-700';
+        icon = '~';
+    } else {
+        badgeClass = 'bg-red-100 text-red-700';
+        icon = '!';
+    }
+
+    return `<span class="${badgeClass} text-[10px] px-1.5 py-0.5 rounded font-medium" title="OCR Confidence: ${conf.toFixed(1)}%">${icon} ${conf.toFixed(0)}%</span>`;
+}
+
+/**
+ * Select all valid (no errors, no duplicates) invoices
+ */
+function selectAllValid() {
+    processedResults.forEach((result, index) => {
+        const canAdd = result.success && !result.is_duplicate &&
+                       (!result.validation_errors || result.validation_errors.length === 0);
+        const checkbox = document.querySelector(`input.add-to-list-checkbox[data-result-index="${index}"]`);
+        if (checkbox) {
+            checkbox.checked = canAdd;
+        }
+    });
+    Notifications.info(`Zaznaczono ${processedResults.filter(r => r.success && !r.is_duplicate && (!r.validation_errors || r.validation_errors.length === 0)).length} poprawnych faktur`);
+}
+
+/**
+ * Deselect all invoices
+ */
+function deselectAll() {
+    document.querySelectorAll('.add-to-list-checkbox').forEach(cb => cb.checked = false);
+    Notifications.info('Odznaczono wszystkie faktury');
+}
+
+/**
+ * Save processing results to localStorage for recovery
+ */
+function saveResultsToStorage() {
+    try {
+        const storageData = {
+            results: processedResults,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('invoice_processing_results', JSON.stringify(storageData));
+    } catch (e) {
+        console.warn('Could not save results to localStorage:', e);
+    }
+}
+
+/**
+ * Try to restore results from localStorage
+ */
+function tryRestoreResults() {
+    try {
+        const saved = localStorage.getItem('invoice_processing_results');
+        if (saved) {
+            const data = JSON.parse(saved);
+            // Only restore if less than 1 hour old
+            if (data.timestamp && (Date.now() - data.timestamp) < 3600000) {
+                return data.results;
+            }
+        }
+    } catch (e) {
+        console.warn('Could not restore results from localStorage:', e);
+    }
+    return null;
+}
+
+/**
+ * Clear saved results from localStorage
+ */
+function clearSavedResults() {
+    localStorage.removeItem('invoice_processing_results');
 }
 
 /**
@@ -635,25 +825,30 @@ function displayProcessingResults() {
 function updateResult(index, field, value) {
     if (processedResults[index] && processedResults[index].extracted_data) {
         processedResults[index].extracted_data[field] = value;
-        
+
         // Sync issue_date and invoice_date as backend might use either
         if (field === 'issue_date') {
             processedResults[index].extracted_data['invoice_date'] = value;
         }
-        
-        // Optional: Update row status (e.g. remove error if user fixed it)
-        // This would require client-side validation logic or just assuming user is right
-        // For now, let's just mark the row as "Modified" visually?
-        // Or better - if it had validation errors, we can't clear them easily without re-running rules.
-        // But we can ensure the checkbox is checked if it was unchecked due to errors (user overriding)
-        
+
+        // Convert total_amount to number if it's a string
+        if (field === 'total_amount' && typeof value === 'string') {
+            processedResults[index].extracted_data[field] = parseFloat(value) || 0;
+        }
+
+        // Auto-check checkbox when user makes edits (assuming they're fixing issues)
         const row = document.querySelector(`tr[data-result-index="${index}"]`);
         if (row) {
-             const checkbox = row.querySelector('.add-to-list-checkbox');
-             if (checkbox && !checkbox.checked) {
-                 checkbox.checked = true; // Auto-check on edit
-             }
+            const checkbox = row.querySelector('.add-to-list-checkbox');
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
+            // Visual indicator that row was modified
+            row.classList.add('bg-blue-50');
         }
+
+        // Save updated results to localStorage
+        saveResultsToStorage();
     }
 }
 
@@ -761,6 +956,8 @@ async function saveAndFinish() {
         }
 
         if (result.success) {
+            // Clear localStorage on success
+            clearSavedResults();
             // Full success - redirect
             setTimeout(() => {
                 window.location.href = '/invoices';
@@ -823,15 +1020,15 @@ async function clearAllStagedFiles() {
         size: 'small',
         buttons: [
             {
-                label: 'Anuluj',
-                class: 'btn-secondary',
-                onClick: () => Modals.close()
+                text: 'Anuluj',
+                type: 'secondary',
+                onClick: (e, overlay) => Modals.close(overlay)
             },
             {
-                label: 'Usuń wszystkie',
-                class: 'btn-danger',
-                onClick: async () => {
-                    Modals.close();
+                text: 'Usuń wszystkie',
+                type: 'danger',
+                onClick: async (e, overlay) => {
+                    Modals.close(overlay);
                     await performClearAllStagedFiles();
                 }
             }

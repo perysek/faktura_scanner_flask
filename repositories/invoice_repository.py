@@ -132,6 +132,46 @@ class InvoiceRepository(BaseRepository):
 		"""Znajdź fakturę po numerze"""
 		query = "SELECT * FROM invoices WHERE invoice_number = ?"
 		return self._fetch_one(query, (invoice_number,))
+
+	def find_by_invoice_number_and_seller(
+			self,
+			invoice_number: str,
+			seller_nip: str = None,
+			seller_name: str = None
+	) -> Optional[sqlite3.Row]:
+		"""
+		Znajdź fakturę po numerze i sprzedawcy (NIP lub nazwa).
+
+		Strategia:
+		1. Jeśli podano seller_nip: szukaj po (invoice_number, seller_nip)
+		2. Jeśli brak NIP ale jest nazwa: szukaj po (invoice_number, seller_name)
+		3. Jeśli brak obu: szukaj tylko po invoice_number (fallback)
+
+		Args:
+			invoice_number: Numer faktury
+			seller_nip: NIP sprzedawcy (opcjonalny)
+			seller_name: Nazwa sprzedawcy (opcjonalny, używana gdy brak NIP)
+
+		Returns:
+			Row jeśli znaleziono duplikat, None jeśli brak
+		"""
+		if seller_nip:
+			# Najbardziej precyzyjne wyszukiwanie: numer + NIP
+			query = """
+				SELECT * FROM invoices
+				WHERE invoice_number = ? AND seller_nip = ?
+			"""
+			return self._fetch_one(query, (invoice_number, seller_nip))
+		elif seller_name:
+			# Fallback: numer + nazwa (mniej precyzyjne, bo nazwy mogą się różnić)
+			query = """
+				SELECT * FROM invoices
+				WHERE invoice_number = ? AND seller_name = ?
+			"""
+			return self._fetch_one(query, (invoice_number, seller_name))
+		else:
+			# Ostateczny fallback: tylko numer (stare zachowanie)
+			return self.find_by_invoice_number(invoice_number)
 	
 	def search(self, search_term: str) -> List[sqlite3.Row]:
 		"""Wyszukaj faktury (seller, numer, NIP)"""

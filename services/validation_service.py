@@ -62,12 +62,17 @@ class ValidationService:
 			warnings.append(f"Niska pewność OCR: {invoice.ocr_confidence:.1f}%")
 
 		# Date validation - payment due date should be after invoice date
+		# This is an ERROR (not warning) because swapped dates are almost certainly OCR errors
 		if invoice.invoice_date and invoice.payment_due_date:
-			if invoice.payment_due_date <= invoice.invoice_date:
+			if invoice.payment_due_date < invoice.invoice_date:
+				errors.append(
+					f"Termin płatności ({invoice.payment_due_date}) jest wcześniejszy "
+					f"niż data faktury ({invoice.invoice_date}) - prawdopodobny błąd OCR"
+				)
+			elif invoice.payment_due_date == invoice.invoice_date:
+				# Same day payment is unusual but possible - treat as warning
 				warnings.append(
-					f"⚠️ Termin płatności ({invoice.payment_due_date}) "
-					f"nie jest późniejszy niż data faktury ({invoice.invoice_date}) - "
-					f"sprawdź daty ręcznie!"
+					f"Termin płatności jest taki sam jak data faktury ({invoice.invoice_date})"
 				)
 
 		return {

@@ -436,14 +436,11 @@
                         <div class="form-field">
                             <label class="form-label">Status płatności</label>
                             <select id="status" name="status" class="form-select">
-                                <option value="Nieopłacona" {% if invoice.status == 'Nieopłacona' or not invoice.status %}selected{% endif %}>
+                                <option value="Nieopłacona" {% if invoice.status != 'Opłacona' %}selected{% endif %}>
                                     Nieopłacona
                                 </option>
                                 <option value="Opłacona" {% if invoice.status == 'Opłacona' %}selected{% endif %}>
                                     Opłacona
-                                </option>
-                                <option value="Przeterminowana" {% if invoice.status == 'Przeterminowana' %}selected{% endif %}>
-                                    Przeterminowana
                                 </option>
                             </select>
                         </div>
