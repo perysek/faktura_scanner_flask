@@ -164,6 +164,7 @@ const API = {
         delete: (id) => API.delete(`/sellers/${id}`),
         getInvoices: (id) => API.get(`/sellers/${id}/invoices`),
         sync: () => API.post('/sellers/sync'),
+        syncInvoiceCounts: () => API.post('/sellers/sync/invoice-counts'),
         addMissing: (nip, name) => API.post('/sellers/sync/add-missing', { nip, name }),
         fixDiscrepancy: (action, invoiceId, sellerId) => API.post('/sellers/sync/fix-discrepancy', {
             action, invoice_id: invoiceId, seller_id: sellerId
