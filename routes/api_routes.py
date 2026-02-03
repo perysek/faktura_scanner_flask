@@ -10,12 +10,9 @@ from flask import Blueprint, jsonify, request, current_app, send_file, session
 from werkzeug.utils import secure_filename
 
 from database.models import Invoice
-from utils.text_extractor import TextExtractor
+from utils.validators import DateParser
 
 api_bp = Blueprint('api', __name__)
-
-# Create TextExtractor instance for date parsing
-_text_extractor = TextExtractor()
 
 
 # Supported file extensions for upload
@@ -35,29 +32,10 @@ def is_image_file(filename: str) -> bool:
 
 def parse_date_string(date_str: Optional[str]) -> Optional[date]:
     """
-    Parse date string to date object using TextExtractor's normalization
-    Handles multiple date formats: YYYY-MM-DD, DD.MM.YYYY, DD/MM/YYYY
-
-    Args:
-        date_str: Date string in various formats or None
-
-    Returns:
-        date object or None
+    Parse date string to date object.
+    Wrapper around centralized DateParser for backward compatibility.
     """
-    if not date_str:
-        return None
-
-    # Use TextExtractor to normalize the date string to ISO format
-    normalized = _text_extractor._normalize_date(date_str)
-
-    if not normalized:
-        return None
-
-    # Convert normalized ISO string to date object
-    try:
-        return datetime.strptime(normalized, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        return None
+    return DateParser.parse(date_str)
 
 
 @api_bp.route('/invoices', methods=['GET'])
@@ -1053,23 +1031,28 @@ def test_email_connection():
     try:
         data = request.get_json()
 
-        success = current_app.email_service.test_connection(
-            server=data.get('imap_server'),
-            username=data.get('email'),
-            password=data.get('password')
-        )
+        # Build settings dict matching EmailService.test_connection signature
+        settings = {
+            'imap_server': data.get('imap_server'),
+            'imap_port': int(data.get('imap_port', 993)),
+            'email_address': data.get('email'),
+            'password': data.get('password')
+        }
+
+        success = current_app.email_service.test_connection(settings)
 
         if success:
             return jsonify({
                 'success': True,
-                'message': 'Connection successful'
+                'message': 'Połączenie udane'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Connection failed'
+                'error': 'Połączenie nieudane - sprawdź dane logowania'
             }), 400
     except Exception as e:
+        logger.error(f"Email test connection error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

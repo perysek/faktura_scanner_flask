@@ -1010,13 +1010,31 @@ function formatAmountShort(amount) {
 }
 
 /**
+ * Check if an invoice is overdue (unpaid + past due date)
+ */
+function isOverdue(invoice) {
+    // Paid invoices are never overdue
+    if (invoice.status === 'Opłacona') return false;
+    // No due date means we can't determine if overdue
+    if (!invoice.payment_due_date) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(invoice.payment_due_date);
+    dueDate.setHours(0, 0, 0, 0);
+
+    return dueDate < today;
+}
+
+/**
  * Update filter counts
  */
 function updateFilterCounts() {
     const all = invoicesData.length;
     const paid = invoicesData.filter(inv => inv.status === 'Opłacona').length;
-    const unpaid = invoicesData.filter(inv => inv.status === 'Nieopłacona').length;
-    const overdue = invoicesData.filter(inv => inv.status === 'Przeterminowana').length;
+    const overdue = invoicesData.filter(inv => isOverdue(inv)).length;
+    // Unpaid = all invoices that are not paid AND not overdue
+    const unpaid = invoicesData.filter(inv => inv.status !== 'Opłacona' && !isOverdue(inv)).length;
 
     document.getElementById('filter-count-all').textContent = all;
     document.getElementById('filter-count-paid').textContent = paid;
@@ -1033,12 +1051,15 @@ function applyFiltersAndRender() {
 
     // Apply status filter
     if (currentFilter !== 'all') {
-        const statusMap = {
-            'paid': 'Opłacona',
-            'unpaid': 'Nieopłacona',
-            'overdue': 'Przeterminowana'
-        };
-        filteredData = filteredData.filter(inv => inv.status === statusMap[currentFilter]);
+        if (currentFilter === 'paid') {
+            filteredData = filteredData.filter(inv => inv.status === 'Opłacona');
+        } else if (currentFilter === 'overdue') {
+            // Overdue = unpaid + past due date
+            filteredData = filteredData.filter(inv => isOverdue(inv));
+        } else if (currentFilter === 'unpaid') {
+            // Unpaid = not paid AND not yet overdue
+            filteredData = filteredData.filter(inv => inv.status !== 'Opłacona' && !isOverdue(inv));
+        }
     }
 
     // Apply search
@@ -1119,7 +1140,7 @@ function renderTable() {
     paginationBar.style.display = 'flex';
 
     tbody.innerHTML = filteredData.map((invoice, index) => {
-        const statusClass = getStatusClass(invoice.status);
+        const statusInfo = getStatusInfo(invoice);
         const delay = Math.min(index * 0.03, 0.3);
 
         return `
@@ -1146,7 +1167,7 @@ function renderTable() {
                     <span class="currency-code">${invoice.currency || 'PLN'}</span>
                 </td>
                 <td>
-                    <span class="status-badge ${statusClass}">${escapeHtml(invoice.status || 'Nieznany')}</span>
+                    <span class="status-badge ${statusInfo.class}">${escapeHtml(statusInfo.text)}</span>
                 </td>
                 <td>
                     <div class="row-actions">
@@ -1176,7 +1197,20 @@ function renderTable() {
 }
 
 /**
- * Get status badge class
+ * Get status badge class and text for an invoice
+ */
+function getStatusInfo(invoice) {
+    if (invoice.status === 'Opłacona') {
+        return { class: 'status-paid', text: 'Opłacona' };
+    }
+    if (isOverdue(invoice)) {
+        return { class: 'status-overdue', text: 'Przeterminowana' };
+    }
+    return { class: 'status-unpaid', text: 'Nieopłacona' };
+}
+
+/**
+ * Get status badge class (legacy, for compatibility)
  */
 function getStatusClass(status) {
     switch (status) {

@@ -8,6 +8,11 @@ import logging
 from datetime import datetime
 from typing import Dict, Tuple
 
+
+class OCRExtractionError(Exception):
+	"""Raised when OCR extraction fails completely after all retry attempts."""
+	pass
+
 from config.settings import (
 	OCR_RETRY_ENABLED, OCR_MAX_RETRIES, OCR_MISSING_FIELDS_THRESHOLD,
 	OCR_RETRY_PROFILE_ORDER
@@ -151,9 +156,13 @@ class OCRService:
 			              f"missing={best_missing_count})")
 			return best_result
 		else:
-			# Fallback: return empty result if all attempts failed
-			logger.error("[Retry] All attempts failed, returning empty result")
-			return "", 0.0, "failed"
+			# All attempts failed - raise exception instead of returning empty result
+			# This prevents saving garbage invoice records with empty fields
+			logger.error("[Retry] All OCR attempts failed - unable to extract any text")
+			raise OCRExtractionError(
+				f"Nie udało się wyekstraktować tekstu z pliku po {self.max_retries + 1} próbach. "
+				"Plik może być uszkodzony lub w nieobsługiwanym formacie."
+			)
 
 	def process_invoice_pdf(self, file_path: str, progress_callback=None) -> \
 	tuple[Invoice, str]:
