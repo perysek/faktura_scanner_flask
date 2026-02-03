@@ -6,6 +6,11 @@
 {% block breadcrumb %}{% endblock %}
 {% block page_actions %}{% endblock %}
 
+{% block extra_head %}
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block extra_css %}
 <style>
     :root {
@@ -337,9 +342,21 @@
         flex-shrink: 0;
     }
 
+    .chart-panel {
+        grid-column: 1 / -1;  /* Span full width */
+        min-height: 300px;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        padding: 1rem;
+    }
+
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: repeat(3, 1fr); }
         .panels-grid { grid-template-columns: 1fr; }
+        .chart-container { height: 250px; }
     }
 </style>
 {% endblock %}
@@ -386,6 +403,21 @@
     </div>
 
     <div class="panels-grid">
+        <!-- Monthly Invoice Totals Chart -->
+        <div class="panel chart-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Kwoty faktur - ostatnie 12 miesięcy
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
         <!-- Recent Invoices -->
         <div class="panel">
             <div class="panel-header">
@@ -454,42 +486,15 @@
 
 {% block extra_scripts %}
 <script>
-let refreshInterval;
-const REFRESH_RATE = 30000;
+let monthlyChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     refreshDashboard();
-    startAutoRefresh();
-});
-
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        refreshDashboard();
-        startAutoRefresh();
-    } else {
-        stopAutoRefresh();
-    }
-});
-
-window.addEventListener('pageshow', (event) => {
-    if (event.persisted) refreshDashboard();
 });
 
 document.addEventListener('invoiceUpdated', refreshDashboard);
 document.addEventListener('invoiceCreated', refreshDashboard);
 document.addEventListener('invoiceDeleted', refreshDashboard);
-
-function startAutoRefresh() {
-    stopAutoRefresh();
-    refreshInterval = setInterval(refreshDashboard, REFRESH_RATE);
-}
-
-function stopAutoRefresh() {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-        refreshInterval = null;
-    }
-}
 
 async function refreshDashboard() {
     const btn = document.getElementById('refresh-btn');
@@ -504,7 +509,8 @@ async function refreshDashboard() {
             loadRecentInvoices(),
             loadUpcomingPayments(),
             loadOverduePayments(),
-            loadTopSellers()
+            loadTopSellers(),
+            loadMonthlyChart()
         ]);
 
         if (label) label.textContent = 'Odswiezono';
@@ -681,6 +687,110 @@ async function loadTopSellers() {
     } catch (error) {
         console.error('Error loading top sellers:', error);
         container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
+    }
+}
+
+async function loadMonthlyChart() {
+    try {
+        const response = await API.get('/dashboard/monthly-totals');
+        if (response.success) {
+            const ctx = document.getElementById('monthlyChart');
+            if (!ctx) return;
+
+            // Destroy existing chart if it exists
+            if (monthlyChart) {
+                monthlyChart.destroy();
+            }
+
+            // Create new chart
+            monthlyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: response.labels,  // ['Sty 25', 'Lut 25', ...]
+                    datasets: [{
+                        label: 'Kwota brutto (zł)',
+                        data: response.data,  // [1234.56, 2345.67, ...]
+                        backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                        borderColor: 'rgba(26, 26, 26, 1)',
+                        borderWidth: 1,
+                        borderRadius: 2,
+                        hoverBackgroundColor: 'rgba(201, 162, 39, 0.8)',
+                        hoverBorderColor: 'rgba(201, 162, 39, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 26, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 13,
+                                weight: '600',
+                                family: 'Inter'
+                            },
+                            bodyFont: {
+                                size: 14,
+                                weight: '500',
+                                family: 'Inter'
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    return 'Kwota: ' + value.toLocaleString('pl-PL', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }) + ' zł';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(232, 230, 225, 0.5)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    family: 'Inter'
+                                },
+                                color: '#8a8a8a',
+                                callback: function(value) {
+                                    if (value >= 1000000) {
+                                        return (value / 1000000).toFixed(1) + ' M';
+                                    } else if (value >= 1000) {
+                                        return (value / 1000).toFixed(0) + ' K';
+                                    }
+                                    return value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    family: 'Inter'
+                                },
+                                color: '#8a8a8a'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading monthly chart:', error);
     }
 }
 </script>

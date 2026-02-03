@@ -1,257 +1,828 @@
 {% extends "base.html" %}
 
-{% block page_title %}Import dokumentów{% endblock %}
-{% block page_subtitle %}Wgraj pliki PDF lub pobierz je z wiadomości e-mail{% endblock %}
+{% block title %}Import dokumentów — FakturaScanner{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
-{% block breadcrumb %}
-<li>
-    <div class="flex items-center">
-        <svg class="w-6 h-6 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
-        <span class="ml-1 text-sm font-medium text-slate-500 md:ml-2">Import</span>
-    </div>
-</li>
+{% block extra_css %}
+<style>
+    /* =============================================
+       REFINED MINIMAL - Upload View
+       Matches design system from other views
+       ============================================= */
+
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-accent: #c9a227;
+        --color-accent-muted: rgba(201, 162, 39, 0.12);
+        --color-success: #2d6a4f;
+        --color-warning: #9a6700;
+        --color-error: #9b2c2c;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { background: var(--color-surface-warm) !important; }
+    #main-content {
+        background: var(--color-surface-warm);
+        padding: 1rem 1.5rem !important;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden !important;
+    }
+
+    .refined-page {
+        font-family: var(--font-body);
+        color: var(--color-ink);
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin: 0;
+    }
+
+    /* Workflow Steps - Centered, 50% width */
+    .workflow-steps-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+        width: 100%;
+    }
+
+    .workflow-steps {
+        width: 50%;
+        max-width: 600px;
+        min-width: 320px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+    }
+
+    .workflow-steps::before {
+        content: '';
+        position: absolute;
+        top: 1.25rem;
+        left: 2rem;
+        right: 2rem;
+        height: 2px;
+        background: var(--color-border);
+        z-index: 0;
+    }
+
+    .step {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0.4;
+        transition: opacity 0.3s ease;
+    }
+
+    .step.active {
+        opacity: 1;
+    }
+
+    .step-circle {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink-subtle);
+        transition: all 0.3s ease;
+    }
+
+    .step.active .step-circle {
+        background: var(--color-ink);
+        border-color: var(--color-ink);
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-ink-subtle);
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .step.active .step-label {
+        color: var(--color-ink);
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.5rem;
+        transition: box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-icon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 2px;
+        background: var(--color-surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-ink-muted);
+    }
+
+    .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin: 0;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+        border: 2px dashed var(--color-border);
+        border-radius: 2px;
+        padding: 2rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: var(--color-surface);
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+        border-color: var(--color-ink);
+        background: white;
+    }
+
+    .drop-zone-icon {
+        width: 3rem;
+        height: 3rem;
+        margin: 0 auto 1rem;
+        color: var(--color-ink-muted);
+    }
+
+    .drop-zone-text {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .drop-zone-hint {
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+    }
+
+    .file-types {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .file-type-badge {
+        padding: 0.25rem 0.5rem;
+        background: var(--color-border-subtle);
+        color: var(--color-ink-subtle);
+        font-size: 0.625rem;
+        font-weight: 500;
+        border-radius: 2px;
+    }
+
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-radius: 2px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-secondary {
+        background: white;
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    .btn-success {
+        background: var(--color-success);
+        color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+        background: #1f5a3a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(45, 106, 79, 0.2);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+    }
+
+    /* Form Elements */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-ink-muted);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    .form-hint {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.375rem;
+    }
+
+    /* Progress */
+    .progress-container {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-ink);
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        height: 0.5rem;
+        background: var(--color-border-subtle);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--color-ink);
+        transition: width 0.3s ease;
+        border-radius: 2px;
+    }
+
+    /* Tables */
+    .table-container {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .table-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--color-surface);
+    }
+
+    .table-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+
+    .table thead {
+        background: var(--color-surface);
+    }
+
+    .table th {
+        padding: 0.75rem 1rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-ink-subtle);
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+        white-space: nowrap;
+    }
+
+    .table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border-subtle);
+        color: var(--color-ink);
+    }
+
+    .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .table tbody tr:hover {
+        background: var(--color-surface);
+    }
+
+    .table-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--color-border);
+        background: var(--color-surface);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* File List */
+    .file-list {
+        margin-top: 1rem;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        margin-bottom: 0.5rem;
+    }
+
+    .file-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--color-ink-muted);
+    }
+
+    .file-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .file-name {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .file-size {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.125rem;
+    }
+
+    .file-remove {
+        padding: 0.375rem;
+        color: var(--color-ink-subtle);
+        cursor: pointer;
+        transition: color 0.2s ease;
+        background: none;
+        border: none;
+    }
+
+    .file-remove:hover {
+        color: var(--color-error);
+    }
+
+    /* Status Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.625rem;
+        font-weight: 500;
+        border-radius: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-success {
+        background: rgba(45, 106, 79, 0.1);
+        color: var(--color-success);
+    }
+
+    .status-warning {
+        background: var(--color-accent-muted);
+        color: var(--color-warning);
+    }
+
+    .status-error {
+        background: rgba(155, 44, 44, 0.1);
+        color: var(--color-error);
+    }
+
+    /* Utilities */
+    .hidden {
+        display: none !important;
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.4s var(--ease-out-expo);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .material-icons {
+        font-size: inherit;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .workflow-steps {
+            width: 90%;
+        }
+
+        .step-label {
+            font-size: 0.625rem;
+        }
+
+        .cards-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .table-footer {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .btn-group {
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .workflow-steps {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .workflow-steps::before {
+            left: 1.5rem;
+            right: 1.5rem;
+        }
+
+        .step-circle {
+            width: 2rem;
+            height: 2rem;
+            font-size: 0.75rem;
+        }
+
+        .step-label {
+            font-size: 0.5625rem;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <!-- Workflow Step Indicator -->
-    <div class="mb-10">
-        <div class="flex items-center justify-between relative">
-            <div class="absolute inset-0 top-1/2 transform -translate-y-1/2 flex items-center" aria-hidden="true">
-                <div class="w-full h-1 bg-slate-200 rounded"></div>
-            </div>
-            
-            <!-- Step 1 -->
-            <div class="relative z-10 flex flex-col items-center group cursor-default" data-step="1">
-                <div class="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center shadow-lg shadow-primary-500/30 transition-all duration-300 ring-4 ring-white">
-                    <span class="text-white font-bold text-sm">1</span>
-                </div>
-                <div class="absolute -bottom-8 w-32 align-content-right text-right">
-                    <span class="block text-xs font-semibold text-primary-700 uppercase tracking-wide">Wybierz źródło</span>
-                </div>
-            </div>
+<div class="refined-page">
+    <header class="page-header">
+        <h1 class="page-title">Import dokumentów</h1>
+    </header>
 
-            <!-- Step 2 -->
-            <div class="relative z-10 flex flex-col items-center group cursor-default opacity-50 transition-opacity duration-300" data-step="2">
-                <div class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white step-circle">
-                    <span class="text-slate-500 font-bold text-sm step-number">2</span>
-                </div>
-                <div class="absolute -bottom-8 w-32 text-center">
-                    <span class="block text-xs font-medium text-slate-500 uppercase tracking-wide step-label">Przegląd plików</span>
-                </div>
+    <!-- Workflow Steps - Centered, 50% width -->
+    <div class="workflow-steps-container">
+        <div class="workflow-steps">
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <span class="step-label">Wybierz źródło</span>
             </div>
-
-            <!-- Step 3 -->
-            <div class="relative z-10 flex flex-col items-center group cursor-default opacity-50 transition-opacity duration-300" data-step="3">
-                <div class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white step-circle">
-                    <span class="text-slate-500 font-bold text-sm step-number">3</span>
-                </div>
-                <div class="absolute -bottom-8 w-32 text-left">
-                    <span class="block text-xs font-medium text-slate-500 uppercase tracking-wide step-label">OCR i Wyniki</span>
-                </div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <span class="step-label">Przegląd plików</span>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <span class="step-label">Wyniki OCR</span>
             </div>
         </div>
     </div>
 
-    <!-- Step 1 Content -->
-    <div id="upload-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-16">
+    <!-- Step 1: Upload Source Selection -->
+    <div id="upload-cards-grid" class="cards-grid">
         <!-- File Upload Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
-            <h3 class="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <span class="material-icons text-blue-600 text-sm">upload_file</span>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <span class="material-icons">upload_file</span>
                 </div>
-                Upload plików
-            </h3>
+                <h3 class="card-title">Upload plików</h3>
+            </div>
 
-            <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 hover:border-primary-500 transition-all cursor-pointer group">
+            <div id="drop-zone" class="drop-zone">
                 <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp" multiple class="hidden">
-                <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary-50 group-hover:text-primary-600 transition-colors">
-                    <span class="material-icons text-3xl">cloud_upload</span>
-                </div>
-                <p class="text-slate-700 font-medium text-lg mt-4 group-hover:text-primary-700 transition-colors">Upuść pliki tutaj</p>
-                <p class="text-sm text-slate-400 mt-2">lub kliknij, aby wybrać z dysku</p>
-                <div class="mt-4 flex flex-wrap justify-center gap-2">
-                     <span class="px-2 py-1 bg-slate-100 text-slate-500 rounded text-xs">PDF</span>
-                     <span class="px-2 py-1 bg-slate-100 text-slate-500 rounded text-xs">JPG</span>
-                     <span class="px-2 py-1 bg-slate-100 text-slate-500 rounded text-xs">PNG</span>
+                <svg class="drop-zone-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p class="drop-zone-text">Upuść pliki tutaj</p>
+                <p class="drop-zone-hint">lub kliknij, aby wybrać z dysku</p>
+                <div class="file-types">
+                    <span class="file-type-badge">PDF</span>
+                    <span class="file-type-badge">JPG</span>
+                    <span class="file-type-badge">PNG</span>
                 </div>
             </div>
 
-            <div id="selected-files" class="mt-6 space-y-2 empty:hidden"></div>
+            <div id="selected-files" class="file-list"></div>
 
-            <div class="mt-8 flex items-center gap-3">
-                <button id="upload-btn" class="flex-1 flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-primary-500/20" disabled>
-                    <span class="material-icons text-sm mr-2">upload</span>
+            <div class="btn-group">
+                <button id="upload-btn" class="btn btn-primary" disabled>
+                    <span class="material-icons">upload</span>
                     Przetwórz pliki
                 </button>
-                <button id="clear-btn" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled onclick="clearFiles()">
+                <button id="clear-btn" class="btn btn-secondary" disabled onclick="clearFiles()">
                     Wyczyść
                 </button>
             </div>
 
             <!-- Progress -->
-            <div id="upload-progress" class="hidden mt-6 bg-slate-50 rounded-xl p-4 border border-slate-100">
-                <div class="flex items-center justify-between text-sm font-medium text-slate-700 mb-2">
-                    <span class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
-                        Przesyłanie...
-                    </span>
-                    <span id="progress-percent" class="text-primary-600">0%</span>
+            <div id="upload-progress" class="progress-container hidden">
+                <div class="progress-header">
+                    <span>Przesyłanie...</span>
+                    <span id="progress-percent">0%</span>
                 </div>
-                <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                    <div id="progress-bar" class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
                 </div>
             </div>
         </div>
 
         <!-- Email Import Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
-            <h3 class="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <span class="material-icons text-emerald-600 text-sm">email</span>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <span class="material-icons">email</span>
                 </div>
-                Import z e-mail
-            </h3>
-
-            <div class="space-y-5">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Foldery e-mail</label>
-                    <button id="select-folders-btn" type="button" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-left flex items-center justify-between cursor-pointer hover:border-primary-400 hover:ring-2 hover:ring-primary-500/10 transition-all outline-none">
-                        <span id="selected-folders-text" class="text-slate-500 text-sm truncate">Kliknij aby wybrać foldery</span>
-                        <span class="material-icons text-slate-400">folder_open</span>
-                    </button>
-                    <p class="text-xs text-slate-400 mt-1.5 ml-1">Wybierz foldery, z których chcesz pobrać faktury</p>
-                </div>
-                
-                <!-- Folder Selection Modal -->
-                <div id="folder-modal" class="hidden bg-slate-50 rounded-xl border border-slate-200 p-4 animate-fade-in">
-                    <div class="space-y-3">
-                        <div class="border-b border-slate-200 pb-3">
-                            <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-white rounded-lg transition-colors">
-                                <input type="checkbox" id="folder-all" class="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500">
-                                <span class="font-medium text-slate-800 text-sm">Wszystkie foldery</span>
-                            </label>
-                        </div>
-                        <div id="folder-list" class="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                            <!-- Populated by JS -->
-                            <div class="flex items-center justify-center py-4 text-slate-400 text-sm">
-                                <span class="material-icons animate-spin mr-2 text-xs">refresh</span>
-                                Ładowanie...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Data od</label>
-                        <input type="date" id="email-date-from" class="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-sm text-slate-600 bg-white">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Data do</label>
-                        <input type="date" id="email-date-to" class="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-sm text-slate-600 bg-white">
-                    </div>
-                </div>
-
-                <button id="email-import-btn" class="w-full mt-4 flex items-center justify-center px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/20" disabled>
-                    <span class="material-icons text-sm mr-2">download</span>
-                    Importuj z e-mail
-                </button>
+                <h3 class="card-title">Import z e-mail</h3>
             </div>
+
+            <div class="form-group">
+                <label class="form-label">Foldery e-mail</label>
+                <button id="select-folders-btn" type="button" class="form-input" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="selected-folders-text" style="color: var(--color-ink-subtle);">Kliknij aby wybrać foldery</span>
+                    <span class="material-icons">folder_open</span>
+                </button>
+                <p class="form-hint">Wybierz foldery, z których chcesz pobrać faktury</p>
+            </div>
+
+            <!-- Folder Selection Modal -->
+            <div id="folder-modal" class="hidden animate-fade-in" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; margin-bottom: 1rem;">
+                <div style="padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--color-border);">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 2px; transition: background 0.2s;" onmouseover="this.style.background='white'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" id="folder-all" style="width: 1rem; height: 1rem; cursor: pointer;">
+                        <span style="font-size: 0.8125rem; font-weight: 500; color: var(--color-ink);">Wszystkie foldery</span>
+                    </label>
+                </div>
+                <div id="folder-list" style="max-height: 200px; overflow-y: auto; padding-right: 0.5rem;">
+                    <p style="text-align: center; color: var(--color-ink-subtle); font-size: 0.75rem; padding: 1rem 0;">
+                        <span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>
+                        Ładowanie...
+                    </p>
+                </div>
+            </div>
+
+            <style>
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            </style>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Data od</label>
+                    <input type="date" id="email-date-from" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Data do</label>
+                    <input type="date" id="email-date-to" class="form-input">
+                </div>
+            </div>
+
+            <button id="email-import-btn" class="btn btn-success" style="width: 100%; margin-top: 0.5rem;" disabled>
+                <span class="material-icons">download</span>
+                Importuj z e-mail
+            </button>
         </div>
     </div>
 
-    <!-- Uploaded Files Review Section (Step 2) -->
-    <div id="uploaded-files-section" class="hidden mt-8 animate-fade-in">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    <span class="material-icons text-primary-500">checklist</span>
+    <!-- Step 2: Uploaded Files Review -->
+    <div id="uploaded-files-section" class="hidden animate-fade-in">
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">
+                    <span class="material-icons">checklist</span>
                     Przegląd plików
-                </h3>
-                <span class="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-500 rounded-md">Step 2 of 3</span>
+                </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-600">
-                    <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <th class="py-3 px-6 w-[30%]">Plik PDF</th>
-                            <th class="py-3 px-4 w-[20%] email-col hidden">Temat e-mail</th>
-                            <th class="py-3 px-4 w-[15%] email-col hidden">Nadawca</th>
-                            <th class="py-3 px-4 w-[10%] email-col hidden">Folder</th>
-                            <th class="py-3 px-4 w-[10%] email-col hidden">Data</th>
-                            <th class="py-3 px-6 w-[10%]">Rozmiar</th>
-                            <th class="py-3 px-6 w-[10%] text-right">Akcje</th>
+                            <th style="width: 40%;">Plik PDF</th>
+                            <th style="width: 15%;" class="email-col hidden">Temat</th>
+                            <th style="width: 15%;" class="email-col hidden">Nadawca</th>
+                            <th style="width: 15%;">Rozmiar</th>
+                            <th style="width: 15%; text-align: right;">Akcje</th>
                         </tr>
                     </thead>
-                    <tbody id="uploaded-files-tbody" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="uploaded-files-tbody"></tbody>
                 </table>
             </div>
 
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-                <button id="clear-all-btn" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 hover:text-red-600 transition-colors flex items-center text-sm shadow-sm">
-                    <span class="material-icons text-sm mr-2">delete_sweep</span>
+            <div class="table-footer">
+                <button id="clear-all-btn" class="btn btn-secondary">
+                    <span class="material-icons">delete_sweep</span>
                     Usuń wszystko
                 </button>
-                <button id="process-documents-btn" class="px-6 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/20 flex items-center text-sm">
-                    <span class="material-icons text-sm mr-2">auto_fix_high</span>
+                <button id="process-documents-btn" class="btn btn-primary">
+                    <span class="material-icons">auto_fix_high</span>
                     Przetwórz dokumenty
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Processing Results (Step 3) -->
-    <div id="results-section" class="hidden mt-8 animate-fade-in">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-200 bg-emerald-50/30 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    <span class="material-icons text-emerald-500">assessment</span>
+    <!-- Step 3: Processing Results -->
+    <div id="results-section" class="hidden animate-fade-in">
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">
+                    <span class="material-icons">assessment</span>
                     Wyniki przetwarzania
-                </h3>
-                 <span class="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md">Final Step</span>
+                </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-600">
-                    <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <th class="py-3 px-2">Plik</th>
-                            <th class="py-3 px-2">Status</th>
-                            <th class="py-3 px-2">Nr faktury</th>
-                            <th class="py-3 px-2">Data</th>
-                            <th class="py-3 px-2">Sprzedawca</th>
-                            <th class="py-3 px-2">NIP</th>
-                            <th class="py-3 px-2">Kwota</th>
-                            <th class="py-3 px-2 text-center" title="OCR Confidence">OCR</th>
-                            <th class="py-3 px-2 text-center">Dupl.</th>
-                            <th class="py-3 px-2">Uwagi</th>
-                            <th class="py-3 px-2 text-center">PDF</th>
-                            <th class="py-3 px-2 text-center">Zapisz</th>
+                            <th>Plik</th>
+                            <th>Status</th>
+                            <th>Nr faktury</th>
+                            <th>Data</th>
+                            <th>Sprzedawca</th>
+                            <th>NIP</th>
+                            <th>Kwota</th>
+                            <th style="text-align: center;">OCR</th>
+                            <th style="text-align: center;">Dupl.</th>
+                            <th>Uwagi</th>
+                            <th style="text-align: center;">PDF</th>
+                            <th style="text-align: center;">Zapisz</th>
                         </tr>
                     </thead>
-                    <tbody id="results-tbody" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="results-tbody"></tbody>
                 </table>
             </div>
 
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                <div class="text-sm font-medium text-slate-600 px-2">
+            <div class="table-footer">
+                <div style="font-size: 0.8125rem; font-weight: 500; color: var(--color-ink-muted);">
                     <span id="results-summary"></span>
                 </div>
-                <div class="flex gap-3">
-                    <button onclick="closeResults()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors text-sm shadow-sm">
+                <div style="display: flex; gap: 0.75rem;">
+                    <button onclick="closeResults()" class="btn btn-secondary">
                         Anuluj
                     </button>
-                    <button id="save-finish-btn" class="px-6 py-2 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20 flex items-center text-sm">
-                        <span class="material-icons text-sm mr-2">save</span>
+                    <button id="save-finish-btn" class="btn btn-success">
+                        <span class="material-icons">save</span>
                         Zapisz i zakończ
                     </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
