@@ -691,6 +691,61 @@ def get_top_sellers():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@api_bp.route('/dashboard/monthly-totals', methods=['GET'])
+def get_monthly_totals():
+    """Get monthly invoice totals for last 12 months (for bar chart)"""
+    try:
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+
+        # Get all invoices
+        rows = current_app.invoice_repo.get_all()
+        invoices = [current_app.invoice_repo.row_to_invoice(row) for row in rows]
+
+        # Calculate date range (last 12 months)
+        today = datetime.now()
+        twelve_months_ago = today - timedelta(days=365)
+
+        # Group invoices by month
+        monthly_totals = defaultdict(float)
+
+        for invoice in invoices:
+            if invoice.invoice_date:
+                invoice_datetime = datetime.combine(invoice.invoice_date, datetime.min.time())
+
+                # Only include invoices from last 12 months
+                if invoice_datetime >= twelve_months_ago:
+                    # Create month key (YYYY-MM format)
+                    month_key = invoice_datetime.strftime('%Y-%m')
+                    monthly_totals[month_key] += (invoice.amount or 0)
+
+        # Generate list of last 12 months in order
+        months = []
+        labels = []
+        month_names_pl = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze',
+                          'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru']
+
+        for i in range(11, -1, -1):  # 11 to 0 (last 12 months, oldest to newest)
+            month_date = today - timedelta(days=30 * i)
+            month_key = month_date.strftime('%Y-%m')
+            month_label = f"{month_names_pl[month_date.month - 1]} {month_date.strftime('%y')}"
+
+            months.append(month_key)
+            labels.append(month_label)
+
+        # Build data array matching the months order
+        data = [monthly_totals.get(month, 0) for month in months]
+
+        return jsonify({
+            'success': True,
+            'labels': labels,  # ['Sty 25', 'Lut 25', ...]
+            'data': data,      # [1234.56, 2345.67, ...]
+            'months': months   # ['2025-01', '2025-02', ...] for reference
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @api_bp.route('/upload', methods=['POST'])
 def upload_files():
     """Upload and process PDF files"""
