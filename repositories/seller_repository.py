@@ -62,13 +62,21 @@ class SellerRepository(BaseRepository):
         return self._fetch_one(query, (nip,))
     
     def find_by_name(self, name: str) -> List[sqlite3.Row]:
-        """Wyszukaj sprzedawców po nazwie (fuzzy matching)"""
+        """Wyszukaj sprzedawców po nazwie lub NIP (fuzzy matching)"""
         query = """
-            SELECT * FROM sellers
-            WHERE seller_name LIKE ?
-            ORDER BY seller_name
+            SELECT
+                s.*,
+                COUNT(i.id) as actual_invoice_count,
+                SUM(CASE WHEN i.status = 'Opłacona' THEN i.amount ELSE 0 END) as total_paid,
+                SUM(CASE WHEN i.status = 'Nieopłacona' THEN i.amount ELSE 0 END) as total_unpaid
+            FROM sellers s
+            LEFT JOIN invoices i ON s.id = i.seller_id
+            WHERE s.seller_name LIKE ? OR s.seller_nip LIKE ?
+            GROUP BY s.id
+            ORDER BY s.seller_name
         """
-        return self._fetch_all(query, (f"%{name}%",))
+        search_pattern = f"%{name}%"
+        return self._fetch_all(query, (search_pattern, search_pattern))
     
     def get_or_create(self, nip: str, name: str, address: str = None) -> tuple[int, bool]:
         """
@@ -174,10 +182,30 @@ class SellerRepository(BaseRepository):
         cursor = self._execute(query, (new_address, seller_id))
         return cursor.rowcount > 0
     
+    def sync_invoice_counts(self) -> int:
+        """
+        Zsynchronizuj liczniki faktur ze stanem faktycznym w bazie.
+        Przelicza invoice_count dla wszystkich sprzedawców na podstawie aktualnej liczby faktur.
+
+        Returns:
+            Liczba zaktualizowanych sprzedawców
+        """
+        query = """
+            UPDATE sellers
+            SET invoice_count = (
+                SELECT COUNT(*)
+                FROM invoices
+                WHERE invoices.seller_id = sellers.id
+            ),
+            last_updated = CURRENT_TIMESTAMP
+        """
+        cursor = self._execute(query)
+        return cursor.rowcount
+
     def row_to_seller(self, row: sqlite3.Row) -> Seller:
         """Konwertuj Row → Seller object"""
         from datetime import datetime
-        
+
         return Seller(
             id=row["id"],
             seller_nip=row["seller_nip"],

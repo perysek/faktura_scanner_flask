@@ -72,37 +72,6 @@
         line-height: 1.2;
     }
 
-    /* Statistics Bar - Compact */
-    .stats-bar {
-        display: flex;
-        gap: 2.5rem;
-        margin-bottom: 1rem;
-        padding: 0.75rem 0;
-        flex-shrink: 0;
-    }
-
-    .stat-item {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .stat-value {
-        font-family: var(--font-display);
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--color-ink);
-        line-height: 1;
-    }
-
-    .stat-label {
-        font-size: 0.6875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: var(--color-ink-subtle);
-        margin-top: 0.25rem;
-        font-weight: 400;
-    }
-
     /* Actions Bar - Compact */
     .actions-bar {
         display: flex;
@@ -202,6 +171,7 @@
         color: var(--color-ink);
         background: var(--color-surface);
     }
+
 
     /* Table Container - Fills remaining space */
     .table-container {
@@ -654,17 +624,12 @@
     @media (max-width: 1024px) {
         .col-nip, .col-due { display: none; }
         .page-title { font-size: 1.25rem; }
-        .stats-bar { gap: 1.5rem; }
     }
 
     @media (max-width: 768px) {
-        .stats-bar {
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .stat-item { min-width: 80px; }
         .actions-bar { flex-wrap: wrap; }
         .search-wrapper { max-width: none; order: 3; width: 100%; }
+        .filtered-stats-badge { order: 2; }
         .row-actions { opacity: 1; }
     }
 </style>
@@ -678,26 +643,6 @@
     <header class="page-header">
         <h1 class="page-title">Faktury</h1>
     </header>
-
-    <!-- Statistics Bar -->
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-value" id="stat-total">—</span>
-            <span class="stat-label">Wszystkie</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value" id="stat-paid">—</span>
-            <span class="stat-label">Opłacone</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value" id="stat-unpaid">—</span>
-            <span class="stat-label">Nieopłacone</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value" id="stat-amount">—</span>
-            <span class="stat-label">Suma brutto</span>
-        </div>
-    </div>
 
     <!-- Filter Pills -->
     <div class="filter-pills" id="filter-pills">
@@ -885,6 +830,9 @@
             <span class="pagination-info">
                 Wyświetlono <span class="pagination-count" id="visible-count">0</span> z <span class="pagination-count" id="total-count">0</span> faktur
             </span>
+            <span class="pagination-info">
+                Suma: <span class="pagination-count" id="filtered-amount">0,00 zł</span>
+            </span>
         </div>
     </div>
 </div>
@@ -970,7 +918,6 @@ async function loadInvoices() {
 
         if (data.success) {
             invoicesData = data.invoices;
-            updateStatistics();
             updateFilterCounts();
             applyFiltersAndRender();
         } else {
@@ -980,33 +927,6 @@ async function loadInvoices() {
         console.error('Error loading invoices:', error);
         Notifications.error('Błąd ładowania faktur');
     }
-}
-
-/**
- * Update statistics display
- */
-function updateStatistics() {
-    const total = invoicesData.length;
-    const paid = invoicesData.filter(inv => inv.status === 'Opłacona').length;
-    const unpaid = invoicesData.filter(inv => inv.status !== 'Opłacona').length;
-    const totalAmount = invoicesData.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-
-    document.getElementById('stat-total').textContent = total;
-    document.getElementById('stat-paid').textContent = paid;
-    document.getElementById('stat-unpaid').textContent = unpaid;
-    document.getElementById('stat-amount').textContent = formatAmountShort(totalAmount);
-}
-
-/**
- * Format amount in short form
- */
-function formatAmountShort(amount) {
-    if (amount >= 1000000) {
-        return (amount / 1000000).toFixed(1) + ' M';
-    } else if (amount >= 1000) {
-        return (amount / 1000).toFixed(1) + ' K';
-    }
-    return amount.toFixed(0);
 }
 
 /**
@@ -1129,6 +1049,9 @@ function renderTable() {
     document.getElementById('visible-count').textContent = filteredData.length;
     document.getElementById('total-count').textContent = invoicesData.length;
 
+    // Update filtered stats badge
+    updateFilteredStats();
+
     if (filteredData.length === 0) {
         tbody.innerHTML = '';
         emptyState.style.display = 'block';
@@ -1194,6 +1117,20 @@ function renderTable() {
             </tr>
         `;
     }).join('');
+}
+
+/**
+ * Update filtered subtotal amount in pagination footer
+ */
+function updateFilteredStats() {
+    const filteredAmount = filteredData.reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
+
+    // Update amount (format with thousands separator and 2 decimals)
+    const formattedAmount = filteredAmount.toLocaleString('pl-PL', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }) + ' zł';
+    document.getElementById('filtered-amount').textContent = formattedAmount;
 }
 
 /**

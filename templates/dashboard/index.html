@@ -448,44 +448,6 @@
                 <div class="empty-panel">Ladowanie...</div>
             </div>
         </div>
-
-        <!-- Quick Actions -->
-        <div class="panel quick-actions" style="grid-column: span 2;">
-            <div class="panel-header">
-                <div class="panel-title">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Szybkie akcje
-                </div>
-            </div>
-            <div class="quick-actions-grid">
-                <a href="{{ url_for('main.upload') }}" class="quick-action">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <span class="quick-action-label">Import PDF</span>
-                </a>
-                <a href="{{ url_for('main.create_invoice') }}" class="quick-action">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span class="quick-action-label">Nowa faktura</span>
-                </a>
-                <a href="{{ url_for('main.invoices_list') }}" class="quick-action">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span class="quick-action-label">Lista faktur</span>
-                </a>
-                <a href="{{ url_for('main.email_settings') }}" class="quick-action">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span class="quick-action-label">Import e-mail</span>
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}

@@ -350,6 +350,127 @@
         .stats-bar { flex-wrap: wrap; gap: 1rem; }
         .row-actions { opacity: 1; }
     }
+
+    /* Sync Results View Styles */
+    .sync-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .sync-stat-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .sync-stat-value {
+        display: block;
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin-bottom: 0.25rem;
+    }
+
+    .sync-stat-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .sync-stat-warning .sync-stat-value {
+        color: var(--color-warning);
+    }
+
+    .sync-stat-error .sync-stat-value {
+        color: var(--color-error);
+    }
+
+    .sync-success-message {
+        background: rgba(45, 106, 79, 0.06);
+        border: 1px solid rgba(45, 106, 79, 0.2);
+        border-radius: 2px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .sync-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+
+    .sync-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface);
+    }
+
+    .sync-card-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .sync-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        border-radius: 999px;
+    }
+
+    .sync-badge-error {
+        background: rgba(155, 44, 44, 0.12);
+        color: var(--color-error);
+    }
+
+    .sync-badge-warning {
+        background: rgba(154, 103, 0, 0.12);
+        color: var(--color-warning);
+    }
+
+    .discrepancy-row {
+        vertical-align: top;
+    }
+
+    .discrepancy-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .discrepancy-recommendation {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.375rem;
+        font-style: italic;
+    }
+
+    .recommendation-icon {
+        display: inline-block;
+        margin-right: 0.25rem;
+    }
+
+    @media (max-width: 1024px) {
+        .sync-summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -455,11 +576,100 @@
         </div>
     </div>
 </div>
+
+<!-- Sync Results View (hidden by default) -->
+<div id="sync-results-view" class="refined-page" style="display: none;">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Wyniki synchronizacji</h1>
+            <p class="page-subtitle">Przegląd niezgodności i brakujących danych</p>
+        </div>
+        <button onclick="closeSyncResults()" class="btn-refined btn-refined-secondary">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 1rem; height: 1rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Zamknij
+        </button>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="sync-summary-grid">
+        <div class="sync-stat-card">
+            <span class="sync-stat-value" id="sync-total-sellers">0</span>
+            <span class="sync-stat-label">Sprzedawcy w bazie</span>
+        </div>
+        <div class="sync-stat-card">
+            <span class="sync-stat-value" id="sync-total-invoices">0</span>
+            <span class="sync-stat-label">Faktury w bazie</span>
+        </div>
+        <div class="sync-stat-card sync-stat-warning">
+            <span class="sync-stat-value" id="sync-missing-count">0</span>
+            <span class="sync-stat-label">Brakujący sprzedawcy</span>
+        </div>
+        <div class="sync-stat-card sync-stat-error">
+            <span class="sync-stat-value" id="sync-discrepancies-count">0</span>
+            <span class="sync-stat-label">Niezgodności nazw</span>
+        </div>
+    </div>
+
+    <!-- All Good Message -->
+    <div id="sync-all-good" class="sync-success-message" style="display: none;">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 3rem; height: 3rem; color: var(--color-success);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p style="font-size: 1.125rem; font-weight: 500; color: var(--color-success); margin-top: 1rem;">
+            Wszystko zsynchronizowane! Brak niezgodności.
+        </p>
+    </div>
+
+    <!-- Discrepancies Card -->
+    <div id="discrepancies-card" class="sync-card" style="display: none;">
+        <div class="sync-card-header">
+            <h3 class="sync-card-title">Niezgodności nazw</h3>
+            <span class="sync-badge sync-badge-error" id="discrepancies-badge">0</span>
+        </div>
+        <div class="table-scroll-wrapper" style="max-height: 60vh; overflow-y: auto;">
+            <table class="refined-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Nr faktury</th>
+                        <th style="width: 25%;">Nazwa w bazie</th>
+                        <th style="width: 25%;">Nazwa na fakturze</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="discrepancies-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Missing Sellers Card -->
+    <div id="missing-sellers-card" class="sync-card" style="display: none;">
+        <div class="sync-card-header">
+            <h3 class="sync-card-title">Brakujący sprzedawcy</h3>
+            <span class="sync-badge sync-badge-warning" id="missing-sellers-badge">0</span>
+        </div>
+        <div class="table-scroll-wrapper" style="max-height: 60vh; overflow-y: auto;">
+            <table class="refined-table">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">NIP</th>
+                        <th>Nazwa</th>
+                        <th style="width: 100px; text-align: center;">Faktury</th>
+                        <th style="width: 180px;">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="missing-sellers-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 let sellersData = [];
+let globalStats = null;
 let searchQuery = '';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -475,6 +685,7 @@ async function loadSellers() {
         const data = await API.sellers.getAll();
         if (data.success) {
             sellersData = data.sellers;
+            globalStats = data.global_stats || null;
             updateStats();
             renderTable();
         }
@@ -486,9 +697,20 @@ async function loadSellers() {
 
 function updateStats() {
     const total = sellersData.length;
-    const invoices = sellersData.reduce((sum, s) => sum + (s.actual_invoice_count || s.invoice_count || 0), 0);
-    const paid = sellersData.reduce((sum, s) => sum + (s.total_paid || 0), 0);
-    const unpaid = sellersData.reduce((sum, s) => sum + (s.total_unpaid || 0), 0);
+
+    // Use global stats if available (includes orphaned invoices)
+    // Otherwise fall back to summing seller stats (old behavior)
+    let invoices, paid, unpaid;
+
+    if (globalStats) {
+        invoices = globalStats.total_invoices || 0;
+        paid = globalStats.total_paid || 0;
+        unpaid = globalStats.total_unpaid || 0;
+    } else {
+        invoices = sellersData.reduce((sum, s) => sum + (s.actual_invoice_count || s.invoice_count || 0), 0);
+        paid = sellersData.reduce((sum, s) => sum + (s.total_paid || 0), 0);
+        unpaid = sellersData.reduce((sum, s) => sum + (s.total_unpaid || 0), 0);
+    }
 
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-invoices').textContent = invoices;
@@ -585,19 +807,229 @@ async function confirmDeleteSeller(sellerId) {
 }
 
 async function syncSellers() {
-    const loadingModal = Modals.loading('Synchronizacja...');
+    const loadingModal = Modals.loading('Synchronizacja danych...');
     try {
         const result = await API.sellers.sync();
         Modals.close(loadingModal);
         if (result.success) {
-            Notifications.success(`Zsynchronizowano. Brakujacych: ${result.summary.missing_sellers_count}, niezgodnosci: ${result.summary.discrepancies_count}`);
-            loadSellers();
+            showSyncResults(result);
         } else {
             Notifications.error(result.error || 'Blad synchronizacji');
         }
     } catch (error) {
         Modals.close(loadingModal);
-        Notifications.error('Blad synchronizacji');
+        console.error('Sync error:', error);
+        Notifications.error('Blad synchronizacji: ' + error.message);
+    }
+}
+
+function showSyncResults(data) {
+    // Update summary stats
+    document.getElementById('sync-total-sellers').textContent = data.summary.total_sellers;
+    document.getElementById('sync-total-invoices').textContent = data.summary.total_invoices;
+    document.getElementById('sync-missing-count').textContent = data.summary.missing_sellers_count;
+    document.getElementById('sync-discrepancies-count').textContent = data.summary.discrepancies_count;
+
+    // Reset visibility
+    document.getElementById('sync-all-good').style.display = 'none';
+    document.getElementById('missing-sellers-card').style.display = 'none';
+    document.getElementById('discrepancies-card').style.display = 'none';
+
+    // Populate missing sellers table
+    const missingTbody = document.getElementById('missing-sellers-tbody');
+    const missingCard = document.getElementById('missing-sellers-card');
+    const missingBadge = document.getElementById('missing-sellers-badge');
+
+    if (data.missing_sellers.length > 0) {
+        missingCard.style.display = 'block';
+        missingBadge.textContent = data.missing_sellers.length;
+        missingTbody.innerHTML = data.missing_sellers.map(ms => `
+            <tr class="hover:bg-gray-50">
+                <td style="font-family: 'Courier New', monospace; font-size: 0.8125rem;">${escapeHtml(ms.nip)}</td>
+                <td style="font-weight: 500;">${escapeHtml(ms.name)}</td>
+                <td style="text-align: center;">
+                    <span style="display: inline-block; padding: 0.125rem 0.375rem; background: rgba(23, 162, 184, 0.12); color: #17A2B8; font-size: 0.6875rem; font-weight: 500; border-radius: 2px;">
+                        ${ms.count}
+                    </span>
+                </td>
+                <td style="text-align: center;">
+                    <button onclick="addMissingSeller('${escapeHtml(ms.nip)}', '${escapeHtml(ms.name).replace(/'/g, "\\'")}')"
+                            class="btn-refined btn-refined-primary"
+                            style="padding: 0.375rem 0.75rem; font-size: 0.6875rem;">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 0.875rem; height: 0.875rem;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Dodaj do bazy
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Populate discrepancies table
+    const discrepanciesTbody = document.getElementById('discrepancies-tbody');
+    const discrepanciesCard = document.getElementById('discrepancies-card');
+    const discrepanciesBadge = document.getElementById('discrepancies-badge');
+
+    if (data.name_discrepancies.length > 0) {
+        discrepanciesCard.style.display = 'block';
+        discrepanciesBadge.textContent = data.name_discrepancies.length;
+        discrepanciesTbody.innerHTML = data.name_discrepancies.map(d => {
+            const recommendation = analyzeDiscrepancy(d);
+            const isSellerRecommended = recommendation.recommendation === 'use_seller_name';
+
+            return `
+                <tr class="discrepancy-row">
+                    <td style="font-family: 'Courier New', monospace; font-size: 0.8125rem; font-weight: 500;">
+                        ${escapeHtml(d.invoice_number)}
+                    </td>
+                    <td style="color: var(--color-ink); font-weight: 500;">
+                        ${escapeHtml(d.seller_name)}
+                    </td>
+                    <td style="color: var(--color-warning); font-weight: 500;">
+                        ${escapeHtml(d.invoice_seller_name)}
+                    </td>
+                    <td>
+                        <div class="discrepancy-actions">
+                            <button onclick="fixDiscrepancy('use_seller_name', ${d.invoice_id}, ${d.seller_id})"
+                                    class="btn-refined btn-refined-${isSellerRecommended ? 'primary' : 'secondary'}"
+                                    style="padding: 0.375rem 0.75rem; font-size: 0.6875rem;">
+                                ${isSellerRecommended ? '<span class="recommendation-icon">✓</span>' : ''}
+                                ← Użyj z bazy
+                            </button>
+                            <button onclick="fixDiscrepancy('use_invoice_name', ${d.invoice_id}, ${d.seller_id})"
+                                    class="btn-refined btn-refined-${!isSellerRecommended && recommendation.recommendation ? 'primary' : 'secondary'}"
+                                    style="padding: 0.375rem 0.75rem; font-size: 0.6875rem;">
+                                ${!isSellerRecommended && recommendation.recommendation ? '<span class="recommendation-icon">✓</span>' : ''}
+                                → Użyj z faktury
+                            </button>
+                        </div>
+                        ${recommendation.reason ? `<div class="discrepancy-recommendation">💡 ${recommendation.reason}</div>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Show "all good" message if everything is synced
+    if (data.missing_sellers.length === 0 && data.name_discrepancies.length === 0) {
+        document.getElementById('sync-all-good').style.display = 'block';
+    }
+
+    // Switch views: hide list, show sync results
+    document.querySelector('.refined-page.fade-in').style.display = 'none';
+    document.getElementById('sync-results-view').style.display = 'block';
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function analyzeDiscrepancy(discrepancy) {
+    const sellerName = discrepancy.seller_name || '';
+    const invoiceName = discrepancy.invoice_seller_name || '';
+
+    // Heuristics for recommendation
+    const sellerHasDots = sellerName.includes('.');
+    const invoiceHasDots = invoiceName.includes('.');
+    const sellerIsLonger = sellerName.length > invoiceName.length;
+    const sellerHasCapitals = sellerName !== sellerName.toLowerCase();
+    const invoiceHasCapitals = invoiceName !== invoiceName.toLowerCase();
+
+    // Recommend the more complete/formal version
+    if (sellerHasDots && !invoiceHasDots) {
+        return {
+            recommendation: 'use_seller_name',
+            reason: 'Nazwa w bazie zawiera poprawną interpunkcję'
+        };
+    }
+
+    if (!sellerHasDots && invoiceHasDots) {
+        return {
+            recommendation: 'use_invoice_name',
+            reason: 'Nazwa na fakturze zawiera poprawną interpunkcję'
+        };
+    }
+
+    if (sellerIsLonger && sellerHasCapitals) {
+        return {
+            recommendation: 'use_seller_name',
+            reason: 'Nazwa w bazie jest pełniejsza i poprawnie sformatowana'
+        };
+    }
+
+    if (sellerIsLonger) {
+        return {
+            recommendation: 'use_seller_name',
+            reason: 'Nazwa w bazie jest pełniejsza'
+        };
+    }
+
+    return {
+        recommendation: null,
+        reason: ''
+    };
+}
+
+function closeSyncResults() {
+    // Switch views: show list, hide sync results
+    document.getElementById('sync-results-view').style.display = 'none';
+    document.querySelector('.refined-page.fade-in').style.display = 'block';
+
+    // Reload sellers data to show any changes
+    loadSellers();
+}
+
+async function fixDiscrepancy(action, invoiceId, sellerId) {
+    const loadingModal = Modals.loading('Naprawianie niezgodnosci...');
+
+    try {
+        const result = await API.sellers.fixDiscrepancy(action, invoiceId, sellerId);
+        Modals.close(loadingModal);
+
+        if (result.success) {
+            Notifications.success(result.message);
+            // Re-run sync to refresh the inline view
+            await refreshSyncResults();
+        } else {
+            Notifications.error(result.error || 'Blad naprawiania niezgodnosci');
+        }
+    } catch (error) {
+        Modals.close(loadingModal);
+        console.error('Error fixing discrepancy:', error);
+        Notifications.error('Blad naprawiania: ' + error.message);
+    }
+}
+
+async function addMissingSeller(nip, name) {
+    const loadingModal = Modals.loading('Dodawanie sprzedawcy...');
+
+    try {
+        const result = await API.sellers.addMissing(nip, name);
+        Modals.close(loadingModal);
+
+        if (result.success) {
+            Notifications.success(result.message);
+            // Re-run sync to refresh the inline view
+            await refreshSyncResults();
+        } else {
+            Notifications.error(result.error || 'Blad dodawania sprzedawcy');
+        }
+    } catch (error) {
+        Modals.close(loadingModal);
+        console.error('Error adding missing seller:', error);
+        Notifications.error('Blad dodawania: ' + error.message);
+    }
+}
+
+async function refreshSyncResults() {
+    try {
+        const result = await API.sellers.sync();
+        if (result.success) {
+            showSyncResults(result);
+        }
+    } catch (error) {
+        console.error('Error refreshing sync results:', error);
+        Notifications.error('Blad odswiezania: ' + error.message);
     }
 }
 </script>

@@ -24,6 +24,24 @@ async function loadSellerData() {
         if (data.success) {
             sellerData = data.seller;
             invoicesData = data.invoices || [];
+
+            // Check if invoice count is out of sync
+            if (sellerData.invoice_count !== invoicesData.length) {
+                console.log(`Invoice count mismatch detected: stored=${sellerData.invoice_count}, actual=${invoicesData.length}`);
+                // Automatically sync invoice counts
+                try {
+                    await API.sellers.syncInvoiceCounts();
+                    console.log('Invoice counts synchronized');
+                    // Reload seller data to get updated count
+                    const refreshedData = await API.sellers.getById(sellerId);
+                    if (refreshedData.success) {
+                        sellerData = refreshedData.seller;
+                    }
+                } catch (syncError) {
+                    console.error('Error syncing invoice counts:', syncError);
+                }
+            }
+
             renderInvoicesTable();
         } else {
             Notifications.error('Blad ladowania danych sprzedawcy');
@@ -41,8 +59,13 @@ function renderInvoicesTable() {
     const tbody = document.getElementById('invoices-tbody');
     const emptyState = document.getElementById('invoices-empty');
     const countBadge = document.getElementById('invoices-count');
+    const countStat = document.getElementById('invoice-count-stat');
 
+    // Update both the badge and the stat with actual count
     countBadge.textContent = invoicesData.length;
+    if (countStat) {
+        countStat.textContent = invoicesData.length;
+    }
 
     if (invoicesData.length === 0) {
         tbody.innerHTML = '';

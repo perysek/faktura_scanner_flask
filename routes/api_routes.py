@@ -556,7 +556,14 @@ def delete_invoice(invoice_id: int):
         # Convert Row to Invoice object for audit log
         invoice = current_app.invoice_repo.row_to_invoice(row)
 
+        # Get seller_id before deletion (for decrementing count)
+        seller_id = row['seller_id'] if 'seller_id' in row.keys() else None
+
         current_app.invoice_repo.delete(invoice_id)
+
+        # Decrement seller invoice count if seller was linked
+        if seller_id:
+            current_app.seller_repo.decrement_invoice_count(seller_id)
         
         # Log deletion (using special field 'status' or just generic 'deleted')
         # FIXME: Logging DELETE action causes IntegrityError because audit_log has 
@@ -1221,14 +1228,14 @@ def get_sellers():
     """Get all sellers with statistics"""
     try:
         search_query = request.args.get('search', '').strip()
-        
+
         if search_query:
             # Search by name or NIP
             rows = current_app.seller_repo.find_by_name(search_query)
         else:
             # Get all sellers with stats
             rows = current_app.seller_repo.get_all_with_stats()
-        
+
         # Convert to seller objects and include stats
         sellers_data = []
         for row in rows:
@@ -1246,11 +1253,28 @@ def get_sellers():
                 'total_unpaid': row['total_unpaid'] if 'total_unpaid' in row.keys() else 0.0
             }
             sellers_data.append(seller_dict)
-        
+
+        # Get global stats (total from invoices table, including orphaned invoices)
+        cursor = current_app.invoice_repo._execute("SELECT COUNT(*) FROM invoices")
+        total_invoices = cursor.fetchone()[0]
+
+        cursor = current_app.invoice_repo._execute("""
+            SELECT
+                SUM(CASE WHEN status = 'Opłacona' THEN amount ELSE 0 END) as total_paid,
+                SUM(CASE WHEN status = 'Nieopłacona' THEN amount ELSE 0 END) as total_unpaid
+            FROM invoices
+        """)
+        global_stats = cursor.fetchone()
+
         return jsonify({
             'success': True,
             'sellers': sellers_data,
-            'count': len(sellers_data)
+            'count': len(sellers_data),
+            'global_stats': {
+                'total_invoices': total_invoices,
+                'total_paid': global_stats[0] or 0.0,
+                'total_unpaid': global_stats[1] or 0.0
+            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1263,19 +1287,26 @@ def get_seller(seller_id: int):
         row = current_app.seller_repo.get_by_id(seller_id)
         if not row:
             return jsonify({'success': False, 'error': 'Seller not found'}), 404
-        
+
         seller = current_app.seller_repo.row_to_seller(row)
-        
+
         # Get related invoices
         invoice_rows = current_app.invoice_repo.get_by_seller(seller_id)
         invoices = [current_app.invoice_repo.row_to_invoice(inv_row) for inv_row in invoice_rows]
         invoices_data = [vars(inv) for inv in invoices]
-        
+
+        # Get actual invoice count (live count from database)
+        actual_count = len(invoices_data)
+
+        # Convert seller to dict and update invoice_count with actual count
+        seller_dict = vars(seller)
+        seller_dict['invoice_count'] = actual_count  # Override with actual count
+
         return jsonify({
             'success': True,
-            'seller': vars(seller),
+            'seller': seller_dict,
             'invoices': invoices_data,
-            'invoice_count': len(invoices_data)
+            'invoice_count': actual_count  # Also return as separate field for backward compatibility
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1762,6 +1793,26 @@ def fix_discrepancy():
             })
         else:
             return jsonify({'success': False, 'error': f'Nieznana akcja: {action}'}), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/sellers/sync/invoice-counts', methods=['POST'])
+def sync_seller_invoice_counts():
+    """
+    Synchronize seller invoice counts with actual data.
+    Recalculates invoice_count for all sellers based on current invoices table.
+    """
+    try:
+        # Sync all seller invoice counts
+        updated_count = current_app.seller_repo.sync_invoice_counts()
+
+        return jsonify({
+            'success': True,
+            'message': f'Zsynchronizowano liczniki faktur dla {updated_count} sprzedawców',
+            'updated_count': updated_count
+        })
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
