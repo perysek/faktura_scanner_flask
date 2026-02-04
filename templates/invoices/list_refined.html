@@ -365,9 +365,28 @@
         border-radius: 1px;
     }
 
+    .clickable-status {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+
+    .clickable-status:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .clickable-status:active {
+        transform: scale(0.98);
+    }
+
     .status-paid {
         background: rgba(45, 106, 79, 0.08);
         color: var(--color-success);
+    }
+
+    .status-paid:hover {
+        background: rgba(45, 106, 79, 0.15);
     }
 
     .status-unpaid {
@@ -375,9 +394,26 @@
         color: var(--color-warning);
     }
 
+    .status-unpaid:hover {
+        background: rgba(201, 162, 39, 0.2);
+    }
+
     .status-overdue {
         background: rgba(155, 44, 44, 0.08);
         color: var(--color-error);
+    }
+
+    .status-overdue:hover {
+        background: rgba(155, 44, 44, 0.15);
+    }
+
+    /* Clickable Rows */
+    .clickable-row {
+        cursor: pointer;
+    }
+
+    .clickable-row:hover {
+        background: var(--color-surface) !important;
     }
 
     /* Row Actions */
@@ -1065,9 +1101,10 @@ function renderTable() {
     tbody.innerHTML = filteredData.map((invoice, index) => {
         const statusInfo = getStatusInfo(invoice);
         const delay = Math.min(index * 0.03, 0.3);
+        const hasPdf = invoice.pdf_path ? 'true' : 'false';
 
         return `
-            <tr class="stagger-row" style="animation-delay: ${delay}s" data-invoice-id="${invoice.id}">
+            <tr class="stagger-row clickable-row" style="animation-delay: ${delay}s" data-invoice-id="${invoice.id}" data-has-pdf="${hasPdf}">
                 <td>
                     <span class="invoice-number">${escapeHtml(invoice.invoice_number || '—')}</span>
                 </td>
@@ -1090,7 +1127,11 @@ function renderTable() {
                     <span class="currency-code">${invoice.currency || 'PLN'}</span>
                 </td>
                 <td>
-                    <span class="status-badge ${statusInfo.class}">${escapeHtml(statusInfo.text)}</span>
+                    <span class="status-badge ${statusInfo.class} clickable-status"
+                          data-invoice-id="${invoice.id}"
+                          data-current-status="${invoice.status || 'Nieopłacona'}"
+                          data-due-date="${invoice.payment_due_date || ''}"
+                          title="Kliknij aby zmienić status">${escapeHtml(statusInfo.text)}</span>
                 </td>
                 <td>
                     <div class="row-actions">
@@ -1117,6 +1158,128 @@ function renderTable() {
             </tr>
         `;
     }).join('');
+
+    // Add event listeners for status badges
+    document.querySelectorAll('.clickable-status').forEach(badge => {
+        badge.addEventListener('click', handleStatusClick);
+    });
+
+    // Add event listeners for clickable rows
+    document.querySelectorAll('.clickable-row').forEach(row => {
+        row.addEventListener('click', handleRowClick);
+    });
+}
+
+/**
+ * Handle status badge click - Toggle payment status
+ */
+async function handleStatusClick(event) {
+    event.stopPropagation(); // Prevent row click
+
+    const badge = event.currentTarget;
+    const invoiceId = parseInt(badge.dataset.invoiceId);
+    const currentStatus = badge.dataset.currentStatus;
+    const dueDate = badge.dataset.dueDate;
+
+    // Determine next status
+    let newStatus;
+    if (currentStatus === 'Opłacona') {
+        // Toggle from Paid to Unpaid (or Overdue if past due)
+        if (dueDate && isOverdueByDate(dueDate)) {
+            newStatus = 'Nieopłacona'; // Will show as Przeterminowana due to due date
+        } else {
+            newStatus = 'Nieopłacona';
+        }
+    } else {
+        // Toggle from Unpaid/Overdue to Paid
+        newStatus = 'Opłacona';
+    }
+
+    // Update database
+    try {
+        const result = await API.invoices.update(invoiceId, { status: newStatus });
+
+        if (result.success) {
+            // Update local data
+            const invoice = invoicesData.find(inv => inv.id === invoiceId);
+            if (invoice) {
+                invoice.status = newStatus;
+            }
+
+            // Update the badge without re-rendering entire table
+            updateStatusBadge(badge, invoice || { status: newStatus, payment_due_date: dueDate });
+
+            // Update filter counts only
+            updateFilterCounts();
+
+            // Update filtered stats if this invoice is in current filtered view
+            const isInFilteredView = filteredData.some(inv => inv.id === invoiceId);
+            if (isInFilteredView) {
+                // Update the invoice in filtered data
+                const filteredInvoice = filteredData.find(inv => inv.id === invoiceId);
+                if (filteredInvoice) {
+                    filteredInvoice.status = newStatus;
+                }
+                updateFilteredStats();
+            }
+        } else {
+            Notifications.error('Błąd aktualizacji statusu');
+        }
+    } catch (error) {
+        console.error('Error updating status:', error);
+        Notifications.error('Błąd aktualizacji statusu');
+    }
+}
+
+/**
+ * Update status badge element without re-rendering table
+ */
+function updateStatusBadge(badge, invoice) {
+    const statusInfo = getStatusInfo(invoice);
+
+    // Remove old status classes
+    badge.classList.remove('status-paid', 'status-unpaid', 'status-overdue');
+
+    // Add new status class
+    badge.classList.add(statusInfo.class);
+
+    // Update text
+    badge.textContent = statusInfo.text;
+
+    // Update data attribute
+    badge.dataset.currentStatus = invoice.status || 'Nieopłacona';
+}
+
+/**
+ * Handle row click - Open PDF in new tab
+ */
+function handleRowClick(event) {
+    // Don't trigger if clicking on action buttons or links
+    if (event.target.closest('.row-actions') || event.target.closest('a') || event.target.closest('button')) {
+        return;
+    }
+
+    const row = event.currentTarget;
+    const invoiceId = parseInt(row.dataset.invoiceId);
+    const hasPdf = row.dataset.hasPdf === 'true';
+
+    if (hasPdf) {
+        // Open PDF in new tab
+        const pdfUrl = `/api/pdf/${invoiceId}`;
+        window.open(pdfUrl, '_blank');
+    }
+}
+
+/**
+ * Check if a date is overdue
+ */
+function isOverdueByDate(dateString) {
+    if (!dateString) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(dateString);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate < today;
 }
 
 /**
