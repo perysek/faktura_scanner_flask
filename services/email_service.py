@@ -386,6 +386,39 @@ class EmailService:
 		return pdf_files
 
 	@staticmethod
+	def _sanitize_filename(filename: str) -> str:
+		"""
+		Sanitize filename by removing invalid characters
+
+		Args:
+			filename: Original filename
+
+		Returns:
+			Sanitized filename safe for Windows/Unix filesystems
+		"""
+		import re
+
+		# Remove control characters (including \r, \n, \t)
+		filename = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', filename)
+
+		# Remove invalid Windows filename characters
+		filename = re.sub(r'[<>:"|?*]', '_', filename)
+
+		# Replace multiple spaces with single space
+		filename = re.sub(r'\s+', ' ', filename)
+
+		# Trim whitespace
+		filename = filename.strip()
+
+		# Limit filename length (Windows MAX_PATH is 260, leave room for path)
+		max_length = 200
+		if len(filename) > max_length:
+			name, ext = os.path.splitext(filename)
+			filename = name[:max_length - len(ext)] + ext
+
+		return filename
+
+	@staticmethod
 	def _save_attachment(data: bytes, filename: str, save_dir: str = None, progress_callback: Optional[callable] = None) -> Optional[str]:
 		"""
 		Save attachment to file
@@ -403,6 +436,9 @@ class EmailService:
 			# Create directory if doesn't exist
 			save_dir = Path(save_dir)
 			save_dir.mkdir(parents=True, exist_ok=True)
+
+			# Sanitize filename to remove invalid characters
+			filename = EmailService._sanitize_filename(filename)
 
 			# Create unique filename if file exists
 			pdf_path = save_dir / filename
