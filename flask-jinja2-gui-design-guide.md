@@ -1,8 +1,21 @@
-# Flask + Jinja2 GUI Design Guide
+# Flask + Jinja2 Refined Minimal Design Guide
 
 ## Overview
 
-This design guide documents the GUI patterns, styling conventions, and component structures used in the Flask/Jinja2 web application. Follow these guidelines to ensure consistent design and user experience across all new projects.
+This design guide documents the **Refined Minimal** design system used across all Flask/Jinja2 templates in this project. Follow these guidelines when creating or modifying any template or DOM manipulation via scripts.
+
+**Design Philosophy:** Elegant restraint with precise typography, minimal visual noise, and professional aesthetics optimized for data-heavy applications.
+
+---
+
+## When to Use This Guide
+
+**ALWAYS** apply these standards when:
+- ✅ Creating new Jinja2 templates
+- ✅ Modifying existing templates
+- ✅ Writing JavaScript that manipulates the DOM
+- ✅ Adding new UI components
+- ✅ Implementing forms, tables, or cards
 
 ---
 
@@ -11,13 +24,13 @@ This design guide documents the GUI patterns, styling conventions, and component
 ### Core Framework
 - **Backend**: Python Flask
 - **Templating**: Jinja2
-- **CSS Framework**: Tailwind CSS (CDN)
+- **CSS Approach**: CSS Custom Properties + Tailwind utilities (minimal)
 - **Icons**: Heroicons (inline SVG)
 
 ### Typography
 - **Primary Font**: Inter (Google Fonts)
-- **Weights**: 300, 400, 500, 600, 700
-- **Font Family**: `['Inter', 'system-ui', 'sans-serif']`
+- **Weights**: 300 (light), 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
+- **Font Family**: `'Inter', system-ui, sans-serif`
 - **Font Loading**: Preconnect to Google Fonts for performance
 
 ```html
@@ -28,116 +41,136 @@ This design guide documents the GUI patterns, styling conventions, and component
 
 ---
 
-## Color System
+## Refined Minimal Design System
 
-### Primary Colors (Blue)
-```javascript
-primary: {
-    50: '#eff6ff',
-    100: '#dbeafe',
-    200: '#bfdbfe',
-    300: '#93c5fd',
-    400: '#60a5fa',
-    500: '#3b82f6',  // Main primary
-    600: '#2563eb',
-    700: '#1d4ed8',
-    800: '#1e40af',
-    900: '#1e3a8a',
+### CSS Custom Properties
+
+All templates should include or inherit these CSS variables:
+
+```css
+:root {
+    /* Text Colors */
+    --color-ink: #1a1a1a;              /* Primary text */
+    --color-ink-muted: #525252;         /* Secondary text */
+    --color-ink-subtle: #8a8a8a;        /* Tertiary text, labels */
+
+    /* Surface Colors */
+    --color-surface: #fafafa;           /* Light background */
+    --color-surface-warm: #f7f6f3;      /* Page background */
+
+    /* Border Colors */
+    --color-border: #e8e6e1;            /* Standard border */
+    --color-border-subtle: #f0eeea;     /* Subtle dividers */
+
+    /* Semantic Colors */
+    --color-accent: #c9a227;            /* Gold accent */
+    --color-accent-muted: rgba(201, 162, 39, 0.12);
+    --color-success: #2d6a4f;           /* Green */
+    --color-warning: #9a6700;           /* Orange/amber */
+    --color-error: #9b2c2c;             /* Red */
+
+    /* Typography */
+    --font-display: 'Inter', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+
+    /* Easing Functions */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 }
 ```
 
-### Accent Colors (Green/Emerald)
-```javascript
-accent: {
-    400: '#34d399',
-    500: '#10b981',  // Main accent
-    600: '#059669',
+### Global Styles
+
+```css
+body {
+    background: var(--color-surface-warm);
+    font-family: var(--font-body);
+    color: var(--color-ink);
+}
+
+#main-content {
+    background: var(--color-surface-warm);
 }
 ```
-
-### Semantic Colors
-- **Success**: Emerald (`emerald-50`, `emerald-500`, `emerald-700`)
-- **Error**: Red (`red-50`, `red-500`, `red-600`)
-- **Warning**: Amber (`amber-50`, `amber-500`, `amber-600`)
-- **Info**: Blue (`blue-50`, `blue-500`, `blue-800`)
-
-### Neutral Colors (Slate)
-- **Background**: `slate-50`, `slate-100`
-- **Text Primary**: `slate-800`
-- **Text Secondary**: `slate-600`, `slate-500`
-- **Borders**: `slate-200`, `slate-300`
-- **Sidebar**: `slate-800`, `slate-850`, `slate-900`
 
 ---
 
-## Layout Structure
+## Color System
 
-### HTML Base Structure
-```html
-<html lang="pl" class="h-full">
-<body class="h-full bg-gradient-to-br from-slate-50 to-slate-100 font-sans antialiased">
-    <div class="flex h-full">
-        <!-- Sidebar -->
-        <aside class="w-64">...</aside>
-        
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
-            <!-- Header -->
-            <header>...</header>
-            
-            <!-- Flash Messages -->
-            <div>...</div>
-            
-            <!-- Page Content -->
-            <main class="flex-1 overflow-auto p-2">...</main>
-            
-            <!-- Footer -->
-            <footer>...</footer>
-        </div>
-    </div>
-</body>
-</html>
+### Primary Text Hierarchy
+- **Primary (headlines, values)**: `var(--color-ink)` (#1a1a1a)
+- **Secondary (subheadings)**: `var(--color-ink-muted)` (#525252)
+- **Tertiary (labels, hints)**: `var(--color-ink-subtle)` (#8a8a8a)
+
+### Surface Colors
+- **Page background**: `var(--color-surface-warm)` (#f7f6f3)
+- **Card background**: `white` or `var(--color-surface)` (#fafafa)
+
+### Semantic Colors
+- **Success**: `var(--color-success)` (#2d6a4f) - with 8% alpha for backgrounds
+- **Warning**: `var(--color-warning)` (#9a6700) - with accent-muted for backgrounds
+- **Error**: `var(--color-error)` (#9b2c2c) - with 8% alpha for backgrounds
+- **Accent**: `var(--color-accent)` (#c9a227) - use sparingly
+
+### Border Colors
+- **Standard**: `var(--color-border)` (#e8e6e1) - cards, inputs
+- **Subtle**: `var(--color-border-subtle)` (#f0eeea) - table rows, dividers
+
+---
+
+## Typography Scale
+
+### Headings
+```css
+.refined-page-title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;        /* 28px */
+    font-weight: 600;
+    letter-spacing: -0.02em;   /* Tighter tracking for display */
+    color: var(--color-ink);
+    margin-bottom: 2rem;
+}
+
+.refined-card-title {
+    font-family: var(--font-display);
+    font-size: 1rem;           /* 16px */
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    margin-bottom: 1.25rem;
+}
 ```
 
-### Sidebar Design
-- **Width**: `w-64` (256px)
-- **Background**: `bg-gradient-to-b from-slate-800 via-slate-850 to-slate-900`
-- **Text Color**: White
-- **Shadow**: `shadow-xl`
+### Body Text
+```css
+.refined-field-value {
+    color: var(--color-ink);
+    font-weight: 400;
+    font-size: 0.9375rem;      /* 15px */
+}
 
-#### Sidebar Sections
-1. **Logo Section**: `p-5 border-b border-slate-700/50`
-2. **Navigation**: `flex-1 p-4 space-y-1`
-3. **Bottom Section**: `p-4 border-t border-slate-700/50`
+.refined-subtitle {
+    color: var(--color-ink-muted);
+    font-size: 0.8125rem;      /* 13px */
+    font-weight: 300;
+}
+```
 
-#### Navigation Links
-- **Class**: `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium`
-- **Active State**: `bg-gradient-to-r from-primary-500/20 to-primary-600/10 text-primary-400 border border-primary-500/30`
-- **Inactive State**: `text-slate-300 hover:bg-slate-700/50 hover:text-white`
-
-#### Section Headers
-- **Class**: `px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider`
-
-### Header Design
-- **Background**: `bg-white/80 backdrop-blur-sm`
-- **Border**: `border-b border-slate-200`
-- **Padding**: `px-4 py-2`
-- **Layout**: `flex items-center justify-between`
-
-#### Page Title
-- **Title**: `text-xl font-semibold text-slate-800`
-- **Subtitle**: `text-sm text-slate-500`
-
-### Main Content Area
-- **Padding**: `p-2`
-- **Overflow**: `overflow-auto`
-- **Flex**: `flex-1`
-
-### Footer Design
-- **Background**: `bg-white/50`
-- **Border**: `border-t border-slate-200`
-- **Padding**: `px-4 py-2`
-- **Text**: `text-center text-sm text-slate-500`
+### Labels
+```css
+.refined-label,
+.refined-field-label {
+    display: block;
+    font-size: 0.75rem;        /* 12px - compact */
+    /* OR */
+    font-size: 0.6875rem;      /* 11px - extra compact for tables */
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;    /* Wide tracking for readability */
+    color: var(--color-ink-subtle);
+    margin-bottom: 0.5rem;
+}
+```
 
 ---
 
@@ -147,363 +180,796 @@ accent: {
 
 #### Standard Card
 ```html
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-        <h2 class="text-lg font-semibold text-slate-800">Card Title</h2>
-    </div>
-    <div class="p-6">
+<div class="refined-card">
+    <h2 class="refined-card-title">Card Title</h2>
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         <!-- Content -->
     </div>
 </div>
 ```
 
-#### Compact Card (for forms)
+```css
+.refined-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;              /* Minimal, sharp corners */
+    padding: 1.5rem;                 /* 24px */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); /* Subtle */
+}
+```
+
+#### Compact Card (for dense layouts)
 ```html
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-4 py-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-        <h2 class="text-lg font-semibold text-slate-800">Section Title</h2>
-    </div>
-    <div class="p-3 space-y-2">
-        <!-- Content -->
-    </div>
+<div class="refined-card" style="padding: 1rem;">
+    <h3 class="refined-card-title" style="margin-bottom: 1rem;">Section</h3>
+    <!-- Content -->
 </div>
 ```
 
-#### Stats Card
-```html
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 hover:shadow-md transition-shadow">
-    <div class="flex items-center gap-1">
-        <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-            <svg class="w-6 h-6 text-white">...</svg>
-        </div>
-        <div>
-            <p class="text-xl font-bold text-slate-800">Value</p>
-            <p class="text-xs text-slate-500">Label</p>
-        </div>
-    </div>
-</div>
-```
+---
 
 ### 2. Buttons
 
 #### Primary Button
 ```html
-<button class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-xl hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all flex items-center gap-2">
-    <svg class="w-5 h-5">...</svg>
+<button class="refined-btn-primary">
     Button Text
 </button>
 ```
 
-#### Success Button
-```html
-<button class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium rounded-xl hover:from-emerald-600 hover:to-emerald-700 shadow-sm transition-all flex items-center gap-2">
-    <svg class="w-5 h-5">...</svg>
-    Action
-</button>
-```
+```css
+.refined-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;        /* Compact vertical */
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: var(--color-ink);
+    color: white;
+    border-radius: 2px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-out-expo);
+}
 
-#### Danger Button
-```html
-<button class="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl shadow-sm transition-all">
-    Delete
-</button>
+.refined-btn-primary:hover {
+    background: #333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 ```
 
 #### Secondary Button
 ```html
-<button class="px-6 py-3 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">
+<button class="refined-btn-secondary">
     Cancel
 </button>
 ```
 
-#### Neutral Button
+```css
+.refined-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    background: white;
+    color: var(--color-ink-muted);
+    border-radius: 2px;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refined-btn-secondary:hover {
+    border-color: var(--color-ink-muted);
+    background: var(--color-surface);
+}
+```
+
+#### Danger Button
 ```html
-<button class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
-    Cancel
+<button class="refined-btn-danger">
+    Delete
 </button>
 ```
 
-#### Icon Button (Action)
+```css
+.refined-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    background: rgba(155, 44, 44, 0.06);
+    color: var(--color-error);
+    border-radius: 2px;
+    border: 1px solid rgba(155, 44, 44, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refined-btn-danger:hover {
+    background: rgba(155, 44, 44, 0.1);
+}
+```
+
+#### Ghost Button (minimal)
 ```html
-<button class="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-    <svg class="w-4 h-4">...</svg>
+<button class="refined-btn-ghost">
+    <svg>...</svg>
 </button>
 ```
+
+```css
+.refined-btn-ghost {
+    background: transparent;
+    color: var(--color-ink-muted);
+    border: none;
+    padding: 0.5rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refined-btn-ghost:hover {
+    color: var(--color-ink);
+    background: var(--color-surface);
+}
+```
+
+---
 
 ### 3. Form Elements
 
 #### Text Input
 ```html
 <div>
-    <label for="field" class="block text-sm font-medium text-slate-700 mb-1">
-        Field Label <span class="text-red-500">*</span>
+    <label for="field" class="refined-label">
+        Field Label
     </label>
-    <input type="text" name="field" id="field" required
-           class="w-full px-2 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
-           placeholder="Enter value">
+    <input type="text"
+           id="field"
+           name="field"
+           class="refined-input"
+           placeholder="Enter value"
+           required>
 </div>
 ```
 
-#### Number Input
-```html
-<input type="number" name="field" min="0" step="0.1"
-       class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow">
+```css
+.refined-input {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 300;
+    color: var(--color-ink);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    transition: all 0.3s var(--ease-out-expo);
+}
+
+.refined-input::placeholder {
+    color: var(--color-ink-subtle);
+}
+
+.refined-input:focus {
+    outline: none;
+    border-color: var(--color-ink-muted);
+    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+}
 ```
 
 #### Select Dropdown
 ```html
-<select name="field" required
-        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow bg-white">
+<select name="field" class="refined-input" required>
     <option value="">Select...</option>
     <option value="1">Option 1</option>
 </select>
 ```
 
-#### Textarea
-```html
-<textarea name="field" rows="2"
-          class="w-full px-2 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow resize-none"
-          placeholder="Enter text..."></textarea>
-```
-
 #### Checkbox
 ```html
-<div class="flex items-center gap-2 py-2">
-    <input type="checkbox" name="field" id="field"
-           class="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-    <label for="field" class="text-sm font-medium text-slate-700">Checkbox Label</label>
+<div style="display: flex; align-items: center;">
+    <input type="checkbox"
+           id="field"
+           name="field"
+           class="refined-checkbox">
+    <label for="field" class="refined-checkbox-label">
+        Checkbox Label
+    </label>
 </div>
 ```
 
-#### Date Input
-```html
-<input type="date" name="date" required
-       class="w-full px-2 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow">
+```css
+.refined-checkbox {
+    margin-right: 0.5rem;
+}
+
+.refined-checkbox-label {
+    font-size: 0.8125rem;
+    color: var(--color-ink-muted);
+    font-weight: 300;
+}
 ```
+
+---
 
 ### 4. Tables
 
-#### Reusable Table Component
-
-Use the reusable table component from `components/scrollable_table.html`:
-
-```jinja2
-{% from 'components/scrollable_table.html' import table_card, table_header_classes, empty_state %}
-
-{% call table_card(title="Table Title", count_label=items|length ~ " items") %}
-<table class="w-full">
-    <thead class="{{ table_header_classes() }}">
-        <tr class="bg-slate-50 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-            <th class="px-6 py-2">Column Name</th>
-        </tr>
-    </thead>
-    <tbody class="divide-y divide-slate-100">
-        {% for item in items %}
-        <tr class="table-row-hover">
-            <td class="px-6 py-2 text-sm text-slate-700">{{ item.value }}</td>
-        </tr>
-        {% else %}
-        {{ empty_state(col_count=1, title="No data", message="Add your first item.") }}
-        {% endfor %}
-    </tbody>
-</table>
-{% endcall %}
-```
-
-**Component Macros:**
-- `table_card(title, count_label, full_height)` - Card wrapper with optional header
-- `table_header_classes(full_height)` - Returns sticky header classes when `full_height=true`
-- `empty_state(col_count, icon_path, title, message)` - Empty table state row
-
-#### Viewport-Filling Scrollable Table (Dashboard)
+#### Table Container
 ```html
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
-    <div class="overflow-x-auto overflow-y-auto flex-1">
-        <table class="w-full">
-            <thead class="sticky top-0 z-10 bg-slate-50">
-                <!-- Headers -->
+<div class="table-container">
+    <div class="table-scroll-wrapper">
+        <!-- Fixed Header -->
+        <table class="refined-table" style="flex-shrink: 0;">
+            <colgroup>
+                <col class="col-name">
+                <col class="col-value">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="sortTable('name')">
+                        Column Name
+                        <svg class="sort-icon">...</svg>
+                    </th>
+                    <th>Value</th>
+                </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
-                <!-- Rows -->
-            </tbody>
         </table>
+
+        <!-- Scrollable Body -->
+        <div class="tbody-scroll">
+            <table class="refined-table">
+                <colgroup>
+                    <col class="col-name">
+                    <col class="col-value">
+                </colgroup>
+                <tbody>
+                    <tr class="clickable-row">
+                        <td><span class="seller-name">Text</span></td>
+                        <td><span class="amount-value">123.45</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="pagination-bar">
+        <span class="pagination-info">
+            Showing <span class="pagination-count">10</span> of <span class="pagination-count">100</span>
+        </span>
     </div>
 </div>
 ```
 
-#### Table Container (Standard)
-```html
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-4 py-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-slate-800">Table Title</h2>
-        <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm font-medium">5 items</span>
-    </div>
-    <div class="overflow-x-auto">
-        <table class="w-full">...</table>
-    </div>
-</div>
-```
-
-#### Table Header (Compact)
-```html
-<thead class="bg-slate-50">
-    <tr class="bg-slate-50 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-        <th class="px-6 py-2">Column Name</th>
-    </tr>
-</thead>
-```
-
-#### Table Header with Sorting
-```html
-<th class="px-2 py-2 align-top">
-    <a href="?sort=field&order=desc" 
-       class="flex items-center gap-1 hover:text-primary-600">
-        Column Name
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-        </svg>
-    </a>
-</th>
-```
-
-#### Table Body (Compact)
-```html
-<tbody class="divide-y divide-slate-100">
-    <tr class="table-row-hover">
-        <td class="px-6 py-2 text-sm text-slate-700">Cell content</td>
-    </tr>
-</tbody>
-```
-
-#### Table Row Hover Effect
+#### Table Styles
 ```css
-.table-row-hover:hover {
-    background-color: #f8fafc;
+.table-container {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.table-scroll-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tbody-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.refined-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.refined-table thead {
+    background: var(--color-surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.refined-table th {
+    padding: 0.5rem 1rem;
+    font-size: 0.6875rem;        /* 11px - compact */
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-ink-subtle);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+}
+
+.refined-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.refined-table th.sortable:hover {
+    color: var(--color-ink);
+}
+
+.refined-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.refined-table tbody tr:hover {
+    background: var(--color-surface);
+}
+
+.refined-table td {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--color-border-subtle);
+    vertical-align: middle;
+}
+
+.refined-table tbody tr:last-child td {
+    border-bottom: none;
+}
+```
+
+#### Column Width Classes
+```css
+.col-number { width: 14%; }
+.col-seller { width: 22%; }
+.col-nip { width: 12%; }
+.col-date { width: 10%; }
+.col-amount { width: 12%; }
+.col-status { width: 10%; }
+.col-actions { width: 10%; }
+```
+
+#### Specialized Cell Styles
+```css
+/* Invoice number - Primary identifier */
+.invoice-number {
+    font-family: var(--font-display);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    letter-spacing: -0.01em;
+}
+
+/* Seller name */
+.seller-name {
+    font-weight: 400;
+    color: var(--color-ink);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* NIP - Monospace */
+.nip-number {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    letter-spacing: 0.02em;
+}
+
+/* Dates */
+.date-value {
+    color: var(--color-ink-muted);
+    font-weight: 300;
+}
+
+/* Amount - Emphasized */
+.amount-value {
+    font-family: var(--font-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    white-space: nowrap;
+}
+
+.currency-code {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-ink-subtle);
+    margin-left: 0.25rem;
 }
 ```
 
 #### Empty State
 ```html
-<tr>
-    <td colspan="5" class="px-6 py-12 text-center text-slate-500">
-        <svg class="w-12 h-12 mx-auto mb-4 text-slate-300">...</svg>
-        <p class="text-lg font-medium">No Records</p>
-        <p class="text-sm">Add your first record using the form above.</p>
-    </td>
-</tr>
+<div class="empty-state">
+    <svg class="empty-icon">...</svg>
+    <h3 class="empty-title">No Records</h3>
+    <p class="empty-text">
+        Add your first record using the button above.
+    </p>
+</div>
 ```
+
+```css
+.empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-icon {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1.5rem;
+    color: var(--color-ink-subtle);
+    opacity: 0.3;
+}
+
+.empty-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-bottom: 0.5rem;
+}
+
+.empty-text {
+    color: var(--color-ink-subtle);
+    font-size: 0.9375rem;
+    font-weight: 300;
+    max-width: 320px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+}
+```
+
+---
 
 ### 5. Badges
 
-#### Standard Badge
+#### Status Badge
 ```html
-<span class="px-3 py-0.5 bg-slate-100 text-slate-700 rounded font-mono text-xs">
-    Value
+<span class="status-badge status-paid">Paid</span>
+<span class="status-badge status-unpaid">Unpaid</span>
+<span class="status-badge status-overdue">Overdue</span>
+```
+
+```css
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 1px;
+}
+
+.status-paid {
+    background: rgba(45, 106, 79, 0.08);
+    color: var(--color-success);
+}
+
+.status-unpaid {
+    background: var(--color-accent-muted);
+    color: var(--color-warning);
+}
+
+.status-overdue {
+    background: rgba(155, 44, 44, 0.08);
+    color: var(--color-error);
+}
+```
+
+#### Clickable Badge (for status toggling)
+```html
+<span class="status-badge clickable-status status-paid"
+      onclick="toggleStatus(123)">
+    Paid
 </span>
 ```
 
-#### Primary Badge
-```html
-<span class="px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm font-medium">
-    Value
-</span>
+```css
+.clickable-status {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.clickable-status:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.clickable-status:active {
+    transform: scale(0.98);
+}
 ```
 
-#### Success Badge
-```html
-<span class="inline-flex items-center align-text-top px-2 py-0.5 rounded text-xs font-normal bg-emerald-100 text-emerald-700">
-    Success
-</span>
+#### Role Badges
+```css
+.refined-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 1px;
+}
+
+.badge-purple { background: rgba(147, 51, 234, 0.08); color: #7e22ce; }
+.badge-blue { background: rgba(37, 99, 235, 0.08); color: #1d4ed8; }
+.badge-green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
+.badge-pink { background: rgba(236, 72, 153, 0.08); color: #be185d; }
+.badge-red { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
+.badge-gray { background: rgba(107, 114, 128, 0.08); color: #4b5563; }
 ```
 
-#### Warning Badge
-```html
-<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium">
-    Warning
-</span>
-```
-
-#### Count Badge
-```html
-<span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm font-medium">
-    24 items
-</span>
-```
+---
 
 ### 6. Flash Messages
 
-#### Flash Message Component
 ```html
-<div class="px-6 pt-4 space-y-2">
-    <div class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-sm
-                bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 text-emerald-800">
-        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0">...</svg>
-        <p class="text-sm font-medium flex-1">Success message</p>
-        <button onclick="this.parentElement.remove()" class="p-1 rounded-lg hover:bg-white/50">
-            <svg class="w-4 h-4 opacity-60">...</svg>
+<div class="flash-message flash-success">
+    Success message
+</div>
+<div class="flash-message flash-error">
+    Error message
+</div>
+<div class="flash-message flash-warning">
+    Warning message
+</div>
+<div class="flash-message flash-info">
+    Info message
+</div>
+```
+
+```css
+.flash-message {
+    padding: 0.875rem 1rem;
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    font-size: 0.8125rem;
+}
+
+.flash-success {
+    background: rgba(45, 106, 79, 0.08);
+    color: var(--color-success);
+    border: 1px solid rgba(45, 106, 79, 0.2);
+}
+
+.flash-error {
+    background: rgba(155, 44, 44, 0.08);
+    color: var(--color-error);
+    border: 1px solid rgba(155, 44, 44, 0.2);
+}
+
+.flash-warning {
+    background: rgba(201, 162, 39, 0.12);
+    color: var(--color-warning);
+    border: 1px solid rgba(201, 162, 39, 0.2);
+}
+
+.flash-info {
+    background: rgba(23, 162, 184, 0.08);
+    color: #0c7489;
+    border: 1px solid rgba(23, 162, 184, 0.2);
+}
+```
+
+---
+
+### 7. Filter Pills
+
+```html
+<div class="filter-pills">
+    <button class="filter-pill active" data-filter="all">
+        All <span class="count">24</span>
+    </button>
+    <button class="filter-pill" data-filter="paid">
+        Paid <span class="count">18</span>
+    </button>
+    <button class="filter-pill" data-filter="unpaid">
+        Unpaid <span class="count">6</span>
+    </button>
+</div>
+```
+
+```css
+.filter-pills {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-shrink: 0;
+}
+
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: var(--color-ink-muted);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;        /* Pill shape */
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+    border-color: var(--color-ink-muted);
+}
+
+.filter-pill.active {
+    background: var(--color-ink);
+    color: white;
+    border-color: var(--color-ink);
+}
+
+.filter-pill .count {
+    font-weight: 500;
+}
+```
+
+---
+
+### 8. Search Input
+
+```html
+<div class="search-wrapper">
+    <svg class="search-icon">...</svg>
+    <input type="text"
+           class="search-input"
+           placeholder="Search by name, number...">
+</div>
+```
+
+```css
+.search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 300;
+    color: var(--color-ink);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    transition: all 0.3s var(--ease-out-expo);
+}
+
+.search-input::placeholder {
+    color: var(--color-ink-subtle);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--color-ink-muted);
+    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-ink-subtle);
+    width: 1rem;
+    height: 1rem;
+}
+```
+
+---
+
+### 9. Dropdown Menu
+
+```html
+<div class="dropdown" id="export-dropdown">
+    <button class="btn-refined btn-refined-secondary"
+            onclick="toggleDropdown('export-dropdown')">
+        Export
+    </button>
+    <div class="dropdown-menu">
+        <button class="dropdown-item" onclick="exportExcel()">
+            <svg>...</svg>
+            Export to Excel
+        </button>
+        <button class="dropdown-item" onclick="exportCSV()">
+            <svg>...</svg>
+            Export to CSV
         </button>
     </div>
 </div>
 ```
 
-#### Message Types
-- **Success**: `from-emerald-50 to-green-50 border-emerald-200 text-emerald-800`
-- **Error**: `from-red-50 to-rose-50 border-red-200 text-red-800`
-- **Warning**: `from-amber-50 to-yellow-50 border-amber-200 text-amber-800`
-- **Info**: `from-blue-50 to-indigo-50 border-blue-200 text-blue-800`
+```css
+.dropdown {
+    position: relative;
+}
 
-### 7. Modals
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    min-width: 180px;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: all 0.2s var(--ease-out-expo);
+    z-index: 50;
+}
 
-#### Modal Structure
-```html
-<div id="modal" class="fixed inset-0 z-50 hidden">
-    <!-- Backdrop -->
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
-    
-    <!-- Modal -->
-    <div class="absolute inset-0 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
-            <!-- Header -->
-            <div class="px-6 pt-6 pb-4">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-red-100">
-                        <svg class="w-6 h-6 text-red-600">...</svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-semibold text-slate-800">Modal Title</h3>
-                        <p class="text-sm text-slate-500">Modal message</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Actions -->
-            <div class="px-6 pb-6 pt-2 flex items-center justify-end gap-3">
-                <button class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl">
-                    Cancel
-                </button>
-                <button class="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl shadow-sm">
-                    Confirm
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-```
+.dropdown.open .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
 
-### 8. Filter Pills / Tabs
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink);
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
 
-#### Filter Pills
-```html
-<div class="flex flex-wrap gap-2">
-    <a href="?filter=active" 
-       class="px-3 py-1.5 text-sm rounded-lg transition-colors bg-primary-500 text-white">
-        Active Filter
-    </a>
-    <a href="?filter=inactive" 
-       class="px-3 py-1.5 text-sm rounded-lg transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200">
-        Inactive Filter
-    </a>
-</div>
+.dropdown-item:hover {
+    background: var(--color-surface);
+}
+
+.dropdown-item svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-ink-muted);
+}
 ```
 
 ---
@@ -511,129 +977,204 @@ Use the reusable table component from `components/scrollable_table.html`:
 ## Spacing & Layout
 
 ### Spacing Scale
-- **Compact spacing**: `gap-1`, `space-y-1`, `p-1`
-- **Default spacing**: `gap-2`, `space-y-2`, `p-2`
-- **Comfortable spacing**: `gap-3`, `space-y-3`, `p-3` (preferred for page layouts)
-- **Spacious**: `gap-4`, `space-y-4`, `p-4`
-- **Extra spacious**: `gap-6`, `space-y-6`, `p-6`
+- **Extra compact**: `0.25rem` (4px), `0.375rem` (6px), `0.5rem` (8px)
+- **Compact**: `0.625rem` (10px), `0.75rem` (12px)
+- **Default**: `1rem` (16px), `1.25rem` (20px), `1.5rem` (24px)
+- **Comfortable**: `2rem` (32px), `2.5rem` (40px)
 
 ### Page Content Spacing
-- **Card stacks**: `space-y-3` (preferred for form + table layouts)
-- **Form grids**: `gap-2` for form field grids
+- **Page container padding**: `2rem` (32px)
+- **Card stacks**: `gap: 1.5rem` between cards
+- **Form field spacing**: `gap: 1.25rem`
 
 ### Card Padding
-- **Header**: `px-6 py-2` (compact/preferred) or `px-6 py-4` (standard)
-- **Body**: `p-6` (standard) or `p-3` (compact)
-- **Table card header**: `px-4 py-2` with count badge
+- **Standard card**: `padding: 1.5rem` (24px)
+- **Compact card**: `padding: 1rem` (16px)
+- **Login card**: `padding: 2.5rem` (40px - for standalone forms)
 
 ### Table Cell Padding
-- **Header cells**: `px-6 py-2`
-- **Body cells**: `px-6 py-2` (compact/preferred) or `px-6 py-4` (spacious)
-
-### Grid Layouts
-- **Two columns**: `grid grid-cols-1 md:grid-cols-2 gap-2`
-- **Four columns**: `grid grid-cols-1 md:grid-cols-4 gap-2`
-- **Six columns (stats)**: `grid grid-cols-1 md:grid-cols-6 gap-1`
+- **Header cells**: `padding: 0.5rem 1rem` (8px 16px)
+- **Body cells**: `padding: 0.5rem 1rem` (8px 16px)
 
 ---
 
 ## Border Radius
 
-### Standard Radii
-- **Small**: `rounded-lg` (8px)
-- **Medium**: `rounded-xl` (12px)
-- **Large**: `rounded-2xl` (16px)
-- **Full**: `rounded-full` (9999px)
+**Standard**: `border-radius: 2px` for ALL components
 
-### Component-Specific
-- **Cards**: `rounded-2xl` (standard) or `rounded-xl` (compact)
-- **Buttons**: `rounded-xl`
-- **Inputs**: `rounded-xl`
-- **Badges**: `rounded` or `rounded-lg`
-- **Icons containers**: `rounded-xl`
+This creates the signature minimal, sharp aesthetic:
+- Cards: `2px`
+- Buttons: `2px`
+- Inputs: `2px`
+- Badges: `1px` (even sharper)
+- Filter pills: `999px` (full rounded - exception)
 
 ---
 
 ## Shadows
 
-### Shadow Scale
-- **Subtle**: `shadow-sm`
-- **Standard**: `shadow-md`
-- **Elevated**: `shadow-lg`
-- **Extra elevated**: `shadow-xl`
-- **Modal**: `shadow-2xl`
+**Philosophy**: Subtle elevation, not dramatic depth
 
-### Interactive Shadows
-- **Button hover**: `shadow-md hover:shadow-lg`
-- **Card hover**: `shadow-sm hover:shadow-md`
+```css
+/* Standard card shadow */
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+/* Button hover */
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+/* Dropdown */
+box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+
+/* Focus ring (inputs) */
+box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+```
 
 ---
 
 ## Transitions & Animations
 
-### Global Transitions
+### Standard Transitions
 ```css
-* {
-    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
+/* Buttons, interactive elements */
+transition: all 0.25s var(--ease-out-expo);
+
+/* Hover states */
+transition: all 0.2s ease;
+
+/* Input focus */
+transition: all 0.3s var(--ease-out-expo);
+```
+
+### Fade-in Animation
+```css
+.fade-in {
+    animation: fadeIn 0.4s var(--ease-out-expo) forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 ```
 
-### Common Transition Classes
-- **All properties**: `transition-all`
-- **Colors**: `transition-colors`
-- **Shadows**: `transition-shadow`
+### Stagger Animation (for table rows)
+```css
+.stagger-row {
+    opacity: 0;
+    animation: fadeIn 0.35s var(--ease-out-expo) forwards;
+}
+
+/* In JavaScript: */
+style="animation-delay: ${index * 0.03}s"
+```
 
 ---
 
 ## Custom Scrollbar
 
 ```css
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+.tbody-scroll::-webkit-scrollbar {
+    width: 6px;
 }
-::-webkit-scrollbar-track {
-    background: #f1f5f9;
+
+.tbody-scroll::-webkit-scrollbar-track {
+    background: var(--color-surface);
 }
-::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
+
+.tbody-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+
+.tbody-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-subtle);
 }
 ```
 
 ---
 
-## Interactive Features
+## Interactive Patterns
 
-### 1. Table Sorting
+### 1. Clickable Table Rows
 
-#### Frontend Pattern
 ```html
-<a href="{{ url_for('route', sort='field', order='asc' if order == 'desc' else 'desc') }}" 
-   class="flex items-center gap-1 hover:text-primary-600">
-    Column Name
-    {% if sort_by == 'field' %}
-    <svg class="w-4 h-4 {{ 'rotate-180' if order == 'asc' else '' }}">
-        <!-- Down arrow icon -->
-    </svg>
-    {% endif %}
-</a>
+<tr class="clickable-row"
+    data-invoice-id="123"
+    data-has-pdf="true"
+    onclick="handleRowClick(event)">
+    <!-- cells -->
+</tr>
 ```
 
-### 2. Real-time Search
+```css
+.clickable-row {
+    cursor: pointer;
+}
 
-#### Search Input in Table Header
-```html
-<input type="text" id="search_field" placeholder="Szukaj..." 
-       class="w-full px-1 py-0.5 text-xs font-normal normal-case rounded border border-slate-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
+.clickable-row:hover {
+    background: var(--color-surface) !important;
+}
 ```
 
-#### JavaScript Pattern (Debounced)
+```javascript
+function handleRowClick(event) {
+    // Don't trigger if clicking action buttons
+    if (event.target.closest('.row-actions') ||
+        event.target.closest('a') ||
+        event.target.closest('button')) {
+        return;
+    }
+
+    const row = event.currentTarget;
+    const invoiceId = parseInt(row.dataset.invoiceId);
+    const hasPdf = row.dataset.hasPdf === 'true';
+
+    if (hasPdf) {
+        window.open(`/api/pdf/${invoiceId}`, '_blank');
+    }
+}
+```
+
+### 2. Inline Status Editing
+
+```html
+<span class="status-badge clickable-status status-paid"
+      data-invoice-id="123"
+      data-current-status="Opłacona"
+      onclick="handleStatusClick(event)">
+    Paid
+</span>
+```
+
+```javascript
+async function handleStatusClick(event) {
+    event.stopPropagation(); // Prevent row click
+
+    const badge = event.currentTarget;
+    const invoiceId = parseInt(badge.dataset.invoiceId);
+    const currentStatus = badge.dataset.currentStatus;
+
+    // Toggle status
+    const newStatus = currentStatus === 'Opłacona' ? 'Nieopłacona' : 'Opłacona';
+
+    // Update via API
+    const result = await API.invoices.update(invoiceId, { status: newStatus });
+
+    if (result.success) {
+        // Update badge without re-rendering table
+        updateStatusBadge(badge, newStatus);
+    }
+}
+```
+
+### 3. Debounced Search
+
 ```javascript
 function debounce(func, wait) {
     let timeout;
@@ -647,37 +1188,11 @@ function debounce(func, wait) {
     };
 }
 
-const debouncedSearch = debounce(() => applyFilters('search_field'), 500);
-
-document.getElementById('search_field').addEventListener('keyup', function(e) {
-    if (e.key === 'Enter') {
-        applyFilters('search_field');
-    } else {
-        debouncedSearch();
-    }
-});
-```
-
-### 3. Confirmation Modal
-
-#### JavaScript Pattern
-```javascript
-function confirmDelete(form, itemName) {
-    showConfirmModal(
-        form,
-        'Potwierdź usunięcie',
-        `Czy na pewno chcesz usunąć "${itemName}"? Ta operacja jest nieodwracalna.`,
-        'Usuń'
-    );
-    return false; // Prevent form submission
-}
-```
-
-#### Form Integration
-```html
-<form onsubmit="return confirmDelete(this, 'Item Name');">
-    <button type="submit">Delete</button>
-</form>
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('input', debounce((e) => {
+    searchQuery = e.target.value.toLowerCase().trim();
+    applyFiltersAndRender();
+}, 300));
 ```
 
 ---
@@ -685,46 +1200,185 @@ function confirmDelete(form, itemName) {
 ## Icon Usage
 
 ### Icon Library
-Use **Heroicons** (inline SVG, 24x24 viewBox)
+**Heroicons** (inline SVG, 24x24 viewBox)
 
 ### Standard Icon Sizes
-- **Extra small**: `w-4 h-4` (16px) - preferred for table action buttons
-- **Small**: `w-5 h-5` (20px) - for buttons with text
-- **Medium**: `w-6 h-6` (24px) - for stats cards, navigation
-- **Large**: `w-8 h-8` (32px) - for category icons in tables
-- **Extra Large**: `w-12 h-12` (48px) - for empty states
+```css
+.icon-xs { width: 0.75rem; height: 0.75rem; }    /* 12px */
+.icon-sm { width: 1rem; height: 1rem; }          /* 16px */
+.icon-md { width: 1.125rem; height: 1.125rem; }  /* 18px */
+.icon-lg { width: 1.5rem; height: 1.5rem; }      /* 24px */
+.icon-xl { width: 2rem; height: 2rem; }          /* 32px */
+```
 
 ### Icon Colors
-- **Default**: `text-slate-400` (inactive actions)
-- **Hover states**: 
-  - View: `hover:text-emerald-600`
-  - Edit: `hover:text-primary-600`
-  - Delete: `hover:text-red-600`
-- **In buttons**: `text-white`
-- **In colored badges**: Match badge color (e.g., `text-emerald-500`)
+- **Default**: `color: var(--color-ink-subtle)`
+- **Hover**: `color: var(--color-ink)`
+- **In buttons**: Match button text color
+- **In badges**: Match badge color
 
 ---
 
 ## Responsive Design
 
-### Breakpoints
-- **Mobile**: Default (no prefix)
-- **Tablet**: `md:` (768px+)
-- **Desktop**: `lg:` (1024px+)
+### Philosophy
+Mobile-first with progressive enhancement
 
-### Common Responsive Patterns
+### Breakpoints
+```css
+/* Mobile: Default (no prefix) */
+/* Tablet: 768px+ */
+@media (max-width: 1024px) {
+    .col-nip, .col-due { display: none; }
+}
+
+/* Mobile: < 768px */
+@media (max-width: 768px) {
+    .actions-bar { flex-wrap: wrap; }
+    .search-wrapper { max-width: none; order: 3; width: 100%; }
+    .row-actions { opacity: 1; } /* Always visible on mobile */
+}
+```
+
+### Responsive Patterns
 ```html
 <!-- Stacked on mobile, 2 columns on tablet -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+<div class="grid grid-cols-1 md:grid-cols-2" style="gap: 1.5rem;">
+```
 
-<!-- Stacked on mobile, 4 columns on tablet -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+---
 
-<!-- Full width on mobile, fixed width on desktop -->
-<div class="w-full md:w-64">
+## Page Structure
 
-<!-- Hide on mobile, show on desktop -->
-<div class="hidden md:block">
+### Standard Page Layout
+```html
+{% extends "base.html" %}
+
+{% block title %}Page Title{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Refined Minimal CSS variables and styles */
+    :root {
+        --color-ink: #1a1a1a;
+        /* ... all variables ... */
+    }
+
+    /* Component styles */
+    .refined-card { ... }
+    .refined-btn-primary { ... }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page fade-in">
+    <header class="page-header">
+        <h1 class="page-title">Page Title</h1>
+    </header>
+
+    <!-- Page content -->
+    <div class="refined-card">
+        <!-- ... -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Page-specific JavaScript
+</script>
+{% endblock %}
+```
+
+### Standalone Template (e.g., login)
+```html
+<!DOCTYPE html>
+<html lang="pl" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Title</title>
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Refined Minimal Design System */
+        :root { /* ... variables ... */ }
+        body { /* ... */ }
+        .refined-card { /* ... */ }
+        /* ... all component styles ... */
+    </style>
+</head>
+<body class="h-full flex items-center justify-center">
+    <!-- Content -->
+</body>
+</html>
+```
+
+---
+
+## JavaScript Patterns
+
+### Utility Functions
+
+```javascript
+// Format date (DD.MM.YY)
+function formatDateShort(dateString) {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}.${month}.${year}`;
+}
+
+// Format amount (Polish locale)
+function formatAmountDisplay(amount) {
+    if (amount === null || amount === undefined) return '—';
+    return new Intl.NumberFormat('pl-PL', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+```
+
+### API Wrapper Pattern
+
+```javascript
+const API = {
+    invoices: {
+        getAll: async () => {
+            const response = await fetch('/api/invoices');
+            return await response.json();
+        },
+        update: async (id, data) => {
+            const response = await fetch(`/api/invoices/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return await response.json();
+        }
+    }
+};
 ```
 
 ---
@@ -732,168 +1386,103 @@ Use **Heroicons** (inline SVG, 24x24 viewBox)
 ## Best Practices
 
 ### 1. Consistency
-- Always use `rounded-xl` for inputs, buttons, and small cards
-- Always use `rounded-2xl` for larger cards and containers
-- Maintain consistent spacing (`p-6` for standard cards, `p-3` for compact)
+- ✅ Always use `border-radius: 2px` for standard components
+- ✅ Always use CSS custom properties for colors (`var(--color-ink)`)
+- ✅ Always use `0.8125rem` (13px) for body text
+- ✅ Always use uppercase labels with `letter-spacing: 0.06em`
 
-### 2. Accessibility
-- Always include `<label>` elements for form inputs
-- Use semantic HTML (`<header>`, `<main>`, `<footer>`, `<nav>`)
-- Include ARIA labels where appropriate
-- Ensure sufficient color contrast
+### 2. Typography Hierarchy
+- **Page titles**: 1.75rem, font-weight: 600, letter-spacing: -0.02em
+- **Card titles**: 1rem, font-weight: 600, letter-spacing: -0.01em
+- **Labels**: 0.6875rem (11px), uppercase, letter-spacing: 0.06em
+- **Body text**: 0.8125rem (13px), font-weight: 300-400
 
-### 3. Performance
-- Use Tailwind's CDN for rapid development
-- Minimize custom CSS (use Tailwind utilities)
-- Lazy-load heavy content where appropriate
+### 3. Color Usage
+- **Text**: Use ink hierarchy (ink → ink-muted → ink-subtle)
+- **Backgrounds**: White for cards, surface-warm for pages
+- **Borders**: Use border (standard) or border-subtle (dividers)
+- **Semantic**: Only use success/warning/error for status, not decorative
 
-### 4. User Experience
-- Provide visual feedback for all interactions (hover states, focus rings)
-- Use loading states for async operations
-- Include empty states with helpful messages
-- Always show confirmation for destructive actions
+### 4. Spacing
+- **Between cards**: 1.5rem gap
+- **Inside cards**: 1.5rem padding (standard), 1rem (compact)
+- **Form fields**: 1.25rem gap
+- **Table cells**: 0.5rem 1rem padding
 
-### 5. Typography
-- Use `font-semibold` or `font-bold` for headings
-- Use `text-sm` or `text-xs` for secondary text
-- Use `font-medium` for emphasized text in tables/lists
+### 5. Interactive Elements
+- ✅ Always provide hover states
+- ✅ Use `transition: all 0.25s var(--ease-out-expo)` for buttons
+- ✅ Use `cursor: pointer` for clickable elements
+- ✅ Prevent action bubbling with `event.stopPropagation()`
 
----
-
-## Template Structure
-
-### Base Template (base.html)
-```jinja2
-<!DOCTYPE html>
-<html lang="pl" class="h-full">
-<head>
-    <title>{% block title %}App Name{% endblock %}</title>
-    <!-- Fonts, Tailwind, Custom Styles -->
-</head>
-<body class="h-full bg-gradient-to-br from-slate-50 to-slate-100 font-sans antialiased">
-    <div class="flex h-full">
-        {% include 'components/sidebar.html' %}
-        
-        <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
-            <header>
-                <h1>{% block page_title %}{% endblock %}</h1>
-                <p>{% block page_subtitle %}{% endblock %}</p>
-            </header>
-            
-            {% include 'components/flash_messages.html' %}
-            
-            <main class="flex-1 overflow-auto p-2">
-                {% block content %}{% endblock %}
-            </main>
-            
-            <footer>...</footer>
-        </div>
-    </div>
-    
-    {% include 'components/confirm_modal.html' %}
-    {% block scripts %}{% endblock %}
-</body>
-</html>
-```
-
-### Page Template
-```jinja2
-{% extends 'base.html' %}
-
-{% block title %}Page Title{% endblock %}
-{% block page_title %}Page Heading{% endblock %}
-{% block page_subtitle %}Page Description{% endblock %}
-
-{% block content %}
-<!-- Page content here -->
-{% endblock %}
-
-{% block scripts %}
-<!-- Page-specific JavaScript -->
-{% endblock %}
-```
-
----
-
-## Component Files
-
-### Reusable Components Directory
-Create components in `app/templates/components/`:
-- `sidebar.html` - Navigation sidebar
-- `flash_messages.html` - Alert notifications
-- `confirm_modal.html` - Confirmation dialog
-- `scrollable_table.html` - Reusable table macros
-
-### Component Inclusion
-```jinja2
-{# For includes #}
-{% include 'components/sidebar.html' %}
-
-{# For macro imports #}
-{% from 'components/scrollable_table.html' import table_card, empty_state %}
-```
-
----
-
-## Form Design Patterns
-
-### Multi-Section Form
-```html
-<form method="POST" class="max-w-4xl space-y-3">
-    <!-- Section 1 -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-4 py-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-            <h2 class="text-lg font-semibold text-slate-800">Section Title</h2>
-        </div>
-        <div class="p-3 space-y-2">
-            <!-- Form fields -->
-        </div>
-    </div>
-    
-    <!-- Section 2 -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <!-- ... -->
-    </div>
-    
-    <!-- Actions -->
-    <div class="flex items-center gap-2">
-        <button type="submit" class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-xl hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all">
-            Save
-        </button>
-        <a href="/" class="px-6 py-3 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">
-            Cancel
-        </a>
-    </div>
-</form>
-```
+### 6. Performance
+- ✅ Use CSS custom properties for easy theming
+- ✅ Minimize inline styles (prefer classes)
+- ✅ Use debouncing for search inputs (300ms)
+- ✅ Use stagger animations with max delay cap (0.3s)
 
 ---
 
 ## Summary Checklist
 
-When creating a new Flask/Jinja2 project, ensure:
+When creating or modifying a template, ensure:
 
-- ✅ Use Inter font from Google Fonts
-- ✅ Configure Tailwind CSS with custom primary/accent colors
-- ✅ Implement sidebar with gradient background and active states
-- ✅ Use consistent card styling (rounded-2xl, shadow-sm, border)
-- ✅ Apply consistent button gradients (primary, success, danger)
-- ✅ Use rounded-xl for all inputs with focus rings
-- ✅ Implement flash messages with color-coded categories
-- ✅ Include confirmation modal for destructive actions
-- ✅ Add table sorting and real-time search when applicable
-- ✅ Use semantic colors (emerald for success, red for errors, etc.)
-- ✅ Add hover states to all interactive elements
-- ✅ Include empty states with helpful icons and messages
-- ✅ Use custom scrollbar styling
-- ✅ Apply global transitions for smooth interactions
-- ✅ Follow responsive design patterns (mobile-first)
+- ✅ CSS custom properties defined in `<style>` or inherited
+- ✅ Body background set to `var(--color-surface-warm)`
+- ✅ All cards use `.refined-card` with 2px border-radius
+- ✅ All buttons use `.refined-btn-primary/secondary/danger`
+- ✅ All inputs use `.refined-input` with focus state
+- ✅ All labels use `.refined-label` (uppercase, letter-spacing)
+- ✅ All status badges use `.status-badge` with semantic colors
+- ✅ Flash messages use `.flash-message` with type classes
+- ✅ Tables use `.refined-table` with fixed headers
+- ✅ Font sizes follow hierarchy (11px labels, 13px body, 16px headings)
+- ✅ Transitions use `var(--ease-out-expo)` easing
+- ✅ Icons match text color hierarchy
+- ✅ Hover states on all interactive elements
+- ✅ Responsive breakpoints for mobile/tablet
 
 ---
 
 ## Version
 
-**Version**: 2.1  
-**Framework**: Flask + Tailwind CSS  
-**Last Updated**: 2026-01-23  
-**Changes**: Added reusable table component, compact spacing standards, updated icon sizes
+**Version**: 3.0 (Refined Minimal)
+**Framework**: Flask + CSS Custom Properties + Minimal Tailwind
+**Last Updated**: 2026-02-05
+**Changes**: Complete redesign to refined minimal aesthetic, removed standard Tailwind patterns
+
+---
+
+## Quick Reference
+
+### Color Variables
+```css
+--color-ink, --color-ink-muted, --color-ink-subtle
+--color-surface, --color-surface-warm
+--color-border, --color-border-subtle
+--color-success, --color-warning, --color-error, --color-accent
+```
+
+### Font Sizes
+```css
+11px (0.6875rem) - Labels, table headers
+13px (0.8125rem) - Body text, inputs, buttons
+15px (0.9375rem) - Field values
+16px (1rem)      - Card titles
+28px (1.75rem)   - Page titles
+```
+
+### Border Radius
+```css
+2px  - Standard (cards, buttons, inputs)
+1px  - Sharper (badges)
+999px - Pills (filters only)
+```
+
+### Shadows
+```css
+0 1px 3px rgba(0,0,0,0.04)      - Cards
+0 4px 12px rgba(0,0,0,0.15)     - Button hover
+0 0 0 3px rgba(26,26,26,0.04)   - Input focus
+0 10px 40px rgba(0,0,0,0.08)    - Dropdowns
+```

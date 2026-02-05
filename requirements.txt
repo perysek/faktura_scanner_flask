@@ -1,6 +1,14 @@
 # Web Framework
 Flask==3.0.0
 
+# Authentication & Security
+Flask-Login==0.6.3
+bcrypt==4.1.2
+
+# Database Migrations
+alembic==1.13.1
+psycopg2-binary==2.9.9  # PostgreSQL support (future migration)
+
 # OCR i przetwarzanie PDF
 pytesseract==0.3.13
 pdf2image==1.17.0

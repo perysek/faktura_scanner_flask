@@ -1,0 +1,174 @@
+"""
+Repository dla użytkowników (user accounts)
+"""
+import sqlite3
+from datetime import datetime
+from typing import Optional
+import bcrypt
+
+from database.models import User
+from repositories.base_repository import BaseRepository
+
+
+class UserRepository(BaseRepository):
+    """Repository dla operacji na użytkownikach"""
+
+    def __init__(self):
+        super().__init__("users")
+
+    def create_user(self, email: str, password: str, full_name: str, role: str = 'receptionist') -> int:
+        """
+        Utwórz nowego użytkownika z zahashowanym hasłem
+
+        Args:
+            email: Adres email (unikalny)
+            password: Hasło w postaci jawnej (zostanie zahashowane)
+            full_name: Imię i nazwisko
+            role: Rola użytkownika (domyślnie 'receptionist')
+
+        Returns:
+            ID nowego użytkownika
+        """
+        # Hash password using bcrypt
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        query = """
+            INSERT INTO users (email, password_hash, full_name, role, is_active)
+            VALUES (?, ?, ?, ?, 1)
+        """
+        cursor = self._execute(query, (email, password_hash, full_name, role))
+        return cursor.lastrowid
+
+    def get_by_email(self, email: str) -> Optional[User]:
+        """
+        Pobierz użytkownika po adresie email
+
+        Args:
+            email: Adres email
+
+        Returns:
+            User object lub None jeśli nie znaleziono
+        """
+        query = "SELECT * FROM users WHERE email = ?"
+        row = self._fetch_one(query, (email,))
+
+        if not row:
+            return None
+
+        return self.row_to_user(row)
+
+    def verify_password(self, user: User, password: str) -> bool:
+        """
+        Weryfikuj hasło użytkownika
+
+        Args:
+            user: Obiekt User
+            password: Hasło do sprawdzenia (w postaci jawnej)
+
+        Returns:
+            True jeśli hasło poprawne, False w przeciwnym razie
+        """
+        return bcrypt.checkpw(
+            password.encode('utf-8'),
+            user.password_hash.encode('utf-8')
+        )
+
+    def update_last_login(self, user_id: int):
+        """
+        Zaktualizuj timestamp ostatniego logowania
+
+        Args:
+            user_id: ID użytkownika
+        """
+        query = "UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?"
+        self._execute(query, (datetime.now(), datetime.now(), user_id))
+
+    def update_password(self, user_id: int, new_password: str):
+        """
+        Zaktualizuj hasło użytkownika
+
+        Args:
+            user_id: ID użytkownika
+            new_password: Nowe hasło (w postaci jawnej, zostanie zahashowane)
+        """
+        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        query = "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?"
+        self._execute(query, (password_hash, datetime.now(), user_id))
+
+    def update_role(self, user_id: int, new_role: str):
+        """
+        Zaktualizuj rolę użytkownika
+
+        Args:
+            user_id: ID użytkownika
+            new_role: Nowa rola
+        """
+        query = "UPDATE users SET role = ?, updated_at = ? WHERE id = ?"
+        self._execute(query, (new_role, datetime.now(), user_id))
+
+    def deactivate(self, user_id: int):
+        """
+        Dezaktywuj konto użytkownika (soft delete)
+
+        Args:
+            user_id: ID użytkownika
+        """
+        query = "UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?"
+        self._execute(query, (datetime.now(), user_id))
+
+    def activate(self, user_id: int):
+        """
+        Aktywuj konto użytkownika
+
+        Args:
+            user_id: ID użytkownika
+        """
+        query = "UPDATE users SET is_active = 1, updated_at = ? WHERE id = ?"
+        self._execute(query, (datetime.now(), user_id))
+
+    def get_by_role(self, role: str) -> list:
+        """
+        Pobierz wszystkich użytkowników o danej roli
+
+        Args:
+            role: Nazwa roli
+
+        Returns:
+            Lista obiektów User
+        """
+        query = "SELECT * FROM users WHERE role = ? AND is_active = 1 ORDER BY full_name"
+        rows = self._fetch_all(query, (role,))
+        return [self.row_to_user(row) for row in rows]
+
+    def get_active_users(self) -> list:
+        """
+        Pobierz wszystkich aktywnych użytkowników
+
+        Returns:
+            Lista obiektów User
+        """
+        query = "SELECT * FROM users WHERE is_active = 1 ORDER BY full_name"
+        rows = self._fetch_all(query)
+        return [self.row_to_user(row) for row in rows]
+
+    def row_to_user(self, row: sqlite3.Row) -> User:
+        """
+        Konwertuj Row → User object
+
+        Args:
+            row: SQLite Row object
+
+        Returns:
+            User object
+        """
+        return User(
+            id=row["id"],
+            email=row["email"],
+            password_hash=row["password_hash"],
+            full_name=row["full_name"],
+            role=row["role"],
+            is_active=bool(row["is_active"]),
+            last_login=datetime.fromisoformat(row["last_login"]) if row["last_login"] else None,
+            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None
+        )

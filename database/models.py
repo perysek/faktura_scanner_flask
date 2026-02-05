@@ -4,6 +4,7 @@ Modele danych (dataclasses)
 from dataclasses import dataclass, field
 from datetime import datetime, date
 from typing import Optional
+from flask_login import UserMixin
 
 
 @dataclass
@@ -64,3 +65,61 @@ class UploadStaging:
     email_date: Optional[str] = None
     uploaded_at: datetime = field(default_factory=datetime.now)
     id: Optional[int] = None
+
+
+@dataclass
+class User(UserMixin):
+    """Model użytkownika (konto logowania)"""
+    email: str
+    password_hash: str
+    full_name: str
+    role: str = 'receptionist'  # 'superuser', 'admin', 'receptionist', 'stylist', 'accountant'
+    is_active: bool = True
+    id: Optional[int] = None
+    last_login: Optional[datetime] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+    def get_id(self):
+        """Required by Flask-Login"""
+        return str(self.id)
+
+    @property
+    def is_authenticated(self):
+        """Required by Flask-Login"""
+        return True
+
+    @property
+    def is_anonymous(self):
+        """Required by Flask-Login"""
+        return False
+
+    def has_role(self, *roles):
+        """Check if user has any of the specified roles"""
+        return self.role in roles
+
+
+@dataclass
+class Employee:
+    """Model pracownika salonu"""
+    first_name: str
+    last_name: str
+    user_id: Optional[int] = None  # Optional link to users table
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    position: Optional[str] = None  # 'Stylist', 'Receptionist', 'Manager'
+    employment_status: str = 'active'  # 'active', 'on_leave', 'terminated'
+    hire_date: Optional[date] = None
+    termination_date: Optional[date] = None
+    base_salary: Optional[float] = None  # Monthly base salary
+    commission_rate: Optional[float] = None  # Percentage (e.g., 40.00 for 40%)
+    skills: Optional[str] = None  # JSON string: '{"Hair Color": 5, "Balayage": 4}'
+    specializations: Optional[str] = None  # JSON string: '["Bridal", "Extensions"]'
+    work_schedule: Optional[str] = None  # JSON string: '{"mon": "9-17", "tue": "9-17"}'
+    max_appointments_per_day: int = 8
+    notes: Optional[str] = None
+    photo_path: Optional[str] = None
+    is_active: bool = True
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
