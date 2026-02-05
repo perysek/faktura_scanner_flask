@@ -123,3 +123,48 @@ class Employee:
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
     updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+@dataclass
+class Client:
+    """Model klienta salonu"""
+    first_name: str
+    last_name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    notes: Optional[str] = None
+    preferences: Optional[str] = None  # JSON string: '{"allergies": [], "favorite_products": []}'
+    first_visit_date: Optional[date] = None
+    last_visit_date: Optional[date] = None
+    is_active: bool = True
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+    @property
+    def full_name(self) -> str:
+        """Pełne imię i nazwisko klienta"""
+        return f"{self.first_name} {self.last_name}"
+
+    @property
+    def age(self) -> Optional[int]:
+        """Oblicz wiek klienta na podstawie daty urodzenia"""
+        if not self.date_of_birth:
+            return None
+        today = date.today()
+        age = today.year - self.date_of_birth.year
+        # Adjust if birthday hasn't occurred this year yet
+        if (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day):
+            age -= 1
+        return age
+
+    def get_preferences_dict(self) -> dict:
+        """Pobierz preferencje jako słownik (parsowanie JSON)"""
+        if not self.preferences:
+            return {}
+        try:
+            import json
+            return json.loads(self.preferences)
+        except (json.JSONDecodeError, TypeError):
+            return {}

@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+
+{% block title %}Klienci - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Refined Minimal Design System */
+    :root {
+        /* Text Colors */
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+
+        /* Surface Colors */
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+
+        /* Border Colors */
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+
+        /* Semantic Colors */
+        --color-success: #2d6a4f;
+
+        /* Typography */
+        --font-display: 'Inter', system-ui, sans-serif;
+        --font-body: 'Inter', system-ui, sans-serif;
+
+        /* Easing */
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body {
+        background: var(--color-surface-warm);
+        font-family: var(--font-body);
+        color: var(--color-ink);
+    }
+
+    /* Page Layout */
+    .refined-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: var(--color-ink-muted);
+        font-size: 0.8125rem;
+        font-weight: 300;
+    }
+
+    /* Statistics Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-ink-subtle);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .stat-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: #2563eb; }
+    .stat-icon.green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
+    .stat-icon.purple { background: rgba(147, 51, 234, 0.08); color: #7e22ce; }
+    .stat-icon.pink { background: rgba(236, 72, 153, 0.08); color: #be185d; }
+
+    .stat-value.blue { color: #2563eb; }
+    .stat-value.green { color: var(--color-success); }
+    .stat-value.purple { color: #7e22ce; }
+    .stat-value.pink { color: #be185d; }
+
+    /* Search Card */
+    .search-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        margin-bottom: 1.5rem;
+    }
+
+    .search-wrapper {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    /* Input */
+    .refined-input {
+        flex: 1;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 300;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.3s var(--ease-out-expo);
+    }
+
+    .refined-input::placeholder {
+        color: var(--color-ink-subtle);
+    }
+
+    .refined-input:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    /* Buttons */
+    .refined-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        background: var(--color-ink);
+        color: white;
+        border-radius: 2px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.25s var(--ease-out-expo);
+        text-decoration: none;
+    }
+
+    .refined-btn-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .refined-btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 400;
+        background: white;
+        color: var(--color-ink-muted);
+        border-radius: 2px;
+        border: 1px solid var(--color-border);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .refined-btn-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: var(--color-surface);
+    }
+
+    /* Table Container */
+    .table-container {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+    }
+
+    /* Table */
+    .refined-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .refined-table thead {
+        background: var(--color-surface);
+    }
+
+    .refined-table th {
+        padding: 0.75rem 1rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--color-ink-subtle);
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+        white-space: nowrap;
+    }
+
+    .refined-table th:last-child {
+        text-align: right;
+    }
+
+    .refined-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .refined-table tbody tr:hover {
+        background: var(--color-surface);
+    }
+
+    .refined-table td {
+        padding: 0.75rem 1rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        border-bottom: 1px solid var(--color-border-subtle);
+        vertical-align: middle;
+    }
+
+    .refined-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Avatar */
+    .client-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .client-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .client-name {
+        font-weight: 500;
+        color: var(--color-ink);
+    }
+
+    .client-age {
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+        font-weight: 300;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.625rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-radius: 1px;
+    }
+
+    .status-badge.active {
+        background: rgba(45, 106, 79, 0.08);
+        color: var(--color-success);
+    }
+
+    .status-badge.inactive {
+        background: rgba(107, 114, 128, 0.08);
+        color: #4b5563;
+    }
+
+    /* Action Links */
+    .action-link {
+        color: #2563eb;
+        font-size: 0.8125rem;
+        font-weight: 400;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .action-link:hover {
+        color: #1d4ed8;
+    }
+
+    .action-link.secondary {
+        color: var(--color-ink-muted);
+    }
+
+    .action-link.secondary:hover {
+        color: var(--color-ink);
+    }
+
+    /* Empty State */
+    .empty-state {
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        color: var(--color-ink-subtle);
+        opacity: 0.3;
+        margin-bottom: 1rem;
+    }
+
+    .empty-text {
+        color: var(--color-ink-subtle);
+        font-size: 0.9375rem;
+        font-weight: 300;
+    }
+
+    /* Material Icons */
+    .material-icons {
+        font-size: 1rem;
+        vertical-align: middle;
+    }
+
+    .material-icons.lg {
+        font-size: 1.5rem;
+    }
+
+    /* Fade-in Animation */
+    .fade-in {
+        animation: fadeIn 0.4s var(--ease-out-expo) forwards;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page fade-in">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Klienci</h1>
+            <p class="page-subtitle">Zarządzanie bazą klientów salonu</p>
+        </div>
+        <a href="{{ url_for('main.create_client') }}" class="refined-btn-primary">
+            <span class="material-icons">add</span>
+            Dodaj klienta
+        </a>
+    </header>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div>
+                <p class="stat-label">Wszyscy klienci</p>
+                <p class="stat-value" id="stat-total">-</p>
+            </div>
+            <div class="stat-icon blue">
+                <span class="material-icons lg">people</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <p class="stat-label">Aktywni</p>
+                <p class="stat-value green" id="stat-active">-</p>
+            </div>
+            <div class="stat-icon green">
+                <span class="material-icons lg">check_circle</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <p class="stat-label">Ostatni miesiąc</p>
+                <p class="stat-value purple" id="stat-recent">-</p>
+            </div>
+            <div class="stat-icon purple">
+                <span class="material-icons lg">event</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <p class="stat-label">Z urodzinami</p>
+                <p class="stat-value pink" id="stat-birthdays">-</p>
+            </div>
+            <div class="stat-icon pink">
+                <span class="material-icons lg">cake</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Card -->
+    <div class="search-card">
+        <div class="search-wrapper">
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..."
+                class="refined-input"
+            >
+            <button onclick="loadClients()" class="refined-btn-secondary">
+                <span class="material-icons">search</span>
+                Szukaj
+            </button>
+        </div>
+    </div>
+
+    <!-- Clients Table -->
+    <div class="table-container">
+        <table class="refined-table">
+            <thead>
+                <tr>
+                    <th>Imię i nazwisko</th>
+                    <th>Telefon</th>
+                    <th>Email</th>
+                    <th>Ostatnia wizyta</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="clients-tbody">
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <span class="material-icons empty-icon">people</span>
+                        <p class="empty-text">Ładowanie klientów...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Format date to Polish locale
+function formatDate(dateString) {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pl-PL');
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// Load statistics
+async function loadStatistics() {
+    try {
+        const response = await fetch('/api/clients/statistics');
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('stat-total').textContent = data.statistics.total_clients || 0;
+            document.getElementById('stat-active').textContent = data.statistics.active_clients || 0;
+            document.getElementById('stat-recent').textContent = data.statistics.recent_visitors || 0;
+            document.getElementById('stat-birthdays').textContent = data.statistics.clients_with_birthdate || 0;
+        }
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+    }
+}
+
+// Load clients list
+async function loadClients() {
+    const searchQuery = document.getElementById('search-input').value.trim();
+    const tbody = document.getElementById('clients-tbody');
+
+    try {
+        const url = searchQuery
+            ? `/api/clients?search=${encodeURIComponent(searchQuery)}`
+            : '/api/clients';
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.clients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <span class="material-icons empty-icon">search_off</span>
+                            <p class="empty-text">Nie znaleziono klientów</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = data.clients.map(client => {
+                const initials = escapeHtml(client.first_name.charAt(0) + client.last_name.charAt(0));
+                const fullName = escapeHtml(client.full_name);
+                const phone = client.phone ? escapeHtml(client.phone) : '<span style="color: var(--color-ink-subtle)">—</span>';
+                const email = client.email ? escapeHtml(client.email) : '<span style="color: var(--color-ink-subtle)">—</span>';
+                const lastVisit = formatDate(client.last_visit_date);
+                const statusBadge = client.is_active
+                    ? '<span class="status-badge active">Aktywny</span>'
+                    : '<span class="status-badge inactive">Nieaktywny</span>';
+                const ageInfo = client.age ? `<div class="client-age">${client.age} lat</div>` : '';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="client-info">
+                                <div class="client-avatar">${initials}</div>
+                                <div>
+                                    <div class="client-name">${fullName}</div>
+                                    ${ageInfo}
+                                </div>
+                            </div>
+                        </td>
+                        <td>${phone}</td>
+                        <td>${email}</td>
+                        <td>${lastVisit}</td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align: right;">
+                            <a href="/client/${client.id}" class="action-link">Zobacz</a>
+                            <span style="margin: 0 0.5rem; color: var(--color-border);">|</span>
+                            <a href="/client/${client.id}/edit" class="action-link secondary">Edytuj</a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <p class="empty-text" style="color: #9b2c2c;">Błąd ładowania klientów: ${escapeHtml(data.error)}</p>
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading clients:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <p class="empty-text" style="color: #9b2c2c;">Błąd połączenia z serwerem</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Search on Enter key
+document.getElementById('search-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        loadClients();
+    }
+});
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadStatistics();
+    loadClients();
+});
+</script>
+{% endblock %}
