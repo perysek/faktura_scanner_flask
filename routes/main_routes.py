@@ -98,6 +98,52 @@ def dashboard():
     return render_template('dashboard/index.html')
 
 
+# ============================================================================
+# CLIENT MANAGEMENT ROUTES
+# ============================================================================
+
+@main_bp.route('/clients')
+@login_required
+@module_permission_required('clients')
+def clients_list():
+    """Client list view"""
+    return render_template('clients/list.html')
+
+
+@main_bp.route('/client/create')
+@login_required
+@module_permission_required('clients')
+def create_client():
+    """Create new client form"""
+    return render_template('clients/create.html')
+
+
+@main_bp.route('/client/<int:client_id>')
+@login_required
+@module_permission_required('clients')
+def view_client(client_id):
+    """View client details"""
+    row = current_app.client_repo.get_by_id(client_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+
+    client = current_app.client_repo.row_to_client(row)
+    return render_template('clients/view.html', client=client)
+
+
+@main_bp.route('/client/<int:client_id>/edit')
+@login_required
+@module_permission_required('clients')
+def edit_client(client_id):
+    """Edit client form"""
+    row = current_app.client_repo.get_by_id(client_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+
+    client = current_app.client_repo.row_to_client(row)
+    return render_template('clients/edit.html', client=client)
+
+
 @main_bp.route('/settings/email')
 @login_required
 @module_permission_required('invoices')

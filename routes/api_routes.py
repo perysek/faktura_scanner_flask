@@ -1948,3 +1948,297 @@ def check_seller_duplicate():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# CLIENT MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@api_bp.route('/clients', methods=['GET'])
+@login_required
+@module_permission_required('clients')
+def get_clients():
+    """Get all clients with optional search"""
+    try:
+        search_query = request.args.get('search', '').strip()
+
+        if search_query:
+            rows = current_app.client_repo.search(search_query)
+        else:
+            rows = current_app.client_repo.get_active_clients()
+
+        # Convert to Client objects then to dicts
+        clients = [current_app.client_repo.row_to_client(row) for row in rows]
+        clients_data = []
+
+        for client in clients:
+            client_dict = vars(client).copy()
+            # Convert dates to ISO format for JSON
+            if client.date_of_birth:
+                client_dict['date_of_birth'] = client.date_of_birth.isoformat()
+            if client.first_visit_date:
+                client_dict['first_visit_date'] = client.first_visit_date.isoformat()
+            if client.last_visit_date:
+                client_dict['last_visit_date'] = client.last_visit_date.isoformat()
+            if client.created_at:
+                client_dict['created_at'] = client.created_at.isoformat()
+            if client.updated_at:
+                client_dict['updated_at'] = client.updated_at.isoformat()
+            # Add computed properties
+            client_dict['full_name'] = client.full_name
+            client_dict['age'] = client.age
+            clients_data.append(client_dict)
+
+        return jsonify({
+            'success': True,
+            'clients': clients_data,
+            'count': len(clients_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/<int:client_id>', methods=['GET'])
+@login_required
+@module_permission_required('clients')
+def get_client(client_id):
+    """Get single client by ID"""
+    try:
+        row = current_app.client_repo.get_by_id(client_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        client = current_app.client_repo.row_to_client(row)
+        client_dict = vars(client).copy()
+
+        # Convert dates to ISO format
+        if client.date_of_birth:
+            client_dict['date_of_birth'] = client.date_of_birth.isoformat()
+        if client.first_visit_date:
+            client_dict['first_visit_date'] = client.first_visit_date.isoformat()
+        if client.last_visit_date:
+            client_dict['last_visit_date'] = client.last_visit_date.isoformat()
+        if client.created_at:
+            client_dict['created_at'] = client.created_at.isoformat()
+        if client.updated_at:
+            client_dict['updated_at'] = client.updated_at.isoformat()
+
+        # Add computed properties
+        client_dict['full_name'] = client.full_name
+        client_dict['age'] = client.age
+
+        return jsonify({
+            'success': True,
+            'client': client_dict
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients', methods=['POST'])
+@login_required
+@module_permission_required('clients')
+def create_client_endpoint():
+    """Create new client"""
+    try:
+        data = request.get_json()
+
+        # Check for duplicate email if provided
+        if data.get('email'):
+            existing = current_app.client_repo.find_by_email(data['email'])
+            if existing:
+                return jsonify({
+                    'success': False,
+                    'error': 'Klient z tym adresem email już istnieje',
+                    'field': 'email'
+                }), 400
+
+        # Create Client object
+        from database.models import Client
+        client = Client(
+            first_name=data.get('first_name', '').strip(),
+            last_name=data.get('last_name', '').strip(),
+            phone=data.get('phone', '').strip() if data.get('phone') else None,
+            email=data.get('email', '').strip() if data.get('email') else None,
+            date_of_birth=parse_date_string(data.get('date_of_birth')) if data.get('date_of_birth') else None,
+            notes=data.get('notes', '').strip() if data.get('notes') else None,
+            preferences=data.get('preferences') if data.get('preferences') else None,
+            first_visit_date=parse_date_string(data.get('first_visit_date')) if data.get('first_visit_date') else None,
+            last_visit_date=parse_date_string(data.get('last_visit_date')) if data.get('last_visit_date') else None,
+            is_active=data.get('is_active', True)
+        )
+
+        # Validate required fields
+        if not client.first_name or not client.last_name:
+            return jsonify({
+                'success': False,
+                'error': 'Imię i nazwisko są wymagane'
+            }), 400
+
+        # Save to database
+        client_id = current_app.client_repo.create(client)
+
+        return jsonify({
+            'success': True,
+            'message': 'Klient został utworzony',
+            'client_id': client_id
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/<int:client_id>', methods=['PUT'])
+@login_required
+@module_permission_required('clients')
+def update_client(client_id):
+    """Update client"""
+    try:
+        data = request.get_json()
+        row = current_app.client_repo.get_by_id(client_id)
+
+        if not row:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        # Convert row to Client object
+        client = current_app.client_repo.row_to_client(row)
+
+        # Check email uniqueness if changed
+        if data.get('email') and data['email'] != client.email:
+            existing = current_app.client_repo.find_by_email(data['email'])
+            if existing and existing['id'] != client_id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Klient z tym adresem email już istnieje',
+                    'field': 'email'
+                }), 400
+
+        # Update fields
+        client.first_name = data.get('first_name', client.first_name).strip()
+        client.last_name = data.get('last_name', client.last_name).strip()
+        client.phone = data.get('phone', '').strip() if data.get('phone') else None
+        client.email = data.get('email', '').strip() if data.get('email') else None
+        client.date_of_birth = parse_date_string(data.get('date_of_birth')) if 'date_of_birth' in data else client.date_of_birth
+        client.notes = data.get('notes', client.notes)
+        client.preferences = data.get('preferences', client.preferences)
+        client.is_active = data.get('is_active', client.is_active)
+
+        # Update in database
+        success = current_app.client_repo.update(client_id, client)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Klient został zaktualizowany'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Nie udało się zaktualizować klienta'
+            }), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/<int:client_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('clients')
+def delete_client(client_id):
+    """Deactivate client (soft delete)"""
+    try:
+        row = current_app.client_repo.get_by_id(client_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        # Deactivate instead of delete
+        success = current_app.client_repo.deactivate(client_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Klient został dezaktywowany'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Nie udało się dezaktywować klienta'
+            }), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/<int:client_id>/activate', methods=['POST'])
+@login_required
+@module_permission_required('clients')
+def activate_client(client_id):
+    """Reactivate client"""
+    try:
+        row = current_app.client_repo.get_by_id(client_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        success = current_app.client_repo.activate(client_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Klient został aktywowany'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Nie udało się aktywować klienta'
+            }), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/statistics', methods=['GET'])
+@login_required
+@module_permission_required('clients')
+def get_client_statistics():
+    """Get client statistics"""
+    try:
+        stats = current_app.client_repo.get_statistics()
+
+        return jsonify({
+            'success': True,
+            'statistics': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/birthdays', methods=['GET'])
+@login_required
+@module_permission_required('clients')
+def get_upcoming_birthdays():
+    """Get clients with upcoming birthdays"""
+    try:
+        days_ahead = request.args.get('days', 30, type=int)
+        rows = current_app.client_repo.get_upcoming_birthdays(days_ahead)
+
+        # Convert to Client objects
+        clients = [current_app.client_repo.row_to_client(row) for row in rows]
+        clients_data = []
+
+        for client in clients:
+            client_dict = {
+                'id': client.id,
+                'full_name': client.full_name,
+                'phone': client.phone,
+                'email': client.email,
+                'date_of_birth': client.date_of_birth.isoformat() if client.date_of_birth else None,
+                'age': client.age
+            }
+            clients_data.append(client_dict)
+
+        return jsonify({
+            'success': True,
+            'clients': clients_data,
+            'count': len(clients_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
