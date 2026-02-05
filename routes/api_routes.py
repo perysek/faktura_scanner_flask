@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Optional
 
 from flask import Blueprint, jsonify, request, current_app, send_file, session
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
+from config.auth_config import module_permission_required
 from database.models import Invoice
 from utils.validators import DateParser
 
@@ -39,6 +41,8 @@ def parse_date_string(date_str: Optional[str]) -> Optional[date]:
 
 
 @api_bp.route('/invoices', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_invoices():
     """Get all invoices with optional filtering"""
     search_query = request.args.get('search', '').strip()
@@ -63,6 +67,8 @@ def get_invoices():
 
 
 @api_bp.route('/invoices', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def create_invoice_manual():
     """Create invoice manually with optional PDF upload"""
     try:
@@ -245,6 +251,8 @@ def create_invoice_manual():
 
 
 @api_bp.route('/invoices/<int:invoice_id>', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_invoice(invoice_id: int):
     """Get single invoice by ID"""
     try:
@@ -264,6 +272,8 @@ def get_invoice(invoice_id: int):
 
 
 @api_bp.route('/invoices/<int:invoice_id>', methods=['PUT'])
+@login_required
+@module_permission_required('invoices')
 def update_invoice(invoice_id: int):
     """Update invoice"""
     try:
@@ -441,6 +451,8 @@ def update_invoice(invoice_id: int):
 
 
 @api_bp.route('/invoices/<int:invoice_id>/confirm-seller', methods=['PUT'])
+@login_required
+@module_permission_required('invoices')
 def confirm_seller_and_update(invoice_id: int):
     """Confirm seller action (create new or use existing) and update invoice"""
     try:
@@ -546,6 +558,8 @@ def confirm_seller_and_update(invoice_id: int):
 
 
 @api_bp.route('/invoices/<int:invoice_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('invoices')
 def delete_invoice(invoice_id: int):
     """Delete invoice"""
     try:
@@ -588,6 +602,8 @@ def delete_invoice(invoice_id: int):
 
 
 @api_bp.route('/invoices/statistics', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_statistics():
     """Get invoice statistics"""
     try:
@@ -747,6 +763,8 @@ def get_monthly_totals():
 
 
 @api_bp.route('/upload', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def upload_files():
     """Upload and process PDF files"""
     import sys
@@ -895,6 +913,8 @@ def upload_files():
 
 
 @api_bp.route('/export/<format>', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def export_invoices(format: str):
     """Export invoices to Excel or CSV"""
     try:
@@ -928,6 +948,8 @@ def export_invoices(format: str):
 
 
 @api_bp.route('/email/import', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def import_from_email():
     """Import PDFs from email - Stage files with metadata (NEW WORKFLOW)"""
     import json
@@ -1182,6 +1204,8 @@ def email_settings():
 
 
 @api_bp.route('/history', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_history():
     """Get audit history"""
     try:
@@ -1279,6 +1303,8 @@ def view_pdf(invoice_id: int):
 # ============================================================================
 
 @api_bp.route('/sellers', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_sellers():
     """Get all sellers with statistics"""
     try:
@@ -1496,6 +1522,8 @@ def get_seller_conflicts():
 
 
 @api_bp.route('/sellers', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def create_seller():
     """Create a new seller with duplicate validation"""
     try:

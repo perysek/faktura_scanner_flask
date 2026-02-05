@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 
 from flask import Flask, render_template
+from flask_login import LoginManager
 
 # Configure logging for debugging
 logging.basicConfig(
@@ -44,10 +45,27 @@ def create_app():
     app = Flask(__name__)
 
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production-flask-login-session-key-2026')
     app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['PDF_FOLDER'] = str(PDF_FOLDER)
+
+    # Flask-Login initialization
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = 'Musisz być zalogowany, aby uzyskać dostęp do tej strony.'
+    login_manager.login_message_category = 'warning'
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        """Load user by ID for Flask-Login"""
+        from repositories.users.user_repository import UserRepository
+        user_repo = UserRepository()
+        user_row = user_repo.get_by_id(int(user_id))
+        if user_row:
+            return user_repo.row_to_user(user_row)
+        return None
 
     # Ensure upload folders exist
     UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -75,10 +93,12 @@ def create_app():
     from routes.main_routes import main_bp
     from routes.api_routes import api_bp
     from routes.upload_routes import upload_bp
+    from routes.auth.routes import auth_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api/upload')
+    app.register_blueprint(auth_bp)  # Auth blueprint already has /auth prefix
 
     # Error handlers
     @app.errorhandler(404)

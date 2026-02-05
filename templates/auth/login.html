@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie - FakturaScanner</title>
+
+    <!-- TailwindCSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Refined Minimal Design System */
+        :root {
+            --color-ink: #1a1a1a;
+            --color-ink-muted: #525252;
+            --color-ink-subtle: #8a8a8a;
+            --color-surface: #fafafa;
+            --color-surface-warm: #f7f6f3;
+            --color-border: #e8e6e1;
+            --color-border-subtle: #f0eeea;
+            --color-accent: #c9a227;
+            --color-success: #2d6a4f;
+            --color-error: #9b2c2c;
+            --font-display: 'Inter', system-ui, sans-serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body {
+            background: var(--color-surface-warm);
+            font-family: var(--font-body);
+            color: var(--color-ink);
+        }
+
+        .refined-card {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .refined-input {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            font-family: var(--font-body);
+            font-size: 0.8125rem;
+            font-weight: 300;
+            color: var(--color-ink);
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 2px;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .refined-input::placeholder {
+            color: var(--color-ink-subtle);
+        }
+
+        .refined-input:focus {
+            outline: none;
+            border-color: var(--color-ink-muted);
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+        }
+
+        .refined-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--color-ink-subtle);
+            margin-bottom: 0.5rem;
+        }
+
+        .refined-btn-primary {
+            width: 100%;
+            background: var(--color-ink);
+            color: white;
+            padding: 0.625rem 1rem;
+            font-family: var(--font-body);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            border-radius: 2px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s var(--ease-out-expo);
+        }
+
+        .refined-btn-primary:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .refined-title {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--color-ink);
+            margin-bottom: 0.5rem;
+        }
+
+        .refined-subtitle {
+            color: var(--color-ink-muted);
+            font-size: 0.8125rem;
+            font-weight: 300;
+        }
+
+        .refined-checkbox {
+            margin-right: 0.5rem;
+        }
+
+        .refined-checkbox-label {
+            font-size: 0.8125rem;
+            color: var(--color-ink-muted);
+            font-weight: 300;
+        }
+
+        .refined-footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.6875rem;
+            color: var(--color-ink-subtle);
+        }
+
+        .flash-message {
+            padding: 0.75rem 1rem;
+            border-radius: 2px;
+            margin-bottom: 1.5rem;
+            font-size: 0.8125rem;
+        }
+
+        .flash-error {
+            background: rgba(155, 44, 44, 0.08);
+            color: var(--color-error);
+            border: 1px solid rgba(155, 44, 44, 0.2);
+        }
+
+        .flash-success {
+            background: rgba(45, 106, 79, 0.08);
+            color: var(--color-success);
+            border: 1px solid rgba(45, 106, 79, 0.2);
+        }
+
+        .flash-warning {
+            background: var(--color-accent-muted);
+            color: #9a6700;
+            border: 1px solid rgba(201, 162, 39, 0.2);
+        }
+
+        .dev-helper {
+            margin-top: 1.5rem;
+            background: rgba(201, 162, 39, 0.08);
+            border: 1px solid var(--color-border);
+            border-radius: 2px;
+            padding: 1rem;
+        }
+
+        .dev-helper-title {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: #9a6700;
+            margin-bottom: 0.5rem;
+        }
+
+        .dev-helper-text {
+            font-size: 0.6875rem;
+            color: var(--color-ink-muted);
+            line-height: 1.6;
+        }
+
+        .dev-helper-code {
+            background: rgba(201, 162, 39, 0.12);
+            padding: 0.125rem 0.375rem;
+            border-radius: 1px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+    </style>
+</head>
+<body class="h-full flex items-center justify-center">
+    <div class="max-w-md w-full mx-4">
+        <div class="refined-card" style="padding: 2.5rem;">
+            <!-- Logo/Header -->
+            <div class="text-center" style="margin-bottom: 2.5rem;">
+                <h1 class="refined-title">FakturaScanner</h1>
+                <p class="refined-subtitle">System zarządzania salonem urody</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash-message {% if category == 'error' %}flash-error{% elif category == 'success' %}flash-success{% elif category == 'warning' %}flash-warning{% else %}flash-info{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Login Form -->
+            <form method="POST" action="{{ url_for('auth.login') }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <!-- Email -->
+                <div>
+                    <label for="email" class="refined-label">
+                        Adres email
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ email or '' }}"
+                        required
+                        autofocus
+                        class="refined-input"
+                        placeholder="twoj@email.pl"
+                    >
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="refined-label">
+                        Hasło
+                    </label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        class="refined-input"
+                        placeholder="••••••••"
+                    >
+                </div>
+
+                <!-- Remember Me -->
+                <div style="display: flex; align-items: center;">
+                    <input
+                        type="checkbox"
+                        id="remember"
+                        name="remember"
+                        class="refined-checkbox"
+                    >
+                    <label for="remember" class="refined-checkbox-label">
+                        Zapamiętaj mnie
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="refined-btn-primary">
+                    Zaloguj się
+                </button>
+            </form>
+
+            <!-- Footer -->
+            <div class="refined-footer">
+                <p>© {{ now().year }} FakturaScanner. Wszelkie prawa zastrzeżone.</p>
+            </div>
+        </div>
+
+        <!-- Development Credentials Helper (remove in production) -->
+        {% if config.DEBUG %}
+        <div class="dev-helper">
+            <p class="dev-helper-title">🔧 Środowisko deweloperskie</p>
+            <p class="dev-helper-text">
+                Użyj jednego z testowych kont (zostaną utworzone przez skrypt seed):<br>
+                <code class="dev-helper-code">admin@salon.pl</code> (Admin)<br>
+                <code class="dev-helper-code">receptionist@salon.pl</code> (Receptionist)<br>
+                Hasło: <code class="dev-helper-code">Test123!</code>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

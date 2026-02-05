@@ -7,7 +7,7 @@
 
     <!-- TailwindCSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
-    
+
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,10 +22,11 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="h-full bg-gradient-to-br from-slate-50 to-slate-100 font-sans antialiased text-slate-800">
+    {% if current_user.is_authenticated %}
     <div class="flex h-full">
         <!-- Sidebar -->
         {% include 'components/sidebar.html' %}
-        
+
         <!-- Main Content -->
         <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
             <!-- Header -->
@@ -35,22 +36,28 @@
                     {% block page_actions %}{% endblock %}
                 </div>
             </header>
-            
+
             <!-- Flash Messages -->
             {% include 'components/flash_messages.html' %}
-            
+
             <!-- Page Content -->
             <main class="flex-1 overflow-auto p-2" id="main-content">
+    {% else %}
+    <!-- Not authenticated - show minimal centered layout -->
+    <div class="flex items-center justify-center min-h-screen">
+    {% endif %}
                 {% block content %}{% endblock %}
+    {% if current_user.is_authenticated %}
             </main>
-            
+
             <!-- Footer -->
             <footer class="bg-white/50 border-t border-slate-200 px-6 py-3 text-center text-xs text-slate-500">
                 &copy; {{ now().year }} FakturaScanner. Wszelkie prawa zastrzeżone.
             </footer>
         </div>
+    {% endif %}
     </div>
-    
+
     <!-- Modals Container -->
     <div id="modal-container"></div>
     {% include 'components/confirm_modal.html' ignore missing %}
@@ -67,4 +74,3 @@
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
-

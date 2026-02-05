@@ -2,24 +2,39 @@
 Main page routes - renders Jinja templates
 """
 from flask import Blueprint, render_template, current_app
+from flask_login import login_required, current_user
+
+from config.auth_config import module_permission_required
 
 main_bp = Blueprint('main', __name__)
 
 
 @main_bp.route('/')
+@login_required
+def index():
+    """Redirect to dashboard"""
+    return render_template('dashboard/index.html')
+
+
 @main_bp.route('/invoices')
+@login_required
+@module_permission_required('invoices')
 def invoices_list():
     """Main view - invoice list with refined minimal design"""
     return render_template('invoices/list_refined.html')
 
 
 @main_bp.route('/upload')
+@login_required
+@module_permission_required('invoices')
 def upload():
     """Upload view - PDF import and OCR processing"""
     return render_template('invoices/upload.html')
 
 
 @main_bp.route('/invoice/<int:invoice_id>/edit')
+@login_required
+@module_permission_required('invoices')
 def edit_invoice(invoice_id):
     """Edit view - edit invoice data"""
     row = current_app.invoice_repo.get_by_id(invoice_id)
@@ -33,30 +48,40 @@ def edit_invoice(invoice_id):
 
 
 @main_bp.route('/invoice/create')
+@login_required
+@module_permission_required('invoices')
 def create_invoice():
     """Create view - manual invoice entry"""
     return render_template('invoices/create.html')
 
 
 @main_bp.route('/history')
+@login_required
+@module_permission_required('invoices')
 def history():
     """History view with refined minimal design"""
     return render_template('history/list_refined.html')
 
 
 @main_bp.route('/sellers')
+@login_required
+@module_permission_required('invoices')
 def sellers_list():
     """Sellers list view with refined minimal design"""
     return render_template('sellers/list_refined.html')
 
 
 @main_bp.route('/seller/create')
+@login_required
+@module_permission_required('invoices')
 def create_seller():
     """Create new seller form"""
     return render_template('sellers/create.html')
 
 
 @main_bp.route('/seller/<int:seller_id>/edit')
+@login_required
+@module_permission_required('invoices')
 def edit_seller(seller_id):
     """Edit seller form"""
     row = current_app.seller_repo.get_by_id(seller_id)
@@ -67,12 +92,15 @@ def edit_seller(seller_id):
 
 
 @main_bp.route('/dashboard')
+@login_required
 def dashboard():
     """Dashboard view - statistics and overview"""
     return render_template('dashboard/index.html')
 
 
 @main_bp.route('/settings/email')
+@login_required
+@module_permission_required('invoices')
 def email_settings():
     """Email settings view - IMAP configuration"""
     return render_template('settings/email.html')
