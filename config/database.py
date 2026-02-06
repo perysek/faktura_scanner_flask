@@ -13,6 +13,11 @@ def get_database_path() -> str:
 	return str(DB_PATH)
 
 
+def get_db_connection() -> sqlite3.Connection:
+	"""Helper function to get database connection (used by repositories)"""
+	return DatabaseConnection.get_connection()
+
+
 class DatabaseConnection:
 	"""Singleton connection do SQLite"""
 	

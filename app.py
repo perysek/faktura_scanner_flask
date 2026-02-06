@@ -31,6 +31,8 @@ from repositories.audit_repository import AuditRepository
 from repositories.upload_staging_repository import UploadStagingRepository
 from repositories.seller_repository import SellerRepository
 from repositories.clients.client_repository import ClientRepository
+from repositories.services.service_repository import ServiceRepository
+from repositories.employees.employee_repository import EmployeeRepository
 
 # Import services
 from services.ocr_service import OCRService
@@ -82,6 +84,8 @@ def create_app():
     app.staging_repo = UploadStagingRepository(db_path=get_database_path())
     app.seller_repo = SellerRepository()
     app.client_repo = ClientRepository()
+    app.service_repo = ServiceRepository()
+    app.employee_repo = EmployeeRepository()
 
     # Initialize services
     app.ocr_service = OCRService()

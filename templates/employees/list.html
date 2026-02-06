@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Pracownicy - {{ app_name }}{% endblock %}
+{% block extra_css %}
+<style>
+:root{--color-ink:#1a1a1a;--color-ink-muted:#525252;--color-ink-subtle:#8a8a8a;--color-surface-warm:#f7f6f3;--color-border:#e8e6e1;--font-display:'Inter',system-ui,sans-serif;--ease-out-expo:cubic-bezier(0.16,1,0.3,1)}
+body{background:var(--color-surface-warm);font-family:var(--font-display);color:var(--color-ink)}.refined-page{max-width:1400px;margin:0 auto;padding:2rem}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}.page-title{font-size:1.75rem;font-weight:600;margin-bottom:0.5rem}.page-subtitle{color:var(--color-ink-muted);font-size:0.8125rem}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-bottom:1.5rem}.stat-card{background:white;border:1px solid var(--color-border);border-radius:2px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.04);display:flex;justify-content:space-between}
+.stat-label{font-size:0.75rem;font-weight:500;text-transform:uppercase;color:var(--color-ink-subtle);margin-bottom:0.5rem}.stat-value{font-size:1.75rem;font-weight:600}.stat-icon{width:3rem;height:3rem;border-radius:2px;display:flex;align-items:center;justify-content:center}
+.refined-input{flex:1;padding:0.625rem 1rem;font-size:0.8125rem;border:1px solid var(--color-border);border-radius:2px}.refined-input:focus{outline:none;border-color:var(--color-ink-muted)}
+.refined-btn-primary{display:inline-flex;align-items:center;gap:0.375rem;padding:0.625rem 1rem;font-size:0.8125rem;font-weight:500;background:var(--color-ink);color:white;border-radius:2px;border:none;cursor:pointer;text-decoration:none}
+.refined-btn-secondary{display:inline-flex;align-items:center;gap:0.375rem;padding:0.625rem 1rem;font-size:0.8125rem;background:white;color:var(--color-ink-muted);border-radius:2px;border:1px solid var(--color-border);cursor:pointer}
+.table-container{background:white;border:1px solid var(--color-border);border-radius:2px;overflow:hidden}.refined-table{width:100%;border-collapse:collapse}.refined-table th{padding:0.75rem 1rem;font-size:0.6875rem;text-transform:uppercase;color:var(--color-ink-subtle);text-align:left}
+.refined-table td{padding:0.75rem 1rem;font-size:0.8125rem}.material-icons{font-size:1rem}.fade-in{animation:fadeIn 0.4s}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="refined-page fade-in">
+<header class="page-header"><div><h1 class="page-title">Pracownicy</h1><p class="page-subtitle">Zarządzanie personelem</p></div><a href="{{ url_for('main.create_employee') }}" class="refined-btn-primary"><span class="material-icons">add</span>Dodaj</a></header>
+<div class="table-container"><table class="refined-table"><thead><tr><th>Imię i nazwisko</th><th>Stanowisko</th><th>Email</th><th>Status</th><th>Akcje</th></tr></thead><tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:3rem">Ładowanie...</td></tr></tbody></table></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function load(){try{const r=await fetch('/api/employees');const d=await r.json();if(d.success){document.getElementById('tbody').innerHTML=d.employees.map(e=>`<tr><td>${e.full_name}</td><td>${e.position||'-'}</td><td>${e.email||'-'}</td><td>${e.is_active?'Aktywny':'Nieaktywny'}</td><td><a href="/employee/${e.id}">Zobacz</a> | <a href="/employee/${e.id}/edit">Edytuj</a></td></tr>`).join('');}}catch(e){}}
+document.addEventListener('DOMContentLoaded',load);
+</script>
+{% endblock %}

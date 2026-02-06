@@ -77,13 +77,13 @@ OCR_PREPROCESSING_PROFILES = {
 OCR_RETRY_PROFILE_ORDER = ['high_contrast', 'high_resolution', 'minimal']
 
 # GUI settings (legacy)
-APP_TITLE = "FakturaScanner"
+APP_TITLE = "MyWay Beauty Salon"
 APP_WIDTH = 1200
 APP_HEIGHT = 800
 
 # Web app settings
-APP_NAME = "FakturaScanner"
-VERSION = "2.0.0"
+APP_NAME = "MyWay Beauty Salon"
+VERSION = "1.1.0"
 UPLOAD_FOLDER = BASE_DIR / "uploads"
 PDF_FOLDER = BASE_DIR / "pdfs"
 

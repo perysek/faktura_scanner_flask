@@ -144,6 +144,102 @@ def edit_client(client_id):
     return render_template('clients/edit.html', client=client)
 
 
+# ============================================================================
+# SERVICES ROUTES
+# ============================================================================
+
+@main_bp.route('/services')
+@login_required
+@module_permission_required('services')
+def services_list():
+    """Services list view"""
+    return render_template('services/list.html')
+
+
+@main_bp.route('/service/create')
+@login_required
+@module_permission_required('services')
+def create_service():
+    """Create new service form"""
+    return render_template('services/create.html')
+
+
+@main_bp.route('/service/<int:service_id>')
+@login_required
+@module_permission_required('services')
+def view_service(service_id):
+    """View service details"""
+    row = current_app.service_repo.get_by_id(service_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+
+    service = current_app.service_repo.row_to_service(row)
+    return render_template('services/view.html', service=service)
+
+
+@main_bp.route('/service/<int:service_id>/edit')
+@login_required
+@module_permission_required('services')
+def edit_service(service_id):
+    """Edit service form"""
+    row = current_app.service_repo.get_by_id(service_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+
+    service = current_app.service_repo.row_to_service(row)
+    return render_template('services/edit.html', service=service)
+
+
+# ============================================================================
+# EMPLOYEES ROUTES
+# ============================================================================
+
+@main_bp.route('/employees')
+@login_required
+@module_permission_required('employees')
+def employees_list():
+    """Employees list view"""
+    return render_template('employees/list.html')
+
+
+@main_bp.route('/employee/create')
+@login_required
+@module_permission_required('employees')
+def create_employee():
+    """Create new employee form"""
+    return render_template('employees/create.html')
+
+
+@main_bp.route('/employee/<int:employee_id>')
+@login_required
+@module_permission_required('employees')
+def view_employee(employee_id):
+    """View employee details"""
+    row = current_app.employee_repo.get_by_id(employee_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+
+    employee = current_app.employee_repo.row_to_employee(row)
+    return render_template('employees/view.html', employee=employee)
+
+
+@main_bp.route('/employee/<int:employee_id>/edit')
+@login_required
+@module_permission_required('employees')
+def edit_employee(employee_id):
+    """Edit employee form"""
+    row = current_app.employee_repo.get_by_id(employee_id)
+    if not row:
+        return render_template('errors/404.html'), 404
+
+    employee = current_app.employee_repo.row_to_employee(row)
+    return render_template('employees/edit.html', employee=employee)
+
+
+# ============================================================================
+# SETTINGS ROUTES
+# ============================================================================
+
 @main_bp.route('/settings/email')
 @login_required
 @module_permission_required('invoices')

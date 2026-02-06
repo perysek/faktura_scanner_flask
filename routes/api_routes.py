@@ -2242,3 +2242,476 @@ def get_upcoming_birthdays():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# SERVICES API ENDPOINTS
+# ============================================================================
+
+@api_bp.route('/services', methods=['GET'])
+@login_required
+@module_permission_required('services')
+def get_services():
+    """Get all services with optional filtering"""
+    search_query = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
+    active_only = request.args.get('active_only', 'true').lower() == 'true'
+
+    try:
+        if search_query:
+            rows = current_app.service_repo.search(search_query, active_only)
+        elif category:
+            rows = current_app.service_repo.get_by_category(category, active_only)
+        else:
+            rows = current_app.service_repo.get_all(active_only)
+
+        # Convert Row objects to Service objects
+        services = [current_app.service_repo.row_to_service(row) for row in rows]
+        services_data = []
+
+        for service in services:
+            service_dict = {
+                'id': service.id,
+                'name': service.name,
+                'description': service.description,
+                'category': service.category,
+                'duration_minutes': service.duration_minutes,
+                'formatted_duration': service.formatted_duration,
+                'price': service.price,
+                'currency': service.currency,
+                'formatted_price': service.formatted_price,
+                'is_active': service.is_active,
+                'created_at': service.created_at.isoformat() if service.created_at else None,
+                'updated_at': service.updated_at.isoformat() if service.updated_at else None
+            }
+            services_data.append(service_dict)
+
+        return jsonify({
+            'success': True,
+            'services': services_data,
+            'count': len(services_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services/<int:service_id>', methods=['GET'])
+@login_required
+@module_permission_required('services')
+def get_service(service_id):
+    """Get single service by ID"""
+    try:
+        row = current_app.service_repo.get_by_id(service_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Usługa nie znaleziona'}), 404
+
+        service = current_app.service_repo.row_to_service(row)
+        service_dict = {
+            'id': service.id,
+            'name': service.name,
+            'description': service.description,
+            'category': service.category,
+            'duration_minutes': service.duration_minutes,
+            'formatted_duration': service.formatted_duration,
+            'price': service.price,
+            'currency': service.currency,
+            'formatted_price': service.formatted_price,
+            'is_active': service.is_active,
+            'created_at': service.created_at.isoformat() if service.created_at else None,
+            'updated_at': service.updated_at.isoformat() if service.updated_at else None
+        }
+
+        return jsonify({
+            'success': True,
+            'service': service_dict
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services', methods=['POST'])
+@login_required
+@module_permission_required('services')
+def create_service_endpoint():
+    """Create new service"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({'success': False, 'error': 'Nazwa usługi jest wymagana'}), 400
+        if not data.get('category'):
+            return jsonify({'success': False, 'error': 'Kategoria jest wymagana'}), 400
+        if not data.get('duration_minutes'):
+            return jsonify({'success': False, 'error': 'Czas trwania jest wymagany'}), 400
+        if not data.get('price'):
+            return jsonify({'success': False, 'error': 'Cena jest wymagana'}), 400
+
+        from database.models import Service
+        service = Service(
+            name=data.get('name'),
+            description=data.get('description'),
+            category=data.get('category'),
+            duration_minutes=int(data.get('duration_minutes')),
+            price=float(data.get('price')),
+            currency=data.get('currency', 'PLN'),
+            is_active=data.get('is_active', True)
+        )
+
+        service_id = current_app.service_repo.create(service)
+
+        return jsonify({
+            'success': True,
+            'service_id': service_id,
+            'message': 'Usługa została utworzona pomyślnie'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services/<int:service_id>', methods=['PUT'])
+@login_required
+@module_permission_required('services')
+def update_service(service_id):
+    """Update existing service"""
+    try:
+        # Check if service exists
+        existing = current_app.service_repo.get_by_id(service_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Usługa nie znaleziona'}), 404
+
+        data = request.get_json()
+
+        from database.models import Service
+        service = Service(
+            id=service_id,
+            name=data.get('name'),
+            description=data.get('description'),
+            category=data.get('category'),
+            duration_minutes=int(data.get('duration_minutes')),
+            price=float(data.get('price')),
+            currency=data.get('currency', 'PLN'),
+            is_active=data.get('is_active', True)
+        )
+
+        success = current_app.service_repo.update(service_id, service)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Usługa została zaktualizowana pomyślnie'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Nie udało się zaktualizować usługi'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services/<int:service_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('services')
+def delete_service(service_id):
+    """Delete (deactivate) service"""
+    try:
+        success = current_app.service_repo.delete(service_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Usługa została dezaktywowana'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Nie udało się dezaktywować usługi'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services/statistics', methods=['GET'])
+@login_required
+@module_permission_required('services')
+def get_service_statistics():
+    """Get service statistics"""
+    try:
+        stats = current_app.service_repo.get_statistics()
+
+        return jsonify({
+            'success': True,
+            'statistics': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services/categories', methods=['GET'])
+@login_required
+@module_permission_required('services')
+def get_service_categories():
+    """Get all service categories"""
+    try:
+        categories = current_app.service_repo.get_categories()
+
+        return jsonify({
+            'success': True,
+            'categories': categories
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# EMPLOYEES API ENDPOINTS
+# ============================================================================
+
+@api_bp.route('/employees', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employees():
+    """Get all employees with optional filtering"""
+    search_query = request.args.get('search', '').strip()
+    position = request.args.get('position', '').strip()
+    active_only = request.args.get('active_only', 'true').lower() == 'true'
+
+    try:
+        if search_query:
+            rows = current_app.employee_repo.search(search_query, active_only)
+        elif position:
+            rows = current_app.employee_repo.get_by_position(position, active_only)
+        else:
+            rows = current_app.employee_repo.get_all(active_only)
+
+        # Convert Row objects to Employee objects
+        employees = [current_app.employee_repo.row_to_employee(row) for row in rows]
+        employees_data = []
+
+        for employee in employees:
+            employee_dict = {
+                'id': employee.id,
+                'user_id': employee.user_id,
+                'full_name': employee.full_name,
+                'first_name': employee.first_name,
+                'last_name': employee.last_name,
+                'phone': employee.phone,
+                'email': employee.email,
+                'position': employee.position,
+                'employment_status': employee.employment_status,
+                'hire_date': employee.hire_date.isoformat() if employee.hire_date else None,
+                'termination_date': employee.termination_date.isoformat() if employee.termination_date else None,
+                'base_salary': employee.base_salary,
+                'commission_rate': employee.commission_rate,
+                'is_active': employee.is_active,
+                'created_at': employee.created_at.isoformat() if employee.created_at else None
+            }
+            employees_data.append(employee_dict)
+
+        return jsonify({
+            'success': True,
+            'employees': employees_data,
+            'count': len(employees_data)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/employees/<int:employee_id>', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee(employee_id):
+    """Get single employee by ID"""
+    try:
+        row = current_app.employee_repo.get_by_id(employee_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+
+        employee = current_app.employee_repo.row_to_employee(row)
+        employee_dict = {
+            'id': employee.id,
+            'user_id': employee.user_id,
+            'full_name': employee.full_name,
+            'first_name': employee.first_name,
+            'last_name': employee.last_name,
+            'phone': employee.phone,
+            'email': employee.email,
+            'position': employee.position,
+            'employment_status': employee.employment_status,
+            'hire_date': employee.hire_date.isoformat() if employee.hire_date else None,
+            'termination_date': employee.termination_date.isoformat() if employee.termination_date else None,
+            'base_salary': employee.base_salary,
+            'commission_rate': employee.commission_rate,
+            'skills': employee.get_skills_dict(),
+            'specializations': employee.get_specializations_list(),
+            'work_schedule': employee.get_work_schedule_dict(),
+            'max_appointments_per_day': employee.max_appointments_per_day,
+            'notes': employee.notes,
+            'photo_path': employee.photo_path,
+            'is_active': employee.is_active,
+            'created_at': employee.created_at.isoformat() if employee.created_at else None,
+            'updated_at': employee.updated_at.isoformat() if employee.updated_at else None
+        }
+
+        return jsonify({
+            'success': True,
+            'employee': employee_dict
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/employees', methods=['POST'])
+@login_required
+@module_permission_required('employees')
+def create_employee_endpoint():
+    """Create new employee"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data.get('first_name'):
+            return jsonify({'success': False, 'error': 'Imię jest wymagane'}), 400
+        if not data.get('last_name'):
+            return jsonify({'success': False, 'error': 'Nazwisko jest wymagane'}), 400
+
+        # Check email uniqueness if provided
+        if data.get('email'):
+            existing = current_app.employee_repo.find_by_email(data.get('email'))
+            if existing:
+                return jsonify({'success': False, 'error': 'Pracownik z tym adresem email już istnieje'}), 400
+
+        from database.models import Employee
+        import json
+
+        employee = Employee(
+            user_id=data.get('user_id'),
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            phone=data.get('phone'),
+            email=data.get('email'),
+            position=data.get('position'),
+            employment_status=data.get('employment_status', 'active'),
+            hire_date=parse_date_string(data.get('hire_date')) if data.get('hire_date') else None,
+            base_salary=float(data.get('base_salary')) if data.get('base_salary') else None,
+            commission_rate=float(data.get('commission_rate')) if data.get('commission_rate') else None,
+            skills=json.dumps(data.get('skills')) if data.get('skills') else None,
+            specializations=json.dumps(data.get('specializations')) if data.get('specializations') else None,
+            work_schedule=json.dumps(data.get('work_schedule')) if data.get('work_schedule') else None,
+            max_appointments_per_day=int(data.get('max_appointments_per_day', 8)),
+            notes=data.get('notes'),
+            is_active=data.get('is_active', True)
+        )
+
+        employee_id = current_app.employee_repo.create(employee)
+
+        return jsonify({
+            'success': True,
+            'employee_id': employee_id,
+            'message': 'Pracownik został utworzony pomyślnie'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/employees/<int:employee_id>', methods=['PUT'])
+@login_required
+@module_permission_required('employees')
+def update_employee(employee_id):
+    """Update existing employee"""
+    try:
+        # Check if employee exists
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+
+        data = request.get_json()
+
+        # Check email uniqueness if changed
+        if data.get('email') and data.get('email') != existing['email']:
+            email_check = current_app.employee_repo.find_by_email(data.get('email'))
+            if email_check and email_check['id'] != employee_id:
+                return jsonify({'success': False, 'error': 'Pracownik z tym adresem email już istnieje'}), 400
+
+        from database.models import Employee
+        import json
+
+        employee = Employee(
+            id=employee_id,
+            user_id=data.get('user_id'),
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            phone=data.get('phone'),
+            email=data.get('email'),
+            position=data.get('position'),
+            employment_status=data.get('employment_status', 'active'),
+            hire_date=parse_date_string(data.get('hire_date')) if data.get('hire_date') else None,
+            termination_date=parse_date_string(data.get('termination_date')) if data.get('termination_date') else None,
+            base_salary=float(data.get('base_salary')) if data.get('base_salary') else None,
+            commission_rate=float(data.get('commission_rate')) if data.get('commission_rate') else None,
+            skills=json.dumps(data.get('skills')) if data.get('skills') else None,
+            specializations=json.dumps(data.get('specializations')) if data.get('specializations') else None,
+            work_schedule=json.dumps(data.get('work_schedule')) if data.get('work_schedule') else None,
+            max_appointments_per_day=int(data.get('max_appointments_per_day', 8)),
+            notes=data.get('notes'),
+            photo_path=data.get('photo_path'),
+            is_active=data.get('is_active', True)
+        )
+
+        success = current_app.employee_repo.update(employee_id, employee)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Pracownik został zaktualizowany pomyślnie'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Nie udało się zaktualizować pracownika'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/employees/<int:employee_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('employees')
+def delete_employee(employee_id):
+    """Delete (deactivate) employee"""
+    try:
+        success = current_app.employee_repo.delete(employee_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Pracownik został dezaktywowany'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Nie udało się dezaktywować pracownika'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/employees/statistics', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee_statistics():
+    """Get employee statistics"""
+    try:
+        stats = current_app.employee_repo.get_statistics()
+
+        return jsonify({
+            'success': True,
+            'statistics': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/employees/positions', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee_positions():
+    """Get all employee positions"""
+    try:
+        positions = current_app.employee_repo.get_positions()
+
+        return jsonify({
+            'success': True,
+            'positions': positions
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
