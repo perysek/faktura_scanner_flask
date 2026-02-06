@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Edytuj {{ service.name }} - {{ app_name }}{% endblock %}
+{% block extra_css %}
+<style>
+    :root{--color-ink:#1a1a1a;--color-ink-muted:#525252;--color-ink-subtle:#8a8a8a;--color-surface-warm:#f7f6f3;--color-border:#e8e6e1;--color-border-subtle:#f0eeea;--color-error:#9b2c2c;--font-display:'Inter',system-ui,sans-serif;--ease-out-expo:cubic-bezier(0.16,1,0.3,1)}
+    body{background:var(--color-surface-warm);font-family:var(--font-display);color:var(--color-ink)}
+    .refined-page{max-width:800px;margin:0 auto;padding:2rem}.page-title{font-size:1.75rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:0.5rem}.page-subtitle{color:var(--color-ink-muted);font-size:0.8125rem;font-weight:300}
+    .refined-card{background:white;border:1px solid var(--color-border);border-radius:2px;padding:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.04)}.section-title{font-size:1rem;font-weight:600;margin-bottom:1.25rem}
+    .form-grid{display:grid;gap:1.25rem;margin-bottom:1.5rem}.form-grid-2{grid-template-columns:1fr 1fr}@media (max-width:768px){.form-grid-2{grid-template-columns:1fr}}
+    .refined-label{display:block;font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-subtle);margin-bottom:0.5rem}.required-mark{color:var(--color-error)}
+    .refined-input,.refined-select{width:100%;padding:0.625rem 1rem;font-size:0.8125rem;font-weight:300;color:var(--color-ink);background:white;border:1px solid var(--color-border);border-radius:2px;transition:all 0.3s var(--ease-out-expo)}
+    .refined-input:focus,.refined-select:focus{outline:none;border-color:var(--color-ink-muted);box-shadow:0 0 0 3px rgba(26,26,26,0.04)}textarea.refined-input{resize:vertical;min-height:100px}
+    .checkbox-wrapper{display:flex;align-items:center;gap:0.5rem;padding:0.75rem 0}.refined-checkbox{width:1.125rem;height:1.125rem;cursor:pointer}.checkbox-label{font-size:0.8125rem;color:var(--color-ink);cursor:pointer}
+    .refined-btn-primary{display:inline-flex;align-items:center;gap:0.375rem;padding:0.625rem 1rem;font-size:0.8125rem;font-weight:500;background:var(--color-ink);color:white;border-radius:2px;border:none;cursor:pointer;transition:all 0.25s var(--ease-out-expo);flex:1;justify-content:center}
+    .refined-btn-primary:hover{background:#333;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+    .refined-btn-secondary{display:inline-flex;align-items:center;gap:0.375rem;padding:0.625rem 1rem;font-size:0.8125rem;font-weight:400;background:white;color:var(--color-ink-muted);border-radius:2px;border:1px solid var(--color-border);cursor:pointer;text-decoration:none;justify-content:center}
+    .refined-btn-secondary:hover{border-color:var(--color-ink-muted);background:#fafafa}.form-actions{display:flex;gap:0.75rem;padding-top:1.5rem;border-top:1px solid var(--color-border-subtle);margin-top:1.5rem}
+    .material-icons{font-size:1rem}.fade-in{animation:fadeIn 0.4s var(--ease-out-expo)}@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="refined-page fade-in">
+    <header style="margin-bottom:2rem"><h1 class="page-title">Edytuj usługę</h1><p class="page-subtitle">{{ service.name }}</p></header>
+    <div class="refined-card">
+        <form id="service-form">
+            <section><h2 class="section-title">Informacje podstawowe</h2>
+                <div class="form-grid form-grid-2">
+                    <div><label for="name" class="refined-label">Nazwa usługi <span class="required-mark">*</span></label><input type="text" id="name" required class="refined-input" value="{{ service.name }}"></div>
+                    <div><label for="category" class="refined-label">Kategoria <span class="required-mark">*</span></label>
+                        <select id="category" required class="refined-select">
+                            {% for cat in ['Strzyżenie','Koloryzacja','Stylizacja','Trwała','Pielęgnacja','Masaż','Manicure','Pedicure','Makijaż','Inne'] %}
+                            <option value="{{ cat }}" {% if service.category == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </section>
+            <section><h2 class="section-title">Cena i czas</h2>
+                <div class="form-grid form-grid-2">
+                    <div><label for="price" class="refined-label">Cena <span class="required-mark">*</span></label><input type="number" id="price" required step="0.01" min="0" class="refined-input" value="{{ service.price }}"></div>
+                    <div><label for="duration_minutes" class="refined-label">Czas trwania (min) <span class="required-mark">*</span></label><input type="number" id="duration_minutes" required min="5" step="5" class="refined-input" value="{{ service.duration_minutes }}"></div>
+                </div>
+            </section>
+            <section><h2 class="section-title">Dodatkowe informacje</h2>
+                <div class="form-grid">
+                    <div><label for="description" class="refined-label">Opis</label><textarea id="description" class="refined-input">{{ service.description if service.description else '' }}</textarea></div>
+                    <div class="checkbox-wrapper"><input type="checkbox" id="is_active" class="refined-checkbox" {% if service.is_active %}checked{% endif %}><label for="is_active" class="checkbox-label">Usługa aktywna</label></div>
+                </div>
+            </section>
+            <div class="form-actions">
+                <button type="submit" class="refined-btn-primary"><span class="material-icons">save</span>Zapisz zmiany</button>
+                <a href="{{ url_for('main.view_service', service_id=service.id) }}" class="refined-btn-secondary">Anuluj</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+document.getElementById('service-form').addEventListener('submit',async(e)=>{e.preventDefault();const d={name:document.getElementById('name').value.trim(),category:document.getElementById('category').value,price:parseFloat(document.getElementById('price').value),duration_minutes:parseInt(document.getElementById('duration_minutes').value),description:document.getElementById('description').value.trim()||null,is_active:document.getElementById('is_active').checked};try{const r=await fetch('/api/services/{{ service.id }}',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const data=await r.json();if(data.success){alert('Zmiany zostały zapisane pomyślnie!');window.location.href='/service/{{ service.id }}';}else{alert('Błąd: '+data.error);}}catch(error){alert('Błąd połączenia z serwerem');}});
+</script>
+{% endblock %}

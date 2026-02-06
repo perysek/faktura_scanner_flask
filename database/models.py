@@ -124,6 +124,75 @@ class Employee:
     created_at: Optional[datetime] = field(default_factory=datetime.now)
     updated_at: Optional[datetime] = field(default_factory=datetime.now)
 
+    @property
+    def full_name(self) -> str:
+        """Pełne imię i nazwisko pracownika"""
+        return f"{self.first_name} {self.last_name}"
+
+    def get_skills_dict(self) -> dict:
+        """Pobierz umiejętności jako słownik (parsowanie JSON)"""
+        if not self.skills:
+            return {}
+        try:
+            import json
+            return json.loads(self.skills)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def get_specializations_list(self) -> list:
+        """Pobierz specjalizacje jako listę (parsowanie JSON)"""
+        if not self.specializations:
+            return []
+        try:
+            import json
+            return json.loads(self.specializations)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    def get_work_schedule_dict(self) -> dict:
+        """Pobierz grafik jako słownik (parsowanie JSON)"""
+        if not self.work_schedule:
+            return {}
+        try:
+            import json
+            return json.loads(self.work_schedule)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+
+@dataclass
+class Service:
+    """Model usługi salonowej"""
+    name: str
+    category: str  # 'Strzyżenie', 'Koloryzacja', 'Stylizacja', etc.
+    duration_minutes: int
+    price: float
+    currency: str = 'PLN'
+    description: Optional[str] = None
+    is_active: bool = True
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+    @property
+    def formatted_price(self) -> str:
+        """Sformatowana cena z walutą"""
+        if self.currency == 'PLN':
+            return f"{self.price:.2f} zł"
+        return f"{self.price:.2f} {self.currency}"
+
+    @property
+    def formatted_duration(self) -> str:
+        """Sformatowany czas trwania"""
+        hours = self.duration_minutes // 60
+        minutes = self.duration_minutes % 60
+        if hours > 0 and minutes > 0:
+            return f"{hours}h {minutes}min"
+        elif hours > 0:
+            return f"{hours}h"
+        else:
+            return f"{minutes}min"
+
 
 @dataclass
 class Client:
