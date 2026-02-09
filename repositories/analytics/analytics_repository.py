@@ -144,3 +144,118 @@ class AnalyticsRepository:
         rows = cursor.fetchall()
 
         return [dict(row) for row in rows]
+
+    def get_service_breakdown(self, start_date: date, end_date: date) -> List[Dict]:
+        """
+        Get service revenue breakdown.
+
+        Returns list of:
+            {
+                'service_name': str,
+                'category': str,
+                'times_booked': int,
+                'revenue_generated': float
+            }
+        """
+        query = """
+            SELECT
+                s.name as service_name,
+                s.category,
+                COUNT(aps.id) as times_booked,
+                COALESCE(SUM(aps.price_charged), 0) as revenue_generated
+            FROM services s
+            LEFT JOIN appointment_services aps ON aps.service_id = s.id
+            LEFT JOIN appointments a ON a.id = aps.appointment_id
+            WHERE a.status = 'completed'
+                AND a.appointment_date BETWEEN ? AND ?
+            GROUP BY s.id, s.name, s.category
+            ORDER BY revenue_generated DESC
+        """
+
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (start_date, end_date))
+        rows = cursor.fetchall()
+
+        return [dict(row) for row in rows]
+
+    def get_client_metrics(self, start_date: date, end_date: date) -> Dict:
+        """
+        Get client acquisition and retention metrics.
+
+        Returns:
+            {
+                'new_clients': int,
+                'returning_clients': int,
+                'retention_rate': float (percentage),
+                'at_risk_clients': List[Dict]
+            }
+        """
+        # New vs. returning clients
+        new_returning_query = """
+            SELECT
+                COUNT(DISTINCT CASE
+                    WHEN c.first_visit_date >= ? THEN c.id
+                END) as new_clients,
+                COUNT(DISTINCT CASE
+                    WHEN c.first_visit_date < ? THEN c.id
+                END) as returning_clients
+            FROM clients c
+            INNER JOIN appointments a ON a.client_id = c.id
+            WHERE a.status = 'completed'
+                AND a.appointment_date BETWEEN ? AND ?
+        """
+
+        # Retention rate (90-day window)
+        retention_query = """
+            WITH client_visits AS (
+                SELECT
+                    client_id,
+                    appointment_date,
+                    LAG(appointment_date) OVER (PARTITION BY client_id ORDER BY appointment_date) as prev_visit
+                FROM appointments
+                WHERE status = 'completed'
+            )
+            SELECT
+                COUNT(CASE WHEN julianday(appointment_date) - julianday(prev_visit) <= 90 THEN 1 END) * 100.0 /
+                NULLIF(COUNT(*), 0) as retention_rate
+            FROM client_visits
+            WHERE prev_visit IS NOT NULL
+                AND appointment_date BETWEEN ? AND ?
+        """
+
+        # At-risk clients (90+ days since last visit)
+        at_risk_query = """
+            SELECT
+                c.id,
+                c.first_name || ' ' || c.last_name as client_name,
+                c.last_visit_date,
+                julianday('now') - julianday(c.last_visit_date) as days_since_visit
+            FROM clients c
+            WHERE c.is_active = 1
+                AND c.last_visit_date < date('now', '-90 days')
+            ORDER BY c.last_visit_date ASC
+            LIMIT 20
+        """
+
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+
+        # New/returning
+        cursor.execute(new_returning_query, (start_date, start_date, start_date, end_date))
+        nr_row = cursor.fetchone()
+
+        # Retention
+        cursor.execute(retention_query, (start_date, end_date))
+        ret_row = cursor.fetchone()
+
+        # At-risk
+        cursor.execute(at_risk_query)
+        at_risk_rows = cursor.fetchall()
+
+        return {
+            'new_clients': nr_row['new_clients'] if nr_row else 0,
+            'returning_clients': nr_row['returning_clients'] if nr_row else 0,
+            'retention_rate': ret_row['retention_rate'] if ret_row else 0.0,
+            'at_risk_clients': [dict(row) for row in at_risk_rows]
+        }
