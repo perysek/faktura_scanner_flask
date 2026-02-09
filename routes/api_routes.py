@@ -2255,6 +2255,7 @@ def get_services():
     """Get all services with optional filtering"""
     search_query = request.args.get('search', '').strip()
     category = request.args.get('category', '').strip()
+    service_type = request.args.get('type', '').strip()
     active_only = request.args.get('active_only', 'true').lower() == 'true'
 
     try:
@@ -2262,6 +2263,8 @@ def get_services():
             rows = current_app.service_repo.search(search_query, active_only)
         elif category:
             rows = current_app.service_repo.get_by_category(category, active_only)
+        elif service_type in ('main', 'addon'):
+            rows = current_app.service_repo.get_by_type(service_type, active_only)
         else:
             rows = current_app.service_repo.get_all(active_only)
 
@@ -2280,6 +2283,7 @@ def get_services():
                 'price': service.price,
                 'currency': service.currency,
                 'formatted_price': service.formatted_price,
+                'service_type': service.service_type,
                 'is_active': service.is_active,
                 'created_at': service.created_at.isoformat() if service.created_at else None,
                 'updated_at': service.updated_at.isoformat() if service.updated_at else None
@@ -2316,6 +2320,7 @@ def get_service(service_id):
             'price': service.price,
             'currency': service.currency,
             'formatted_price': service.formatted_price,
+            'service_type': service.service_type,
             'is_active': service.is_active,
             'created_at': service.created_at.isoformat() if service.created_at else None,
             'updated_at': service.updated_at.isoformat() if service.updated_at else None
@@ -2355,6 +2360,7 @@ def create_service_endpoint():
             duration_minutes=int(data.get('duration_minutes')),
             price=float(data.get('price')),
             currency=data.get('currency', 'PLN'),
+            service_type=data.get('service_type', 'main'),
             is_active=data.get('is_active', True)
         )
 
@@ -2391,6 +2397,7 @@ def update_service(service_id):
             duration_minutes=int(data.get('duration_minutes')),
             price=float(data.get('price')),
             currency=data.get('currency', 'PLN'),
+            service_type=data.get('service_type', 'main'),
             is_active=data.get('is_active', True)
         )
 

@@ -1,5 +1,309 @@
 {% extends "base.html" %}
+
 {% block title %}Edytuj {{ employee.full_name }} - {{ app_name }}{% endblock %}
-{% block extra_css %}<style>:root{--color-ink:#1a1a1a;--color-border:#e8e6e1;--color-surface-warm:#f7f6f3}body{background:var(--color-surface-warm);font-family:Inter,sans-serif}.refined-page{max-width:800px;margin:0 auto;padding:2rem}.page-title{font-size:1.75rem;font-weight:600;margin-bottom:0.5rem}.page-subtitle{color:#525252;font-size:0.8125rem;margin-bottom:2rem}.refined-card{background:white;border:1px solid var(--color-border);border-radius:2px;padding:2rem}.form-grid{display:grid;gap:1.25rem}.form-grid-2{grid-template-columns:1fr 1fr}@media (max-width:768px){.form-grid-2{grid-template-columns:1fr}}.refined-label{display:block;font-size:0.75rem;font-weight:500;text-transform:uppercase;margin-bottom:0.5rem}.refined-input{width:100%;padding:0.625rem 1rem;font-size:0.8125rem;border:1px solid var(--color-border);border-radius:2px}.checkbox-wrapper{display:flex;gap:0.5rem;padding:0.75rem 0}.refined-checkbox{width:1.125rem;height:1.125rem}.refined-btn-primary{display:inline-flex;padding:0.625rem 1rem;font-size:0.8125rem;background:var(--color-ink);color:white;border-radius:2px;border:none;cursor:pointer;flex:1;justify-content:center}.refined-btn-secondary{display:inline-flex;padding:0.625rem 1rem;background:white;color:#525252;border-radius:2px;border:1px solid var(--color-border);text-decoration:none;justify-content:center}.form-actions{display:flex;gap:0.75rem;margin-top:1.5rem}.material-icons{font-size:1rem}</style>{% endblock %}
-{% block content %}<div class="refined-page"><h1 class="page-title">Edytuj pracownika</h1><p class="page-subtitle">{{ employee.full_name }}</p><div class="refined-card"><form id="form"><div class="form-grid form-grid-2"><div><label class="refined-label">Imię *</label><input type="text" id="first_name" required class="refined-input" value="{{ employee.first_name }}"></div><div><label class="refined-label">Nazwisko *</label><input type="text" id="last_name" required class="refined-input" value="{{ employee.last_name }}"></div><div><label class="refined-label">Telefon</label><input type="tel" id="phone" class="refined-input" value="{{ employee.phone if employee.phone else '' }}"></div><div><label class="refined-label">Email</label><input type="email" id="email" class="refined-input" value="{{ employee.email if employee.email else '' }}"></div><div><label class="refined-label">Stanowisko</label><input type="text" id="position" class="refined-input" value="{{ employee.position if employee.position else '' }}"></div><div><label class="refined-label">Data zatrudnienia</label><input type="date" id="hire_date" class="refined-input" value="{{ employee.hire_date.strftime('%Y-%m-%d') if employee.hire_date else '' }}"></div></div><div class="checkbox-wrapper"><input type="checkbox" id="is_active" class="refined-checkbox" {% if employee.is_active %}checked{% endif %}><label>Pracownik aktywny</label></div><div class="form-actions"><button type="submit" class="refined-btn-primary"><span class="material-icons">save</span>Zapisz</button><a href="{{ url_for('main.view_employee', employee_id=employee.id) }}" class="refined-btn-secondary">Anuluj</a></div></form></div></div>{% endblock %}
-{% block extra_scripts %}<script>document.getElementById('form').addEventListener('submit',async(e)=>{e.preventDefault();const d={first_name:document.getElementById('first_name').value,last_name:document.getElementById('last_name').value,phone:document.getElementById('phone').value||null,email:document.getElementById('email').value||null,position:document.getElementById('position').value||null,hire_date:document.getElementById('hire_date').value||null,is_active:document.getElementById('is_active').checked};try{const r=await fetch('/api/employees/{{ employee.id }}',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const data=await r.json();if(data.success){alert('Zmiany zapisane!');window.location.href='/employee/{{ employee.id }}';}else{alert('Błąd: '+data.error);}}catch(e){alert('Błąd połączenia');}});</script>{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-error: #9b2c2c;
+        --font-display: 'Inter', system-ui, sans-serif;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { background: var(--color-surface-warm); font-family: var(--font-body); color: var(--color-ink); }
+
+    .refined-page { max-width: 800px; margin: 0 auto; padding: 2rem; }
+
+    .page-title {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: var(--color-ink-muted);
+        font-size: 0.8125rem;
+        font-weight: 300;
+    }
+
+    .refined-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin-bottom: 1.25rem;
+    }
+
+    .form-grid { display: grid; gap: 1.25rem; margin-bottom: 1.5rem; }
+    .form-grid-2 { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 768px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+    .refined-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-ink-subtle);
+        margin-bottom: 0.5rem;
+    }
+
+    .required-mark { color: var(--color-error); }
+
+    .refined-input, .refined-select {
+        width: 100%;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 300;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: all 0.3s var(--ease-out-expo);
+    }
+
+    .refined-input:focus, .refined-select:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    }
+
+    textarea.refined-input { resize: vertical; min-height: 100px; }
+
+    .input-hint {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.375rem;
+    }
+
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 0;
+    }
+
+    .refined-checkbox { width: 1.125rem; height: 1.125rem; cursor: pointer; }
+    .checkbox-label { font-size: 0.8125rem; color: var(--color-ink); cursor: pointer; }
+
+    .refined-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        background: var(--color-ink);
+        color: white;
+        border-radius: 2px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.25s var(--ease-out-expo);
+        flex: 1;
+        justify-content: center;
+    }
+
+    .refined-btn-primary:hover {
+        background: #333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .refined-btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 400;
+        background: white;
+        color: var(--color-ink-muted);
+        border-radius: 2px;
+        border: 1px solid var(--color-border);
+        cursor: pointer;
+        text-decoration: none;
+        justify-content: center;
+    }
+
+    .refined-btn-secondary:hover {
+        border-color: var(--color-ink-muted);
+        background: #fafafa;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 0.75rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--color-border-subtle);
+        margin-top: 1.5rem;
+    }
+
+    .material-icons { font-size: 1rem; }
+
+    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo); }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page fade-in">
+    <header style="margin-bottom: 2rem;">
+        <h1 class="page-title">Edytuj pracownika</h1>
+        <p class="page-subtitle">{{ employee.full_name }}</p>
+    </header>
+
+    <div class="refined-card">
+        <form id="employee-form">
+            <!-- Personal Data -->
+            <section>
+                <h2 class="section-title">Dane osobowe</h2>
+                <div class="form-grid form-grid-2">
+                    <div>
+                        <label for="first_name" class="refined-label">Imię <span class="required-mark">*</span></label>
+                        <input type="text" id="first_name" name="first_name" required class="refined-input" value="{{ employee.first_name }}">
+                    </div>
+                    <div>
+                        <label for="last_name" class="refined-label">Nazwisko <span class="required-mark">*</span></label>
+                        <input type="text" id="last_name" name="last_name" required class="refined-input" value="{{ employee.last_name }}">
+                    </div>
+                    <div>
+                        <label for="phone" class="refined-label">Telefon</label>
+                        <input type="tel" id="phone" name="phone" class="refined-input" value="{{ employee.phone if employee.phone else '' }}">
+                    </div>
+                    <div>
+                        <label for="email" class="refined-label">Email</label>
+                        <input type="email" id="email" name="email" class="refined-input" value="{{ employee.email if employee.email else '' }}">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Position & Employment -->
+            <section>
+                <h2 class="section-title">Stanowisko</h2>
+                <div class="form-grid form-grid-2">
+                    <div>
+                        <label for="position" class="refined-label">Stanowisko</label>
+                        <input type="text" id="position" name="position" class="refined-input" value="{{ employee.position if employee.position else '' }}">
+                    </div>
+                    <div>
+                        <label for="hire_date" class="refined-label">Data zatrudnienia</label>
+                        <input type="date" id="hire_date" name="hire_date" class="refined-input" value="{{ employee.hire_date.strftime('%Y-%m-%d') if employee.hire_date else '' }}">
+                    </div>
+                    <div>
+                        <label for="employment_status" class="refined-label">Status zatrudnienia</label>
+                        <select id="employment_status" name="employment_status" class="refined-select">
+                            <option value="active" {% if employee.employment_status == 'active' %}selected{% endif %}>Aktywny</option>
+                            <option value="on_leave" {% if employee.employment_status == 'on_leave' %}selected{% endif %}>Na urlopie</option>
+                            <option value="terminated" {% if employee.employment_status == 'terminated' %}selected{% endif %}>Zwolniony</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Compensation -->
+            <section>
+                <h2 class="section-title">Wynagrodzenie</h2>
+                <div class="form-grid form-grid-2">
+                    <div>
+                        <label for="base_salary" class="refined-label">Wynagrodzenie podstawowe (PLN)</label>
+                        <input type="number" id="base_salary" name="base_salary" step="0.01" min="0" class="refined-input" value="{{ employee.base_salary if employee.base_salary else '' }}">
+                        <p class="input-hint">Miesięczna stawka podstawowa</p>
+                    </div>
+                    <div>
+                        <label for="commission_rate" class="refined-label">Prowizja (%)</label>
+                        <input type="number" id="commission_rate" name="commission_rate" step="0.1" min="0" max="100" class="refined-input" value="{{ employee.commission_rate if employee.commission_rate else '' }}">
+                        <p class="input-hint">Domyślna stawka prowizyjna od usług</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Additional -->
+            <section>
+                <h2 class="section-title">Dodatkowe informacje</h2>
+                <div class="form-grid">
+                    <div>
+                        <label for="notes" class="refined-label">Notatki</label>
+                        <textarea id="notes" name="notes" class="refined-input">{{ employee.notes if employee.notes else '' }}</textarea>
+                    </div>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="is_active" class="refined-checkbox" {% if employee.is_active %}checked{% endif %}>
+                        <label for="is_active" class="checkbox-label">Pracownik aktywny</label>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-actions">
+                <button type="submit" class="refined-btn-primary">
+                    <span class="material-icons">save</span>
+                    Zapisz zmiany
+                </button>
+                <a href="{{ url_for('main.view_employee', employee_id=employee.id) }}" class="refined-btn-secondary">Anuluj</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('employee-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+        first_name: document.getElementById('first_name').value.trim(),
+        last_name: document.getElementById('last_name').value.trim(),
+        phone: document.getElementById('phone').value.trim() || null,
+        email: document.getElementById('email').value.trim() || null,
+        position: document.getElementById('position').value.trim() || null,
+        hire_date: document.getElementById('hire_date').value || null,
+        employment_status: document.getElementById('employment_status').value,
+        base_salary: document.getElementById('base_salary').value ? parseFloat(document.getElementById('base_salary').value) : null,
+        commission_rate: document.getElementById('commission_rate').value ? parseFloat(document.getElementById('commission_rate').value) : null,
+        notes: document.getElementById('notes').value.trim() || null,
+        is_active: document.getElementById('is_active').checked
+    };
+
+    try {
+        const response = await fetch('/api/employees/{{ employee.id }}', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert('Zmiany zostały zapisane pomyślnie!');
+            window.location.href = '/employee/{{ employee.id }}';
+        } else {
+            alert('Błąd: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Błąd połączenia z serwerem');
+    }
+});
+</script>
+{% endblock %}
