@@ -51,6 +51,27 @@
 
     <div class="refined-card">
         <form id="service-form">
+            <!-- Service Type -->
+            <section>
+                <h2 class="section-title">Typ usługi</h2>
+                <div class="form-grid">
+                    <div>
+                        <label class="refined-label">Typ <span class="required-mark">*</span></label>
+                        <div style="display: flex; gap: 1.5rem; padding: 0.5rem 0;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" id="type_main" name="service_type" value="main" checked style="width: 1rem; height: 1rem; cursor: pointer;">
+                                <label for="type_main" style="font-size: 0.8125rem; cursor: pointer;">Główna</label>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" id="type_addon" name="service_type" value="addon" style="width: 1rem; height: 1rem; cursor: pointer;">
+                                <label for="type_addon" style="font-size: 0.8125rem; cursor: pointer;">Dodatkowa</label>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.6875rem; color: var(--color-ink-subtle); margin-top: 0.375rem;">Usługa dodatkowa może być dodana tylko podczas wizyty</p>
+                    </div>
+                </div>
+            </section>
+
             <section>
                 <h2 class="section-title">Informacje podstawowe</h2>
                 <div class="form-grid form-grid-2">
@@ -124,6 +145,7 @@ document.getElementById('service-form').addEventListener('submit', async (e) => 
         price: parseFloat(document.getElementById('price').value),
         duration_minutes: parseInt(document.getElementById('duration_minutes').value),
         description: document.getElementById('description').value.trim() || null,
+        service_type: document.querySelector('input[name="service_type"]:checked').value,
         currency: 'PLN',
         is_active: true
     };

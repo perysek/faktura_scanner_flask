@@ -255,6 +255,27 @@
         color: #4b5563;
     }
 
+    .type-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.625rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-radius: 1px;
+    }
+
+    .type-badge.main {
+        background: rgba(107, 114, 128, 0.08);
+        color: #4b5563;
+    }
+
+    .type-badge.addon {
+        background: rgba(147, 51, 234, 0.08);
+        color: #7e22ce;
+    }
+
     .action-link {
         color: #2563eb;
         font-size: 0.8125rem;
@@ -385,6 +406,11 @@
                 placeholder="Szukaj po nazwie, kategorii lub opisie..."
                 class="refined-input"
             >
+            <select id="filter-type" style="padding: 0.625rem 1rem; font-family: var(--font-body); font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; min-width: 140px; cursor: pointer;" onchange="loadServices()">
+                <option value="">Wszystkie typy</option>
+                <option value="main">Główne</option>
+                <option value="addon">Dodatkowe</option>
+            </select>
             <button onclick="loadServices()" class="refined-btn-secondary">
                 <span class="material-icons">search</span>
                 Szukaj
@@ -398,6 +424,7 @@
             <thead>
                 <tr>
                     <th>Nazwa usługi</th>
+                    <th>Typ</th>
                     <th>Kategoria</th>
                     <th>Czas trwania</th>
                     <th>Cena</th>
@@ -407,7 +434,7 @@
             </thead>
             <tbody id="services-tbody">
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <span class="material-icons empty-icon">spa</span>
                         <p class="empty-text">Ładowanie usług...</p>
                     </td>
@@ -449,12 +476,15 @@ async function loadStatistics() {
 
 async function loadServices() {
     const searchQuery = document.getElementById('search-input').value.trim();
+    const typeFilter = document.getElementById('filter-type').value;
     const tbody = document.getElementById('services-tbody');
 
     try {
-        const url = searchQuery
-            ? `/api/services?search=${encodeURIComponent(searchQuery)}`
-            : '/api/services';
+        let url = '/api/services';
+        const params = [];
+        if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);
+        if (typeFilter) params.push(`type=${encodeURIComponent(typeFilter)}`);
+        if (params.length > 0) url += '?' + params.join('&');
 
         const response = await fetch(url);
         const data = await response.json();
@@ -463,7 +493,7 @@ async function loadServices() {
             if (data.services.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="empty-state">
+                        <td colspan="7" class="empty-state">
                             <span class="material-icons empty-icon">search_off</span>
                             <p class="empty-text">Nie znaleziono usług</p>
                         </td>
@@ -481,6 +511,9 @@ async function loadServices() {
                 const statusBadge = service.is_active
                     ? '<span class="status-badge active">Aktywna</span>'
                     : '<span class="status-badge inactive">Nieaktywna</span>';
+                const typeBadge = service.service_type === 'addon'
+                    ? '<span class="type-badge addon">Dodatkowa</span>'
+                    : '<span class="type-badge main">Główna</span>';
 
                 return `
                     <tr>
@@ -490,6 +523,7 @@ async function loadServices() {
                                 ${description ? `<div style="font-size: 0.75rem; color: var(--color-ink-subtle); margin-top: 0.25rem;">${description}</div>` : ''}
                             </div>
                         </td>
+                        <td>${typeBadge}</td>
                         <td>${category}</td>
                         <td>${duration}</td>
                         <td style="font-weight: 500;">${price}</td>
@@ -505,7 +539,7 @@ async function loadServices() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <p class="empty-text" style="color: #9b2c2c;">Błąd ładowania usług: ${escapeHtml(data.error)}</p>
                     </td>
                 </tr>
@@ -515,7 +549,7 @@ async function loadServices() {
         console.error('Error loading services:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="empty-state">
+                <td colspan="7" class="empty-state">
                     <p class="empty-text" style="color: #9b2c2c;">Błąd połączenia z serwerem</p>
                 </td>
             </tr>
