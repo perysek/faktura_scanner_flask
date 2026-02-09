@@ -1,0 +1,64 @@
+1: A, existing sellers table is for external sellers of products/services which issue invoice. New table with employees must be created. 2: all 4 proposed + superuser who is not linked to any employee and hidden related data for other users. Superuser can view and change any data in the system. 3: flask login. 4: services will have prices, each appointment  links to ONE client, ONE employee, multiple services. 5:  appointments generate "income records" when marked as completed/paid,  Separate income table. 6: choose easier approach. 7: alembic. 8: plan migration path to postgresql. 9: hard del with logs.
+
+ Module Prioritization & Scope
+
+  10. Appointments Module - Core Features:
+    - Calendar view (day/week/month)? //yes
+    - Recurring appointments? //no
+    - Appointment status workflow (scheduled → confirmed → in-progress → completed → cancelled)? //yes
+    - Reminders/notifications (email/SMS)? //yes
+  11. Clients Module - What Data:
+    - Contact info (name, phone, email, address)? //yes, but no address
+    - Client notes/preferences (hair color history, allergies, preferred products)? //yes
+    - Photo gallery (before/after photos)? //no
+    - Marketing consent (GDPR compliance)? //yes
+  12. Services Module - Pricing Model:
+    - Fixed pricing per service? //no
+    - Dynamic pricing (employee-specific, e.g., senior stylist vs junior)? //yes
+    - Time-based duration for scheduling? //yes
+    - Service categories (hair, nails, spa)? //yes
+  13. Employees Module - What to Track:
+    - Work schedule/availability? //yes
+    - Commission structure? //comission as % of service price + base salary
+    - Skills/certifications (which services they can perform)? //skills with level rating number
+    - Performance metrics (completed appointments, revenue generated)? //yes + statistics, paretos, averages etc.
+
+  ---
+  Refactoring Strategy
+
+  14. Namespace Strategy: Should we restructure to support modules? //Option C
+  - Option A (Flat Structure): Keep current structure, add new modules alongside
+  repositories/invoice_repository.py
+  repositories/appointment_repository.py
+  services/invoice_service.py
+  services/appointment_service.py
+  - Option B (Module Namespaces): Group by module
+  modules/invoices/repositories/invoice_repository.py
+  modules/invoices/services/invoice_service.py
+  modules/appointments/repositories/appointment_repository.py
+  modules/appointments/services/appointment_service.py
+  - Option C (Hybrid): Keep repositories/services folders but use sub-packages
+  repositories/invoices/invoice_repository.py
+  repositories/appointments/appointment_repository.py
+  services/invoices/invoice_service.py
+  services/appointments/appointment_service.py
+
+  15. Shared vs Module-Specific Code: //choose best option preffered by you
+    - Should BaseRepository move to core/ or stay in repositories/?
+    - Shared utilities (formatting, validation) - where do they live?
+    - Authentication/authorization - separate auth/ module or in core/?
+  16. Backward Compatibility:
+    - Preserve existing invoice API endpoints exactly? //preserve existing
+    - Or can we version them (/api/v1/invoices vs /api/v2/invoices)?
+
+  ---
+  Frontend Refactoring
+
+  17. Navigation Structure: //grouped by module
+    - Should sidebar navigation be grouped by module? (Finances, Booking, Staff, etc.)
+    - Or keep flat list with many items?
+  18. Shared Components: //component library as proposed
+    - Calendar component (for appointments)?
+    - Contact form (reused for clients/employees)?
+    - Photo upload gallery (for clients)?
+    - Do we need a component library or build inline?

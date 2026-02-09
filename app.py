@@ -100,11 +100,21 @@ def create_app():
     from routes.api_routes import api_bp
     from routes.upload_routes import upload_bp
     from routes.auth.routes import auth_bp
+    from routes.appointment_routes import appointment_bp
+    from routes.employee_service_routes import employee_service_bp
+    from routes.service_addon_routes import service_addon_bp
+    from routes.client_preference_routes import client_preference_bp
+    from routes.income_routes import income_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api/upload')
     app.register_blueprint(auth_bp)  # Auth blueprint already has /auth prefix
+    app.register_blueprint(appointment_bp, url_prefix='/api')
+    app.register_blueprint(employee_service_bp, url_prefix='/api')
+    app.register_blueprint(service_addon_bp, url_prefix='/api')
+    app.register_blueprint(client_preference_bp, url_prefix='/api')
+    app.register_blueprint(income_bp, url_prefix='/api')
 
     # Error handlers
     @app.errorhandler(404)
