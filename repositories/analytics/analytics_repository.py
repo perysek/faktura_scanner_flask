@@ -2,7 +2,7 @@
 Analytics repository for dashboard metrics
 """
 from datetime import date, timedelta
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 from dateutil.relativedelta import relativedelta
 from config.database import DatabaseConnection
 
@@ -88,3 +88,59 @@ class AnalyticsRepository:
             'avg_ticket': 0.0,
             'total_commissions': 0.0
         }
+
+    def get_employee_performance(self, start_date: date, end_date: date) -> List[Dict]:
+        """
+        Get employee performance metrics with Polish employment cost model.
+
+        Total Employer Cost = (base_salary + commission) × (1 + employer_cost_rate)
+        Net Profit = revenue_generated - total_employer_cost
+
+        Returns list of:
+            {
+                'id': int,
+                'employee_name': str,
+                'base_salary': float,
+                'cost_rate': float (default 0.22 = 22%),
+                'appointments_count': int,
+                'revenue_generated': float,
+                'commission_earned': float,
+                'gross_salary': float (base + commission),
+                'total_employer_cost': float (gross × 1.22),
+                'net_profit': float (revenue - cost)
+            }
+        """
+        query = """
+            SELECT
+                e.id,
+                e.first_name || ' ' || e.last_name as employee_name,
+                e.base_salary,
+                COALESCE(e.employer_cost_rate, 0.22) as cost_rate,
+                COUNT(a.id) as appointments_count,
+                COALESCE(SUM(i.net_amount), 0) as revenue_generated,
+                COALESCE(SUM(i.commission_total), 0) as commission_earned,
+
+                -- Cost calculation
+                (e.base_salary + COALESCE(SUM(i.commission_total), 0)) as gross_salary,
+                (e.base_salary + COALESCE(SUM(i.commission_total), 0)) *
+                    (1 + COALESCE(e.employer_cost_rate, 0.22)) as total_employer_cost,
+
+                -- Profitability
+                COALESCE(SUM(i.net_amount), 0) -
+                    ((e.base_salary + COALESCE(SUM(i.commission_total), 0)) *
+                     (1 + COALESCE(e.employer_cost_rate, 0.22))) as net_profit
+            FROM employees e
+            LEFT JOIN appointments a ON a.employee_id = e.id AND a.status = 'completed'
+            LEFT JOIN income_records i ON i.appointment_id = a.id
+            WHERE e.is_active = 1
+                AND (a.appointment_date BETWEEN ? AND ? OR a.appointment_date IS NULL)
+            GROUP BY e.id, e.first_name, e.last_name, e.base_salary, e.employer_cost_rate
+            ORDER BY revenue_generated DESC
+        """
+
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (start_date, end_date))
+        rows = cursor.fetchall()
+
+        return [dict(row) for row in rows]
