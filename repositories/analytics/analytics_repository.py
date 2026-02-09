@@ -2,8 +2,9 @@
 Analytics repository for dashboard metrics
 """
 from datetime import date, timedelta
-from typing import Tuple
+from typing import Tuple, Dict
 from dateutil.relativedelta import relativedelta
+from config.database import DatabaseConnection
 
 
 class AnalyticsRepository:
@@ -48,3 +49,42 @@ class AnalyticsRepository:
             raise ValueError(f"Unsupported period: {period}")
 
         return (current_start, current_end, previous_start, previous_end)
+
+    def get_revenue_summary(self, start_date: date, end_date: date) -> Dict:
+        """
+        Get revenue summary for date range.
+
+        Returns:
+            {
+                'total_appointments': int,
+                'unique_clients': int,
+                'total_revenue': float,
+                'avg_ticket': float,
+                'total_commissions': float
+            }
+        """
+        query = """
+            SELECT
+                COUNT(DISTINCT a.id) as total_appointments,
+                COUNT(DISTINCT a.client_id) as unique_clients,
+                COALESCE(SUM(i.net_amount), 0) as total_revenue,
+                COALESCE(AVG(i.net_amount), 0) as avg_ticket,
+                COALESCE(SUM(i.commission_total), 0) as total_commissions
+            FROM appointments a
+            LEFT JOIN income_records i ON i.appointment_id = a.id
+            WHERE a.status = 'completed'
+                AND a.appointment_date BETWEEN ? AND ?
+        """
+
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (start_date, end_date))
+        row = cursor.fetchone()
+
+        return dict(row) if row else {
+            'total_appointments': 0,
+            'unique_clients': 0,
+            'total_revenue': 0.0,
+            'avg_ticket': 0.0,
+            'total_commissions': 0.0
+        }
