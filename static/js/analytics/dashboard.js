@@ -387,6 +387,46 @@ function renderAtRiskList(clients) {
 }
 
 /**
+ * Load and render employee performance table
+ */
+async function loadEmployees() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/employees?${params}`);
+    const data = await response.json();
+
+    if (!data.success) {
+        throw new Error(data.error || 'Failed to load employees');
+    }
+
+    const tbody = document.getElementById('employeeTableBody');
+
+    if (data.employees.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-ink-light">Brak danych</td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = data.employees.map(emp => `
+        <tr>
+            <td class="font-medium">${escapeHtml(emp.employee_name)}</td>
+            <td class="text-right">${emp.appointments_count}</td>
+            <td class="text-right">${formatCurrency(emp.revenue_generated)}</td>
+            <td class="text-right">${formatCurrency(emp.commission_earned)}</td>
+            <td class="text-right">${formatCurrency(emp.gross_salary)}</td>
+            <td class="text-right" title="Stawka pracodawcy: ${(emp.cost_rate * 100).toFixed(1)}%">
+                ${formatCurrency(emp.total_employer_cost)}
+            </td>
+            <td class="text-right ${emp.net_profit >= 0 ? 'text-green-600' : 'text-red-600'} font-medium">
+                ${formatCurrency(emp.net_profit)}
+            </td>
+        </tr>
+    `).join('');
+}
+
+/**
  * Escape HTML to prevent XSS
  */
 function escapeHtml(text) {
