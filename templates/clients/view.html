@@ -278,6 +278,152 @@
             justify-content: center;
         }
     }
+
+    /* Client Preferences Section */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .section-header .section-title {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .refined-btn-sm {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
+    }
+
+    .pref-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .pref-table thead {
+        background: var(--color-surface);
+    }
+
+    .pref-table th {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--color-ink-subtle);
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .pref-table td {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        border-bottom: 1px solid var(--color-border-subtle);
+        vertical-align: middle;
+    }
+
+    .pref-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .pref-table tbody tr:hover {
+        background: var(--color-surface);
+    }
+
+    .action-link-sm {
+        font-size: 0.75rem;
+        color: var(--color-ink-muted);
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-decoration: underline;
+        padding: 0;
+    }
+
+    .action-link-sm:hover {
+        color: var(--color-error);
+    }
+
+    .empty-preferences {
+        text-align: center;
+        padding: 2rem;
+        color: var(--color-ink-subtle);
+        font-size: 0.8125rem;
+    }
+
+    /* Add Preference Form */
+    .add-pref-form {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+    }
+
+    .add-pref-form.visible {
+        display: block;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 2fr 2fr 1fr auto;
+        gap: 0.75rem;
+        align-items: end;
+        margin-bottom: 0.75rem;
+    }
+
+    .form-row.full {
+        grid-template-columns: 1fr auto;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-row label {
+        display: block;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        color: var(--color-ink-subtle);
+        margin-bottom: 0.375rem;
+    }
+
+    .form-row input,
+    .form-row select,
+    .form-row textarea {
+        width: 100%;
+        padding: 0.5rem 0.625rem;
+        font-size: 0.8125rem;
+        font-family: var(--font-body);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        background: white;
+        color: var(--color-ink);
+        box-sizing: border-box;
+    }
+
+    .form-row input:focus,
+    .form-row select:focus,
+    .form-row textarea:focus {
+        outline: none;
+        border-color: var(--color-ink);
+        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.05);
+    }
+
+    .form-row textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
 </style>
 {% endblock %}
 
@@ -374,6 +520,69 @@
         </div>
     </div>
 
+    <!-- Client Preferences -->
+    <div class="refined-card">
+        <div class="section-header">
+            <h2 class="section-title">Preferencje klienta</h2>
+            <button onclick="toggleAddPrefForm()" class="refined-btn-secondary refined-btn-sm">
+                <span class="material-icons">add</span>
+                Dodaj preferencję
+            </button>
+        </div>
+
+        <!-- Add Preference Form -->
+        <div id="add-pref-form" class="add-pref-form">
+            <div class="form-row">
+                <div>
+                    <label>Usługa (opcjonalnie)</label>
+                    <select id="new-pref-service-id">
+                        <option value="">Dowolna z kategorii...</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Kategoria (opcjonalnie)</label>
+                    <input type="text" id="new-pref-category" placeholder="np. Koloryzacja">
+                </div>
+                <div>
+                    <label>Preferowany pracownik</label>
+                    <select id="new-pref-employee-id">
+                        <option value="">Wybierz pracownika...</option>
+                    </select>
+                </div>
+                <div>
+                    <button onclick="addPreference()" class="refined-btn-primary refined-btn-sm" style="margin-top: 1.25rem;">
+                        Dodaj
+                    </button>
+                </div>
+            </div>
+            <div class="form-row full">
+                <div>
+                    <label>Notatki</label>
+                    <textarea id="new-pref-notes" placeholder="np. Woli ciche środowisko..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences Table -->
+        <div id="preferences-container">
+            <table class="pref-table" id="preferences-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Typ</th>
+                        <th>Preferowany pracownik</th>
+                        <th>Notatki</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="preferences-tbody"></tbody>
+            </table>
+            <div id="preferences-empty" class="empty-preferences">
+                <span class="material-icons" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;">person_search</span>
+                Brak zdefiniowanych preferencji
+            </div>
+        </div>
+    </div>
+
     <!-- Actions -->
     <div class="refined-card">
         <div class="action-bar">
@@ -395,7 +604,229 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 <script>
+const CLIENT_ID = {{ client.id }};
+
+// Initialize notification system
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Notifications !== 'undefined') {
+        Notifications.init();
+    }
+    loadPreferences();
+    loadEmployees();
+    loadServices();
+});
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// Toggle add preference form
+function toggleAddPrefForm() {
+    const form = document.getElementById('add-pref-form');
+    form.classList.toggle('visible');
+}
+
+// Load employees for dropdown
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/employees?active_only=true');
+        const data = await response.json();
+        if (data.success) {
+            const select = document.getElementById('new-pref-employee-id');
+            select.innerHTML = '<option value="">Wybierz pracownika...</option>';
+            data.employees.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = `${e.first_name} ${e.last_name}`;
+                select.appendChild(opt);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading employees:', error);
+    }
+}
+
+// Load services for dropdown
+async function loadServices() {
+    try {
+        const response = await fetch('/api/services?active_only=true');
+        const data = await response.json();
+        if (data.success) {
+            const select = document.getElementById('new-pref-service-id');
+            select.innerHTML = '<option value="">Dowolna z kategorii...</option>';
+            data.services.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                select.appendChild(opt);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading services:', error);
+    }
+}
+
+// Load client preferences
+async function loadPreferences() {
+    try {
+        const response = await fetch(`/api/clients/${CLIENT_ID}/preferences`);
+        const data = await response.json();
+
+        const table = document.getElementById('preferences-table');
+        const empty = document.getElementById('preferences-empty');
+        const tbody = document.getElementById('preferences-tbody');
+
+        if (data.success && data.preferences && data.preferences.length > 0) {
+            table.style.display = 'table';
+            empty.style.display = 'none';
+
+            tbody.innerHTML = data.preferences.map(pref => {
+                let typeLabel = '';
+                if (pref.service_name) {
+                    typeLabel = `<div style="font-weight: 500;">Usługa: ${escapeHtml(pref.service_name)}</div>`;
+                } else if (pref.service_category) {
+                    typeLabel = `<div style="font-weight: 500;">Kategoria: ${escapeHtml(pref.service_category)}</div>`;
+                } else {
+                    typeLabel = '<div style="color: var(--color-ink-subtle);">Ogólna preferencja</div>';
+                }
+
+                const employee = escapeHtml(pref.employee_name || 'Nieznany');
+                const notes = pref.notes ? escapeHtml(pref.notes) : '—';
+
+                return `
+                    <tr>
+                        <td>${typeLabel}</td>
+                        <td>${employee}</td>
+                        <td style="max-width: 250px;">${notes}</td>
+                        <td style="text-align: right;">
+                            <button class="action-link-sm" onclick="removePreference(${pref.id})">Usuń</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            table.style.display = 'none';
+            empty.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading preferences:', error);
+        if (typeof Notifications !== 'undefined') {
+            Notifications.error('Błąd wczytywania preferencji');
+        }
+    }
+}
+
+// Add new preference
+async function addPreference() {
+    const serviceId = document.getElementById('new-pref-service-id').value;
+    const category = document.getElementById('new-pref-category').value.trim();
+    const employeeId = document.getElementById('new-pref-employee-id').value;
+    const notes = document.getElementById('new-pref-notes').value.trim();
+
+    if (!employeeId) {
+        if (typeof Notifications !== 'undefined') {
+            Notifications.warning('Wybierz preferowanego pracownika');
+        } else {
+            alert('Wybierz preferowanego pracownika');
+        }
+        return;
+    }
+
+    if (!serviceId && !category) {
+        if (typeof Notifications !== 'undefined') {
+            Notifications.warning('Wybierz usługę lub wpisz kategorię');
+        } else {
+            alert('Wybierz usługę lub wpisz kategorię');
+        }
+        return;
+    }
+
+    const payload = {
+        preferred_employee_id: parseInt(employeeId),
+        notes: notes || null
+    };
+
+    if (serviceId) {
+        payload.service_id = parseInt(serviceId);
+    } else if (category) {
+        payload.service_category = category;
+    }
+
+    try {
+        const response = await fetch(`/api/clients/${CLIENT_ID}/preferences`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Clear form
+            document.getElementById('new-pref-service-id').value = '';
+            document.getElementById('new-pref-category').value = '';
+            document.getElementById('new-pref-employee-id').value = '';
+            document.getElementById('new-pref-notes').value = '';
+            document.getElementById('add-pref-form').classList.remove('visible');
+            loadPreferences();
+            if (typeof Notifications !== 'undefined') {
+                Notifications.success('Preferencja została dodana');
+            }
+        } else {
+            if (typeof Notifications !== 'undefined') {
+                Notifications.error('Błąd: ' + data.error);
+            } else {
+                alert('Błąd: ' + data.error);
+            }
+        }
+    } catch (error) {
+        console.error('Error adding preference:', error);
+        if (typeof Notifications !== 'undefined') {
+            Notifications.error('Błąd połączenia z serwerem');
+        } else {
+            alert('Błąd połączenia z serwerem');
+        }
+    }
+}
+
+// Remove preference
+async function removePreference(prefId) {
+    if (!confirm('Czy na pewno chcesz usunąć tę preferencję?')) return;
+
+    try {
+        const response = await fetch(`/api/clients/${CLIENT_ID}/preferences/${prefId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            loadPreferences();
+            if (typeof Notifications !== 'undefined') {
+                Notifications.success('Preferencja usunięta');
+            }
+        } else {
+            if (typeof Notifications !== 'undefined') {
+                Notifications.error('Błąd: ' + data.error);
+            } else {
+                alert('Błąd: ' + data.error);
+            }
+        }
+    } catch (error) {
+        console.error('Error removing preference:', error);
+        if (typeof Notifications !== 'undefined') {
+            Notifications.error('Błąd połączenia z serwerem');
+        } else {
+            alert('Błąd połączenia z serwerem');
+        }
+    }
+}
+
+// Delete/deactivate client
 async function confirmDelete() {
     const isActive = {{ 'true' if client.is_active else 'false' }};
     const action = isActive ? 'dezaktywować' : 'usunąć';
