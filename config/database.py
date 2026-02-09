@@ -4,6 +4,7 @@ Konfiguracja bazy danych SQLite
 import sqlite3
 from pathlib import Path
 from typing import Optional
+from flask import g
 
 from config.settings import DB_PATH
 
@@ -19,39 +20,39 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 class DatabaseConnection:
-	"""Singleton connection do SQLite"""
-	
-	_instance: Optional[sqlite3.Connection] = None
-	
+	"""Per-request database connection using Flask's g object"""
+
 	@classmethod
 	def get_connection(cls) -> sqlite3.Connection:
-		"""Pobierz połączenie do bazy (singleton z walidacją)"""
-		if cls._instance is not None:
-			# Validate the existing connection is still usable
-			try:
-				cls._instance.execute("SELECT 1")
-			except (sqlite3.ProgrammingError, sqlite3.InterfaceError, sqlite3.OperationalError):
-				cls._instance = None
-
-		if cls._instance is None:
-			cls._instance = sqlite3.connect(
+		"""Get per-request database connection from Flask's g object"""
+		# Check if connection exists in current request context
+		if 'db' not in g:
+			# Create new connection for this request
+			g.db = sqlite3.connect(
 				DB_PATH,
-				check_same_thread=False
-				)
-			cls._instance.row_factory = sqlite3.Row
-		return cls._instance
-	
+				check_same_thread=True  # Safe since each request has its own connection
+			)
+			g.db.row_factory = sqlite3.Row
+		return g.db
+
+	@classmethod
+	def close_connection(cls):
+		"""Close the connection for current request context"""
+		db = g.pop('db', None)
+		if db is not None:
+			db.close()
+
 	@classmethod
 	def close(cls):
-		"""Zamknij połączenie"""
-		if cls._instance:
-			cls._instance.close()
-			cls._instance = None
+		"""Alias for close_connection for backward compatibility"""
+		cls.close_connection()
 
 
 def initialize_database():
 	"""Inicjalizuj bazę danych ze schema"""
-	conn = DatabaseConnection.get_connection()
+	# Create direct connection (not using Flask g since we're outside request context)
+	conn = sqlite3.connect(DB_PATH)
+	conn.row_factory = sqlite3.Row
 
 	# Wczytaj schema
 	schema_path = Path(__file__).parent.parent / "database" / "schema.sql"
@@ -130,4 +131,6 @@ def initialize_database():
 	except Exception as e:
 		print(f"Ostrzezenie - Migracja seller_id: {e}")
 
+	# Close the connection
+	conn.close()
 	print("Baza danych zainicjalizowana")
