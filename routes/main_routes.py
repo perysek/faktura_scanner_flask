@@ -256,6 +256,22 @@ def appointments_calendar():
     return render_template('appointments/calendar.html')
 
 
+@main_bp.route('/appointments/calendar/week')
+@login_required
+@module_permission_required('appointments')
+def appointments_calendar_week():
+    """Appointments calendar week view"""
+    return render_template('appointments/calendar_week.html')
+
+
+@main_bp.route('/appointments/calendar/month')
+@login_required
+@module_permission_required('appointments')
+def appointments_calendar_month():
+    """Appointments calendar month view"""
+    return render_template('appointments/calendar_month.html')
+
+
 @main_bp.route('/appointment/create')
 @login_required
 @module_permission_required('appointments')

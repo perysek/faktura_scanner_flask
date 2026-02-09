@@ -125,7 +125,9 @@
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <div class="view-toggle">
-                <a href="{{ url_for('main.appointments_calendar') }}" class="active">Kalendarz</a>
+                <a href="{{ url_for('main.appointments_calendar') }}" class="active">Dzień</a>
+                <a href="{{ url_for('main.appointments_calendar_week') }}">Tydzień</a>
+                <a href="{{ url_for('main.appointments_calendar_month') }}">Miesiąc</a>
                 <a href="{{ url_for('main.appointments_list') }}">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
@@ -382,6 +384,7 @@ function goToToday() {
 
 function updateNewAppointmentLink() {
     const params = new URLSearchParams();
+    params.set('from', 'calendar');
     if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     if (currentDate) params.set('date', currentDate);
     newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
@@ -544,6 +547,7 @@ function handleSlotClick(event) {
     const startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
     const params = new URLSearchParams({
+        from: 'calendar',
         employee_id: currentEmployeeId,
         date: currentDate,
         start_time: startTime

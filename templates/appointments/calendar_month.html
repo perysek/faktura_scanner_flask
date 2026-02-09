@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block title %}Kalendarz miesiąca - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --font-display: 'Inter', system-ui, sans-serif;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body { background: var(--color-surface-warm); font-family: var(--font-body); color: var(--color-ink); }
+    .refined-page { max-width: 1600px; margin: 0 auto; padding: 1rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .page-title { font-family: var(--font-display); font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
+
+    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 0.75rem; }
+
+    .controls-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .controls-bar label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem; display: block; }
+    .controls-bar select { padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); min-width: 150px; }
+    .controls-bar select:focus { outline: none; border-color: var(--color-ink-muted); }
+
+    .refined-btn-primary { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; font-size: 0.75rem; font-weight: 500; background: var(--color-ink); color: white; border-radius: 2px; border: none; cursor: pointer; text-decoration: none; transition: all 0.25s var(--ease-out-expo); }
+    .refined-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.5rem; font-size: 0.75rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
+    .refined-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
+
+    .view-toggle { display: flex; gap: 0.375rem; }
+    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
+    .view-toggle a:hover { border-color: var(--color-ink-muted); }
+    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+
+    /* Month Navigation */
+    .month-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .month-label { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); min-width: 150px; text-align: center; }
+
+    /* Month Grid */
+    .month-container { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: 32px repeat(6, 100px); gap: 1px; background: var(--color-border); }
+
+    /* Day Headers */
+    .weekday-header { padding: 0.375rem; text-align: center; background: var(--color-surface); font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink-muted); }
+
+    /* Day Cells */
+    .day-cell { background: white; padding: 0.3rem; cursor: pointer; transition: background 0.2s ease; position: relative; overflow: hidden; }
+    .day-cell:hover { background: var(--color-surface); }
+    .day-cell.other-month { background: var(--color-surface-warm); }
+    .day-cell.other-month .day-number { color: var(--color-ink-subtle); }
+    .day-cell.today { background: #fffbeb; }
+    .day-cell.today .day-number { color: #d97706; font-weight: 700; }
+
+    .day-number { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; line-height: 1; }
+
+    /* Appointment List in Day Cell */
+    .apt-list { display: flex; flex-direction: column; gap: 0.0625rem; }
+    .apt-item { display: flex; align-items: center; gap: 0.125rem; font-size: 0.5625rem; color: var(--color-ink-muted); padding: 0.0625rem 0.125rem; border-radius: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+    .apt-item.scheduled { background: rgba(59,130,246,0.08); }
+    .apt-item.confirmed { background: rgba(16,185,129,0.08); }
+    .apt-item.in_progress { background: rgba(245,158,11,0.08); }
+    .apt-item.completed { background: rgba(45,106,79,0.08); }
+    .apt-item.cancelled { background: rgba(220,38,38,0.08); opacity: 0.7; }
+
+    .status-dot { width: 3px; height: 3px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.scheduled { background: #2563eb; }
+    .status-dot.confirmed { background: #059669; }
+    .status-dot.in_progress { background: #d97706; }
+    .status-dot.completed { background: var(--color-success); }
+    .status-dot.cancelled { background: #dc2626; }
+
+    .apt-overflow { font-size: 0.5625rem; color: var(--color-ink-subtle); padding: 0.0625rem 0.125rem; font-style: italic; }
+
+    /* Month Summary */
+    .month-summary { display: flex; justify-content: center; gap: 2rem; padding: 0.375rem 0.75rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+    .summary-item { display: flex; align-items: center; gap: 0.5rem; }
+    .summary-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); white-space: nowrap; }
+    .summary-value { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); }
+
+    /* Loading State */
+    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .spinner { border: 3px solid var(--color-border); border-top: 3px solid var(--color-ink); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Empty State */
+    .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--color-ink-muted); }
+    .empty-state svg { width: 48px; height: 48px; margin: 0 auto 0.75rem; opacity: 0.3; }
+    .empty-state h3 { font-size: 0.9375rem; font-weight: 500; margin-bottom: 0.25rem; }
+    .empty-state p { font-size: 0.8125rem; }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+        .month-grid { grid-template-rows: 28px repeat(6, 90px); }
+        .weekday-header { padding: 0.25rem; font-size: 0.625rem; }
+        .day-cell { padding: 0.25rem; }
+        .day-number { font-size: 0.6875rem; }
+        .apt-item { font-size: 0.5rem; }
+    }
+    @media (max-width: 1024px) {
+        .refined-page { padding: 0.5rem; }
+        .page-header { margin-bottom: 0.5rem; }
+        .refined-card { padding: 0.5rem; margin-bottom: 0.5rem; }
+        .month-grid { grid-template-rows: 24px repeat(6, 80px); }
+        .weekday-header { padding: 0.25rem; font-size: 0.5625rem; }
+        .day-cell { padding: 0.2rem; }
+        .day-number { font-size: 0.625rem; }
+        .apt-item { font-size: 0.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Kalendarz miesiąca</h1>
+            <p class="page-subtitle">Widok miesięczny harmonogramu pracowników</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <div class="view-toggle">
+                <a href="{{ url_for('main.appointments_calendar') }}">Dzień</a>
+                <a href="{{ url_for('main.appointments_calendar_week') }}">Tydzień</a>
+                <a href="{{ url_for('main.appointments_calendar_month') }}" class="active">Miesiąc</a>
+                <a href="{{ url_for('main.appointments_list') }}">Lista</a>
+            </div>
+            <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
+                <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Nowa wizyta
+            </a>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="refined-card">
+        <div class="controls-bar">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 200px;">
+                <label for="employeeSelect" style="margin-bottom: 0;">Pracownik</label>
+                <select id="employeeSelect" style="flex: 1;">
+                    <option value="">Ładowanie...</option>
+                </select>
+            </div>
+            <div class="month-nav">
+                <button id="prevMonthBtn" class="refined-btn-secondary" title="Poprzedni miesiąc">
+                    <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="month-label" id="monthLabel">Miesiąc</div>
+                <button id="nextMonthBtn" class="refined-btn-secondary" title="Następny miesiąc">
+                    <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+            <button id="thisMonthBtn" class="refined-btn-secondary">Ten miesiąc</button>
+        </div>
+    </div>
+
+    <!-- Month Calendar -->
+    <div class="month-container">
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="month-grid" id="monthGrid">
+            <!-- Weekday Headers -->
+            <div class="weekday-header">Pon</div>
+            <div class="weekday-header">Wt</div>
+            <div class="weekday-header">Śr</div>
+            <div class="weekday-header">Czw</div>
+            <div class="weekday-header">Pt</div>
+            <div class="weekday-header">Sob</div>
+            <div class="weekday-header">Ndz</div>
+
+            <!-- Day Cells will be populated by JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3>Brak wizyt</h3>
+            <p>W tym miesiącu nie ma zaplanowanych wizyt dla wybranego pracownika.</p>
+        </div>
+
+        <!-- Month Summary -->
+        <div class="month-summary">
+            <div class="summary-item">
+                <div class="summary-label">Wizyty</div>
+                <div class="summary-value" id="totalAppointments">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Godziny</div>
+                <div class="summary-value" id="totalHours">0h</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Przychód</div>
+                <div class="summary-value" id="totalRevenue">0 zł</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// State
+let currentEmployeeId = null;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let employees = [];
+let appointments = [];
+
+// DOM Elements
+const employeeSelect = document.getElementById('employeeSelect');
+const prevMonthBtn = document.getElementById('prevMonthBtn');
+const nextMonthBtn = document.getElementById('nextMonthBtn');
+const thisMonthBtn = document.getElementById('thisMonthBtn');
+const monthLabel = document.getElementById('monthLabel');
+const newAppointmentBtn = document.getElementById('newAppointmentBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const emptyState = document.getElementById('emptyState');
+const monthGrid = document.getElementById('monthGrid');
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    // Check URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlEmployeeId = urlParams.get('employee_id');
+
+    if (urlEmployeeId) {
+        currentEmployeeId = urlEmployeeId;
+    }
+
+    updateMonthLabel();
+    loadEmployees();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    employeeSelect.addEventListener('change', handleEmployeeChange);
+    prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
+    nextMonthBtn.addEventListener('click', () => navigateMonth(1));
+    thisMonthBtn.addEventListener('click', goToThisMonth);
+}
+
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/appointments/employees');
+        if (!response.ok) throw new Error('Failed to load employees');
+
+        employees = await response.json();
+
+        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
+        employees.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.id;
+            option.textContent = emp.full_name + (emp.position ? ` (${emp.position})` : '');
+            employeeSelect.appendChild(option);
+        });
+
+        if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
+            employeeSelect.value = currentEmployeeId;
+            loadMonth();
+        } else if (employees.length > 0) {
+            employeeSelect.value = employees[0].id;
+            currentEmployeeId = employees[0].id;
+            loadMonth();
+        }
+    } catch (error) {
+        console.error('Error loading employees:', error);
+        alert('Nie udało się załadować listy pracowników');
+    }
+}
+
+function handleEmployeeChange() {
+    currentEmployeeId = employeeSelect.value;
+    if (currentEmployeeId) {
+        loadMonth();
+        updateNewAppointmentLink();
+    }
+}
+
+function navigateMonth(offset) {
+    currentMonth += offset;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    updateMonthLabel();
+    loadMonth();
+    updateNewAppointmentLink();
+}
+
+function goToThisMonth() {
+    const now = new Date();
+    currentMonth = now.getMonth();
+    currentYear = now.getFullYear();
+    updateMonthLabel();
+    loadMonth();
+    updateNewAppointmentLink();
+}
+
+function updateMonthLabel() {
+    const date = new Date(currentYear, currentMonth, 1);
+    const monthName = date.toLocaleDateString('pl-PL', { month: 'long' });
+    monthLabel.textContent = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${currentYear}`;
+}
+
+function updateNewAppointmentLink() {
+    const params = new URLSearchParams();
+    params.set('from', 'month');
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    params.set('date', firstDay.toISOString().split('T')[0]);
+    newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
+}
+
+function getMonthRange(year, month) {
+    // First day of month
+    const firstDay = new Date(year, month, 1);
+
+    // Start from Monday before first day
+    const startDay = new Date(firstDay);
+    const dayOfWeek = firstDay.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startDay.setDate(1 - daysToSubtract);
+
+    // End at Sunday after last day (6 weeks total = 42 days)
+    const endDay = new Date(startDay);
+    endDay.setDate(startDay.getDate() + 41);
+
+    return {
+        start: startDay.toISOString().split('T')[0],
+        end: endDay.toISOString().split('T')[0],
+        startDate: new Date(startDay)
+    };
+}
+
+function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+async function loadMonth() {
+    if (!currentEmployeeId) return;
+
+    showLoading(true);
+
+    try {
+        const { start, end } = getMonthRange(currentYear, currentMonth);
+
+        const params = new URLSearchParams({
+            employee_id: currentEmployeeId,
+            start_date: start,
+            end_date: end
+        });
+
+        const response = await fetch(`/api/appointments?${params}`);
+        if (!response.ok) throw new Error('Failed to load appointments');
+
+        const data = await response.json();
+        // Filter out cancelled and no_show appointments
+        appointments = (data.appointments || []).filter(apt =>
+            apt.status !== 'cancelled' && apt.status !== 'no_show'
+        );
+
+        renderMonth();
+        updateSummary();
+    } catch (error) {
+        console.error('Error loading month:', error);
+        alert('Nie udało się załadować harmonogramu');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function renderMonth() {
+    // Remove existing day cells (keep the 7 weekday headers)
+    while (monthGrid.children.length > 7) {
+        monthGrid.removeChild(monthGrid.lastChild);
+    }
+
+    if (appointments.length === 0) {
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+    }
+
+    const { startDate } = getMonthRange(currentYear, currentMonth);
+    const appointmentsByDay = groupByDay(appointments);
+    const today = new Date().toDateString();
+
+    // Render 42 days (6 weeks)
+    for (let i = 0; i < 42; i++) {
+        const cellDate = new Date(startDate);
+        cellDate.setDate(cellDate.getDate() + i);
+        const dateStr = cellDate.toISOString().split('T')[0];
+
+        const cell = createDayCell(cellDate, appointmentsByDay[dateStr] || [], today);
+        monthGrid.appendChild(cell);
+    }
+}
+
+function groupByDay(appointments) {
+    const grouped = {};
+    appointments.forEach(apt => {
+        if (!grouped[apt.appointment_date]) {
+            grouped[apt.appointment_date] = [];
+        }
+        grouped[apt.appointment_date].push(apt);
+    });
+    return grouped;
+}
+
+function createDayCell(date, dayAppointments, today) {
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+
+    const isCurrentMonth = date.getMonth() === currentMonth;
+    const isToday = date.toDateString() === today;
+
+    if (!isCurrentMonth) cell.classList.add('other-month');
+    if (isToday) cell.classList.add('today');
+
+    // Day number
+    const dayNum = document.createElement('div');
+    dayNum.className = 'day-number';
+    dayNum.textContent = date.getDate();
+    cell.appendChild(dayNum);
+
+    // Appointment list (max 4 visible)
+    const aptList = document.createElement('div');
+    aptList.className = 'apt-list';
+
+    const visibleApts = dayAppointments.slice(0, 4);
+    visibleApts.forEach(apt => {
+        const item = document.createElement('div');
+        item.className = `apt-item ${apt.status}`;
+        item.innerHTML = `
+            <span class="status-dot ${apt.status}"></span>
+            ${formatTime(apt.start_time)} ${escapeHtml(truncate(apt.client_name || 'Brak', 12))}
+        `;
+        aptList.appendChild(item);
+    });
+
+    // Overflow indicator
+    if (dayAppointments.length > 4) {
+        const overflow = document.createElement('div');
+        overflow.className = 'apt-overflow';
+        overflow.textContent = `+${dayAppointments.length - 4} więcej`;
+        aptList.appendChild(overflow);
+    }
+
+    cell.appendChild(aptList);
+
+    // Click handler → navigate to week view
+    cell.addEventListener('click', () => {
+        const monday = getMonday(date);
+        const params = new URLSearchParams({
+            date: monday.toISOString().split('T')[0],
+            employee_id: currentEmployeeId
+        });
+        window.location.href = `/appointments/calendar/week?${params}`;
+    });
+
+    return cell;
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    return `${parseInt(hours)}:${minutes}`;
+}
+
+function truncate(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+function updateSummary() {
+    const totalAppointments = appointments.length;
+
+    let totalMinutes = 0;
+    appointments.forEach(apt => {
+        const start = timeToMinutes(apt.start_time);
+        const end = timeToMinutes(apt.end_time);
+        totalMinutes += (end - start);
+    });
+    const totalHours = (totalMinutes / 60).toFixed(1);
+
+    const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.total_price || 0), 0);
+
+    document.getElementById('totalAppointments').textContent = totalAppointments;
+    document.getElementById('totalHours').textContent = totalHours + 'h';
+    document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
+}
+
+function timeToMinutes(timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+function showLoading(show) {
+    loadingOverlay.style.display = show ? 'flex' : 'none';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}
