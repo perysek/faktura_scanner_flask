@@ -317,17 +317,17 @@
 
   /* Refined Card - Modern card container */
   .refined-card {
-      @apply bg-white rounded-2xl shadow-md p-6 border border-slate-200/50;
+      @apply bg-white shadow-md p-6 border border-slate-200/50;
   }
 
   /* Refined Buttons - Primary action button */
   .refined-btn-primary {
-      @apply px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-xl font-medium shadow-sm hover:shadow-md hover:from-primary-700 hover:to-primary-600 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+      @apply px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium shadow-sm hover:shadow-md hover:from-primary-700 hover:to-primary-600 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Refined Buttons - Secondary action button */
   .refined-btn-secondary {
-      @apply px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 hover:shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+      @apply px-5 py-2.5 bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 hover:shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Refined Buttons - Small size variant */
