@@ -350,11 +350,17 @@
   }
 
   .refined-table th {
-      @apply px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider;
+      @apply px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider;
   }
 
   .refined-table td {
       @apply px-6 py-4 text-sm text-slate-900 border-b border-slate-100;
+  }
+
+  /* Default left alignment for first column only */
+  .refined-table th:first-child,
+  .refined-table td:first-child {
+      @apply text-left;
   }
 
   .refined-table tbody tr {
