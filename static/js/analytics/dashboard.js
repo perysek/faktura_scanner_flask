@@ -39,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Period navigation buttons
+    document.getElementById('prevPeriod').addEventListener('click', () => navigatePeriod(-1));
+    document.getElementById('nextPeriod').addEventListener('click', () => navigatePeriod(1));
+    document.getElementById('currentPeriod').addEventListener('click', () => {
+        selectPeriod('current_month');
+    });
+
     // Load initial data
     loadDashboard();
 });
@@ -56,7 +63,64 @@ function selectPeriod(period) {
         btn.classList.toggle('active', btn.dataset.period === period);
     });
 
+    // Update period description
+    updatePeriodDescription();
+
     loadDashboard();
+}
+
+/**
+ * Navigate to previous or next period
+ */
+function navigatePeriod(direction) {
+    const today = new Date();
+
+    if (currentPeriod === 'current_month') {
+        // Navigate months
+        const targetMonth = new Date(today.getFullYear(), today.getMonth() + direction, 1);
+        customStartDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1).toISOString().split('T')[0];
+        customEndDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).toISOString().split('T')[0];
+        currentPeriod = 'custom';
+
+        // Clear active buttons
+        document.querySelectorAll('.period-selector button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    } else if (currentPeriod === 'custom' && customStartDate && customEndDate) {
+        // Navigate by the current range length
+        const start = new Date(customStartDate);
+        const end = new Date(customEndDate);
+        const rangeDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+        const newStart = new Date(start);
+        newStart.setDate(newStart.getDate() + (direction * rangeDays));
+        const newEnd = new Date(newStart);
+        newEnd.setDate(newEnd.getDate() + rangeDays);
+
+        customStartDate = newStart.toISOString().split('T')[0];
+        customEndDate = newEnd.toISOString().split('T')[0];
+    }
+
+    updatePeriodDescription();
+    loadDashboard();
+}
+
+/**
+ * Update period description text
+ */
+function updatePeriodDescription() {
+    const descEl = document.getElementById('periodDescription');
+    if (!descEl) return;
+
+    if (currentPeriod === 'current_month') {
+        descEl.textContent = 'Ten miesiąc';
+    } else if (currentPeriod === 'last_month') {
+        descEl.textContent = 'Ostatni miesiąc';
+    } else if (currentPeriod === 'current_year') {
+        descEl.textContent = 'Rok do daty';
+    } else if (currentPeriod === 'custom' && customStartDate && customEndDate) {
+        descEl.textContent = `${formatDateLabel(customStartDate)} - ${formatDateLabel(customEndDate)}`;
+    }
 }
 
 /**
@@ -182,6 +246,9 @@ function applyCustomRange() {
     document.querySelectorAll('.period-selector button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.period === 'custom');
     });
+
+    // Update period description
+    updatePeriodDescription();
 
     closeCustomRange();
     loadDashboard();

@@ -1,29 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Analityka - {{ super() }}{% endblock %}
-
-{% block page_title %}
-<div class="flex justify-between items-center">
-    <h1 class="text-2xl font-medium text-slate-900">Analityka biznesowa</h1>
-
-    <!-- Period Selector -->
-    <div class="period-selector flex gap-2">
-        <button data-period="current_month" class="refined-btn-secondary refined-btn-sm active">
-            Ten miesiąc
-        </button>
-        <button data-period="last_month" class="refined-btn-secondary refined-btn-sm">
-            Ostatni miesiąc
-        </button>
-        <button data-period="current_year" class="refined-btn-secondary refined-btn-sm">
-            Rok do daty
-        </button>
-        <button data-period="custom" class="refined-btn-secondary refined-btn-sm">
-            Własny zakres
-        </button>
-    </div>
-</div>
-{% endblock %}
+{% block title %}Analityka - {{ app_name }}{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
+<div class="mb-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center text-sm text-slate-600 mb-4">
+        <a href="{{ url_for('main.index') }}" class="hover:text-primary-600 transition-colors">Strona główna</a>
+        <svg class="w-4 h-4 mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        <span class="text-slate-900 font-medium">Analityka biznesowa</span>
+    </nav>
+
+    <!-- Header with Title and Actions -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900 mb-1">Analityka biznesowa</h1>
+            <p class="text-sm text-slate-500" id="periodDescription">Ten miesiąc</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Period Navigation -->
+            <div class="flex items-center gap-2 border border-slate-200 p-1 bg-white">
+                <button id="prevPeriod" class="refined-btn-secondary refined-btn-sm" title="Poprzedni okres">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button id="currentPeriod" class="refined-btn-secondary refined-btn-sm">
+                    Dziś
+                </button>
+                <button id="nextPeriod" class="refined-btn-secondary refined-btn-sm" title="Następny okres">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Period Selector -->
+            <div class="period-selector flex gap-2 border border-slate-200 p-1 bg-white">
+                <button data-period="current_month" class="refined-btn-secondary refined-btn-sm active">
+                    Ten miesiąc
+                </button>
+                <button data-period="last_month" class="refined-btn-secondary refined-btn-sm">
+                    Ostatni miesiąc
+                </button>
+                <button data-period="current_year" class="refined-btn-secondary refined-btn-sm">
+                    Rok do daty
+                </button>
+                <button data-period="custom" class="refined-btn-secondary refined-btn-sm">
+                    Własny zakres
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Content -->
 <!-- Custom Date Range Modal (hidden by default) -->
 <div id="customRangeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="refined-card max-w-md w-full">
