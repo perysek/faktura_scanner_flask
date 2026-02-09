@@ -111,7 +111,7 @@
     </div>
 
     <div class="btn-bar">
-        <a href="{{ url_for('main.appointments_list') }}" class="refined-btn-secondary">Anuluj</a>
+        <a href="{{ url_for('main.appointments_list') }}" class="refined-btn-secondary" id="btn-cancel">Anuluj</a>
         <button id="btn-save" onclick="saveAppointment()" class="refined-btn-primary" disabled>
             <span class="material-icons">check</span>
             Zarezerwuj wizytę
@@ -261,10 +261,59 @@ document.getElementById('employee-select').addEventListener('change', loadEmploy
 );
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Read URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('date');
+    const urlEmployeeId = urlParams.get('employee_id');
+    const urlStartTime = urlParams.get('start_time');
+    const from = urlParams.get('from');
+
+    // Set default or URL date
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('appt-date').value = today;
+    document.getElementById('appt-date').value = urlDate || today;
+
+    // Prefill start time if provided
+    if (urlStartTime) {
+        document.getElementById('appt-time').value = urlStartTime;
+    }
+
+    // Set cancel button to return to correct view
+    const cancelBtn = document.getElementById('btn-cancel');
+    let backUrl;
+
+    if (from === 'calendar') {
+        backUrl = "{{ url_for('main.appointments_calendar') }}";
+    } else if (from === 'week') {
+        backUrl = "{{ url_for('main.appointments_calendar_week') }}";
+    } else if (from === 'month') {
+        backUrl = "{{ url_for('main.appointments_calendar_month') }}";
+    } else {
+        backUrl = "{{ url_for('main.appointments_list') }}";
+    }
+
+    // Add date and employee_id parameters if available
+    if (from === 'calendar' || from === 'week' || from === 'month') {
+        const backParams = new URLSearchParams();
+        if (urlDate) backParams.set('date', urlDate);
+        if (urlEmployeeId) backParams.set('employee_id', urlEmployeeId);
+        if (backParams.toString()) {
+            backUrl += '?' + backParams.toString();
+        }
+    }
+
+    cancelBtn.href = backUrl;
+
+    // Load form data
     loadClients();
-    loadEmployees();
+    loadEmployees().then(() => {
+        // Prefill employee selection if provided
+        if (urlEmployeeId) {
+            const employeeSelect = document.getElementById('employee-select');
+            employeeSelect.value = urlEmployeeId;
+            // Trigger change event to load employee services
+            employeeSelect.dispatchEvent(new Event('change'));
+        }
+    });
 });
 </script>
 {% endblock %}

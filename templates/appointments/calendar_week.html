@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+
+{% block title %}Kalendarz tygodnia - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a;
+        --color-ink-muted: #525252;
+        --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa;
+        --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1;
+        --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --font-display: 'Inter', system-ui, sans-serif;
+        --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body { background: var(--color-surface-warm); font-family: var(--font-body); color: var(--color-ink); }
+    .refined-page { max-width: 1600px; margin: 0 auto; padding: 1rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .page-title { font-family: var(--font-display); font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
+
+    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 0.75rem; }
+
+    .controls-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .controls-bar label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem; display: block; }
+    .controls-bar select { padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); min-width: 150px; }
+    .controls-bar select:focus { outline: none; border-color: var(--color-ink-muted); }
+
+    .refined-btn-primary { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; font-size: 0.75rem; font-weight: 500; background: var(--color-ink); color: white; border-radius: 2px; border: none; cursor: pointer; text-decoration: none; transition: all 0.25s var(--ease-out-expo); }
+    .refined-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.5rem; font-size: 0.75rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
+    .refined-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
+
+    .view-toggle { display: flex; gap: 0.375rem; }
+    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
+    .view-toggle a:hover { border-color: var(--color-ink-muted); }
+    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+
+    /* Week Navigation */
+    .week-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .week-label { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); min-width: 180px; text-align: center; }
+
+    /* Week Grid */
+    .week-container { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+    .week-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); grid-template-rows: 60px 1050px; }
+
+    /* Day Headers */
+    .day-header { padding: 0.5rem 0.375rem; text-align: center; border-bottom: 1px solid var(--color-border); border-right: 1px solid var(--color-border-subtle); background: var(--color-surface); cursor: pointer; transition: background 0.2s ease; }
+    .day-header:hover { background: var(--color-surface-warm); }
+    .day-header.today { background: #fffbeb; border-bottom-color: #d97706; }
+    .day-name { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink-subtle); margin-bottom: 0.125rem; }
+    .day-date { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); }
+    .day-header.today .day-date { color: #d97706; }
+
+    /* Hour Labels */
+    .week-hours { border-right: 1px solid var(--color-border); background: var(--color-surface); display: grid; grid-template-rows: repeat(16, 65.625px); grid-row: 2; grid-column: 1; }
+    .hour-label { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: var(--color-ink-muted); text-align: right; border-bottom: 1px solid var(--color-border-subtle); display: flex; align-items: start; justify-content: flex-end; }
+
+    /* Day Columns */
+    .day-column { position: relative; border-right: 1px solid var(--color-border-subtle); grid-row: 2; background: white; }
+    .day-column:last-child { border-right: none; }
+    .day-column-bg { display: grid; grid-template-rows: repeat(32, 32.8125px); height: 100%; }
+    .time-slot { border-bottom: 1px solid var(--color-border-subtle); }
+    .time-slot:hover { background: var(--color-surface); }
+
+    /* Appointment Blocks */
+    .appointments-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+    .appointment-block { position: absolute; left: 4px; right: 4px; background: white; border-left: 3px solid #2563eb; border-radius: 2px; padding: 0.375rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); pointer-events: auto; cursor: pointer; transition: all 0.2s var(--ease-out-expo); overflow: hidden; }
+    .appointment-block:hover { transform: translateX(1px); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+    .appointment-block.scheduled { border-left-color: #2563eb; background: #eff6ff; }
+    .appointment-block.confirmed { border-left-color: #059669; background: #ecfdf5; }
+    .appointment-block.in_progress { border-left-color: #d97706; background: #fffbeb; }
+    .appointment-block.completed { border-left-color: var(--color-success); background: #f0fdf4; }
+    .appointment-block.cancelled { border-left-color: #dc2626; background: #fef2f2; opacity: 0.7; }
+
+    .apt-time { font-size: 0.6875rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; line-height: 1.2; }
+    .apt-client { font-size: 0.6875rem; color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-bottom: 0.0625rem; }
+    .apt-service { font-size: 0.625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; font-style: italic; }
+
+    /* Week Summary */
+    .week-summary { display: flex; justify-content: center; gap: 2rem; padding: 0.375rem 0.75rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+    .summary-item { display: flex; align-items: center; gap: 0.5rem; }
+    .summary-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); white-space: nowrap; }
+    .summary-value { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); }
+
+    /* Loading State */
+    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .spinner { border: 3px solid var(--color-border); border-top: 3px solid var(--color-ink); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Empty State */
+    .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--color-ink-muted); }
+    .empty-state svg { width: 48px; height: 48px; margin: 0 auto 0.75rem; opacity: 0.3; }
+    .empty-state h3 { font-size: 0.9375rem; font-weight: 500; margin-bottom: 0.25rem; }
+    .empty-state p { font-size: 0.8125rem; }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+        .week-grid { grid-template-columns: 70px repeat(7, 1fr); }
+        .hour-label { padding: 0.375rem 0.5rem; font-size: 0.6875rem; }
+        .day-header { padding: 0.375rem 0.25rem; }
+        .day-name { font-size: 0.5625rem; }
+        .day-date { font-size: 0.8125rem; }
+    }
+    @media (max-width: 1200px) {
+        .week-grid { grid-template-columns: 60px repeat(7, 1fr); }
+        .hour-label { padding: 0.25rem 0.375rem; font-size: 0.625rem; }
+        .appointment-block { left: 2px; right: 2px; padding: 0.25rem; }
+        .apt-time, .apt-client { font-size: 0.625rem; }
+        .apt-service { font-size: 0.5625rem; }
+        .day-header { padding: 0.25rem; }
+        .day-name { font-size: 0.5rem; }
+        .day-date { font-size: 0.75rem; }
+    }
+    @media (max-width: 1024px) {
+        .refined-page { padding: 0.5rem; }
+        .page-header { margin-bottom: 0.5rem; }
+        .refined-card { padding: 0.5rem; margin-bottom: 0.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Kalendarz tygodnia</h1>
+            <p class="page-subtitle">Widok tygodniowy harmonogramu pracowników</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <div class="view-toggle">
+                <a href="{{ url_for('main.appointments_calendar') }}">Dzień</a>
+                <a href="{{ url_for('main.appointments_calendar_week') }}" class="active">Tydzień</a>
+                <a href="{{ url_for('main.appointments_calendar_month') }}">Miesiąc</a>
+                <a href="{{ url_for('main.appointments_list') }}">Lista</a>
+            </div>
+            <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
+                <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Nowa wizyta
+            </a>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="refined-card">
+        <div class="controls-bar">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 200px;">
+                <label for="employeeSelect" style="margin-bottom: 0;">Pracownik</label>
+                <select id="employeeSelect" style="flex: 1;">
+                    <option value="">Ładowanie...</option>
+                </select>
+            </div>
+            <div class="week-nav">
+                <button id="prevWeekBtn" class="refined-btn-secondary" title="Poprzedni tydzień">
+                    <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="week-label" id="weekLabel">Tydzień</div>
+                <button id="nextWeekBtn" class="refined-btn-secondary" title="Następny tydzień">
+                    <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+            <button id="thisWeekBtn" class="refined-btn-secondary">Ten tydzień</button>
+        </div>
+    </div>
+
+    <!-- Week Timeline -->
+    <div class="week-container">
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="week-grid">
+            <!-- Empty top-left corner -->
+            <div style="grid-column: 1; grid-row: 1; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: var(--color-surface);"></div>
+
+            <!-- Day Headers (7 columns) -->
+            <div class="day-header" id="dayHeader0">
+                <div class="day-name">Pon</div>
+                <div class="day-date">--</div>
+            </div>
+            <div class="day-header" id="dayHeader1">
+                <div class="day-name">Wt</div>
+                <div class="day-date">--</div>
+            </div>
+            <div class="day-header" id="dayHeader2">
+                <div class="day-name">Śr</div>
+                <div class="day-date">--</div>
+            </div>
+            <div class="day-header" id="dayHeader3">
+                <div class="day-name">Czw</div>
+                <div class="day-date">--</div>
+            </div>
+            <div class="day-header" id="dayHeader4">
+                <div class="day-name">Pt</div>
+                <div class="day-date">--</div>
+            </div>
+            <div class="day-header" id="dayHeader5">
+                <div class="day-name">Sob</div>
+                <div class="day-date">--</div>
+            </div>
+            <div class="day-header" id="dayHeader6">
+                <div class="day-name">Ndz</div>
+                <div class="day-date">--</div>
+            </div>
+
+            <!-- Hour Labels -->
+            <div class="week-hours">
+                <div class="hour-label">7:00</div>
+                <div class="hour-label">8:00</div>
+                <div class="hour-label">9:00</div>
+                <div class="hour-label">10:00</div>
+                <div class="hour-label">11:00</div>
+                <div class="hour-label">12:00</div>
+                <div class="hour-label">13:00</div>
+                <div class="hour-label">14:00</div>
+                <div class="hour-label">15:00</div>
+                <div class="hour-label">16:00</div>
+                <div class="hour-label">17:00</div>
+                <div class="hour-label">18:00</div>
+                <div class="hour-label">19:00</div>
+                <div class="hour-label">20:00</div>
+                <div class="hour-label">21:00</div>
+                <div class="hour-label">22:00</div>
+            </div>
+
+            <!-- Day Columns (7 columns) -->
+            <div class="day-column" style="grid-column: 2;">
+                <div class="day-column-bg" id="dayColumnBg0"></div>
+                <div class="appointments-layer" id="dayColumn0"></div>
+            </div>
+            <div class="day-column" style="grid-column: 3;">
+                <div class="day-column-bg" id="dayColumnBg1"></div>
+                <div class="appointments-layer" id="dayColumn1"></div>
+            </div>
+            <div class="day-column" style="grid-column: 4;">
+                <div class="day-column-bg" id="dayColumnBg2"></div>
+                <div class="appointments-layer" id="dayColumn2"></div>
+            </div>
+            <div class="day-column" style="grid-column: 5;">
+                <div class="day-column-bg" id="dayColumnBg3"></div>
+                <div class="appointments-layer" id="dayColumn3"></div>
+            </div>
+            <div class="day-column" style="grid-column: 6;">
+                <div class="day-column-bg" id="dayColumnBg4"></div>
+                <div class="appointments-layer" id="dayColumn4"></div>
+            </div>
+            <div class="day-column" style="grid-column: 7;">
+                <div class="day-column-bg" id="dayColumnBg5"></div>
+                <div class="appointments-layer" id="dayColumn5"></div>
+            </div>
+            <div class="day-column" style="grid-column: 8;">
+                <div class="day-column-bg" id="dayColumnBg6"></div>
+                <div class="appointments-layer" id="dayColumn6"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3>Brak wizyt</h3>
+            <p>W tym tygodniu nie ma zaplanowanych wizyt dla wybranego pracownika.</p>
+        </div>
+
+        <!-- Week Summary -->
+        <div class="week-summary">
+            <div class="summary-item">
+                <div class="summary-label">Wizyty</div>
+                <div class="summary-value" id="totalAppointments">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Godziny</div>
+                <div class="summary-value" id="totalHours">0h</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Przychód</div>
+                <div class="summary-value" id="totalRevenue">0 zł</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// State
+let currentEmployeeId = null;
+let currentWeekStart = getMonday(new Date());
+let employees = [];
+let appointments = [];
+
+// DOM Elements
+const employeeSelect = document.getElementById('employeeSelect');
+const prevWeekBtn = document.getElementById('prevWeekBtn');
+const nextWeekBtn = document.getElementById('nextWeekBtn');
+const thisWeekBtn = document.getElementById('thisWeekBtn');
+const weekLabel = document.getElementById('weekLabel');
+const newAppointmentBtn = document.getElementById('newAppointmentBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const emptyState = document.getElementById('emptyState');
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    // Check URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('date');
+    const urlEmployeeId = urlParams.get('employee_id');
+
+    if (urlDate) {
+        currentWeekStart = getMonday(new Date(urlDate));
+    }
+    if (urlEmployeeId) {
+        currentEmployeeId = urlEmployeeId;
+    }
+
+    initializeTimeline();
+    loadEmployees();
+    setupEventListeners();
+});
+
+function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function initializeTimeline() {
+    updateWeekLabel();
+    updateDayHeaders();
+
+    // Create 32 time slots for each day column
+    for (let day = 0; day < 7; day++) {
+        const bgContainer = document.getElementById(`dayColumnBg${day}`);
+        for (let i = 0; i < 32; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'time-slot';
+            bgContainer.appendChild(slot);
+        }
+    }
+}
+
+function setupEventListeners() {
+    employeeSelect.addEventListener('change', handleEmployeeChange);
+    prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
+    nextWeekBtn.addEventListener('click', () => navigateWeek(1));
+    thisWeekBtn.addEventListener('click', goToThisWeek);
+
+    // Day header click -> go to day view
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`dayHeader${i}`).addEventListener('click', () => {
+            const date = new Date(currentWeekStart);
+            date.setDate(date.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const params = new URLSearchParams({
+                date: dateStr,
+                employee_id: currentEmployeeId
+            });
+            window.location.href = `/appointments/calendar?${params}`;
+        });
+    }
+}
+
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/appointments/employees');
+        if (!response.ok) throw new Error('Failed to load employees');
+
+        employees = await response.json();
+
+        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
+        employees.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.id;
+            option.textContent = emp.full_name + (emp.position ? ` (${emp.position})` : '');
+            employeeSelect.appendChild(option);
+        });
+
+        if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
+            employeeSelect.value = currentEmployeeId;
+            loadWeek();
+        } else if (employees.length > 0) {
+            employeeSelect.value = employees[0].id;
+            currentEmployeeId = employees[0].id;
+            loadWeek();
+        }
+    } catch (error) {
+        console.error('Error loading employees:', error);
+        alert('Nie udało się załadować listy pracowników');
+    }
+}
+
+function handleEmployeeChange() {
+    currentEmployeeId = employeeSelect.value;
+    if (currentEmployeeId) {
+        loadWeek();
+        updateNewAppointmentLink();
+    }
+}
+
+function navigateWeek(offset) {
+    currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
+    updateWeekLabel();
+    updateDayHeaders();
+    loadWeek();
+    updateNewAppointmentLink();
+}
+
+function goToThisWeek() {
+    currentWeekStart = getMonday(new Date());
+    updateWeekLabel();
+    updateDayHeaders();
+    loadWeek();
+    updateNewAppointmentLink();
+}
+
+function updateWeekLabel() {
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    const startDay = currentWeekStart.getDate();
+    const endDay = weekEnd.getDate();
+    const startMonth = currentWeekStart.toLocaleDateString('pl-PL', { month: 'long' });
+    const endMonth = weekEnd.toLocaleDateString('pl-PL', { month: 'long' });
+    const year = currentWeekStart.getFullYear();
+
+    let label;
+    if (startMonth === endMonth) {
+        label = `${startDay}-${endDay} ${startMonth} ${year}`;
+    } else {
+        label = `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
+    }
+
+    weekLabel.textContent = label;
+}
+
+function updateDayHeaders() {
+    const today = new Date().toDateString();
+
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(currentWeekStart);
+        date.setDate(date.getDate() + i);
+
+        const header = document.getElementById(`dayHeader${i}`);
+        const dateEl = header.querySelector('.day-date');
+        dateEl.textContent = date.getDate();
+
+        // Highlight today
+        if (date.toDateString() === today) {
+            header.classList.add('today');
+        } else {
+            header.classList.remove('today');
+        }
+    }
+}
+
+function updateNewAppointmentLink() {
+    const params = new URLSearchParams();
+    params.set('from', 'week');
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
+    if (currentWeekStart) params.set('date', currentWeekStart.toISOString().split('T')[0]);
+    newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
+}
+
+async function loadWeek() {
+    if (!currentEmployeeId) return;
+
+    showLoading(true);
+
+    try {
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        const params = new URLSearchParams({
+            employee_id: currentEmployeeId,
+            start_date: currentWeekStart.toISOString().split('T')[0],
+            end_date: weekEnd.toISOString().split('T')[0]
+        });
+
+        const response = await fetch(`/api/appointments?${params}`);
+        if (!response.ok) throw new Error('Failed to load appointments');
+
+        const data = await response.json();
+        // Filter out cancelled and no_show appointments
+        appointments = (data.appointments || []).filter(apt =>
+            apt.status !== 'cancelled' && apt.status !== 'no_show'
+        );
+
+        renderWeek();
+        updateSummary();
+    } catch (error) {
+        console.error('Error loading week:', error);
+        alert('Nie udało się załadować harmonogramu');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function renderWeek() {
+    // Clear all day columns
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`dayColumn${i}`).innerHTML = '';
+    }
+
+    if (appointments.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    // Group appointments by day
+    const appointmentsByDay = groupByDay(appointments);
+
+    // Render each day
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(currentWeekStart);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        const dayAppointments = appointmentsByDay[dateStr] || [];
+        renderDayColumn(i, dayAppointments);
+    }
+}
+
+function groupByDay(appointments) {
+    const grouped = {};
+    appointments.forEach(apt => {
+        if (!grouped[apt.appointment_date]) {
+            grouped[apt.appointment_date] = [];
+        }
+        grouped[apt.appointment_date].push(apt);
+    });
+    return grouped;
+}
+
+function renderDayColumn(dayIndex, dayAppointments) {
+    const column = document.getElementById(`dayColumn${dayIndex}`);
+
+    dayAppointments.forEach(apt => {
+        const block = createAppointmentBlock(apt);
+        column.appendChild(block);
+    });
+}
+
+function createAppointmentBlock(appointment) {
+    const block = document.createElement('div');
+    block.className = `appointment-block ${appointment.status}`;
+
+    const position = calculatePosition(appointment.start_time, appointment.end_time);
+    block.style.top = position.top + '%';
+    block.style.height = position.height + '%';
+
+    const clientName = appointment.client_name || 'Bez klienta';
+    const serviceName = appointment.service_name || 'Brak usługi';
+    const timeRange = `${formatTime(appointment.start_time)} - ${formatTime(appointment.end_time)}`;
+
+    block.innerHTML = `
+        <div class="apt-time">${timeRange}</div>
+        <div class="apt-client" title="${escapeHtml(clientName)}">${escapeHtml(truncate(clientName, 15))}</div>
+        <div class="apt-service" title="${escapeHtml(serviceName)}">${escapeHtml(truncate(serviceName, 15))}</div>
+    `;
+
+    block.addEventListener('click', () => {
+        const params = new URLSearchParams({
+            from: 'week',
+            date: currentWeekStart.toISOString().split('T')[0],
+            employee_id: currentEmployeeId
+        });
+        window.location.href = `/appointment/${appointment.id}?${params.toString()}`;
+    });
+
+    return block;
+}
+
+function calculatePosition(startTime, endTime) {
+    const workStart = 7 * 60;
+    const workEnd = 23 * 60;
+    const totalMinutes = workEnd - workStart;
+
+    const start = timeToMinutes(startTime);
+    const end = timeToMinutes(endTime);
+
+    const top = ((start - workStart) / totalMinutes) * 100;
+    const height = ((end - start) / totalMinutes) * 100;
+
+    return { top, height };
+}
+
+function timeToMinutes(timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+function formatTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':');
+    return `${parseInt(hours)}:${minutes}`;
+}
+
+function truncate(text, maxLength) {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+function updateSummary() {
+    const totalAppointments = appointments.length;
+
+    let totalMinutes = 0;
+    appointments.forEach(apt => {
+        const start = timeToMinutes(apt.start_time);
+        const end = timeToMinutes(apt.end_time);
+        totalMinutes += (end - start);
+    });
+    const totalHours = (totalMinutes / 60).toFixed(1);
+
+    const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.total_price || 0), 0);
+
+    document.getElementById('totalAppointments').textContent = totalAppointments;
+    document.getElementById('totalHours').textContent = totalHours + 'h';
+    document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
+}
+
+function showLoading(show) {
+    loadingOverlay.style.display = show ? 'flex' : 'none';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

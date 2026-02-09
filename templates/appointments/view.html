@@ -142,23 +142,40 @@ const TRANSITIONS = {
     const backBtn = document.getElementById('back-button');
     const backText = document.getElementById('back-text');
 
+    let backUrl;
+    let backLabel;
+
     if (from === 'calendar') {
-        // Build calendar URL with date and employee_id parameters
-        let calendarUrl = "{{ url_for('main.appointments_calendar') }}";
+        // Day view
+        backUrl = "{{ url_for('main.appointments_calendar') }}";
+        backLabel = 'Powrót do kalendarza (dzień)';
+    } else if (from === 'week') {
+        // Week view
+        backUrl = "{{ url_for('main.appointments_calendar_week') }}";
+        backLabel = 'Powrót do kalendarza (tydzień)';
+    } else if (from === 'month') {
+        // Month view
+        backUrl = "{{ url_for('main.appointments_calendar_month') }}";
+        backLabel = 'Powrót do kalendarza (miesiąc)';
+    } else {
+        // Default: list view
+        backUrl = "{{ url_for('main.appointments_list') }}";
+        backLabel = 'Powrót do listy';
+    }
+
+    // Add date and employee_id parameters if available
+    if (from === 'calendar' || from === 'week' || from === 'month') {
         const calendarParams = new URLSearchParams();
         if (date) calendarParams.set('date', date);
         if (employeeId) calendarParams.set('employee_id', employeeId);
 
         if (calendarParams.toString()) {
-            calendarUrl += '?' + calendarParams.toString();
+            backUrl += '?' + calendarParams.toString();
         }
-
-        backBtn.href = calendarUrl;
-        backText.textContent = 'Powrót do kalendarza';
-    } else {
-        backBtn.href = "{{ url_for('main.appointments_list') }}";
-        backText.textContent = 'Powrót do listy';
     }
+
+    backBtn.href = backUrl;
+    backText.textContent = backLabel;
 })();
 
 function esc(t){if(!t)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};return String(t).replace(/[&<>"']/g,c=>m[c]);}
