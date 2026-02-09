@@ -3,7 +3,7 @@
 
 {% block page_title %}
 <div class="flex justify-between items-center">
-    <h1 class="text-2xl font-medium text-ink">Analityka biznesowa</h1>
+    <h1 class="text-2xl font-medium text-slate-900">Analityka biznesowa</h1>
 
     <!-- Period Selector -->
     <div class="period-selector flex gap-2">
@@ -53,29 +53,29 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <!-- Revenue Card -->
     <div class="refined-card">
-        <div class="text-sm text-ink-light mb-1">Przychód</div>
-        <div id="kpi-revenue" class="text-2xl font-semibold text-ink mb-2">-</div>
+        <div class="text-sm text-slate-500 mb-1">Przychód</div>
+        <div id="kpi-revenue" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
         <div id="kpi-revenue-change" class="text-sm"></div>
     </div>
 
     <!-- Appointments Card -->
     <div class="refined-card">
-        <div class="text-sm text-ink-light mb-1">Wizyty</div>
-        <div id="kpi-appointments" class="text-2xl font-semibold text-ink mb-2">-</div>
+        <div class="text-sm text-slate-500 mb-1">Wizyty</div>
+        <div id="kpi-appointments" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
         <div id="kpi-appointments-change" class="text-sm"></div>
     </div>
 
     <!-- Clients Card -->
     <div class="refined-card">
-        <div class="text-sm text-ink-light mb-1">Klienci</div>
-        <div id="kpi-clients" class="text-2xl font-semibold text-ink mb-2">-</div>
+        <div class="text-sm text-slate-500 mb-1">Klienci</div>
+        <div id="kpi-clients" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
         <div id="kpi-clients-change" class="text-sm"></div>
     </div>
 
     <!-- Avg Ticket Card -->
     <div class="refined-card">
-        <div class="text-sm text-ink-light mb-1">Średni rachunek</div>
-        <div id="kpi-avg-ticket" class="text-2xl font-semibold text-ink mb-2">-</div>
+        <div class="text-sm text-slate-500 mb-1">Średni rachunek</div>
+        <div id="kpi-avg-ticket" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
         <div id="kpi-avg-ticket-change" class="text-sm"></div>
     </div>
 </div>
@@ -103,7 +103,7 @@
 <div class="refined-card mb-6">
     <h3 class="text-lg font-medium mb-4">Wyniki pracowników</h3>
     <div class="overflow-x-auto">
-        <table class="table">
+        <table class="refined-table">
             <thead>
                 <tr>
                     <th>Pracownik</th>
@@ -117,7 +117,7 @@
             </thead>
             <tbody id="employeeTableBody">
                 <tr>
-                    <td colspan="7" class="text-center text-ink-light">Ładowanie...</td>
+                    <td colspan="7" class="text-center text-slate-500">Ładowanie...</td>
                 </tr>
             </tbody>
         </table>
@@ -132,14 +132,14 @@
         <div style="height: 300px;">
             <canvas id="clientSplitChart"></canvas>
         </div>
-        <div id="retentionRate" class="text-center mt-4 text-sm text-ink-light"></div>
+        <div id="retentionRate" class="text-center mt-4 text-sm text-slate-500"></div>
     </div>
 
     <!-- At-Risk Clients -->
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-4">Klienci zagrożeni utratą</h3>
         <div id="atRiskList" class="space-y-2 max-h-[300px] overflow-y-auto">
-            <p class="text-center text-ink-light">Ładowanie...</p>
+            <p class="text-center text-slate-500">Ładowanie...</p>
         </div>
     </div>
 </div>
