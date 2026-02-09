@@ -9,28 +9,34 @@ from config.database import DatabaseConnection
 
 class BaseRepository:
 	"""Bazowy repository z podstawowymi operacjami CRUD"""
-	
+
 	def __init__(self, table_name: str):
 		self.table_name = table_name
-		self.conn = DatabaseConnection.get_connection()
-	
+
+	def _get_conn(self) -> sqlite3.Connection:
+		"""Get database connection for current request context"""
+		return DatabaseConnection.get_connection()
+
 	def _execute(self, query: str, params: tuple = ()) -> sqlite3.Cursor:
 		"""Wykonaj query"""
-		cursor = self.conn.cursor()
+		conn = self._get_conn()
+		cursor = conn.cursor()
 		cursor.execute(query, params)
-		self.conn.commit()
+		conn.commit()
 		return cursor
-	
+
 	def _fetch_one(self, query: str, params: tuple = ()) -> Optional[
 		sqlite3.Row]:
 		"""Pobierz jeden rekord"""
-		cursor = self.conn.cursor()
+		conn = self._get_conn()
+		cursor = conn.cursor()
 		cursor.execute(query, params)
 		return cursor.fetchone()
-	
+
 	def _fetch_all(self, query: str, params: tuple = ()) -> List[sqlite3.Row]:
 		"""Pobierz wszystkie rekordy"""
-		cursor = self.conn.cursor()
+		conn = self._get_conn()
+		cursor = conn.cursor()
 		cursor.execute(query, params)
 		return cursor.fetchall()
 	
