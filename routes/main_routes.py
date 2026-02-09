@@ -237,6 +237,54 @@ def edit_employee(employee_id):
 
 
 # ============================================================================
+# APPOINTMENTS ROUTES
+# ============================================================================
+
+@main_bp.route('/appointments')
+@login_required
+@module_permission_required('appointments')
+def appointments_list():
+    """Appointments list/calendar view"""
+    return render_template('appointments/list.html')
+
+
+@main_bp.route('/appointments/calendar')
+@login_required
+@module_permission_required('appointments')
+def appointments_calendar():
+    """Appointments calendar day view"""
+    return render_template('appointments/calendar.html')
+
+
+@main_bp.route('/appointment/create')
+@login_required
+@module_permission_required('appointments')
+def create_appointment():
+    """Create new appointment form"""
+    return render_template('appointments/create.html')
+
+
+@main_bp.route('/appointment/<int:appointment_id>')
+@login_required
+@module_permission_required('appointments')
+def view_appointment(appointment_id):
+    """View appointment details"""
+    return render_template('appointments/view.html', appointment_id=appointment_id)
+
+
+# ============================================================================
+# INCOME ROUTES
+# ============================================================================
+
+@main_bp.route('/income')
+@login_required
+@module_permission_required('appointments')
+def income_dashboard():
+    """Income dashboard view"""
+    return render_template('income/dashboard.html')
+
+
+# ============================================================================
 # SETTINGS ROUTES
 # ============================================================================
 
