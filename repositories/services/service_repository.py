@@ -24,6 +24,7 @@ class ServiceRepository:
             duration_minutes=row['duration_minutes'],
             price=float(row['price']),
             currency=row['currency'],
+            service_type=row['service_type'] if 'service_type' in row.keys() else 'main',
             is_active=bool(row['is_active']),
             created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
             updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
@@ -33,8 +34,8 @@ class ServiceRepository:
         """Utwórz nową usługę"""
         query = """
             INSERT INTO services (
-                name, description, category, duration_minutes, price, currency, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                name, description, category, duration_minutes, price, currency, service_type, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -45,6 +46,7 @@ class ServiceRepository:
                 service.duration_minutes,
                 service.price,
                 service.currency,
+                service.service_type,
                 service.is_active
             ))
             conn.commit()
@@ -114,6 +116,7 @@ class ServiceRepository:
                 duration_minutes = ?,
                 price = ?,
                 currency = ?,
+                service_type = ?,
                 is_active = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
@@ -127,6 +130,7 @@ class ServiceRepository:
                 service.duration_minutes,
                 service.price,
                 service.currency,
+                service.service_type,
                 service.is_active,
                 service_id
             ))
@@ -220,4 +224,43 @@ class ServiceRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (min_minutes, max_minutes))
+            return cursor.fetchall()
+
+    def get_main_services(self, active_only: bool = True) -> List[sqlite3.Row]:
+        """Pobierz usługi główne (service_type='main')"""
+        active_filter = "AND is_active = 1" if active_only else ""
+        query = f"""
+            SELECT * FROM services
+            WHERE service_type = 'main' {active_filter}
+            ORDER BY category, name
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            return cursor.fetchall()
+
+    def get_addon_services(self, active_only: bool = True) -> List[sqlite3.Row]:
+        """Pobierz mikrousługi (service_type='addon')"""
+        active_filter = "AND is_active = 1" if active_only else ""
+        query = f"""
+            SELECT * FROM services
+            WHERE service_type = 'addon' {active_filter}
+            ORDER BY category, name
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            return cursor.fetchall()
+
+    def get_by_type(self, service_type: str, active_only: bool = True) -> List[sqlite3.Row]:
+        """Pobierz usługi według typu ('main' lub 'addon')"""
+        active_filter = "AND is_active = 1" if active_only else ""
+        query = f"""
+            SELECT * FROM services
+            WHERE service_type = ? {active_filter}
+            ORDER BY category, name
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (service_type,))
             return cursor.fetchall()

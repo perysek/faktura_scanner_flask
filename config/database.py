@@ -25,13 +25,20 @@ class DatabaseConnection:
 	
 	@classmethod
 	def get_connection(cls) -> sqlite3.Connection:
-		"""Pobierz połączenie do bazy (singleton)"""
+		"""Pobierz połączenie do bazy (singleton z walidacją)"""
+		if cls._instance is not None:
+			# Validate the existing connection is still usable
+			try:
+				cls._instance.execute("SELECT 1")
+			except (sqlite3.ProgrammingError, sqlite3.InterfaceError, sqlite3.OperationalError):
+				cls._instance = None
+
 		if cls._instance is None:
 			cls._instance = sqlite3.connect(
 				DB_PATH,
-				check_same_thread=False  # Dla Flet threading
+				check_same_thread=False
 				)
-			cls._instance.row_factory = sqlite3.Row  # Dostęp po nazwach kolumn
+			cls._instance.row_factory = sqlite3.Row
 		return cls._instance
 	
 	@classmethod

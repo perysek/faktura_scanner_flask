@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Przychody - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a; --color-ink-muted: #525252; --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa; --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1; --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --font-display: 'Inter', system-ui, sans-serif; --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body { background: var(--color-surface-warm); font-family: var(--font-body); color: var(--color-ink); }
+    .refined-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .page-title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.8125rem; font-weight: 300; }
+
+    .month-selector { display: flex; align-items: center; gap: 0.75rem; }
+    .month-selector input { padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; }
+    .month-selector button { padding: 0.5rem 0.75rem; font-size: 0.8125rem; background: var(--color-ink); color: white; border: none; border-radius: 2px; cursor: pointer; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .stat-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); margin-bottom: 0.5rem; }
+    .stat-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; }
+    .stat-value.green { color: var(--color-success); }
+    .stat-value.blue { color: #2563eb; }
+    .stat-value.purple { color: #7e22ce; }
+    .stat-value.orange { color: #d97706; }
+
+    .table-container { background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1.5rem; }
+    .table-container h2 { font-size: 1rem; font-weight: 600; padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border-subtle); margin: 0; }
+    .refined-table { width: 100%; border-collapse: collapse; }
+    .refined-table thead { background: var(--color-surface); }
+    .refined-table th { padding: 0.75rem 1rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-ink-subtle); text-align: left; border-bottom: 1px solid var(--color-border); }
+    .refined-table td { padding: 0.75rem 1rem; font-size: 0.8125rem; border-bottom: 1px solid var(--color-border-subtle); }
+    .refined-table tbody tr:hover { background: var(--color-surface); }
+    .refined-table tbody tr:last-child td { border-bottom: none; }
+
+    .empty-state { padding: 3rem 2rem; text-align: center; }
+    .empty-text { color: var(--color-ink-subtle); font-size: 0.9375rem; font-weight: 300; }
+    .material-icons { font-size: 1rem; vertical-align: middle; }
+    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page fade-in">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Przychody</h1>
+            <p class="page-subtitle" id="period-label">Podsumowanie przychodów</p>
+        </div>
+        <div class="month-selector">
+            <input type="month" id="month-picker" />
+            <button onclick="loadDashboard()">Pokaż</button>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <p class="stat-label">Przychód brutto</p>
+            <p class="stat-value green" id="s-revenue">—</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Przychód netto</p>
+            <p class="stat-value blue" id="s-net">—</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Prowizje</p>
+            <p class="stat-value purple" id="s-commissions">—</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Rabaty</p>
+            <p class="stat-value orange" id="s-discounts">—</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Wizyty</p>
+            <p class="stat-value" id="s-appointments">—</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Średni rachunek</p>
+            <p class="stat-value" id="s-avg">—</p>
+        </div>
+    </div>
+
+    <!-- Per-employee table -->
+    <div class="table-container">
+        <h2>Przychody wg pracowników</h2>
+        <table class="refined-table">
+            <thead>
+                <tr>
+                    <th>Pracownik</th>
+                    <th>Wizyty</th>
+                    <th>Przychód brutto</th>
+                    <th>Przychód netto</th>
+                    <th>Prowizja</th>
+                </tr>
+            </thead>
+            <tbody id="employee-tbody">
+                <tr><td colspan="5" class="empty-state"><p class="empty-text">Ładowanie...</p></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function fmtPrice(a) { return a != null ? parseFloat(a).toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' zł' : '—'; }
+function esc(t){if(!t)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};return String(t).replace(/[&<>"']/g,c=>m[c]);}
+
+const MONTH_NAMES = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+async function loadDashboard() {
+    const picker = document.getElementById('month-picker');
+    const [year, month] = picker.value.split('-').map(Number);
+
+    document.getElementById('period-label').textContent = `${MONTH_NAMES[month-1]} ${year}`;
+
+    try {
+        const resp = await fetch(`/api/income/summary?year=${year}&month=${month}`);
+        const data = await resp.json();
+
+        if (data.success) {
+            const s = data.summary;
+            document.getElementById('s-revenue').textContent = fmtPrice(s.total_revenue);
+            document.getElementById('s-net').textContent = fmtPrice(s.total_net);
+            document.getElementById('s-commissions').textContent = fmtPrice(s.total_commissions);
+            document.getElementById('s-discounts').textContent = fmtPrice(s.total_discounts);
+            document.getElementById('s-appointments').textContent = s.total_appointments;
+            document.getElementById('s-avg').textContent = fmtPrice(s.avg_ticket);
+
+            const tbody = document.getElementById('employee-tbody');
+            if (data.by_employee.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><p class="empty-text">Brak danych za ten okres</p></td></tr>';
+            } else {
+                tbody.innerHTML = data.by_employee.map(e => `
+                    <tr>
+                        <td style="font-weight:500;">${esc(e.employee_name)}</td>
+                        <td>${e.appointment_count}</td>
+                        <td>${fmtPrice(e.total_revenue)}</td>
+                        <td>${fmtPrice(e.net_revenue)}</td>
+                        <td>${fmtPrice(e.total_commission)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (e) {
+        console.error('Error loading dashboard:', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    document.getElementById('month-picker').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    loadDashboard();
+});
+</script>
+{% endblock %}
