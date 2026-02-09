@@ -301,6 +301,18 @@ def income_dashboard():
 
 
 # ============================================================================
+# ANALYTICS ROUTES
+# ============================================================================
+
+@main_bp.route('/analytics')
+@login_required
+@module_permission_required('appointments')
+def analytics_dashboard():
+    """Analytics dashboard view"""
+    return render_template('analytics/dashboard.html')
+
+
+# ============================================================================
 # SETTINGS ROUTES
 # ============================================================================
 
