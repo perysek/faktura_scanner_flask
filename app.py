@@ -63,12 +63,27 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         """Load user by ID for Flask-Login"""
-        from repositories.users.user_repository import UserRepository
-        user_repo = UserRepository()
-        user_row = user_repo.get_by_id(int(user_id))
-        if user_row:
-            return user_repo.row_to_user(user_row)
+        if user_id is None:
+            return None
+        try:
+            from repositories.users.user_repository import UserRepository
+            user_repo = UserRepository()
+            user_row = user_repo.get_by_id(int(user_id))
+            if user_row:
+                return user_repo.row_to_user(user_row)
+        except (ValueError, TypeError):
+            # Invalid user_id format
+            return None
+        except Exception as e:
+            logging.error(f"Error loading user {user_id}: {e}")
+            return None
         return None
+
+    @app.teardown_appcontext
+    def close_db_connection(error):
+        """Close database connection at end of request"""
+        from config.database import DatabaseConnection
+        DatabaseConnection.close_connection()
 
     # Ensure upload folders exist
     UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
