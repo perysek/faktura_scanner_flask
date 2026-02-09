@@ -89,3 +89,92 @@ def get_summary():
         } if previous else None,
         "change": change
     })
+
+
+@analytics_bp.route('/analytics/revenue-trend', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_revenue_trend():
+    """Get revenue trend for line chart"""
+    ranges, error = parse_period_params()
+    if error:
+        return jsonify({"success": False, **error}), 400
+
+    current_start, current_end, _, _ = ranges
+
+    data = repo.get_revenue_trend(current_start, current_end)
+
+    # Calculate summary
+    total = sum(d['revenue'] for d in data)
+    days_count = len(data) if data else 1
+    avg_daily = total / days_count
+
+    return jsonify({
+        "success": True,
+        "period": request.args.get('period', 'current_month'),
+        "data": data,
+        "summary": {
+            "total": total,
+            "avg_daily": avg_daily
+        }
+    })
+
+
+@analytics_bp.route('/analytics/employees', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employees():
+    """Get employee performance metrics"""
+    ranges, error = parse_period_params()
+    if error:
+        return jsonify({"success": False, **error}), 400
+
+    current_start, current_end, _, _ = ranges
+
+    employees = repo.get_employee_performance(current_start, current_end)
+
+    return jsonify({
+        "success": True,
+        "period": request.args.get('period', 'current_month'),
+        "employees": employees
+    })
+
+
+@analytics_bp.route('/analytics/services', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_services():
+    """Get service breakdown"""
+    ranges, error = parse_period_params()
+    if error:
+        return jsonify({"success": False, **error}), 400
+
+    current_start, current_end, _, _ = ranges
+
+    services = repo.get_service_breakdown(current_start, current_end)
+
+    return jsonify({
+        "success": True,
+        "period": request.args.get('period', 'current_month'),
+        "services": services
+    })
+
+
+@analytics_bp.route('/analytics/clients', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_clients():
+    """Get client metrics and retention"""
+    ranges, error = parse_period_params()
+    if error:
+        return jsonify({"success": False, **error}), 400
+
+    current_start, current_end, _, _ = ranges
+
+    metrics = repo.get_client_metrics(current_start, current_end)
+
+    return jsonify({
+        "success": True,
+        "period": request.args.get('period', 'current_month'),
+        "metrics": metrics
+    })
