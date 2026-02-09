@@ -186,3 +186,211 @@ function applyCustomRange() {
     closeCustomRange();
     loadDashboard();
 }
+
+/**
+ * Load and render revenue trend chart
+ */
+async function loadRevenueTrend() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/revenue-trend?${params}`);
+    const data = await response.json();
+
+    if (!data.success) {
+        throw new Error(data.error || 'Failed to load revenue trend');
+    }
+
+    const ctx = document.getElementById('revenueTrendChart');
+
+    // Destroy existing chart
+    if (revenueTrendChart) {
+        revenueTrendChart.destroy();
+    }
+
+    // Create new chart
+    revenueTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.data.map(d => formatDateLabel(d.date)),
+            datasets: [{
+                label: 'Przychód',
+                data: data.data.map(d => d.revenue),
+                borderColor: CHART_COLORS.primary,
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (val) => `${val.toLocaleString('pl-PL')} zł`
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Format date for chart labels
+ */
+function formatDateLabel(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+}
+
+/**
+ * Load and render services chart
+ */
+async function loadServices() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/services?${params}`);
+    const data = await response.json();
+
+    if (!data.success) {
+        throw new Error(data.error || 'Failed to load services');
+    }
+
+    // Take top 5 services
+    const topServices = data.services.slice(0, 5);
+
+    const ctx = document.getElementById('servicesChart');
+
+    // Destroy existing chart
+    if (servicesChart) {
+        servicesChart.destroy();
+    }
+
+    // Create new chart
+    servicesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: topServices.map(s => s.service_name),
+            datasets: [{
+                data: topServices.map(s => s.revenue_generated),
+                backgroundColor: [
+                    CHART_COLORS.primary,
+                    CHART_COLORS.purple,
+                    CHART_COLORS.pink,
+                    CHART_COLORS.orange,
+                    CHART_COLORS.green
+                ]
+            }]
+        },
+        options: {
+            indexAxis: 'y',  // Horizontal bars
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${formatCurrency(ctx.parsed.x)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (val) => `${val.toLocaleString('pl-PL')} zł`
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Load and render client metrics
+ */
+async function loadClients() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/clients?${params}`);
+    const data = await response.json();
+
+    if (!data.success) {
+        throw new Error(data.error || 'Failed to load client metrics');
+    }
+
+    // Render client split doughnut chart
+    const ctx = document.getElementById('clientSplitChart');
+
+    // Destroy existing chart
+    if (clientSplitChart) {
+        clientSplitChart.destroy();
+    }
+
+    // Create new chart
+    clientSplitChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Nowi klienci', 'Powracający'],
+            datasets: [{
+                data: [
+                    data.metrics.new_clients,
+                    data.metrics.returning_clients
+                ],
+                backgroundColor: [CHART_COLORS.primary, CHART_COLORS.gray]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Update retention rate
+    const retentionEl = document.getElementById('retentionRate');
+    retentionEl.textContent = `Wskaźnik retencji (90 dni): ${data.metrics.retention_rate.toFixed(1)}%`;
+
+    // Render at-risk clients list
+    renderAtRiskList(data.metrics.at_risk_clients);
+}
+
+/**
+ * Render at-risk clients list
+ */
+function renderAtRiskList(clients) {
+    const listEl = document.getElementById('atRiskList');
+
+    if (clients.length === 0) {
+        listEl.innerHTML = '<p class="text-center text-ink-light">Brak klientów zagrożonych utratą</p>';
+        return;
+    }
+
+    listEl.innerHTML = clients.map(client => `
+        <div class="flex justify-between items-center p-2 border-b">
+            <div>
+                <div class="font-medium">${escapeHtml(client.client_name)}</div>
+                <div class="text-sm text-ink-light">
+                    Ostatnia wizyta: ${formatDateLabel(client.last_visit_date)}
+                </div>
+            </div>
+            <div class="text-sm text-red-600">
+                ${Math.floor(client.days_since_visit)} dni
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
