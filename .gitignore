@@ -53,3 +53,6 @@ assets/temp/
 
 # TailwindCSS output (generated)
 static/css/output.css
+
+# Git worktrees
+.worktrees/
