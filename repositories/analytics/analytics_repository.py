@@ -259,3 +259,34 @@ class AnalyticsRepository:
             'retention_rate': ret_row['retention_rate'] if ret_row else 0.0,
             'at_risk_clients': [dict(row) for row in at_risk_rows]
         }
+
+    def get_revenue_trend(self, start_date: date, end_date: date) -> List[Dict]:
+        """
+        Get daily revenue trend for line chart.
+
+        Returns list of:
+            {
+                'date': str (YYYY-MM-DD),
+                'revenue': float,
+                'appointments': int
+            }
+        """
+        query = """
+            SELECT
+                a.appointment_date as date,
+                COUNT(a.id) as appointments,
+                COALESCE(SUM(i.net_amount), 0) as revenue
+            FROM appointments a
+            LEFT JOIN income_records i ON i.appointment_id = a.id
+            WHERE a.status = 'completed'
+                AND a.appointment_date BETWEEN ? AND ?
+            GROUP BY a.appointment_date
+            ORDER BY a.appointment_date
+        """
+
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (start_date, end_date))
+        rows = cursor.fetchall()
+
+        return [dict(row) for row in rows]
