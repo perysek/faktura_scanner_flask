@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Wizyta #{{ appointment_id }} - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a; --color-ink-muted: #525252; --color-ink-subtle: #8a8a8a;
+        --color-surface: #fafafa; --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1; --color-border-subtle: #f0eeea;
+        --color-success: #2d6a4f;
+        --font-display: 'Inter', system-ui, sans-serif; --font-body: 'Inter', system-ui, sans-serif;
+        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body { background: var(--color-surface-warm); font-family: var(--font-body); color: var(--color-ink); }
+    .refined-page { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+    .page-title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.8125rem; font-weight: 300; }
+
+    .detail-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
+    .detail-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
+    .detail-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); margin-bottom: 0.25rem; }
+    .detail-value { font-size: 0.9375rem; font-weight: 500; }
+
+    .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 1px; }
+    .status-badge.scheduled { background: rgba(59,130,246,0.08); color: #2563eb; }
+    .status-badge.confirmed { background: rgba(16,185,129,0.08); color: #059669; }
+    .status-badge.in_progress { background: rgba(245,158,11,0.08); color: #d97706; }
+    .status-badge.completed { background: rgba(45,106,79,0.08); color: var(--color-success); }
+    .status-badge.cancelled { background: rgba(239,68,68,0.08); color: #dc2626; }
+    .status-badge.no_show { background: rgba(107,114,128,0.08); color: #4b5563; }
+
+    .svc-list { list-style: none; padding: 0; margin: 0; }
+    .svc-item { display: flex; justify-content: space-between; align-items: center; padding: 0.625rem 0; border-bottom: 1px solid var(--color-border-subtle); }
+    .svc-item:last-child { border-bottom: none; }
+    .svc-item .svc-name { font-size: 0.8125rem; font-weight: 500; }
+    .svc-item .svc-type { font-size: 0.6875rem; padding: 0.125rem 0.5rem; border-radius: 1px; margin-left: 0.5rem; }
+    .svc-item .svc-type.main { background: rgba(59,130,246,0.08); color: #2563eb; }
+    .svc-item .svc-type.addon { background: rgba(245,158,11,0.08); color: #d97706; }
+    .svc-item .svc-price { font-size: 0.8125rem; color: var(--color-ink-muted); }
+    .svc-item .svc-time { font-size: 0.75rem; color: var(--color-ink-subtle); }
+
+    .totals-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; margin-top: 1rem; }
+    .totals-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
+    .totals-row.grand { font-weight: 600; font-size: 1rem; border-top: 1px solid var(--color-border); margin-top: 0.5rem; padding-top: 0.5rem; }
+
+    .action-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-action { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 1rem; font-size: 0.8125rem; font-weight: 500; border-radius: 2px; border: 1px solid var(--color-border); background: white; color: var(--color-ink-muted); cursor: pointer; transition: all 0.2s; }
+    .btn-action:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
+    .btn-action.primary { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+    .btn-action.primary:hover { background: #333; }
+    .btn-action.success { background: var(--color-success); color: white; border-color: var(--color-success); }
+    .btn-action.danger { color: #dc2626; border-color: #fca5a5; }
+    .btn-action.danger:hover { background: #fef2f2; border-color: #dc2626; }
+
+    .addon-section { margin-top: 1rem; padding: 1rem; background: rgba(245,158,11,0.04); border: 1px dashed rgba(245,158,11,0.3); border-radius: 2px; }
+    .addon-section h3 { font-size: 0.8125rem; font-weight: 600; color: #d97706; margin-bottom: 0.75rem; }
+    .addon-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; cursor: pointer; margin: 0.25rem; }
+    .addon-btn:hover { border-color: #d97706; background: rgba(245,158,11,0.06); }
+
+    .material-icons { font-size: 1rem; vertical-align: middle; }
+    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page fade-in" id="appt-page">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title" id="page-title">Wizyta #{{ appointment_id }}</h1>
+            <p class="page-subtitle" id="page-subtitle">Ładowanie...</p>
+        </div>
+        <a href="{{ url_for('main.appointments_list') }}" class="btn-action" id="back-button">
+            <span class="material-icons">arrow_back</span> <span id="back-text">Powrót do listy</span>
+        </a>
+    </header>
+
+    <!-- Appointment Info -->
+    <div class="detail-card">
+        <h2>Informacje o wizycie</h2>
+        <div class="detail-grid" id="appt-details">
+            <div><div class="detail-label">Status</div><div class="detail-value" id="d-status">—</div></div>
+            <div><div class="detail-label">Data</div><div class="detail-value" id="d-date">—</div></div>
+            <div><div class="detail-label">Godzina</div><div class="detail-value" id="d-time">—</div></div>
+            <div><div class="detail-label">Klient</div><div class="detail-value" id="d-client">—</div></div>
+            <div><div class="detail-label">Pracownik</div><div class="detail-value" id="d-employee">—</div></div>
+            <div><div class="detail-label">Czas trwania</div><div class="detail-value" id="d-duration">—</div></div>
+        </div>
+    </div>
+
+    <!-- Status Actions -->
+    <div class="detail-card" id="actions-card">
+        <h2>Akcje</h2>
+        <div class="action-bar" id="action-bar"></div>
+    </div>
+
+    <!-- Services -->
+    <div class="detail-card">
+        <h2>Usługi</h2>
+        <ul class="svc-list" id="services-list"></ul>
+
+        <!-- Addon section (visible only when in_progress) -->
+        <div class="addon-section" id="addon-section" style="display: none;">
+            <h3>Dodaj mikrousługę</h3>
+            <div id="addon-buttons">Ładowanie...</div>
+        </div>
+
+        <div class="totals-box" id="totals-box"></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="detail-card" id="notes-card" style="display: none;">
+        <h2>Uwagi</h2>
+        <p id="d-notes" style="font-size: 0.8125rem; color: var(--color-ink-muted);"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const APPT_ID = {{ appointment_id }};
+const STATUS_LABELS = {
+    'scheduled':'Zaplanowana','confirmed':'Potwierdzona','in_progress':'W trakcie',
+    'completed':'Zakończona','cancelled':'Anulowana','no_show':'Nieobecność'
+};
+const TRANSITIONS = {
+    'scheduled': [{status:'confirmed',label:'Potwierdź',cls:'primary'},{status:'cancelled',label:'Anuluj',cls:'danger'},{status:'no_show',label:'Nieobecność',cls:''}],
+    'confirmed': [{status:'in_progress',label:'Rozpocznij',cls:'primary'},{status:'cancelled',label:'Anuluj',cls:'danger'}],
+    'in_progress': [{status:'completed',label:'Zamknij wizytę',cls:'success'},{status:'cancelled',label:'Anuluj',cls:'danger'}]
+};
+
+// Handle back button based on 'from' query parameter
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('from');
+    const date = params.get('date');
+    const employeeId = params.get('employee_id');
+    const backBtn = document.getElementById('back-button');
+    const backText = document.getElementById('back-text');
+
+    if (from === 'calendar') {
+        // Build calendar URL with date and employee_id parameters
+        let calendarUrl = "{{ url_for('main.appointments_calendar') }}";
+        const calendarParams = new URLSearchParams();
+        if (date) calendarParams.set('date', date);
+        if (employeeId) calendarParams.set('employee_id', employeeId);
+
+        if (calendarParams.toString()) {
+            calendarUrl += '?' + calendarParams.toString();
+        }
+
+        backBtn.href = calendarUrl;
+        backText.textContent = 'Powrót do kalendarza';
+    } else {
+        backBtn.href = "{{ url_for('main.appointments_list') }}";
+        backText.textContent = 'Powrót do listy';
+    }
+})();
+
+function esc(t){if(!t)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};return String(t).replace(/[&<>"']/g,c=>m[c]);}
+function fmtDate(d){return d?new Date(d).toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'—';}
+function fmtTime(t){return t?t.substring(0,5):'—';}
+function fmtPrice(a){return a!=null?parseFloat(a).toFixed(2)+' zł':'—';}
+
+async function loadAppointment() {
+    const resp = await fetch(`/api/appointments/${APPT_ID}`);
+    const data = await resp.json();
+    if (!data.success) { document.getElementById('page-subtitle').textContent = 'Błąd: ' + data.error; return; }
+
+    const a = data.appointment;
+    document.getElementById('page-subtitle').textContent = `${esc(a.client_name)} — ${fmtDate(a.appointment_date)}`;
+    document.getElementById('d-status').innerHTML = `<span class="status-badge ${a.status}">${STATUS_LABELS[a.status]||a.status}</span>`;
+    document.getElementById('d-date').textContent = fmtDate(a.appointment_date);
+    document.getElementById('d-time').textContent = `${fmtTime(a.start_time)} — ${fmtTime(a.end_time)}`;
+    document.getElementById('d-client').textContent = a.client_name || '—';
+    document.getElementById('d-employee').textContent = a.employee_name || '—';
+    document.getElementById('d-duration').textContent = (a.total_duration || 0) + ' min';
+
+    if (a.notes) {
+        document.getElementById('notes-card').style.display = 'block';
+        document.getElementById('d-notes').textContent = a.notes;
+    }
+
+    // Services
+    const svcs = [...data.main_services, ...data.addon_services];
+    document.getElementById('services-list').innerHTML = svcs.map(s => `
+        <li class="svc-item">
+            <div>
+                <span class="svc-name">${esc(s.service_name)}</span>
+                <span class="svc-type ${s.is_addon?'addon':'main'}">${s.is_addon?'Dodatkowa':'Główna'}</span>
+                ${s.added_at?`<span class="svc-time">dodano ${fmtTime(s.added_at)}</span>`:''}
+            </div>
+            <span class="svc-price">${fmtPrice(s.price_charged)}</span>
+        </li>
+    `).join('');
+
+    // Totals
+    const t = data.totals;
+    document.getElementById('totals-box').innerHTML = `
+        <div class="totals-row"><span>Usługi główne:</span><span>${fmtPrice(t.main_total)}</span></div>
+        ${t.addon_count>0?`<div class="totals-row"><span>Mikrousługi (${t.addon_count}):</span><span>${fmtPrice(t.addon_total)}</span></div>`:''}
+        <div class="totals-row"><span>Prowizja:</span><span>${fmtPrice(t.total_commission)}</span></div>
+        <div class="totals-row grand"><span>Razem:</span><span>${fmtPrice(t.total_price)}</span></div>
+    `;
+
+    // Actions
+    const actions = TRANSITIONS[a.status] || [];
+    const bar = document.getElementById('action-bar');
+    if (actions.length === 0) {
+        bar.innerHTML = '<span style="color:var(--color-ink-subtle);font-size:0.8125rem;">Brak dostępnych akcji</span>';
+    } else {
+        bar.innerHTML = actions.map(act => {
+            if (act.status === 'completed') {
+                return `<button class="btn-action ${act.cls}" onclick="completeAppointment()"><span class="material-icons">check_circle</span>${act.label}</button>`;
+            }
+            return `<button class="btn-action ${act.cls}" onclick="changeStatus('${act.status}')"><span class="material-icons">${act.cls==='danger'?'cancel':'arrow_forward'}</span>${act.label}</button>`;
+        }).join('');
+    }
+
+    // Addon section
+    if (data.can_add_addon) {
+        document.getElementById('addon-section').style.display = 'block';
+        loadAvailableAddons();
+    }
+}
+
+async function changeStatus(status) {
+    const body = { status };
+    if (status === 'cancelled') {
+        const reason = prompt('Powód anulowania (opcjonalnie):');
+        if (reason === null) return;
+        body.cancellation_reason = reason;
+    }
+    const resp = await fetch(`/api/appointments/${APPT_ID}/status`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data.success) loadAppointment();
+    else alert('Błąd: ' + data.error);
+}
+
+async function completeAppointment() {
+    const method = prompt('Metoda płatności (gotówka / karta / przelew):', 'gotówka');
+    if (method === null) return;
+
+    const resp = await fetch(`/api/appointments/${APPT_ID}/complete`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ payment_method: method })
+    });
+    const data = await resp.json();
+    if (data.success) {
+        alert(`Wizyta zamknięta!\nPrzychód: ${parseFloat(data.net_amount).toFixed(2)} zł\nProwizja: ${parseFloat(data.commission_total).toFixed(2)} zł`);
+        loadAppointment();
+    } else {
+        alert('Błąd: ' + data.error);
+    }
+}
+
+async function loadAvailableAddons() {
+    const resp = await fetch(`/api/appointments/${APPT_ID}/addons`);
+    const data = await resp.json();
+    const container = document.getElementById('addon-buttons');
+
+    if (data.success && data.addons.length > 0) {
+        container.innerHTML = data.addons.map(a => `
+            <button class="addon-btn" onclick="addAddon(${a.service_id})">
+                <span class="material-icons">add</span>
+                ${esc(a.service_name)} (${fmtPrice(a.price)})
+            </button>
+        `).join('');
+    } else {
+        container.innerHTML = '<span style="font-size:0.8125rem;color:var(--color-ink-subtle);">Brak dostępnych mikrousług</span>';
+    }
+}
+
+async function addAddon(serviceId) {
+    const resp = await fetch(`/api/appointments/${APPT_ID}/addons`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ service_id: serviceId })
+    });
+    const data = await resp.json();
+    if (data.success) {
+        loadAppointment();
+    } else {
+        alert('Błąd: ' + data.error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadAppointment);
+</script>
+{% endblock %}
