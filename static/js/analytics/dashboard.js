@@ -136,8 +136,8 @@ async function loadDashboard() {
             loadClients()
         ]);
     } catch (error) {
+        // Log error silently - empty states are handled by individual components
         console.error('Error loading dashboard:', error);
-        Notifications.error('Błąd ładowania danych analitycznych');
     }
 }
 
@@ -150,7 +150,12 @@ async function loadSummary() {
     const data = await response.json();
 
     if (!data.success) {
-        throw new Error(data.error || 'Failed to load summary');
+        // Silently handle error - show empty states
+        updateKPI('revenue', 0, null);
+        updateKPI('appointments', 0, null);
+        updateKPI('clients', 0, null);
+        updateKPI('avg-ticket', 0, null);
+        return;
     }
 
     // Update KPI cards
@@ -263,7 +268,8 @@ async function loadRevenueTrend() {
     const data = await response.json();
 
     if (!data.success) {
-        throw new Error(data.error || 'Failed to load revenue trend');
+        // Silently handle error - chart will show empty
+        return;
     }
 
     const ctx = document.getElementById('revenueTrendChart');
@@ -327,7 +333,8 @@ async function loadServices() {
     const data = await response.json();
 
     if (!data.success) {
-        throw new Error(data.error || 'Failed to load services');
+        // Silently handle error - empty state already rendered
+        return;
     }
 
     // Take top 5 services
@@ -389,7 +396,8 @@ async function loadClients() {
     const data = await response.json();
 
     if (!data.success) {
-        throw new Error(data.error || 'Failed to load client metrics');
+        // Silently handle error - empty state already rendered
+        return;
     }
 
     // Render client split doughnut chart
@@ -462,7 +470,8 @@ async function loadEmployees() {
     const data = await response.json();
 
     if (!data.success) {
-        throw new Error(data.error || 'Failed to load employees');
+        // Silently handle error - empty state already rendered
+        return;
     }
 
     const tbody = document.getElementById('employeeTableBody');
