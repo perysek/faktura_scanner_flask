@@ -79,7 +79,7 @@
                         <label for="name" class="refined-label">Nazwa usługi <span class="required-mark">*</span></label>
                         <input type="text" id="name" name="name" required class="refined-input" placeholder="np. Strzyżenie damskie">
                     </div>
-                    <div>
+                    <div id="category-wrapper">
                         <label for="category" class="refined-label">Kategoria <span class="required-mark">*</span></label>
                         <select id="category" name="category" required class="refined-select">
                             <option value="">Wybierz kategorię</option>
@@ -136,19 +136,63 @@
 
 {% block extra_scripts %}
 <script>
+// Event listener dla zmiany typu usługi
+document.querySelectorAll('input[name="service_type"]').forEach(radio => {
+    radio.addEventListener('change', handleServiceTypeChange);
+});
+
+function handleServiceTypeChange(e) {
+    const serviceType = e.target.value;
+    const categoryWrapper = document.getElementById('category-wrapper');
+    const categorySelect = document.getElementById('category');
+    const durationInput = document.getElementById('duration_minutes');
+
+    if (serviceType === 'addon') {
+        // Ukryj kategorię
+        categoryWrapper.style.display = 'none';
+        categorySelect.removeAttribute('required');
+        categorySelect.value = ''; // Wyczyść wartość
+
+        // Zmień min duration na 0
+        durationInput.setAttribute('min', '0');
+        durationInput.placeholder = '0';
+    } else {
+        // Pokaż kategorię (typ = 'main')
+        categoryWrapper.style.display = 'block';
+        categorySelect.setAttribute('required', 'required');
+
+        // Przywróć min duration = 5
+        durationInput.setAttribute('min', '5');
+        durationInput.placeholder = '60';
+    }
+}
+
+// Wywołaj na starcie (dla domyślnego stanu)
+document.addEventListener('DOMContentLoaded', () => {
+    const checkedRadio = document.querySelector('input[name="service_type"]:checked');
+    if (checkedRadio) {
+        handleServiceTypeChange({ target: checkedRadio });
+    }
+});
+
 document.getElementById('service-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const serviceType = document.querySelector('input[name="service_type"]:checked').value;
     const formData = {
         name: document.getElementById('name').value.trim(),
-        category: document.getElementById('category').value,
         price: parseFloat(document.getElementById('price').value),
         duration_minutes: parseInt(document.getElementById('duration_minutes').value),
         description: document.getElementById('description').value.trim() || null,
-        service_type: document.querySelector('input[name="service_type"]:checked').value,
+        service_type: serviceType,
         currency: 'PLN',
         is_active: true
     };
+
+    // Dodaj kategorię TYLKO jeśli typ = 'main'
+    if (serviceType === 'main') {
+        formData.category = document.getElementById('category').value;
+    }
 
     try {
         const response = await fetch('/api/services', {
