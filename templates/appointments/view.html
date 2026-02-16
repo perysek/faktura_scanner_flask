@@ -269,7 +269,11 @@ async function changeStatus(status) {
     });
     const data = await resp.json();
     if (data.success) loadAppointment();
-    else alert('Błąd: ' + data.error);
+    else Modals.alert({
+        title: 'Błąd zmiany statusu',
+        message: data.error,
+        type: 'error'
+    });
 }
 
 async function completeAppointment() {
@@ -282,10 +286,18 @@ async function completeAppointment() {
     });
     const data = await resp.json();
     if (data.success) {
-        alert(`Wizyta zamknięta!\nPrzychód: ${parseFloat(data.net_amount).toFixed(2)} zł\nProwizja: ${parseFloat(data.commission_total).toFixed(2)} zł`);
-        loadAppointment();
+        Modals.alert({
+            title: 'Wizyta zamknięta',
+            message: `Przychód: ${parseFloat(data.net_amount).toFixed(2)} zł\nProwizja: ${parseFloat(data.commission_total).toFixed(2)} zł`,
+            type: 'success',
+            onClose: () => loadAppointment()
+        });
     } else {
-        alert('Błąd: ' + data.error);
+        Modals.alert({
+            title: 'Błąd',
+            message: data.error,
+            type: 'error'
+        });
     }
 }
 
@@ -315,10 +327,17 @@ async function addAddon(serviceId) {
     if (data.success) {
         loadAppointment();
     } else {
-        alert('Błąd: ' + data.error);
+        Modals.alert({
+            title: 'Błąd dodawania usługi',
+            message: data.error,
+            type: 'error'
+        });
     }
 }
 
 document.addEventListener('DOMContentLoaded', loadAppointment);
 </script>
+
+<!-- Modal System -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 {% endblock %}

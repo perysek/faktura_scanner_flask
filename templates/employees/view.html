@@ -657,7 +657,11 @@ async function assignService() {
         if (typeof Notifications !== 'undefined') {
             Notifications.warning('Wybierz usługę');
         } else {
-            alert('Wybierz usługę');
+            Modals.alert({
+                title: 'Uwaga',
+                message: 'Wybierz usługę',
+                type: 'warning'
+            });
         }
         return;
     }
@@ -697,7 +701,11 @@ async function assignService() {
             if (typeof Notifications !== 'undefined') {
                 Notifications.error('Błąd: ' + data.error);
             } else {
-                alert('Błąd: ' + data.error);
+                Modals.alert({
+                    title: 'Błąd',
+                    message: data.error,
+                    type: 'error'
+                });
             }
         }
     } catch (error) {
@@ -705,7 +713,11 @@ async function assignService() {
         if (typeof Notifications !== 'undefined') {
             Notifications.error('Błąd połączenia z serwerem (500)');
         } else {
-            alert('Błąd połączenia z serwerem');
+            Modals.alert({
+                title: 'Błąd połączenia',
+                message: 'Nie udało się połączyć z serwerem',
+                type: 'error'
+            });
         }
     }
 }
@@ -730,7 +742,11 @@ async function removeService(esId) {
             if (typeof Notifications !== 'undefined') {
                 Notifications.error('Błąd: ' + data.error);
             } else {
-                alert('Błąd: ' + data.error);
+                Modals.alert({
+                    title: 'Błąd',
+                    message: data.error,
+                    type: 'error'
+                });
             }
         }
     } catch (error) {
@@ -738,7 +754,11 @@ async function removeService(esId) {
         if (typeof Notifications !== 'undefined') {
             Notifications.error('Błąd połączenia z serwerem (500)');
         } else {
-            alert('Błąd połączenia z serwerem');
+            Modals.alert({
+                title: 'Błąd połączenia',
+                message: 'Nie udało się połączyć z serwerem',
+                type: 'error'
+            });
         }
     }
 }
@@ -771,7 +791,11 @@ async function confirmDelete() {
             if (typeof Notifications !== 'undefined') {
                 Notifications.error('Błąd: ' + data.error);
             } else {
-                alert('Błąd: ' + data.error);
+                Modals.alert({
+                    title: 'Błąd',
+                    message: data.error,
+                    type: 'error'
+                });
             }
         }
     } catch (error) {
@@ -779,7 +803,11 @@ async function confirmDelete() {
         if (typeof Notifications !== 'undefined') {
             Notifications.error('Błąd połączenia z serwerem (500)');
         } else {
-            alert('Błąd połączenia z serwerem');
+            Modals.alert({
+                title: 'Błąd połączenia',
+                message: 'Nie udało się połączyć z serwerem',
+                type: 'error'
+            });
         }
     }
 }
@@ -790,4 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAssignedServices();
 });
 </script>
+
+<!-- Modal System -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 {% endblock %}

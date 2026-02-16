@@ -274,6 +274,56 @@ class AppointmentRepository:
             ))
             return cursor.fetchall()
 
+    def check_client_conflicts(self, client_id: int, appt_date: date,
+                                start_time: time, end_time: time,
+                                exclude_appointment_id: Optional[int] = None) -> List[sqlite3.Row]:
+        """
+        Sprawdź konflikty czasowe w harmonogramie klienta.
+
+        Wykrywa sytuację gdy klient ma już zaplanowaną wizytę (z dowolnym pracownikiem)
+        w nakładającym się czasie.
+
+        Args:
+            client_id: ID klienta
+            appt_date: Data wizyty
+            start_time: Godzina rozpoczęcia
+            end_time: Godzina zakończenia
+            exclude_appointment_id: ID wizyty do wykluczenia (przy edycji)
+
+        Returns:
+            Lista kolidujących wizyt (pusta = brak konfliktu)
+        """
+        params = [client_id, appt_date.isoformat(),
+                  start_time.strftime('%H:%M:%S'), end_time.strftime('%H:%M:%S')]
+        exclude_filter = ""
+
+        if exclude_appointment_id:
+            exclude_filter = "AND a.id != ?"
+            params.append(exclude_appointment_id)
+
+        query = f"""
+            SELECT
+                a.*,
+                e.first_name || ' ' || e.last_name as employee_name
+            FROM appointments a
+            LEFT JOIN employees e ON e.id = a.employee_id
+            WHERE a.client_id = ? AND a.appointment_date = ?
+            AND a.start_time < ? AND a.end_time > ?
+            AND a.status NOT IN ('cancelled', 'no_show')
+            {exclude_filter}
+        """
+        # Logika konfliktu: existing.start_time < proposed.end_time AND existing.end_time > proposed.start_time
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (
+                client_id,
+                appt_date.isoformat(),
+                end_time.strftime('%H:%M:%S'),    # existing.start_time < proposed.end_time
+                start_time.strftime('%H:%M:%S'),   # existing.end_time > proposed.start_time
+                *([exclude_appointment_id] if exclude_appointment_id else [])
+            ))
+            return cursor.fetchall()
+
     def update_status(self, appointment_id: int, new_status: str,
                        cancellation_reason: Optional[str] = None) -> bool:
         """Zaktualizuj status wizyty"""
@@ -434,4 +484,45 @@ class AppointmentRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
+            return cursor.fetchall()
+
+    def get_past_pending_appointments(self) -> List[sqlite3.Row]:
+        """
+        Pobierz przeszłe wizyty które nie mają jeszcze finalnego statusu.
+
+        Kryteria:
+        - Data i godzina zakończenia wizyty < NOW()
+        - Status nie należy do: 'completed', 'cancelled', 'no_show'
+
+        Returns:
+            Lista wizyt z danymi klienta, pracownika i usług
+        """
+        query = """
+            SELECT
+                a.id,
+                a.client_id,
+                a.employee_id,
+                a.status,
+                a.appointment_date,
+                a.start_time,
+                a.end_time,
+                a.total_price,
+                a.notes,
+                c.first_name || ' ' || c.last_name as client_name,
+                e.first_name || ' ' || e.last_name as employee_name,
+                GROUP_CONCAT(s.name, ', ') as service_names
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            JOIN employees e ON e.id = a.employee_id
+            LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
+            LEFT JOIN services s ON s.id = aps.service_id
+            WHERE
+                datetime(a.appointment_date || ' ' || a.end_time) < datetime('now', 'localtime')
+                AND a.status NOT IN ('completed', 'cancelled', 'no_show')
+            GROUP BY a.id
+            ORDER BY a.appointment_date DESC, a.start_time DESC
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
             return cursor.fetchall()
