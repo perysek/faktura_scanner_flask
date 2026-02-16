@@ -34,6 +34,15 @@
     .refined-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
     .refined-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
+    .refined-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .refined-btn-secondary:disabled:hover { border-color: var(--color-border); background: white; }
+
+    /* Coverage Stat Card */
+    .coverage-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 140px; }
+    .coverage-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); }
+    .coverage-value { font-size: 1.5rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
+    .coverage-bar { width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden; margin-top: 0.25rem; }
+    .coverage-fill { height: 100%; background: var(--color-success); transition: width 0.3s ease; }
 
     .view-toggle { display: flex; gap: 0.5rem; }
     .view-toggle a { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
@@ -42,13 +51,24 @@
 
     /* Timeline Styles */
     .timeline-container { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
-    .timeline-grid { display: grid; grid-template-columns: 80px 1fr; min-height: 600px; }
+    .timeline-grid { display: grid; min-height: 600px; }
+    /* Dynamic grid columns set via JavaScript */
 
-    .timeline-hours { border-right: 1px solid var(--color-border); background: var(--color-surface); display: grid; grid-template-rows: repeat(16, 65.625px); }
+    .timeline-hours { border-right: 1px solid var(--color-border); background: var(--color-surface); display: grid; grid-template-rows: repeat(16, 65.625px); grid-row: 2; grid-column: 1; }
     .hour-label { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: var(--color-ink-muted); text-align: right; border-bottom: 1px solid var(--color-border-subtle); display: flex; align-items: start; justify-content: flex-end; }
 
-    .timeline-content { position: relative; }
-    .timeline-slots { display: grid; grid-template-rows: repeat(32, 32.8125px); position: relative; }
+    /* Employee Headers */
+    .employee-header { padding: 0.75rem 0.5rem; text-align: center; border-bottom: 1px solid var(--color-border); border-right: 1px solid var(--color-border-subtle); background: var(--color-surface); grid-row: 1; }
+    .employee-header:last-child { border-right: none; }
+    .employee-name { font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .employee-stats { font-size: 0.625rem; color: var(--color-ink-muted); margin-top: 0.375rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+    .employee-stat { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .employee-stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* Employee Columns */
+    .timeline-column { position: relative; border-right: 1px solid var(--color-border-subtle); grid-row: 2; }
+    .timeline-column:last-child { border-right: none; }
+    .timeline-slots { display: grid; grid-template-rows: repeat(32, 32.8125px); position: relative; height: 100%; }
     .timeline-slot { border-bottom: 1px solid var(--color-border-subtle); position: relative; }
     .timeline-slot:hover { background: var(--color-surface); cursor: pointer; }
 
@@ -74,6 +94,9 @@
 
     .appointment-details { font-size: 0.625rem; color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .appointment-separator { margin: 0 0.375rem; color: var(--color-ink-subtle); }
+    .appointment-addons { font-size: 0.625rem; color: #d97706; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-weight: 500; }
+    .appointment-notes { font-size: 0.625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-style: italic; }
+    .appointment-stylist { font-size: 0.5625rem; color: var(--color-ink-subtle); background: rgba(0,0,0,0.04); padding: 0.125rem 0.375rem; border-radius: 2px; white-space: nowrap; font-weight: 400; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 
     .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
     .status-dot.scheduled { background: #2563eb; }
@@ -99,10 +122,38 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     /* Empty State */
-    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--color-ink-muted); }
-    .empty-state svg { width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3; }
-    .empty-state h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem; }
-    .empty-state p { font-size: 0.8125rem; }
+    .empty-state {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        color: var(--color-ink-muted);
+        text-align: center;
+        z-index: 10;
+    }
+    .empty-state svg {
+        display: block;
+        width: 128px;
+        height: 128px;
+        margin: 0.5rem auto 1rem auto;
+        padding-top: 2rem;
+        opacity: 0.3;
+    }
+    .empty-state h3 {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .empty-state p {
+        font-size: 0.8125rem;
+    }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -125,10 +176,10 @@
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <div class="view-toggle">
-                <a href="{{ url_for('main.appointments_calendar') }}" class="active">Dzień</a>
-                <a href="{{ url_for('main.appointments_calendar_week') }}">Tydzień</a>
-                <a href="{{ url_for('main.appointments_calendar_month') }}">Miesiąc</a>
-                <a href="{{ url_for('main.appointments_list') }}">Lista</a>
+                <a href="{{ url_for('main.appointments_calendar') }}" class="active" id="nav-day">Dzień</a>
+                <a href="{{ url_for('main.appointments_calendar_week') }}" id="nav-week">Tydzień</a>
+                <a href="{{ url_for('main.appointments_calendar_month') }}" id="nav-month">Miesiąc</a>
+                <a href="{{ url_for('main.appointments_list') }}" id="nav-list">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
                 <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,55 +192,57 @@
 
     <!-- Controls -->
     <div class="refined-card">
-        <div class="controls-bar">
-            <div style="flex: 1; min-width: 200px;">
-                <label for="employeeSelect">Pracownik</label>
-                <select id="employeeSelect" class="w-full">
-                    <option value="">Ładowanie...</option>
-                </select>
+        <div class="controls-bar" style="justify-content: space-between;">
+            <!-- Coverage Stat Card (left side) -->
+            <div class="coverage-card">
+                <div class="coverage-label">Pokrycie wizytami</div>
+                <div class="coverage-value" id="coverageValue">0%</div>
+                <div class="coverage-bar">
+                    <div class="coverage-fill" id="coverageFill" style="width: 0%;"></div>
+                </div>
             </div>
+
+            <!-- Right side controls -->
+            <div style="display: flex; gap: 1rem; align-items: end;">
+            <!-- Employee Pagination -->
             <div style="display: flex; gap: 0.5rem; align-items: end;">
-                <button id="prevDayBtn" class="refined-btn-secondary" title="Poprzedni dzień">
+                <button id="prevEmployeesBtn" class="refined-btn-secondary" title="Poprzedni pracownicy" style="flex-shrink: 0;">
                     <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                <div>
-                    <label for="dateInput">Data</label>
-                    <input type="date" id="dateInput" class="w-full">
+                <div style="min-width: 180px;">
+                    <label for="employeesLabel" style="display: block;">Pracownicy</label>
+                    <div id="employeesLabel" style="padding: 0.5rem 0.75rem; font-size: 0.8125rem; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; min-height: 38px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
+                        Ładowanie...
+                    </div>
                 </div>
-                <button id="nextDayBtn" class="refined-btn-secondary" title="Następny dzień">
+                <button id="nextEmployeesBtn" class="refined-btn-secondary" title="Następni pracownicy" style="flex-shrink: 0;">
                     <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                 </button>
             </div>
-            <button id="todayBtn" class="refined-btn-secondary" style="align-self: end;">Dzisiaj</button>
-        </div>
 
-        <!-- Status Legend -->
-        <div class="status-legend" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle);">
-            <div style="font-size: 0.6875rem; font-weight: 500; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: 0.06em;">Status:</div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #2563eb;"></span>
-                Zaplanowana
+            <!-- Day Pagination (right side) -->
+            <div style="display: flex; gap: 0.5rem; align-items: end;">
+                <button id="prevDayBtn" class="refined-btn-secondary" title="Poprzedni dzień" style="flex-shrink: 0;">
+                    <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div style="min-width: 180px;">
+                    <label for="dateInput">Data</label>
+                    <input type="date" id="dateInput" style="width: 100%;">
+                </div>
+                <button id="nextDayBtn" class="refined-btn-secondary" title="Następny dzień" style="flex-shrink: 0;">
+                    <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button id="todayBtn" class="refined-btn-secondary">Dzisiaj</button>
             </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #059669;"></span>
-                Potwierdzona
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #d97706;"></span>
-                W trakcie
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #2d6a4f;"></span>
-                Zakończona
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #dc2626;"></span>
-                Anulowana
-            </div>
+            </div> <!-- End right side controls -->
         </div>
     </div>
 
@@ -199,8 +252,13 @@
             <div class="spinner"></div>
         </div>
 
-        <div class="timeline-grid">
-            <!-- Hour Labels (16 hours: 7:00-22:00, each label = 1 hour = 2 slots = 132px) -->
+        <div class="timeline-grid" id="timelineGrid">
+            <!-- Top-left corner (Hours header) -->
+            <div style="grid-column: 1; grid-row: 1; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: var(--color-surface); display: flex; align-items: center; justify-content: center; padding: 0.75rem;">
+                <span style="font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); text-transform: uppercase; letter-spacing: 0.05em;">Godz</span>
+            </div>
+
+            <!-- Hour Labels (16 hours: 7:00-22:00) -->
             <div class="timeline-hours">
                 <div class="hour-label">7:00</div>
                 <div class="hour-label">8:00</div>
@@ -220,27 +278,16 @@
                 <div class="hour-label">22:00</div>
             </div>
 
-            <!-- Timeline Content -->
-            <div class="timeline-content">
-                <!-- Background Slots -->
-                <div class="timeline-slots" id="timelineSlots">
-                    <!-- 18 slots (9:00-18:00, 30min each) -->
-                </div>
+            <!-- Employee headers and columns will be inserted here by JavaScript -->
+        </div>
 
-                <!-- Appointments Layer -->
-                <div class="appointments-layer" id="appointmentsLayer">
-                    <!-- Appointment blocks will be inserted here -->
-                </div>
-
-                <!-- Empty State -->
-                <div id="emptyState" class="empty-state" style="display: none;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <h3>Brak wizyt</h3>
-                    <p>W tym dniu nie ma zaplanowanych wizyt dla wybranego pracownika.</p>
-                </div>
-            </div>
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3>Brak wizyt</h3>
+            <p>W tym dniu nie ma zaplanowanych wizyt.</p>
         </div>
 
         <!-- Day Summary -->
@@ -265,150 +312,111 @@
 {% block extra_scripts %}
 <script>
 // State
-let currentEmployeeId = null;
-let currentDate = new Date().toISOString().split('T')[0];
-let employees = [];
-let appointments = [];
+let currentDate = formatLocalDate(new Date());
+let currentPage = 0;  // Current employee page (0-indexed)
+let pageLimit = 8;    // Max employees per page
+let scheduleData = null;  // Full response from API
+
+function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 // DOM Elements
-const employeeSelect = document.getElementById('employeeSelect');
 const dateInput = document.getElementById('dateInput');
 const prevDayBtn = document.getElementById('prevDayBtn');
 const nextDayBtn = document.getElementById('nextDayBtn');
 const todayBtn = document.getElementById('todayBtn');
+const prevEmployeesBtn = document.getElementById('prevEmployeesBtn');
+const nextEmployeesBtn = document.getElementById('nextEmployeesBtn');
+const employeesLabel = document.getElementById('employeesLabel');
 const newAppointmentBtn = document.getElementById('newAppointmentBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
-const appointmentsLayer = document.getElementById('appointmentsLayer');
 const emptyState = document.getElementById('emptyState');
-const timelineSlots = document.getElementById('timelineSlots');
+const timelineGrid = document.getElementById('timelineGrid');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Check URL parameters for date and employee (when returning from appointment view)
+    // Check URL parameters for date
     const urlParams = new URLSearchParams(window.location.search);
     const urlDate = urlParams.get('date');
-    const urlEmployeeId = urlParams.get('employee_id');
 
     if (urlDate) {
         currentDate = urlDate;
     }
-    if (urlEmployeeId) {
-        currentEmployeeId = urlEmployeeId;
-    }
 
-    initializeTimeline();
-    loadEmployees();
+    dateInput.value = currentDate;
     setupEventListeners();
+    loadSchedule();
 });
 
-function initializeTimeline() {
-    dateInput.value = currentDate;
-
-    // Create 32 time slots (7:00-23:00, 30min intervals)
-    for (let i = 0; i < 32; i++) {
-        const slot = document.createElement('div');
-        slot.className = 'timeline-slot';
-        slot.dataset.slotIndex = i;
-        slot.addEventListener('click', handleSlotClick);
-        timelineSlots.appendChild(slot);
-    }
-}
-
 function setupEventListeners() {
-    employeeSelect.addEventListener('change', handleEmployeeChange);
     dateInput.addEventListener('change', handleDateChange);
     prevDayBtn.addEventListener('click', () => navigateDay(-1));
     nextDayBtn.addEventListener('click', () => navigateDay(1));
     todayBtn.addEventListener('click', goToToday);
-}
-
-async function loadEmployees() {
-    try {
-        const response = await fetch('/api/appointments/employees');
-        if (!response.ok) throw new Error('Failed to load employees');
-
-        employees = await response.json();
-
-        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
-        employees.forEach(emp => {
-            const option = document.createElement('option');
-            option.value = emp.id;
-            option.textContent = emp.full_name + (emp.position ? ` (${emp.position})` : '');
-            employeeSelect.appendChild(option);
-        });
-
-        // Select employee from URL parameter (when returning from appointment view) or first employee
-        if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
-            employeeSelect.value = currentEmployeeId;
-            loadSchedule();
-        } else if (employees.length > 0) {
-            employeeSelect.value = employees[0].id;
-            currentEmployeeId = employees[0].id;
-            loadSchedule();
-        }
-    } catch (error) {
-        console.error('Error loading employees:', error);
-        showError('Nie udało się załadować listy pracowników');
-    }
-}
-
-function handleEmployeeChange() {
-    currentEmployeeId = employeeSelect.value;
-    if (currentEmployeeId) {
-        loadSchedule();
-        updateNewAppointmentLink();
-    }
+    prevEmployeesBtn.addEventListener('click', () => navigateEmployees(-1));
+    nextEmployeesBtn.addEventListener('click', () => navigateEmployees(1));
 }
 
 function handleDateChange() {
     currentDate = dateInput.value;
+    currentPage = 0;  // Reset to first page when date changes
     loadSchedule();
-    updateNewAppointmentLink();
 }
 
 function navigateDay(offset) {
     const date = new Date(currentDate);
     date.setDate(date.getDate() + offset);
-    currentDate = date.toISOString().split('T')[0];
+    currentDate = formatLocalDate(date);
     dateInput.value = currentDate;
+    currentPage = 0;  // Reset to first page
     loadSchedule();
-    updateNewAppointmentLink();
 }
 
 function goToToday() {
-    currentDate = new Date().toISOString().split('T')[0];
+    currentDate = formatLocalDate(new Date());
     dateInput.value = currentDate;
+    currentPage = 0;  // Reset to first page
     loadSchedule();
-    updateNewAppointmentLink();
 }
 
-function updateNewAppointmentLink() {
-    const params = new URLSearchParams();
-    params.set('from', 'calendar');
-    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
-    if (currentDate) params.set('date', currentDate);
-    newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
+function navigateEmployees(direction) {
+    if (!scheduleData) return;
+
+    const newPage = currentPage + direction;
+    if (newPage < 0 || newPage >= scheduleData.total_pages) return;
+
+    currentPage = newPage;
+    loadSchedule();
 }
 
 async function loadSchedule() {
-    if (!currentEmployeeId || !currentDate) return;
+    if (!currentDate) return;
 
     showLoading(true);
 
     try {
+        const offset = currentPage * pageLimit;
         const params = new URLSearchParams({
-            employee_id: currentEmployeeId,
-            date: currentDate
+            date: currentDate,
+            offset: offset,
+            limit: pageLimit
         });
 
-        const response = await fetch(`/api/appointments/daily-schedule?${params}`);
+        const response = await fetch(`/api/appointments/multi-employee-schedule?${params}`);
         if (!response.ok) throw new Error('Failed to load schedule');
 
-        const data = await response.json();
+        scheduleData = await response.json();
 
-        // Extract schedule array from response object
-        appointments = data.schedule || [];
+        if (!scheduleData.success) {
+            throw new Error(scheduleData.error || 'Unknown error');
+        }
+
         renderTimeline();
+        updateEmployeePagination();
         updateSummary();
     } catch (error) {
         console.error('Error loading schedule:', error);
@@ -419,19 +427,168 @@ async function loadSchedule() {
 }
 
 function renderTimeline() {
-    appointmentsLayer.innerHTML = '';
-
-    if (appointments.length === 0) {
+    if (!scheduleData || scheduleData.employees.length === 0) {
         emptyState.style.display = 'block';
+        // Remove all employee headers and columns
+        timelineGrid.querySelectorAll('.employee-header').forEach(el => el.remove());
+        timelineGrid.querySelectorAll('.timeline-column').forEach(el => el.remove());
+        timelineGrid.style.gridTemplateColumns = '80px 1fr';
+        timelineGrid.style.gridTemplateRows = '75px 1050px';
         return;
     }
 
     emptyState.style.display = 'none';
 
-    appointments.forEach(appointment => {
-        const block = createAppointmentBlock(appointment);
-        appointmentsLayer.appendChild(block);
+    const numEmployees = scheduleData.employees.length;
+
+    // Set grid template columns: 80px (hours) + N employee columns
+    timelineGrid.style.gridTemplateColumns = `80px repeat(${numEmployees}, 1fr)`;
+    timelineGrid.style.gridTemplateRows = '60px 1050px';
+
+    // Render employee headers
+    renderEmployeeHeaders();
+
+    // Render employee columns
+    renderEmployeeColumns();
+}
+
+function renderEmployeeHeaders() {
+    // Remove old headers (find and remove all .employee-header elements)
+    timelineGrid.querySelectorAll('.employee-header').forEach(el => el.remove());
+
+    scheduleData.employees.forEach((employee, index) => {
+        const header = document.createElement('div');
+        header.className = 'employee-header';
+        header.style.gridColumn = index + 2;  // +2 because column 1 is hours
+        header.style.gridRow = '1';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'employee-name';
+        nameEl.textContent = employee.full_name;
+        nameEl.title = employee.full_name;
+
+        header.appendChild(nameEl);
+
+        // Calculate visit stats for this employee
+        const employeeAppointments = scheduleData.schedules[employee.id] || [];
+        const stats = {
+            scheduled: employeeAppointments.filter(a => a.status === 'scheduled').length,
+            confirmed: employeeAppointments.filter(a => a.status === 'confirmed').length,
+            completed: employeeAppointments.filter(a => a.status === 'completed').length,
+            cancelledOrNoShow: employeeAppointments.filter(a =>
+                a.status === 'cancelled' || a.status === 'no_show'
+            ).length
+        };
+
+        // Add stats row
+        const statsEl = document.createElement('div');
+        statsEl.className = 'employee-stats';
+
+        if (stats.scheduled > 0) {
+            statsEl.innerHTML += `
+                <span class="employee-stat" title="Zaplanowane">
+                    <span class="employee-stat-dot" style="background: #2563eb;"></span>
+                    ${stats.scheduled}
+                </span>
+            `;
+        }
+        if (stats.confirmed > 0) {
+            statsEl.innerHTML += `
+                <span class="employee-stat" title="Potwierdzone">
+                    <span class="employee-stat-dot" style="background: #059669;"></span>
+                    ${stats.confirmed}
+                </span>
+            `;
+        }
+        if (stats.completed > 0) {
+            statsEl.innerHTML += `
+                <span class="employee-stat" title="Zakończone">
+                    <span class="employee-stat-dot" style="background: #2d6a4f;"></span>
+                    ${stats.completed}
+                </span>
+            `;
+        }
+        if (stats.cancelledOrNoShow > 0) {
+            statsEl.innerHTML += `
+                <span class="employee-stat" title="Anulowane/Nieobecność">
+                    <span class="employee-stat-dot" style="background: #dc2626;"></span>
+                    ${stats.cancelledOrNoShow}
+                </span>
+            `;
+        }
+
+        if (employeeAppointments.length > 0) {
+            header.appendChild(statsEl);
+        }
+
+        // Add directly to grid
+        timelineGrid.appendChild(header);
     });
+}
+
+function renderEmployeeColumns() {
+    // Remove old columns (find and remove all .timeline-column elements)
+    timelineGrid.querySelectorAll('.timeline-column').forEach(el => el.remove());
+
+    scheduleData.employees.forEach((employee, index) => {
+        const column = document.createElement('div');
+        column.className = 'timeline-column';
+        column.style.gridColumn = index + 2;  // +2 because column 1 is hours
+        column.style.gridRow = '2';
+
+        // Create time slots background
+        const slotsContainer = document.createElement('div');
+        slotsContainer.className = 'timeline-slots';
+
+        for (let i = 0; i < 32; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'timeline-slot';
+            slot.dataset.employeeId = employee.id;
+            slot.dataset.slotIndex = i;
+            slot.addEventListener('click', handleSlotClick);
+            slotsContainer.appendChild(slot);
+        }
+
+        // Create appointments layer
+        const appointmentsLayer = document.createElement('div');
+        appointmentsLayer.className = 'appointments-layer';
+
+        // Get appointments for this employee (filter out cancelled/no_show for display)
+        const employeeAppointments = scheduleData.schedules[employee.id] || [];
+        const activeAppointments = employeeAppointments.filter(apt =>
+            apt.status !== 'cancelled' && apt.status !== 'no_show'
+        );
+
+        activeAppointments.forEach(appointment => {
+            const block = createAppointmentBlock(appointment);
+            appointmentsLayer.appendChild(block);
+        });
+
+        column.appendChild(slotsContainer);
+        column.appendChild(appointmentsLayer);
+
+        // Add directly to grid
+        timelineGrid.appendChild(column);
+    });
+}
+
+function updateEmployeePagination() {
+    if (!scheduleData) return;
+
+    const { total_employees, page, total_pages, has_prev, has_next } = scheduleData;
+
+    // Update pagination buttons
+    prevEmployeesBtn.disabled = !has_prev;
+    nextEmployeesBtn.disabled = !has_next;
+
+    // Update label
+    if (total_employees === 0) {
+        employeesLabel.textContent = 'Brak pracowników';
+    } else {
+        const startNum = (page * pageLimit) + 1;
+        const endNum = Math.min((page + 1) * pageLimit, total_employees);
+        employeesLabel.textContent = `${startNum}-${endNum} z ${total_employees} pracowników`;
+    }
 }
 
 function createAppointmentBlock(appointment) {
@@ -449,9 +606,10 @@ function createAppointmentBlock(appointment) {
     const serviceName = appointment.service_name || 'Brak usługi';
     const timeRange = `${formatTime(appointment.start_time)}-${formatTime(appointment.end_time)}`;
     const statusLabel = getStatusLabel(appointment.status);
+    const addons = appointment.addon_services;
+    const notes = appointment.notes;
 
-    // Compact single-row layout
-    block.innerHTML = `
+    let content = `
         <div class="appointment-header">
             <div class="appointment-client" title="${escapeHtml(clientName)}">${escapeHtml(clientName)}</div>
             <span class="appointment-status-badge ${appointment.status}">${statusLabel}</span>
@@ -461,12 +619,20 @@ function createAppointmentBlock(appointment) {
         </div>
     `;
 
+    if (addons && addons !== 'null') {
+        content += `<div class="appointment-addons" title="Dodatki: ${escapeHtml(addons)}">+ ${escapeHtml(addons)}</div>`;
+    }
+
+    if (notes) {
+        content += `<div class="appointment-notes" title="${escapeHtml(notes)}">${escapeHtml(notes)}</div>`;
+    }
+
+    block.innerHTML = content;
+
     block.addEventListener('click', () => {
-        // Preserve current date and employee when navigating to appointment details
         const params = new URLSearchParams({
             from: 'calendar',
-            date: currentDate,
-            employee_id: currentEmployeeId
+            date: currentDate
         });
         window.location.href = `/appointment/${appointment.id}?${params.toString()}`;
     });
@@ -515,30 +681,77 @@ function formatTime(timeStr) {
 }
 
 function updateSummary() {
-    const totalAppointments = appointments.length;
+    if (!scheduleData || !scheduleData.schedules) {
+        document.getElementById('totalAppointments').textContent = '0';
+        document.getElementById('totalHours').textContent = '0h';
+        document.getElementById('totalRevenue').textContent = '0 zł';
+        updateCoverage(0);
+        return;
+    }
 
-    // Calculate total hours
+    let totalAppointments = 0;
     let totalMinutes = 0;
-    appointments.forEach(apt => {
-        const start = timeToMinutes(apt.start_time);
-        const end = timeToMinutes(apt.end_time);
-        totalMinutes += (end - start);
-    });
-    const totalHours = (totalMinutes / 60).toFixed(1);
+    let totalRevenue = 0;
 
-    // Calculate total revenue
-    const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.total_price || 0), 0);
+    // Sum across all employees
+    Object.values(scheduleData.schedules).forEach(employeeAppointments => {
+        totalAppointments += employeeAppointments.length;
+
+        employeeAppointments.forEach(apt => {
+            const start = timeToMinutes(apt.start_time);
+            const end = timeToMinutes(apt.end_time);
+            totalMinutes += (end - start);
+            totalRevenue += (apt.total_price || 0);
+        });
+    });
+
+    const totalHours = (totalMinutes / 60).toFixed(1);
 
     document.getElementById('totalAppointments').textContent = totalAppointments;
     document.getElementById('totalHours').textContent = totalHours + 'h';
     document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
+
+    // Calculate coverage
+    calculateCoverage(totalMinutes);
+}
+
+function calculateCoverage(totalAppointmentMinutes) {
+    if (!scheduleData || !scheduleData.employees || scheduleData.employees.length === 0) {
+        updateCoverage(0);
+        return;
+    }
+
+    // Working hours: 7:00 - 23:00 = 16 hours = 960 minutes per employee
+    const workingMinutesPerEmployee = 16 * 60; // 960 minutes
+    const numberOfEmployees = scheduleData.employees.length;
+    const totalAvailableMinutes = workingMinutesPerEmployee * numberOfEmployees;
+
+    const coveragePercent = (totalAppointmentMinutes / totalAvailableMinutes) * 100;
+    updateCoverage(Math.min(coveragePercent, 100)); // Cap at 100%
+}
+
+function updateCoverage(percent) {
+    const coverageValue = document.getElementById('coverageValue');
+    const coverageFill = document.getElementById('coverageFill');
+
+    if (coverageValue && coverageFill) {
+        coverageValue.textContent = Math.round(percent) + '%';
+        coverageFill.style.width = percent + '%';
+
+        // Change color based on coverage
+        if (percent >= 80) {
+            coverageFill.style.background = '#2d6a4f'; // Green
+        } else if (percent >= 50) {
+            coverageFill.style.background = '#d97706'; // Orange
+        } else {
+            coverageFill.style.background = '#dc2626'; // Red
+        }
+    }
 }
 
 function handleSlotClick(event) {
-    if (!currentEmployeeId) {
-        showError('Wybierz pracownika');
-        return;
-    }
+    const employeeId = event.currentTarget.dataset.employeeId;
+    if (!employeeId) return;
 
     const slotIndex = parseInt(event.currentTarget.dataset.slotIndex);
     const startMinutes = 7 * 60 + (slotIndex * 30); // 7:00 + slot offset
@@ -548,7 +761,7 @@ function handleSlotClick(event) {
 
     const params = new URLSearchParams({
         from: 'calendar',
-        employee_id: currentEmployeeId,
+        employee_id: employeeId,
         date: currentDate,
         start_time: startTime
     });
@@ -563,6 +776,13 @@ function showLoading(show) {
 function showError(message) {
     // Simple alert for now - could be replaced with toast notification
     alert(message);
+}
+
+function getInitials(fullName) {
+    if (!fullName) return '';
+    const names = fullName.trim().split(' ');
+    if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
+    return names.map(n => n.charAt(0).toUpperCase()).join('');
 }
 
 function escapeHtml(text) {
