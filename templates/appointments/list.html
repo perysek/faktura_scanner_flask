@@ -113,10 +113,22 @@
                 <option value="no_show">Nieobecność</option>
             </select>
         </div>
-        <div style="margin-left: auto; align-self: flex-end;">
+        <div style="align-self: flex-end;">
             <button onclick="loadAppointments()" class="refined-btn-secondary">
                 <span class="material-icons">search</span>
                 Filtruj
+            </button>
+        </div>
+
+        <!-- Kontrolki paginacji tygodniowej -->
+        <div style="margin-left: auto; align-self: flex-end; display: flex; gap: 0.5rem;">
+            <button onclick="previousWeek()" class="refined-btn-secondary" title="Poprzedni tydzień">
+                <span class="material-icons">chevron_left</span>
+                Poprzedni
+            </button>
+            <button onclick="nextWeek()" class="refined-btn-secondary" title="Następny tydzień">
+                Następny
+                <span class="material-icons">chevron_right</span>
             </button>
         </div>
     </div>
@@ -180,6 +192,73 @@ function formatTime(timeStr) {
 function formatCurrency(amount) {
     if (amount == null) return '—';
     return parseFloat(amount).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+}
+
+// Funkcje pomocnicze dla paginacji tygodniowej
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getDateFromInput(inputId) {
+    const dateStr = document.getElementById(inputId).value;
+    return dateStr ? new Date(dateStr + 'T12:00:00') : null; // T12:00:00 unika problemów z timezone
+}
+
+function setDateToInput(inputId, date) {
+    document.getElementById(inputId).value = formatDateForInput(date);
+}
+
+function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
+// Poprzedni tydzień
+function previousWeek() {
+    const startDate = getDateFromInput('filter-start');
+    const endDate = getDateFromInput('filter-end');
+
+    if (!startDate || !endDate) {
+        // Brak dat - ustaw domyślne (tydzień wstecz od dzisiaj)
+        const today = new Date();
+        const weekBefore = addDays(today, -7);
+        setDateToInput('filter-start', weekBefore);
+        setDateToInput('filter-end', today);
+    } else {
+        // Przesuń istniejące daty o -7 dni
+        const newStart = addDays(startDate, -7);
+        const newEnd = addDays(endDate, -7);
+        setDateToInput('filter-start', newStart);
+        setDateToInput('filter-end', newEnd);
+    }
+
+    loadAppointments(); // Auto-load
+}
+
+// Następny tydzień
+function nextWeek() {
+    const startDate = getDateFromInput('filter-start');
+    const endDate = getDateFromInput('filter-end');
+
+    if (!startDate || !endDate) {
+        // Brak dat - ustaw domyślne (tydzień do przodu od dzisiaj)
+        const today = new Date();
+        const weekLater = addDays(today, 7);
+        setDateToInput('filter-start', today);
+        setDateToInput('filter-end', weekLater);
+    } else {
+        // Przesuń istniejące daty o +7 dni
+        const newStart = addDays(startDate, 7);
+        const newEnd = addDays(endDate, 7);
+        setDateToInput('filter-start', newStart);
+        setDateToInput('filter-end', newEnd);
+    }
+
+    loadAppointments(); // Auto-load
 }
 
 async function loadAppointments() {
