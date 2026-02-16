@@ -111,43 +111,124 @@ def get_appointment(appointment_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@appointment_bp.route('/appointments/check-conflict', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def check_appointment_conflict():
+    """Sprawdź czy wizyta koliduje z innymi wizytami pracownika"""
+    try:
+        employee_id = request.args.get('employee_id', type=int)
+        appointment_date = _parse_date(request.args.get('appointment_date'))
+        start_time = _parse_time(request.args.get('start_time'))
+        duration_minutes = request.args.get('duration_minutes', type=int)
+        exclude_appointment_id = request.args.get('exclude_appointment_id', type=int)
+
+        if not all([employee_id, appointment_date, start_time, duration_minutes]):
+            return jsonify({'success': False, 'error': 'Brakujące parametry'}), 400
+
+        # Calculate end time
+        from datetime import datetime, timedelta
+        start_dt = datetime.combine(appointment_date, start_time)
+        end_dt = start_dt + timedelta(minutes=duration_minutes)
+        end_time = end_dt.time()
+
+        # Check for conflicts
+        repo = AppointmentRepository()
+        conflicts = repo.find_conflicting_appointments(
+            employee_id=employee_id,
+            appointment_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+            exclude_appointment_id=exclude_appointment_id
+        )
+
+        has_conflict = len(conflicts) > 0
+        message = None
+        if has_conflict:
+            message = f"Konflikt z wizytą o godz. {conflicts[0]['start_time']}-{conflicts[0]['end_time']}"
+
+        return jsonify({
+            'success': True,
+            'has_conflict': has_conflict,
+            'message': message,
+            'conflicting_appointments': [dict(c) for c in conflicts]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @appointment_bp.route('/appointments/<int:appointment_id>', methods=['PUT'])
 @login_required
 @module_permission_required('appointments')
 def update_appointment(appointment_id):
-    """Zaktualizuj wizytę"""
+    """Zaktualizuj wizytę (pełna edycja z usługami)"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'error': 'Brak danych'}), 400
+
+        required = ['client_id', 'employee_id', 'appointment_date', 'start_time', 'status', 'services']
+        missing = [f for f in required if f not in data]
+        if missing:
+            return jsonify({'success': False, 'error': f'Brakujące pola: {", ".join(missing)}'}), 400
 
         repo = AppointmentRepository()
         row = repo.get_by_id(appointment_id)
         if not row:
             return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
 
-        from database.models import Appointment
-        appt = repo.row_to_appointment(row)
+        # Validate services
+        if not data['services'] or len(data['services']) == 0:
+            return jsonify({'success': False, 'error': 'Brak usług'}), 400
 
-        # Update fields from request data
-        if 'client_id' in data:
-            appt.client_id = int(data['client_id'])
-        if 'employee_id' in data:
-            appt.employee_id = int(data['employee_id'])
-        if 'appointment_date' in data:
-            appt.appointment_date = _parse_date(data['appointment_date'])
-        if 'start_time' in data:
-            appt.start_time = _parse_time(data['start_time'])
-        if 'end_time' in data:
-            appt.end_time = _parse_time(data['end_time'])
-        if 'notes' in data:
-            appt.notes = data.get('notes')
-        if 'discount_amount' in data:
-            appt.discount_amount = Decimal(str(data['discount_amount']))
+        # Calculate total duration and end time
+        total_duration = sum(int(s['duration_minutes']) for s in data['services'])
+        from datetime import datetime, timedelta
+        start_time = _parse_time(data['start_time'])
+        appointment_date = _parse_date(data['appointment_date'])
+        start_dt = datetime.combine(appointment_date, start_time)
+        end_dt = start_dt + timedelta(minutes=total_duration)
+        end_time = end_dt.time()
 
-        success = repo.update(appointment_id, appt)
-        return jsonify({'success': success})
+        # Check for conflicts (exclude current appointment)
+        conflicts = repo.find_conflicting_appointments(
+            employee_id=int(data['employee_id']),
+            appointment_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+            exclude_appointment_id=appointment_id
+        )
+
+        if conflicts:
+            conflict_start = conflicts[0]['start_time']
+            conflict_end = conflicts[0]['end_time']
+            return jsonify({
+                'success': False,
+                'error': f"Konflikt z wizytą o godz. {conflict_start}-{conflict_end}"
+            }), 400
+
+        # Update appointment using business service
+        service = AppointmentBusinessService()
+        result = service.update_appointment(
+            appointment_id=appointment_id,
+            client_id=int(data['client_id']),
+            employee_id=int(data['employee_id']),
+            appointment_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+            status=data['status'],
+            notes=data.get('notes'),
+            services=data['services']
+        )
+
+        return jsonify({'success': True, **result})
+    except AppointmentError as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -325,5 +406,78 @@ def get_daily_schedule():
 
         schedule = [dict(row) for row in rows]
         return jsonify({'success': True, 'schedule': schedule, 'count': len(schedule)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@appointment_bp.route('/appointments/multi-employee-schedule', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_multi_employee_schedule():
+    """
+    Pobierz harmonogram dnia dla wielu pracowników jednocześnie
+
+    Query params:
+        - date: Data harmonogramu (YYYY-MM-DD) [wymagane]
+        - offset: Offset paginacji pracowników [opcjonalne, default=0]
+        - limit: Limit pracowników na stronę [opcjonalne, default=8]
+
+    Returns:
+        {
+            'success': True,
+            'date': str,
+            'employees': [{'id', 'full_name', 'position'}, ...],  # Max 'limit' pracowników
+            'schedules': {employee_id: [appointments...], ...},
+            'total_employees': int,  # Łączna liczba pracowników z wizytami
+            'page': int,  # Aktualna strona (0-indexed)
+            'total_pages': int
+        }
+    """
+    try:
+        schedule_date = _parse_date(request.args.get('date'))
+        if not schedule_date:
+            return jsonify({'success': False, 'error': 'Wymagane: date'}), 400
+
+        offset = request.args.get('offset', default=0, type=int)
+        limit = request.args.get('limit', default=8, type=int)
+
+        # Validate pagination params
+        if offset < 0:
+            offset = 0
+        if limit < 1 or limit > 20:  # Max 20 employees per page
+            limit = 8
+
+        repo = AppointmentRepository()
+
+        # Pobierz wszystkich pracowników z wizytami tego dnia
+        all_data = repo.get_multi_employee_schedule(schedule_date, employee_ids=None)
+        all_employees = all_data['employees']
+        total_employees = len(all_employees)
+
+        # Oblicz paginację
+        total_pages = (total_employees + limit - 1) // limit if total_employees > 0 else 0
+        current_page = offset // limit
+
+        # Wybierz pracowników dla bieżącej strony
+        page_employees = all_employees[offset:offset + limit]
+        page_employee_ids = [emp['id'] for emp in page_employees]
+
+        # Pobierz wizyty tylko dla pracowników z bieżącej strony
+        page_schedules = {
+            emp_id: all_data['schedules'].get(emp_id, [])
+            for emp_id in page_employee_ids
+        }
+
+        return jsonify({
+            'success': True,
+            'date': schedule_date.isoformat(),
+            'employees': page_employees,
+            'schedules': page_schedules,
+            'total_employees': total_employees,
+            'page': current_page,
+            'total_pages': total_pages,
+            'has_prev': current_page > 0,
+            'has_next': current_page < total_pages - 1
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

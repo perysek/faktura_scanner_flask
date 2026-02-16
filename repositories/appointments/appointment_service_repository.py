@@ -164,3 +164,12 @@ class AppointmentServiceRepository:
             cursor.execute(query, (appt_service_id,))
             conn.commit()
             return cursor.rowcount > 0
+
+    def delete_all_for_appointment(self, appointment_id: int) -> bool:
+        """Usuń wszystkie usługi przypisane do wizyty"""
+        query = "DELETE FROM appointment_services WHERE appointment_id = ?"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            conn.commit()
+            return True

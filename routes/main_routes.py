@@ -288,6 +288,14 @@ def view_appointment(appointment_id):
     return render_template('appointments/view.html', appointment_id=appointment_id)
 
 
+@main_bp.route('/appointment/<int:appointment_id>/edit')
+@login_required
+@module_permission_required('appointments')
+def edit_appointment(appointment_id):
+    """Edit appointment"""
+    return render_template('appointments/edit.html', appointment_id=appointment_id)
+
+
 # ============================================================================
 # INCOME ROUTES
 # ============================================================================

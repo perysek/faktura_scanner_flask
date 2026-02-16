@@ -227,16 +227,28 @@ async function loadAppointment() {
     // Actions
     const actions = TRANSITIONS[a.status] || [];
     const bar = document.getElementById('action-bar');
+
+    let actionsHTML = '';
+
+    // Add Edit button for editable statuses (not cancelled, not completed)
+    if (a.status !== 'cancelled' && a.status !== 'completed') {
+        actionsHTML += `<a href="/appointment/${APPT_ID}/edit" class="btn-action"><span class="material-icons">edit</span>Edytuj</a>`;
+    }
+
     if (actions.length === 0) {
-        bar.innerHTML = '<span style="color:var(--color-ink-subtle);font-size:0.8125rem;">Brak dostępnych akcji</span>';
+        if (actionsHTML === '') {
+            actionsHTML = '<span style="color:var(--color-ink-subtle);font-size:0.8125rem;">Brak dostępnych akcji</span>';
+        }
     } else {
-        bar.innerHTML = actions.map(act => {
+        actionsHTML += actions.map(act => {
             if (act.status === 'completed') {
                 return `<button class="btn-action ${act.cls}" onclick="completeAppointment()"><span class="material-icons">check_circle</span>${act.label}</button>`;
             }
             return `<button class="btn-action ${act.cls}" onclick="changeStatus('${act.status}')"><span class="material-icons">${act.cls==='danger'?'cancel':'arrow_forward'}</span>${act.label}</button>`;
         }).join('');
     }
+
+    bar.innerHTML = actionsHTML;
 
     // Addon section
     if (data.can_add_addon) {

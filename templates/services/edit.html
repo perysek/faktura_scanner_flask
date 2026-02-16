@@ -85,6 +85,19 @@
         box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
     }
 
+    /* Validation Error States */
+    .refined-input.error, .refined-select.error {
+        border-color: var(--color-error);
+        box-shadow: 0 0 0 3px rgba(155, 44, 44, 0.1);
+    }
+    .field-error {
+        display: block;
+        color: var(--color-error);
+        font-size: 0.6875rem;
+        margin-top: 0.375rem;
+        font-weight: 400;
+    }
+
     textarea.refined-input { resize: vertical; min-height: 100px; }
 
     /* Radio Group */
@@ -288,6 +301,66 @@
 
 {% block extra_scripts %}
 <script>
+// Store original values
+let originalValues = {};
+
+// Validation error handling utilities
+function showFieldError(fieldId, errorMessage) {
+    clearFieldError(fieldId);
+
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    field.classList.add('error');
+
+    const errorEl = document.createElement('span');
+    errorEl.className = 'field-error';
+    errorEl.id = `${fieldId}-error`;
+    errorEl.textContent = errorMessage;
+
+    field.parentElement.appendChild(errorEl);
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    field.addEventListener('focus', () => clearFieldError(fieldId), { once: true });
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    field.classList.remove('error');
+    const errorEl = document.getElementById(`${fieldId}-error`);
+    if (errorEl) errorEl.remove();
+}
+
+function resetFieldToOriginal(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field || !originalValues[fieldId]) return;
+
+    if (field.type === 'checkbox' || field.type === 'radio') {
+        field.checked = originalValues[fieldId];
+    } else {
+        field.value = originalValues[fieldId];
+    }
+}
+
+// Save original values on page load
+document.addEventListener('DOMContentLoaded', () => {
+    ['name', 'category', 'price', 'duration_minutes', 'description', 'is_active'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) {
+            originalValues[id] = field.type === 'checkbox' ? field.checked : field.value;
+        }
+    });
+
+    // Save radio button states
+    document.querySelectorAll('input[name="service_type"]').forEach(radio => {
+        if (radio.checked) {
+            originalValues['service_type'] = radio.value;
+        }
+    });
+});
+
 document.getElementById('service-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -311,14 +384,30 @@ document.getElementById('service-form').addEventListener('submit', async (e) => 
         const data = await response.json();
 
         if (data.success) {
-            alert('Zmiany zostały zapisane pomyślnie!');
             window.location.href = '/service/{{ service.id }}';
         } else {
-            alert('Błąd: ' + data.error);
+            const errorMsg = data.error || 'Nieznany błąd';
+
+            // Identify field with error
+            if (errorMsg.toLowerCase().includes('nazwa') || errorMsg.toLowerCase().includes('name')) {
+                showFieldError('name', errorMsg);
+                resetFieldToOriginal('name');
+            } else if (errorMsg.toLowerCase().includes('kategoria') || errorMsg.toLowerCase().includes('category')) {
+                showFieldError('category', errorMsg);
+                resetFieldToOriginal('category');
+            } else if (errorMsg.toLowerCase().includes('cena') || errorMsg.toLowerCase().includes('price')) {
+                showFieldError('price', errorMsg);
+                resetFieldToOriginal('price');
+            } else if (errorMsg.toLowerCase().includes('czas') || errorMsg.toLowerCase().includes('duration')) {
+                showFieldError('duration_minutes', errorMsg);
+                resetFieldToOriginal('duration_minutes');
+            } else {
+                showFieldError('name', errorMsg);
+            }
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Błąd połączenia z serwerem');
+        showFieldError('name', 'Błąd połączenia z serwerem');
     }
 });
 </script>
