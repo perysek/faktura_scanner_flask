@@ -311,6 +311,67 @@
   }
 
   /* ============================================
+     REFINED MINIMAL COMPONENTS
+     Card and button styles for refined design system
+     ============================================ */
+
+  /* Refined Card - Modern card container */
+  .refined-card {
+      @apply bg-white shadow-md p-6 border border-slate-200/50;
+  }
+
+  /* Refined Buttons - Primary action button */
+  .refined-btn-primary {
+      @apply px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium shadow-sm hover:shadow-md hover:from-primary-700 hover:to-primary-600 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Refined Buttons - Secondary action button */
+  .refined-btn-secondary {
+      @apply px-5 py-2.5 bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 hover:shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Refined Buttons - Small size variant */
+  .refined-btn-sm {
+      @apply px-3 py-1.5 text-sm;
+  }
+
+  /* Refined Button - Active state for period selector */
+  .refined-btn-secondary.active {
+      @apply bg-primary-100 text-primary-700 border border-primary-200;
+  }
+
+  /* Refined Table - Modern table styling */
+  .refined-table {
+      @apply w-full border-collapse;
+  }
+
+  .refined-table thead {
+      @apply bg-slate-50 border-b-2 border-slate-200;
+  }
+
+  .refined-table th {
+      @apply px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider;
+  }
+
+  .refined-table td {
+      @apply px-6 py-4 text-sm text-slate-900 border-b border-slate-100;
+  }
+
+  /* Default left alignment for first column only */
+  .refined-table th:first-child,
+  .refined-table td:first-child {
+      @apply text-left;
+  }
+
+  .refined-table tbody tr {
+      @apply hover:bg-slate-50 transition-colors duration-150;
+  }
+
+  .refined-table tbody tr:last-child td {
+      @apply border-b-0;
+  }
+
+  /* ============================================
      MODAL DIALOG SYSTEM
      Dynamic modals created by Modals.show()
      ============================================ */

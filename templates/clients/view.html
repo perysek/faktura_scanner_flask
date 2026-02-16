@@ -532,16 +532,12 @@
 
         <!-- Add Preference Form -->
         <div id="add-pref-form" class="add-pref-form">
-            <div class="form-row">
+            <div class="form-row" style="grid-template-columns: 2fr 2fr auto;">
                 <div>
-                    <label>Usługa (opcjonalnie)</label>
+                    <label>Usługa</label>
                     <select id="new-pref-service-id">
-                        <option value="">Dowolna z kategorii...</option>
+                        <option value="">Wybierz usługę...</option>
                     </select>
-                </div>
-                <div>
-                    <label>Kategoria (opcjonalnie)</label>
-                    <input type="text" id="new-pref-category" placeholder="np. Koloryzacja">
                 </div>
                 <div>
                     <label>Preferowany pracownik</label>
@@ -616,6 +612,17 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPreferences();
     loadEmployees();
     loadServices();
+
+    // Event listenery dla wzajemnego filtrowania
+    document.getElementById('new-pref-service-id').addEventListener('change', async (e) => {
+        const serviceId = e.target.value;
+        await filterEmployeesByService(serviceId);
+    });
+
+    document.getElementById('new-pref-employee-id').addEventListener('change', async (e) => {
+        const employeeId = e.target.value;
+        await filterServicesByEmployee(employeeId);
+    });
 });
 
 function escapeHtml(text) {
@@ -668,6 +675,143 @@ async function loadServices() {
     } catch (error) {
         console.error('Error loading services:', error);
     }
+}
+
+// Filtruj usługi według wybranego pracownika
+async function filterServicesByEmployee(employeeId) {
+    const serviceSelect = document.getElementById('new-pref-service-id');
+    const previousServiceId = serviceSelect.value; // Zachowaj poprzedni wybór
+
+    if (!employeeId) {
+        // Brak pracownika - pokaż wszystkie usługi
+        await loadServices();
+        // Przywróć poprzedni wybór jeśli nadal dostępny
+        if (previousServiceId) {
+            serviceSelect.value = previousServiceId;
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/employees/${employeeId}/services?active_only=true`);
+        const data = await response.json();
+
+        if (data.success) {
+            serviceSelect.innerHTML = '<option value="">Wybierz usługę...</option>';
+            data.services.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.service_id;
+                opt.textContent = s.service_name;
+                serviceSelect.appendChild(opt);
+            });
+
+            if (data.services.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Ten pracownik nie ma przypisanych usług';
+                opt.disabled = true;
+                serviceSelect.appendChild(opt);
+            }
+
+            // Przywróć poprzedni wybór jeśli ta usługa jest nadal dostępna
+            if (previousServiceId) {
+                const optionExists = Array.from(serviceSelect.options).some(opt => opt.value === previousServiceId);
+                if (optionExists) {
+                    serviceSelect.value = previousServiceId;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error filtering services:', error);
+        if (typeof Notifications !== 'undefined') {
+            Notifications.error('Błąd wczytywania usług pracownika');
+        }
+    }
+}
+
+// Filtruj pracowników według wybranej usługi
+async function filterEmployeesByService(serviceId) {
+    const employeeSelect = document.getElementById('new-pref-employee-id');
+    const previousEmployeeId = employeeSelect.value; // Zachowaj poprzedni wybór
+
+    if (!serviceId) {
+        // Brak usługi - pokaż wszystkich pracowników
+        await loadEmployees();
+        // Przywróć poprzedni wybór jeśli nadal dostępny
+        if (previousEmployeeId) {
+            employeeSelect.value = previousEmployeeId;
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/services/${serviceId}/employees?active_only=true`);
+        const data = await response.json();
+
+        if (data.success) {
+            employeeSelect.innerHTML = '<option value="">Wybierz pracownika...</option>';
+            data.employees.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.employee_id;
+                opt.textContent = `${e.first_name} ${e.last_name}`;
+                employeeSelect.appendChild(opt);
+            });
+
+            if (data.employees.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Brak pracowników dla tej usługi';
+                opt.disabled = true;
+                employeeSelect.appendChild(opt);
+            }
+
+            // Przywróć poprzedni wybór jeśli ten pracownik jest nadal dostępny
+            if (previousEmployeeId) {
+                const optionExists = Array.from(employeeSelect.options).some(opt => opt.value === previousEmployeeId);
+                if (optionExists) {
+                    employeeSelect.value = previousEmployeeId;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error filtering employees:', error);
+        if (typeof Notifications !== 'undefined') {
+            Notifications.error('Błąd wczytywania pracowników');
+        }
+    }
+}
+
+// Wyświetl błąd walidacji na polu
+function showFieldError(fieldId, errorMessage) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    // Dodaj klasę błędu
+    field.classList.add('error');
+    field.style.borderColor = '#DC3545';
+    field.style.boxShadow = '0 0 0 3px rgba(220, 53, 69, 0.1)';
+
+    // Utwórz element błędu
+    let errorEl = document.getElementById(`${fieldId}-error`);
+    if (!errorEl) {
+        errorEl = document.createElement('span');
+        errorEl.id = `${fieldId}-error`;
+        errorEl.style.color = '#DC3545';
+        errorEl.style.fontSize = '0.6875rem';
+        errorEl.style.display = 'block';
+        errorEl.style.marginTop = '0.375rem';
+        errorEl.style.fontWeight = '400';
+        field.parentElement.appendChild(errorEl);
+    }
+    errorEl.textContent = errorMessage;
+
+    // Usuń błąd przy focus
+    field.addEventListener('focus', () => {
+        field.classList.remove('error');
+        field.style.borderColor = '';
+        field.style.boxShadow = '';
+        if (errorEl) errorEl.remove();
+    }, { once: true });
 }
 
 // Load client preferences
@@ -723,38 +867,43 @@ async function loadPreferences() {
 // Add new preference
 async function addPreference() {
     const serviceId = document.getElementById('new-pref-service-id').value;
-    const category = document.getElementById('new-pref-category').value.trim();
     const employeeId = document.getElementById('new-pref-employee-id').value;
     const notes = document.getElementById('new-pref-notes').value.trim();
 
+    // Walidacja: wymagana usługa I pracownik
+    if (!serviceId) {
+        showFieldError('new-pref-service-id', 'Wybierz usługę');
+        return;
+    }
     if (!employeeId) {
-        if (typeof Notifications !== 'undefined') {
-            Notifications.warning('Wybierz preferowanego pracownika');
-        } else {
-            alert('Wybierz preferowanego pracownika');
-        }
+        showFieldError('new-pref-employee-id', 'Wybierz pracownika');
         return;
     }
 
-    if (!serviceId && !category) {
-        if (typeof Notifications !== 'undefined') {
-            Notifications.warning('Wybierz usługę lub wpisz kategorię');
-        } else {
-            alert('Wybierz usługę lub wpisz kategorię');
+    // Sprawdź duplikat kombinacji service + employee
+    try {
+        const existingPrefs = await fetch(`/api/clients/${CLIENT_ID}/preferences`).then(r => r.json());
+        if (existingPrefs.success) {
+            const isDuplicate = existingPrefs.preferences.some(pref =>
+                pref.service_id === parseInt(serviceId) &&
+                pref.preferred_employee_id === parseInt(employeeId)
+            );
+
+            if (isDuplicate) {
+                showFieldError('new-pref-employee-id', 'Ta kombinacja usługi i pracownika już istnieje');
+                return;
+            }
         }
-        return;
+    } catch (error) {
+        console.error('Error checking duplicates:', error);
     }
 
+    // Utwórz payload (BEZ category)
     const payload = {
+        service_id: parseInt(serviceId),
         preferred_employee_id: parseInt(employeeId),
         notes: notes || null
     };
-
-    if (serviceId) {
-        payload.service_id = parseInt(serviceId);
-    } else if (category) {
-        payload.service_category = category;
-    }
 
     try {
         const response = await fetch(`/api/clients/${CLIENT_ID}/preferences`, {
@@ -768,11 +917,17 @@ async function addPreference() {
         if (data.success) {
             // Clear form
             document.getElementById('new-pref-service-id').value = '';
-            document.getElementById('new-pref-category').value = '';
             document.getElementById('new-pref-employee-id').value = '';
             document.getElementById('new-pref-notes').value = '';
             document.getElementById('add-pref-form').classList.remove('visible');
+
+            // Przeładuj listę preferencji
             loadPreferences();
+
+            // Przywróć pełne listy w dropdownach
+            loadEmployees();
+            loadServices();
+
             if (typeof Notifications !== 'undefined') {
                 Notifications.success('Preferencja została dodana');
             }

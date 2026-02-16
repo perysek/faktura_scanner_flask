@@ -288,6 +288,14 @@ def view_appointment(appointment_id):
     return render_template('appointments/view.html', appointment_id=appointment_id)
 
 
+@main_bp.route('/appointment/<int:appointment_id>/edit')
+@login_required
+@module_permission_required('appointments')
+def edit_appointment(appointment_id):
+    """Edit appointment"""
+    return render_template('appointments/edit.html', appointment_id=appointment_id)
+
+
 # ============================================================================
 # INCOME ROUTES
 # ============================================================================
@@ -298,6 +306,18 @@ def view_appointment(appointment_id):
 def income_dashboard():
     """Income dashboard view"""
     return render_template('income/dashboard.html')
+
+
+# ============================================================================
+# ANALYTICS ROUTES
+# ============================================================================
+
+@main_bp.route('/analytics')
+@login_required
+@module_permission_required('appointments')
+def analytics_dashboard():
+    """Analytics dashboard view"""
+    return render_template('analytics/dashboard.html')
 
 
 # ============================================================================

@@ -143,10 +143,11 @@ class AppointmentBusinessService:
 
         Kroki:
         1. Waliduj status (musi być in_progress)
-        2. Oblicz sumy (main + addon)
-        3. Utwórz income_record
-        4. Zmień status na completed
-        5. Zaktualizuj last_visit_date klienta
+        2. Waliduj datę (musi być w przeszłości)
+        3. Oblicz sumy (main + addon)
+        4. Utwórz income_record
+        5. Zmień status na completed
+        6. Zaktualizuj last_visit_date klienta
 
         Returns: dict z podsumowaniem finansowym
         """
@@ -158,6 +159,26 @@ class AppointmentBusinessService:
             raise AppointmentError(
                 f"Wizytę można zamknąć tylko ze statusu 'in_progress', "
                 f"aktualny status: '{row['status']}'"
+            )
+
+        # Walidacja: wizyta musi być w przeszłości
+        appointment_date = row['appointment_date']
+        start_time = row['start_time']
+
+        # Parse date and time
+        if isinstance(appointment_date, str):
+            appointment_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+        if isinstance(start_time, str):
+            start_time = datetime.strptime(start_time, '%H:%M:%S').time()
+
+        appointment_datetime = datetime.combine(appointment_date, start_time)
+        now = datetime.now()
+
+        if appointment_datetime > now:
+            raise AppointmentError(
+                "Nie można zamknąć wizyty zaplanowanej w przyszłości. "
+                f"Data wizyty: {appointment_datetime.strftime('%Y-%m-%d %H:%M')}, "
+                f"obecna data: {now.strftime('%Y-%m-%d %H:%M')}"
             )
 
         # Sprawdź czy nie ma już rekordu przychodu
@@ -385,4 +406,130 @@ class AppointmentBusinessService:
             'addon_services': [dict(s) for s in addon_services],
             'totals': totals,
             'can_add_addon': appt_row['status'] == 'in_progress'
+        }
+
+    def update_appointment(
+        self,
+        appointment_id: int,
+        client_id: int,
+        employee_id: int,
+        appointment_date: date,
+        start_time: time,
+        end_time: time,
+        status: str,
+        notes: Optional[str],
+        services: List[dict]
+    ) -> dict:
+        """
+        Aktualizuj wizytę wraz z usługami.
+
+        Obsługuje automatyczną aktualizację dochodów przy zmianie statusu:
+        - Zmiana NA 'completed' → tworzy rekord przychodu (wymaga daty w przeszłości)
+        - Zmiana Z 'completed' → usuwa rekord przychodu
+
+        Args:
+            appointment_id: ID wizyty do aktualizacji
+            client_id: ID klienta
+            employee_id: ID pracownika
+            appointment_date: Data wizyty
+            start_time: Godzina rozpoczęcia
+            end_time: Godzina zakończenia
+            status: Status wizyty
+            notes: Uwagi
+            services: Lista usług [{service_id, price_charged, duration_minutes, is_addon}, ...]
+
+        Returns:
+            dict z potwierdzeniem i nowym totalem
+        """
+        from database.models import Appointment
+        from decimal import Decimal
+
+        # 1. Sprawdź czy wizyta istnieje i pobierz stary status
+        appt_row = self.appt_repo.get_by_id(appointment_id)
+        if not appt_row:
+            raise AppointmentError("Wizyta nie istnieje")
+
+        old_status = appt_row['status']
+
+        # 2. Walidacja: zmiana statusu na 'completed' wymaga daty w przeszłości
+        if status == 'completed' and old_status != 'completed':
+            appointment_datetime = datetime.combine(appointment_date, start_time)
+            now = datetime.now()
+            if appointment_datetime > now:
+                raise AppointmentError(
+                    "Nie można zmienić statusu na 'zakończona' dla wizyty w przyszłości. "
+                    f"Data wizyty: {appointment_datetime.strftime('%Y-%m-%d %H:%M')}, "
+                    f"obecna data: {now.strftime('%Y-%m-%d %H:%M')}"
+                )
+
+        # 3. Policz sumę cen i czasu trwania
+        total_price = sum(Decimal(str(s['price_charged'])) for s in services)
+        total_duration = sum(s['duration_minutes'] for s in services)
+
+        # 4. Zaktualizuj obiekt Appointment
+        appt = Appointment(
+            id=appointment_id,
+            client_id=client_id,
+            employee_id=employee_id,
+            appointment_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+            status=status,
+            total_price=total_price,
+            total_duration=total_duration,
+            notes=notes
+        )
+
+        # 5. Zaktualizuj w bazie
+        self.appt_repo.update(appointment_id, appt)
+
+        # 6. Usuń stare usługi i dodaj nowe
+        self.appt_svc_repo.delete_all_for_appointment(appointment_id)
+
+        for svc in services:
+            from database.models import AppointmentService as AppointmentServiceModel
+            appt_svc = AppointmentServiceModel(
+                appointment_id=appointment_id,
+                service_id=int(svc['service_id']),
+                price_charged=Decimal(str(svc['price_charged'])),
+                duration_minutes=int(svc['duration_minutes']),
+                commission_rate=Decimal('0'),  # Można dodać logikę prowizji
+                commission_amount=Decimal('0'),
+                is_addon=bool(svc.get('is_addon', False))
+            )
+            self.appt_svc_repo.add_service(appt_svc)
+
+        # 7. Obsługa dochodów przy zmianie statusu
+        existing_income = self.income_repo.get_by_appointment(appointment_id)
+
+        if status == 'completed' and old_status != 'completed':
+            # Zmiana NA 'completed' → utwórz rekord przychodu jeśli nie istnieje
+            if not existing_income:
+                # Oblicz sumy dla rekordu przychodu
+                totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
+                commission_total = totals.get('total_commission', Decimal('0'))
+
+                income = IncomeRecord(
+                    appointment_id=appointment_id,
+                    client_id=client_id,
+                    employee_id=employee_id,
+                    total_amount=total_price,
+                    discount_amount=Decimal('0'),
+                    net_amount=total_price,
+                    commission_total=commission_total,
+                    payment_method=None,  # Można dodać do parametrów jeśli potrzebne
+                    payment_date=date.today()
+                )
+                self.income_repo.create(income)
+
+        elif status != 'completed' and old_status == 'completed':
+            # Zmiana Z 'completed' na inny → usuń rekord przychodu
+            if existing_income:
+                self.income_repo.delete_by_appointment(appointment_id)
+
+        return {
+            'appointment_id': appointment_id,
+            'total_price': float(total_price),
+            'total_duration': total_duration,
+            'service_count': len(services)
         }

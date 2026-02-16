@@ -113,7 +113,12 @@ class AppointmentRepository:
                 a.*,
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(s.name, ', ') as service_name
+                GROUP_CONCAT(
+                    CASE WHEN aps.is_addon = 0 THEN s.name END, ', '
+                ) as service_name,
+                GROUP_CONCAT(
+                    CASE WHEN aps.is_addon = 1 THEN s.name END, ', '
+                ) as addon_services
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
@@ -151,6 +156,87 @@ class AppointmentRepository:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id, schedule_date.isoformat()))
             return cursor.fetchall()
+
+    def get_multi_employee_schedule(self, schedule_date: date,
+                                      employee_ids: Optional[List[int]] = None) -> dict:
+        """
+        Pobierz harmonogram dnia dla wielu pracowników jednocześnie.
+
+        Args:
+            schedule_date: Data harmonogramu
+            employee_ids: Lista ID pracowników (opcjonalne - jeśli None, pobierze wszystkich z wizytami tego dnia)
+
+        Returns:
+            dict: {
+                'employees': [{'id': int, 'full_name': str, 'position': str}, ...],
+                'schedules': {employee_id: [appointments...], ...}
+            }
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Jeśli nie podano employee_ids, znajdź wszystkich pracowników z wizytami tego dnia
+            if employee_ids is None:
+                query_employees = """
+                    SELECT DISTINCT
+                        e.id,
+                        e.first_name || ' ' || e.last_name as full_name,
+                        e.position
+                    FROM employees e
+                    JOIN appointments a ON a.employee_id = e.id
+                    WHERE a.appointment_date = ?
+                    AND a.status NOT IN ('cancelled', 'no_show')
+                    AND e.is_active = 1
+                    ORDER BY e.first_name, e.last_name
+                """
+                cursor.execute(query_employees, (schedule_date.isoformat(),))
+            else:
+                # Użyj podanych employee_ids
+                placeholders = ','.join('?' * len(employee_ids))
+                query_employees = f"""
+                    SELECT
+                        e.id,
+                        e.first_name || ' ' || e.last_name as full_name,
+                        e.position
+                    FROM employees e
+                    WHERE e.id IN ({placeholders})
+                    AND e.is_active = 1
+                    ORDER BY e.first_name, e.last_name
+                """
+                cursor.execute(query_employees, employee_ids)
+
+            employees = [dict(row) for row in cursor.fetchall()]
+
+            # Pobierz wizyty dla każdego pracownika (włącznie z anulowanymi dla statystyk)
+            schedules = {}
+            query_appointments = """
+                SELECT
+                    a.*,
+                    c.first_name || ' ' || c.last_name as client_name,
+                    c.phone as client_phone,
+                    e.first_name || ' ' || e.last_name as employee_name,
+                    GROUP_CONCAT(s.name, ', ') as service_name,
+                    GROUP_CONCAT(
+                        CASE WHEN aps.is_addon = 1 THEN s.name ELSE NULL END, ', '
+                    ) as addon_services
+                FROM appointments a
+                JOIN clients c ON c.id = a.client_id
+                JOIN employees e ON e.id = a.employee_id
+                LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
+                LEFT JOIN services s ON s.id = aps.service_id
+                WHERE a.employee_id = ? AND a.appointment_date = ?
+                GROUP BY a.id
+                ORDER BY a.start_time
+            """
+
+            for emp in employees:
+                cursor.execute(query_appointments, (emp['id'], schedule_date.isoformat()))
+                schedules[emp['id']] = [dict(row) for row in cursor.fetchall()]
+
+            return {
+                'employees': employees,
+                'schedules': schedules
+            }
 
     def check_conflicts(self, employee_id: int, appt_date: date,
                          start_time: time, end_time: time,
@@ -231,9 +317,9 @@ class AppointmentRepository:
         query = """
             UPDATE appointments
             SET client_id = ?, employee_id = ?, appointment_date = ?,
-                start_time = ?, end_time = ?, total_price = ?,
-                total_duration = ?, discount_amount = ?, notes = ?,
-                updated_at = CURRENT_TIMESTAMP
+                start_time = ?, end_time = ?, status = ?,
+                total_price = ?, total_duration = ?, discount_amount = ?,
+                notes = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """
         with get_db_connection() as conn:
@@ -244,9 +330,10 @@ class AppointmentRepository:
                 appt.appointment_date.isoformat(),
                 appt.start_time.strftime('%H:%M:%S'),
                 appt.end_time.strftime('%H:%M:%S'),
+                appt.status,
                 str(appt.total_price),
                 appt.total_duration,
-                str(appt.discount_amount),
+                str(appt.discount_amount) if appt.discount_amount else '0',
                 appt.notes,
                 appointment_id
             ))
@@ -296,3 +383,55 @@ class AppointmentRepository:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
             return cursor.fetchone()['cnt']
+
+    def find_conflicting_appointments(
+        self,
+        employee_id: int,
+        appointment_date: date,
+        start_time: time,
+        end_time: time,
+        exclude_appointment_id: Optional[int] = None
+    ) -> List[sqlite3.Row]:
+        """
+        Znajdź wizyty które kolidują z podanym przedziałem czasowym.
+        Wizyta koliduje gdy przedziały się nakładają.
+
+        Logika: Dwa przedziały [A_start, A_end) i [B_start, B_end) nakładają się gdy:
+        A_start < B_end AND A_end > B_start
+        """
+        # Convert time to string format for SQLite (HH:MM:SS)
+        start_str = start_time.strftime('%H:%M:%S')
+        end_str = end_time.strftime('%H:%M:%S')
+
+        params = [
+            employee_id,
+            appointment_date.isoformat(),
+            end_str,      # new_end for: existing_start < new_end
+            start_str     # new_start for: existing_end > new_start
+        ]
+
+        exclude_filter = ""
+        if exclude_appointment_id:
+            exclude_filter = "AND a.id != ?"
+            params.append(exclude_appointment_id)
+
+        query = f"""
+            SELECT
+                a.id, a.start_time, a.end_time, a.client_id,
+                c.first_name || ' ' || c.last_name as client_name
+            FROM appointments a
+            LEFT JOIN clients c ON c.id = a.client_id
+            WHERE
+                a.employee_id = ?
+                AND a.appointment_date = ?
+                AND a.status NOT IN ('cancelled', 'no_show')
+                AND a.start_time < ?
+                AND a.end_time > ?
+                {exclude_filter}
+            ORDER BY a.start_time
+        """
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(params))
+            return cursor.fetchall()
