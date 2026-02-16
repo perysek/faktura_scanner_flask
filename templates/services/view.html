@@ -545,7 +545,11 @@ async function addCompatibleAddon() {
     const addonId = parseInt(select.value);
 
     if (!addonId) {
-        alert('Proszę wybrać mikrousługę');
+        Modals.alert({
+            title: 'Uwaga',
+            message: 'Proszę wybrać mikrousługę',
+            type: 'warning'
+        });
         return;
     }
 
@@ -561,7 +565,11 @@ async function addCompatibleAddon() {
         // 2. Build new compatibility list (add this main service)
         const currentMainIds = rulesData.rules.map(r => r.main_service_id);
         if (currentMainIds.includes(MAIN_SERVICE_ID)) {
-            alert('Ta mikrousługa jest już przypisana');
+            Modals.alert({
+                title: 'Uwaga',
+                message: 'Ta mikrousługa jest już przypisana',
+                type: 'warning'
+            });
             return;
         }
 
@@ -580,12 +588,20 @@ async function addCompatibleAddon() {
             toggleAddAddonForm();
             loadCompatibleAddons();
         } else {
-            alert('Błąd: ' + updateData.error);
+            Modals.alert({
+                title: 'Błąd',
+                message: updateData.error,
+                type: 'error'
+            });
         }
 
     } catch (error) {
         console.error('Error adding addon:', error);
-        alert('Błąd połączenia z serwerem');
+        Modals.alert({
+            title: 'Błąd połączenia',
+            message: 'Nie udało się połączyć z serwerem',
+            type: 'error'
+        });
     }
 }
 
@@ -619,12 +635,20 @@ async function removeCompatibleAddon(addonId) {
         if (updateData.success) {
             loadCompatibleAddons();
         } else {
-            alert('Błąd: ' + updateData.error);
+            Modals.alert({
+                title: 'Błąd',
+                message: updateData.error,
+                type: 'error'
+            });
         }
 
     } catch (error) {
         console.error('Error removing addon:', error);
-        alert('Błąd połączenia z serwerem');
+        Modals.alert({
+            title: 'Błąd połączenia',
+            message: 'Nie udało się połączyć z serwerem',
+            type: 'error'
+        });
     }
 }
 
@@ -642,14 +666,29 @@ async function confirmDelete() {
         const data = await response.json();
 
         if (data.success) {
-            alert('Usługa została dezaktywowana');
-            window.location.href = '/services';
+            Modals.alert({
+                title: 'Sukces',
+                message: 'Usługa została dezaktywowana',
+                type: 'success',
+                onClose: () => window.location.href = '/services'
+            });
         } else {
-            alert('Błąd: ' + data.error);
+            Modals.alert({
+                title: 'Błąd',
+                message: data.error,
+                type: 'error'
+            });
         }
     } catch (error) {
-        alert('Błąd połączenia z serwerem');
+        Modals.alert({
+            title: 'Błąd połączenia',
+            message: 'Nie udało się połączyć z serwerem',
+            type: 'error'
+        });
     }
 }
 </script>
+
+<!-- Modal System -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 {% endblock %}

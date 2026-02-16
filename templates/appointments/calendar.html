@@ -774,8 +774,11 @@ function showLoading(show) {
 }
 
 function showError(message) {
-    // Simple alert for now - could be replaced with toast notification
-    alert(message);
+    Modals.alert({
+        title: 'Błąd',
+        message: message,
+        type: 'error'
+    });
 }
 
 function getInitials(fullName) {
@@ -791,4 +794,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 </script>
+
+<!-- Past Visits Scanner -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
+<script src="{{ url_for('static', filename='js/past_visits_scanner.js') }}"></script>
 {% endblock %}
