@@ -120,6 +120,7 @@ def create_app():
     from routes.service_addon_routes import service_addon_bp
     from routes.client_preference_routes import client_preference_bp
     from routes.income_routes import income_bp
+    from routes.analytics_routes import analytics_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -130,6 +131,7 @@ def create_app():
     app.register_blueprint(service_addon_bp, url_prefix='/api')
     app.register_blueprint(client_preference_bp, url_prefix='/api')
     app.register_blueprint(income_bp, url_prefix='/api')
+    app.register_blueprint(analytics_bp, url_prefix='/api')
 
     # Error handlers
     @app.errorhandler(404)

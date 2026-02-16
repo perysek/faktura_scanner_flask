@@ -173,3 +173,12 @@ class IncomeRepository:
             cursor = conn.cursor()
             cursor.execute(query, (start_date, end_date))
             return cursor.fetchall()
+
+    def delete_by_appointment(self, appointment_id: int) -> bool:
+        """Usuń rekord przychodu dla wizyty (używane przy cofnięciu statusu 'completed')"""
+        query = "DELETE FROM income_records WHERE appointment_id = ?"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            conn.commit()
+            return cursor.rowcount > 0

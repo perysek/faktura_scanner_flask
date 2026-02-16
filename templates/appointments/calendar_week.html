@@ -34,6 +34,8 @@
     .refined-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.5rem; font-size: 0.75rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
     .refined-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
+    .refined-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .refined-btn-secondary:disabled:hover { border-color: var(--color-border); background: white; }
 
     .view-toggle { display: flex; gap: 0.375rem; }
     .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
@@ -78,9 +80,12 @@
     .appointment-block.completed { border-left-color: var(--color-success); background: #f0fdf4; }
     .appointment-block.cancelled { border-left-color: #dc2626; background: #fef2f2; opacity: 0.7; }
 
-    .apt-time { font-size: 0.6875rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; line-height: 1.2; }
+    .apt-time { font-size: 0.6875rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; line-height: 1.2; display: flex; justify-content: space-between; align-items: center; }
+    .apt-stylist { font-size: 0.5rem; color: var(--color-ink-subtle); background: rgba(0,0,0,0.04); padding: 0.0625rem 0.1875rem; border-radius: 2px; white-space: nowrap; font-weight: 500; }
     .apt-client { font-size: 0.6875rem; color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-bottom: 0.0625rem; }
     .apt-service { font-size: 0.625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; font-style: italic; }
+    .apt-addons { font-size: 0.5625rem; color: #d97706; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-top: 0.0625rem; font-weight: 500; }
+    .apt-notes { font-size: 0.5625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-top: 0.0625rem; font-style: italic; }
 
     /* Week Summary */
     .week-summary { display: flex; justify-content: center; gap: 2rem; padding: 0.375rem 0.75rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
@@ -135,10 +140,10 @@
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <div class="view-toggle">
-                <a href="{{ url_for('main.appointments_calendar') }}">Dzień</a>
-                <a href="{{ url_for('main.appointments_calendar_week') }}" class="active">Tydzień</a>
-                <a href="{{ url_for('main.appointments_calendar_month') }}">Miesiąc</a>
-                <a href="{{ url_for('main.appointments_list') }}">Lista</a>
+                <a href="{{ url_for('main.appointments_calendar') }}" id="nav-day">Dzień</a>
+                <a href="{{ url_for('main.appointments_calendar_week') }}" class="active" id="nav-week">Tydzień</a>
+                <a href="{{ url_for('main.appointments_calendar_month') }}" id="nav-month">Miesiąc</a>
+                <a href="{{ url_for('main.appointments_list') }}" id="nav-list">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
                 <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -152,26 +157,54 @@
     <!-- Controls -->
     <div class="refined-card">
         <div class="controls-bar">
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 200px;">
-                <label for="employeeSelect" style="margin-bottom: 0;">Pracownik</label>
-                <select id="employeeSelect" style="flex: 1;">
-                    <option value="">Ładowanie...</option>
-                </select>
+            <!-- Employee Controls (Left) -->
+            <div id="employeeControlsContainer">
+                <label id="employeeLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Wybór pracownika</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <!-- Employee Pagination -->
+                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" disabled>
+                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div id="employeePagination" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; min-height: 32px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
+                        Ładowanie...
+                    </div>
+                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" disabled>
+                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+
+                    <!-- Employee Dropdown -->
+                    <select id="employeeSelect" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);">
+                        <option value="">Ładowanie...</option>
+                    </select>
+                </div>
             </div>
-            <div class="week-nav">
-                <button id="prevWeekBtn" class="refined-btn-secondary" title="Poprzedni tydzień">
-                    <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div class="week-label" id="weekLabel">Tydzień</div>
-                <button id="nextWeekBtn" class="refined-btn-secondary" title="Następny tydzień">
-                    <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
+
+            <!-- Week Controls (Right) -->
+            <div style="display: flex; gap: 0.5rem; align-items: end; margin-left: auto;">
+                <button id="thisWeekBtn" class="refined-btn-secondary">Ten tydzień</button>
+
+                <!-- Week Navigation -->
+                <div style="display: flex; gap: 0.5rem; align-items: end;">
+                    <button id="prevWeekBtn" class="refined-btn-secondary" title="Poprzedni tydzień">
+                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div style="min-width: 180px;">
+                        <label for="weekLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Tydzień</label>
+                        <div class="week-label" id="weekLabel" style="min-height: 32px; display: flex; align-items: center; justify-content: center;">Tydzień</div>
+                    </div>
+                    <button id="nextWeekBtn" class="refined-btn-secondary" title="Następny tydzień">
+                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <button id="thisWeekBtn" class="refined-btn-secondary">Ten tydzień</button>
         </div>
     </div>
 
@@ -272,7 +305,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <h3>Brak wizyt</h3>
-            <p>W tym tygodniu nie ma zaplanowanych wizyt dla wybranego pracownika.</p>
+            <p>do wyświetlenia dla bieżącego widoku.</p>
         </div>
 
         <!-- Week Summary -->
@@ -298,12 +331,19 @@
 <script>
 // State
 let currentEmployeeId = null;
+let currentEmployeePage = 0;
 let currentWeekStart = getMonday(new Date());
-let employees = [];
+let allEmployees = [];  // All employees in system
+let employees = [];     // Filtered employees with appointments in current week
 let appointments = [];
 
 // DOM Elements
+const employeeControlsContainer = document.getElementById('employeeControlsContainer');
+const employeeLabel = document.getElementById('employeeLabel');
 const employeeSelect = document.getElementById('employeeSelect');
+const prevEmployeeBtn = document.getElementById('prevEmployeeBtn');
+const nextEmployeeBtn = document.getElementById('nextEmployeeBtn');
+const employeePagination = document.getElementById('employeePagination');
 const prevWeekBtn = document.getElementById('prevWeekBtn');
 const nextWeekBtn = document.getElementById('nextWeekBtn');
 const thisWeekBtn = document.getElementById('thisWeekBtn');
@@ -340,6 +380,13 @@ function getMonday(d) {
     return date;
 }
 
+function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function initializeTimeline() {
     updateWeekLabel();
     updateDayHeaders();
@@ -357,6 +404,8 @@ function initializeTimeline() {
 
 function setupEventListeners() {
     employeeSelect.addEventListener('change', handleEmployeeChange);
+    prevEmployeeBtn.addEventListener('click', () => navigateEmployee(-1));
+    nextEmployeeBtn.addEventListener('click', () => navigateEmployee(1));
     prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
     nextWeekBtn.addEventListener('click', () => navigateWeek(1));
     thisWeekBtn.addEventListener('click', goToThisWeek);
@@ -366,7 +415,7 @@ function setupEventListeners() {
         document.getElementById(`dayHeader${i}`).addEventListener('click', () => {
             const date = new Date(currentWeekStart);
             date.setDate(date.getDate() + i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = formatLocalDate(date);
             const params = new URLSearchParams({
                 date: dateStr,
                 employee_id: currentEmployeeId
@@ -381,35 +430,184 @@ async function loadEmployees() {
         const response = await fetch('/api/appointments/employees');
         if (!response.ok) throw new Error('Failed to load employees');
 
-        employees = await response.json();
+        allEmployees = await response.json();
 
-        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
-        employees.forEach(emp => {
-            const option = document.createElement('option');
-            option.value = emp.id;
-            option.textContent = emp.full_name + (emp.position ? ` (${emp.position})` : '');
-            employeeSelect.appendChild(option);
-        });
-
-        if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
-            employeeSelect.value = currentEmployeeId;
-            loadWeek();
-        } else if (employees.length > 0) {
-            employeeSelect.value = employees[0].id;
-            currentEmployeeId = employees[0].id;
-            loadWeek();
-        }
+        // Load week data which will filter employees
+        await loadWeekAndFilterEmployees();
     } catch (error) {
         console.error('Error loading employees:', error);
         alert('Nie udało się załadować listy pracowników');
     }
 }
 
+async function loadWeekAndFilterEmployees() {
+    if (allEmployees.length === 0) return;
+
+    showLoading(true);
+
+    try {
+        // Load all appointments for the week (no employee filter)
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        const params = new URLSearchParams({
+            start_date: formatLocalDate(currentWeekStart),
+            end_date: formatLocalDate(weekEnd)
+        });
+
+        const response = await fetch(`/api/appointments?${params}`);
+        if (!response.ok) throw new Error('Failed to load appointments');
+
+        const data = await response.json();
+        const allAppointments = (data.appointments || []).filter(apt =>
+            apt.status !== 'cancelled' && apt.status !== 'no_show'
+        );
+
+        // Get unique employee IDs with appointments
+        const employeeIdsWithAppointments = new Set(
+            allAppointments.map(apt => apt.employee_id)
+        );
+
+        // Filter employees to only those with appointments
+        employees = allEmployees.filter(emp =>
+            employeeIdsWithAppointments.has(emp.id)
+        );
+
+        // Update dropdown
+        updateEmployeeDropdown();
+
+        // Select employee
+        if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
+            // Current employee still has appointments in this week
+            const empIndex = employees.findIndex(e => e.id == currentEmployeeId);
+            if (empIndex !== -1) {
+                currentEmployeePage = empIndex;
+            }
+            employeeSelect.value = currentEmployeeId;
+
+            // Filter appointments for current employee
+            appointments = allAppointments.filter(apt => apt.employee_id == currentEmployeeId);
+        } else if (employees.length > 0) {
+            // Select first available employee
+            currentEmployeePage = 0;
+            currentEmployeeId = employees[0].id;
+            employeeSelect.value = employees[0].id;
+
+            // Filter appointments for selected employee
+            appointments = allAppointments.filter(apt => apt.employee_id == currentEmployeeId);
+        } else {
+            // No employees with appointments this week
+            currentEmployeeId = null;
+            appointments = [];
+        }
+
+        updateEmployeePagination();
+        updateViewLinks();
+        renderWeek();
+        updateSummary();
+    } catch (error) {
+        console.error('Error loading week:', error);
+        alert('Nie udało się załadować harmonogramu');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function updateEmployeeDropdown() {
+    // Hide dropdown if only one employee
+    if (employees.length === 1) {
+        employeeSelect.style.display = 'none';
+    } else {
+        employeeSelect.style.display = 'block';
+        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
+        employees.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.id;
+            option.textContent = emp.full_name;
+            option.title = emp.full_name + (emp.position ? ` (${emp.position})` : '');
+            employeeSelect.appendChild(option);
+        });
+    }
+}
+
 function handleEmployeeChange() {
     currentEmployeeId = employeeSelect.value;
     if (currentEmployeeId) {
-        loadWeek();
+        // Update pagination to match selected employee
+        const empIndex = employees.findIndex(e => e.id == currentEmployeeId);
+        if (empIndex !== -1) {
+            currentEmployeePage = empIndex;
+            updateEmployeePagination();
+        }
+        // Reload week data for selected employee
+        loadWeekForCurrentEmployee();
         updateNewAppointmentLink();
+        updateViewLinks();
+    }
+}
+
+function updateViewLinks() {
+    // Update navigation links to preserve selected employee
+    const baseUrls = {
+        'nav-day': '{{ url_for("main.appointments_calendar") }}',
+        'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
+        'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
+        'nav-list': '{{ url_for("main.appointments_list") }}'
+    };
+
+    Object.entries(baseUrls).forEach(([id, baseUrl]) => {
+        const link = document.getElementById(id);
+        if (link && currentEmployeeId) {
+            link.href = `${baseUrl}?employee_id=${currentEmployeeId}`;
+        }
+    });
+}
+
+function navigateEmployee(offset) {
+    if (employees.length === 0) return;
+
+    const newPage = currentEmployeePage + offset;
+    if (newPage < 0 || newPage >= employees.length) return;
+
+    currentEmployeePage = newPage;
+    currentEmployeeId = employees[currentEmployeePage].id;
+
+    // Update dropdown to match pagination
+    employeeSelect.value = currentEmployeeId;
+
+    updateEmployeePagination();
+    loadWeekForCurrentEmployee();
+    updateNewAppointmentLink();
+    updateViewLinks();
+}
+
+function updateEmployeePagination() {
+    if (employees.length === 0) {
+        // Hide entire employee controls when no employees with appointments
+        employeeControlsContainer.style.display = 'none';
+        return;
+    }
+
+    // Show employee controls
+    employeeControlsContainer.style.display = 'block';
+
+    // Update label based on employee count
+    if (employees.length === 1) {
+        employeeLabel.textContent = 'Pracownik';
+        prevEmployeeBtn.disabled = true;
+        nextEmployeeBtn.disabled = true;
+    } else {
+        employeeLabel.textContent = 'Wybór pracownika';
+        // Update pagination buttons
+        prevEmployeeBtn.disabled = currentEmployeePage === 0;
+        nextEmployeeBtn.disabled = currentEmployeePage === employees.length - 1;
+    }
+
+    // Update label
+    const currentEmployee = employees[currentEmployeePage];
+    if (currentEmployee) {
+        employeePagination.textContent = currentEmployee.full_name;
+        employeePagination.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
     }
 }
 
@@ -417,7 +615,7 @@ function navigateWeek(offset) {
     currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
     updateWeekLabel();
     updateDayHeaders();
-    loadWeek();
+    loadWeekAndFilterEmployees();
     updateNewAppointmentLink();
 }
 
@@ -425,7 +623,7 @@ function goToThisWeek() {
     currentWeekStart = getMonday(new Date());
     updateWeekLabel();
     updateDayHeaders();
-    loadWeek();
+    loadWeekAndFilterEmployees();
     updateNewAppointmentLink();
 }
 
@@ -447,6 +645,20 @@ function updateWeekLabel() {
     }
 
     weekLabel.textContent = label;
+    updateThisWeekButton();
+}
+
+function updateThisWeekButton() {
+    // Check if current week is this week
+    const thisWeekStart = getMonday(new Date());
+    const isThisWeek = currentWeekStart.getTime() === thisWeekStart.getTime();
+
+    // Hide button if displaying current week
+    if (isThisWeek) {
+        thisWeekBtn.style.display = 'none';
+    } else {
+        thisWeekBtn.style.display = 'inline-flex';
+    }
 }
 
 function updateDayHeaders() {
@@ -473,11 +685,11 @@ function updateNewAppointmentLink() {
     const params = new URLSearchParams();
     params.set('from', 'week');
     if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
-    if (currentWeekStart) params.set('date', currentWeekStart.toISOString().split('T')[0]);
+    if (currentWeekStart) params.set('date', formatLocalDate(currentWeekStart));
     newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
 }
 
-async function loadWeek() {
+async function loadWeekForCurrentEmployee() {
     if (!currentEmployeeId) return;
 
     showLoading(true);
@@ -488,8 +700,8 @@ async function loadWeek() {
 
         const params = new URLSearchParams({
             employee_id: currentEmployeeId,
-            start_date: currentWeekStart.toISOString().split('T')[0],
-            end_date: weekEnd.toISOString().split('T')[0]
+            start_date: formatLocalDate(currentWeekStart),
+            end_date: formatLocalDate(weekEnd)
         });
 
         const response = await fetch(`/api/appointments?${params}`);
@@ -531,7 +743,7 @@ function renderWeek() {
     for (let i = 0; i < 7; i++) {
         const date = new Date(currentWeekStart);
         date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatLocalDate(date);
 
         const dayAppointments = appointmentsByDay[dateStr] || [];
         renderDayColumn(i, dayAppointments);
@@ -568,18 +780,34 @@ function createAppointmentBlock(appointment) {
 
     const clientName = appointment.client_name || 'Bez klienta';
     const serviceName = appointment.service_name || 'Brak usługi';
+    const employeeName = appointment.employee_name || '';
     const timeRange = `${formatTime(appointment.start_time)} - ${formatTime(appointment.end_time)}`;
+    const addons = appointment.addon_services;
+    const notes = appointment.notes;
 
-    block.innerHTML = `
-        <div class="apt-time">${timeRange}</div>
+    let content = `
+        <div class="apt-time">
+            <span>${timeRange}</span>
+            ${employeeName ? `<span class="apt-stylist" title="Stylista: ${escapeHtml(employeeName)}">${escapeHtml(getInitials(employeeName))}</span>` : ''}
+        </div>
         <div class="apt-client" title="${escapeHtml(clientName)}">${escapeHtml(truncate(clientName, 15))}</div>
         <div class="apt-service" title="${escapeHtml(serviceName)}">${escapeHtml(truncate(serviceName, 15))}</div>
     `;
 
+    if (addons) {
+        content += `<div class="apt-addons" title="Dodatki: ${escapeHtml(addons)}">+ ${escapeHtml(truncate(addons, 20))}</div>`;
+    }
+
+    if (notes) {
+        content += `<div class="apt-notes" title="${escapeHtml(notes)}">${escapeHtml(truncate(notes, 20))}</div>`;
+    }
+
+    block.innerHTML = content;
+
     block.addEventListener('click', () => {
         const params = new URLSearchParams({
             from: 'week',
-            date: currentWeekStart.toISOString().split('T')[0],
+            date: formatLocalDate(currentWeekStart),
             employee_id: currentEmployeeId
         });
         window.location.href = `/appointment/${appointment.id}?${params.toString()}`;
@@ -637,6 +865,13 @@ function updateSummary() {
 
 function showLoading(show) {
     loadingOverlay.style.display = show ? 'flex' : 'none';
+}
+
+function getInitials(fullName) {
+    if (!fullName) return '';
+    const names = fullName.trim().split(' ');
+    if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
+    return names.map(n => n.charAt(0).toUpperCase()).join('');
 }
 
 function escapeHtml(text) {
