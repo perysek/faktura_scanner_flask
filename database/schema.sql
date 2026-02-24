@@ -1,21 +1,22 @@
 -- Tabela faktur
 CREATE TABLE IF NOT EXISTS invoices (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     seller_name TEXT NOT NULL,
     seller_nip TEXT,
     invoice_number TEXT NOT NULL UNIQUE,
     invoice_date DATE NOT NULL,
     bank_account TEXT,
-    amount REAL NOT NULL,
+    amount FLOAT NOT NULL,
     currency TEXT DEFAULT 'PLN',
     payment_due_date DATE,
     payment_term TEXT,
     status TEXT DEFAULT 'Nieopłacona',
     pdf_path TEXT,
-    ocr_confidence REAL,
+    ocr_confidence FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_duplicate BOOLEAN DEFAULT 0
+    is_duplicate BOOLEAN DEFAULT FALSE,
+    seller_id INTEGER
 );
 
 -- Indeksy dla wydajności
@@ -25,7 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_seller_name ON invoices(seller_name);
 
 -- Tabela sprzedawców (sellers)
 CREATE TABLE IF NOT EXISTS sellers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     seller_nip TEXT UNIQUE NOT NULL,
     seller_name TEXT NOT NULL,
     address TEXT,
@@ -39,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_seller_name_search ON sellers(seller_name);
 
 -- Tabela historii zmian (audit log)
 CREATE TABLE IF NOT EXISTS audit_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     invoice_id INTEGER NOT NULL,
     action TEXT DEFAULT 'UPDATE',
     field_name TEXT NOT NULL,
@@ -53,10 +54,10 @@ CREATE INDEX IF NOT EXISTS idx_audit_invoice ON audit_log(invoice_id);
 
 -- Tabela duplikatów
 CREATE TABLE IF NOT EXISTS duplicate_detection (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     invoice_id INTEGER NOT NULL,
     duplicate_of INTEGER,
-    similarity_score REAL,
+    similarity_score FLOAT,
     detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
     FOREIGN KEY (duplicate_of) REFERENCES invoices(id) ON DELETE SET NULL
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS duplicate_detection (
 
 -- Tabela tymczasowych uploadów (staging)
 CREATE TABLE IF NOT EXISTS upload_staging (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     session_id TEXT NOT NULL,
     filename TEXT NOT NULL,
     file_path TEXT NOT NULL,
@@ -77,4 +78,4 @@ CREATE TABLE IF NOT EXISTS upload_staging (
 );
 
 CREATE INDEX IF NOT EXISTS idx_staging_session ON upload_staging(session_id);
-CREATE INDEX IF NOT EXISTS idx_staging_uploaded_at ON upload_staging(uploaded_at);
+CREATE INDEX IF NOT EXISTS idx_staging_uploaded_at ON upload_staging(uploaded_at)
