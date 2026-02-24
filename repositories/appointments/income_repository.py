@@ -1,9 +1,8 @@
 """
 Repository dla operacji na rekordach przychodu (income_records)
 """
-import sqlite3
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime, date
 from config.database import get_db_connection
 from database.models import IncomeRecord
@@ -12,7 +11,7 @@ from database.models import IncomeRecord
 class IncomeRepository:
     """Repository do zarządzania rekordami przychodu"""
 
-    def row_to_income_record(self, row: sqlite3.Row) -> Optional[IncomeRecord]:
+    def row_to_income_record(self, row: Any) -> Optional[IncomeRecord]:
         """Konwertuj Row na obiekt IncomeRecord"""
         if not row:
             return None
@@ -40,7 +39,8 @@ class IncomeRepository:
                 appointment_id, client_id, employee_id,
                 total_amount, discount_amount, net_amount,
                 commission_total, payment_method, payment_date, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -56,25 +56,26 @@ class IncomeRepository:
                 record.payment_date.isoformat(),
                 record.notes
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
-    def get_by_appointment(self, appointment_id: int) -> Optional[sqlite3.Row]:
+    def get_by_appointment(self, appointment_id: int) -> Optional[Any]:
         """Pobierz rekord przychodu dla wizyty"""
-        query = "SELECT * FROM income_records WHERE appointment_id = ?"
+        query = "SELECT * FROM income_records WHERE appointment_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
             return cursor.fetchone()
 
     def get_by_date_range(self, start_date: date, end_date: date,
-                           employee_id: Optional[int] = None) -> List[sqlite3.Row]:
+                           employee_id: Optional[int] = None) -> List[Any]:
         """Pobierz rekordy przychodu w zakresie dat"""
         params = [start_date.isoformat(), end_date.isoformat()]
         employee_filter = ""
 
         if employee_id:
-            employee_filter = "AND ir.employee_id = ?"
+            employee_filter = "AND ir.employee_id = %s"
             params.append(employee_id)
 
         query = f"""
@@ -85,7 +86,7 @@ class IncomeRepository:
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id
             JOIN employees e ON e.id = ir.employee_id
-            WHERE ir.payment_date BETWEEN ? AND ? {employee_filter}
+            WHERE ir.payment_date BETWEEN %s AND %s {employee_filter}
             ORDER BY ir.payment_date DESC
         """
         with get_db_connection() as conn:
@@ -93,7 +94,7 @@ class IncomeRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
-    def get_by_employee(self, employee_id: int, year: int, month: int) -> List[sqlite3.Row]:
+    def get_by_employee(self, employee_id: int, year: int, month: int) -> List[Any]:
         """Pobierz rekordy przychodu pracownika za miesiąc"""
         start_date = f"{year}-{month:02d}-01"
         if month == 12:
@@ -107,7 +108,7 @@ class IncomeRepository:
                 c.first_name || ' ' || c.last_name as client_name
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id
-            WHERE ir.employee_id = ? AND ir.payment_date >= ? AND ir.payment_date < ?
+            WHERE ir.employee_id = %s AND ir.payment_date >= %s AND ir.payment_date < %s
             ORDER BY ir.payment_date DESC
         """
         with get_db_connection() as conn:
@@ -132,7 +133,7 @@ class IncomeRepository:
                 COALESCE(SUM(commission_total), 0) as total_commissions,
                 COALESCE(AVG(net_amount), 0) as avg_ticket
             FROM income_records
-            WHERE payment_date >= ? AND payment_date < ?
+            WHERE payment_date >= %s AND payment_date < %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -147,7 +148,7 @@ class IncomeRepository:
                 'avg_ticket': Decimal(str(row['avg_ticket']))
             }
 
-    def get_employee_summary(self, year: int, month: int) -> List[sqlite3.Row]:
+    def get_employee_summary(self, year: int, month: int) -> List[Any]:
         """Pobierz podsumowanie przychodów per pracownik za miesiąc"""
         start_date = f"{year}-{month:02d}-01"
         if month == 12:
@@ -165,7 +166,7 @@ class IncomeRepository:
                 COALESCE(SUM(ir.commission_total), 0) as total_commission
             FROM income_records ir
             JOIN employees e ON e.id = ir.employee_id
-            WHERE ir.payment_date >= ? AND ir.payment_date < ?
+            WHERE ir.payment_date >= %s AND ir.payment_date < %s
             GROUP BY e.id
             ORDER BY total_revenue DESC
         """
@@ -176,7 +177,7 @@ class IncomeRepository:
 
     def delete_by_appointment(self, appointment_id: int) -> bool:
         """Usuń rekord przychodu dla wizyty (używane przy cofnięciu statusu 'completed')"""
-        query = "DELETE FROM income_records WHERE appointment_id = ?"
+        query = "DELETE FROM income_records WHERE appointment_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))

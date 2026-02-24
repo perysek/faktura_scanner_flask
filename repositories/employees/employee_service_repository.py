@@ -1,10 +1,10 @@
 """
 Repository dla operacji na przypisaniach usług do pracowników (employee_services)
 """
-import sqlite3
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime
+import psycopg2
 from config.database import get_db_connection
 from database.models import EmployeeService
 
@@ -12,7 +12,7 @@ from database.models import EmployeeService
 class EmployeeServiceRepository:
     """Repository do zarządzania przypisaniami usług do pracowników z indywidualnym cenowaniem"""
 
-    def row_to_employee_service(self, row: sqlite3.Row) -> Optional[EmployeeService]:
+    def row_to_employee_service(self, row: Any) -> Optional[EmployeeService]:
         """Konwertuj Row na obiekt EmployeeService"""
         if not row:
             return None
@@ -35,7 +35,8 @@ class EmployeeServiceRepository:
             INSERT INTO employee_services (
                 employee_id, service_id, custom_price, commission_rate,
                 duration_override, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -47,8 +48,9 @@ class EmployeeServiceRepository:
                 es.duration_override,
                 es.is_active
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
     def update(self, es_id: int, custom_price: Optional[Decimal] = None,
                commission_rate: Optional[Decimal] = None,
@@ -59,16 +61,16 @@ class EmployeeServiceRepository:
         params = []
 
         if custom_price is not None:
-            updates.append("custom_price = ?")
+            updates.append("custom_price = %s")
             params.append(str(custom_price))
         if commission_rate is not None:
-            updates.append("commission_rate = ?")
+            updates.append("commission_rate = %s")
             params.append(str(commission_rate))
         if duration_override is not None:
-            updates.append("duration_override = ?")
+            updates.append("duration_override = %s")
             params.append(duration_override)
         if is_active is not None:
-            updates.append("is_active = ?")
+            updates.append("is_active = %s")
             params.append(is_active)
 
         if not updates:
@@ -77,7 +79,7 @@ class EmployeeServiceRepository:
         updates.append("updated_at = CURRENT_TIMESTAMP")
         params.append(es_id)
 
-        query = f"UPDATE employee_services SET {', '.join(updates)} WHERE id = ?"
+        query = f"UPDATE employee_services SET {', '.join(updates)} WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
@@ -86,22 +88,22 @@ class EmployeeServiceRepository:
 
     def delete(self, es_id: int) -> bool:
         """Usuń przypisanie usługi do pracownika"""
-        query = "DELETE FROM employee_services WHERE id = ?"
+        query = "DELETE FROM employee_services WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (es_id,))
             conn.commit()
             return cursor.rowcount > 0
 
-    def get_by_id(self, es_id: int) -> Optional[sqlite3.Row]:
+    def get_by_id(self, es_id: int) -> Optional[Any]:
         """Pobierz przypisanie po ID"""
-        query = "SELECT * FROM employee_services WHERE id = ?"
+        query = "SELECT * FROM employee_services WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (es_id,))
             return cursor.fetchone()
 
-    def get_services_for_employee(self, employee_id: int, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_services_for_employee(self, employee_id: int, active_only: bool = True) -> List[Any]:
         """Pobierz usługi przypisane do pracownika z efektywnym cenowaniem.
 
         Zwraca JOIN z tabelą services + employees dla rozwiązania łańcucha COALESCE:
@@ -109,7 +111,7 @@ class EmployeeServiceRepository:
         - effective_commission = COALESCE(es.commission_rate, e.commission_rate, 0)
         - effective_duration = COALESCE(es.duration_override, s.duration_minutes)
         """
-        active_filter = "AND es.is_active = 1 AND s.is_active = 1" if active_only else ""
+        active_filter = "AND es.is_active = TRUE AND s.is_active = TRUE" if active_only else ""
         query = f"""
             SELECT
                 es.*,
@@ -126,7 +128,7 @@ class EmployeeServiceRepository:
             FROM employee_services es
             JOIN services s ON s.id = es.service_id
             JOIN employees e ON e.id = es.employee_id
-            WHERE es.employee_id = ? {active_filter}
+            WHERE es.employee_id = %s {active_filter}
             ORDER BY s.service_type, s.category, s.name
         """
         with get_db_connection() as conn:
@@ -134,9 +136,9 @@ class EmployeeServiceRepository:
             cursor.execute(query, (employee_id,))
             return cursor.fetchall()
 
-    def get_employees_for_service(self, service_id: int, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_employees_for_service(self, service_id: int, active_only: bool = True) -> List[Any]:
         """Pobierz pracowników mogących wykonać daną usługę"""
-        active_filter = "AND es.is_active = 1 AND e.is_active = 1" if active_only else ""
+        active_filter = "AND es.is_active = TRUE AND e.is_active = TRUE" if active_only else ""
         query = f"""
             SELECT
                 es.*,
@@ -152,7 +154,7 @@ class EmployeeServiceRepository:
             FROM employee_services es
             JOIN employees e ON e.id = es.employee_id
             JOIN services s ON s.id = es.service_id
-            WHERE es.service_id = ? {active_filter}
+            WHERE es.service_id = %s {active_filter}
             ORDER BY e.last_name, e.first_name
         """
         with get_db_connection() as conn:
@@ -160,7 +162,7 @@ class EmployeeServiceRepository:
             cursor.execute(query, (service_id,))
             return cursor.fetchall()
 
-    def get_effective_pricing(self, employee_id: int, service_id: int) -> Optional[sqlite3.Row]:
+    def get_effective_pricing(self, employee_id: int, service_id: int) -> Optional[Any]:
         """Pobierz efektywne cenowanie dla pary pracownik-usługa.
 
         Rozwiązuje łańcuch COALESCE dla ceny, prowizji i czasu trwania.
@@ -180,7 +182,7 @@ class EmployeeServiceRepository:
             FROM employee_services es
             JOIN services s ON s.id = es.service_id
             JOIN employees e ON e.id = es.employee_id
-            WHERE es.employee_id = ? AND es.service_id = ? AND es.is_active = 1
+            WHERE es.employee_id = %s AND es.service_id = %s AND es.is_active = TRUE
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -191,7 +193,7 @@ class EmployeeServiceRepository:
         """Sprawdź czy pracownik może wykonać daną usługę"""
         query = """
             SELECT COUNT(*) as cnt FROM employee_services
-            WHERE employee_id = ? AND service_id = ? AND is_active = 1
+            WHERE employee_id = %s AND service_id = %s AND is_active = TRUE
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -206,11 +208,11 @@ class EmployeeServiceRepository:
             for service_id in service_ids:
                 try:
                     cursor.execute(
-                        "INSERT INTO employee_services (employee_id, service_id) VALUES (?, ?)",
+                        "INSERT INTO employee_services (employee_id, service_id) VALUES (%s, %s)",
                         (employee_id, service_id)
                     )
                     count += 1
-                except sqlite3.IntegrityError:
+                except psycopg2.errors.UniqueViolation:
                     # Para już istnieje — pomijamy
                     pass
             conn.commit()

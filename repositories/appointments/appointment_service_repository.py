@@ -1,9 +1,8 @@
 """
 Repository dla operacji na usługach przypisanych do wizyt (appointment_services)
 """
-import sqlite3
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime
 from config.database import get_db_connection
 from database.models import AppointmentService
@@ -12,7 +11,7 @@ from database.models import AppointmentService
 class AppointmentServiceRepository:
     """Repository do zarządzania usługami w ramach wizyt (główne + mikrousługi)"""
 
-    def row_to_appointment_service(self, row: sqlite3.Row) -> Optional[AppointmentService]:
+    def row_to_appointment_service(self, row: Any) -> Optional[AppointmentService]:
         """Konwertuj Row na obiekt AppointmentService"""
         if not row:
             return None
@@ -35,7 +34,8 @@ class AppointmentServiceRepository:
             INSERT INTO appointment_services (
                 appointment_id, service_id, price_charged, duration_minutes,
                 commission_rate, commission_amount, is_addon, added_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 0, NULL)
+            ) VALUES (%s, %s, %s, %s, %s, %s, 0, NULL)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -47,8 +47,9 @@ class AppointmentServiceRepository:
                 str(appt_svc.commission_rate),
                 str(appt_svc.commission_amount)
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
     def add_addon_service(self, appt_svc: AppointmentService) -> int:
         """Dodaj mikrousługę do wizyty (w trakcie — status=in_progress)"""
@@ -56,7 +57,8 @@ class AppointmentServiceRepository:
             INSERT INTO appointment_services (
                 appointment_id, service_id, price_charged, duration_minutes,
                 commission_rate, commission_amount, is_addon, added_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+            ) VALUES (%s, %s, %s, %s, %s, %s, 1, CURRENT_TIMESTAMP)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -68,10 +70,11 @@ class AppointmentServiceRepository:
                 str(appt_svc.commission_rate),
                 str(appt_svc.commission_amount)
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
-    def get_all_for_appointment(self, appointment_id: int) -> List[sqlite3.Row]:
+    def get_all_for_appointment(self, appointment_id: int) -> List[Any]:
         """Pobierz wszystkie usługi (główne + mikrousługi) dla wizyty"""
         query = """
             SELECT
@@ -81,7 +84,7 @@ class AppointmentServiceRepository:
                 s.service_type
             FROM appointment_services aps
             JOIN services s ON s.id = aps.service_id
-            WHERE aps.appointment_id = ?
+            WHERE aps.appointment_id = %s
             ORDER BY aps.is_addon, aps.id
         """
         with get_db_connection() as conn:
@@ -89,13 +92,13 @@ class AppointmentServiceRepository:
             cursor.execute(query, (appointment_id,))
             return cursor.fetchall()
 
-    def get_main_services(self, appointment_id: int) -> List[sqlite3.Row]:
+    def get_main_services(self, appointment_id: int) -> List[Any]:
         """Pobierz tylko usługi główne dla wizyty"""
         query = """
             SELECT aps.*, s.name as service_name, s.category as service_category
             FROM appointment_services aps
             JOIN services s ON s.id = aps.service_id
-            WHERE aps.appointment_id = ? AND aps.is_addon = 0
+            WHERE aps.appointment_id = %s AND aps.is_addon = FALSE
             ORDER BY aps.id
         """
         with get_db_connection() as conn:
@@ -103,13 +106,13 @@ class AppointmentServiceRepository:
             cursor.execute(query, (appointment_id,))
             return cursor.fetchall()
 
-    def get_addons(self, appointment_id: int) -> List[sqlite3.Row]:
+    def get_addons(self, appointment_id: int) -> List[Any]:
         """Pobierz tylko mikrousługi dodane w trakcie wizyty"""
         query = """
             SELECT aps.*, s.name as service_name, s.category as service_category
             FROM appointment_services aps
             JOIN services s ON s.id = aps.service_id
-            WHERE aps.appointment_id = ? AND aps.is_addon = 1
+            WHERE aps.appointment_id = %s AND aps.is_addon = TRUE
             ORDER BY aps.added_at
         """
         with get_db_connection() as conn:
@@ -123,13 +126,13 @@ class AppointmentServiceRepository:
             SELECT
                 COALESCE(SUM(price_charged), 0) as total_price,
                 COALESCE(SUM(commission_amount), 0) as total_commission,
-                COALESCE(SUM(CASE WHEN is_addon = 0 THEN price_charged ELSE 0 END), 0) as main_total,
-                COALESCE(SUM(CASE WHEN is_addon = 1 THEN price_charged ELSE 0 END), 0) as addon_total,
-                COALESCE(SUM(CASE WHEN is_addon = 0 THEN duration_minutes ELSE 0 END), 0) as main_duration,
+                COALESCE(SUM(CASE WHEN is_addon = FALSE THEN price_charged ELSE 0 END), 0) as main_total,
+                COALESCE(SUM(CASE WHEN is_addon = TRUE THEN price_charged ELSE 0 END), 0) as addon_total,
+                COALESCE(SUM(CASE WHEN is_addon = FALSE THEN duration_minutes ELSE 0 END), 0) as main_duration,
                 COUNT(*) as service_count,
-                SUM(CASE WHEN is_addon = 1 THEN 1 ELSE 0 END) as addon_count
+                SUM(CASE WHEN is_addon = TRUE THEN 1 ELSE 0 END) as addon_count
             FROM appointment_services
-            WHERE appointment_id = ?
+            WHERE appointment_id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -149,7 +152,7 @@ class AppointmentServiceRepository:
         """Sprawdź czy mikrousługa została już dodana do wizyty"""
         query = """
             SELECT COUNT(*) as cnt FROM appointment_services
-            WHERE appointment_id = ? AND service_id = ? AND is_addon = 1
+            WHERE appointment_id = %s AND service_id = %s AND is_addon = TRUE
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -158,7 +161,7 @@ class AppointmentServiceRepository:
 
     def delete(self, appt_service_id: int) -> bool:
         """Usuń usługę z wizyty"""
-        query = "DELETE FROM appointment_services WHERE id = ?"
+        query = "DELETE FROM appointment_services WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appt_service_id,))
@@ -167,7 +170,7 @@ class AppointmentServiceRepository:
 
     def delete_all_for_appointment(self, appointment_id: int) -> bool:
         """Usuń wszystkie usługi przypisane do wizyty"""
-        query = "DELETE FROM appointment_services WHERE appointment_id = ?"
+        query = "DELETE FROM appointment_services WHERE appointment_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))

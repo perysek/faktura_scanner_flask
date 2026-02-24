@@ -1,9 +1,8 @@
 """
 Repository dla użytkowników (user accounts)
 """
-import sqlite3
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 import bcrypt
 
 from database.models import User
@@ -34,10 +33,9 @@ class UserRepository(BaseRepository):
 
         query = """
             INSERT INTO users (email, password_hash, full_name, role, is_active)
-            VALUES (?, ?, ?, ?, 1)
+            VALUES (%s, %s, %s, %s, TRUE)
         """
-        cursor = self._execute(query, (email, password_hash, full_name, role))
-        return cursor.lastrowid
+        return self._execute_insert(query, (email, password_hash, full_name, role))
 
     def get_by_email(self, email: str) -> Optional[User]:
         """
@@ -49,7 +47,7 @@ class UserRepository(BaseRepository):
         Returns:
             User object lub None jeśli nie znaleziono
         """
-        query = "SELECT * FROM users WHERE email = ?"
+        query = "SELECT * FROM users WHERE email = %s"
         row = self._fetch_one(query, (email,))
 
         if not row:
@@ -80,7 +78,7 @@ class UserRepository(BaseRepository):
         Args:
             user_id: ID użytkownika
         """
-        query = "UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?"
+        query = "UPDATE users SET last_login = %s, updated_at = %s WHERE id = %s"
         self._execute(query, (datetime.now(), datetime.now(), user_id))
 
     def update_password(self, user_id: int, new_password: str):
@@ -92,7 +90,7 @@ class UserRepository(BaseRepository):
             new_password: Nowe hasło (w postaci jawnej, zostanie zahashowane)
         """
         password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        query = "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?"
+        query = "UPDATE users SET password_hash = %s, updated_at = %s WHERE id = %s"
         self._execute(query, (password_hash, datetime.now(), user_id))
 
     def update_role(self, user_id: int, new_role: str):
@@ -103,7 +101,7 @@ class UserRepository(BaseRepository):
             user_id: ID użytkownika
             new_role: Nowa rola
         """
-        query = "UPDATE users SET role = ?, updated_at = ? WHERE id = ?"
+        query = "UPDATE users SET role = %s, updated_at = %s WHERE id = %s"
         self._execute(query, (new_role, datetime.now(), user_id))
 
     def deactivate(self, user_id: int):
@@ -113,7 +111,7 @@ class UserRepository(BaseRepository):
         Args:
             user_id: ID użytkownika
         """
-        query = "UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?"
+        query = "UPDATE users SET is_active = FALSE, updated_at = %s WHERE id = %s"
         self._execute(query, (datetime.now(), user_id))
 
     def activate(self, user_id: int):
@@ -123,7 +121,7 @@ class UserRepository(BaseRepository):
         Args:
             user_id: ID użytkownika
         """
-        query = "UPDATE users SET is_active = 1, updated_at = ? WHERE id = ?"
+        query = "UPDATE users SET is_active = TRUE, updated_at = %s WHERE id = %s"
         self._execute(query, (datetime.now(), user_id))
 
     def get_by_role(self, role: str) -> list:
@@ -136,7 +134,7 @@ class UserRepository(BaseRepository):
         Returns:
             Lista obiektów User
         """
-        query = "SELECT * FROM users WHERE role = ? AND is_active = 1 ORDER BY full_name"
+        query = "SELECT * FROM users WHERE role = %s AND is_active = TRUE ORDER BY full_name"
         rows = self._fetch_all(query, (role,))
         return [self.row_to_user(row) for row in rows]
 
@@ -147,11 +145,11 @@ class UserRepository(BaseRepository):
         Returns:
             Lista obiektów User
         """
-        query = "SELECT * FROM users WHERE is_active = 1 ORDER BY full_name"
+        query = "SELECT * FROM users WHERE is_active = TRUE ORDER BY full_name"
         rows = self._fetch_all(query)
         return [self.row_to_user(row) for row in rows]
 
-    def row_to_user(self, row: sqlite3.Row) -> User:
+    def row_to_user(self, row: Any) -> User:
         """
         Konwertuj Row → User object
 

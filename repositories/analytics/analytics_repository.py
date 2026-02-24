@@ -73,7 +73,7 @@ class AnalyticsRepository:
             FROM appointments a
             LEFT JOIN income_records i ON i.appointment_id = a.id
             WHERE a.status = 'completed'
-                AND a.appointment_date BETWEEN ? AND ?
+                AND a.appointment_date BETWEEN %s AND %s
         """
 
         conn = DatabaseConnection.get_connection()
@@ -132,8 +132,8 @@ class AnalyticsRepository:
             FROM employees e
             LEFT JOIN appointments a ON a.employee_id = e.id AND a.status = 'completed'
             LEFT JOIN income_records i ON i.appointment_id = a.id
-            WHERE e.is_active = 1
-                AND (a.appointment_date BETWEEN ? AND ? OR a.appointment_date IS NULL)
+            WHERE e.is_active = TRUE
+                AND (a.appointment_date BETWEEN %s AND %s OR a.appointment_date IS NULL)
             GROUP BY e.id, e.first_name, e.last_name, e.base_salary, e.employer_cost_rate
             ORDER BY revenue_generated DESC
         """
@@ -167,7 +167,7 @@ class AnalyticsRepository:
             LEFT JOIN appointment_services aps ON aps.service_id = s.id
             LEFT JOIN appointments a ON a.id = aps.appointment_id
             WHERE a.status = 'completed'
-                AND a.appointment_date BETWEEN ? AND ?
+                AND a.appointment_date BETWEEN %s AND %s
             GROUP BY s.id, s.name, s.category
             ORDER BY revenue_generated DESC
         """
@@ -195,15 +195,15 @@ class AnalyticsRepository:
         new_returning_query = """
             SELECT
                 COUNT(DISTINCT CASE
-                    WHEN c.first_visit_date >= ? THEN c.id
+                    WHEN c.first_visit_date >= %s THEN c.id
                 END) as new_clients,
                 COUNT(DISTINCT CASE
-                    WHEN c.first_visit_date < ? THEN c.id
+                    WHEN c.first_visit_date < %s THEN c.id
                 END) as returning_clients
             FROM clients c
             INNER JOIN appointments a ON a.client_id = c.id
             WHERE a.status = 'completed'
-                AND a.appointment_date BETWEEN ? AND ?
+                AND a.appointment_date BETWEEN %s AND %s
         """
 
         # Retention rate (90-day window)
@@ -221,7 +221,7 @@ class AnalyticsRepository:
                 NULLIF(COUNT(*), 0) as retention_rate
             FROM client_visits
             WHERE prev_visit IS NOT NULL
-                AND appointment_date BETWEEN ? AND ?
+                AND appointment_date BETWEEN %s AND %s
         """
 
         # At-risk clients (90+ days since last visit)
@@ -232,7 +232,7 @@ class AnalyticsRepository:
                 c.last_visit_date,
                 julianday('now') - julianday(c.last_visit_date) as days_since_visit
             FROM clients c
-            WHERE c.is_active = 1
+            WHERE c.is_active = TRUE
                 AND c.last_visit_date < date('now', '-90 days')
             ORDER BY c.last_visit_date ASC
             LIMIT 20
@@ -279,7 +279,7 @@ class AnalyticsRepository:
             FROM appointments a
             LEFT JOIN income_records i ON i.appointment_id = a.id
             WHERE a.status = 'completed'
-                AND a.appointment_date BETWEEN ? AND ?
+                AND a.appointment_date BETWEEN %s AND %s
             GROUP BY a.appointment_date
             ORDER BY a.appointment_date
         """

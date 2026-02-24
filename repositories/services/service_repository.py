@@ -1,8 +1,7 @@
 """
 Repository dla operacji na usługach (services)
 """
-import sqlite3
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime
 from config.database import get_db_connection
 from database.models import Service
@@ -11,7 +10,7 @@ from database.models import Service
 class ServiceRepository:
     """Repository do zarządzania usługami salonowymi"""
 
-    def row_to_service(self, row: sqlite3.Row) -> Service:
+    def row_to_service(self, row: Any) -> Service:
         """Konwertuj Row na obiekt Service"""
         if not row:
             return None
@@ -35,7 +34,8 @@ class ServiceRepository:
         query = """
             INSERT INTO services (
                 name, description, category, duration_minutes, price, currency, service_type, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -49,21 +49,22 @@ class ServiceRepository:
                 service.service_type,
                 service.is_active
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
-    def get_by_id(self, service_id: int) -> Optional[sqlite3.Row]:
+    def get_by_id(self, service_id: int) -> Optional[Any]:
         """Pobierz usługę po ID"""
-        query = "SELECT * FROM services WHERE id = ?"
+        query = "SELECT * FROM services WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (service_id,))
             return cursor.fetchone()
 
-    def get_all(self, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_all(self, active_only: bool = True) -> List[Any]:
         """Pobierz wszystkie usługi"""
         if active_only:
-            query = "SELECT * FROM services WHERE is_active = 1 ORDER BY category, name"
+            query = "SELECT * FROM services WHERE is_active = TRUE ORDER BY category, name"
         else:
             query = "SELECT * FROM services ORDER BY category, name"
 
@@ -72,32 +73,32 @@ class ServiceRepository:
             cursor.execute(query)
             return cursor.fetchall()
 
-    def get_by_category(self, category: str, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_by_category(self, category: str, active_only: bool = True) -> List[Any]:
         """Pobierz usługi według kategorii"""
         if active_only:
-            query = "SELECT * FROM services WHERE category = ? AND is_active = 1 ORDER BY name"
+            query = "SELECT * FROM services WHERE category = %s AND is_active = TRUE ORDER BY name"
         else:
-            query = "SELECT * FROM services WHERE category = ? ORDER BY name"
+            query = "SELECT * FROM services WHERE category = %s ORDER BY name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (category,))
             return cursor.fetchall()
 
-    def search(self, query: str, active_only: bool = True) -> List[sqlite3.Row]:
+    def search(self, query: str, active_only: bool = True) -> List[Any]:
         """Wyszukaj usługi po nazwie lub kategorii"""
         search_pattern = f"%{query}%"
         if active_only:
             sql = """
                 SELECT * FROM services
-                WHERE (name LIKE ? OR category LIKE ? OR description LIKE ?)
-                AND is_active = 1
+                WHERE (name LIKE %s OR category LIKE %s OR description LIKE %s)
+                AND is_active = TRUE
                 ORDER BY category, name
             """
         else:
             sql = """
                 SELECT * FROM services
-                WHERE name LIKE ? OR category LIKE ? OR description LIKE ?
+                WHERE name LIKE %s OR category LIKE %s OR description LIKE %s
                 ORDER BY category, name
             """
 
@@ -110,16 +111,16 @@ class ServiceRepository:
         """Zaktualizuj usługę"""
         query = """
             UPDATE services
-            SET name = ?,
-                description = ?,
-                category = ?,
-                duration_minutes = ?,
-                price = ?,
-                currency = ?,
-                service_type = ?,
-                is_active = ?,
+            SET name = %s,
+                description = %s,
+                category = %s,
+                duration_minutes = %s,
+                price = %s,
+                currency = %s,
+                service_type = %s,
+                is_active = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -143,7 +144,7 @@ class ServiceRepository:
 
     def deactivate(self, service_id: int) -> bool:
         """Dezaktywuj usługę"""
-        query = "UPDATE services SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        query = "UPDATE services SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (service_id,))
@@ -152,7 +153,7 @@ class ServiceRepository:
 
     def activate(self, service_id: int) -> bool:
         """Aktywuj usługę"""
-        query = "UPDATE services SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        query = "UPDATE services SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (service_id,))
@@ -169,7 +170,7 @@ class ServiceRepository:
 
     def get_price_range(self) -> tuple:
         """Pobierz zakres cen (min, max)"""
-        query = "SELECT MIN(price) as min_price, MAX(price) as max_price FROM services WHERE is_active = 1"
+        query = "SELECT MIN(price) as min_price, MAX(price) as max_price FROM services WHERE is_active = TRUE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
@@ -182,10 +183,10 @@ class ServiceRepository:
         query = """
             SELECT
                 COUNT(*) as total_services,
-                COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_services,
+                COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_services,
                 COUNT(DISTINCT category) as total_categories,
-                AVG(CASE WHEN is_active = 1 THEN price END) as avg_price,
-                AVG(CASE WHEN is_active = 1 THEN duration_minutes END) as avg_duration
+                AVG(CASE WHEN is_active = TRUE THEN price END) as avg_price,
+                AVG(CASE WHEN is_active = TRUE THEN duration_minutes END) as avg_duration
             FROM services
         """
         with get_db_connection() as conn:
@@ -202,11 +203,11 @@ class ServiceRepository:
                 'avg_duration': int(row['avg_duration']) if row['avg_duration'] else 0
             }
 
-    def get_by_price_range(self, min_price: float, max_price: float) -> List[sqlite3.Row]:
+    def get_by_price_range(self, min_price: float, max_price: float) -> List[Any]:
         """Pobierz usługi w danym zakresie cen"""
         query = """
             SELECT * FROM services
-            WHERE is_active = 1 AND price BETWEEN ? AND ?
+            WHERE is_active = TRUE AND price BETWEEN %s AND %s
             ORDER BY price, name
         """
         with get_db_connection() as conn:
@@ -214,11 +215,11 @@ class ServiceRepository:
             cursor.execute(query, (min_price, max_price))
             return cursor.fetchall()
 
-    def get_by_duration_range(self, min_minutes: int, max_minutes: int) -> List[sqlite3.Row]:
+    def get_by_duration_range(self, min_minutes: int, max_minutes: int) -> List[Any]:
         """Pobierz usługi w danym zakresie czasu trwania"""
         query = """
             SELECT * FROM services
-            WHERE is_active = 1 AND duration_minutes BETWEEN ? AND ?
+            WHERE is_active = TRUE AND duration_minutes BETWEEN %s AND %s
             ORDER BY duration_minutes, name
         """
         with get_db_connection() as conn:
@@ -226,9 +227,9 @@ class ServiceRepository:
             cursor.execute(query, (min_minutes, max_minutes))
             return cursor.fetchall()
 
-    def get_main_services(self, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_main_services(self, active_only: bool = True) -> List[Any]:
         """Pobierz usługi główne (service_type='main')"""
-        active_filter = "AND is_active = 1" if active_only else ""
+        active_filter = "AND is_active = TRUE" if active_only else ""
         query = f"""
             SELECT * FROM services
             WHERE service_type = 'main' {active_filter}
@@ -239,9 +240,9 @@ class ServiceRepository:
             cursor.execute(query)
             return cursor.fetchall()
 
-    def get_addon_services(self, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_addon_services(self, active_only: bool = True) -> List[Any]:
         """Pobierz mikrousługi (service_type='addon')"""
-        active_filter = "AND is_active = 1" if active_only else ""
+        active_filter = "AND is_active = TRUE" if active_only else ""
         query = f"""
             SELECT * FROM services
             WHERE service_type = 'addon' {active_filter}
@@ -252,12 +253,12 @@ class ServiceRepository:
             cursor.execute(query)
             return cursor.fetchall()
 
-    def get_by_type(self, service_type: str, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_by_type(self, service_type: str, active_only: bool = True) -> List[Any]:
         """Pobierz usługi według typu ('main' lub 'addon')"""
-        active_filter = "AND is_active = 1" if active_only else ""
+        active_filter = "AND is_active = TRUE" if active_only else ""
         query = f"""
             SELECT * FROM services
-            WHERE service_type = ? {active_filter}
+            WHERE service_type = %s {active_filter}
             ORDER BY category, name
         """
         with get_db_connection() as conn:

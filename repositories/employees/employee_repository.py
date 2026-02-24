@@ -1,8 +1,7 @@
 """
 Repository dla operacji na pracownikach (employees)
 """
-import sqlite3
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime, date
 from config.database import get_db_connection
 from database.models import Employee
@@ -11,7 +10,7 @@ from database.models import Employee
 class EmployeeRepository:
     """Repository do zarządzania pracownikami salonu"""
 
-    def row_to_employee(self, row: sqlite3.Row) -> Employee:
+    def row_to_employee(self, row: Any) -> Employee:
         """Konwertuj Row na obiekt Employee"""
         if not row:
             return None
@@ -48,7 +47,8 @@ class EmployeeRepository:
                 employment_status, hire_date, termination_date,
                 base_salary, commission_rate, skills, specializations,
                 work_schedule, max_appointments_per_day, notes, photo_path, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -72,29 +72,30 @@ class EmployeeRepository:
                 employee.photo_path,
                 employee.is_active
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
-    def get_by_id(self, employee_id: int) -> Optional[sqlite3.Row]:
+    def get_by_id(self, employee_id: int) -> Optional[Any]:
         """Pobierz pracownika po ID"""
-        query = "SELECT * FROM employees WHERE id = ?"
+        query = "SELECT * FROM employees WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id,))
             return cursor.fetchone()
 
-    def get_by_user_id(self, user_id: int) -> Optional[sqlite3.Row]:
+    def get_by_user_id(self, user_id: int) -> Optional[Any]:
         """Pobierz pracownika po user_id"""
-        query = "SELECT * FROM employees WHERE user_id = ?"
+        query = "SELECT * FROM employees WHERE user_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (user_id,))
             return cursor.fetchone()
 
-    def get_all(self, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_all(self, active_only: bool = True) -> List[Any]:
         """Pobierz wszystkich pracowników"""
         if active_only:
-            query = "SELECT * FROM employees WHERE is_active = 1 ORDER BY last_name, first_name"
+            query = "SELECT * FROM employees WHERE is_active = TRUE ORDER BY last_name, first_name"
         else:
             query = "SELECT * FROM employees ORDER BY last_name, first_name"
 
@@ -103,40 +104,40 @@ class EmployeeRepository:
             cursor.execute(query)
             return cursor.fetchall()
 
-    def get_by_position(self, position: str, active_only: bool = True) -> List[sqlite3.Row]:
+    def get_by_position(self, position: str, active_only: bool = True) -> List[Any]:
         """Pobierz pracowników według pozycji"""
         if active_only:
-            query = "SELECT * FROM employees WHERE position = ? AND is_active = 1 ORDER BY last_name, first_name"
+            query = "SELECT * FROM employees WHERE position = %s AND is_active = TRUE ORDER BY last_name, first_name"
         else:
-            query = "SELECT * FROM employees WHERE position = ? ORDER BY last_name, first_name"
+            query = "SELECT * FROM employees WHERE position = %s ORDER BY last_name, first_name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (position,))
             return cursor.fetchall()
 
-    def get_by_employment_status(self, status: str) -> List[sqlite3.Row]:
+    def get_by_employment_status(self, status: str) -> List[Any]:
         """Pobierz pracowników według statusu zatrudnienia"""
-        query = "SELECT * FROM employees WHERE employment_status = ? ORDER BY last_name, first_name"
+        query = "SELECT * FROM employees WHERE employment_status = %s ORDER BY last_name, first_name"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (status,))
             return cursor.fetchall()
 
-    def search(self, query: str, active_only: bool = True) -> List[sqlite3.Row]:
+    def search(self, query: str, active_only: bool = True) -> List[Any]:
         """Wyszukaj pracowników po imieniu, nazwisku, telefonie lub emailu"""
         search_pattern = f"%{query}%"
         if active_only:
             sql = """
                 SELECT * FROM employees
-                WHERE (first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR email LIKE ?)
-                AND is_active = 1
+                WHERE (first_name LIKE %s OR last_name LIKE %s OR phone LIKE %s OR email LIKE %s)
+                AND is_active = TRUE
                 ORDER BY last_name, first_name
             """
         else:
             sql = """
                 SELECT * FROM employees
-                WHERE first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR email LIKE ?
+                WHERE first_name LIKE %s OR last_name LIKE %s OR phone LIKE %s OR email LIKE %s
                 ORDER BY last_name, first_name
             """
 
@@ -149,26 +150,26 @@ class EmployeeRepository:
         """Zaktualizuj pracownika"""
         query = """
             UPDATE employees
-            SET user_id = ?,
-                first_name = ?,
-                last_name = ?,
-                phone = ?,
-                email = ?,
-                position = ?,
-                employment_status = ?,
-                hire_date = ?,
-                termination_date = ?,
-                base_salary = ?,
-                commission_rate = ?,
-                skills = ?,
-                specializations = ?,
-                work_schedule = ?,
-                max_appointments_per_day = ?,
-                notes = ?,
-                photo_path = ?,
-                is_active = ?,
+            SET user_id = %s,
+                first_name = %s,
+                last_name = %s,
+                phone = %s,
+                email = %s,
+                position = %s,
+                employment_status = %s,
+                hire_date = %s,
+                termination_date = %s,
+                base_salary = %s,
+                commission_rate = %s,
+                skills = %s,
+                specializations = %s,
+                work_schedule = %s,
+                max_appointments_per_day = %s,
+                notes = %s,
+                photo_path = %s,
+                is_active = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -202,7 +203,7 @@ class EmployeeRepository:
 
     def deactivate(self, employee_id: int) -> bool:
         """Dezaktywuj pracownika"""
-        query = "UPDATE employees SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        query = "UPDATE employees SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id,))
@@ -211,7 +212,7 @@ class EmployeeRepository:
 
     def activate(self, employee_id: int) -> bool:
         """Aktywuj pracownika"""
-        query = "UPDATE employees SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        query = "UPDATE employees SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id,))
@@ -231,7 +232,7 @@ class EmployeeRepository:
         query = """
             SELECT
                 COUNT(*) as total_employees,
-                COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_employees,
+                COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_employees,
                 COUNT(CASE WHEN employment_status = 'active' THEN 1 END) as employed,
                 COUNT(CASE WHEN employment_status = 'on_leave' THEN 1 END) as on_leave,
                 COUNT(CASE WHEN employment_status = 'terminated' THEN 1 END) as terminated,
@@ -255,11 +256,11 @@ class EmployeeRepository:
                 'avg_salary': float(row['avg_salary']) if row['avg_salary'] else 0
             }
 
-    def get_recent_hires(self, days: int = 90) -> List[sqlite3.Row]:
+    def get_recent_hires(self, days: int = 90) -> List[Any]:
         """Pobierz pracowników zatrudnionych w ostatnich X dniach"""
         query = """
             SELECT * FROM employees
-            WHERE hire_date >= date('now', '-' || ? || ' days')
+            WHERE hire_date >= CURRENT_DATE - INTERVAL '1 day' * %s
             ORDER BY hire_date DESC
         """
         with get_db_connection() as conn:
@@ -267,9 +268,9 @@ class EmployeeRepository:
             cursor.execute(query, (days,))
             return cursor.fetchall()
 
-    def find_by_email(self, email: str) -> Optional[sqlite3.Row]:
+    def find_by_email(self, email: str) -> Optional[Any]:
         """Znajdź pracownika po adresie email"""
-        query = "SELECT * FROM employees WHERE email = ?"
+        query = "SELECT * FROM employees WHERE email = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (email,))
@@ -283,10 +284,10 @@ class EmployeeRepository:
         query = """
             UPDATE employees
             SET employment_status = 'terminated',
-                termination_date = ?,
-                is_active = 0,
+                termination_date = %s,
+                is_active = FALSE,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
