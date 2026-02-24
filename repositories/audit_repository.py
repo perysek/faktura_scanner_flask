@@ -1,7 +1,7 @@
 """
 Repository dla historii zmian (audit log)
 """
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from repositories.base_repository import BaseRepository
 
@@ -19,7 +19,7 @@ class AuditRepository(BaseRepository):
         """Zapisz zmianę pola faktury"""
         query = """
             INSERT INTO audit_log (invoice_id, field_name, old_value, new_value, action)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """
         self._execute(query, (invoice_id, field_name, old_value, new_value, action))
 
@@ -48,7 +48,7 @@ class AuditRepository(BaseRepository):
         """
         
         if invoice_id:
-            query += " WHERE a.invoice_id = ?"
+            query += " WHERE a.invoice_id = %s"
             params.append(invoice_id)
             
         query += " ORDER BY a.changed_at DESC, a.id DESC"
@@ -75,7 +75,7 @@ class AuditRepository(BaseRepository):
         if not ids_list:
             return []
         
-        placeholders = ','.join(['?'] * len(ids_list))
+        placeholders = ','.join(['%s'] * len(ids_list))
         query = f"""
             SELECT 
                 field_name,

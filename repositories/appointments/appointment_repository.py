@@ -1,9 +1,8 @@
 """
 Repository dla operacji na wizytach (appointments)
 """
-import sqlite3
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime, date, time
 from config.database import get_db_connection
 from database.models import Appointment
@@ -12,7 +11,7 @@ from database.models import Appointment
 class AppointmentRepository:
     """Repository do zarządzania wizytami w salonie"""
 
-    def row_to_appointment(self, row: sqlite3.Row) -> Optional[Appointment]:
+    def row_to_appointment(self, row: Any) -> Optional[Appointment]:
         """Konwertuj Row na obiekt Appointment"""
         if not row:
             return None
@@ -46,7 +45,8 @@ class AppointmentRepository:
                 client_id, employee_id, status, appointment_date,
                 start_time, end_time, total_price, total_duration,
                 discount_amount, notes, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -63,18 +63,19 @@ class AppointmentRepository:
                 appt.notes,
                 appt.created_by
             ))
+            result_id = cursor.fetchone()["id"]
             conn.commit()
-            return cursor.lastrowid
+            return result_id
 
-    def get_by_id(self, appointment_id: int) -> Optional[sqlite3.Row]:
+    def get_by_id(self, appointment_id: int) -> Optional[Any]:
         """Pobierz wizytę po ID"""
-        query = "SELECT * FROM appointments WHERE id = ?"
+        query = "SELECT * FROM appointments WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
             return cursor.fetchone()
 
-    def get_by_id_with_details(self, appointment_id: int) -> Optional[sqlite3.Row]:
+    def get_by_id_with_details(self, appointment_id: int) -> Optional[Any]:
         """Pobierz wizytę z danymi klienta i pracownika"""
         query = """
             SELECT
@@ -86,7 +87,7 @@ class AppointmentRepository:
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
-            WHERE a.id = ?
+            WHERE a.id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -95,16 +96,16 @@ class AppointmentRepository:
 
     def get_by_date_range(self, start_date: date, end_date: date,
                            employee_id: Optional[int] = None,
-                           status: Optional[str] = None) -> List[sqlite3.Row]:
+                           status: Optional[str] = None) -> List[Any]:
         """Pobierz wizyty w zakresie dat"""
         params = [start_date.isoformat(), end_date.isoformat()]
-        filters = ["a.appointment_date BETWEEN ? AND ?"]
+        filters = ["a.appointment_date BETWEEN %s AND %s"]
 
         if employee_id:
-            filters.append("a.employee_id = ?")
+            filters.append("a.employee_id = %s")
             params.append(employee_id)
         if status:
-            filters.append("a.status = ?")
+            filters.append("a.status = %s")
             params.append(status)
 
         where_clause = " AND ".join(filters)
@@ -114,10 +115,10 @@ class AppointmentRepository:
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name,
                 GROUP_CONCAT(
-                    CASE WHEN aps.is_addon = 0 THEN s.name END, ', '
+                    CASE WHEN aps.is_addon = FALSE THEN s.name END, ', '
                 ) as service_name,
                 GROUP_CONCAT(
-                    CASE WHEN aps.is_addon = 1 THEN s.name END, ', '
+                    CASE WHEN aps.is_addon = TRUE THEN s.name END, ', '
                 ) as addon_services
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
@@ -133,7 +134,7 @@ class AppointmentRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
-    def get_daily_schedule(self, employee_id: int, schedule_date: date) -> List[sqlite3.Row]:
+    def get_daily_schedule(self, employee_id: int, schedule_date: date) -> List[Any]:
         """Pobierz harmonogram dnia pracownika z nazwami usług"""
         query = """
             SELECT
@@ -147,7 +148,7 @@ class AppointmentRepository:
             JOIN employees e ON e.id = a.employee_id
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
-            WHERE a.employee_id = ? AND a.appointment_date = ?
+            WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.status NOT IN ('cancelled', 'no_show')
             GROUP BY a.id
             ORDER BY a.start_time
@@ -184,15 +185,15 @@ class AppointmentRepository:
                         e.position
                     FROM employees e
                     JOIN appointments a ON a.employee_id = e.id
-                    WHERE a.appointment_date = ?
+                    WHERE a.appointment_date = %s
                     AND a.status NOT IN ('cancelled', 'no_show')
-                    AND e.is_active = 1
+                    AND e.is_active = TRUE
                     ORDER BY e.first_name, e.last_name
                 """
                 cursor.execute(query_employees, (schedule_date.isoformat(),))
             else:
                 # Użyj podanych employee_ids
-                placeholders = ','.join('?' * len(employee_ids))
+                placeholders = ','.join('%s' * len(employee_ids))
                 query_employees = f"""
                     SELECT
                         e.id,
@@ -200,7 +201,7 @@ class AppointmentRepository:
                         e.position
                     FROM employees e
                     WHERE e.id IN ({placeholders})
-                    AND e.is_active = 1
+                    AND e.is_active = TRUE
                     ORDER BY e.first_name, e.last_name
                 """
                 cursor.execute(query_employees, employee_ids)
@@ -217,14 +218,14 @@ class AppointmentRepository:
                     e.first_name || ' ' || e.last_name as employee_name,
                     GROUP_CONCAT(s.name, ', ') as service_name,
                     GROUP_CONCAT(
-                        CASE WHEN aps.is_addon = 1 THEN s.name ELSE NULL END, ', '
+                        CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
                     ) as addon_services
                 FROM appointments a
                 JOIN clients c ON c.id = a.client_id
                 JOIN employees e ON e.id = a.employee_id
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
-                WHERE a.employee_id = ? AND a.appointment_date = ?
+                WHERE a.employee_id = %s AND a.appointment_date = %s
                 GROUP BY a.id
                 ORDER BY a.start_time
             """
@@ -240,7 +241,7 @@ class AppointmentRepository:
 
     def check_conflicts(self, employee_id: int, appt_date: date,
                          start_time: time, end_time: time,
-                         exclude_appointment_id: Optional[int] = None) -> List[sqlite3.Row]:
+                         exclude_appointment_id: Optional[int] = None) -> List[Any]:
         """Sprawdź konflikty czasowe w harmonogramie pracownika.
 
         Zwraca listę kolidujących wizyt (pusta = brak konfliktu).
@@ -250,13 +251,13 @@ class AppointmentRepository:
         exclude_filter = ""
 
         if exclude_appointment_id:
-            exclude_filter = "AND a.id != ?"
+            exclude_filter = "AND a.id != %s"
             params.append(exclude_appointment_id)
 
         query = f"""
             SELECT a.* FROM appointments a
-            WHERE a.employee_id = ? AND a.appointment_date = ?
-            AND a.start_time < ? AND a.end_time > ?
+            WHERE a.employee_id = %s AND a.appointment_date = %s
+            AND a.start_time < %s AND a.end_time > %s
             AND a.status NOT IN ('cancelled', 'no_show')
             {exclude_filter}
         """
@@ -276,7 +277,7 @@ class AppointmentRepository:
 
     def check_client_conflicts(self, client_id: int, appt_date: date,
                                 start_time: time, end_time: time,
-                                exclude_appointment_id: Optional[int] = None) -> List[sqlite3.Row]:
+                                exclude_appointment_id: Optional[int] = None) -> List[Any]:
         """
         Sprawdź konflikty czasowe w harmonogramie klienta.
 
@@ -298,7 +299,7 @@ class AppointmentRepository:
         exclude_filter = ""
 
         if exclude_appointment_id:
-            exclude_filter = "AND a.id != ?"
+            exclude_filter = "AND a.id != %s"
             params.append(exclude_appointment_id)
 
         query = f"""
@@ -307,8 +308,8 @@ class AppointmentRepository:
                 e.first_name || ' ' || e.last_name as employee_name
             FROM appointments a
             LEFT JOIN employees e ON e.id = a.employee_id
-            WHERE a.client_id = ? AND a.appointment_date = ?
-            AND a.start_time < ? AND a.end_time > ?
+            WHERE a.client_id = %s AND a.appointment_date = %s
+            AND a.start_time < %s AND a.end_time > %s
             AND a.status NOT IN ('cancelled', 'no_show')
             {exclude_filter}
         """
@@ -330,16 +331,16 @@ class AppointmentRepository:
         if new_status == 'cancelled':
             query = """
                 UPDATE appointments
-                SET status = ?, cancellation_reason = ?, cancelled_at = CURRENT_TIMESTAMP,
+                SET status = %s, cancellation_reason = %s, cancelled_at = CURRENT_TIMESTAMP,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = %s
             """
             params = (new_status, cancellation_reason, appointment_id)
         else:
             query = """
                 UPDATE appointments
-                SET status = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                SET status = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
             """
             params = (new_status, appointment_id)
 
@@ -353,8 +354,8 @@ class AppointmentRepository:
         """Zaktualizuj łączną cenę wizyty (po dodaniu mikrousługi)"""
         query = """
             UPDATE appointments
-            SET total_price = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            SET total_price = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -366,11 +367,11 @@ class AppointmentRepository:
         """Zaktualizuj wizytę"""
         query = """
             UPDATE appointments
-            SET client_id = ?, employee_id = ?, appointment_date = ?,
-                start_time = ?, end_time = ?, status = ?,
-                total_price = ?, total_duration = ?, discount_amount = ?,
-                notes = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            SET client_id = %s, employee_id = %s, appointment_date = %s,
+                start_time = %s, end_time = %s, status = %s,
+                total_price = %s, total_duration = %s, discount_amount = %s,
+                notes = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -392,14 +393,14 @@ class AppointmentRepository:
 
     def delete(self, appointment_id: int) -> bool:
         """Usuń wizytę"""
-        query = "DELETE FROM appointments WHERE id = ?"
+        query = "DELETE FROM appointments WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
             conn.commit()
             return cursor.rowcount > 0
 
-    def get_client_appointments(self, client_id: int, limit: int = 20) -> List[sqlite3.Row]:
+    def get_client_appointments(self, client_id: int, limit: int = 20) -> List[Any]:
         """Pobierz wizyty klienta"""
         query = """
             SELECT
@@ -407,9 +408,9 @@ class AppointmentRepository:
                 e.first_name || ' ' || e.last_name as employee_name
             FROM appointments a
             JOIN employees e ON e.id = a.employee_id
-            WHERE a.client_id = ?
+            WHERE a.client_id = %s
             ORDER BY a.appointment_date DESC, a.start_time DESC
-            LIMIT ?
+            LIMIT %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -421,12 +422,12 @@ class AppointmentRepository:
         params = [schedule_date.isoformat()]
         employee_filter = ""
         if employee_id:
-            employee_filter = "AND employee_id = ?"
+            employee_filter = "AND employee_id = %s"
             params.append(employee_id)
 
         query = f"""
             SELECT COUNT(*) as cnt FROM appointments
-            WHERE appointment_date = ? AND status NOT IN ('cancelled', 'no_show')
+            WHERE appointment_date = %s AND status NOT IN ('cancelled', 'no_show')
             {employee_filter}
         """
         with get_db_connection() as conn:
@@ -441,7 +442,7 @@ class AppointmentRepository:
         start_time: time,
         end_time: time,
         exclude_appointment_id: Optional[int] = None
-    ) -> List[sqlite3.Row]:
+    ) -> List[Any]:
         """
         Znajdź wizyty które kolidują z podanym przedziałem czasowym.
         Wizyta koliduje gdy przedziały się nakładają.
@@ -462,7 +463,7 @@ class AppointmentRepository:
 
         exclude_filter = ""
         if exclude_appointment_id:
-            exclude_filter = "AND a.id != ?"
+            exclude_filter = "AND a.id != %s"
             params.append(exclude_appointment_id)
 
         query = f"""
@@ -472,11 +473,11 @@ class AppointmentRepository:
             FROM appointments a
             LEFT JOIN clients c ON c.id = a.client_id
             WHERE
-                a.employee_id = ?
-                AND a.appointment_date = ?
+                a.employee_id = %s
+                AND a.appointment_date = %s
                 AND a.status NOT IN ('cancelled', 'no_show')
-                AND a.start_time < ?
-                AND a.end_time > ?
+                AND a.start_time < %s
+                AND a.end_time > %s
                 {exclude_filter}
             ORDER BY a.start_time
         """
@@ -486,7 +487,7 @@ class AppointmentRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
-    def get_past_pending_appointments(self) -> List[sqlite3.Row]:
+    def get_past_pending_appointments(self) -> List[Any]:
         """
         Pobierz przeszłe wizyty które nie mają jeszcze finalnego statusu.
 

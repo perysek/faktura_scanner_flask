@@ -1,8 +1,7 @@
 """
 Repository dla sprzedawców
 """
-import sqlite3
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from database.models import Seller
 from repositories.base_repository import BaseRepository
@@ -22,7 +21,7 @@ class SellerRepository(BaseRepository):
         query = """
             INSERT INTO sellers (
                 seller_nip, seller_name, address, invoice_count
-            ) VALUES (?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s)
         """
         params = (
             seller.seller_nip,
@@ -31,19 +30,18 @@ class SellerRepository(BaseRepository):
             seller.invoice_count
         )
         
-        cursor = self._execute(query, params)
-        return cursor.lastrowid
+        return self._execute_insert(query, params)
     
     def update(self, seller_id: int, seller: Seller) -> bool:
         """Zaktualizuj sprzedawcę"""
         query = """
             UPDATE sellers SET
-                seller_nip = ?,
-                seller_name = ?,
-                address = ?,
-                invoice_count = ?,
+                seller_nip = %s,
+                seller_name = %s,
+                address = %s,
+                invoice_count = %s,
                 last_updated = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         params = (
             seller.seller_nip,
@@ -56,12 +54,12 @@ class SellerRepository(BaseRepository):
         cursor = self._execute(query, params)
         return cursor.rowcount > 0
     
-    def find_by_nip(self, nip: str) -> Optional[sqlite3.Row]:
+    def find_by_nip(self, nip: str) -> Optional[Any]:
         """Znajdź sprzedawcę po numerze NIP"""
-        query = "SELECT * FROM sellers WHERE seller_nip = ?"
+        query = "SELECT * FROM sellers WHERE seller_nip = %s"
         return self._fetch_one(query, (nip,))
     
-    def find_by_name(self, name: str) -> List[sqlite3.Row]:
+    def find_by_name(self, name: str) -> List[Any]:
         """Wyszukaj sprzedawców po nazwie lub NIP (fuzzy matching)"""
         query = """
             SELECT
@@ -71,7 +69,7 @@ class SellerRepository(BaseRepository):
                 SUM(CASE WHEN i.status = 'Nieopłacona' THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
             LEFT JOIN invoices i ON s.id = i.seller_id
-            WHERE s.seller_name LIKE ? OR s.seller_nip LIKE ?
+            WHERE s.seller_name LIKE %s OR s.seller_nip LIKE %s
             GROUP BY s.id
             ORDER BY s.seller_name
         """
@@ -106,7 +104,7 @@ class SellerRepository(BaseRepository):
             UPDATE sellers 
             SET invoice_count = invoice_count + 1,
                 last_updated = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         cursor = self._execute(query, (seller_id,))
         return cursor.rowcount > 0
@@ -120,12 +118,12 @@ class SellerRepository(BaseRepository):
                 ELSE 0 
             END,
                 last_updated = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         cursor = self._execute(query, (seller_id,))
         return cursor.rowcount > 0
     
-    def get_top_sellers(self, limit: int = 5) -> List[sqlite3.Row]:
+    def get_top_sellers(self, limit: int = 5) -> List[Any]:
         """
         Pobierz najczęstszych sprzedawców na podstawie danych z faktur.
         Liczy wszystkie faktury, nawet te niepowiązane z tabelą sellers.
@@ -141,11 +139,11 @@ class SellerRepository(BaseRepository):
             WHERE seller_name IS NOT NULL AND seller_name != ''
             GROUP BY seller_name
             ORDER BY actual_invoice_count DESC, total_amount DESC
-            LIMIT ?
+            LIMIT %s
         """
         return self._fetch_all(query, (limit,))
 
-    def get_all_with_stats(self) -> List[sqlite3.Row]:
+    def get_all_with_stats(self) -> List[Any]:
         """Pobierz wszystkich sprzedawców wraz z statystykami"""
         query = """
             SELECT 
@@ -164,9 +162,9 @@ class SellerRepository(BaseRepository):
         """Zaktualizuj tylko nazwę sprzedawcy"""
         query = """
             UPDATE sellers
-            SET seller_name = ?,
+            SET seller_name = %s,
                 last_updated = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         cursor = self._execute(query, (new_name, seller_id))
         return cursor.rowcount > 0
@@ -175,9 +173,9 @@ class SellerRepository(BaseRepository):
         """Zaktualizuj tylko adres sprzedawcy"""
         query = """
             UPDATE sellers
-            SET address = ?,
+            SET address = %s,
                 last_updated = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """
         cursor = self._execute(query, (new_address, seller_id))
         return cursor.rowcount > 0
@@ -202,7 +200,7 @@ class SellerRepository(BaseRepository):
         cursor = self._execute(query)
         return cursor.rowcount
 
-    def row_to_seller(self, row: sqlite3.Row) -> Seller:
+    def row_to_seller(self, row: Any) -> Seller:
         """Konwertuj Row → Seller object"""
         from datetime import datetime
 

@@ -1,43 +1,41 @@
 """
 Upload Staging Repository - Manages temporary file uploads
 """
-import sqlite3
-from typing import List
+from typing import Any, List, Optional
 
+import psycopg2
+import psycopg2.extras
+
+from config.database import get_database_url
 from database.models import UploadStaging
 
 
 class UploadStagingRepository:
     """Repository for managing upload staging data"""
-    
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        
-    def _get_connection(self):
-        """Get database connection"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
-    
+
+    def __init__(self, db_path: str = None):
+        # db_path kept for backward compatibility but ignored — uses DATABASE_URL
+        pass
+
+    def _get_connection(self) -> psycopg2.extensions.connection:
+        """Get a standalone psycopg2 connection (not Flask-g bound)"""
+        return psycopg2.connect(
+            get_database_url(),
+            cursor_factory=psycopg2.extras.RealDictCursor
+        )
+
     def create(self, staging: UploadStaging) -> int:
-        """
-        Add a file to upload staging
-        
-        Args:
-            staging: UploadStaging object
-            
-        Returns:
-            int: ID of created staging entry
+        """Add a file to upload staging. Returns ID of created entry."""
+        query = """
+            INSERT INTO upload_staging
+            (session_id, filename, file_path, file_size, email_subject,
+             email_sender, email_folder, email_date, uploaded_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """
         conn = self._get_connection()
         cursor = conn.cursor()
-        
-        cursor.execute("""
-            INSERT INTO upload_staging 
-            (session_id, filename, file_path, file_size, email_subject, 
-             email_sender, email_folder, email_date, uploaded_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+        cursor.execute(query, (
             staging.session_id,
             staging.filename,
             staging.file_path,
@@ -48,49 +46,30 @@ class UploadStagingRepository:
             staging.email_date,
             staging.uploaded_at
         ))
-        
-        staging_id = cursor.lastrowid
+        staging_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        
         return staging_id
-    
-    def get_by_session(self, session_id: str) -> List[sqlite3.Row]:
-        """
-        Get all staged files for a session
-        
-        Args:
-            session_id: Session identifier
-            
-        Returns:
-            List of Row objects with staged files
-        """
+
+    def get_by_session(self, session_id: str) -> List[Any]:
+        """Get all staged files for a session"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        
         cursor.execute("""
-            SELECT * FROM upload_staging 
-            WHERE session_id = ?
+            SELECT * FROM upload_staging
+            WHERE session_id = %s
             ORDER BY uploaded_at ASC
         """, (session_id,))
-        
         rows = cursor.fetchall()
         conn.close()
-        
         return rows
-    
-    def row_to_upload_staging(self, row: sqlite3.Row) -> UploadStaging:
-        """
-        Convert database Row to UploadStaging object
-        
-        Args:
-            row: sqlite3.Row object
-            
-        Returns:
-            UploadStaging object
-        """
+
+    def row_to_upload_staging(self, row: Any) -> UploadStaging:
+        """Convert database row to UploadStaging object"""
         from datetime import datetime
-        
+        uploaded_at = row['uploaded_at']
+        if isinstance(uploaded_at, str):
+            uploaded_at = datetime.fromisoformat(uploaded_at)
         return UploadStaging(
             id=row['id'],
             session_id=row['session_id'],
@@ -101,78 +80,44 @@ class UploadStagingRepository:
             email_sender=row['email_sender'],
             email_folder=row['email_folder'],
             email_date=row['email_date'],
-            uploaded_at=datetime.fromisoformat(row['uploaded_at']) if row['uploaded_at'] else datetime.now()
+            uploaded_at=uploaded_at or datetime.now()
         )
-    
+
     def delete_by_filename(self, session_id: str, filename: str) -> bool:
-        """
-        Delete a staged file by filename for specific session
-        
-        Args:
-            session_id: Session identifier
-            filename: Name of file to delete
-            
-        Returns:
-            bool: True if deleted, False if not found
-        """
+        """Delete a staged file by filename for specific session"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        
         cursor.execute("""
-            DELETE FROM upload_staging 
-            WHERE session_id = ? AND filename = ?
+            DELETE FROM upload_staging
+            WHERE session_id = %s AND filename = %s
         """, (session_id, filename))
-        
         deleted = cursor.rowcount > 0
         conn.commit()
         conn.close()
-        
         return deleted
-    
+
     def delete_by_session(self, session_id: str) -> int:
-        """
-        Delete all staged files for a session
-        
-        Args:
-            session_id: Session identifier
-            
-        Returns:
-            int: Number of files deleted
-        """
+        """Delete all staged files for a session. Returns count deleted."""
         conn = self._get_connection()
         cursor = conn.cursor()
-        
         cursor.execute("""
-            DELETE FROM upload_staging 
-            WHERE session_id = ?
+            DELETE FROM upload_staging
+            WHERE session_id = %s
         """, (session_id,))
-        
         deleted_count = cursor.rowcount
         conn.commit()
         conn.close()
-        
         return deleted_count
-    
+
     def cleanup_old_uploads(self, hours: int = 24) -> int:
-        """
-        Clean up staged uploads older than specified hours
-        
-        Args:
-            hours: Age threshold in hours (default 24)
-            
-        Returns:
-            int: Number of files deleted
-        """
+        """Clean up staged uploads older than specified hours"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        
         cursor.execute("""
-            DELETE FROM upload_staging 
-            WHERE datetime(uploaded_at) < datetime('now', '-' || ? || ' hours')
+            DELETE FROM upload_staging
+            WHERE uploaded_at < NOW() - INTERVAL '1 hour' * %s
         """, (hours,))
-        
         deleted_count = cursor.rowcount
         conn.commit()
         conn.close()
-        
         return deleted_count

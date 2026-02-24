@@ -93,10 +93,9 @@ def create_app():
     initialize_database()
 
     # Initialize repositories
-    from config.database import get_database_path
     app.invoice_repo = InvoiceRepository()
     app.audit_repo = AuditRepository()
-    app.staging_repo = UploadStagingRepository(db_path=get_database_path())
+    app.staging_repo = UploadStagingRepository()
     app.seller_repo = SellerRepository()
     app.client_repo = ClientRepository()
     app.service_repo = ServiceRepository()
