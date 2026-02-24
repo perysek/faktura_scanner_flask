@@ -444,7 +444,7 @@ if (SERVICE_TYPE === 'main') {
 
 async function loadCompatibleAddons() {
     try {
-        const response = await fetch(`/api/services/${MAIN_SERVICE_ID}/compatible-addons`);
+        const response = await fetch(`/api/services/${MAIN_SERVICE_ID}/compatible-addons?explicit_only=true`);
         const data = await response.json();
 
         const container = document.getElementById('addons-list');

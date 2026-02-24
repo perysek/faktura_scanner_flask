@@ -556,8 +556,8 @@ async function loadClients() {
             }
 
             tbody.innerHTML = data.clients.map(client => {
-                const initials = escapeHtml(client.first_name.charAt(0) + client.last_name.charAt(0));
-                const fullName = escapeHtml(client.full_name);
+                const initials = escapeHtml(client.first_name.charAt(0) + (client.last_name || '').charAt(0));
+                const fullName = escapeHtml((client.full_name || '').trim());
                 const phone = client.phone ? escapeHtml(client.phone) : '<span style="color: var(--color-ink-subtle)">—</span>';
                 const email = client.email ? escapeHtml(client.email) : '<span style="color: var(--color-ink-subtle)">—</span>';
                 const lastVisit = formatDate(client.last_visit_date);
