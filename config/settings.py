@@ -7,7 +7,7 @@ from pathlib import Path
 # Ścieżki bazowe
 BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "assets"
-TEMP_DIR = ASSETS_DIR / "temp"
+TEMP_DIR = Path(os.environ.get('TEMP_DIR', ASSETS_DIR / "temp"))
 DB_PATH = Path(os.environ.get('DB_PATH', BASE_DIR / "faktury.db"))
 
 # Tesseract
@@ -84,8 +84,8 @@ APP_HEIGHT = 800
 # Web app settings
 APP_NAME = "MyWay Beauty Salon"
 VERSION = "1.1.0"
-UPLOAD_FOLDER = BASE_DIR / "uploads"
-PDF_FOLDER = BASE_DIR / "pdfs"
+UPLOAD_FOLDER = Path(os.environ.get('UPLOAD_FOLDER', BASE_DIR / "uploads"))
+PDF_FOLDER = Path(os.environ.get('PDF_FOLDER', BASE_DIR / "pdfs"))
 
 # Create upload directories
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
