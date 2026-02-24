@@ -70,13 +70,28 @@ class AppointmentBusinessService:
         end_dt = start_dt + timedelta(minutes=total_duration)
         end_time = end_dt.time()
 
-        # 3. Sprawdź konflikty
-        conflicts = self.appt_repo.check_conflicts(
+        # 3. Sprawdź konflikty pracownika
+        employee_conflicts = self.appt_repo.check_conflicts(
             employee_id, appt_date, start_time, end_time
         )
-        if conflicts:
+        if employee_conflicts:
             raise AppointmentError(
-                f"Konflikt czasowy — pracownik ma {len(conflicts)} kolidującą wizytę/y"
+                f"Konflikt czasowy — pracownik ma {len(employee_conflicts)} kolidującą wizytę/y"
+            )
+
+        # 3b. Sprawdź konflikty klienta (czy klient ma już wizytę w tym czasie)
+        client_conflicts = self.appt_repo.check_client_conflicts(
+            client_id, appt_date, start_time, end_time
+        )
+        if client_conflicts:
+            conflict = client_conflicts[0]
+            conflict_time = f"{conflict['start_time']}-{conflict['end_time']}"
+            try:
+                employee_name = conflict['employee_name']
+            except (KeyError, TypeError):
+                employee_name = 'inny pracownik'
+            raise AppointmentError(
+                f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
             )
 
         # 4. Utwórz wizytę
@@ -461,6 +476,32 @@ class AppointmentBusinessService:
                     f"Data wizyty: {appointment_datetime.strftime('%Y-%m-%d %H:%M')}, "
                     f"obecna data: {now.strftime('%Y-%m-%d %H:%M')}"
                 )
+
+        # 2b. Sprawdź konflikty pracownika (jeśli zmienia się pracownik/data/czas)
+        employee_conflicts = self.appt_repo.check_conflicts(
+            employee_id, appointment_date, start_time, end_time,
+            exclude_appointment_id=appointment_id
+        )
+        if employee_conflicts:
+            raise AppointmentError(
+                f"Konflikt czasowy — pracownik ma {len(employee_conflicts)} kolidującą wizytę/y"
+            )
+
+        # 2c. Sprawdź konflikty klienta (jeśli zmienia się klient/data/czas)
+        client_conflicts = self.appt_repo.check_client_conflicts(
+            client_id, appointment_date, start_time, end_time,
+            exclude_appointment_id=appointment_id
+        )
+        if client_conflicts:
+            conflict = client_conflicts[0]
+            conflict_time = f"{conflict['start_time']}-{conflict['end_time']}"
+            try:
+                employee_name = conflict['employee_name']
+            except (KeyError, TypeError):
+                employee_name = 'inny pracownik'
+            raise AppointmentError(
+                f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
+            )
 
         # 3. Policz sumę cen i czasu trwania
         total_price = sum(Decimal(str(s['price_charged'])) for s in services)

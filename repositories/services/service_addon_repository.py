@@ -44,6 +44,23 @@ class ServiceAddonRepository:
             conn.commit()
             return cursor.rowcount > 0
 
+    def get_explicitly_linked_addons(self, main_service_id: int) -> List[sqlite3.Row]:
+        """Pobierz TYLKO mikrousługi z jawnym wpisem w service_addons dla tej usługi głównej.
+
+        Używane w widoku konfiguracji — nie zwraca addons 'universal' (bez reguł).
+        """
+        query = """
+            SELECT s.* FROM services s
+            JOIN service_addons sa ON sa.addon_service_id = s.id
+            WHERE s.service_type = 'addon' AND s.is_active = 1
+              AND sa.main_service_id = ?
+            ORDER BY s.category, s.name
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (main_service_id,))
+            return cursor.fetchall()
+
     def get_compatible_addons(self, main_service_id: int) -> List[sqlite3.Row]:
         """Pobierz mikrousługi kompatybilne z daną usługą główną.
 

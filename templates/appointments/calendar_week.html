@@ -436,7 +436,11 @@ async function loadEmployees() {
         await loadWeekAndFilterEmployees();
     } catch (error) {
         console.error('Error loading employees:', error);
-        alert('Nie udało się załadować listy pracowników');
+        Modals.alert({
+            title: 'Błąd ładowania',
+            message: 'Nie udało się załadować listy pracowników',
+            type: 'error'
+        });
     }
 }
 
@@ -507,7 +511,11 @@ async function loadWeekAndFilterEmployees() {
         updateSummary();
     } catch (error) {
         console.error('Error loading week:', error);
-        alert('Nie udało się załadować harmonogramu');
+        Modals.alert({
+            title: 'Błąd ładowania',
+            message: 'Nie udało się załadować harmonogramu',
+            type: 'error'
+        });
     } finally {
         showLoading(false);
     }
@@ -717,7 +725,11 @@ async function loadWeekForCurrentEmployee() {
         updateSummary();
     } catch (error) {
         console.error('Error loading week:', error);
-        alert('Nie udało się załadować harmonogramu');
+        Modals.alert({
+            title: 'Błąd ładowania',
+            message: 'Nie udało się załadować harmonogramu',
+            type: 'error'
+        });
     } finally {
         showLoading(false);
     }
@@ -880,4 +892,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 </script>
+
+<!-- Past Visits Scanner -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
+<script src="{{ url_for('static', filename='js/past_visits_scanner.js') }}"></script>
 {% endblock %}

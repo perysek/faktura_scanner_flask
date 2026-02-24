@@ -165,9 +165,9 @@ class Employee:
 class Service:
     """Model usługi salonowej"""
     name: str
-    category: str  # 'Strzyżenie', 'Koloryzacja', 'Stylizacja', etc.
     duration_minutes: int
     price: float
+    category: Optional[str] = None  # Required for service_type='main'; None for 'addon'
     currency: str = 'PLN'
     service_type: str = 'main'  # 'main' or 'addon'
     description: Optional[str] = None
@@ -221,7 +221,7 @@ class Client:
     @property
     def full_name(self) -> str:
         """Pełne imię i nazwisko klienta"""
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def age(self) -> Optional[int]:
