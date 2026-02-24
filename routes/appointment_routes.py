@@ -115,9 +115,16 @@ def get_appointment(appointment_id):
 @login_required
 @module_permission_required('appointments')
 def check_appointment_conflict():
-    """Sprawdź czy wizyta koliduje z innymi wizytami pracownika"""
+    """
+    Sprawdź czy wizyta koliduje z innymi wizytami.
+
+    Sprawdza dwa rodzaje konfliktów:
+    1. Konflikt pracownika - czy pracownik ma już wizytę w tym czasie
+    2. Konflikt klienta - czy klient ma już wizytę w tym czasie (z dowolnym pracownikiem)
+    """
     try:
         employee_id = request.args.get('employee_id', type=int)
+        client_id = request.args.get('client_id', type=int)
         appointment_date = _parse_date(request.args.get('appointment_date'))
         start_time = _parse_time(request.args.get('start_time'))
         duration_minutes = request.args.get('duration_minutes', type=int)
@@ -132,9 +139,10 @@ def check_appointment_conflict():
         end_dt = start_dt + timedelta(minutes=duration_minutes)
         end_time = end_dt.time()
 
-        # Check for conflicts
         repo = AppointmentRepository()
-        conflicts = repo.find_conflicting_appointments(
+
+        # Check for employee conflicts
+        employee_conflicts = repo.find_conflicting_appointments(
             employee_id=employee_id,
             appointment_date=appointment_date,
             start_time=start_time,
@@ -142,16 +150,42 @@ def check_appointment_conflict():
             exclude_appointment_id=exclude_appointment_id
         )
 
-        has_conflict = len(conflicts) > 0
+        # Check for client conflicts (if client_id provided)
+        client_conflicts = []
+        if client_id:
+            client_conflicts = repo.check_client_conflicts(
+                client_id=client_id,
+                appt_date=appointment_date,
+                start_time=start_time,
+                end_time=end_time,
+                exclude_appointment_id=exclude_appointment_id
+            )
+
+        # Determine conflict type and message
+        has_conflict = len(employee_conflicts) > 0 or len(client_conflicts) > 0
         message = None
-        if has_conflict:
-            message = f"Konflikt z wizytą o godz. {conflicts[0]['start_time']}-{conflicts[0]['end_time']}"
+        conflict_type = None
+
+        if len(employee_conflicts) > 0:
+            conflict_type = 'employee'
+            message = f"Konflikt pracownika - wizyta o godz. {employee_conflicts[0]['start_time']}-{employee_conflicts[0]['end_time']}"
+        elif len(client_conflicts) > 0:
+            conflict_type = 'client'
+            conflict = client_conflicts[0]
+            conflict_time = f"{conflict['start_time']}-{conflict['end_time']}"
+            try:
+                employee_name = conflict['employee_name']
+            except (KeyError, TypeError):
+                employee_name = 'inny pracownik'
+            message = f"Konflikt klienta - ma już wizytę o {conflict_time} z {employee_name}"
 
         return jsonify({
             'success': True,
             'has_conflict': has_conflict,
+            'conflict_type': conflict_type,
             'message': message,
-            'conflicting_appointments': [dict(c) for c in conflicts]
+            'employee_conflicts': [dict(c) for c in employee_conflicts],
+            'client_conflicts': [dict(c) for c in client_conflicts]
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -480,4 +514,118 @@ def get_multi_employee_schedule():
             'has_next': current_page < total_pages - 1
         })
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@appointment_bp.route('/appointments/past-pending', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_past_pending_appointments():
+    """
+    Pobierz przeszłe wizyty z nieukończonym statusem (do aktualizacji).
+
+    Zwraca wizyty które:
+    - Zakończyły się (data + end_time < NOW)
+    - Mają status inny niż: 'completed', 'cancelled', 'no_show'
+
+    Returns:
+        JSON z listą wizyt do aktualizacji statusu
+    """
+    try:
+        repo = AppointmentRepository()
+        rows = repo.get_past_pending_appointments()
+
+        # Convert rows to dictionaries
+        appointments = []
+        for row in rows:
+            appointments.append({
+                'id': row['id'],
+                'client_id': row['client_id'],
+                'client_name': row['client_name'],
+                'employee_id': row['employee_id'],
+                'employee_name': row['employee_name'],
+                'appointment_date': row['appointment_date'],
+                'start_time': row['start_time'],
+                'end_time': row['end_time'],
+                'status': row['status'],
+                'service_names': row['service_names'],
+                'total_price': float(row['total_price']) if row['total_price'] else 0.0,
+                'notes': row['notes']
+            })
+
+        return jsonify({
+            'success': True,
+            'appointments': appointments,
+            'count': len(appointments)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/past-status', methods=['PUT'])
+@login_required
+@module_permission_required('appointments')
+def update_past_appointment_status(appointment_id):
+    """
+    Zaktualizuj status przeszłej wizyty (omija standardową walidację przejść).
+
+    Dedykowany endpoint dla skanera przeszłych wizyt.
+    Pozwala na bezpośrednie ustawienie statusów finalnych dla wizyt które się już odbyły.
+
+    Walidacja:
+    - Wizyta musi być przeszła (appointment_date + end_time < NOW)
+    - Nowy status musi być finalny: 'completed', 'cancelled', 'no_show'
+    """
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+
+        if not new_status:
+            return jsonify({'success': False, 'error': 'Brak statusu'}), 400
+
+        # Walidacja: czy status jest finalny
+        ALLOWED_FINAL_STATUSES = ['completed', 'cancelled', 'no_show']
+        if new_status not in ALLOWED_FINAL_STATUSES:
+            return jsonify({
+                'success': False,
+                'error': f'Dozwolone statusy: {", ".join(ALLOWED_FINAL_STATUSES)}'
+            }), 400
+
+        repo = AppointmentRepository()
+        row = repo.get_by_id(appointment_id)
+
+        if not row:
+            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+
+        # Walidacja: czy wizyta jest przeszła
+        from datetime import datetime
+        appointment_datetime_str = f"{row['appointment_date']} {row['end_time']}"
+        appointment_datetime = datetime.strptime(appointment_datetime_str, '%Y-%m-%d %H:%M:%S')
+        now = datetime.now()
+
+        if appointment_datetime >= now:
+            return jsonify({
+                'success': False,
+                'error': 'Można aktualizować tylko wizyty które się już zakończyły'
+            }), 400
+
+        # Walidacja: czy status już nie jest finalny
+        if row['status'] in ALLOWED_FINAL_STATUSES:
+            return jsonify({
+                'success': False,
+                'error': f'Wizyta ma już finalny status: {row["status"]}'
+            }), 400
+
+        # Aktualizacja statusu bezpośrednio (omijamy transition_status)
+        cancellation_reason = data.get('cancellation_reason') if new_status == 'cancelled' else None
+        success = repo.update_status(appointment_id, new_status, cancellation_reason)
+
+        if success:
+            return jsonify({'success': True, 'message': f'Status zaktualizowany na: {new_status}'})
+        else:
+            return jsonify({'success': False, 'error': 'Nie udało się zaktualizować statusu'}), 500
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500

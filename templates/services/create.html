@@ -204,15 +204,30 @@ document.getElementById('service-form').addEventListener('submit', async (e) => 
         const data = await response.json();
 
         if (data.success) {
-            alert('Usługa została utworzona pomyślnie!');
-            window.location.href = '/services';
+            Modals.alert({
+                title: 'Sukces',
+                message: 'Usługa została utworzona pomyślnie!',
+                type: 'success',
+                onClose: () => window.location.href = '/services'
+            });
         } else {
-            alert('Błąd: ' + data.error);
+            Modals.alert({
+                title: 'Błąd',
+                message: data.error,
+                type: 'error'
+            });
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Błąd połączenia z serwerem');
+        Modals.alert({
+            title: 'Błąd połączenia',
+            message: 'Nie udało się połączyć z serwerem',
+            type: 'error'
+        });
     }
 });
 </script>
+
+<!-- Modal System -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 {% endblock %}

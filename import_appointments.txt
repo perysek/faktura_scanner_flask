@@ -1,0 +1,22 @@
+Data utworzenia = created_at, updated_at (string date time format: 'YYYY-MM-DD HH:MM:SS')
+Od = appointment_date (string date time format: 'YYYY-MM-DD HH:MM:SS') - get only 'YYYY-MM-DD' from excel cell value, start_time - get value of 'HH:MM:SS' string value from excel
+Do = end_time ('HH:MM:SS' part of string value)
+Czas trwania (dni) = <SKIP>
+Czas trwania (godziny) = <SKIP>
+Imię i nazwisko = client_id - data import method: compare full name value from excel cells with existing clients 'full_name' to get client_id base on unique first name and last name matching (ignore 'p.' prefixes in excel data and consider cases with first name/last name switched order in full name excel cell string value.
+Email = <SKIP>
+Telefon = <SKIP> phone number of the client already in the clients datatable
+Cena netto = <SKIP>
+Cena brutto = <SKIP>
+Rabat [%] = <SKIP>
+Suma netto = <SKIP>
+Suma brutto = total_price. IMPORTANT! Skip all excel rows where 'suma brutto' = 0.
+VAT (z rezerwacji) = <SKIP>
+VAT (obliczony przez system) = <SKIP>
+Kalendarz = employee full name - get employee.id by checking excel value matching with Employee.first_name items of employees table existing rows.
+Kategoria = service.name - to be used to get service.id value for feeding appointment_services table. for empty values, service.id = 20.
+
+
+##GENERAL RULES:
+#1:appointment status = 'completed' for each created appointment record.
+#2:for each appointment record created, create related tables records: income_records, clients.last_visit_date and other data as per defined relationships and indexes

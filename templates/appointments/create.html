@@ -244,12 +244,20 @@ async function saveAppointment() {
         if (data.success) {
             window.location.href = `/appointment/${data.appointment_id}`;
         } else {
-            alert('Błąd: ' + data.error);
+            Modals.alert({
+                title: 'Błąd rezerwacji',
+                message: data.error,
+                type: 'error'
+            });
             btn.disabled = false;
             btn.innerHTML = '<span class="material-icons">check</span> Zarezerwuj wizytę';
         }
     } catch (e) {
-        alert('Błąd połączenia z serwerem');
+        Modals.alert({
+            title: 'Błąd połączenia',
+            message: 'Nie udało się połączyć z serwerem. Spróbuj ponownie.',
+            type: 'error'
+        });
         btn.disabled = false;
         btn.innerHTML = '<span class="material-icons">check</span> Zarezerwuj wizytę';
     }
@@ -316,4 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+
+<!-- Modal System -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 {% endblock %}

@@ -99,7 +99,10 @@ class ClientRepository(BaseRepository):
         query = """
             SELECT * FROM clients
             WHERE first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR email LIKE ?
-            ORDER BY last_name, first_name
+            ORDER BY
+                CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
+                last_name COLLATE NOCASE,
+                first_name COLLATE NOCASE
         """
         search_pattern = f'%{search_term}%'
         return self._fetch_all(query, (search_pattern, search_pattern, search_pattern, search_pattern))
@@ -134,7 +137,10 @@ class ClientRepository(BaseRepository):
         query = """
             SELECT * FROM clients
             WHERE is_active = 1
-            ORDER BY last_name, first_name
+            ORDER BY
+                CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
+                last_name COLLATE NOCASE,
+                first_name COLLATE NOCASE
         """
         return self._fetch_all(query)
 

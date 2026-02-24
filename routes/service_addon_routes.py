@@ -15,10 +15,18 @@ service_addon_bp = Blueprint('service_addons', __name__)
 @login_required
 @module_permission_required('services')
 def get_compatible_addons(service_id):
-    """Pobierz mikrousługi kompatybilne z daną usługą główną"""
+    """Pobierz mikrousługi kompatybilne z daną usługą główną.
+
+    ?explicit_only=true — zwraca tylko jawnie powiązane mikrousługi (bez universal).
+    Używane w widoku konfiguracji usługi, gdzie 'universal' nie powinno się pojawiać.
+    """
     try:
         repo = ServiceAddonRepository()
-        rows = repo.get_compatible_addons(service_id)
+        explicit_only = request.args.get('explicit_only', '').lower() == 'true'
+        if explicit_only:
+            rows = repo.get_explicitly_linked_addons(service_id)
+        else:
+            rows = repo.get_compatible_addons(service_id)
         addons = [dict(row) for row in rows]
 
         return jsonify({'success': True, 'addons': addons, 'count': len(addons)})
