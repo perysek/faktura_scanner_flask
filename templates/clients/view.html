@@ -432,7 +432,7 @@
     <header class="page-header">
         <div class="page-title-section">
             <div class="client-avatar-large">
-                {{ client.first_name[0] }}{{ client.last_name[0] }}
+                {{ client.first_name[0] if client.first_name else '?' }}{{ client.last_name[0] if client.last_name else '' }}
             </div>
             <h1 class="page-title">{{ client.full_name }}</h1>
             <p class="page-subtitle">

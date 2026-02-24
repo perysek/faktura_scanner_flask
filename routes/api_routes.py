@@ -2343,24 +2343,25 @@ def create_service_endpoint():
         data = request.get_json()
 
         # Validate required fields
+        service_type = data.get('service_type', 'main')
         if not data.get('name'):
             return jsonify({'success': False, 'error': 'Nazwa usługi jest wymagana'}), 400
-        if not data.get('category'):
-            return jsonify({'success': False, 'error': 'Kategoria jest wymagana'}), 400
-        if not data.get('duration_minutes'):
+        if service_type == 'main' and not data.get('category'):
+            return jsonify({'success': False, 'error': 'Kategoria jest wymagana dla usługi głównej'}), 400
+        if data.get('duration_minutes') is None:
             return jsonify({'success': False, 'error': 'Czas trwania jest wymagany'}), 400
-        if not data.get('price'):
+        if data.get('price') is None:
             return jsonify({'success': False, 'error': 'Cena jest wymagana'}), 400
 
         from database.models import Service
         service = Service(
             name=data.get('name'),
             description=data.get('description'),
-            category=data.get('category'),
+            category=data.get('category') if service_type == 'main' else None,
             duration_minutes=int(data.get('duration_minutes')),
             price=float(data.get('price')),
             currency=data.get('currency', 'PLN'),
-            service_type=data.get('service_type', 'main'),
+            service_type=service_type,
             is_active=data.get('is_active', True)
         )
 
@@ -2387,17 +2388,18 @@ def update_service(service_id):
             return jsonify({'success': False, 'error': 'Usługa nie znaleziona'}), 404
 
         data = request.get_json()
+        service_type = data.get('service_type', 'main')
 
         from database.models import Service
         service = Service(
             id=service_id,
             name=data.get('name'),
             description=data.get('description'),
-            category=data.get('category'),
+            category=data.get('category') if service_type == 'main' else None,
             duration_minutes=int(data.get('duration_minutes')),
             price=float(data.get('price')),
             currency=data.get('currency', 'PLN'),
-            service_type=data.get('service_type', 'main'),
+            service_type=service_type,
             is_active=data.get('is_active', True)
         )
 
