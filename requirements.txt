@@ -26,3 +26,6 @@ schwifty==2024.6.1
 
 # Utilities
 python-dotenv==1.0.1
+
+# Production WSGI server (Render/Linux deployment)
+gunicorn==21.2.0

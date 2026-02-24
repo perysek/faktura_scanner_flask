@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: faktura-scanner
+    runtime: python
+    plan: starter          # $7/month — required for persistent disk + no sleep
+    region: frankfurt      # Closest to Poland
+    buildCommand: |
+      apt-get install -y \
+        tesseract-ocr \
+        tesseract-ocr-pol \
+        poppler-utils \
+        libgl1-mesa-glx \
+        libglib2.0-0 && \
+      npm install && \
+      npm run build:css && \
+      pip install -r requirements.txt
+    startCommand: >
+      gunicorn
+      --workers 2
+      --timeout 120
+      --bind 0.0.0.0:$PORT
+      "app:create_app()"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true           # Render auto-generates a secure random value
+      - key: TESSERACT_CMD
+        value: /usr/bin/tesseract     # Linux path after apt-get install
+      - key: POPPLER_PATH
+        value: /usr/bin               # Linux path after apt-get install poppler-utils
+      - key: DB_PATH
+        value: /data/faktury.db       # Persistent disk mount
+      - key: UPLOAD_FOLDER
+        value: /data/uploads          # Persistent disk mount
+      - key: PDF_FOLDER
+        value: /data/pdfs             # Persistent disk mount
+      - key: TEMP_DIR
+        value: /data/temp             # Persistent disk mount
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"                    # Ensures logs appear immediately in Render dashboard
+    disk:
+      name: faktura-data
+      mountPath: /data
+      sizeGB: 5                       # 5GB = $1.25/month — covers db + pdfs + uploads
