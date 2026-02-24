@@ -1,9 +1,8 @@
 """
 Repository dla faktur
 """
-import sqlite3
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from database.models import Invoice
 from repositories.base_repository import BaseRepository
@@ -27,7 +26,7 @@ class InvoiceRepository(BaseRepository):
                 seller_name, seller_nip, invoice_number, invoice_date,
                 bank_account, amount, currency, payment_due_date, payment_term, status,
                 pdf_path, ocr_confidence, is_duplicate, seller_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 		params = (
 			invoice.seller_name,
@@ -46,30 +45,29 @@ class InvoiceRepository(BaseRepository):
 			seller_id
 			)
 		
-		cursor = self._execute(query, params)
-		return cursor.lastrowid
+		return self._execute_insert(query, params)
 	
 	def update(self, invoice_id: int, invoice: Invoice, seller_id: int = None) -> bool:
 		"""Zaktualizuj fakturę"""
 		if seller_id is not None:
 			query = """
 				UPDATE invoices SET
-					seller_name = ?,
-					seller_nip = ?,
-					invoice_number = ?,
-					invoice_date = ?,
-					bank_account = ?,
-					amount = ?,
-					currency = ?,
-					payment_due_date = ?,
-					payment_term = ?,
-					status = ?,
-					pdf_path = ?,
-					ocr_confidence = ?,
-					is_duplicate = ?,
-					seller_id = ?,
+					seller_name = %s,
+					seller_nip = %s,
+					invoice_number = %s,
+					invoice_date = %s,
+					bank_account = %s,
+					amount = %s,
+					currency = %s,
+					payment_due_date = %s,
+					payment_term = %s,
+					status = %s,
+					pdf_path = %s,
+					ocr_confidence = %s,
+					is_duplicate = %s,
+					seller_id = %s,
 					updated_at = CURRENT_TIMESTAMP
-				WHERE id = ?
+				WHERE id = %s
 			"""
 			params = (
 				invoice.seller_name,
@@ -91,21 +89,21 @@ class InvoiceRepository(BaseRepository):
 		else:
 			query = """
 				UPDATE invoices SET
-					seller_name = ?,
-					seller_nip = ?,
-					invoice_number = ?,
-					invoice_date = ?,
-					bank_account = ?,
-					amount = ?,
-					currency = ?,
-					payment_due_date = ?,
-					payment_term = ?,
-					status = ?,
-					pdf_path = ?,
-					ocr_confidence = ?,
-					is_duplicate = ?,
+					seller_name = %s,
+					seller_nip = %s,
+					invoice_number = %s,
+					invoice_date = %s,
+					bank_account = %s,
+					amount = %s,
+					currency = %s,
+					payment_due_date = %s,
+					payment_term = %s,
+					status = %s,
+					pdf_path = %s,
+					ocr_confidence = %s,
+					is_duplicate = %s,
 					updated_at = CURRENT_TIMESTAMP
-				WHERE id = ?
+				WHERE id = %s
 			"""
 			params = (
 				invoice.seller_name,
@@ -128,9 +126,9 @@ class InvoiceRepository(BaseRepository):
 		return cursor.rowcount > 0
 	
 	def find_by_invoice_number(self, invoice_number: str) -> Optional[
-		sqlite3.Row]:
+		Any]:
 		"""Znajdź fakturę po numerze"""
-		query = "SELECT * FROM invoices WHERE invoice_number = ?"
+		query = "SELECT * FROM invoices WHERE invoice_number = %s"
 		return self._fetch_one(query, (invoice_number,))
 
 	def find_by_invoice_number_and_seller(
@@ -138,7 +136,7 @@ class InvoiceRepository(BaseRepository):
 			invoice_number: str,
 			seller_nip: str = None,
 			seller_name: str = None
-	) -> Optional[sqlite3.Row]:
+	) -> Optional[Any]:
 		"""
 		Znajdź fakturę po numerze i sprzedawcy (NIP lub nazwa).
 
@@ -159,49 +157,49 @@ class InvoiceRepository(BaseRepository):
 			# Najbardziej precyzyjne wyszukiwanie: numer + NIP
 			query = """
 				SELECT * FROM invoices
-				WHERE invoice_number = ? AND seller_nip = ?
+				WHERE invoice_number = %s AND seller_nip = %s
 			"""
 			return self._fetch_one(query, (invoice_number, seller_nip))
 		elif seller_name:
 			# Fallback: numer + nazwa (mniej precyzyjne, bo nazwy mogą się różnić)
 			query = """
 				SELECT * FROM invoices
-				WHERE invoice_number = ? AND seller_name = ?
+				WHERE invoice_number = %s AND seller_name = %s
 			"""
 			return self._fetch_one(query, (invoice_number, seller_name))
 		else:
 			# Ostateczny fallback: tylko numer (stare zachowanie)
 			return self.find_by_invoice_number(invoice_number)
 	
-	def search(self, search_term: str) -> List[sqlite3.Row]:
+	def search(self, search_term: str) -> List[Any]:
 		"""Wyszukaj faktury (seller, numer, NIP)"""
 		query = """
             SELECT * FROM invoices
-            WHERE seller_name LIKE ?
-               OR invoice_number LIKE ?
-               OR seller_nip LIKE ?
+            WHERE seller_name LIKE %s
+               OR invoice_number LIKE %s
+               OR seller_nip LIKE %s
             ORDER BY invoice_date DESC
         """
 		term = f"%{search_term}%"
 		return self._fetch_all(query, (term, term, term))
 	
 	def get_by_date_range(self, start_date: date, end_date: date) -> List[
-		sqlite3.Row]:
+		Any]:
 		"""Pobierz faktury z zakresu dat"""
 		query = """
             SELECT * FROM invoices
-            WHERE invoice_date BETWEEN ? AND ?
+            WHERE invoice_date BETWEEN %s AND %s
             ORDER BY invoice_date DESC
         """
 		return self._fetch_all(
 			query, (start_date.isoformat(), end_date.isoformat())
 			)
 	
-	def get_by_seller(self, seller_id: int) -> List[sqlite3.Row]:
+	def get_by_seller(self, seller_id: int) -> List[Any]:
 		"""Pobierz wszystkie faktury dla danego sprzedawcy"""
 		query = """
             SELECT * FROM invoices
-            WHERE seller_id = ?
+            WHERE seller_id = %s
             ORDER BY invoice_date DESC
         """
 		return self._fetch_all(query, (seller_id,))
@@ -210,23 +208,23 @@ class InvoiceRepository(BaseRepository):
 		"""Zmień seller_id dla wszystkich faktur"""
 		query = """
             UPDATE invoices
-            SET seller_id = ?,
+            SET seller_id = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE seller_id = ?
+            WHERE seller_id = %s
         """
 		cursor = self._execute(query, (new_seller_id, old_seller_id))
 		return cursor.rowcount
 	
-	def get_recent(self, limit: int = 5) -> List[sqlite3.Row]:
+	def get_recent(self, limit: int = 5) -> List[Any]:
 		"""Pobierz ostatnio dodane faktury"""
 		query = """
             SELECT * FROM invoices
             ORDER BY created_at DESC
-            LIMIT ?
+            LIMIT %s
         """
 		return self._fetch_all(query, (limit,))
 
-	def get_upcoming_payments(self, limit: int = 5) -> List[sqlite3.Row]:
+	def get_upcoming_payments(self, limit: int = 5) -> List[Any]:
 		"""Pobierz faktury z najbliższymi terminami płatności (nieopłacone, tylko przyszłe)"""
 		query = """
             SELECT * FROM invoices
@@ -234,11 +232,11 @@ class InvoiceRepository(BaseRepository):
               AND payment_due_date IS NOT NULL
               AND payment_due_date >= date('now')
             ORDER BY payment_due_date ASC
-            LIMIT ?
+            LIMIT %s
         """
 		return self._fetch_all(query, (limit,))
 
-	def get_overdue_payments(self, limit: int = 5) -> List[sqlite3.Row]:
+	def get_overdue_payments(self, limit: int = 5) -> List[Any]:
 		"""Pobierz przeterminowane faktury (nieopłacone, termin < dzisiaj)"""
 		query = """
             SELECT * FROM invoices
@@ -246,7 +244,7 @@ class InvoiceRepository(BaseRepository):
               AND payment_due_date IS NOT NULL
               AND payment_due_date < date('now')
             ORDER BY payment_due_date ASC
-            LIMIT ?
+            LIMIT %s
         """
 		return self._fetch_all(query, (limit,))
 
@@ -328,7 +326,7 @@ class InvoiceRepository(BaseRepository):
 
 		return stats
 	
-	def row_to_invoice(self, row: sqlite3.Row) -> Invoice:
+	def row_to_invoice(self, row: Any) -> Invoice:
 		"""Konwertuj Row → Invoice object"""
 		# Safely get payment_term (may not exist in older databases)
 		payment_term = None
