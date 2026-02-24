@@ -6,6 +6,9 @@ import logging
 import os
 from datetime import datetime
 
+from dotenv import load_dotenv
+load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
+
 from flask import Flask, render_template
 from flask_login import LoginManager
 
