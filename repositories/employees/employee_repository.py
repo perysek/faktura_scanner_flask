@@ -2,7 +2,7 @@
 Repository dla operacji na pracownikach (employees)
 """
 from typing import Any, List, Optional
-from datetime import datetime
+from datetime import datetime, date
 from repositories.db_utils import parse_dt, parse_date
 from config.database import get_db_connection
 from database.models import Employee
