@@ -6,6 +6,7 @@ from typing import Any, List, Optional, Tuple
 
 from database.models import Client
 from repositories.base_repository import BaseRepository
+from repositories.db_utils import parse_dt, parse_date
 
 
 class ClientRepository(BaseRepository):
@@ -25,14 +26,14 @@ class ClientRepository(BaseRepository):
             last_name=row['last_name'],
             phone=row['phone'],
             email=row['email'],
-            date_of_birth=datetime.strptime(row['date_of_birth'], '%Y-%m-%d').date() if row['date_of_birth'] else None,
+            date_of_birth=parse_date(row['date_of_birth']),
             notes=row['notes'],
             preferences=row['preferences'],
-            first_visit_date=datetime.strptime(row['first_visit_date'], '%Y-%m-%d').date() if row['first_visit_date'] else None,
-            last_visit_date=datetime.strptime(row['last_visit_date'], '%Y-%m-%d').date() if row['last_visit_date'] else None,
+            first_visit_date=parse_date(row['first_visit_date']),
+            last_visit_date=parse_date(row['last_visit_date']),
             is_active=bool(row['is_active']),
-            created_at=datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S') if row['created_at'] else None,
-            updated_at=datetime.strptime(row['updated_at'], '%Y-%m-%d %H:%M:%S') if row['updated_at'] else None
+            created_at=parse_dt(row['created_at']),
+            updated_at=parse_dt(row['updated_at'])
         )
 
     def create(self, client: Client) -> int:
@@ -170,7 +171,7 @@ class ClientRepository(BaseRepository):
         upcoming_birthdays = []
         for row in all_clients:
             if row['date_of_birth']:
-                birth_date = datetime.strptime(row['date_of_birth'], '%Y-%m-%d').date()
+                birth_date = parse_date(row['date_of_birth'])
                 # Create birthday in current year
                 this_year_birthday = birth_date.replace(year=today.year)
 
@@ -240,7 +241,7 @@ class ClientRepository(BaseRepository):
                 COUNT(*) as total_clients,
                 SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_clients,
                 SUM(CASE WHEN is_active = FALSE THEN 1 ELSE 0 END) as inactive_clients,
-                SUM(CASE WHEN last_visit_date >= date('now', '-30 days') THEN 1 ELSE 0 END) as recent_visitors,
+                SUM(CASE WHEN last_visit_date >= CURRENT_DATE - INTERVAL '30 days' THEN 1 ELSE 0 END) as recent_visitors,
                 SUM(CASE WHEN date_of_birth IS NOT NULL THEN 1 ELSE 0 END) as clients_with_birthdate
             FROM clients
         """

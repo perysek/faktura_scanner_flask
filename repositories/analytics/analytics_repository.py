@@ -217,7 +217,7 @@ class AnalyticsRepository:
                 WHERE status = 'completed'
             )
             SELECT
-                COUNT(CASE WHEN julianday(appointment_date) - julianday(prev_visit) <= 90 THEN 1 END) * 100.0 /
+                COUNT(CASE WHEN (appointment_date - prev_visit) <= 90 THEN 1 END) * 100.0 /
                 NULLIF(COUNT(*), 0) as retention_rate
             FROM client_visits
             WHERE prev_visit IS NOT NULL
@@ -230,10 +230,10 @@ class AnalyticsRepository:
                 c.id,
                 c.first_name || ' ' || c.last_name as client_name,
                 c.last_visit_date,
-                julianday('now') - julianday(c.last_visit_date) as days_since_visit
+                CURRENT_DATE - c.last_visit_date as days_since_visit
             FROM clients c
             WHERE c.is_active = TRUE
-                AND c.last_visit_date < date('now', '-90 days')
+                AND c.last_visit_date < CURRENT_DATE - INTERVAL '90 days'
             ORDER BY c.last_visit_date ASC
             LIMIT 20
         """
