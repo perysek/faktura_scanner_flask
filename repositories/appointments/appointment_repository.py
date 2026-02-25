@@ -112,11 +112,11 @@ class AppointmentRepository:
                 a.*,
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(
-                    CASE WHEN aps.is_addon = FALSE THEN s.name END, ', '
+                STRING_AGG(
+                    CASE WHEN aps.is_addon = FALSE THEN s.name ELSE NULL END, ', '
                 ) as service_name,
-                GROUP_CONCAT(
-                    CASE WHEN aps.is_addon = TRUE THEN s.name END, ', '
+                STRING_AGG(
+                    CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
                 ) as addon_services
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
@@ -140,7 +140,7 @@ class AppointmentRepository:
                 c.first_name || ' ' || c.last_name as client_name,
                 c.phone as client_phone,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(s.name, ', ') as service_name
+                STRING_AGG(s.name, ', ') as service_name
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
@@ -214,8 +214,8 @@ class AppointmentRepository:
                     c.first_name || ' ' || c.last_name as client_name,
                     c.phone as client_phone,
                     e.first_name || ' ' || e.last_name as employee_name,
-                    GROUP_CONCAT(s.name, ', ') as service_name,
-                    GROUP_CONCAT(
+                    STRING_AGG(s.name, ', ') as service_name,
+                    STRING_AGG(
                         CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
                     ) as addon_services
                 FROM appointments a
@@ -509,14 +509,14 @@ class AppointmentRepository:
                 a.notes,
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(s.name, ', ') as service_names
+                STRING_AGG(s.name, ', ') as service_names
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE
-                datetime(a.appointment_date || ' ' || a.end_time) < datetime('now', 'localtime')
+                (a.appointment_date + a.end_time) < NOW()
                 AND a.status NOT IN ('completed', 'cancelled', 'no_show')
             GROUP BY a.id
             ORDER BY a.appointment_date DESC, a.start_time DESC
