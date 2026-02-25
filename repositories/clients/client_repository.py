@@ -97,11 +97,11 @@ class ClientRepository(BaseRepository):
         """Wyszukaj klientów po imieniu, nazwisku, telefonie lub emailu"""
         query = """
             SELECT * FROM clients
-            WHERE first_name LIKE %s OR last_name LIKE %s OR phone LIKE %s OR email LIKE %s
+            WHERE first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
             ORDER BY
                 CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
-                last_name COLLATE NOCASE,
-                first_name COLLATE NOCASE
+                LOWER(last_name),
+                LOWER(first_name)
         """
         search_pattern = f'%{search_term}%'
         return self._fetch_all(query, (search_pattern, search_pattern, search_pattern, search_pattern))
@@ -110,7 +110,7 @@ class ClientRepository(BaseRepository):
         """Wyszukaj klientów po imieniu lub nazwisku"""
         query = """
             SELECT * FROM clients
-            WHERE first_name LIKE %s OR last_name LIKE %s
+            WHERE first_name ILIKE %s OR last_name ILIKE %s
             ORDER BY last_name, first_name
         """
         search_pattern = f'%{name}%'
@@ -120,7 +120,7 @@ class ClientRepository(BaseRepository):
         """Wyszukaj klientów po numerze telefonu"""
         query = """
             SELECT * FROM clients
-            WHERE phone LIKE %s
+            WHERE phone ILIKE %s
             ORDER BY last_name, first_name
         """
         search_pattern = f'%{phone}%'
@@ -138,8 +138,8 @@ class ClientRepository(BaseRepository):
             WHERE is_active = TRUE
             ORDER BY
                 CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
-                last_name COLLATE NOCASE,
-                first_name COLLATE NOCASE
+                LOWER(last_name),
+                LOWER(first_name)
         """
         return self._fetch_all(query)
 

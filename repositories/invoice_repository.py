@@ -176,9 +176,9 @@ class InvoiceRepository(BaseRepository):
 		"""Wyszukaj faktury (seller, numer, NIP)"""
 		query = """
             SELECT * FROM invoices
-            WHERE seller_name LIKE %s
-               OR invoice_number LIKE %s
-               OR seller_nip LIKE %s
+            WHERE seller_name ILIKE %s
+               OR invoice_number ILIKE %s
+               OR seller_nip ILIKE %s
             ORDER BY invoice_date DESC
         """
 		term = f"%{search_term}%"

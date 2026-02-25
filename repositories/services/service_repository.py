@@ -92,14 +92,14 @@ class ServiceRepository:
         if active_only:
             sql = """
                 SELECT * FROM services
-                WHERE (name LIKE %s OR category LIKE %s OR description LIKE %s)
+                WHERE (name ILIKE %s OR category ILIKE %s OR description ILIKE %s)
                 AND is_active = TRUE
                 ORDER BY category, name
             """
         else:
             sql = """
                 SELECT * FROM services
-                WHERE name LIKE %s OR category LIKE %s OR description LIKE %s
+                WHERE name ILIKE %s OR category ILIKE %s OR description ILIKE %s
                 ORDER BY category, name
             """
 
