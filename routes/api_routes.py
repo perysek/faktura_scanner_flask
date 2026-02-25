@@ -1325,8 +1325,8 @@ def get_sellers():
                 'seller_nip': row['seller_nip'],
                 'seller_name': row['seller_name'],
                 'address': row['address'] if 'address' in row.keys() else None,
-                'first_seen': row['first_seen'] if 'first_seen' in row.keys() else None,
-                'last_updated': row['last_updated'] if 'last_updated' in row.keys() else None,
+                'first_seen': row['first_seen'].isoformat() if row.get('first_seen') else None,
+                'last_updated': row['last_updated'].isoformat() if row.get('last_updated') else None,
                 'invoice_count': row['invoice_count'] if 'invoice_count' in row.keys() else 0,
                 # Stats from JOIN (if available)
                 'actual_invoice_count': row['actual_invoice_count'] if 'actual_invoice_count' in row.keys() else 0,
@@ -1336,8 +1336,8 @@ def get_sellers():
             sellers_data.append(seller_dict)
 
         # Get global stats (total from invoices table, including orphaned invoices)
-        cursor = current_app.invoice_repo._execute("SELECT COUNT(*) FROM invoices")
-        total_invoices = cursor.fetchone()[0]
+        cursor = current_app.invoice_repo._execute("SELECT COUNT(*) as cnt FROM invoices")
+        total_invoices = cursor.fetchone()['cnt']
 
         cursor = current_app.invoice_repo._execute("""
             SELECT
@@ -1353,8 +1353,8 @@ def get_sellers():
             'count': len(sellers_data),
             'global_stats': {
                 'total_invoices': total_invoices,
-                'total_paid': global_stats[0] or 0.0,
-                'total_unpaid': global_stats[1] or 0.0
+                'total_paid': float(global_stats['total_paid'] or 0.0),
+                'total_unpaid': float(global_stats['total_unpaid'] or 0.0)
             }
         })
     except Exception as e:
