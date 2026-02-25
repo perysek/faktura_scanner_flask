@@ -4,7 +4,9 @@ Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, date, time
+from decimal import Decimal
+from flask.json.provider import DefaultJSONProvider
 
 from dotenv import load_dotenv
 load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
@@ -46,9 +48,22 @@ from services.export_service import ExportService
 from services.seller_service import SellerService
 
 
+class PostgreSQLJSONProvider(DefaultJSONProvider):
+    """Custom JSON provider that handles PostgreSQL native types."""
+
+    def default(self, obj):
+        if isinstance(obj, (datetime, date, time)):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
+
+
 def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__)
+    app.json_provider_class = PostgreSQLJSONProvider
+    app.json = PostgreSQLJSONProvider(app)
 
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production-flask-login-session-key-2026')
