@@ -116,7 +116,7 @@ class AnalyticsRepository:
                 e.first_name || ' ' || e.last_name as employee_name,
                 e.base_salary,
                 COALESCE(e.employer_cost_rate, 0.22) as cost_rate,
-                COUNT(a.id) as appointments_count,
+                COUNT(DISTINCT a.id) as appointments_count,
                 COALESCE(SUM(i.net_amount), 0) as revenue_generated,
                 COALESCE(SUM(i.commission_total), 0) as commission_earned,
 
@@ -130,10 +130,11 @@ class AnalyticsRepository:
                     ((e.base_salary + COALESCE(SUM(i.commission_total), 0)) *
                      (1 + COALESCE(e.employer_cost_rate, 0.22))) as net_profit
             FROM employees e
-            LEFT JOIN appointments a ON a.employee_id = e.id AND a.status = 'completed'
+            LEFT JOIN appointments a ON a.employee_id = e.id
+                AND a.status = 'completed'
+                AND a.appointment_date BETWEEN %s AND %s
             LEFT JOIN income_records i ON i.appointment_id = a.id
             WHERE e.is_active = TRUE
-                AND (a.appointment_date BETWEEN %s AND %s OR a.appointment_date IS NULL)
             GROUP BY e.id, e.first_name, e.last_name, e.base_salary, e.employer_cost_rate
             ORDER BY revenue_generated DESC
         """
