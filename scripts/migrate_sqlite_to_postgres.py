@@ -4,8 +4,9 @@ Migrate data from existing faktury.db (SQLite) to PostgreSQL.
 Usage:
     DATABASE_URL=postgresql://user:pass@host:5432/dbname python scripts/migrate_sqlite_to_postgres.py
 
-Or on Render (via Shell tab):
-    DATABASE_URL=$DATABASE_URL python scripts/migrate_sqlite_to_postgres.py /data/faktury.db
+Or on Vultr server:
+    export $(grep -v '^#' .env | xargs)
+    python scripts/migrate_sqlite_to_postgres.py /home/deploy/faktury_backup.db
 """
 import os
 import sys
@@ -13,6 +14,20 @@ import sqlite3
 
 import psycopg2
 import psycopg2.extras
+
+
+# SQLite stores booleans as 0/1 integers. These columns must be cast to
+# Python bool before inserting into PostgreSQL BOOLEAN columns.
+BOOLEAN_COLUMNS = {
+    'invoices': ['is_duplicate'],
+    'employees': ['is_active'],
+    'clients': ['is_active'],
+    'services': ['is_active'],
+    'employee_services': ['is_active'],
+    'appointment_services': ['is_addon'],
+    'employee_availability': ['is_available'],
+    'users': ['is_active'],
+}
 
 
 def get_pg_url() -> str:
@@ -23,6 +38,14 @@ def get_pg_url() -> str:
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)
     return url
+
+
+def coerce_value(table: str, col: str, value):
+    """Cast SQLite integer booleans to Python bool for PostgreSQL."""
+    bool_cols = BOOLEAN_COLUMNS.get(table, [])
+    if col in bool_cols and value is not None:
+        return bool(value)
+    return value
 
 
 def migrate(sqlite_path: str):
@@ -62,7 +85,7 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
         return
 
     columns = [desc[0] for desc in sc.description]
-    # Exclude 'id' — PostgreSQL SERIAL handles it; we reset sequences after
+    # Exclude 'id' — PostgreSQL SERIAL auto-assigns it; sequences are reset after
     non_id_cols = [c for c in columns if c != 'id']
     placeholders = ', '.join(['%s'] * len(non_id_cols))
     col_names = ', '.join(non_id_cols)
@@ -71,7 +94,7 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
     inserted = 0
     skipped = 0
     for row in rows:
-        values = tuple(row[c] for c in non_id_cols)
+        values = tuple(coerce_value(table, c, row[c]) for c in non_id_cols)
         try:
             pc.execute(
                 f"INSERT INTO {table} ({col_names}) VALUES ({placeholders})",
@@ -86,7 +109,7 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
             print(f"  ERROR in {table}: {e} — row: {dict(zip(non_id_cols, values))}")
             skipped += 1
 
-    # Reset PostgreSQL sequence to max id to avoid conflicts on new inserts
+    # Reset PostgreSQL sequence to max id so new inserts don't conflict
     pc.execute(f"""
         SELECT setval(
             pg_get_serial_sequence('{table}', 'id'),
