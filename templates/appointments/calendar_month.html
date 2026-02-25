@@ -490,8 +490,8 @@ function updateEmployeePagination() {
     // Update label
     const currentEmployee = employees[currentEmployeePage];
     if (currentEmployee) {
-        employeeSelected.textContent = currentEmployee.full_name;
-        employeeSelected.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
+        employeeLabel.textContent = currentEmployee.full_name;
+        employeeLabel.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
     }
 }
 
