@@ -195,7 +195,7 @@
         <div class="controls-bar" style="justify-content: space-between;">
             <!-- Coverage Stat Card (left side) -->
             <div class="coverage-card">
-                <div class="coverage-label">Pokrycie wizytami</div>
+                <div class="coverage-label">Obłożenie</div>
                 <div class="coverage-value" id="coverageValue">0%</div>
                 <div class="coverage-bar">
                     <div class="coverage-fill" id="coverageFill" style="width: 0%;"></div>
@@ -796,6 +796,5 @@ function escapeHtml(text) {
 </script>
 
 <!-- Past Visits Scanner -->
-<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 <script src="{{ url_for('static', filename='js/past_visits_scanner.js') }}"></script>
 {% endblock %}
