@@ -1,12 +1,15 @@
 """
-Migrate data from existing faktury.db (SQLite) to PostgreSQL.
+Migrate ALL data from existing faktury.db (SQLite) to PostgreSQL.
+
+Migrates all tables in foreign-key dependency order, preserving original
+id values to maintain referential integrity across tables.
 
 Usage:
-    DATABASE_URL=postgresql://user:pass@host:5432/dbname python scripts/migrate_sqlite_to_postgres.py
-
-Or on Vultr server:
     export $(grep -v '^#' .env | xargs)
     python scripts/migrate_sqlite_to_postgres.py /home/deploy/faktury_backup.db
+
+Or with explicit DATABASE_URL:
+    DATABASE_URL=postgresql://user:pass@host:5432/dbname python scripts/migrate_sqlite_to_postgres.py faktury.db
 """
 import os
 import sys
@@ -16,8 +19,8 @@ import psycopg2
 import psycopg2.extras
 
 
-# SQLite stores booleans as 0/1 integers. These columns must be cast to
-# Python bool before inserting into PostgreSQL BOOLEAN columns.
+# SQLite stores booleans as 0/1 integers. These must be cast to Python bool
+# before inserting into PostgreSQL BOOLEAN columns.
 BOOLEAN_COLUMNS = {
     'invoices': ['is_duplicate'],
     'employees': ['is_active'],
@@ -28,6 +31,28 @@ BOOLEAN_COLUMNS = {
     'employee_availability': ['is_available'],
     'users': ['is_active'],
 }
+
+# Migrate in FK dependency order — parents before children.
+# Tables not present in the SQLite source are silently skipped.
+TABLES = [
+    'users',                  # no FKs — authentication accounts
+    'sellers',                # no FKs — invoice suppliers
+    'clients',                # no FKs — salon clients
+    'services',               # no FKs — service catalog
+    'employees',              # FK → users
+    'invoices',               # FK → sellers
+    'service_addons',         # FK → services x2
+    'employee_services',      # FK → employees, services
+    'employee_availability',  # FK → employees
+    'employee_time_off',      # FK → employees
+    'client_preferences',     # FK → clients, services, employees
+    'appointments',           # FK → clients, employees, users
+    'appointment_services',   # FK → appointments, services
+    'income_records',         # FK → appointments, clients, employees
+    'audit_log',              # FK → invoices
+    'duplicate_detection',    # FK → invoices
+    'upload_staging',         # no FKs — temporary upload records
+]
 
 
 def get_pg_url() -> str:
@@ -60,12 +85,10 @@ def migrate(sqlite_path: str):
     pg_conn = psycopg2.connect(get_pg_url(), cursor_factory=psycopg2.extras.RealDictCursor)
     pg_conn.autocommit = False
 
-    tables = ['sellers', 'invoices', 'audit_log', 'duplicate_detection', 'upload_staging']
-
-    for table in tables:
+    for table in TABLES:
         migrate_table(sqlite_conn, pg_conn, table)
-        # Commit after EACH table so that an error in a later table
-        # cannot roll back rows already successfully migrated.
+        # Commit after EACH table so that a later table's errors cannot
+        # roll back rows already successfully migrated.
         pg_conn.commit()
 
     sqlite_conn.close()
@@ -87,20 +110,25 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
         return
 
     columns = [desc[0] for desc in sc.description]
-    # Exclude 'id' — PostgreSQL SERIAL auto-assigns it; sequences are reset after
-    non_id_cols = [c for c in columns if c != 'id']
-    placeholders = ', '.join(['%s'] * len(non_id_cols))
-    col_names = ', '.join(non_id_cols)
+
+    # Include 'id' in the insert to preserve original IDs and maintain
+    # referential integrity: if user id=5 becomes id=3 in PostgreSQL,
+    # every employee.user_id=5 reference silently points to the wrong record.
+    placeholders = ', '.join(['%s'] * len(columns))
+    col_names = ', '.join(columns)
 
     pc = pg_conn.cursor()
     inserted = 0
     skipped = 0
+    errors = 0
+
     for i, row in enumerate(rows):
-        values = tuple(coerce_value(table, c, row[c]) for c in non_id_cols)
-        sp = f"sp_{table}_{i}"
+        values = tuple(coerce_value(table, c, row[c]) for c in columns)
+        row_id = row['id'] if 'id' in columns else f'row{i}'
+        sp = f"sp_{i}"
         try:
-            # SAVEPOINT rolls back only this single row on error,
-            # leaving all previously inserted rows in the transaction intact.
+            # SAVEPOINT scopes the rollback to this single row only.
+            # Without it, any error would roll back the entire table's work.
             pc.execute(f"SAVEPOINT {sp}")
             pc.execute(
                 f"INSERT INTO {table} ({col_names}) VALUES ({placeholders})",
@@ -108,32 +136,53 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
             )
             pc.execute(f"RELEASE SAVEPOINT {sp}")
             inserted += 1
-        except psycopg2.errors.UniqueViolation as e:
+
+        except psycopg2.errors.UniqueViolation:
+            # Row already exists — safe to skip (idempotent re-run support)
             pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
             pc.execute(f"RELEASE SAVEPOINT {sp}")
             skipped += 1
-        except psycopg2.errors.ForeignKeyViolation as e:
-            # Audit log entries for invoices that were deleted in SQLite are
-            # silently dropped — the invoice no longer exists, so neither
-            # should its history.
+
+        except psycopg2.errors.ForeignKeyViolation:
+            # Orphaned row — parent was deleted in SQLite but SQLite doesn't
+            # enforce FK constraints by default, leaving ghost references.
+            # Example: audit_log entries for deleted invoices.
             pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
             pc.execute(f"RELEASE SAVEPOINT {sp}")
             skipped += 1
+
+        except psycopg2.errors.CheckViolation as e:
+            # Data doesn't satisfy a PostgreSQL CHECK constraint that may not
+            # have existed in SQLite (e.g. service category, user role values).
+            pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
+            pc.execute(f"RELEASE SAVEPOINT {sp}")
+            print(f"  WARN {table} id={row_id}: check constraint — {e.pgerror.strip()}")
+            skipped += 1
+            errors += 1
+
         except Exception as e:
             pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
             pc.execute(f"RELEASE SAVEPOINT {sp}")
-            print(f"  ERROR in {table}: {e} — row: {dict(zip(non_id_cols, values))}")
+            print(f"  ERROR {table} id={row_id}: {e}")
             skipped += 1
+            errors += 1
 
-    # Reset PostgreSQL sequence to max id so new inserts don't conflict
-    pc.execute(f"""
-        SELECT setval(
-            pg_get_serial_sequence('{table}', 'id'),
-            COALESCE(MAX(id), 1)
-        ) FROM {table}
-    """)
+    # Reset the PostgreSQL SERIAL sequence to MAX(id) so future auto-incremented
+    # inserts don't collide with the explicitly-inserted IDs.
+    try:
+        pc.execute(f"""
+            SELECT setval(
+                pg_get_serial_sequence('{table}', 'id'),
+                COALESCE(MAX(id), 1)
+            ) FROM {table}
+        """)
+    except Exception:
+        pass  # Some tables may not have a SERIAL sequence — safe to ignore
 
-    print(f"  {table}: {inserted} inserted, {skipped} skipped")
+    status = f"{inserted} inserted, {skipped} skipped"
+    if errors:
+        status += f" ({errors} need review)"
+    print(f"  {table}: {status}")
 
 
 if __name__ == '__main__':
