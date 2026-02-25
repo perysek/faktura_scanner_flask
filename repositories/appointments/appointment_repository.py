@@ -124,7 +124,7 @@ class AppointmentRepository:
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE {where_clause}
-            GROUP BY a.id
+            GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
             ORDER BY a.appointment_date, a.start_time
         """
         with get_db_connection() as conn:
@@ -148,7 +148,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.status NOT IN ('cancelled', 'no_show')
-            GROUP BY a.id
+            GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.start_time
         """
         with get_db_connection() as conn:
@@ -224,7 +224,7 @@ class AppointmentRepository:
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
                 WHERE a.employee_id = %s AND a.appointment_date = %s
-                GROUP BY a.id
+                GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
                 ORDER BY a.start_time
             """
 
@@ -518,7 +518,9 @@ class AppointmentRepository:
             WHERE
                 (a.appointment_date + a.end_time) < NOW()
                 AND a.status NOT IN ('completed', 'cancelled', 'no_show')
-            GROUP BY a.id
+            GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
+                     a.start_time, a.end_time, a.total_price, a.notes,
+                     c.first_name, c.last_name, e.first_name, e.last_name
             ORDER BY a.appointment_date DESC, a.start_time DESC
         """
         with get_db_connection() as conn:
