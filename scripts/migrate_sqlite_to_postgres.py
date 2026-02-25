@@ -64,8 +64,10 @@ def migrate(sqlite_path: str):
 
     for table in tables:
         migrate_table(sqlite_conn, pg_conn, table)
+        # Commit after EACH table so that an error in a later table
+        # cannot roll back rows already successfully migrated.
+        pg_conn.commit()
 
-    pg_conn.commit()
     sqlite_conn.close()
     pg_conn.close()
     print("\nMigration complete.")
@@ -93,19 +95,33 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
     pc = pg_conn.cursor()
     inserted = 0
     skipped = 0
-    for row in rows:
+    for i, row in enumerate(rows):
         values = tuple(coerce_value(table, c, row[c]) for c in non_id_cols)
+        sp = f"sp_{table}_{i}"
         try:
+            # SAVEPOINT rolls back only this single row on error,
+            # leaving all previously inserted rows in the transaction intact.
+            pc.execute(f"SAVEPOINT {sp}")
             pc.execute(
                 f"INSERT INTO {table} ({col_names}) VALUES ({placeholders})",
                 values
             )
+            pc.execute(f"RELEASE SAVEPOINT {sp}")
             inserted += 1
-        except psycopg2.errors.UniqueViolation:
-            pg_conn.rollback()
+        except psycopg2.errors.UniqueViolation as e:
+            pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
+            pc.execute(f"RELEASE SAVEPOINT {sp}")
+            skipped += 1
+        except psycopg2.errors.ForeignKeyViolation as e:
+            # Audit log entries for invoices that were deleted in SQLite are
+            # silently dropped — the invoice no longer exists, so neither
+            # should its history.
+            pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
+            pc.execute(f"RELEASE SAVEPOINT {sp}")
             skipped += 1
         except Exception as e:
-            pg_conn.rollback()
+            pc.execute(f"ROLLBACK TO SAVEPOINT {sp}")
+            pc.execute(f"RELEASE SAVEPOINT {sp}")
             print(f"  ERROR in {table}: {e} — row: {dict(zip(non_id_cols, values))}")
             skipped += 1
 
