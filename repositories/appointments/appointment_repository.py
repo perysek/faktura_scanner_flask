@@ -224,7 +224,7 @@ class AppointmentRepository:
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
                 WHERE a.employee_id = %s AND a.appointment_date = %s
-                GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
+                GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
                 ORDER BY a.start_time
             """
 
