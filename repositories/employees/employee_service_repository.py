@@ -4,6 +4,7 @@ Repository dla operacji na przypisaniach usług do pracowników (employee_servic
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime
+from repositories.db_utils import parse_dt
 import psycopg2
 from config.database import get_db_connection
 from database.models import EmployeeService
@@ -25,8 +26,8 @@ class EmployeeServiceRepository:
             commission_rate=Decimal(str(row['commission_rate'])) if row['commission_rate'] is not None else None,
             duration_override=row['duration_override'],
             is_active=bool(row['is_active']),
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-            updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
+            created_at=parse_dt(row['created_at']),
+            updated_at=parse_dt(row['updated_at'])
         )
 
     def create(self, es: EmployeeService) -> int:

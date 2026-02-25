@@ -7,6 +7,7 @@ import bcrypt
 
 from database.models import User
 from repositories.base_repository import BaseRepository
+from repositories.db_utils import parse_dt
 
 
 class UserRepository(BaseRepository):
@@ -166,7 +167,7 @@ class UserRepository(BaseRepository):
             full_name=row["full_name"],
             role=row["role"],
             is_active=bool(row["is_active"]),
-            last_login=datetime.fromisoformat(row["last_login"]) if row["last_login"] else None,
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
-            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None
+            last_login=parse_dt(row["last_login"]),
+            created_at=parse_dt(row["created_at"]),
+            updated_at=parse_dt(row["updated_at"])
         )
