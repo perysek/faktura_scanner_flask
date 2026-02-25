@@ -70,7 +70,7 @@ class SellerRepository(BaseRepository):
                 SUM(CASE WHEN i.status = 'Nieopłacona' THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
             LEFT JOIN invoices i ON s.id = i.seller_id
-            WHERE s.seller_name LIKE %s OR s.seller_nip LIKE %s
+            WHERE s.seller_name ILIKE %s OR s.seller_nip ILIKE %s
             GROUP BY s.id
             ORDER BY s.seller_name
         """
