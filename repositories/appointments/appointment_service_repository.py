@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 from datetime import datetime
 from config.database import get_db_connection
 from database.models import AppointmentService
+from repositories.db_utils import parse_dt
 
 
 class AppointmentServiceRepository:
@@ -25,7 +26,7 @@ class AppointmentServiceRepository:
             commission_rate=Decimal(str(row['commission_rate'])) if row['commission_rate'] is not None else Decimal('0'),
             commission_amount=Decimal(str(row['commission_amount'])) if row['commission_amount'] is not None else Decimal('0'),
             is_addon=bool(row['is_addon']),
-            added_at=datetime.fromisoformat(row['added_at']) if row['added_at'] else None
+            added_at=parse_dt(row['added_at'])
         )
 
     def add_service(self, appt_svc: AppointmentService) -> int:

@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 from datetime import datetime, date
 from config.database import get_db_connection
 from database.models import IncomeRecord
+from repositories.db_utils import parse_dt, parse_date
 
 
 class IncomeRepository:
@@ -26,10 +27,9 @@ class IncomeRepository:
             net_amount=Decimal(str(row['net_amount'])),
             commission_total=Decimal(str(row['commission_total'])),
             payment_method=row['payment_method'],
-            payment_date=datetime.strptime(row['payment_date'], '%Y-%m-%d').date()
-                if row['payment_date'] else None,
+            payment_date=parse_date(row['payment_date']),
             notes=row['notes'],
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
+            created_at=parse_dt(row['created_at'])
         )
 
     def create(self, record: IncomeRecord) -> int:
