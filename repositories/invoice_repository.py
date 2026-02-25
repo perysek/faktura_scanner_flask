@@ -231,7 +231,7 @@ class InvoiceRepository(BaseRepository):
             SELECT * FROM invoices
             WHERE status = 'Nieopłacona'
               AND payment_due_date IS NOT NULL
-              AND payment_due_date >= date('now')
+              AND payment_due_date >= CURRENT_DATE
             ORDER BY payment_due_date ASC
             LIMIT %s
         """
@@ -243,7 +243,7 @@ class InvoiceRepository(BaseRepository):
             SELECT * FROM invoices
             WHERE status = 'Nieopłacona'
               AND payment_due_date IS NOT NULL
-              AND payment_due_date < date('now')
+              AND payment_due_date < CURRENT_DATE
             ORDER BY payment_due_date ASC
             LIMIT %s
         """
@@ -267,7 +267,7 @@ class InvoiceRepository(BaseRepository):
                 currency,
                 status,
                 CASE
-                    WHEN status = 'Nieopłacona' AND payment_due_date < date('now') THEN 'overdue'
+                    WHEN status = 'Nieopłacona' AND payment_due_date < CURRENT_DATE THEN 'overdue'
                     WHEN status = 'Nieopłacona' THEN 'unpaid'
                     WHEN status = 'Opłacona' THEN 'paid'
                     ELSE 'unpaid'

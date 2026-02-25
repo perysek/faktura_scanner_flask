@@ -3,7 +3,7 @@ Repository dla operacji na pracownikach (employees)
 """
 from typing import Any, List, Optional
 from datetime import datetime
-from repositories.db_utils import parse_dt, date
+from repositories.db_utils import parse_dt, parse_date
 from config.database import get_db_connection
 from database.models import Employee
 
@@ -25,8 +25,8 @@ class EmployeeRepository:
             email=row['email'],
             position=row['position'],
             employment_status=row['employment_status'],
-            hire_date=datetime.strptime(row['hire_date'], '%Y-%m-%d').date() if row['hire_date'] else None,
-            termination_date=datetime.strptime(row['termination_date'], '%Y-%m-%d').date() if row['termination_date'] else None,
+            hire_date=parse_date(row['hire_date']),
+            termination_date=parse_date(row['termination_date']),
             base_salary=float(row['base_salary']) if row['base_salary'] else None,
             commission_rate=float(row['commission_rate']) if row['commission_rate'] else None,
             skills=row['skills'],
