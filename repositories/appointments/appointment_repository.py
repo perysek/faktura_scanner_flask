@@ -186,7 +186,7 @@ class AppointmentRepository:
                     WHERE a.appointment_date = %s
                     AND a.status NOT IN ('cancelled', 'no_show')
                     AND e.is_active = TRUE
-                    ORDER BY e.first_name, e.last_name
+                    ORDER BY full_name
                 """
                 cursor.execute(query_employees, (schedule_date.isoformat(),))
             else:
