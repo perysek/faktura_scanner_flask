@@ -1,11 +1,15 @@
 """
-Trasy autentykacji - logowanie, wylogowanie, profil
+Trasy autentykacji - logowanie, wylogowanie, profil, reset hasła
 """
+import secrets
+from datetime import datetime, timedelta
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from repositories.users.user_repository import UserRepository
 from repositories.audit_repository import AuditRepository
 from services.auth.auth_service import AuthService
+from config.database import DatabaseConnection
 
 # Create blueprint
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -127,3 +131,107 @@ def change_password():
             return render_template('auth/change_password.html')
 
     return render_template('auth/change_password.html')
+
+
+# ---------------------------------------------------------------------------
+# Forgot / Reset password (no email required — token shown directly on screen)
+# ---------------------------------------------------------------------------
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Formularz resetowania hasła — wyświetla link z tokenem na ekranie"""
+    reset_url = None
+
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+
+        if email:
+            user_repo = UserRepository()
+            user = user_repo.get_by_email(email)
+
+            if user:
+                conn = DatabaseConnection.get_connection()
+                cursor = conn.cursor()
+
+                # Invalidate any existing unused tokens for this user
+                cursor.execute(
+                    "UPDATE password_reset_tokens SET used = TRUE WHERE user_id = %s AND used = FALSE",
+                    (user.id,)
+                )
+
+                # Generate new token (256-bit URL-safe)
+                token = secrets.token_urlsafe(32)
+                expires_at = datetime.now() + timedelta(hours=1)
+
+                cursor.execute(
+                    "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (%s, %s, %s)",
+                    (user.id, token, expires_at)
+                )
+                conn.commit()
+
+                reset_url = url_for('auth.reset_password', token=token, _external=True)
+
+                try:
+                    AuditRepository().log_event(
+                        entity_type='user', action='PASSWORD_RESET_REQUESTED',
+                        entity_id=user.id, entity_label=user.email,
+                    )
+                except Exception:
+                    pass
+
+            # Always show the same neutral message (prevents email enumeration)
+            # reset_url is only set when user was found
+
+    return render_template('auth/forgot_password.html', reset_url=reset_url)
+
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token: str):
+    """Formularz ustawiania nowego hasła po kliknięciu w link z tokenem"""
+    conn = DatabaseConnection.get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM password_reset_tokens WHERE token = %s AND used = FALSE AND expires_at > NOW()",
+        (token,)
+    )
+    token_row = cursor.fetchone()
+
+    if not token_row:
+        flash('Link wygasł lub został już użyty. Spróbuj ponownie.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if len(new_password) < 8:
+            flash('Hasło musi mieć co najmniej 8 znaków.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+
+        if new_password != confirm_password:
+            flash('Hasła nie pasują do siebie.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+
+        # Update password and mark token as used
+        user_repo = UserRepository()
+        user_repo.update_password(token_row['user_id'], new_password)
+
+        cursor.execute(
+            "UPDATE password_reset_tokens SET used = TRUE WHERE token = %s",
+            (token,)
+        )
+        conn.commit()
+
+        try:
+            AuditRepository().log_event(
+                entity_type='user', action='PASSWORD_RESET',
+                entity_id=token_row['user_id'],
+                new_value=request.remote_addr,
+            )
+        except Exception:
+            pass
+
+        flash('Hasło zostało zmienione. Możesz się teraz zalogować.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password.html', token=token)
