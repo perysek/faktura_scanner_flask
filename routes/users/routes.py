@@ -187,6 +187,16 @@ def api_update(user_id):
     employee_id = data.get('employee_id')
     new_password = data.get('new_password') or ''
 
+    # Password-only update (from the separate password change form)
+    if new_password and not email and not full_name and not role:
+        if len(new_password) < 8:
+            return jsonify({'error': 'Nowe hasło musi mieć co najmniej 8 znaków'}), 400
+        try:
+            user_repo.update_password(user_id, new_password)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     if not email or not full_name or not role:
         return jsonify({'error': 'Email, imię i rola są wymagane'}), 400
 
