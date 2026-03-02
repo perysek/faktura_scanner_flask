@@ -13,9 +13,9 @@ graceful_timeout = 30
 keepalive = 5
 
 # Logging
-accesslog = "/var/log/faktura-scanner/access.log"
-errorlog  = "/var/log/faktura-scanner/error.log"
+accesslog = "/var/log/my-way-beauty-salon/access.log"
+errorlog  = "/var/log/my-way-beauty-salon/error.log"
 loglevel  = "info"
 
 # Process naming (visible in `ps aux`)
-proc_name = "faktura-scanner"
+proc_name = "my-way-beauty-salon"
