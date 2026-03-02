@@ -3,6 +3,7 @@ Repository dla operacji na pracownikach (employees)
 """
 from typing import Any, List, Optional
 from datetime import datetime, date
+from repositories.db_utils import parse_dt, parse_date
 from config.database import get_db_connection
 from database.models import Employee
 
@@ -24,8 +25,8 @@ class EmployeeRepository:
             email=row['email'],
             position=row['position'],
             employment_status=row['employment_status'],
-            hire_date=datetime.strptime(row['hire_date'], '%Y-%m-%d').date() if row['hire_date'] else None,
-            termination_date=datetime.strptime(row['termination_date'], '%Y-%m-%d').date() if row['termination_date'] else None,
+            hire_date=parse_date(row['hire_date']),
+            termination_date=parse_date(row['termination_date']),
             base_salary=float(row['base_salary']) if row['base_salary'] else None,
             commission_rate=float(row['commission_rate']) if row['commission_rate'] else None,
             skills=row['skills'],
@@ -35,8 +36,8 @@ class EmployeeRepository:
             notes=row['notes'],
             photo_path=row['photo_path'],
             is_active=bool(row['is_active']),
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-            updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
+            created_at=parse_dt(row['created_at']),
+            updated_at=parse_dt(row['updated_at'])
         )
 
     def create(self, employee: Employee) -> int:
@@ -130,14 +131,14 @@ class EmployeeRepository:
         if active_only:
             sql = """
                 SELECT * FROM employees
-                WHERE (first_name LIKE %s OR last_name LIKE %s OR phone LIKE %s OR email LIKE %s)
+                WHERE (first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s)
                 AND is_active = TRUE
                 ORDER BY last_name, first_name
             """
         else:
             sql = """
                 SELECT * FROM employees
-                WHERE first_name LIKE %s OR last_name LIKE %s OR phone LIKE %s OR email LIKE %s
+                WHERE first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
                 ORDER BY last_name, first_name
             """
 

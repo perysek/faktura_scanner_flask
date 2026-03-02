@@ -2,9 +2,15 @@
 FakturaScanner - Flask Web Application
 Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
+import base64
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, date, time
+from decimal import Decimal
+from flask.json.provider import DefaultJSONProvider
+
+from dotenv import load_dotenv
+load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
 
 from flask import Flask, render_template
 from flask_login import LoginManager
@@ -43,9 +49,22 @@ from services.export_service import ExportService
 from services.seller_service import SellerService
 
 
+class PostgreSQLJSONProvider(DefaultJSONProvider):
+    """Custom JSON provider that handles PostgreSQL native types."""
+
+    def default(self, obj):
+        if isinstance(obj, (datetime, date, time)):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
+
+
 def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__)
+    app.json_provider_class = PostgreSQLJSONProvider
+    app.json = PostgreSQLJSONProvider(app)
 
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production-flask-login-session-key-2026')
@@ -120,6 +139,8 @@ def create_app():
     from routes.client_preference_routes import client_preference_bp
     from routes.income_routes import income_bp
     from routes.analytics_routes import analytics_bp
+    from routes.users.routes import users_bp
+    from routes.roles.routes import roles_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -131,6 +152,8 @@ def create_app():
     app.register_blueprint(client_preference_bp, url_prefix='/api')
     app.register_blueprint(income_bp, url_prefix='/api')
     app.register_blueprint(analytics_bp, url_prefix='/api')
+    app.register_blueprint(users_bp)
+    app.register_blueprint(roles_bp)
 
     # Error handlers
     @app.errorhandler(404)
@@ -141,13 +164,33 @@ def create_app():
     def internal_error(error):
         return render_template('errors/500.html'), 500
 
+    # Pre-encode sidebar logo as base64 data URI (eliminates flash on navigation)
+    logo_path = app.static_folder + '/Logo.png'
+    try:
+        with open(logo_path, 'rb') as f:
+            logo_data_uri = 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
+    except FileNotFoundError:
+        logo_data_uri = ''
+
     # Context processors
     @app.context_processor
     def inject_globals():
+        from flask_login import current_user
+        from config.auth_config import get_user_module_permissions
+
+        user_permissions = {}
+        if current_user.is_authenticated:
+            try:
+                user_permissions = get_user_module_permissions(current_user.role)
+            except Exception:
+                pass
+
         return {
             'app_name': APP_NAME,
             'version': VERSION,
-            'now': datetime.now
+            'now': datetime.now,
+            'logo_data_uri': logo_data_uri,
+            'user_permissions': user_permissions,
         }
 
     return app

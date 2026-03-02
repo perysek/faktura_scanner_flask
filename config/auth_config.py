@@ -53,12 +53,8 @@ def role_required(*roles):
 
 def module_permission_required(module_name):
     """
-    Decorator to check module permissions based on MODULE_PERMISSIONS
-
-    Usage:
-        @module_permission_required('clients')
-        def clients_list():
-            pass
+    Decorator sprawdzający uprawnienia do modułu — dynamicznie z DB.
+    Fallback do MODULE_PERMISSIONS jeśli tabela roles jeszcze nie istnieje.
     """
     def decorator(f):
         @wraps(f)
@@ -67,8 +63,16 @@ def module_permission_required(module_name):
                 flash('Musisz być zalogowany', 'error')
                 return redirect(url_for('auth.login'))
 
-            allowed_roles = MODULE_PERMISSIONS.get(module_name, [])
-            if current_user.role not in allowed_roles:
+            try:
+                from repositories.roles.role_repository import RoleRepository
+                role_repo = RoleRepository()
+                has_access = role_repo.role_has_module_access(current_user.role, module_name)
+            except Exception:
+                # Fallback to static config (e.g. during initial DB setup)
+                allowed_roles = MODULE_PERMISSIONS.get(module_name, [])
+                has_access = current_user.role in allowed_roles
+
+            if not has_access:
                 flash(f'Brak dostępu do modułu: {module_name}', 'error')
                 return redirect(url_for('main.dashboard'))
 
@@ -107,3 +111,21 @@ def get_user_modules(user_role: str) -> list:
         if user_role in allowed_roles:
             accessible_modules.append(module)
     return accessible_modules
+
+
+def get_user_module_permissions(role_name: str) -> dict:
+    """
+    Pobierz dict {module: bool} dla roli użytkownika.
+    Używane przez context processor w app.py.
+    Fallback do statycznego MODULE_PERMISSIONS.
+    """
+    try:
+        from repositories.roles.role_repository import RoleRepository
+        role_repo = RoleRepository()
+        return role_repo.get_user_module_permissions(role_name)
+    except Exception:
+        # Fallback: build from static config
+        return {
+            module: role_name in allowed_roles
+            for module, allowed_roles in MODULE_PERMISSIONS.items()
+        }

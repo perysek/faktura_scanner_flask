@@ -43,12 +43,17 @@ class Seller:
 
 @dataclass
 class AuditEntry:
-    """Model wpisu historii zmian"""
-    invoice_id: int
-    field_name: str
-    old_value: Optional[str]
-    new_value: Optional[str]
-    action: str = "UPDATE"
+    """Model wpisu historii zmian — obsługuje wszystkie encje aplikacji"""
+    entity_type: str                   # invoice, appointment, client, service, employee, seller, import, login
+    action: str                        # CREATE, UPDATE, DELETE, LOGIN, LOGOUT, IMPORT
+    entity_id: Optional[int] = None
+    entity_label: Optional[str] = None
+    invoice_id: Optional[int] = None   # backward compat
+    field_name: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    user_id: Optional[int] = None
+    user_name: Optional[str] = None
     changed_at: datetime = field(default_factory=datetime.now)
     id: Optional[int] = None
 

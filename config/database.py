@@ -52,6 +52,59 @@ class DatabaseConnection:
         cls.close_connection()
 
 
+def _split_sql_statements(sql: str) -> list[str]:
+    """Split SQL into individual statements, respecting dollar-quoted blocks.
+
+    A naive split(';') breaks PostgreSQL DO $$ BEGIN ... END $$ blocks because
+    they contain internal semicolons that are NOT statement terminators.
+    This parser tracks dollar-quote depth to split only at real boundaries.
+    """
+    statements = []
+    current: list[str] = []
+    in_dollar_quote = False
+    dollar_tag = ''
+    i = 0
+
+    while i < len(sql):
+        ch = sql[i]
+
+        # Detect start/end of a dollar-quoted string (e.g. $$ or $body$)
+        if ch == '$':
+            j = sql.find('$', i + 1)
+            if j != -1:
+                tag = sql[i:j + 1]
+                if in_dollar_quote and tag == dollar_tag:
+                    # Closing tag — exit dollar-quote mode
+                    in_dollar_quote = False
+                    current.append(tag)
+                    i = j + 1
+                    continue
+                elif not in_dollar_quote:
+                    # Opening tag — enter dollar-quote mode
+                    in_dollar_quote = True
+                    dollar_tag = tag
+                    current.append(tag)
+                    i = j + 1
+                    continue
+
+        if ch == ';' and not in_dollar_quote:
+            stmt = ''.join(current).strip()
+            if stmt:
+                statements.append(stmt)
+            current = []
+        else:
+            current.append(ch)
+
+        i += 1
+
+    # Capture any trailing statement without a final semicolon
+    stmt = ''.join(current).strip()
+    if stmt:
+        statements.append(stmt)
+
+    return statements
+
+
 def initialize_database():
     """Inicjalizuj bazę danych ze schema"""
     conn = psycopg2.connect(
@@ -64,11 +117,8 @@ def initialize_database():
         schema = f.read()
 
     cursor = conn.cursor()
-    # Execute each statement separately (psycopg2 does not support executescript)
-    for statement in schema.split(';'):
-        stmt = statement.strip()
-        if stmt:
-            cursor.execute(stmt)
+    for stmt in _split_sql_statements(schema):
+        cursor.execute(stmt)
 
     conn.commit()
     conn.close()

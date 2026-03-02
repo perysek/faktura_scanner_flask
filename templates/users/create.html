@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Nowy użytkownik - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a; --color-ink-muted: #525252; --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1; --color-accent: #c9a227; --color-error: #9b2c2c;
+        --font-display: 'Inter', system-ui, sans-serif;
+    }
+    body { background: var(--color-surface-warm); font-family: var(--font-display); color: var(--color-ink); }
+    .refined-page { max-width: 720px; margin: 0 auto; padding: 2rem; }
+    .page-title { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 2rem; }
+    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .field-label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem; }
+    .field-input { width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; background: white; color: var(--color-ink); outline: none; box-sizing: border-box; }
+    .field-input:focus { border-color: var(--color-ink); }
+    .field-group { margin-bottom: 1.25rem; }
+    .field-hint { font-size: 0.75rem; color: var(--color-ink-muted); margin-top: 0.25rem; }
+    .btn-primary { background: var(--color-ink); color: white; border: none; padding: 0.625rem 1.5rem; border-radius: 2px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+    .btn-ghost { background: none; border: 1px solid var(--color-border); color: var(--color-ink-muted); padding: 0.625rem 1.25rem; border-radius: 2px; font-size: 0.875rem; cursor: pointer; text-decoration: none; }
+    .error-msg { color: var(--color-error); font-size: 0.8125rem; margin-bottom: 1rem; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 2px; display: none; }
+    .required-mark { color: var(--color-error); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <h1 class="page-title">Nowy użytkownik</h1>
+    <div class="refined-card">
+        <div id="error-msg" class="error-msg"></div>
+        <form id="create-form">
+            <div class="field-group">
+                <label class="field-label" for="full_name">Imię i nazwisko <span class="required-mark">*</span></label>
+                <input type="text" id="full_name" name="full_name" class="field-input" required>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="email">Email <span class="required-mark">*</span></label>
+                <input type="email" id="email" name="email" class="field-input" required>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="password">Hasło <span class="required-mark">*</span></label>
+                <input type="password" id="password" name="password" class="field-input" required minlength="8">
+                <p class="field-hint">Minimum 8 znaków</p>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="password_confirm">Potwierdź hasło <span class="required-mark">*</span></label>
+                <input type="password" id="password_confirm" name="password_confirm" class="field-input" required>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="role">Rola <span class="required-mark">*</span></label>
+                <select id="role" name="role" class="field-input" required>
+                    <option value="">-- Wybierz rolę --</option>
+                    {% for role in roles %}
+                    <option value="{{ role.name }}">{{ role.display_name }} ({{ role.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="employee_id">Pracownik <span class="required-mark">*</span></label>
+                <select id="employee_id" name="employee_id" class="field-input" required>
+                    <option value="">-- Wybierz pracownika --</option>
+                    {% for emp in available_employees %}
+                    <option value="{{ emp.id }}">{{ emp.first_name }} {{ emp.last_name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="field-hint">Tylko pracownicy bez przypisanego konta użytkownika</p>
+            </div>
+            <div style="display:flex;gap:0.75rem;margin-top:2rem;">
+                <button type="submit" class="btn-primary">Utwórz użytkownika</button>
+                <a href="{{ url_for('users.users_list') }}" class="btn-ghost">Anuluj</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('create-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const errorDiv = document.getElementById('error-msg');
+        errorDiv.style.display = 'none';
+
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('password_confirm').value;
+        if (password !== passwordConfirm) {
+            errorDiv.textContent = 'Hasła nie pasują do siebie.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const payload = {
+            full_name: document.getElementById('full_name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            password: password,
+            role: document.getElementById('role').value,
+            employee_id: document.getElementById('employee_id').value || null,
+            is_active: true,
+        };
+
+        const resp = await fetch('{{ url_for("users.api_create") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            window.location.href = '{{ url_for("users.users_list") }}';
+        } else {
+            errorDiv.textContent = data.error || 'Błąd tworzenia użytkownika.';
+            errorDiv.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

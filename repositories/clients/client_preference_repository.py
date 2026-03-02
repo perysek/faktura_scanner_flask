@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 from datetime import datetime
 from config.database import get_db_connection
 from database.models import ClientPreference
+from repositories.db_utils import parse_dt
 
 
 class ClientPreferenceRepository:
@@ -22,8 +23,8 @@ class ClientPreferenceRepository:
             service_id=row['service_id'],
             service_category=row['service_category'],
             notes=row['notes'],
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-            updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
+            created_at=parse_dt(row['created_at']),
+            updated_at=parse_dt(row['updated_at'])
         )
 
     def create(self, pref: ClientPreference) -> int:

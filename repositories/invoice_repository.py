@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 
 from database.models import Invoice
 from repositories.base_repository import BaseRepository
+from repositories.db_utils import parse_dt, parse_date
 
 
 class InvoiceRepository(BaseRepository):
@@ -175,9 +176,9 @@ class InvoiceRepository(BaseRepository):
 		"""Wyszukaj faktury (seller, numer, NIP)"""
 		query = """
             SELECT * FROM invoices
-            WHERE seller_name LIKE %s
-               OR invoice_number LIKE %s
-               OR seller_nip LIKE %s
+            WHERE seller_name ILIKE %s
+               OR invoice_number ILIKE %s
+               OR seller_nip ILIKE %s
             ORDER BY invoice_date DESC
         """
 		term = f"%{search_term}%"
@@ -230,7 +231,7 @@ class InvoiceRepository(BaseRepository):
             SELECT * FROM invoices
             WHERE status = 'Nieopłacona'
               AND payment_due_date IS NOT NULL
-              AND payment_due_date >= date('now')
+              AND payment_due_date >= CURRENT_DATE
             ORDER BY payment_due_date ASC
             LIMIT %s
         """
@@ -242,7 +243,7 @@ class InvoiceRepository(BaseRepository):
             SELECT * FROM invoices
             WHERE status = 'Nieopłacona'
               AND payment_due_date IS NOT NULL
-              AND payment_due_date < date('now')
+              AND payment_due_date < CURRENT_DATE
             ORDER BY payment_due_date ASC
             LIMIT %s
         """
@@ -266,7 +267,7 @@ class InvoiceRepository(BaseRepository):
                 currency,
                 status,
                 CASE
-                    WHEN status = 'Nieopłacona' AND payment_due_date < date('now') THEN 'overdue'
+                    WHEN status = 'Nieopłacona' AND payment_due_date < CURRENT_DATE THEN 'overdue'
                     WHEN status = 'Nieopłacona' THEN 'unpaid'
                     WHEN status = 'Opłacona' THEN 'paid'
                     ELSE 'unpaid'
@@ -347,21 +348,16 @@ class InvoiceRepository(BaseRepository):
 			seller_name=row["seller_name"],
 			seller_nip=row["seller_nip"],
 			invoice_number=row["invoice_number"],
-			invoice_date=datetime.fromisoformat(row["invoice_date"]).date() if
-			row["invoice_date"] else None,
+			invoice_date=parse_date(row["invoice_date"]),
 			bank_account=row["bank_account"],
 			amount=row["amount"],
 			currency=row["currency"],
-			payment_due_date=datetime.fromisoformat(
-				row["payment_due_date"]
-				).date() if row["payment_due_date"] else None,
+			payment_due_date=parse_date(row["payment_due_date"]),
 			payment_term=payment_term,
 			status=status,
 			pdf_path=row["pdf_path"],
 			ocr_confidence=row["ocr_confidence"],
 			is_duplicate=bool(row["is_duplicate"]),
-			created_at=datetime.fromisoformat(row["created_at"]) if row[
-				"created_at"] else None,
-			updated_at=datetime.fromisoformat(row["updated_at"]) if row[
-				"updated_at"] else None
+			created_at=parse_dt(row["created_at"]),
+			updated_at=parse_dt(row["updated_at"])
 			)
