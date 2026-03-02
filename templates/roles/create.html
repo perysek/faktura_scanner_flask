@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Nowa rola - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root { --color-ink:#1a1a1a;--color-ink-muted:#525252;--color-surface-warm:#f7f6f3;--color-border:#e8e6e1;--color-success:#2d6a4f;--color-error:#9b2c2c;--font-display:'Inter',system-ui,sans-serif; }
+    body { background:var(--color-surface-warm);font-family:var(--font-display);color:var(--color-ink); }
+    .refined-page { max-width:720px;margin:0 auto;padding:2rem; }
+    .page-title { font-size:1.75rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:2rem; }
+    .refined-card { background:white;border:1px solid var(--color-border);border-radius:2px;padding:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+    .section-title { font-size:0.875rem;font-weight:600;color:var(--color-ink-muted);margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--color-border); }
+    .field-label { display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-muted);margin-bottom:0.375rem; }
+    .field-input { width:100%;border:1px solid var(--color-border);border-radius:2px;padding:0.625rem 0.75rem;font-size:0.875rem;background:white;outline:none;box-sizing:border-box; }
+    .field-input:focus { border-color:var(--color-ink); }
+    .field-group { margin-bottom:1.25rem; }
+    .field-hint { font-size:0.75rem;color:var(--color-ink-muted);margin-top:0.25rem; }
+    .module-row { display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid #f0eeea; }
+    .module-row:last-child { border-bottom:none; }
+    .module-name { font-size:0.875rem;font-weight:500; }
+    .module-key { font-size:0.75rem;color:var(--color-ink-muted);font-family:monospace; }
+    .toggle { position:relative;width:44px;height:24px;flex-shrink:0; }
+    .toggle input { opacity:0;width:0;height:0; }
+    .toggle-slider { position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:24px;transition:0.2s; }
+    .toggle-slider:before { content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.2s; }
+    input:checked + .toggle-slider { background:var(--color-success); }
+    input:checked + .toggle-slider:before { transform:translateX(20px); }
+    .btn-primary { background:var(--color-ink);color:white;border:none;padding:0.625rem 1.5rem;border-radius:2px;font-size:0.875rem;font-weight:500;cursor:pointer; }
+    .btn-ghost { background:none;border:1px solid var(--color-border);color:var(--color-ink-muted);padding:0.625rem 1.25rem;border-radius:2px;font-size:0.875rem;cursor:pointer;text-decoration:none; }
+    .error-msg { color:var(--color-error);font-size:0.8125rem;margin-bottom:1rem;padding:0.75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:2px;display:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <h1 class="page-title">Nowa rola</h1>
+    <div class="refined-card">
+        <div id="error-msg" class="error-msg"></div>
+        <form id="create-form">
+            <div class="field-group">
+                <label class="field-label" for="name">Nazwa roli (klucz systemowy)</label>
+                <input type="text" id="name" name="name" class="field-input" required
+                       placeholder="np. manager" pattern="[a-z_]+" title="Tylko małe litery i podkreślenia">
+                <p class="field-hint">Tylko małe litery i podkreślenia. Np. "manager", "head_stylist"</p>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="display_name">Wyświetlana nazwa</label>
+                <input type="text" id="display_name" name="display_name" class="field-input" required
+                       placeholder="np. Kierownik">
+            </div>
+
+            <div class="section-title" style="margin-top:1.5rem">Dostęp do modułów</div>
+            <div id="modules-list">
+                {% for module in all_modules %}
+                <div class="module-row">
+                    <div>
+                        <div class="module-name">{{ module_display_names[module] }}</div>
+                        <div class="module-key">{{ module }}</div>
+                    </div>
+                    <label class="toggle">
+                        <input type="checkbox" name="perm_{{ module }}" id="perm_{{ module }}">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="display:flex;gap:0.75rem;margin-top:2rem;">
+                <button type="submit" class="btn-primary">Utwórz rolę</button>
+                <a href="{{ url_for('roles.roles_list') }}" class="btn-ghost">Anuluj</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const allModules = {{ all_modules | tojson }};
+
+    document.getElementById('create-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const errorDiv = document.getElementById('error-msg');
+        errorDiv.style.display = 'none';
+
+        const permissions = {};
+        allModules.forEach(m => {
+            permissions[m] = document.getElementById('perm_' + m).checked;
+        });
+
+        const payload = {
+            name: document.getElementById('name').value.trim(),
+            display_name: document.getElementById('display_name').value.trim(),
+            permissions,
+        };
+
+        const resp = await fetch('{{ url_for("roles.api_create") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            window.location.href = '{{ url_for("roles.roles_list") }}';
+        } else {
+            errorDiv.textContent = data.error || 'Błąd tworzenia roli.';
+            errorDiv.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

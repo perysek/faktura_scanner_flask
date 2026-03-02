@@ -150,6 +150,90 @@ class UserRepository(BaseRepository):
         rows = self._fetch_all(query)
         return [self.row_to_user(row) for row in rows]
 
+    def get_all_with_employee(self) -> list:
+        """
+        Pobierz wszystkich użytkowników wraz z powiązanym pracownikiem (jeśli istnieje).
+        Zwraca surowe Row objects z polami: id, email, full_name, role, is_active,
+        last_login, created_at, employee_id, employee_first_name, employee_last_name
+        """
+        query = """
+            SELECT u.id, u.email, u.full_name, u.role, u.is_active,
+                   u.last_login, u.created_at,
+                   e.id AS employee_id,
+                   e.first_name AS employee_first_name,
+                   e.last_name AS employee_last_name
+            FROM users u
+            LEFT JOIN employees e ON e.user_id = u.id
+            ORDER BY u.full_name
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(query)
+        return cursor.fetchall()
+
+    def update_user(self, user_id: int, email: str, full_name: str, role: str, is_active: bool):
+        """
+        Zaktualizuj dane użytkownika (email, imię, rola, aktywność).
+        Nie aktualizuje hasła — użyj update_password() osobno.
+        """
+        query = """
+            UPDATE users
+            SET email = %s, full_name = %s, role = %s, is_active = %s, updated_at = %s
+            WHERE id = %s
+        """
+        self._execute(query, (email, full_name, role, is_active, datetime.now(), user_id))
+
+    def unlink_employee(self, user_id: int):
+        """Odepnij pracownika od konta użytkownika (ustaw user_id = NULL w employees)"""
+        query = "UPDATE employees SET user_id = NULL WHERE user_id = %s"
+        self._execute(query, (user_id,))
+
+    def link_employee(self, user_id: int, employee_id: int):
+        """
+        Przypisz pracownika do konta użytkownika.
+        Wszystkie trzy operacje wykonywane atomowo w jednej transakcji.
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        try:
+            # Clear previous user link for this employee
+            cursor.execute("UPDATE employees SET user_id = NULL WHERE id = %s", (employee_id,))
+            # Clear previous employee link for this user
+            cursor.execute(
+                "UPDATE employees SET user_id = NULL WHERE user_id = %s AND id != %s",
+                (user_id, employee_id)
+            )
+            # Link
+            cursor.execute("UPDATE employees SET user_id = %s WHERE id = %s", (user_id, employee_id))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+    def get_available_employees(self) -> list:
+        """
+        Pobierz pracowników bez przypisanego konta użytkownika.
+        Używane w formularzu tworzenia/edycji użytkownika.
+        """
+        query = """
+            SELECT id, first_name, last_name
+            FROM employees
+            WHERE user_id IS NULL AND is_active = TRUE
+            ORDER BY last_name, first_name
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(query)
+        return cursor.fetchall()
+
+    def get_linked_employee(self, user_id: int):
+        """Pobierz pracownika powiązanego z użytkownikiem (lub None)"""
+        query = "SELECT id, first_name, last_name FROM employees WHERE user_id = %s"
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(query, (user_id,))
+        return cursor.fetchone()
+
     def row_to_user(self, row: Any) -> User:
         """
         Konwertuj Row → User object
