@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 from datetime import datetime, date, time
 from config.database import get_db_connection
 from database.models import Appointment
+from repositories.db_utils import parse_dt, parse_date, parse_time
 
 
 class AppointmentRepository:
@@ -21,21 +22,18 @@ class AppointmentRepository:
             client_id=row['client_id'],
             employee_id=row['employee_id'],
             status=row['status'],
-            appointment_date=datetime.strptime(row['appointment_date'], '%Y-%m-%d').date()
-                if row['appointment_date'] else None,
-            start_time=datetime.strptime(row['start_time'], '%H:%M:%S').time()
-                if row['start_time'] else None,
-            end_time=datetime.strptime(row['end_time'], '%H:%M:%S').time()
-                if row['end_time'] else None,
+            appointment_date=parse_date(row['appointment_date']),
+            start_time=parse_time(row['start_time']),
+            end_time=parse_time(row['end_time']),
             total_price=Decimal(str(row['total_price'])) if row['total_price'] is not None else Decimal('0'),
             total_duration=row['total_duration'] or 0,
             discount_amount=Decimal(str(row['discount_amount'])) if row['discount_amount'] is not None else Decimal('0'),
             notes=row['notes'],
             cancellation_reason=row['cancellation_reason'],
-            cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+            cancelled_at=parse_dt(row['cancelled_at']),
             created_by=row['created_by'],
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-            updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
+            created_at=parse_dt(row['created_at']),
+            updated_at=parse_dt(row['updated_at'])
         )
 
     def create(self, appt: Appointment) -> int:
@@ -114,11 +112,11 @@ class AppointmentRepository:
                 a.*,
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(
-                    CASE WHEN aps.is_addon = FALSE THEN s.name END, ', '
+                STRING_AGG(
+                    CASE WHEN aps.is_addon = FALSE THEN s.name ELSE NULL END, ', '
                 ) as service_name,
-                GROUP_CONCAT(
-                    CASE WHEN aps.is_addon = TRUE THEN s.name END, ', '
+                STRING_AGG(
+                    CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
                 ) as addon_services
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
@@ -126,7 +124,7 @@ class AppointmentRepository:
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE {where_clause}
-            GROUP BY a.id
+            GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
             ORDER BY a.appointment_date, a.start_time
         """
         with get_db_connection() as conn:
@@ -142,7 +140,7 @@ class AppointmentRepository:
                 c.first_name || ' ' || c.last_name as client_name,
                 c.phone as client_phone,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(s.name, ', ') as service_name
+                STRING_AGG(s.name, ', ') as service_name
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
@@ -150,7 +148,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.status NOT IN ('cancelled', 'no_show')
-            GROUP BY a.id
+            GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.start_time
         """
         with get_db_connection() as conn:
@@ -188,7 +186,7 @@ class AppointmentRepository:
                     WHERE a.appointment_date = %s
                     AND a.status NOT IN ('cancelled', 'no_show')
                     AND e.is_active = TRUE
-                    ORDER BY e.first_name, e.last_name
+                    ORDER BY full_name
                 """
                 cursor.execute(query_employees, (schedule_date.isoformat(),))
             else:
@@ -216,8 +214,8 @@ class AppointmentRepository:
                     c.first_name || ' ' || c.last_name as client_name,
                     c.phone as client_phone,
                     e.first_name || ' ' || e.last_name as employee_name,
-                    GROUP_CONCAT(s.name, ', ') as service_name,
-                    GROUP_CONCAT(
+                    STRING_AGG(s.name, ', ') as service_name,
+                    STRING_AGG(
                         CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
                     ) as addon_services
                 FROM appointments a
@@ -226,7 +224,7 @@ class AppointmentRepository:
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
                 WHERE a.employee_id = %s AND a.appointment_date = %s
-                GROUP BY a.id
+                GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
                 ORDER BY a.start_time
             """
 
@@ -511,16 +509,18 @@ class AppointmentRepository:
                 a.notes,
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name,
-                GROUP_CONCAT(s.name, ', ') as service_names
+                STRING_AGG(s.name, ', ') as service_names
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE
-                datetime(a.appointment_date || ' ' || a.end_time) < datetime('now', 'localtime')
+                (a.appointment_date + a.end_time) < NOW()
                 AND a.status NOT IN ('completed', 'cancelled', 'no_show')
-            GROUP BY a.id
+            GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
+                     a.start_time, a.end_time, a.total_price, a.notes,
+                     c.first_name, c.last_name, e.first_name, e.last_name
             ORDER BY a.appointment_date DESC, a.start_time DESC
         """
         with get_db_connection() as conn:

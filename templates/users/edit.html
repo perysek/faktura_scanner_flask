@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Edytuj użytkownika - {{ user.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-ink: #1a1a1a; --color-ink-muted: #525252; --color-surface-warm: #f7f6f3;
+        --color-border: #e8e6e1; --color-accent: #c9a227; --color-error: #9b2c2c;
+        --font-display: 'Inter', system-ui, sans-serif;
+    }
+    body { background: var(--color-surface-warm); font-family: var(--font-display); color: var(--color-ink); }
+    .refined-page { max-width: 720px; margin: 0 auto; padding: 2rem; }
+    .page-title { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 2rem; }
+    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
+    .section-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border); }
+    .field-label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem; }
+    .field-input { width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; background: white; color: var(--color-ink); outline: none; box-sizing: border-box; }
+    .field-input:focus { border-color: var(--color-ink); }
+    .field-group { margin-bottom: 1.25rem; }
+    .field-hint { font-size: 0.75rem; color: var(--color-ink-muted); margin-top: 0.25rem; }
+    .btn-primary { background: var(--color-ink); color: white; border: none; padding: 0.625rem 1.5rem; border-radius: 2px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+    .btn-ghost { background: none; border: 1px solid var(--color-border); color: var(--color-ink-muted); padding: 0.625rem 1.25rem; border-radius: 2px; font-size: 0.875rem; cursor: pointer; text-decoration: none; }
+    .error-msg { color: var(--color-error); font-size: 0.8125rem; margin-bottom: 1rem; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 2px; display: none; }
+    .success-msg { color: #166534; font-size: 0.8125rem; margin-bottom: 1rem; padding: 0.75rem; background: #dcfce7; border: 1px solid #86efac; border-radius: 2px; display: none; }
+    .toggle-container { display: flex; align-items: center; gap: 0.75rem; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 24px; transition: 0.2s; }
+    .toggle-slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+    input:checked + .toggle-slider { background: #2d6a4f; }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <h1 class="page-title">Edytuj: {{ user.full_name }}</h1>
+
+    <!-- Basic Info Card -->
+    <div class="refined-card">
+        <div class="section-title">Dane konta</div>
+        <div id="error-msg" class="error-msg"></div>
+        <div id="success-msg" class="success-msg"></div>
+        <form id="edit-form">
+            <div class="field-group">
+                <label class="field-label" for="full_name">Imię i nazwisko</label>
+                <input type="text" id="full_name" name="full_name" class="field-input"
+                       value="{{ user.full_name }}" required>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="field-input"
+                       value="{{ user.email }}" required>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="role">Rola</label>
+                <select id="role" name="role" class="field-input" required>
+                    {% for role in roles %}
+                    <option value="{{ role.name }}" {% if role.name == user.role %}selected{% endif %}>
+                        {{ role.display_name }} ({{ role.name }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="employee_id">Powiązany pracownik</label>
+                <select id="employee_id" name="employee_id" class="field-input">
+                    <option value="">-- Brak --</option>
+                    {% if linked_employee %}
+                    <option value="{{ linked_employee.id }}" selected>
+                        {{ linked_employee.first_name }} {{ linked_employee.last_name }} (bieżący)
+                    </option>
+                    {% endif %}
+                    {% for emp in available_employees %}
+                    <option value="{{ emp.id }}">{{ emp.first_name }} {{ emp.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Aktywne konto</label>
+                <div class="toggle-container">
+                    <label class="toggle">
+                        <input type="checkbox" id="is_active" {% if user.is_active %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span id="active-label" style="font-size:0.875rem;color:var(--color-ink-muted)">
+                        {{ 'Aktywne' if user.is_active else 'Nieaktywne' }}
+                    </span>
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;margin-top:2rem;">
+                <button type="submit" class="btn-primary">Zapisz zmiany</button>
+                <a href="{{ url_for('users.users_list') }}" class="btn-ghost">Anuluj</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Change Password Card -->
+    <div class="refined-card">
+        <div class="section-title">Zmiana hasła</div>
+        <div id="pw-error-msg" class="error-msg"></div>
+        <div id="pw-success-msg" class="success-msg"></div>
+        <form id="password-form">
+            <div class="field-group">
+                <label class="field-label" for="new_password">Nowe hasło</label>
+                <input type="password" id="new_password" class="field-input" minlength="8"
+                       placeholder="Pozostaw puste, aby nie zmieniać">
+                <p class="field-hint">Minimum 8 znaków. Pozostaw puste, aby zachować obecne hasło.</p>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="new_password_confirm">Potwierdź nowe hasło</label>
+                <input type="password" id="new_password_confirm" class="field-input">
+            </div>
+            <button type="submit" class="btn-primary">Zmień hasło</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const userId = {{ user.id }};
+    const apiUrl = `/system/users/api/${userId}`;
+
+    document.getElementById('is_active').addEventListener('change', function() {
+        document.getElementById('active-label').textContent = this.checked ? 'Aktywne' : 'Nieaktywne';
+    });
+
+    document.getElementById('edit-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const errorDiv = document.getElementById('error-msg');
+        const successDiv = document.getElementById('success-msg');
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+
+        const payload = {
+            full_name: document.getElementById('full_name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            role: document.getElementById('role').value,
+            is_active: document.getElementById('is_active').checked,
+            employee_id: document.getElementById('employee_id').value || null,
+        };
+
+        const resp = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            successDiv.textContent = 'Zapisano zmiany.';
+            successDiv.style.display = 'block';
+        } else {
+            errorDiv.textContent = data.error || 'Błąd zapisu.';
+            errorDiv.style.display = 'block';
+        }
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const errorDiv = document.getElementById('pw-error-msg');
+        const successDiv = document.getElementById('pw-success-msg');
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+
+        const newPw = document.getElementById('new_password').value;
+        const confirmPw = document.getElementById('new_password_confirm').value;
+
+        if (!newPw) return;
+        if (newPw !== confirmPw) {
+            errorDiv.textContent = 'Hasła nie pasują do siebie.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const resp = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ new_password: newPw }),
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            successDiv.textContent = 'Hasło zostało zmienione.';
+            successDiv.style.display = 'block';
+            document.getElementById('new_password').value = '';
+            document.getElementById('new_password_confirm').value = '';
+        } else {
+            errorDiv.textContent = data.error || 'Błąd zmiany hasła.';
+            errorDiv.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

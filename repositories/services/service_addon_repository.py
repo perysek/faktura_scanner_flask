@@ -3,6 +3,7 @@ Repository dla operacji na powiązaniach usług dodatkowych (service_addons)
 """
 from typing import Any, List, Optional
 from datetime import datetime
+from repositories.db_utils import parse_dt
 from config.database import get_db_connection
 from database.models import ServiceAddon
 
@@ -19,7 +20,7 @@ class ServiceAddonRepository:
             id=row['id'],
             addon_service_id=row['addon_service_id'],
             main_service_id=row['main_service_id'],
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
+            created_at=parse_dt(row['created_at'])
         )
 
     def create(self, addon: ServiceAddon) -> int:

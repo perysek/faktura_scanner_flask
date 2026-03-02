@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Historia — FakturaScanner{% endblock %}
+{% block title %}Historia — MyWay{% endblock %}
 {% block page_title %}{% endblock %}
 {% block page_subtitle %}{% endblock %}
 {% block breadcrumb %}{% endblock %}
@@ -46,7 +46,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         flex-shrink: 0;
     }
 
@@ -58,38 +58,54 @@
         margin: 0;
     }
 
-    .filter-bar {
+    /* Tab filter bar */
+    .tab-bar {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.25rem;
         margin-bottom: 0.75rem;
         flex-shrink: 0;
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: 0;
     }
 
-    .filter-label {
+    .tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
         font-size: 0.75rem;
         font-weight: 500;
         color: var(--color-ink-muted);
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        margin-bottom: -1px;
+        transition: all 0.15s ease;
         white-space: nowrap;
     }
-
-    .filter-select {
-        padding: 0.5rem 2rem 0.5rem 0.75rem;
-        font-size: 0.8125rem;
+    .tab-btn:hover { color: var(--color-ink); }
+    .tab-btn.active {
         color: var(--color-ink);
-        background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238a8a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E") no-repeat right 0.5rem center;
-        background-size: 1rem;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        appearance: none;
-        cursor: pointer;
-        min-width: 250px;
-        transition: all 0.2s ease;
+        border-bottom-color: var(--color-ink);
     }
-    .filter-select:focus {
-        outline: none;
-        border-color: var(--color-ink-muted);
-        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+    .tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        padding: 0 0.3rem;
+        font-size: 0.625rem;
+        font-weight: 600;
+        background: var(--color-border);
+        color: var(--color-ink-muted);
+        border-radius: 999px;
+    }
+    .tab-btn.active .tab-count {
+        background: var(--color-ink);
+        color: white;
     }
 
     .table-container {
@@ -111,19 +127,13 @@
         flex-direction: column;
     }
 
-    .table-scroll-wrapper > table:first-child {
-        padding-right: 6px;
-    }
-
     .refined-table {
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
     }
 
-    .refined-table thead {
-        background: var(--color-surface);
-    }
+    .refined-table thead { background: var(--color-surface); }
 
     .refined-table th {
         padding: 0.5rem 1rem;
@@ -159,52 +169,67 @@
     .tbody-scroll::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
     /* Column widths */
-    .col-timestamp { width: 14%; }
-    .col-action { width: 10%; }
-    .col-invoice-id { width: 8%; }
-    .col-invoice-number { width: 14%; }
-    .col-field { width: 12%; }
-    .col-old { width: 21%; }
-    .col-new { width: 21%; }
+    .col-timestamp    { width: 12%; }
+    .col-entity-type  { width: 10%; }
+    .col-action       { width: 9%; }
+    .col-entity-label { width: 18%; }
+    .col-field        { width: 10%; }
+    .col-old          { width: 17%; }
+    .col-new          { width: 17%; }
+    .col-user         { width: 7%; }
 
-    .timestamp-value {
-        font-size: 0.75rem;
-        color: var(--color-ink-muted);
-        white-space: nowrap;
+    .timestamp-value { font-size: 0.75rem; color: var(--color-ink-muted); white-space: nowrap; }
+    .timestamp-date  { font-weight: 500; color: var(--color-ink); }
+
+    /* Entity type badges */
+    .entity-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-radius: 2px;
     }
-    .timestamp-date { font-weight: 500; color: var(--color-ink); }
+    .entity-invoice    { background: rgba(30,96,145,0.1);  color: #1e6091; }
+    .entity-appointment{ background: rgba(106,27,154,0.1); color: #6a1b9a; }
+    .entity-client     { background: rgba(0,121,107,0.1);  color: #00796b; }
+    .entity-employee   { background: rgba(230,81,0,0.1);   color: #e65100; }
+    .entity-service    { background: rgba(21,101,192,0.1); color: #1565c0; }
+    .entity-seller     { background: rgba(74,20,140,0.1);  color: #4a148c; }
+    .entity-import     { background: rgba(45,106,79,0.1);  color: #2d6a4f; }
+    .entity-login      { background: rgba(97,97,97,0.1);   color: #424242; }
 
+    /* Action badges */
     .action-badge {
         display: inline-flex;
         align-items: center;
         gap: 0.25rem;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.625rem;
+        padding: 0.2rem 0.45rem;
+        font-size: 0.6rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         border-radius: 2px;
     }
-    .action-badge svg { width: 0.75rem; height: 0.75rem; }
+    .action-badge svg { width: 0.7rem; height: 0.7rem; }
+    .action-create       { background: rgba(45,106,79,0.1);  color: var(--color-success); }
+    .action-update       { background: rgba(30,96,145,0.1);  color: var(--color-info); }
+    .action-delete       { background: rgba(155,44,44,0.1);  color: var(--color-error); }
+    .action-import       { background: rgba(45,106,79,0.12); color: #1b5e20; }
+    .action-login        { background: rgba(97,97,97,0.1);   color: #424242; }
+    .action-login-failed { background: rgba(155,44,44,0.12); color: var(--color-error); }
+    .action-logout       { background: rgba(150,150,150,0.1);color: #666; }
+    .action-status       { background: rgba(154,103,0,0.1);  color: var(--color-warning); }
+    .action-complete     { background: rgba(45,106,79,0.15); color: var(--color-success); }
 
-    .action-create { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
-    .action-update { background: rgba(30, 96, 145, 0.1); color: var(--color-info); }
-    .action-delete { background: rgba(155, 44, 44, 0.1); color: var(--color-error); }
-
-    .invoice-id {
-        font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 0.6875rem;
-        color: var(--color-ink-subtle);
-    }
-
-    .invoice-number {
-        font-weight: 500;
-        color: var(--color-ink);
-    }
+    .entity-label-text { font-weight: 500; color: var(--color-ink); font-size: 0.8rem; }
 
     .field-badge {
         display: inline-block;
-        padding: 0.25rem 0.5rem;
+        padding: 0.2rem 0.45rem;
         font-size: 0.6875rem;
         font-weight: 500;
         background: var(--color-surface);
@@ -212,25 +237,20 @@
         border-radius: 2px;
     }
 
-    .value-old {
-        color: var(--color-ink-subtle);
-        text-decoration: line-through;
-        opacity: 0.7;
-        font-size: 0.75rem;
-        word-break: break-word;
-    }
+    .value-old { color: var(--color-ink-subtle); text-decoration: line-through; opacity: 0.7; font-size: 0.75rem; word-break: break-word; }
+    .value-new { color: var(--color-ink); font-weight: 500; font-size: 0.75rem; word-break: break-word; }
+    .value-empty { color: var(--color-ink-subtle); font-style: italic; opacity: 0.5; }
 
-    .value-new {
-        color: var(--color-ink);
-        font-weight: 500;
-        font-size: 0.75rem;
-        word-break: break-word;
-    }
-
-    .value-empty {
-        color: var(--color-ink-subtle);
-        font-style: italic;
-        opacity: 0.5;
+    .user-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-size: 0.7rem;
+        color: var(--color-ink-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 
     .empty-state {
@@ -244,28 +264,7 @@
     }
     .empty-icon { width: 3rem; height: 3rem; color: var(--color-ink-subtle); opacity: 0.3; margin-bottom: 1rem; }
     .empty-title { font-size: 1.125rem; font-weight: 500; color: var(--color-ink); margin-bottom: 0.25rem; }
-    .empty-text { color: var(--color-ink-subtle); font-size: 0.875rem; margin-bottom: 1.5rem; max-width: 300px; }
-
-    .btn-refined {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-        padding: 0.5rem 0.875rem;
-        font-family: var(--font-body);
-        font-size: 0.75rem;
-        font-weight: 400;
-        border-radius: 2px;
-        transition: all 0.25s var(--ease-out-expo);
-        cursor: pointer;
-        text-decoration: none;
-        background: var(--color-ink);
-        color: white;
-        border: none;
-    }
-    .btn-refined:hover {
-        background: #333;
-        transform: translateY(-1px);
-    }
+    .empty-text { color: var(--color-ink-subtle); font-size: 0.875rem; max-width: 300px; }
 
     .pagination-bar {
         display: flex;
@@ -294,11 +293,8 @@
 
     .stagger-row { opacity: 0; animation: fadeIn 0.35s var(--ease-out-expo) forwards; }
 
-    @media (max-width: 1024px) {
-        .col-invoice-id, .col-old { display: none; }
-    }
-    @media (max-width: 768px) {
-        .filter-select { min-width: 200px; }
+    @media (max-width: 1200px) {
+        .col-old, .col-user { display: none; }
     }
 </style>
 {% endblock %}
@@ -306,32 +302,59 @@
 {% block content %}
 <div class="refined-page fade-in">
     <header class="page-header">
-        <h1 class="page-title">Historia zmian</h1>
+        <h1 class="page-title">Historia zdarzeń</h1>
     </header>
 
-    <div class="filter-bar">
-        <span class="filter-label">Filtruj po fakturze:</span>
-        <select id="invoice-filter" class="filter-select" onchange="loadHistory()">
-            <option value="">Wszystkie faktury</option>
-        </select>
+    <!-- Entity type tabs -->
+    <div class="tab-bar" id="tab-bar">
+        <button class="tab-btn active" data-type="" onclick="switchTab(this, '')">
+            Wszystkie <span class="tab-count" id="count-all">—</span>
+        </button>
+        <button class="tab-btn" data-type="invoice" onclick="switchTab(this, 'invoice')">
+            Faktury <span class="tab-count" id="count-invoice">—</span>
+        </button>
+        <button class="tab-btn" data-type="import" onclick="switchTab(this, 'import')">
+            Import <span class="tab-count" id="count-import">—</span>
+        </button>
+        <button class="tab-btn" data-type="appointment" onclick="switchTab(this, 'appointment')">
+            Wizyty <span class="tab-count" id="count-appointment">—</span>
+        </button>
+        <button class="tab-btn" data-type="client" onclick="switchTab(this, 'client')">
+            Klienci <span class="tab-count" id="count-client">—</span>
+        </button>
+        <button class="tab-btn" data-type="employee" onclick="switchTab(this, 'employee')">
+            Pracownicy <span class="tab-count" id="count-employee">—</span>
+        </button>
+        <button class="tab-btn" data-type="service" onclick="switchTab(this, 'service')">
+            Usługi <span class="tab-count" id="count-service">—</span>
+        </button>
+        <button class="tab-btn" data-type="seller" onclick="switchTab(this, 'seller')">
+            Dostawcy <span class="tab-count" id="count-seller">—</span>
+        </button>
+        <button class="tab-btn" data-type="login" onclick="switchTab(this, 'login')">
+            Logowania <span class="tab-count" id="count-login">—</span>
+        </button>
     </div>
 
     <div class="table-container">
         <div class="table-scroll-wrapper">
+            <!-- Fixed header -->
             <table class="refined-table" style="flex-shrink: 0;">
                 <colgroup>
-                    <col class="col-timestamp"><col class="col-action"><col class="col-invoice-id">
-                    <col class="col-invoice-number"><col class="col-field"><col class="col-old"><col class="col-new">
+                    <col class="col-timestamp"><col class="col-entity-type"><col class="col-action">
+                    <col class="col-entity-label"><col class="col-field">
+                    <col class="col-old"><col class="col-new"><col class="col-user">
                 </colgroup>
                 <thead>
                     <tr>
                         <th>Data i czas</th>
+                        <th>Moduł</th>
                         <th>Akcja</th>
-                        <th class="col-invoice-id">ID</th>
-                        <th>Nr faktury</th>
+                        <th>Obiekt</th>
                         <th>Pole</th>
-                        <th class="col-old">Bylo</th>
+                        <th class="col-old">Było</th>
                         <th>Zmieniono na</th>
+                        <th>Użytkownik</th>
                     </tr>
                 </thead>
             </table>
@@ -339,13 +362,14 @@
             <div class="tbody-scroll">
                 <table class="refined-table" id="historyTable">
                     <colgroup>
-                        <col class="col-timestamp"><col class="col-action"><col class="col-invoice-id">
-                        <col class="col-invoice-number"><col class="col-field"><col class="col-old"><col class="col-new">
+                        <col class="col-timestamp"><col class="col-entity-type"><col class="col-action">
+                        <col class="col-entity-label"><col class="col-field">
+                        <col class="col-old"><col class="col-new"><col class="col-user">
                     </colgroup>
                     <tbody id="history-tbody">
-                        <tr class="skeleton-row"><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:60%"></div></td><td><div class="skeleton-bar" style="width:40%"></div></td><td><div class="skeleton-bar" style="width:80%"></div></td><td><div class="skeleton-bar" style="width:50%"></div></td><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:75%"></div></td></tr>
-                        <tr class="skeleton-row"><td><div class="skeleton-bar" style="width:65%"></div></td><td><div class="skeleton-bar" style="width:55%"></div></td><td><div class="skeleton-bar" style="width:35%"></div></td><td><div class="skeleton-bar" style="width:75%"></div></td><td><div class="skeleton-bar" style="width:45%"></div></td><td><div class="skeleton-bar" style="width:65%"></div></td><td><div class="skeleton-bar" style="width:80%"></div></td></tr>
-                        <tr class="skeleton-row"><td><div class="skeleton-bar" style="width:75%"></div></td><td><div class="skeleton-bar" style="width:50%"></div></td><td><div class="skeleton-bar" style="width:45%"></div></td><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:55%"></div></td><td><div class="skeleton-bar" style="width:60%"></div></td><td><div class="skeleton-bar" style="width:70%"></div></td></tr>
+                        <tr class="skeleton-row"><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:60%"></div></td><td><div class="skeleton-bar" style="width:50%"></div></td><td><div class="skeleton-bar" style="width:80%"></div></td><td><div class="skeleton-bar" style="width:40%"></div></td><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:75%"></div></td><td><div class="skeleton-bar" style="width:55%"></div></td></tr>
+                        <tr class="skeleton-row"><td><div class="skeleton-bar" style="width:65%"></div></td><td><div class="skeleton-bar" style="width:55%"></div></td><td><div class="skeleton-bar" style="width:45%"></div></td><td><div class="skeleton-bar" style="width:75%"></div></td><td><div class="skeleton-bar" style="width:35%"></div></td><td><div class="skeleton-bar" style="width:65%"></div></td><td><div class="skeleton-bar" style="width:80%"></div></td><td><div class="skeleton-bar" style="width:50%"></div></td></tr>
+                        <tr class="skeleton-row"><td><div class="skeleton-bar" style="width:75%"></div></td><td><div class="skeleton-bar" style="width:50%"></div></td><td><div class="skeleton-bar" style="width:55%"></div></td><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:45%"></div></td><td><div class="skeleton-bar" style="width:60%"></div></td><td><div class="skeleton-bar" style="width:70%"></div></td><td><div class="skeleton-bar" style="width:60%"></div></td></tr>
                     </tbody>
                 </table>
 
@@ -353,20 +377,14 @@
                     <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <h3 class="empty-title">Brak historii zmian</h3>
-                    <p class="empty-text">Historia zmian bedzie widoczna po dodaniu lub edycji faktur.</p>
-                    <a href="{{ url_for('main.invoices_list') }}" class="btn-refined">
-                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Zobacz faktury
-                    </a>
+                    <h3 class="empty-title">Brak zdarzeń</h3>
+                    <p class="empty-text">Zdarzenia pojawią się po wykonaniu operacji w aplikacji.</p>
                 </div>
             </div>
         </div>
 
         <div class="pagination-bar">
-            <span>Wyswietlono <span class="pagination-count" id="visible-count">0</span> wpisow</span>
+            <span>Wyświetlono <span class="pagination-count" id="visible-count">0</span> wpisów</span>
         </div>
     </div>
 </div>
@@ -374,73 +392,137 @@
 
 {% block extra_scripts %}
 <script>
+let allEntries = [];
+let currentType = '';
+
+const ENTITY_LABELS = {
+    invoice:     'Faktura',
+    appointment: 'Wizyta',
+    client:      'Klient',
+    employee:    'Pracownik',
+    service:     'Usługa',
+    seller:      'Dostawca',
+    import:      'Import',
+    login:       'Logowanie',
+};
+
+const ACTION_LABELS = {
+    CREATE:       { label: 'Dodano',     cls: 'action-create' },
+    UPDATE:       { label: 'Edytowano',  cls: 'action-update' },
+    DELETE:       { label: 'Usunięto',   cls: 'action-delete' },
+    IMPORT:       { label: 'Import',     cls: 'action-import' },
+    LOGIN:        { label: 'Zalogowano', cls: 'action-login' },
+    LOGIN_FAILED: { label: 'Błąd login', cls: 'action-login-failed' },
+    LOGOUT:       { label: 'Wylogowano', cls: 'action-logout' },
+    STATUS_CHANGE:{ label: 'Status',     cls: 'action-status' },
+    COMPLETE:     { label: 'Zakończono', cls: 'action-complete' },
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
-    loadInvoicesForFilter();
 });
 
+function switchTab(btn, type) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentType = type;
+    renderTable(type ? allEntries.filter(e => e.entity_type === type) : allEntries);
+}
+
 async function loadHistory() {
-    const invoiceId = document.getElementById('invoice-filter').value;
     const tbody = document.getElementById('history-tbody');
     const emptyState = document.getElementById('empty-state');
-    const table = document.getElementById('historyTable');
 
     try {
-        const data = await API.history.getAll(invoiceId || null);
+        const data = await API.get('/history');
 
-        if (data.success) {
-            document.getElementById('visible-count').textContent = data.entries.length;
-
-            if (data.entries.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.style.display = 'flex';
-                return;
-            }
-
-            emptyState.style.display = 'none';
-
-            tbody.innerHTML = data.entries.map((entry, index) => {
-                const delay = Math.min(index * 0.02, 0.3);
-
-                let actionClass = 'action-update';
-                let actionIcon = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>';
-
-                if (entry.action === 'CREATE') {
-                    actionClass = 'action-create';
-                    actionIcon = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>';
-                } else if (entry.action === 'DELETE') {
-                    actionClass = 'action-delete';
-                    actionIcon = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
-                }
-
-                const timestamp = formatTimestamp(entry.timestamp);
-
-                return `
-                    <tr class="stagger-row" style="animation-delay: ${delay}s">
-                        <td>
-                            <span class="timestamp-value">
-                                <span class="timestamp-date">${timestamp.date}</span> ${timestamp.time}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="action-badge ${actionClass}">
-                                ${actionIcon}
-                                ${entry.action}
-                            </span>
-                        </td>
-                        <td class="col-invoice-id"><span class="invoice-id">${entry.invoice_id}</span></td>
-                        <td><span class="invoice-number">${entry.invoice_number || '<span class="value-empty">—</span>'}</span></td>
-                        <td>${entry.field_name ? `<span class="field-badge">${escapeHtml(entry.field_name)}</span>` : '<span class="value-empty">—</span>'}</td>
-                        <td class="col-old">${entry.old_value ? `<span class="value-old">${escapeHtml(entry.old_value)}</span>` : '<span class="value-empty">brak</span>'}</td>
-                        <td>${entry.new_value ? `<span class="value-new">${escapeHtml(entry.new_value)}</span>` : '<span class="value-empty">brak</span>'}</td>
-                    </tr>
-                `;
-            }).join('');
+        if (!data.success) {
+            Notifications.error('Błąd ładowania historii');
+            return;
         }
+
+        allEntries = data.entries;
+
+        // Update tab counts
+        updateTabCounts(allEntries);
+
+        // Render initial view (all)
+        renderTable(allEntries);
+
     } catch (error) {
         console.error('Error loading history:', error);
-        Notifications.error('Blad ladowania historii');
+        Notifications.error('Błąd ładowania historii');
     }
+}
+
+function updateTabCounts(entries) {
+    document.getElementById('count-all').textContent = entries.length;
+    const types = ['invoice','import','appointment','client','employee','service','seller','login'];
+    types.forEach(type => {
+        const el = document.getElementById('count-' + type);
+        if (el) el.textContent = entries.filter(e => e.entity_type === type).length;
+    });
+}
+
+function renderTable(entries) {
+    const tbody = document.getElementById('history-tbody');
+    const emptyState = document.getElementById('empty-state');
+
+    document.getElementById('visible-count').textContent = entries.length;
+
+    if (entries.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'flex';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    tbody.innerHTML = entries.map((entry, index) => {
+        const delay = Math.min(index * 0.015, 0.25);
+        const ts = formatTimestamp(entry.timestamp);
+
+        const entityType = entry.entity_type || 'invoice';
+        const entityCls  = 'entity-' + entityType;
+        const entityLbl  = ENTITY_LABELS[entityType] || entityType;
+
+        const actionInfo = ACTION_LABELS[entry.action] || { label: entry.action, cls: 'action-update' };
+
+        const label = entry.entity_label || entry.invoice_number || '';
+
+        const oldVal = entry.old_value
+            ? `<span class="value-old">${escapeHtml(entry.old_value)}</span>`
+            : `<span class="value-empty">—</span>`;
+
+        const newVal = entry.new_value
+            ? `<span class="value-new">${escapeHtml(entry.new_value)}</span>`
+            : `<span class="value-empty">—</span>`;
+
+        const fieldCell = entry.field_name
+            ? `<span class="field-badge">${escapeHtml(entry.field_name)}</span>`
+            : `<span class="value-empty">—</span>`;
+
+        const userCell = entry.user_name
+            ? `<span class="user-chip" title="${escapeHtml(entry.user_name)}">${escapeHtml(entry.user_name.split(' ')[0])}</span>`
+            : `<span class="value-empty">—</span>`;
+
+        return `
+            <tr class="stagger-row" style="animation-delay:${delay}s">
+                <td>
+                    <span class="timestamp-value">
+                        <span class="timestamp-date">${ts.date}</span> ${ts.time}
+                    </span>
+                </td>
+                <td><span class="entity-badge ${entityCls}">${entityLbl}</span></td>
+                <td><span class="action-badge ${actionInfo.cls}">${actionInfo.label}</span></td>
+                <td><span class="entity-label-text" title="${escapeHtml(label)}">${escapeHtml(label) || '<span class="value-empty">—</span>'}</span></td>
+                <td>${fieldCell}</td>
+                <td class="col-old">${oldVal}</td>
+                <td>${newVal}</td>
+                <td>${userCell}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function formatTimestamp(timestamp) {
@@ -449,24 +531,6 @@ function formatTimestamp(timestamp) {
     const date = `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear().toString().slice(-2)}`;
     const time = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
     return { date, time };
-}
-
-async function loadInvoicesForFilter() {
-    try {
-        const data = await API.invoices.getAll();
-        if (data.success) {
-            const select = document.getElementById('invoice-filter');
-            select.innerHTML = '<option value="">Wszystkie faktury</option>';
-            data.invoices.forEach(invoice => {
-                const option = document.createElement('option');
-                option.value = invoice.id;
-                option.textContent = `${invoice.invoice_number || 'Brak numeru'} — ${invoice.seller_name || 'Brak nazwy'}`;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading invoices:', error);
-    }
 }
 </script>
 {% endblock %}

@@ -42,6 +42,13 @@
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
     .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
 
+    /* Coverage Stat Card */
+    .coverage-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 140px; }
+    .coverage-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); text-align: center; }
+    .coverage-value { font-size: 1.5rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
+    .coverage-bar { width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden; margin-top: 0.25rem; }
+    .coverage-fill { height: 100%; background: var(--color-success); transition: width 0.3s ease; }
+
     /* Month Navigation */
     .month-nav { display: flex; align-items: center; gap: 0.5rem; }
     .month-label { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); min-width: 150px; text-align: center; }
@@ -146,6 +153,8 @@
     <!-- Controls -->
     <div class="refined-card">
         <div class="controls-bar">
+           
+
             <!-- Employee Controls (Left) -->
             <div id="employeeControlsContainer">
                 <label id="employeeLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Wybór pracownika</label>
@@ -156,19 +165,30 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div id="employeePagination" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; min-height: 32px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
-                        Ładowanie...
-                    </div>
+	                 <!-- Employee Dropdown -->
+                    <select id="employeeSelect" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);">
+                        <option value="">Ładowanie...</option>
+                    </select>
                     <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" disabled>
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
                     </button>
 
-                    <!-- Employee Dropdown -->
-                    <select id="employeeSelect" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);">
-                        <option value="">Ładowanie...</option>
-                    </select>
+                   
+                </div>
+            </div>
+	         <!-- Coverage Badges (Left) -->
+            <div style="display: flex; gap: 0.5rem; align-items: stretch; flex-shrink: 0;">
+                <div class="coverage-card">
+                    <div class="coverage-label">Obłożenie pracownik</div>
+                    <div class="coverage-value" id="coverageValue">0%</div>
+                    <div class="coverage-bar"><div class="coverage-fill" id="coverageFill" style="width: 0%;"></div></div>
+                </div>
+                <div class="coverage-card">
+                    <div class="coverage-label">Obłożenie wszyscy</div>
+                    <div class="coverage-value" id="coverageValueAll">0%</div>
+                    <div class="coverage-bar"><div class="coverage-fill" id="coverageFillAll" style="width: 0%;"></div></div>
                 </div>
             </div>
 
@@ -254,6 +274,7 @@ let currentYear = new Date().getFullYear();
 let allEmployees = [];  // All employees in system
 let employees = [];     // Filtered employees with appointments in current month
 let appointments = [];
+let allMonthAppointments = [];  // All employees' appointments for current month (coverage calc)
 
 // DOM Elements
 const employeeControlsContainer = document.getElementById('employeeControlsContainer');
@@ -261,7 +282,7 @@ const employeeLabel = document.getElementById('employeeLabel');
 const employeeSelect = document.getElementById('employeeSelect');
 const prevEmployeeBtn = document.getElementById('prevEmployeeBtn');
 const nextEmployeeBtn = document.getElementById('nextEmployeeBtn');
-const employeePagination = document.getElementById('employeePagination');
+// const employeePagination = document.getElementById('employeePagination');
 const prevMonthBtn = document.getElementById('prevMonthBtn');
 const nextMonthBtn = document.getElementById('nextMonthBtn');
 const thisMonthBtn = document.getElementById('thisMonthBtn');
@@ -335,6 +356,9 @@ async function loadMonthAndFilterEmployees() {
         const allAppointments = (data.appointments || []).filter(apt =>
             apt.status !== 'cancelled' && apt.status !== 'no_show'
         );
+
+        // Save for "all employees" coverage calculation
+        allMonthAppointments = allAppointments;
 
         // Get unique employee IDs with appointments
         const employeeIdsWithAppointments = new Set(
@@ -466,8 +490,8 @@ function updateEmployeePagination() {
     // Update label
     const currentEmployee = employees[currentEmployeePage];
     if (currentEmployee) {
-        employeePagination.textContent = currentEmployee.full_name;
-        employeePagination.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
+        employeeLabel.textContent = currentEmployee.full_name;
+        employeeLabel.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
     }
 }
 
@@ -733,6 +757,31 @@ function updateSummary() {
     document.getElementById('totalAppointments').textContent = totalAppointments;
     document.getElementById('totalHours').textContent = totalHours + 'h';
     document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
+
+    // Coverage for selected employee: daysInMonth × 16 h × 60 min
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const monthMinutes = daysInMonth * 16 * 60;
+    updateCoverage(totalMinutes, monthMinutes, 'coverageValue', 'coverageFill');
+
+    // Coverage for all active employees combined
+    let allTotalMinutes = 0;
+    allMonthAppointments.forEach(apt => {
+        allTotalMinutes += timeToMinutes(apt.end_time) - timeToMinutes(apt.start_time);
+    });
+    const monthMinutesAll = monthMinutes * (allEmployees.length || 1);
+    updateCoverage(allTotalMinutes, monthMinutesAll, 'coverageValueAll', 'coverageFillAll');
+}
+
+function updateCoverage(appointmentMinutes, availableMinutes, valueId, fillId) {
+    const percent = availableMinutes > 0
+        ? Math.min((appointmentMinutes / availableMinutes) * 100, 100)
+        : 0;
+    const valueEl = document.getElementById(valueId);
+    const fillEl = document.getElementById(fillId);
+    if (!valueEl || !fillEl) return;
+    valueEl.textContent = Math.round(percent) + '%';
+    fillEl.style.width = percent + '%';
+    fillEl.style.background = percent >= 80 ? '#2d6a4f' : percent >= 50 ? '#d97706' : '#dc2626';
 }
 
 function timeToMinutes(timeStr) {
@@ -752,6 +801,5 @@ function escapeHtml(text) {
 </script>
 
 <!-- Past Visits Scanner -->
-<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
 <script src="{{ url_for('static', filename='js/past_visits_scanner.js') }}"></script>
 {% endblock %}

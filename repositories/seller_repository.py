@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 
 from database.models import Seller
 from repositories.base_repository import BaseRepository
+from repositories.db_utils import parse_dt
 
 
 class SellerRepository(BaseRepository):
@@ -69,7 +70,7 @@ class SellerRepository(BaseRepository):
                 SUM(CASE WHEN i.status = 'Nieopłacona' THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
             LEFT JOIN invoices i ON s.id = i.seller_id
-            WHERE s.seller_name LIKE %s OR s.seller_nip LIKE %s
+            WHERE s.seller_name ILIKE %s OR s.seller_nip ILIKE %s
             GROUP BY s.id
             ORDER BY s.seller_name
         """
@@ -209,7 +210,7 @@ class SellerRepository(BaseRepository):
             seller_nip=row["seller_nip"],
             seller_name=row["seller_name"],
             address=row["address"] if "address" in row.keys() else None,
-            first_seen=datetime.fromisoformat(row["first_seen"]) if row["first_seen"] else None,
-            last_updated=datetime.fromisoformat(row["last_updated"]) if row["last_updated"] else None,
+            first_seen=parse_dt(row["first_seen"]),
+            last_updated=parse_dt(row["last_updated"]),
             invoice_count=row["invoice_count"] if "invoice_count" in row.keys() else 0
         )

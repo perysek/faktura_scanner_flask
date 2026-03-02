@@ -13,8 +13,63 @@ from werkzeug.utils import secure_filename
 from config.auth_config import module_permission_required
 from database.models import Invoice
 from utils.validators import DateParser
+from repositories.audit_repository import AuditRepository
 
 api_bp = Blueprint('api', __name__)
+
+
+def _audit(entity_type, action, entity_id=None, entity_label=None,
+           field_name=None, old_value=None, new_value=None):
+    """Log audit event with current user context. Logs errors to stderr."""
+    try:
+        uid = current_user.id if current_user.is_authenticated else None
+        uname = current_user.full_name if current_user.is_authenticated else None
+        AuditRepository().log_event(
+            entity_type=entity_type, action=action,
+            entity_id=entity_id, entity_label=entity_label,
+            field_name=field_name, old_value=old_value, new_value=new_value,
+            user_id=uid, user_name=uname,
+        )
+    except Exception as e:
+        import sys
+        print(f"[AUDIT ERROR] {entity_type}/{action} id={entity_id}: {e}", file=sys.stderr)
+
+
+def _canonical(value) -> str:
+    """Return a canonical string for a value so numeric type differences
+    (DB float 2000.0 vs JSON int 2000) do not produce false change detections."""
+    if value is None or value == '':
+        return ''
+    try:
+        f = float(str(value))
+        # Whole numbers: drop the decimal so "2000.0" == "2000"
+        return str(int(f)) if f == int(f) else str(f)
+    except (ValueError, TypeError):
+        return str(value).strip()
+
+
+def _audit_changes(entity_type: str, entity_id: int, entity_label: str,
+                   old_dict: dict, new_dict: dict, tracked_fields: list):
+    """Log one audit UPDATE entry per changed field.
+
+    Compares old_dict[field] vs new_dict[field] for each field in
+    tracked_fields and calls _audit for every field whose value changed.
+    Values are normalised via _canonical() before comparison so that type
+    differences (e.g. DB float 2000.0 vs JSON int 2000) are not treated as changes.
+    """
+    for field in tracked_fields:
+        if field not in new_dict:   # field was not sent — not a change
+            continue
+        old_raw = old_dict.get(field)
+        new_raw = new_dict.get(field)
+        old_val = _canonical(old_raw)
+        new_val = _canonical(new_raw)
+        if old_val != new_val:
+            _audit(entity_type, 'UPDATE', entity_id=entity_id,
+                   entity_label=entity_label,
+                   field_name=field,
+                   old_value=old_val or None,
+                   new_value=new_val or None)
 
 
 # Supported file extensions for upload
@@ -1205,13 +1260,16 @@ def email_settings():
 
 @api_bp.route('/history', methods=['GET'])
 @login_required
-@module_permission_required('invoices')
 def get_history():
-    """Get audit history"""
+    """Get audit history — all entity types"""
     try:
         invoice_id = request.args.get('invoice_id', type=int)
+        entity_type = request.args.get('entity_type')  # filter by type
 
-        entries = current_app.audit_repo.get_all(invoice_id)
+        entries = current_app.audit_repo.get_all(
+            invoice_id=invoice_id,
+            entity_type=entity_type,
+        )
 
         return jsonify({
             'success': True,
@@ -1325,8 +1383,8 @@ def get_sellers():
                 'seller_nip': row['seller_nip'],
                 'seller_name': row['seller_name'],
                 'address': row['address'] if 'address' in row.keys() else None,
-                'first_seen': row['first_seen'] if 'first_seen' in row.keys() else None,
-                'last_updated': row['last_updated'] if 'last_updated' in row.keys() else None,
+                'first_seen': row['first_seen'].isoformat() if row.get('first_seen') else None,
+                'last_updated': row['last_updated'].isoformat() if row.get('last_updated') else None,
                 'invoice_count': row['invoice_count'] if 'invoice_count' in row.keys() else 0,
                 # Stats from JOIN (if available)
                 'actual_invoice_count': row['actual_invoice_count'] if 'actual_invoice_count' in row.keys() else 0,
@@ -1336,8 +1394,8 @@ def get_sellers():
             sellers_data.append(seller_dict)
 
         # Get global stats (total from invoices table, including orphaned invoices)
-        cursor = current_app.invoice_repo._execute("SELECT COUNT(*) FROM invoices")
-        total_invoices = cursor.fetchone()[0]
+        cursor = current_app.invoice_repo._execute("SELECT COUNT(*) as cnt FROM invoices")
+        total_invoices = cursor.fetchone()['cnt']
 
         cursor = current_app.invoice_repo._execute("""
             SELECT
@@ -1353,8 +1411,8 @@ def get_sellers():
             'count': len(sellers_data),
             'global_stats': {
                 'total_invoices': total_invoices,
-                'total_paid': global_stats[0] or 0.0,
-                'total_unpaid': global_stats[1] or 0.0
+                'total_paid': float(global_stats['total_paid'] or 0.0),
+                'total_unpaid': float(global_stats['total_unpaid'] or 0.0)
             }
         })
     except Exception as e:
@@ -1421,6 +1479,10 @@ def update_seller(seller_id: int):
             current_app.seller_repo.update_address(seller_id, data['address'])
             changes.append("Address updated")
         
+        _audit('seller', 'UPDATE', entity_id=seller_id,
+               entity_label=seller.seller_name,
+               new_value='; '.join(changes) if changes else 'no changes')
+
         return jsonify({
             'success': True,
             'message': 'Seller updated successfully',
@@ -1608,6 +1670,9 @@ def create_seller():
         seller_id = current_app.seller_repo.create(new_seller)
         new_seller.id = seller_id
 
+        _audit('seller', 'CREATE', entity_id=seller_id,
+               entity_label=f"{normalized_name} ({normalized_nip})")
+
         return jsonify({
             'success': True,
             'message': 'Sprzedawca zostal utworzony',
@@ -1646,6 +1711,10 @@ def delete_seller(seller_id: int):
 
         # Delete the seller
         current_app.seller_repo.delete(seller_id)
+
+        _audit('seller', 'DELETE', entity_id=seller_id,
+               entity_label=f"{seller.seller_name} ({seller.seller_nip})",
+               old_value=f"{invoice_count} faktur")
 
         return jsonify({
             'success': True,
@@ -2078,6 +2147,9 @@ def create_client_endpoint():
         # Save to database
         client_id = current_app.client_repo.create(client)
 
+        _audit('client', 'CREATE', entity_id=client_id,
+               entity_label=f"{client.first_name} {client.last_name}")
+
         return jsonify({
             'success': True,
             'message': 'Klient został utworzony',
@@ -2112,6 +2184,18 @@ def update_client(client_id):
                     'field': 'email'
                 }), 400
 
+        # Snapshot old values before mutation
+        _client_old = {
+            'first_name': client.first_name,
+            'last_name': client.last_name,
+            'phone': client.phone,
+            'email': client.email,
+            'date_of_birth': client.date_of_birth,
+            'notes': client.notes,
+            'preferences': client.preferences,
+            'is_active': client.is_active,
+        }
+
         # Update fields
         client.first_name = data.get('first_name', client.first_name).strip()
         client.last_name = data.get('last_name', client.last_name).strip()
@@ -2126,6 +2210,11 @@ def update_client(client_id):
         success = current_app.client_repo.update(client_id, client)
 
         if success:
+            entity_label = f"{client.first_name} {client.last_name}"
+            _audit_changes('client', client_id, entity_label,
+                           _client_old, data,
+                           ['first_name', 'last_name', 'phone', 'email',
+                            'date_of_birth', 'notes', 'preferences', 'is_active'])
             return jsonify({
                 'success': True,
                 'message': 'Klient został zaktualizowany'
@@ -2150,10 +2239,11 @@ def delete_client(client_id):
         if not row:
             return jsonify({'success': False, 'error': 'Client not found'}), 404
 
-        # Deactivate instead of delete
+        client_name = f"{row.get('first_name','')} {row.get('last_name','')}".strip()
         success = current_app.client_repo.deactivate(client_id)
 
         if success:
+            _audit('client', 'DELETE', entity_id=client_id, entity_label=client_name)
             return jsonify({
                 'success': True,
                 'message': 'Klient został dezaktywowany'
@@ -2367,6 +2457,10 @@ def create_service_endpoint():
 
         service_id = current_app.service_repo.create(service)
 
+        _audit('service', 'CREATE', entity_id=service_id,
+               entity_label=service.name,
+               new_value=f"{service.price} {service.currency} / {service.duration_minutes}min")
+
         return jsonify({
             'success': True,
             'service_id': service_id,
@@ -2406,6 +2500,10 @@ def update_service(service_id):
         success = current_app.service_repo.update(service_id, service)
 
         if success:
+            _audit_changes('service', service_id, service.name,
+                           existing, data,
+                           ['name', 'description', 'category', 'duration_minutes',
+                            'price', 'currency', 'service_type', 'is_active'])
             return jsonify({
                 'success': True,
                 'message': 'Usługa została zaktualizowana pomyślnie'
@@ -2422,9 +2520,12 @@ def update_service(service_id):
 def delete_service(service_id):
     """Delete (deactivate) service"""
     try:
+        existing = current_app.service_repo.get_by_id(service_id)
+        service_name = existing['name'] if existing else str(service_id)
         success = current_app.service_repo.delete(service_id)
 
         if success:
+            _audit('service', 'DELETE', entity_id=service_id, entity_label=service_name)
             return jsonify({
                 'success': True,
                 'message': 'Usługa została dezaktywowana'
@@ -2609,6 +2710,10 @@ def create_employee_endpoint():
 
         employee_id = current_app.employee_repo.create(employee)
 
+        _audit('employee', 'CREATE', entity_id=employee_id,
+               entity_label=f"{employee.first_name} {employee.last_name}",
+               new_value=employee.position)
+
         return jsonify({
             'success': True,
             'employee_id': employee_id,
@@ -2665,6 +2770,13 @@ def update_employee(employee_id):
         success = current_app.employee_repo.update(employee_id, employee)
 
         if success:
+            entity_label = f"{employee.first_name} {employee.last_name}"
+            _audit_changes('employee', employee_id, entity_label,
+                           existing, data,
+                           ['first_name', 'last_name', 'phone', 'email',
+                            'position', 'employment_status', 'hire_date',
+                            'termination_date', 'base_salary', 'commission_rate',
+                            'max_appointments_per_day', 'notes', 'is_active'])
             return jsonify({
                 'success': True,
                 'message': 'Pracownik został zaktualizowany pomyślnie'
@@ -2681,9 +2793,12 @@ def update_employee(employee_id):
 def delete_employee(employee_id):
     """Delete (deactivate) employee"""
     try:
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        emp_name = f"{existing['first_name']} {existing['last_name']}" if existing else str(employee_id)
         success = current_app.employee_repo.delete(employee_id)
 
         if success:
+            _audit('employee', 'DELETE', entity_id=employee_id, entity_label=emp_name)
             return jsonify({
                 'success': True,
                 'message': 'Pracownik został dezaktywowany'

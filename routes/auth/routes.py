@@ -1,9 +1,10 @@
 """
 Trasy autentykacji - logowanie, wylogowanie, profil
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from repositories.users.user_repository import UserRepository
+from repositories.audit_repository import AuditRepository
 from services.auth.auth_service import AuthService
 
 # Create blueprint
@@ -34,16 +35,32 @@ def login():
         success, user, error_message = auth_service.authenticate(email, password)
 
         if success:
-            # Zaloguj użytkownika (Flask-Login)
             login_user(user, remember=remember)
             flash(f'Witaj, {user.full_name}!', 'success')
 
-            # Przekieruj do next URL lub dashboard
+            try:
+                AuditRepository().log_event(
+                    entity_type='login', action='LOGIN',
+                    entity_label=user.email,
+                    new_value=request.remote_addr,
+                    user_id=user.id, user_name=user.full_name,
+                )
+            except Exception:
+                pass
+
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)
             return redirect(url_for('main.dashboard'))
         else:
+            try:
+                AuditRepository().log_event(
+                    entity_type='login', action='LOGIN_FAILED',
+                    entity_label=email,
+                    new_value=request.remote_addr,
+                )
+            except Exception:
+                pass
             flash(error_message, 'error')
             return render_template('auth/login.html', email=email)
 
@@ -54,6 +71,14 @@ def login():
 @login_required
 def logout():
     """Wylogowanie użytkownika"""
+    try:
+        AuditRepository().log_event(
+            entity_type='login', action='LOGOUT',
+            entity_label=current_user.email,
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
+    except Exception:
+        pass
     logout_user()
     flash('Zostałeś wylogowany', 'info')
     return redirect(url_for('auth.login'))
