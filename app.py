@@ -139,6 +139,8 @@ def create_app():
     from routes.client_preference_routes import client_preference_bp
     from routes.income_routes import income_bp
     from routes.analytics_routes import analytics_bp
+    from routes.users.routes import users_bp
+    from routes.roles.routes import roles_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -150,6 +152,8 @@ def create_app():
     app.register_blueprint(client_preference_bp, url_prefix='/api')
     app.register_blueprint(income_bp, url_prefix='/api')
     app.register_blueprint(analytics_bp, url_prefix='/api')
+    app.register_blueprint(users_bp)
+    app.register_blueprint(roles_bp)
 
     # Error handlers
     @app.errorhandler(404)
@@ -171,11 +175,22 @@ def create_app():
     # Context processors
     @app.context_processor
     def inject_globals():
+        from flask_login import current_user
+        from config.auth_config import get_user_module_permissions
+
+        user_permissions = {}
+        if current_user.is_authenticated:
+            try:
+                user_permissions = get_user_module_permissions(current_user.role)
+            except Exception:
+                pass
+
         return {
             'app_name': APP_NAME,
             'version': VERSION,
             'now': datetime.now,
             'logo_data_uri': logo_data_uri,
+            'user_permissions': user_permissions,
         }
 
     return app

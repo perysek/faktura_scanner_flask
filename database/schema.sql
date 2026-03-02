@@ -107,4 +107,51 @@ CREATE TABLE IF NOT EXISTS upload_staging (
 );
 
 CREATE INDEX IF NOT EXISTS idx_staging_session ON upload_staging(session_id);
-CREATE INDEX IF NOT EXISTS idx_staging_uploaded_at ON upload_staging(uploaded_at)
+CREATE INDEX IF NOT EXISTS idx_staging_uploaded_at ON upload_staging(uploaded_at);
+
+-- ============================================================
+-- Roles & dynamic permissions (Users/Roles management module)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    display_name TEXT NOT NULL,
+    is_protected BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id SERIAL PRIMARY KEY,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    module_name TEXT NOT NULL,
+    has_access BOOLEAN DEFAULT TRUE,
+    UNIQUE (role_id, module_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+
+-- Seed built-in roles (idempotent)
+INSERT INTO roles (name, display_name, is_protected) VALUES
+    ('superuser',    'Właściciel',    TRUE),
+    ('admin',        'Administrator', FALSE),
+    ('receptionist', 'Recepcjonista', FALSE),
+    ('stylist',      'Stylista',      FALSE),
+    ('accountant',   'Księgowy',      FALSE)
+ON CONFLICT (name) DO NOTHING;
+
+-- Seed role_permissions: all roles get all modules enabled (adjust before deployment)
+DO $$
+DECLARE
+    r RECORD;
+    modules TEXT[] := ARRAY['invoices','appointments','clients','employees','services','settings','reports'];
+    m TEXT;
+BEGIN
+    FOR r IN SELECT id FROM roles LOOP
+        FOREACH m IN ARRAY modules LOOP
+            INSERT INTO role_permissions (role_id, module_name, has_access)
+            VALUES (r.id, m, TRUE)
+            ON CONFLICT (role_id, module_name) DO NOTHING;
+        END LOOP;
+    END LOOP;
+END $$;
