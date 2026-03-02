@@ -120,5 +120,11 @@
     }
 
     loadRoles();
+
+    const _savedMsg = sessionStorage.getItem('listNotification');
+    if (_savedMsg) {
+        sessionStorage.removeItem('listNotification');
+        setTimeout(() => Notifications.success(_savedMsg), 300);
+    }
 </script>
 {% endblock %}
