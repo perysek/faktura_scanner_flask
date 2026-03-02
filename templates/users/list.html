@@ -39,6 +39,8 @@
     .search-input { border: 1px solid var(--color-border); border-radius: 2px; padding: 0.5rem 0.75rem; font-size: 0.8125rem; background: white; color: var(--color-ink); outline: none; width: 240px; }
     .search-input:focus { border-color: var(--color-ink); }
     #loading-state, #empty-state { text-align: center; padding: 3rem; color: var(--color-ink-muted); font-size: 0.875rem; }
+    .btn-reset { background: none; border: 1px solid #fca5a5; color: #b91c1c; padding: 0.375rem 0.75rem; border-radius: 2px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; margin-left: 0.375rem; }
+    .btn-reset:hover { background: #fef2f2; border-color: #b91c1c; }
 </style>
 {% endblock %}
 
@@ -50,7 +52,7 @@
             <p class="page-subtitle">Zarządzanie kontami użytkowników systemu</p>
         </div>
         <div class="flex items-center gap-3">
-            <input type="text" id="search-input" class="search-input" placeholder="Szukaj użytkownika...">
+            <input type="text" id="search-input" class="search-input" placeholder="Szukaj użytkownika..." autocomplete="off">
             <a href="{{ url_for('users.create_user') }}" class="btn-primary">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -79,10 +81,75 @@
         </table>
     </div>
 </div>
+
+{% if current_user.role == 'superuser' %}
+<!-- Reset Password Modal (superuser only) -->
+<div id="reset-pw-modal" class="fixed inset-0 z-[9999] hidden" role="dialog" aria-modal="true" aria-labelledby="reset-pw-modal-title">
+    <div class="absolute inset-0 transition-all duration-200 opacity-0"
+         id="reset-pw-backdrop" onclick="closeResetPwModal()"
+         style="background: rgba(0,0,0,0.5);"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div class="relative bg-white max-w-md w-full transform transition-all duration-200 scale-95 opacity-0 pointer-events-auto"
+             id="reset-pw-panel"
+             style="border-radius: 2px; border: 1px solid #e8e6e1; box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
+
+            <!-- Header -->
+            <div style="padding: 1.5rem 1.5rem 1rem;">
+                <div class="flex items-start gap-4">
+                    <div class="flex items-center justify-center flex-shrink-0"
+                         style="width: 2.5rem; height: 2.5rem; border-radius: 2px; background: #fdf6e3;">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#c9a227" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 style="font-size: 1rem; font-weight: 600; color: #1a1a1a; line-height: 1.3;" id="reset-pw-modal-title">Resetuj hasło</h3>
+                        <p style="font-size: 0.8125rem; color: #525252; margin-top: 0.125rem;" id="reset-pw-subtitle"></p>
+                    </div>
+                    <button type="button" onclick="closeResetPwModal()"
+                            style="background: none; border: none; cursor: pointer; color: #8a8a8a; padding: 0.25rem; border-radius: 2px; line-height: 0; transition: color 0.15s;"
+                            onmouseover="this.style.color='#525252'" onmouseout="this.style.color='#8a8a8a'">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 0 1.5rem 1rem;">
+                <div id="reset-pw-error" class="hidden" style="margin-bottom: 0.75rem; padding: 0.625rem 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 2px; font-size: 0.8125rem; color: #9b2c2c;"></div>
+                <div id="reset-pw-success" class="hidden" style="margin-bottom: 0.75rem; padding: 0.625rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 2px; font-size: 0.8125rem; color: #2d6a4f;"></div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; margin-bottom: 0.375rem;" for="reset-pw-new">Nowe hasło</label>
+                    <input type="password" id="reset-pw-new" minlength="8" autocomplete="new-password"
+                           style="width: 100%; border: 1px solid #e8e6e1; border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: #1a1a1a; background: white; outline: none; box-sizing: border-box;"
+                           placeholder="Minimum 8 znaków"
+                           onfocus="this.style.borderColor='#1a1a1a'" onblur="this.style.borderColor='#e8e6e1'">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; margin-bottom: 0.375rem;" for="reset-pw-confirm">Potwierdź hasło</label>
+                    <input type="password" id="reset-pw-confirm" autocomplete="new-password"
+                           style="width: 100%; border: 1px solid #e8e6e1; border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: #1a1a1a; background: white; outline: none; box-sizing: border-box;"
+                           placeholder="Powtórz nowe hasło"
+                           onfocus="this.style.borderColor='#1a1a1a'" onblur="this.style.borderColor='#e8e6e1'">
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 0.875rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.625rem; background: #f7f6f3; border-top: 1px solid #e8e6e1; border-radius: 0 0 2px 2px;">
+                <button type="button" onclick="closeResetPwModal()" class="btn-ghost">Anuluj</button>
+                <button type="button" id="reset-pw-submit" class="btn-primary">Zapisz hasło</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+    const isSuperuser = {{ 'true' if current_user.role == 'superuser' else 'false' }};
     let allUsers = [];
 
     async function loadUsers() {
@@ -121,6 +188,10 @@
                 : '—';
             const employeeName = u.employee_name || '<span style="color:var(--color-ink-subtle)">—</span>';
 
+            const resetBtn = isSuperuser
+                ? `<button class="btn-reset" onclick="openResetPwModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g, "\\'")}')">Resetuj hasło</button>`
+                : '';
+
             return `<tr>
                 <td style="font-weight:500">${escapeHtml(u.full_name)}</td>
                 <td style="color:var(--color-ink-muted)">${escapeHtml(u.email)}</td>
@@ -130,6 +201,7 @@
                 <td style="color:var(--color-ink-muted)">${lastLogin}</td>
                 <td style="text-align:right">
                     <a href="/system/users/${u.id}/edit" class="btn-ghost">Edytuj</a>
+                    ${resetBtn}
                 </td>
             </tr>`;
         }).join('');
@@ -150,5 +222,113 @@
     });
 
     loadUsers();
+
+    const _savedMsg = sessionStorage.getItem('listNotification');
+    if (_savedMsg) {
+        sessionStorage.removeItem('listNotification');
+        setTimeout(() => Notifications.success(_savedMsg), 300);
+    }
+
+    // ─── Reset Password Modal ──────────────────────────────────────────────────
+    let resetPwTargetId = null;
+
+    function openResetPwModal(userId, userName) {
+        resetPwTargetId = userId;
+        document.getElementById('reset-pw-subtitle').textContent = userName;
+        document.getElementById('reset-pw-new').value = '';
+        document.getElementById('reset-pw-confirm').value = '';
+        document.getElementById('reset-pw-error').classList.add('hidden');
+        document.getElementById('reset-pw-success').classList.add('hidden');
+
+        const modal = document.getElementById('reset-pw-modal');
+        const backdrop = document.getElementById('reset-pw-backdrop');
+        const panel = document.getElementById('reset-pw-panel');
+
+        document.body.style.overflow = 'hidden';
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+            panel.classList.remove('scale-95', 'opacity-0');
+            panel.classList.add('scale-100', 'opacity-100');
+        });
+        setTimeout(() => document.getElementById('reset-pw-new').focus(), 100);
+    }
+
+    function closeResetPwModal() {
+        const modal = document.getElementById('reset-pw-modal');
+        const backdrop = document.getElementById('reset-pw-backdrop');
+        const panel = document.getElementById('reset-pw-panel');
+
+        backdrop.classList.remove('opacity-100');
+        backdrop.classList.add('opacity-0');
+        panel.classList.remove('scale-100', 'opacity-100');
+        panel.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            resetPwTargetId = null;
+        }, 200);
+    }
+
+    document.getElementById('reset-pw-submit')?.addEventListener('click', async function() {
+        const newPw = document.getElementById('reset-pw-new').value;
+        const confirmPw = document.getElementById('reset-pw-confirm').value;
+        const errorEl = document.getElementById('reset-pw-error');
+        const successEl = document.getElementById('reset-pw-success');
+
+        errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
+
+        if (!newPw) {
+            errorEl.textContent = 'Podaj nowe hasło.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+        if (newPw.length < 8) {
+            errorEl.textContent = 'Hasło musi mieć co najmniej 8 znaków.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+        if (newPw !== confirmPw) {
+            errorEl.textContent = 'Hasła nie pasują do siebie.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        this.disabled = true;
+        this.textContent = 'Zapisywanie...';
+        try {
+            const resp = await fetch(`/system/users/api/${resetPwTargetId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ new_password: newPw }),
+            });
+            const data = await resp.json();
+            if (data.success) {
+                successEl.textContent = 'Hasło zostało zmienione.';
+                successEl.classList.remove('hidden');
+                document.getElementById('reset-pw-new').value = '';
+                document.getElementById('reset-pw-confirm').value = '';
+                setTimeout(closeResetPwModal, 1200);
+            } else {
+                errorEl.textContent = data.error || 'Błąd zmiany hasła.';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorEl.textContent = 'Błąd połączenia z serwerem.';
+            errorEl.classList.remove('hidden');
+        } finally {
+            this.disabled = false;
+            this.textContent = 'Zapisz hasło';
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('reset-pw-modal');
+            if (modal && !modal.classList.contains('hidden')) closeResetPwModal();
+        }
+    });
 </script>
 {% endblock %}

@@ -138,7 +138,7 @@ class SellerRepository(BaseRepository):
                 MAX(seller_id) as id
             FROM invoices
             WHERE seller_name IS NOT NULL AND seller_name != ''
-            GROUP BY seller_name
+            GROUP BY seller_name, seller_nip
             ORDER BY actual_invoice_count DESC, total_amount DESC
             LIMIT %s
         """

@@ -266,16 +266,23 @@ class InvoiceRepository(BaseRepository):
             SELECT
                 currency,
                 status,
-                CASE
-                    WHEN status = 'Nieopłacona' AND payment_due_date < CURRENT_DATE THEN 'overdue'
-                    WHEN status = 'Nieopłacona' THEN 'unpaid'
-                    WHEN status = 'Opłacona' THEN 'paid'
-                    ELSE 'unpaid'
-                END as payment_status,
+                payment_status,
                 SUM(amount) as total_amount,
                 COUNT(*) as count
-            FROM invoices
-            GROUP BY currency, payment_status
+            FROM (
+                SELECT
+                    currency,
+                    status,
+                    amount,
+                    CASE
+                        WHEN status = 'Nieopłacona' AND payment_due_date < CURRENT_DATE THEN 'overdue'
+                        WHEN status = 'Nieopłacona' THEN 'unpaid'
+                        WHEN status = 'Opłacona' THEN 'paid'
+                        ELSE 'unpaid'
+                    END as payment_status
+                FROM invoices
+            ) sub
+            GROUP BY currency, status, payment_status
         """
 		amount_results = self._fetch_all(query_amounts)
 
