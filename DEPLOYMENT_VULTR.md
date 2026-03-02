@@ -266,7 +266,6 @@ This creates all tables in PostgreSQL.
 
 ```bash
 cd /opt/faktura-scanner
-source .venv/bin/activate
 
 # Load environment variables from .env
 export $(grep -v '^#' .env | xargs)
@@ -346,8 +345,8 @@ Migration complete.
 ### 12c — Verify data arrived
 
 ```bash
-psql -U faktura_user -h localhost -d faktura_db \
-  -c "SELECT COUNT(*) as total_invoices FROM invoices;"
+   psql -U faktura_user -h localhost -d faktura_db \
+     -c "SELECT COUNT(*) as total_invoices FROM invoices;"
 
 psql -U faktura_user -h localhost -d faktura_db \
   -c "SELECT COUNT(*) as total_sellers FROM sellers;"

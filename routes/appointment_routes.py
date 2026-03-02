@@ -11,6 +11,35 @@ from config.auth_config import module_permission_required
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
+from repositories.audit_repository import AuditRepository
+
+
+def _audit(entity_type, action, entity_id=None, entity_label=None,
+           field_name=None, old_value=None, new_value=None):
+    """Helper: log audit event with current user context. Logs errors to stderr."""
+    try:
+        uid = current_user.id if current_user.is_authenticated else None
+        uname = current_user.full_name if current_user.is_authenticated else None
+        AuditRepository().log_event(
+            entity_type=entity_type, action=action,
+            entity_id=entity_id, entity_label=entity_label,
+            field_name=field_name, old_value=old_value, new_value=new_value,
+            user_id=uid, user_name=uname,
+        )
+    except Exception as e:
+        import sys
+        print(f"[AUDIT ERROR] {entity_type}/{action} id={entity_id}: {e}", file=sys.stderr)
+
+
+def _canonical(value) -> str:
+    """Canonical string for change-detection — same logic as in api_routes."""
+    if value is None or value == '':
+        return ''
+    try:
+        f = float(str(value))
+        return str(int(f)) if f == int(f) else str(f)
+    except (ValueError, TypeError):
+        return str(value).strip()
 
 appointment_bp = Blueprint('appointments', __name__)
 
@@ -81,6 +110,10 @@ def create_appointment():
             created_by=current_user.id if current_user.is_authenticated else None
         )
 
+        appt_date = data.get('appointment_date', '')
+        _audit('appointment', 'CREATE', entity_id=result.get('appointment_id'),
+               entity_label=f"{appt_date} {data.get('start_time','')}",
+               new_value=f"klient={data.get('client_id')} pracownik={data.get('employee_id')}")
         return jsonify({'success': True, **result}), 201
     except AppointmentError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -255,6 +288,20 @@ def update_appointment(appointment_id):
             services=data['services']
         )
 
+        entity_label = f"{data.get('appointment_date')} {data.get('start_time','')}"
+        old_row = dict(row)
+        for field in ['appointment_date', 'start_time', 'end_time',
+                      'employee_id', 'client_id', 'status', 'notes']:
+            if field not in data:   # field was not sent — not a change
+                continue
+            old_val = _canonical(old_row.get(field))
+            new_val = _canonical(data.get(field))
+            if old_val != new_val:
+                _audit('appointment', 'UPDATE', entity_id=appointment_id,
+                       entity_label=entity_label,
+                       field_name=field,
+                       old_value=old_val or None,
+                       new_value=new_val or None)
         return jsonify({'success': True, **result})
     except AppointmentError as e:
         import traceback
@@ -277,11 +324,22 @@ def update_appointment_status(appointment_id):
         if not new_status:
             return jsonify({'success': False, 'error': 'Brak statusu'}), 400
 
+        # Fetch old status before the transition
+        old_row = AppointmentRepository().get_by_id(appointment_id)
+        old_status = old_row['status'] if old_row else None
+
         service = AppointmentBusinessService()
         success = service.transition_status(
             appointment_id, new_status,
             cancellation_reason=data.get('cancellation_reason')
         )
+        if success:
+            cancellation_reason = data.get('cancellation_reason')
+            new_val = f"{new_status} ({cancellation_reason})" if cancellation_reason else new_status
+            _audit('appointment', 'STATUS_CHANGE', entity_id=appointment_id,
+                   field_name='status',
+                   old_value=old_status,
+                   new_value=new_val)
         return jsonify({'success': success})
     except AppointmentError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -308,6 +366,8 @@ def complete_appointment(appointment_id):
             if isinstance(result[key], Decimal):
                 result[key] = float(result[key])
 
+        _audit('appointment', 'COMPLETE', entity_id=appointment_id,
+               field_name='status', new_value='completed')
         return jsonify({'success': True, **result})
     except AppointmentError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -617,10 +677,18 @@ def update_past_appointment_status(appointment_id):
             }), 400
 
         # Aktualizacja statusu bezpośrednio (omijamy transition_status)
+        old_status = row['status']
         cancellation_reason = data.get('cancellation_reason') if new_status == 'cancelled' else None
         success = repo.update_status(appointment_id, new_status, cancellation_reason)
 
         if success:
+            appt_label = f"{row['appointment_date']} {row.get('start_time','')}"
+            new_val = f"{new_status} ({cancellation_reason})" if cancellation_reason else new_status
+            _audit('appointment', 'STATUS_CHANGE', entity_id=appointment_id,
+                   entity_label=appt_label,
+                   field_name='status',
+                   old_value=old_status,
+                   new_value=new_val)
             return jsonify({'success': True, 'message': f'Status zaktualizowany na: {new_status}'})
         else:
             return jsonify({'success': False, 'error': 'Nie udało się zaktualizować statusu'}), 500

@@ -2,6 +2,7 @@
 FakturaScanner - Flask Web Application
 Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
+import base64
 import logging
 import os
 from datetime import datetime, date, time
@@ -159,13 +160,22 @@ def create_app():
     def internal_error(error):
         return render_template('errors/500.html'), 500
 
+    # Pre-encode sidebar logo as base64 data URI (eliminates flash on navigation)
+    logo_path = app.static_folder + '/Logo.png'
+    try:
+        with open(logo_path, 'rb') as f:
+            logo_data_uri = 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
+    except FileNotFoundError:
+        logo_data_uri = ''
+
     # Context processors
     @app.context_processor
     def inject_globals():
         return {
             'app_name': APP_NAME,
             'version': VERSION,
-            'now': datetime.now
+            'now': datetime.now,
+            'logo_data_uri': logo_data_uri,
         }
 
     return app

@@ -41,16 +41,45 @@ CREATE INDEX IF NOT EXISTS idx_seller_name_search ON sellers(seller_name);
 -- Tabela historii zmian (audit log)
 CREATE TABLE IF NOT EXISTS audit_log (
     id SERIAL PRIMARY KEY,
-    invoice_id INTEGER NOT NULL,
+    invoice_id INTEGER,
     action TEXT DEFAULT 'UPDATE',
-    field_name TEXT NOT NULL,
+    field_name TEXT,
     old_value TEXT,
     new_value TEXT,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+    entity_type TEXT DEFAULT 'invoice',
+    entity_id INTEGER,
+    entity_label TEXT,
+    user_id INTEGER,
+    user_name TEXT
 );
 
+-- Migration: extend existing audit_log for multi-entity support (idempotent)
+-- Runs BEFORE indexes so new columns exist when idx_audit_entity is created
+DO $$
+BEGIN
+    -- Drop FK constraint so invoice_id can be nullable (login/import events have no invoice)
+    EXECUTE (
+        SELECT 'ALTER TABLE audit_log DROP CONSTRAINT ' || constraint_name
+        FROM information_schema.table_constraints
+        WHERE table_name = 'audit_log' AND constraint_type = 'FOREIGN KEY'
+        LIMIT 1
+    );
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
+DO $$ BEGIN ALTER TABLE audit_log ALTER COLUMN invoice_id DROP NOT NULL; EXCEPTION WHEN others THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE audit_log ALTER COLUMN field_name DROP NOT NULL;  EXCEPTION WHEN others THEN NULL; END $$;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_type  TEXT DEFAULT 'invoice';
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_id    INTEGER;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_label TEXT;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_id      INTEGER;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_name    TEXT;
+UPDATE audit_log SET entity_type = 'invoice' WHERE entity_type IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_audit_invoice ON audit_log(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit_log(changed_at DESC);
 
 -- Tabela duplikatów
 CREATE TABLE IF NOT EXISTS duplicate_detection (

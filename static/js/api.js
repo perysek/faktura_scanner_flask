@@ -141,8 +141,10 @@ const API = {
 
     // History endpoints
     history: {
-        getAll: (invoiceId = null) => {
-            const params = invoiceId ? { invoice_id: invoiceId } : {};
+        getAll: (invoiceId = null, entityType = null) => {
+            const params = {};
+            if (invoiceId) params.invoice_id = invoiceId;
+            if (entityType) params.entity_type = entityType;
             return API.get('/history', params);
         },
         getDetails: (ids) => API.post('/history/details', { ids: ids })
