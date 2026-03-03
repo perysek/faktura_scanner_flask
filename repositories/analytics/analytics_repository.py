@@ -196,18 +196,26 @@ class AnalyticsRepository:
             }
         """
         # New vs. returning clients
+        # Use MIN(appointment_date) per client from appointments table instead of
+        # first_visit_date, which can be NULL for imported clients.
         new_returning_query = """
+            WITH period_clients AS (
+                SELECT DISTINCT client_id
+                FROM appointments
+                WHERE status = 'completed'
+                  AND appointment_date BETWEEN %s AND %s
+            ),
+            first_appointments AS (
+                SELECT client_id, MIN(appointment_date) AS first_ever
+                FROM appointments
+                WHERE status = 'completed'
+                GROUP BY client_id
+            )
             SELECT
-                COUNT(DISTINCT CASE
-                    WHEN c.first_visit_date >= %s THEN c.id
-                END) as new_clients,
-                COUNT(DISTINCT CASE
-                    WHEN c.first_visit_date < %s THEN c.id
-                END) as returning_clients
-            FROM clients c
-            INNER JOIN appointments a ON a.client_id = c.id
-            WHERE a.status = 'completed'
-                AND a.appointment_date BETWEEN %s AND %s
+                COUNT(CASE WHEN fa.first_ever >= %s THEN 1 END) AS new_clients,
+                COUNT(CASE WHEN fa.first_ever < %s  THEN 1 END) AS returning_clients
+            FROM period_clients pc
+            JOIN first_appointments fa ON fa.client_id = pc.client_id
         """
 
         # Retention rate (90-day window)
@@ -246,8 +254,8 @@ class AnalyticsRepository:
         conn = DatabaseConnection.get_connection()
         cursor = conn.cursor()
 
-        # New/returning
-        cursor.execute(new_returning_query, (start_date, start_date, start_date, end_date))
+        # New/returning: period_clients(start,end) → final SELECT(start, start)
+        cursor.execute(new_returning_query, (start_date, end_date, start_date, start_date))
         nr_row = cursor.fetchone()
 
         # Retention

@@ -426,34 +426,55 @@ async function loadClients() {
 
     // Render client split doughnut chart
     const ctx = document.getElementById('clientSplitChart');
+    const newCount = data.metrics.new_clients || 0;
+    const returningCount = data.metrics.returning_clients || 0;
 
     // Destroy existing chart
     if (clientSplitChart) {
         clientSplitChart.destroy();
     }
 
-    // Create new chart
-    clientSplitChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Nowi klienci', 'Powracający'],
-            datasets: [{
-                data: [
-                    data.metrics.new_clients,
-                    data.metrics.returning_clients
-                ],
-                backgroundColor: [CHART_COLORS.primary, CHART_COLORS.green]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
+    if (newCount === 0 && returningCount === 0) {
+        // No data — show placeholder text so canvas area isn't blank
+        const wrapper = ctx ? ctx.parentElement : null;
+        if (wrapper) {
+            ctx.style.display = 'none';
+            if (!wrapper.querySelector('.no-data-msg')) {
+                const msg = document.createElement('p');
+                msg.className = 'no-data-msg text-center text-sm text-slate-400 pt-16';
+                msg.textContent = 'Brak danych w wybranym okresie';
+                wrapper.appendChild(msg);
+            }
         }
-    });
+    } else {
+        // Remove any existing no-data placeholder
+        if (ctx) {
+            ctx.style.display = '';
+            const wrapper = ctx.parentElement;
+            const msg = wrapper && wrapper.querySelector('.no-data-msg');
+            if (msg) msg.remove();
+        }
 
-    // Update retention rate
+        clientSplitChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Nowi klienci', 'Powracający'],
+                datasets: [{
+                    data: [newCount, returningCount],
+                    backgroundColor: [CHART_COLORS.primary, CHART_COLORS.green]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Update retention rate (retention_rate can be null when no prior-visit data)
     const retentionEl = document.getElementById('retentionRate');
-    retentionEl.textContent = `Wskaźnik retencji (90 dni): ${data.metrics.retention_rate.toFixed(1)}%`;
+    const retRate = data.metrics.retention_rate != null ? Number(data.metrics.retention_rate).toFixed(1) : '—';
+    retentionEl.textContent = `Wskaźnik retencji (90 dni): ${retRate}%`;
 
     // Render at-risk clients list
     renderAtRiskList(data.metrics.at_risk_clients);

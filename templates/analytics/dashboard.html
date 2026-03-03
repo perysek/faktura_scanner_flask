@@ -63,11 +63,12 @@
     <button onclick="scrollToSection('nav-trends')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Trendy roczne</button>
 </div>
 
-<!-- Back-to-top button (hidden until scrolled) -->
+<!-- Back-to-top button (hidden until scrolled; moved to <body> by JS for reliable fixed positioning) -->
 <button id="backToTopBtn"
-    class="fixed bottom-6 right-6 z-50 hidden items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-lg hover:bg-blue-700 transition-colors">
-    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+    class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-full shadow-2xl ring-2 ring-blue-400 hover:bg-blue-700 transition-colors"
+    style="display:none">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
     </svg>
     Idź na początek
 </button>
@@ -402,15 +403,14 @@ function scrollToSection(id) {
 }
 
 // Back-to-top button visibility
+// Move button to <body> so position:fixed works correctly regardless of
+// overflow:hidden / overflow:auto ancestors in the layout.
 (function () {
     const btn = document.getElementById('backToTopBtn');
     if (!btn || !_scrollEl) return;
+    document.body.appendChild(btn);   // lift out of overflow container
     _scrollEl.addEventListener('scroll', function () {
-        if (_scrollEl.scrollTop > 400) {
-            btn.style.display = 'flex';
-        } else {
-            btn.style.display = 'none';
-        }
+        btn.style.display = _scrollEl.scrollTop > 400 ? 'flex' : 'none';
     }, { passive: true });
     btn.addEventListener('click', function () {
         _scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
