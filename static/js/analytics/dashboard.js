@@ -933,3 +933,115 @@ async function loadMonthlyTrend() {
         }
     });
 }
+
+async function loadNewClients() {
+    const response = await fetch('/api/analytics/rolling/new-clients');
+    const data = await response.json();
+    const ctx = document.getElementById('newClientsChart');
+    if (!ctx || !data.success) return;
+
+    if (newClientsChart) newClientsChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    newClientsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Nowi klienci',
+                data: data.months.map(m => m.new_clients),
+                borderColor: 'rgba(22, 163, 74, 1)',
+                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `Nowi klienci: ${ctx.parsed.y}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+async function loadCancellationRate() {
+    const response = await fetch('/api/analytics/rolling/cancellation-rate');
+    const data = await response.json();
+    const ctx = document.getElementById('cancellationRateChart');
+    if (!ctx || !data.success) return;
+
+    if (cancellationRateChart) cancellationRateChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    cancellationRateChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Odwołania',
+                    data: data.months.map(m => m.cancellation_pct),
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: 'Nieobecności',
+                    data: data.months.map(m => m.noshow_pct),
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val}%` }
+                }
+            }
+        }
+    });
+}
