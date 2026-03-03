@@ -105,6 +105,25 @@
     </div>
 </div>
 
+<!-- Profit Breakdown Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="refined-card border-l-4 border-orange-400">
+        <div class="text-sm text-slate-500 mb-1">Koszty pracownicze</div>
+        <div id="kpi-employee-costs" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div class="text-xs text-slate-400">ZUS + wynagrodzenia</div>
+    </div>
+    <div class="refined-card border-l-4 border-red-400">
+        <div class="text-sm text-slate-500 mb-1">Koszty faktur</div>
+        <div id="kpi-invoice-costs" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div id="kpi-invoice-unpaid" class="text-xs text-slate-400"></div>
+    </div>
+    <div class="refined-card border-l-4 border-green-500">
+        <div class="text-sm text-slate-500 mb-1">Zysk netto</div>
+        <div id="kpi-net-profit" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div id="kpi-net-profit-change" class="text-sm"></div>
+    </div>
+</div>
+
 <!-- Charts Row 1: Revenue Trend + Services -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
     <!-- Revenue Trend Chart -->
@@ -121,6 +140,27 @@
         <div style="height: 300px;">
             <canvas id="servicesChart"></canvas>
         </div>
+    </div>
+</div>
+
+<!-- Profit Breakdown Chart -->
+<div class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-4">Struktura zysku</h3>
+    <div style="height: 280px;">
+        <canvas id="profitBreakdownChart"></canvas>
+    </div>
+</div>
+
+<!-- 12-Month Rolling Profit Trend -->
+<div class="refined-card mb-6">
+    <div class="flex justify-between items-start mb-4">
+        <div>
+            <h3 class="text-lg font-medium">Trend 12 miesięcy — przychody / koszty / zysk</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Ruchome okno 12 miesięcy (niezależne od wybranego okresu)</p>
+        </div>
+    </div>
+    <div style="height: 320px;">
+        <canvas id="monthlyTrendChart"></canvas>
     </div>
 </div>
 
@@ -166,6 +206,135 @@
         <div id="atRiskList" class="space-y-2 max-h-[300px] overflow-y-auto">
             <p class="text-center text-slate-500">Ładowanie...</p>
         </div>
+    </div>
+</div>
+<!-- Occupancy & Visit Quality -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 mt-6">
+    <div class="refined-card border-l-4 border-blue-400">
+        <div class="text-sm text-slate-500 mb-1">Obłożenie salonu</div>
+        <div id="kpi-occupancy" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div id="kpi-occupancy-detail" class="text-xs text-slate-400"></div>
+    </div>
+    <div class="refined-card border-l-4 border-amber-400">
+        <div class="text-sm text-slate-500 mb-1">Wskaźnik odwołań</div>
+        <div id="kpi-cancellation-rate" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div id="kpi-cancellation-detail" class="text-xs text-slate-400"></div>
+    </div>
+    <div class="refined-card border-l-4 border-red-300">
+        <div class="text-sm text-slate-500 mb-1">Nieobecności (no-show)</div>
+        <div id="kpi-noshow-rate" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div id="kpi-noshow-detail" class="text-xs text-slate-400"></div>
+    </div>
+</div>
+
+<!-- Peak Hours Heatmap -->
+<div class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-4">Szczyty rezerwacji (godzina × dzień tygodnia)</h3>
+    <div id="peakHoursHeatmap" class="overflow-x-auto">
+        <p class="text-center text-slate-500">Ładowanie...</p>
+    </div>
+</div>
+
+<!-- Service Price Analysis -->
+<div class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-2">Analiza cen usług</h3>
+    <p class="text-sm text-slate-500 mb-4">Porównanie cen katalogowych z faktycznie pobranymi</p>
+    <div class="overflow-x-auto">
+        <table class="refined-table">
+            <thead>
+                <tr>
+                    <th>Usługa</th>
+                    <th>Kategoria</th>
+                    <th class="text-right">Cena katalogowa</th>
+                    <th class="text-right">Śr. pobrana</th>
+                    <th class="text-right">Rabat śr.</th>
+                    <th class="text-right">Wizyty</th>
+                    <th class="text-right">Przychód</th>
+                </tr>
+            </thead>
+            <tbody id="servicePriceTableBody">
+                <tr><td colspan="7" class="text-center text-slate-500">Ładowanie...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Business Insights -->
+<div class="refined-card mt-4">
+    <h3 class="text-lg font-medium mb-4">Wskazówki biznesowe</h3>
+    <div id="insightsList" class="space-y-3">
+        <p class="text-center text-slate-500">Ładowanie...</p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     Trendy roczne (ruchome okno 12 miesięcy)
+     ═══════════════════════════════════════════════ -->
+<div class="mt-8 mb-4">
+    <h2 class="text-xl font-semibold text-slate-800">Trendy roczne</h2>
+    <p class="text-xs text-slate-400 mt-0.5">Wszystkie wykresy poniżej — ruchome okno 12 miesięcy, niezależne od wybranego okresu</p>
+</div>
+
+<!-- Row 1: New clients + Cancellation/no-show rate -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-1">Nowi klienci / miesiąc</h3>
+        <p class="text-xs text-slate-400 mb-4">Czy salon rośnie?</p>
+        <div style="height: 280px;">
+            <canvas id="newClientsChart"></canvas>
+        </div>
+    </div>
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-1">Wskaźnik odwołań i nieobecności</h3>
+        <p class="text-xs text-slate-400 mb-4">Czy niezawodność rezerwacji rośnie?</p>
+        <div style="height: 280px;">
+            <canvas id="cancellationRateChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Avg ticket + Invoice cost ratio -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-1">Średni rachunek / miesiąc</h3>
+        <p class="text-xs text-slate-400 mb-4">Czy wartość wizyty rośnie?</p>
+        <div style="height: 280px;">
+            <canvas id="avgTicketChart"></canvas>
+        </div>
+    </div>
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-1">Udział kosztów faktur w przychodzie</h3>
+        <p class="text-xs text-slate-400 mb-4">Czy koszty dostawców pochłaniają więcej przychodu?</p>
+        <div style="height: 280px;">
+            <canvas id="costRatioChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Service category mix (full width stacked bar) -->
+<div class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-1">Mix kategorii usług / miesiąc</h3>
+    <p class="text-xs text-slate-400 mb-4">Które kategorie rosną, a które zanikają?</p>
+    <div style="height: 320px;">
+        <canvas id="categoryMixChart"></canvas>
+    </div>
+</div>
+
+<!-- Row 4: Employee utilisation (full width multi-line) -->
+<div class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-1">Wykorzystanie pracowników / miesiąc</h3>
+    <p class="text-xs text-slate-400 mb-4">Kto jest przeciążony, a kto niedociążony? (22 dni rob. × max wizyt/dzień)</p>
+    <div style="height: 320px;">
+        <canvas id="employeeUtilisationChart"></canvas>
+    </div>
+</div>
+
+<!-- Row 5: Visit frequency histogram (full width) -->
+<div class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-1">Częstotliwość wizyt klientów</h3>
+    <p class="text-xs text-slate-400 mb-4">Ilu klientów odwiedziło salon 1×, 2×, 3×… w ostatnich 12 miesiącach</p>
+    <div style="height: 280px;">
+        <canvas id="visitFrequencyChart"></canvas>
     </div>
 </div>
 {% endblock %}
