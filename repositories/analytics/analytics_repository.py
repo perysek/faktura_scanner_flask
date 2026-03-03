@@ -818,12 +818,12 @@ class AnalyticsRepository:
                     COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_count,
                     COUNT(*) FILTER (WHERE status = 'no_show')   AS noshow_count,
                     ROUND(
-                        COUNT(*) FILTER (WHERE status = 'cancelled') * 100.0
-                        / NULLIF(COUNT(*), 0), 1
+                        (COUNT(*) FILTER (WHERE status = 'cancelled') * 100.0
+                        / NULLIF(COUNT(*), 0))::numeric, 1
                     ) AS cancellation_pct,
                     ROUND(
-                        COUNT(*) FILTER (WHERE status = 'no_show') * 100.0
-                        / NULLIF(COUNT(*), 0), 1
+                        (COUNT(*) FILTER (WHERE status = 'no_show') * 100.0
+                        / NULLIF(COUNT(*), 0))::numeric, 1
                     ) AS noshow_pct
                 FROM appointments
                 WHERE appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
@@ -934,8 +934,8 @@ class AnalyticsRepository:
                 COALESCE(r.revenue, 0)        AS revenue,
                 COALESCE(ic.invoice_costs, 0) AS invoice_costs,
                 ROUND(
-                    COALESCE(ic.invoice_costs, 0)
-                    / NULLIF(COALESCE(r.revenue, 0), 0) * 100,
+                    (COALESCE(ic.invoice_costs, 0)
+                    / NULLIF(COALESCE(r.revenue, 0), 0) * 100)::numeric,
                     1
                 ) AS ratio_pct
             FROM months m
@@ -978,8 +978,8 @@ class AnalyticsRepository:
                 COALESCE(ab.appointments_count, 0)          AS appointments_count,
                 COALESCE(e.max_appointments_per_day, 8)     AS max_per_day,
                 ROUND(
-                    COALESCE(ab.appointments_count, 0) * 100.0
-                    / (22 * COALESCE(e.max_appointments_per_day, 8)),
+                    (COALESCE(ab.appointments_count, 0) * 100.0
+                    / (22 * COALESCE(e.max_appointments_per_day, 8)))::numeric,
                     1
                 ) AS utilisation_pct
             FROM months m
