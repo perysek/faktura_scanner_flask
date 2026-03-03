@@ -779,7 +779,12 @@ class AnalyticsRepository:
         return [dict(row) for row in cursor.fetchall()]
 
     def get_new_clients_monthly(self) -> List[Dict]:
-        """Nowi klienci wg miesiąca (first_visit_date) — ostatnie 12 miesięcy."""
+        """
+        Nowi klienci wg miesiąca — ostatnie 12 miesięcy (bez bieżącego).
+        Oparty na pierwszej zrealizowanej wizycie klienta (MIN appointment_date),
+        nie na first_visit_date, która może być NULL lub nieprawidłowa dla
+        importowanych klientów.
+        """
         query = """
             WITH months AS (
                 SELECT generate_series(
@@ -788,20 +793,20 @@ class AnalyticsRepository:
                     '1 month'::interval
                 )::date AS month_start
             ),
-            new_per_month AS (
+            first_appointments AS (
                 SELECT
-                    DATE_TRUNC('month', first_visit_date)::date AS month_start,
-                    COUNT(*) AS new_clients
-                FROM clients
-                WHERE first_visit_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
-                  AND first_visit_date IS NOT NULL
-                GROUP BY DATE_TRUNC('month', first_visit_date)::date
+                    client_id,
+                    DATE_TRUNC('month', MIN(appointment_date))::date AS first_month
+                FROM appointments
+                WHERE status = 'completed'
+                GROUP BY client_id
             )
             SELECT
                 m.month_start,
-                COALESCE(n.new_clients, 0) AS new_clients
+                COUNT(fa.client_id) AS new_clients
             FROM months m
-            LEFT JOIN new_per_month n ON n.month_start = m.month_start
+            LEFT JOIN first_appointments fa ON fa.first_month = m.month_start
+            GROUP BY m.month_start
             ORDER BY m.month_start
         """
         conn = DatabaseConnection.get_connection()
