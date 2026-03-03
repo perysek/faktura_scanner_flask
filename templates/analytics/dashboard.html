@@ -65,7 +65,6 @@
 
 <!-- Back-to-top button (hidden until scrolled) -->
 <button id="backToTopBtn"
-    onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); this.style.display='none';"
     class="fixed bottom-6 right-6 z-50 hidden items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-lg hover:bg-blue-700 transition-colors">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
@@ -390,26 +389,33 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/analytics/dashboard.js') }}"></script>
 <script>
+// The scrollable container is <main id="main-content">, not window
+const _scrollEl = document.getElementById('main-content');
+
 // Section navigation
 function scrollToSection(id) {
     const el = document.getElementById(id);
-    if (!el) return;
-    const offset = 80; // account for any sticky top bar
-    const top = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top, behavior: 'smooth' });
+    if (!el || !_scrollEl) return;
+    const offset = 16; // small breathing room
+    const top = el.offsetTop - _scrollEl.offsetTop - offset;
+    _scrollEl.scrollTo({ top, behavior: 'smooth' });
 }
 
 // Back-to-top button visibility
 (function () {
     const btn = document.getElementById('backToTopBtn');
-    if (!btn) return;
-    window.addEventListener('scroll', function () {
-        if (window.scrollY > 400) {
+    if (!btn || !_scrollEl) return;
+    _scrollEl.addEventListener('scroll', function () {
+        if (_scrollEl.scrollTop > 400) {
             btn.style.display = 'flex';
         } else {
             btn.style.display = 'none';
         }
     }, { passive: true });
+    btn.addEventListener('click', function () {
+        _scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+        btn.style.display = 'none';
+    });
 })();
 </script>
 {% endblock %}
