@@ -1173,3 +1173,80 @@ async function loadCostRatio() {
         }
     });
 }
+
+async function loadCategoryMix() {
+    const response = await fetch('/api/analytics/rolling/category-mix');
+    const data = await response.json();
+    const ctx = document.getElementById('categoryMixChart');
+    if (!ctx || !data.success) return;
+
+    if (categoryMixChart) categoryMixChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    // Generate 12 month keys from today backwards (local time, no UTC shift)
+    const today = new Date();
+    const monthKeys = [];
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        monthKeys.push(`${d.getFullYear()}-${mm}-01`);
+    }
+    const labels = monthKeys.map(k => {
+        const [y, mo] = k.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    // Collect unique categories from response
+    const categories = [...new Set(data.rows.map(r => r.category))].sort();
+
+    // Build lookup: month_start_prefix → category → revenue
+    // month_start from DB may be "2026-03-01", key format must match monthKeys
+    const lookup = {};
+    data.rows.forEach(r => {
+        // Normalise key: take YYYY-MM from month_start and append -01
+        const key = r.month_start.substring(0, 7) + '-01';
+        if (!lookup[key]) lookup[key] = {};
+        lookup[key][r.category] = parseFloat(r.revenue);
+    });
+
+    const CATEGORY_COLORS = [
+        'rgba(37,99,235,0.8)',   'rgba(22,163,74,0.8)',  'rgba(234,88,12,0.8)',
+        'rgba(168,85,247,0.8)', 'rgba(236,72,153,0.8)', 'rgba(20,184,166,0.8)',
+        'rgba(245,158,11,0.8)', 'rgba(239,68,68,0.8)',  'rgba(100,116,139,0.8)',
+        'rgba(14,165,233,0.8)'
+    ];
+
+    const datasets = categories.map((cat, i) => ({
+        label: cat,
+        data: monthKeys.map(k => (lookup[k] && lookup[k][cat]) || 0),
+        backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+        borderWidth: 0
+    }));
+
+    categoryMixChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
+}
