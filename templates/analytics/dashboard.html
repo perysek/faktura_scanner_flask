@@ -48,6 +48,31 @@
     </div>
 </div>
 
+<!-- Section Navigation Strip -->
+<div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1 flex-nowrap">
+    <span class="text-xs text-slate-400 shrink-0">Przejdź do:</span>
+    <button onclick="scrollToSection('nav-kpi')"        class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">KPI</button>
+    <button onclick="scrollToSection('nav-profit')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Zysk netto</button>
+    <button onclick="scrollToSection('nav-charts')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Przychody</button>
+    <button onclick="scrollToSection('nav-employees')"  class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Pracownicy</button>
+    <button onclick="scrollToSection('nav-clients')"    class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Klienci</button>
+    <button onclick="scrollToSection('nav-occupancy')"  class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Obłożenie</button>
+    <button onclick="scrollToSection('nav-peakhours')"  class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Szczyty</button>
+    <button onclick="scrollToSection('nav-services')"   class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Ceny usług</button>
+    <button onclick="scrollToSection('nav-insights')"   class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Wskazówki</button>
+    <button onclick="scrollToSection('nav-trends')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Trendy roczne</button>
+</div>
+
+<!-- Back-to-top button (hidden until scrolled) -->
+<button id="backToTopBtn"
+    onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); this.style.display='none';"
+    class="fixed bottom-6 right-6 z-50 hidden items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-lg hover:bg-blue-700 transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+    </svg>
+    Idź na początek
+</button>
+
 <!-- Dashboard Content -->
 <!-- Custom Date Range Modal (hidden by default) -->
 <div id="customRangeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -75,7 +100,7 @@
 </div>
 
 <!-- KPI Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div id="nav-kpi" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <!-- Revenue Card -->
     <div class="refined-card">
         <div class="text-sm text-slate-500 mb-1">Przychód</div>
@@ -106,7 +131,7 @@
 </div>
 
 <!-- Profit Breakdown Row -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div id="nav-profit" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
     <div class="refined-card border-l-4 border-orange-400">
         <div class="text-sm text-slate-500 mb-1">Koszty pracownicze</div>
         <div id="kpi-employee-costs" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
@@ -125,7 +150,7 @@
 </div>
 
 <!-- Charts Row 1: Revenue Trend + Services -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+<div id="nav-charts" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
     <!-- Revenue Trend Chart -->
     <div class="refined-card lg:col-span-2">
         <h3 class="text-lg font-medium mb-4">Trend przychodów</h3>
@@ -165,7 +190,7 @@
 </div>
 
 <!-- Employee Performance Table -->
-<div class="refined-card mb-6">
+<div id="nav-employees" class="refined-card mb-6">
     <h3 class="text-lg font-medium mb-4">Wyniki pracowników</h3>
     <div class="overflow-x-auto">
         <table class="refined-table">
@@ -190,7 +215,7 @@
 </div>
 
 <!-- Charts Row 2: Client Split + Top Clients + At-Risk -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+<div id="nav-clients" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <!-- Client Split Chart -->
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-4">Nowi vs. powracający klienci</h3>
@@ -230,7 +255,7 @@
     </div>
 </div>
 <!-- Occupancy & Visit Quality -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 mt-6">
+<div id="nav-occupancy" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 mt-6">
     <div class="refined-card border-l-4 border-blue-400">
         <div class="text-sm text-slate-500 mb-1">Obłożenie salonu</div>
         <div id="kpi-occupancy" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
@@ -249,7 +274,7 @@
 </div>
 
 <!-- Peak Hours Heatmap -->
-<div class="refined-card mb-6">
+<div id="nav-peakhours" class="refined-card mb-6">
     <h3 class="text-lg font-medium mb-4">Szczyty rezerwacji (godzina × dzień tygodnia)</h3>
     <div id="peakHoursHeatmap" class="overflow-x-auto">
         <p class="text-center text-slate-500">Ładowanie...</p>
@@ -257,7 +282,7 @@
 </div>
 
 <!-- Service Price Analysis -->
-<div class="refined-card mb-6">
+<div id="nav-services" class="refined-card mb-6">
     <h3 class="text-lg font-medium mb-2">Analiza cen usług</h3>
     <p class="text-sm text-slate-500 mb-4">Porównanie cen katalogowych z faktycznie pobranymi</p>
     <div class="overflow-x-auto">
@@ -281,7 +306,7 @@
 </div>
 
 <!-- Business Insights -->
-<div class="refined-card mt-4">
+<div id="nav-insights" class="refined-card mt-4">
     <h3 class="text-lg font-medium mb-4">Wskazówki biznesowe</h3>
     <div id="insightsList" class="space-y-3">
         <p class="text-center text-slate-500">Ładowanie...</p>
@@ -291,7 +316,7 @@
 <!-- ═══════════════════════════════════════════════
      Trendy roczne (ruchome okno 12 miesięcy)
      ═══════════════════════════════════════════════ -->
-<div class="mt-8 mb-4">
+<div id="nav-trends" class="mt-8 mb-4">
     <h2 class="text-xl font-semibold text-slate-800">Trendy roczne</h2>
     <p class="text-xs text-slate-400 mt-0.5">Wszystkie wykresy poniżej — ruchome okno 12 miesięcy, niezależne od wybranego okresu</p>
 </div>
@@ -364,4 +389,27 @@
 <!-- Chart.js from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/analytics/dashboard.js') }}"></script>
+<script>
+// Section navigation
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const offset = 80; // account for any sticky top bar
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: 'smooth' });
+}
+
+// Back-to-top button visibility
+(function () {
+    const btn = document.getElementById('backToTopBtn');
+    if (!btn) return;
+    window.addEventListener('scroll', function () {
+        if (window.scrollY > 400) {
+            btn.style.display = 'flex';
+        } else {
+            btn.style.display = 'none';
+        }
+    }, { passive: true });
+})();
+</script>
 {% endblock %}
