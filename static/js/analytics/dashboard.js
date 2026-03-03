@@ -11,6 +11,15 @@ let customEndDate = null;
 let revenueTrendChart = null;
 let servicesChart = null;
 let clientSplitChart = null;
+let profitBreakdownChart = null;
+let monthlyTrendChart = null;
+let newClientsChart = null;
+let cancellationRateChart = null;
+let avgTicketChart = null;
+let categoryMixChart = null;
+let costRatioChart = null;
+let employeeUtilisationChart = null;
+let visitFrequencyChart = null;
 
 // Chart.js color palette (Refined Minimal)
 const CHART_COLORS = {
@@ -133,7 +142,20 @@ async function loadDashboard() {
             loadRevenueTrend(),
             loadEmployees(),
             loadServices(),
-            loadClients()
+            loadClients(),
+            loadProfit(),
+            loadInsights(),
+            loadOccupancy(),
+            loadPeakHours(),
+            loadServiceAnalysis(),
+            loadMonthlyTrend(),
+            loadNewClients(),
+            loadCancellationRate(),
+            loadAvgTicket(),
+            loadCategoryMix(),
+            loadCostRatio(),
+            loadEmployeeUtilisation(),
+            loadVisitFrequency()
         ]);
     } catch (error) {
         // Log error silently - empty states are handled by individual components
@@ -509,4 +531,405 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Load profit breakdown KPIs and chart
+ */
+async function loadProfit() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/profit?${params}`);
+    const data = await response.json();
+
+    const empEl = document.getElementById('kpi-employee-costs');
+    const invEl = document.getElementById('kpi-invoice-costs');
+    const unpaidEl = document.getElementById('kpi-invoice-unpaid');
+    const netEl = document.getElementById('kpi-net-profit');
+    const changeEl = document.getElementById('kpi-net-profit-change');
+
+    if (!data.success) {
+        [empEl, invEl, netEl].forEach(el => { if (el) el.textContent = '0,00 zł'; });
+        return;
+    }
+
+    if (empEl) empEl.textContent = formatCurrency(data.employee_costs);
+    if (invEl) invEl.textContent = formatCurrency(data.invoice_costs);
+
+    // Unpaid invoice hint
+    if (unpaidEl) {
+        if (data.invoice_details.unpaid_count > 0) {
+            unpaidEl.textContent =
+                `${data.invoice_details.unpaid_count} niezapłaconych: ` +
+                `${formatCurrency(data.invoice_details.unpaid_amount)}`;
+            unpaidEl.className = 'text-xs text-red-500';
+        } else {
+            unpaidEl.textContent = 'Wszystkie faktury opłacone';
+            unpaidEl.className = 'text-xs text-green-600';
+        }
+    }
+
+    // Net profit — colour based on sign
+    if (netEl) {
+        netEl.textContent = formatCurrency(data.net_profit);
+        netEl.className = `text-2xl font-semibold mb-2 ${data.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`;
+    }
+
+    // Period change badge
+    if (changeEl && data.change) {
+        const pct = data.change.net_profit_pct;
+        const sign = pct >= 0 ? '+' : '';
+        const color = pct >= 0 ? 'text-green-600' : 'text-red-600';
+        const arrow = pct >= 0 ? '↑' : '↓';
+        changeEl.textContent = `${sign}${pct.toFixed(1)}% ${arrow} vs poprzedni okres`;
+        changeEl.className = `text-sm font-medium ${color}`;
+    } else if (changeEl) {
+        changeEl.textContent = '';
+    }
+
+    // Profit breakdown chart
+    const ctx = document.getElementById('profitBreakdownChart');
+    if (!ctx) return;
+
+    if (profitBreakdownChart) {
+        profitBreakdownChart.destroy();
+    }
+
+    const netProfit = data.net_profit;
+    const netColor = netProfit >= 0 ? 'rgba(34, 197, 94, 0.75)' : 'rgba(239, 68, 68, 0.75)';
+    const netLabel = netProfit >= 0 ? 'Zysk netto' : 'Strata netto';
+
+    profitBreakdownChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [''],
+            datasets: [
+                {
+                    label: 'Koszty pracownicze',
+                    data: [data.employee_costs],
+                    backgroundColor: 'rgba(234, 88, 12, 0.75)',
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Koszty faktur',
+                    data: [data.invoice_costs],
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: netLabel,
+                    data: [Math.abs(netProfit)],
+                    backgroundColor: netColor,
+                    borderColor: netColor.replace('0.75', '1'),
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.x)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (val) => `${val.toLocaleString('pl-PL')} zł`
+                    }
+                },
+                y: { stacked: true }
+            }
+        }
+    });
+}
+
+/**
+ * Load and render occupancy KPI cards
+ */
+async function loadOccupancy() {
+    const response = await fetch(`/api/analytics/occupancy?${buildParams()}`);
+    const data = await response.json();
+
+    const occupancyEl = document.getElementById('kpi-occupancy');
+    const occupancyDetailEl = document.getElementById('kpi-occupancy-detail');
+    const cancEl = document.getElementById('kpi-cancellation-rate');
+    const cancDetailEl = document.getElementById('kpi-cancellation-detail');
+    const nsEl = document.getElementById('kpi-noshow-rate');
+    const nsDetailEl = document.getElementById('kpi-noshow-detail');
+
+    if (!data.success) {
+        [occupancyEl, cancEl, nsEl].forEach(el => { if (el) el.textContent = '—'; });
+        return;
+    }
+
+    if (occupancyEl) occupancyEl.textContent = `${data.occupancy_rate.toFixed(1)}%`;
+    if (occupancyDetailEl) {
+        occupancyDetailEl.textContent =
+            `${data.completed} wizyt z ${data.theoretical_capacity} możliwych`;
+    }
+
+    if (cancEl) {
+        cancEl.textContent = `${data.cancellation_rate.toFixed(1)}%`;
+        cancEl.className = `text-2xl font-semibold mb-2 ${
+            data.cancellation_rate > 15 ? 'text-red-600' : 'text-slate-900'
+        }`;
+    }
+    if (cancDetailEl) cancDetailEl.textContent = `${data.cancelled} odwołań`;
+
+    if (nsEl) {
+        nsEl.textContent = `${data.no_show_rate.toFixed(1)}%`;
+        nsEl.className = `text-2xl font-semibold mb-2 ${
+            data.no_show_rate > 10 ? 'text-red-600' : 'text-slate-900'
+        }`;
+    }
+    if (nsDetailEl) nsDetailEl.textContent = `${data.no_shows} nieobecności`;
+}
+
+/**
+ * Load and render peak hours heatmap (HTML table, Mon-Sat × 8-20h)
+ */
+async function loadPeakHours() {
+    const container = document.getElementById('peakHoursHeatmap');
+    if (!container) return;
+
+    const response = await fetch(`/api/analytics/peak-hours?${buildParams()}`);
+    const data = await response.json();
+
+    if (!data.success || data.data.length === 0) {
+        container.innerHTML = '<p class="text-center text-slate-500 py-4">Brak danych</p>';
+        return;
+    }
+
+    // Polish day labels (0=Sun .. 6=Sat); we show Mon(1) through Sat(6)
+    const DAY_LABELS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+    const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6]; // Mon–Sat
+    const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8..20
+
+    // Build lookup: grid[dow][hour] = count
+    const grid = {};
+    let maxCount = 0;
+    for (const row of data.data) {
+        const d = row.day_of_week;
+        const h = row.hour_of_day;
+        if (!grid[d]) grid[d] = {};
+        grid[d][h] = (grid[d][h] || 0) + row.appointment_count;
+        if (grid[d][h] > maxCount) maxCount = grid[d][h];
+    }
+
+    const cellStyle = (count) => {
+        if (count === 0 || maxCount === 0) return 'background:transparent';
+        const opacity = Math.max(0.12, count / maxCount);
+        return `background:rgba(37,99,235,${opacity.toFixed(2)})`;
+    };
+
+    let html = '<table style="border-collapse:collapse;min-width:100%">';
+
+    // Header row: day names
+    html += '<thead><tr>';
+    html += '<th style="padding:4px 8px;font-size:11px;color:#64748b;text-align:right">Godz.</th>';
+    for (const dow of DISPLAY_DAYS) {
+        html += `<th style="padding:4px 12px;font-size:11px;color:#64748b;text-align:center">${DAY_LABELS[dow]}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    // Data rows: one per hour
+    for (const hour of HOURS) {
+        html += '<tr>';
+        html += `<td style="padding:3px 8px;font-size:11px;color:#94a3b8;text-align:right;white-space:nowrap">${hour}:00</td>`;
+        for (const dow of DISPLAY_DAYS) {
+            const count = (grid[dow] && grid[dow][hour]) || 0;
+            const title = count > 0 ? `${DAY_LABELS[dow]} ${hour}:00 — ${count} wizyt` : '';
+            html += `<td title="${title}" style="padding:3px 6px;text-align:center;border-radius:3px;${cellStyle(count)}">`;
+            if (count > 0) {
+                html += `<span style="font-size:11px;color:#1e40af;font-weight:500">${count}</span>`;
+            }
+            html += '</td>';
+        }
+        html += '</tr>';
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+/**
+ * Load and render service price analysis table
+ */
+async function loadServiceAnalysis() {
+    const response = await fetch(`/api/analytics/service-analysis?${buildParams()}`);
+    const data = await response.json();
+
+    const tbody = document.getElementById('servicePriceTableBody');
+    if (!tbody) return;
+
+    if (!data.success) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-500">Błąd ładowania danych</td></tr>';
+        return;
+    }
+
+    if (data.services.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-500">Brak danych</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.services.map(s => {
+        const discount = parseFloat(s.avg_discount_pct) || 0;
+        const discountColor = discount > 10 ? 'text-red-600' :
+                              discount > 0  ? 'text-amber-600' : 'text-green-600';
+        const rowClass = s.bookings === 0 ? 'text-slate-400' : '';
+        const hasBookings = s.bookings > 0;
+        return `
+            <tr class="${rowClass}">
+                <td class="${s.bookings === 0 ? 'italic' : 'font-medium'}">${escapeHtml(s.service_name)}</td>
+                <td><span class="text-xs">${escapeHtml(s.category || '')}</span></td>
+                <td class="text-right">${formatCurrency(s.catalogue_price)}</td>
+                <td class="text-right">${hasBookings ? formatCurrency(s.avg_charged) : '—'}</td>
+                <td class="text-right ${hasBookings ? discountColor : ''} font-medium">
+                    ${hasBookings ? `${discount.toFixed(1)}%` : '—'}
+                </td>
+                <td class="text-right">${s.bookings}</td>
+                <td class="text-right">${hasBookings ? formatCurrency(s.total_revenue) : '—'}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Load and render business insights panel
+ */
+async function loadInsights() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/insights?${params}`);
+    const data = await response.json();
+
+    const listEl = document.getElementById('insightsList');
+    if (!listEl) return;
+
+    if (!data.success || !data.insights || data.insights.length === 0) {
+        listEl.innerHTML = '<p class="text-center text-slate-500">Brak danych do analizy</p>';
+        return;
+    }
+
+    const typeStyles = {
+        alert:   'bg-red-50 border-red-200 text-red-700',
+        warning: 'bg-amber-50 border-amber-200 text-amber-700',
+        success: 'bg-green-50 border-green-200 text-green-700',
+        info:    'bg-blue-50 border-blue-200 text-blue-700'
+    };
+    const typeIcons = {
+        alert: '⚠️', warning: '⚡', success: '✓', info: 'ℹ'
+    };
+
+    listEl.innerHTML = data.insights.map(insight => {
+        const style = typeStyles[insight.type] || typeStyles.info;
+        const icon = typeIcons[insight.type] || 'ℹ';
+        return `
+            <div class="flex items-start gap-3 p-3 rounded border ${style}">
+                <span class="text-lg leading-none mt-0.5">${icon}</span>
+                <div>
+                    <div class="font-semibold text-sm">${escapeHtml(insight.title)}</div>
+                    <div class="text-sm mt-0.5">${escapeHtml(insight.message)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Load 12-month rolling profit trend chart (always relative to today, ignores period selector)
+ */
+async function loadMonthlyTrend() {
+    const response = await fetch('/api/analytics/monthly-trend');
+    const data = await response.json();
+    const ctx = document.getElementById('monthlyTrendChart');
+    if (!ctx || !data.success) return;
+
+    if (monthlyTrendChart) monthlyTrendChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    const labels = data.months.map(m => {
+        // Parse as local time per date-formatting rules (avoids UTC day-shift)
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    monthlyTrendChart = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Przychód',
+                    data: data.months.map(m => m.revenue),
+                    backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    type: 'bar',
+                    label: 'Koszty pracownicze',
+                    data: data.months.map(m => m.employee_costs),
+                    backgroundColor: 'rgba(234, 88, 12, 0.75)',
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    type: 'bar',
+                    label: 'Koszty faktur',
+                    data: data.months.map(m => m.invoice_costs),
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    type: 'line',
+                    label: 'Zysk netto',
+                    data: data.months.map(m => m.profit),
+                    borderColor: 'rgba(22, 163, 74, 1)',
+                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: data.months.map(m =>
+                        m.profit >= 0 ? 'rgba(22,163,74,1)' : 'rgba(239,68,68,1)'
+                    ),
+                    fill: false,
+                    tension: 0.3,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
 }
