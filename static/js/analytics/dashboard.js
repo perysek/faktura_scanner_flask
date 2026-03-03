@@ -1045,3 +1045,131 @@ async function loadCancellationRate() {
         }
     });
 }
+
+async function loadAvgTicket() {
+    const response = await fetch('/api/analytics/rolling/avg-ticket');
+    const data = await response.json();
+    const ctx = document.getElementById('avgTicketChart');
+    if (!ctx || !data.success) return;
+
+    if (avgTicketChart) avgTicketChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    avgTicketChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Średni rachunek',
+                data: data.months.map(m => m.avg_ticket),
+                borderColor: 'rgba(37, 99, 235, 1)',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `Średni rachunek: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
+}
+
+async function loadCostRatio() {
+    const response = await fetch('/api/analytics/rolling/cost-ratio');
+    const data = await response.json();
+    const ctx = document.getElementById('costRatioChart');
+    if (!ctx || !data.success) return;
+
+    if (costRatioChart) costRatioChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    costRatioChart = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Przychód',
+                    data: data.months.map(m => m.revenue),
+                    backgroundColor: 'rgba(37, 99, 235, 0.5)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'yPLN',
+                    order: 2
+                },
+                {
+                    type: 'line',
+                    label: 'Udział faktur (%)',
+                    data: data.months.map(m => m.ratio_pct),
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3,
+                    yAxisID: 'yPct',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.dataset.yAxisID === 'yPct'
+                            ? `${ctx.dataset.label}: ${ctx.parsed.y ?? 0}%`
+                            : `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                yPLN: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                },
+                yPct: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    ticks: { callback: (val) => `${val}%` }
+                }
+            }
+        }
+    });
+}
