@@ -1319,3 +1319,64 @@ async function loadEmployeeUtilisation() {
         }
     });
 }
+
+async function loadVisitFrequency() {
+    const response = await fetch('/api/analytics/rolling/visit-frequency');
+    const data = await response.json();
+    const ctx = document.getElementById('visitFrequencyChart');
+    if (!ctx || !data.success) return;
+
+    if (visitFrequencyChart) visitFrequencyChart.destroy();
+
+    // Build buckets 1 through 10+ (anything >= 10 merged into one bucket)
+    const MAX_BUCKET = 10;
+    const buckets = {};
+    data.distribution.forEach(d => {
+        const key = parseInt(d.visit_count) >= MAX_BUCKET ? MAX_BUCKET : parseInt(d.visit_count);
+        buckets[key] = (buckets[key] || 0) + parseInt(d.client_count);
+    });
+
+    const labels = [];
+    const values = [];
+    for (let i = 1; i <= MAX_BUCKET; i++) {
+        labels.push(i === MAX_BUCKET ? `${MAX_BUCKET}+` : String(i));
+        values.push(buckets[i] || 0);
+    }
+
+    visitFrequencyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Klienci',
+                data: values,
+                backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `Klienci: ${ctx.parsed.y}`,
+                        title: (items) => {
+                            const v = items[0].label;
+                            return v === '10+' ? '10 lub więcej wizyt' : `${v} ${v === '1' ? 'wizyta' : 'wizyty'}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    title: { display: true, text: 'Liczba wizyt w ostatnich 12 miesiącach' }
+                },
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
