@@ -1250,3 +1250,72 @@ async function loadCategoryMix() {
         }
     });
 }
+
+async function loadEmployeeUtilisation() {
+    const response = await fetch('/api/analytics/rolling/employee-utilisation');
+    const data = await response.json();
+    const ctx = document.getElementById('employeeUtilisationChart');
+    if (!ctx || !data.success) return;
+
+    if (employeeUtilisationChart) employeeUtilisationChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    // Collect unique sorted months from response
+    const monthKeys = [...new Set(data.rows.map(r => r.month_start))].sort();
+    const labels = monthKeys.map(k => {
+        const [y, mo] = k.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    const employees = [...new Set(data.rows.map(r => r.employee_name))].sort();
+
+    // Build lookup: employee → month_start → utilisation_pct
+    const lookup = {};
+    data.rows.forEach(r => {
+        if (!lookup[r.employee_name]) lookup[r.employee_name] = {};
+        lookup[r.employee_name][r.month_start] = parseFloat(r.utilisation_pct);
+    });
+
+    const EMP_COLORS = [
+        'rgba(37,99,235,1)',  'rgba(22,163,74,1)',  'rgba(234,88,12,1)',
+        'rgba(168,85,247,1)', 'rgba(236,72,153,1)', 'rgba(20,184,166,1)',
+        'rgba(245,158,11,1)', 'rgba(100,116,139,1)'
+    ];
+
+    const datasets = employees.map((emp, i) => ({
+        label: emp,
+        data: monthKeys.map(k => (lookup[emp] && lookup[emp][k]) || 0),
+        borderColor: EMP_COLORS[i % EMP_COLORS.length],
+        backgroundColor: EMP_COLORS[i % EMP_COLORS.length].replace(',1)', ',0.08)'),
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: false,
+        tension: 0.3
+    }));
+
+    employeeUtilisationChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val}%` }
+                }
+            }
+        }
+    });
+}
