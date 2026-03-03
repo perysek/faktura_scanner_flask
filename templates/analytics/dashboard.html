@@ -51,16 +51,15 @@
 <!-- Section Navigation Strip -->
 <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1 flex-nowrap">
     <span class="text-xs text-slate-400 shrink-0">Przejdź do:</span>
-    <button onclick="scrollToSection('nav-kpi')"        class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">KPI</button>
-    <button onclick="scrollToSection('nav-profit')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Zysk netto</button>
-    <button onclick="scrollToSection('nav-charts')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Przychody</button>
-    <button onclick="scrollToSection('nav-employees')"  class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Pracownicy</button>
-    <button onclick="scrollToSection('nav-clients')"    class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Klienci</button>
-    <button onclick="scrollToSection('nav-occupancy')"  class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Obłożenie</button>
-    <button onclick="scrollToSection('nav-peakhours')"  class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Szczyty</button>
-    <button onclick="scrollToSection('nav-services')"   class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Ceny usług</button>
-    <button onclick="scrollToSection('nav-insights')"   class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Wskazówki</button>
-    <button onclick="scrollToSection('nav-trends')"     class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Trendy roczne</button>
+    <button onclick="scrollToSection('nav-kpi')"        class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">KPI</button>
+    <button onclick="scrollToSection('nav-profit')"     class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Zysk netto</button>
+    <button onclick="scrollToSection('nav-employees')"  class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Pracownicy</button>
+    <button onclick="scrollToSection('nav-clients')"    class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Klienci</button>
+    <button onclick="scrollToSection('nav-occupancy')"  class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Obłożenie</button>
+    <button onclick="scrollToSection('nav-peakhours')"  class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Szczyty</button>
+    <button onclick="scrollToSection('nav-services')"   class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Ceny usług</button>
+    <button onclick="scrollToSection('nav-insights')"   class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Wskazówki</button>
+    <button onclick="scrollToSection('nav-trends')"     class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Trendy roczne</button>
 </div>
 
 <!-- Back-to-top button (hidden until scrolled; moved to <body> by JS for reliable fixed positioning) -->
@@ -150,7 +149,7 @@
 </div>
 
 <!-- Charts Row 1: Revenue Trend + Services -->
-<div id="nav-charts" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
     <!-- Revenue Trend Chart -->
     <div class="refined-card lg:col-span-2">
         <h3 class="text-lg font-medium mb-4">Trend przychodów</h3>

@@ -684,8 +684,8 @@ class AnalyticsRepository:
         query = """
             WITH months AS (
                 SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
-                    DATE_TRUNC('month', CURRENT_DATE),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
                     '1 month'::interval
                 )::date AS month_start
             ),
@@ -696,7 +696,7 @@ class AnalyticsRepository:
                 FROM appointments a
                 LEFT JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = 'completed'
-                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             ),
             commission_by_month AS (
@@ -707,7 +707,7 @@ class AnalyticsRepository:
                 FROM appointments a
                 LEFT JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = 'completed'
-                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY a.employee_id, DATE_TRUNC('month', a.appointment_date)::date
             ),
             employee_costs_by_month AS (
@@ -729,7 +729,7 @@ class AnalyticsRepository:
                     DATE_TRUNC('month', invoice_date)::date AS month_start,
                     COALESCE(SUM(amount), 0)                AS invoice_costs
                 FROM invoices
-                WHERE invoice_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                WHERE invoice_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', invoice_date)::date
             )
             SELECT
@@ -783,8 +783,8 @@ class AnalyticsRepository:
         query = """
             WITH months AS (
                 SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
-                    DATE_TRUNC('month', CURRENT_DATE),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
                     '1 month'::interval
                 )::date AS month_start
             ),
@@ -793,7 +793,7 @@ class AnalyticsRepository:
                     DATE_TRUNC('month', first_visit_date)::date AS month_start,
                     COUNT(*) AS new_clients
                 FROM clients
-                WHERE first_visit_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                WHERE first_visit_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                   AND first_visit_date IS NOT NULL
                 GROUP BY DATE_TRUNC('month', first_visit_date)::date
             )
@@ -814,8 +814,8 @@ class AnalyticsRepository:
         query = """
             WITH months AS (
                 SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
-                    DATE_TRUNC('month', CURRENT_DATE),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
                     '1 month'::interval
                 )::date AS month_start
             ),
@@ -834,7 +834,7 @@ class AnalyticsRepository:
                         / NULLIF(COUNT(*), 0))::numeric, 1
                     ) AS noshow_pct
                 FROM appointments
-                WHERE appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                WHERE appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', appointment_date)::date
             )
             SELECT
@@ -856,8 +856,8 @@ class AnalyticsRepository:
         query = """
             WITH months AS (
                 SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
-                    DATE_TRUNC('month', CURRENT_DATE),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
                     '1 month'::interval
                 )::date AS month_start
             ),
@@ -868,7 +868,7 @@ class AnalyticsRepository:
                 FROM appointments a
                 JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = 'completed'
-                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             )
             SELECT
@@ -897,7 +897,8 @@ class AnalyticsRepository:
             JOIN appointment_services aps ON aps.appointment_id = a.id
             JOIN services s               ON s.id = aps.service_id
             WHERE a.status = 'completed'
-              AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+              AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+              AND a.appointment_date <  DATE_TRUNC('month', CURRENT_DATE)
             GROUP BY DATE_TRUNC('month', a.appointment_date)::date, s.category
             ORDER BY month_start, s.category
         """
@@ -914,8 +915,8 @@ class AnalyticsRepository:
         query = """
             WITH months AS (
                 SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
-                    DATE_TRUNC('month', CURRENT_DATE),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
                     '1 month'::interval
                 )::date AS month_start
             ),
@@ -926,7 +927,7 @@ class AnalyticsRepository:
                 FROM appointments a
                 LEFT JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = 'completed'
-                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                  AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             ),
             invoice_by_month AS (
@@ -934,7 +935,7 @@ class AnalyticsRepository:
                     DATE_TRUNC('month', invoice_date)::date AS month_start,
                     COALESCE(SUM(amount), 0)                AS invoice_costs
                 FROM invoices
-                WHERE invoice_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                WHERE invoice_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', invoice_date)::date
             )
             SELECT
@@ -965,8 +966,8 @@ class AnalyticsRepository:
         query = """
             WITH months AS (
                 SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
-                    DATE_TRUNC('month', CURRENT_DATE),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
                     '1 month'::interval
                 )::date AS month_start
             ),
@@ -977,7 +978,7 @@ class AnalyticsRepository:
                     COUNT(DISTINCT id) AS appointments_count
                 FROM appointments
                 WHERE status = 'completed'
-                  AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
+                  AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
             )
             SELECT
