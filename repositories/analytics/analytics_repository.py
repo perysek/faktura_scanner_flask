@@ -744,6 +744,32 @@ class AnalyticsRepository:
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
+    def get_top_clients(self, start_date: date, end_date: date) -> List[Dict]:
+        """
+        Top 10 klientów wg wyniku: liczba_wizyt × przychód — w zadanym okresie.
+        Zwraca tylko klientów z wynikiem > 0.
+        """
+        query = """
+            SELECT
+                c.first_name || ' ' || c.last_name          AS client_name,
+                COUNT(DISTINCT a.id)                          AS visits,
+                COALESCE(SUM(i.net_amount), 0)               AS revenue,
+                COUNT(DISTINCT a.id) * COALESCE(SUM(i.net_amount), 0) AS score
+            FROM clients c
+            JOIN appointments a ON a.client_id = c.id
+                AND a.status = 'completed'
+                AND a.appointment_date BETWEEN %s AND %s
+            LEFT JOIN income_records i ON i.appointment_id = a.id
+            GROUP BY c.id, c.first_name, c.last_name
+            HAVING COUNT(DISTINCT a.id) * COALESCE(SUM(i.net_amount), 0) > 0
+            ORDER BY score DESC
+            LIMIT 10
+        """
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (start_date, end_date))
+        return [dict(row) for row in cursor.fetchall()]
+
     def get_new_clients_monthly(self) -> List[Dict]:
         """Nowi klienci wg miesiąca (first_visit_date) — ostatnie 12 miesięcy."""
         query = """
