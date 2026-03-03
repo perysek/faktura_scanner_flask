@@ -20,6 +20,7 @@ let categoryMixChart = null;
 let costRatioChart = null;
 let employeeUtilisationChart = null;
 let visitFrequencyChart = null;
+let topClientsLoaded = false;
 
 // Chart.js color palette (Refined Minimal)
 const CHART_COLORS = {
@@ -155,7 +156,8 @@ async function loadDashboard() {
             loadCategoryMix(),
             loadCostRatio(),
             loadEmployeeUtilisation(),
-            loadVisitFrequency()
+            loadVisitFrequency(),
+            loadTopClients()
         ]);
     } catch (error) {
         // Log error silently - empty states are handled by individual components
@@ -440,7 +442,7 @@ async function loadClients() {
                     data.metrics.new_clients,
                     data.metrics.returning_clients
                 ],
-                backgroundColor: [CHART_COLORS.primary, CHART_COLORS.gray]
+                backgroundColor: [CHART_COLORS.primary, CHART_COLORS.green]
             }]
         },
         options: {
@@ -781,7 +783,7 @@ async function loadServiceAnalysis() {
         return;
     }
 
-    tbody.innerHTML = data.services.map(s => {
+    tbody.innerHTML = data.services.filter(s => parseFloat(s.total_revenue) > 0).map(s => {
         const discount = parseFloat(s.avg_discount_pct) || 0;
         const discountColor = discount > 10 ? 'text-red-600' :
                               discount > 0  ? 'text-amber-600' : 'text-green-600';
@@ -1112,6 +1114,7 @@ async function loadCostRatio() {
     });
 
     costRatioChart = new Chart(ctx, {
+        type: 'bar',
         data: {
             labels,
             datasets: [
@@ -1328,19 +1331,23 @@ async function loadVisitFrequency() {
 
     if (visitFrequencyChart) visitFrequencyChart.destroy();
 
-    // Build buckets 1 through 10+ (anything >= 10 merged into one bucket)
-    const MAX_BUCKET = 10;
-    const buckets = {};
+    // Group into 5-visit bands: 1-5, 6-10, 11-15, ..., 46-50
+    const BAND_SIZE = 5;
+    const BANDS = 10;  // 10 bands of 5 = covers 1..50
+    const bandCounts = new Array(BANDS).fill(0);
     data.distribution.forEach(d => {
-        const key = parseInt(d.visit_count) >= MAX_BUCKET ? MAX_BUCKET : parseInt(d.visit_count);
-        buckets[key] = (buckets[key] || 0) + parseInt(d.client_count);
+        const count = parseInt(d.visit_count);
+        const bandIdx = Math.min(Math.floor((count - 1) / BAND_SIZE), BANDS - 1);
+        bandCounts[bandIdx] += parseInt(d.client_count);
     });
 
     const labels = [];
     const values = [];
-    for (let i = 1; i <= MAX_BUCKET; i++) {
-        labels.push(i === MAX_BUCKET ? `${MAX_BUCKET}+` : String(i));
-        values.push(buckets[i] || 0);
+    for (let i = 0; i < BANDS; i++) {
+        const lo = i * BAND_SIZE + 1;
+        const hi = lo + BAND_SIZE - 1;
+        labels.push(`${lo}-${hi}`);
+        values.push(bandCounts[i]);
     }
 
     visitFrequencyChart = new Chart(ctx, {
@@ -1363,10 +1370,7 @@ async function loadVisitFrequency() {
                 tooltip: {
                     callbacks: {
                         label: (ctx) => `Klienci: ${ctx.parsed.y}`,
-                        title: (items) => {
-                            const v = items[0].label;
-                            return v === '10+' ? '10 lub więcej wizyt' : `${v} ${v === '1' ? 'wizyta' : 'wizyty'}`;
-                        }
+                        title: (items) => `${items[0].label} wizyt`
                     }
                 }
             },
@@ -1379,4 +1383,26 @@ async function loadVisitFrequency() {
             }
         }
     });
+}
+
+async function loadTopClients() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/top-clients?${params}`);
+    const data = await response.json();
+    const tbody = document.getElementById('topClientsTableBody');
+    if (!tbody) return;
+
+    if (!data.success || !data.clients.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-500 py-2">Brak danych</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.clients.map((c, i) => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="py-1.5 text-slate-400 text-xs">${i + 1}</td>
+            <td class="py-1.5 font-medium">${escapeHtml(c.client_name)}</td>
+            <td class="py-1.5 text-right text-slate-600">${c.visits}</td>
+            <td class="py-1.5 text-right text-slate-600">${formatCurrency(c.revenue)}</td>
+        </tr>
+    `).join('');
 }

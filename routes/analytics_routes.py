@@ -315,6 +315,20 @@ def get_monthly_trend():
     return jsonify({"success": True, "months": months})
 
 
+@analytics_bp.route('/analytics/top-clients', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_top_clients():
+    """Top 10 klientów wg wyniku (wizyty × przychód) dla wybranego okresu"""
+    ranges, error = parse_period_params()
+    if error:
+        return jsonify({"success": False, **error}), 400
+
+    current_start, current_end, _, _ = ranges
+    clients = repo.get_top_clients(current_start, current_end)
+    return jsonify({"success": True, "clients": clients})
+
+
 @analytics_bp.route('/analytics/rolling/new-clients', methods=['GET'])
 @login_required
 @module_permission_required('appointments')

@@ -189,15 +189,36 @@
     </div>
 </div>
 
-<!-- Charts Row 2: Client Split + At-Risk -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- Charts Row 2: Client Split + Top Clients + At-Risk -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <!-- Client Split Chart -->
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-4">Nowi vs. powracający klienci</h3>
-        <div style="height: 300px;">
+        <div style="height: 260px;">
             <canvas id="clientSplitChart"></canvas>
         </div>
         <div id="retentionRate" class="text-center mt-4 text-sm text-slate-500"></div>
+    </div>
+
+    <!-- Top 10 Clients Table -->
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-4">Top 10 klientów</h3>
+        <p class="text-xs text-slate-400 mb-3">Ranking wg wyniku: wizyty × przychód</p>
+        <div class="overflow-y-auto" style="max-height: 300px;">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs text-slate-500 border-b">
+                        <th class="text-left pb-2">#</th>
+                        <th class="text-left pb-2">Klient</th>
+                        <th class="text-right pb-2">Wizyty</th>
+                        <th class="text-right pb-2">Przychód</th>
+                    </tr>
+                </thead>
+                <tbody id="topClientsTableBody">
+                    <tr><td colspan="4" class="text-center text-slate-500 py-2">Ładowanie...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- At-Risk Clients -->
