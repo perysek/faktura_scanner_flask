@@ -283,6 +283,7 @@ function applyCustomRange() {
     loadDashboard();
 }
 
+
 /**
  * Load and render revenue trend chart
  */
@@ -292,18 +293,12 @@ async function loadRevenueTrend() {
     const data = await response.json();
 
     if (!data.success) {
-        // Silently handle error - chart will show empty
         return;
     }
 
     const ctx = document.getElementById('revenueTrendChart');
+    if (revenueTrendChart) revenueTrendChart.destroy();
 
-    // Destroy existing chart
-    if (revenueTrendChart) {
-        revenueTrendChart.destroy();
-    }
-
-    // Create new chart
     revenueTrendChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -322,18 +317,12 @@ async function loadRevenueTrend() {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${formatCurrency(ctx.parsed.y)}`
-                    }
-                }
+                tooltip: { callbacks: { label: (ctx) => `${formatCurrency(ctx.parsed.y)}` } }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        callback: (val) => `${val.toLocaleString('pl-PL')} zł`
-                    }
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
                 }
             }
         }
@@ -754,13 +743,15 @@ async function loadPeakHours() {
         return `background:rgba(37,99,235,${opacity.toFixed(2)})`;
     };
 
-    let html = '<table style="border-collapse:collapse;min-width:100%">';
+    // Day columns get equal explicit widths; label col auto-shrinks to content (table-layout:auto)
+    const dayColWidth = (100 / DISPLAY_DAYS.length).toFixed(2) + '%';
+    let html = '<table style="border-collapse:collapse;width:100%">';
 
     // Header row: day names
     html += '<thead><tr>';
-    html += '<th style="padding:4px 8px;font-size:11px;color:#64748b;text-align:right">Godz.</th>';
+    html += '<th style="padding:4px 8px;font-size:11px;color:#64748b;text-align:right;white-space:nowrap">Godz.</th>';
     for (const dow of DISPLAY_DAYS) {
-        html += `<th style="padding:4px 12px;font-size:11px;color:#64748b;text-align:center">${DAY_LABELS[dow]}</th>`;
+        html += `<th style="padding:4px 12px;font-size:11px;color:#64748b;text-align:center;width:${dayColWidth}">${DAY_LABELS[dow]}</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -1208,10 +1199,10 @@ async function loadCategoryMix() {
 
     const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
 
-    // Generate 12 month keys from today backwards (local time, no UTC shift)
+    // Generate 12 month keys ending at previous month (no current in-progress month)
     const today = new Date();
     const monthKeys = [];
-    for (let i = 11; i >= 0; i--) {
+    for (let i = 12; i >= 1; i--) {
         const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         monthKeys.push(`${d.getFullYear()}-${mm}-01`);
