@@ -734,6 +734,13 @@
                 </div>
             </div>
 
+            <button class="btn-refined btn-refined-secondary" id="seller-sync-btn" onclick="openSellerSyncModal()" title="Sprawdź powiązania faktur ze sprzedawcami">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Sync sprzedawców
+            </button>
+
             <a href="{{ url_for('main.create_invoice') }}" class="btn-refined btn-refined-primary">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
@@ -1405,6 +1412,137 @@ function exportToCSV() {
         toggleDropdown('export-dropdown');
     } catch (error) {
         Notifications.error('Błąd eksportu');
+    }
+}
+
+// ─── Seller Sync ─────────────────────────────────────────────────────────────
+
+async function openSellerSyncModal() {
+    const btn = document.getElementById('seller-sync-btn');
+    if (btn) btn.disabled = true;
+
+    const loadingModal = Modals.loading('Sprawdzanie powiązań ze sprzedawcami...');
+    try {
+        const data = await API.invoiceSellerSync.check();
+        Modals.close(loadingModal);
+
+        if (!data.success) {
+            Notifications.error(data.error || 'Błąd sprawdzania powiązań');
+            return;
+        }
+
+        const all = [...(data.unlinked || []), ...(data.wrong_link || [])];
+        if (all.length === 0) {
+            Notifications.success('Wszystkie faktury są poprawnie powiązane ze sprzedawcami.');
+            return;
+        }
+        showSellerSyncModal(all);
+    } catch (err) {
+        Modals.close(loadingModal);
+        console.error('Seller sync check error:', err);
+        Notifications.error('Błąd sprawdzania powiązań: ' + err.message);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function showSellerSyncModal(items) {
+    const rows = items.map((item, i) => {
+        const typeLabel = item.type === 'unlinked'
+            ? '<span style="color:#9a6700;font-size:0.75rem;">brak powiązania</span>'
+            : '<span style="color:#9b2c2c;font-size:0.75rem;">błędne powiązanie</span>';
+        const currentInfo = item.type === 'wrong_link'
+            ? `<div style="font-size:0.7rem;color:#8a8a8a;">Było: ${escapeHtml(item.current_seller_name || '—')}</div>` : '';
+        return `
+            <tr style="border-bottom:1px solid #f0eeea;">
+                <td style="padding:0.5rem 0.25rem;width:2rem;vertical-align:middle;">
+                    <input type="checkbox" class="sync-item-cb" data-idx="${i}" checked
+                           style="width:1rem;height:1rem;cursor:pointer;accent-color:#c9a227;">
+                </td>
+                <td style="padding:0.5rem 0.5rem;vertical-align:middle;">
+                    <span style="font-family:monospace;font-size:0.8rem;">${escapeHtml(item.invoice_number || '—')}</span>
+                    <div style="font-size:0.7rem;color:#8a8a8a;">${item.invoice_date || ''}</div>
+                </td>
+                <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.8rem;">
+                    ${escapeHtml(item.invoice_seller_name || '—')}
+                    <div style="font-family:monospace;font-size:0.7rem;color:#8a8a8a;">${escapeHtml(item.invoice_nip || '—')}</div>
+                </td>
+                <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.8rem;">
+                    ${escapeHtml(item.suggested_seller_name || '—')}
+                    ${currentInfo}
+                </td>
+                <td style="padding:0.5rem 0.5rem;vertical-align:middle;">${typeLabel}</td>
+            </tr>`;
+    }).join('');
+
+    const content = `
+        <div style="margin-bottom:0.75rem;padding:0.75rem 1rem;background:#f7f6f3;border-radius:6px;font-size:0.85rem;color:#525252;">
+            Znaleziono <strong>${items.length}</strong> faktur wymagających aktualizacji powiązania ze sprzedawcą.
+            Odznacz wiersze, których nie chcesz zmieniać.
+        </div>
+        <div style="margin-bottom:0.5rem;display:flex;gap:1rem;">
+            <button onclick="sellerSyncToggleAll(true)"  style="font-size:0.75rem;color:#c9a227;background:none;border:none;cursor:pointer;padding:0;">Zaznacz wszystkie</button>
+            <button onclick="sellerSyncToggleAll(false)" style="font-size:0.75rem;color:#c9a227;background:none;border:none;cursor:pointer;padding:0;">Odznacz wszystkie</button>
+        </div>
+        <div style="max-height:360px;overflow-y:auto;border:1px solid #e8e6e1;border-radius:6px;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                <thead>
+                    <tr style="background:#f7f6f3;position:sticky;top:0;">
+                        <th style="padding:0.4rem 0.25rem;width:2rem;"></th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Nr faktury</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Sprzedawca (faktura)</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Sprzedawca (baza)</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Typ</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+
+    window._sellerSyncItems = items;
+
+    Modals.show({
+        title: 'Synchronizacja powiązań — Sprzedawcy',
+        content,
+        size: 'large',
+        buttons: [
+            { text: 'Anuluj',           type: 'secondary', onClick: (e, overlay) => Modals.close(overlay) },
+            { text: 'Zastosuj zmiany',  type: 'primary',   onClick: async (e, overlay) => { Modals.close(overlay); await applySellerSyncUpdates(); } },
+        ],
+    });
+}
+
+function sellerSyncToggleAll(checked) {
+    document.querySelectorAll('.sync-item-cb').forEach(cb => cb.checked = checked);
+}
+
+async function applySellerSyncUpdates() {
+    const items = window._sellerSyncItems || [];
+    const checked = [...document.querySelectorAll('.sync-item-cb:checked')];
+    const indices = new Set(checked.map(cb => parseInt(cb.dataset.idx)));
+    const updates = items
+        .filter((_, i) => indices.has(i))
+        .map(item => ({ invoice_id: item.invoice_id, seller_id: item.suggested_seller_id }));
+
+    if (updates.length === 0) {
+        Notifications.info('Nie zaznaczono żadnych faktur do aktualizacji.');
+        return;
+    }
+
+    const loadingModal = Modals.loading('Aktualizowanie powiązań...');
+    try {
+        const result = await API.invoiceSellerSync.apply(updates);
+        Modals.close(loadingModal);
+        if (result.success) {
+            Notifications.success(result.message || `Zaktualizowano ${result.updated_count} faktur`);
+            loadInvoices();
+        } else {
+            Notifications.error(result.error || 'Błąd aktualizacji powiązań');
+        }
+    } catch (err) {
+        Modals.close(loadingModal);
+        console.error('Seller sync apply error:', err);
+        Notifications.error('Błąd aktualizacji: ' + err.message);
     }
 }
 </script>
