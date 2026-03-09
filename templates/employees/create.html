@@ -156,6 +156,73 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Skills section */
+    .skill-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .skill-remove-btn {
+        padding: 0.375rem 0.625rem;
+        background: transparent;
+        color: var(--color-error);
+        border: 1px solid transparent;
+        border-radius: 2px;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        transition: all 0.15s;
+    }
+    .skill-remove-btn:hover { background: rgba(155,44,44,0.06); border-color: rgba(155,44,44,0.2); }
+
+    /* Chips (specializations) */
+    .chips-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        min-height: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.625rem;
+        background: rgba(37, 99, 235, 0.08);
+        color: #2563eb;
+        border-radius: 2px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .chip-remove {
+        background: none; border: none; cursor: pointer;
+        color: #2563eb; font-size: 0.875rem; padding: 0; line-height: 1;
+    }
+    .chip-add-row { display: flex; gap: 0.5rem; }
+
+    /* Schedule grid */
+    .schedule-grid { display: flex; flex-direction: column; gap: 0.375rem; }
+    .schedule-row {
+        display: grid;
+        grid-template-columns: 100px auto 1fr 16px 1fr;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .schedule-day-label { font-size: 0.8125rem; color: var(--color-ink-muted); font-weight: 400; }
+    .schedule-sep { text-align: center; color: var(--color-ink-subtle); font-size: 0.75rem; }
+    .schedule-time {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        background: white;
+        color: var(--color-ink);
+    }
+    .schedule-time:disabled { background: var(--color-surface-warm); color: var(--color-ink-subtle); }
+    .schedule-time:focus { outline: none; border-color: var(--color-ink-muted); }
 </style>
 {% endblock %}
 
@@ -211,6 +278,20 @@
                             <option value="terminated">Zwolniony</option>
                         </select>
                     </div>
+                    <div>
+                        <label for="forma_zatrudnienia_id" class="refined-label">Forma zatrudnienia</label>
+                        <select id="forma_zatrudnienia_id" name="forma_zatrudnienia_id" class="refined-select">
+                            <option value="">— nie wybrano —</option>
+                            {% for f in forma_options %}
+                            <option value="{{ f['id'] }}">{{ f['nazwa'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="photo_path" class="refined-label">Ścieżka do zdjęcia</label>
+                        <input type="text" id="photo_path" name="photo_path" class="refined-input" placeholder="np. /static/photos/anna.jpg">
+                        <p class="input-hint">Opcjonalna ścieżka do zdjęcia profilowego</p>
+                    </div>
                 </div>
             </section>
 
@@ -228,6 +309,56 @@
                         <input type="number" id="commission_rate" name="commission_rate" step="0.1" min="0" max="100" class="refined-input" placeholder="0.0">
                         <p class="input-hint">Domyślna stawka prowizyjna od usług</p>
                     </div>
+                    <div>
+                        <label for="employer_cost_rate" class="refined-label">Koszt pracodawcy (ułamek)</label>
+                        <input type="number" id="employer_cost_rate" name="employer_cost_rate" step="0.01" min="0" max="1" class="refined-input" value="0.22">
+                        <p class="input-hint">np. 0.22 = 22% ZUS/podatki/świadczenia</p>
+                    </div>
+                    <div>
+                        <label for="max_appointments_per_day" class="refined-label">Maks. wizyt dziennie</label>
+                        <input type="number" id="max_appointments_per_day" name="max_appointments_per_day" step="1" min="1" max="50" class="refined-input" value="8">
+                        <p class="input-hint">Limit wizyt na jeden dzień pracy</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skills -->
+            <section>
+                <h2 class="section-title">Umiejętności</h2>
+                <div id="skills-container"></div>
+                <button type="button" class="refined-btn-secondary" style="font-size:0.75rem;padding:0.375rem 0.75rem;margin-top:0.5rem" onclick="addSkillRow()">
+                    + Dodaj umiejętność
+                </button>
+                <p class="input-hint" style="margin-top:0.5rem">Ocena 1–5: 1 = Podstawowy, 5 = Ekspert</p>
+            </section>
+
+            <!-- Specializations -->
+            <section>
+                <h2 class="section-title">Specjalizacje</h2>
+                <div class="chips-container" id="specs-chips"></div>
+                <div class="chip-add-row">
+                    <input type="text" id="spec-input" class="refined-input" style="max-width:260px" placeholder="np. Bridal, Balayage, Extensions">
+                    <button type="button" class="refined-btn-secondary" style="font-size:0.75rem;padding:0.375rem 0.75rem;white-space:nowrap" onclick="addSpec()">Dodaj</button>
+                </div>
+                <p class="input-hint" style="margin-top:0.5rem">Wciśnij Enter lub kliknij Dodaj</p>
+            </section>
+
+            <!-- Work Schedule -->
+            <section>
+                <h2 class="section-title">Harmonogram pracy</h2>
+                <div class="schedule-grid">
+                    {% set days = [('mon','Poniedziałek'),('tue','Wtorek'),('wed','Środa'),('thu','Czwartek'),('fri','Piątek'),('sat','Sobota'),('sun','Niedziela')] %}
+                    {% for day_key, day_name in days %}
+                    <div class="schedule-row">
+                        <label class="schedule-day-label">
+                            <input type="checkbox" id="sched-{{ day_key }}" onchange="toggleDay('{{ day_key }}')">
+                            {{ day_name }}
+                        </label>
+                        <input type="time" id="sched-{{ day_key }}-start" class="schedule-time" value="09:00" disabled>
+                        <span class="schedule-sep">–</span>
+                        <input type="time" id="sched-{{ day_key }}-end" class="schedule-time" value="17:00" disabled>
+                    </div>
+                    {% endfor %}
                 </div>
             </section>
 
@@ -256,8 +387,81 @@
 
 {% block extra_scripts %}
 <script>
+// ── Skills ──────────────────────────────────────
+function addSkillRow(name = '', rating = 3) {
+    const container = document.getElementById('skills-container');
+    const div = document.createElement('div');
+    div.className = 'skill-row';
+    div.innerHTML = `
+        <input type="text" class="refined-input skill-name" placeholder="Nazwa umiejętności" value="${name.replace(/"/g,'&quot;')}">
+        <select class="refined-select skill-rating" style="min-width:160px">
+            ${[1,2,3,4,5].map(n => `<option value="${n}" ${n==rating?'selected':''}>${n} — ${['Podstawowy','Podstawowy+','Średni','Zaawansowany','Ekspert'][n-1]}</option>`).join('')}
+        </select>
+        <button type="button" class="skill-remove-btn" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(div);
+}
+
+// ── Specializations ──────────────────────────────
+let specsArray = [];
+
+function addSpec() {
+    const inp = document.getElementById('spec-input');
+    const val = inp.value.trim();
+    if (!val || specsArray.includes(val)) { inp.value = ''; return; }
+    specsArray.push(val);
+    renderChips();
+    inp.value = '';
+}
+
+function removeSpec(idx) {
+    specsArray.splice(idx, 1);
+    renderChips();
+}
+
+function renderChips() {
+    document.getElementById('specs-chips').innerHTML = specsArray.map((s, i) =>
+        `<span class="chip">${s.replace(/</g,'&lt;')}<button type="button" class="chip-remove" onclick="removeSpec(${i})">×</button></span>`
+    ).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('spec-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addSpec(); }
+    });
+});
+
+// ── Schedule ─────────────────────────────────────
+function toggleDay(day) {
+    const checked = document.getElementById(`sched-${day}`).checked;
+    document.getElementById(`sched-${day}-start`).disabled = !checked;
+    document.getElementById(`sched-${day}-end`).disabled = !checked;
+}
+
+// ── Form submit ───────────────────────────────────
 document.getElementById('employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Collect skills
+    const skillsObj = {};
+    document.querySelectorAll('.skill-row').forEach(row => {
+        const name = row.querySelector('.skill-name').value.trim();
+        const rating = parseInt(row.querySelector('.skill-rating').value);
+        if (name) skillsObj[name] = rating;
+    });
+
+    // Collect schedule
+    const scheduleObj = {};
+    ['mon','tue','wed','thu','fri','sat','sun'].forEach(d => {
+        const cb = document.getElementById(`sched-${d}`);
+        if (cb && cb.checked) {
+            const start = document.getElementById(`sched-${d}-start`).value;
+            const end = document.getElementById(`sched-${d}-end`).value;
+            if (start && end) scheduleObj[d] = `${start}-${end}`;
+        }
+    });
+
+    const formaVal = document.getElementById('forma_zatrudnienia_id').value;
 
     const formData = {
         first_name: document.getElementById('first_name').value.trim(),
@@ -267,8 +471,15 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         position: document.getElementById('position').value.trim() || null,
         hire_date: document.getElementById('hire_date').value || null,
         employment_status: document.getElementById('employment_status').value,
+        forma_zatrudnienia_id: formaVal ? parseInt(formaVal) : null,
+        photo_path: document.getElementById('photo_path').value.trim() || null,
         base_salary: document.getElementById('base_salary').value ? parseFloat(document.getElementById('base_salary').value) : null,
         commission_rate: document.getElementById('commission_rate').value ? parseFloat(document.getElementById('commission_rate').value) : null,
+        employer_cost_rate: parseFloat(document.getElementById('employer_cost_rate').value) || 0.22,
+        max_appointments_per_day: parseInt(document.getElementById('max_appointments_per_day').value) || 8,
+        skills: Object.keys(skillsObj).length ? skillsObj : null,
+        specializations: specsArray.length ? specsArray : null,
+        work_schedule: Object.keys(scheduleObj).length ? scheduleObj : null,
         notes: document.getElementById('notes').value.trim() || null
     };
 
@@ -289,19 +500,11 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
                 onClose: () => window.location.href = `/employee/${data.employee_id}`
             });
         } else {
-            Modals.alert({
-                title: 'Błąd',
-                message: data.error,
-                type: 'error'
-            });
+            Modals.alert({ title: 'Błąd', message: data.error, type: 'error' });
         }
     } catch (error) {
         console.error('Error:', error);
-        Modals.alert({
-            title: 'Błąd połączenia',
-            message: 'Nie udało się połączyć z serwerem',
-            type: 'error'
-        });
+        Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
     }
 });
 </script>

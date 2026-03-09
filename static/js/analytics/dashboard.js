@@ -758,11 +758,12 @@ async function loadPeakHours() {
     // Data rows: one per hour
     for (const hour of HOURS) {
         html += '<tr>';
-        html += `<td style="padding:3px 8px;font-size:11px;color:#94a3b8;text-align:right;white-space:nowrap">${hour}:00</td>`;
+        html += `<td style="padding:3px 8px; font-size:11px;color:#94a3b8;text-align:right;
+        white-space:nowrap">${hour}:00</td>`;
         for (const dow of DISPLAY_DAYS) {
             const count = (grid[dow] && grid[dow][hour]) || 0;
             const title = count > 0 ? `${DAY_LABELS[dow]} ${hour}:00 — ${count} wizyt` : '';
-            html += `<td title="${title}" style="padding:3px 6px;text-align:center;border-radius:3px;${cellStyle(count)}">`;
+            html += `<td title="${title}" style="padding:7px 6px;text-align:center;border-radius:5px;${cellStyle(count)}">`;
             if (count > 0) {
                 html += `<span style="font-size:11px;color:#1e40af;font-weight:500">${count}</span>`;
             }
