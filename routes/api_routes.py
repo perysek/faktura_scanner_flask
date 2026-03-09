@@ -110,60 +110,116 @@ def invoice_seller_sync_check():
                 sellers_by_nip[row['seller_nip']] = row  # already normalized in sellers table
             sellers_by_id[row['id']] = row
 
-        # Fetch raw invoice rows so we can read seller_id directly
-        cursor = current_app.invoice_repo._execute("""
+        # Also build a name-based index for fuzzy matching when NIP is missing
+        # key: normalised lower-case name → seller row
+        sellers_by_name = {}
+        for row in all_seller_rows:
+            key = (row['seller_name'] or '').strip().lower()
+            if key:
+                sellers_by_name[key] = row
+
+        # Fetch ALL invoices (including those without NIP) so we can detect
+        # name-only matches too.
+        # Must use _fetch_all (not _execute) — _execute commits before returning
+        # the cursor, which closes the server-side portal and yields 0 rows.
+        rows = current_app.invoice_repo._fetch_all("""
             SELECT id, invoice_number, seller_name, seller_nip, seller_id,
                    amount, currency, invoice_date
             FROM invoices
-            WHERE seller_nip IS NOT NULL AND seller_nip != ''
             ORDER BY invoice_date DESC
         """)
-        rows = cursor.fetchall()
 
-        unlinked = []   # seller_id IS NULL but a matching seller exists
-        wrong_link = [] # seller_id set but NIP does not match
+        unlinked = []   # seller_id IS NULL but a matching seller exists (by NIP or name)
+        wrong_link = [] # seller_id set but linked seller's NIP does not match invoice NIP
 
         for row in rows:
-            inv_nip_raw = row['seller_nip'] or ''
-            normalized = current_app.seller_service.normalize_nip(inv_nip_raw)
+            inv_nip_raw = (row['seller_nip'] or '').strip()
+            inv_name = (row['seller_name'] or '').strip()
             current_seller_id = row['seller_id']
 
+            def _base(type_):
+                return {
+                    'invoice_id': row['id'],
+                    'invoice_number': row['invoice_number'],
+                    'invoice_seller_name': inv_name,
+                    'invoice_nip': inv_nip_raw,
+                    'invoice_date': str(row['invoice_date']) if row['invoice_date'] else None,
+                    'amount': float(row['amount'] or 0),
+                    'currency': row['currency'],
+                    'type': type_,
+                }
+
             if current_seller_id is None:
-                if normalized in sellers_by_nip:
-                    s = sellers_by_nip[normalized]
-                    unlinked.append({
-                        'invoice_id': row['id'],
-                        'invoice_number': row['invoice_number'],
-                        'invoice_seller_name': row['seller_name'],
-                        'invoice_nip': inv_nip_raw,
-                        'invoice_date': str(row['invoice_date']) if row['invoice_date'] else None,
-                        'amount': float(row['amount'] or 0),
-                        'currency': row['currency'],
-                        'suggested_seller_id': s['id'],
-                        'suggested_seller_name': s['seller_name'],
-                        'suggested_seller_nip': s['seller_nip'],
-                        'type': 'unlinked',
-                    })
+                # --- Try NIP match first ---
+                if inv_nip_raw:
+                    normalized = current_app.seller_service.normalize_nip(inv_nip_raw)
+                    if normalized in sellers_by_nip:
+                        s = sellers_by_nip[normalized]
+                        item = _base('unlinked')
+                        item.update({'suggested_seller_id': s['id'],
+                                     'suggested_seller_name': s['seller_name'],
+                                     'suggested_seller_nip': s['seller_nip'],
+                                     'match_reason': 'NIP'})
+                        unlinked.append(item)
+                        continue
+
+                # --- Fallback: name match (for invoices missing NIP) ---
+                if inv_name:
+                    name_key = inv_name.lower()
+                    if name_key in sellers_by_name:
+                        s = sellers_by_name[name_key]
+                        item = _base('unlinked')
+                        item.update({'suggested_seller_id': s['id'],
+                                     'suggested_seller_name': s['seller_name'],
+                                     'suggested_seller_nip': s['seller_nip'],
+                                     'match_reason': 'nazwa'})
+                        unlinked.append(item)
+
             else:
-                if current_seller_id in sellers_by_id:
+                # seller_id is set — first check if the seller still exists (orphan detection)
+                if current_seller_id not in sellers_by_id:
+                    # Orphaned link: seller was deleted. Try to re-match by NIP or name.
+                    matched = False
+                    if inv_nip_raw:
+                        normalized = current_app.seller_service.normalize_nip(inv_nip_raw)
+                        if normalized in sellers_by_nip:
+                            s = sellers_by_nip[normalized]
+                            item = _base('wrong_link')
+                            item.update({'current_seller_id': current_seller_id,
+                                         'current_seller_name': f'(usunięty sprzedawca #{current_seller_id})',
+                                         'suggested_seller_id': s['id'],
+                                         'suggested_seller_name': s['seller_name'],
+                                         'suggested_seller_nip': s['seller_nip'],
+                                         'match_reason': 'NIP'})
+                            wrong_link.append(item)
+                            matched = True
+                    if not matched and inv_name:
+                        name_key = inv_name.lower()
+                        if name_key in sellers_by_name:
+                            s = sellers_by_name[name_key]
+                            item = _base('wrong_link')
+                            item.update({'current_seller_id': current_seller_id,
+                                         'current_seller_name': f'(usunięty sprzedawca #{current_seller_id})',
+                                         'suggested_seller_id': s['id'],
+                                         'suggested_seller_name': s['seller_name'],
+                                         'suggested_seller_nip': s['seller_nip'],
+                                         'match_reason': 'nazwa'})
+                            wrong_link.append(item)
+
+                elif inv_nip_raw:
+                    # Seller exists — verify its NIP matches the invoice NIP
                     linked = sellers_by_id[current_seller_id]
+                    normalized = current_app.seller_service.normalize_nip(inv_nip_raw)
                     if (linked['seller_nip'] or '') != normalized and normalized in sellers_by_nip:
                         correct = sellers_by_nip[normalized]
-                        wrong_link.append({
-                            'invoice_id': row['id'],
-                            'invoice_number': row['invoice_number'],
-                            'invoice_seller_name': row['seller_name'],
-                            'invoice_nip': inv_nip_raw,
-                            'invoice_date': str(row['invoice_date']) if row['invoice_date'] else None,
-                            'amount': float(row['amount'] or 0),
-                            'currency': row['currency'],
-                            'current_seller_id': current_seller_id,
-                            'current_seller_name': linked['seller_name'],
-                            'suggested_seller_id': correct['id'],
-                            'suggested_seller_name': correct['seller_name'],
-                            'suggested_seller_nip': correct['seller_nip'],
-                            'type': 'wrong_link',
-                        })
+                        item = _base('wrong_link')
+                        item.update({'current_seller_id': current_seller_id,
+                                     'current_seller_name': linked['seller_name'],
+                                     'suggested_seller_id': correct['id'],
+                                     'suggested_seller_name': correct['seller_name'],
+                                     'suggested_seller_nip': correct['seller_nip'],
+                                     'match_reason': 'NIP'})
+                        wrong_link.append(item)
 
         return jsonify({
             'success': True,

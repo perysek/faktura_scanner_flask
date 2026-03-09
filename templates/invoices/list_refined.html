@@ -1448,11 +1448,13 @@ async function openSellerSyncModal() {
 
 function showSellerSyncModal(items) {
     const rows = items.map((item, i) => {
-        const typeLabel = item.type === 'unlinked'
-            ? '<span style="color:#9a6700;font-size:0.75rem;">brak powiązania</span>'
-            : '<span style="color:#9b2c2c;font-size:0.75rem;">błędne powiązanie</span>';
+        const typeColor = item.type === 'unlinked' ? '#9a6700' : '#9b2c2c';
+        const typeText  = item.type === 'unlinked' ? 'brak powiązania' : 'błędne powiązanie';
+        const matchBadge = item.match_reason === 'nazwa'
+            ? '<span style="font-size:0.68rem;background:#e8f4fd;color:#1a6fa8;padding:1px 5px;border-radius:3px;">wg nazwy</span>'
+            : '<span style="font-size:0.68rem;background:#f0f9f0;color:#2d6a4f;padding:1px 5px;border-radius:3px;">wg NIP</span>';
         const currentInfo = item.type === 'wrong_link'
-            ? `<div style="font-size:0.7rem;color:#8a8a8a;">Było: ${escapeHtml(item.current_seller_name || '—')}</div>` : '';
+            ? `<div style="font-size:0.7rem;color:#8a8a8a;margin-top:2px;">Było: ${escapeHtml(item.current_seller_name || '—')}</div>` : '';
         return `
             <tr style="border-bottom:1px solid #f0eeea;">
                 <td style="padding:0.5rem 0.25rem;width:2rem;vertical-align:middle;">
@@ -1465,13 +1467,14 @@ function showSellerSyncModal(items) {
                 </td>
                 <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.8rem;">
                     ${escapeHtml(item.invoice_seller_name || '—')}
-                    <div style="font-family:monospace;font-size:0.7rem;color:#8a8a8a;">${escapeHtml(item.invoice_nip || '—')}</div>
+                    <div style="font-family:monospace;font-size:0.7rem;color:#8a8a8a;">${escapeHtml(item.invoice_nip || '(brak NIP)')}</div>
                 </td>
                 <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.8rem;">
                     ${escapeHtml(item.suggested_seller_name || '—')}
                     ${currentInfo}
+                    <div style="margin-top:2px;">${matchBadge}</div>
                 </td>
-                <td style="padding:0.5rem 0.5rem;vertical-align:middle;">${typeLabel}</td>
+                <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.75rem;color:${typeColor};">${typeText}</td>
             </tr>`;
     }).join('');
 
