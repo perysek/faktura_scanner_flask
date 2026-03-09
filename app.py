@@ -39,6 +39,7 @@ from repositories.seller_repository import SellerRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_repository import ServiceRepository
 from repositories.employees.employee_repository import EmployeeRepository
+from repositories.employees.forma_zatrudnienia_repository import FormaZatrudnieniaRepository
 
 # Import services
 from services.ocr_service import OCRService
@@ -119,6 +120,7 @@ def create_app():
     app.client_repo = ClientRepository()
     app.service_repo = ServiceRepository()
     app.employee_repo = EmployeeRepository()
+    app.forma_zatrudnienia_repo = FormaZatrudnieniaRepository()
 
     # Initialize services
     app.ocr_service = OCRService()

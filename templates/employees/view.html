@@ -348,9 +348,14 @@
 <div class="refined-page fade-in">
     <header class="page-header">
         <div class="page-title-section">
+            {% if employee.photo_path %}
+            <img src="{{ employee.photo_path }}" alt="{{ employee.full_name }}"
+                 class="employee-avatar-large" style="object-fit:cover;border-radius:50%;">
+            {% else %}
             <div class="employee-avatar-large">
                 {{ employee.first_name[0] }}{{ employee.last_name[0] }}
             </div>
+            {% endif %}
             <h1 class="page-title">{{ employee.full_name }}</h1>
             <p class="page-subtitle">
                 {{ employee.position if employee.position else 'Pracownik' }}
@@ -407,6 +412,12 @@
                     {% else %}{{ employee.employment_status }}{% endif %}
                 </p>
             </div>
+            {% if forma_nazwa %}
+            <div>
+                <label class="field-label">Forma zatrudnienia</label>
+                <p class="field-value">{{ forma_nazwa }}</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -434,8 +445,75 @@
                     {% endif %}
                 </p>
             </div>
+            <div>
+                <label class="field-label">Koszt pracodawcy (ZUS/podatki)</label>
+                <p class="field-value">
+                    <span class="status-badge" style="background:rgba(37,99,235,0.08);color:#2563eb;">
+                        {{ (employee.employer_cost_rate * 100) | round(1) }}%
+                    </span>
+                </p>
+            </div>
+            <div>
+                <label class="field-label">Maks. wizyt dziennie</label>
+                <p class="field-value">{{ employee.max_appointments_per_day }}</p>
+            </div>
         </div>
     </div>
+
+    <!-- Skills & Specializations -->
+    {% set skills = employee.get_skills_dict() %}
+    {% set specs = employee.get_specializations_list() %}
+    {% if skills or specs %}
+    <div class="refined-card">
+        <h2 class="section-title">Umiejętności i specjalizacje</h2>
+        {% if skills %}
+        <div style="margin-bottom:1.25rem">
+            <label class="field-label" style="margin-bottom:0.75rem;display:block">Umiejętności</label>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+                {% for skill_name, rating in skills.items() %}
+                <span class="status-badge" style="background:{% if rating >= 4 %}rgba(45,106,79,0.1){% elif rating >= 3 %}rgba(234,88,12,0.08){% else %}rgba(0,0,0,0.05){% endif %};color:{% if rating >= 4 %}var(--color-success){% elif rating >= 3 %}#c2410c{% else %}var(--color-ink-muted){% endif %};">
+                    {{ skill_name }} — {{ rating }}/5
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% if specs %}
+        <div>
+            <label class="field-label" style="margin-bottom:0.75rem;display:block">Specjalizacje</label>
+            <div style="display:flex;flex-wrap:wrap;gap:0.375rem">
+                {% for spec in specs %}
+                <span style="display:inline-flex;align-items:center;padding:0.25rem 0.75rem;background:rgba(37,99,235,0.08);color:#2563eb;border-radius:2px;font-size:0.75rem;font-weight:500;">{{ spec }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Work Schedule -->
+    {% set sched = employee.get_work_schedule_dict() %}
+    {% if sched %}
+    <div class="refined-card">
+        <h2 class="section-title">Harmonogram pracy</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
+            {% set day_names = {'mon':'Pon','tue':'Wt','wed':'Śr','thu':'Czw','fri':'Pt','sat':'Sob','sun':'Nd'} %}
+            {% for day_key in ['mon','tue','wed','thu','fri','sat','sun'] %}
+            {% if day_key in sched %}
+            <div style="background:rgba(45,106,79,0.06);border:1px solid rgba(45,106,79,0.15);border-radius:2px;padding:0.625rem 0.75rem;">
+                <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-success);margin-bottom:0.25rem;">{{ day_names[day_key] }}</div>
+                <div style="font-size:0.8125rem;color:var(--color-ink);">{{ sched[day_key] }}</div>
+            </div>
+            {% else %}
+            <div style="background:var(--color-surface-warm);border:1px solid var(--color-border-subtle);border-radius:2px;padding:0.625rem 0.75rem;opacity:0.5;">
+                <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-subtle);margin-bottom:0.25rem;">{{ day_names[day_key] }}</div>
+                <div style="font-size:0.75rem;color:var(--color-ink-subtle);">wolny</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Assigned Services -->
     <div class="refined-card">

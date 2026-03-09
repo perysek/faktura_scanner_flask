@@ -111,6 +111,7 @@ class Employee:
     first_name: str
     last_name: str
     user_id: Optional[int] = None  # Optional link to users table
+    forma_zatrudnienia_id: Optional[int] = None  # FK to formy_zatrudnienia
     phone: Optional[str] = None
     email: Optional[str] = None
     position: Optional[str] = None  # 'Stylist', 'Receptionist', 'Manager'
@@ -119,6 +120,7 @@ class Employee:
     termination_date: Optional[date] = None
     base_salary: Optional[float] = None  # Monthly base salary
     commission_rate: Optional[float] = None  # Percentage (e.g., 40.00 for 40%)
+    employer_cost_rate: float = 0.22  # Polish ZUS/taxes rate (e.g. 0.22 = 22%)
     skills: Optional[str] = None  # JSON string: '{"Hair Color": 5, "Balayage": 4}'
     specializations: Optional[str] = None  # JSON string: '["Bridal", "Extensions"]'
     work_schedule: Optional[str] = None  # JSON string: '{"mon": "9-17", "tue": "9-17"}'
@@ -164,6 +166,19 @@ class Employee:
             return json.loads(self.work_schedule)
         except (json.JSONDecodeError, TypeError):
             return {}
+
+
+@dataclass
+class FormaZatrudnienia:
+    """Model formy zatrudnienia (np. UoP, B2B, Umowa zlecenie)"""
+    nazwa: str
+    uwagi: Optional[str] = None
+    min_salary_required: bool = False  # Czy wymagane minimalne wynagrodzenie
+    granted_salary: bool = False       # Czy wynagrodzenie gwarantowane
+    commision_included: bool = False   # Czy prowizja wliczona
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
 
 
 @dataclass

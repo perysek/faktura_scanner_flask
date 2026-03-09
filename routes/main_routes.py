@@ -207,7 +207,8 @@ def employees_list():
 @module_permission_required('employees')
 def create_employee():
     """Create new employee form"""
-    return render_template('employees/create.html')
+    forma_options = current_app.forma_zatrudnienia_repo.get_all()
+    return render_template('employees/create.html', forma_options=forma_options)
 
 
 @main_bp.route('/employee/<int:employee_id>')
@@ -220,7 +221,12 @@ def view_employee(employee_id):
         return render_template('errors/404.html'), 404
 
     employee = current_app.employee_repo.row_to_employee(row)
-    return render_template('employees/view.html', employee=employee)
+    forma_nazwa = None
+    if employee.forma_zatrudnienia_id:
+        forma_row = current_app.forma_zatrudnienia_repo.get_by_id(employee.forma_zatrudnienia_id)
+        if forma_row:
+            forma_nazwa = forma_row['nazwa']
+    return render_template('employees/view.html', employee=employee, forma_nazwa=forma_nazwa)
 
 
 @main_bp.route('/employee/<int:employee_id>/edit')
@@ -233,7 +239,16 @@ def edit_employee(employee_id):
         return render_template('errors/404.html'), 404
 
     employee = current_app.employee_repo.row_to_employee(row)
-    return render_template('employees/edit.html', employee=employee)
+    forma_options = current_app.forma_zatrudnienia_repo.get_all()
+    return render_template('employees/edit.html', employee=employee, forma_options=forma_options)
+
+
+@main_bp.route('/formy-zatrudnienia')
+@login_required
+@module_permission_required('employees')
+def formy_zatrudnienia_list():
+    """Formy zatrudnienia — lista i zarządzanie"""
+    return render_template('employees/formy_zatrudnienia/list.html')
 
 
 # ============================================================================
