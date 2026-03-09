@@ -112,6 +112,20 @@ def remove_employee_service(employee_id, es_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@employee_service_bp.route('/employees/<int:employee_id>/analytics', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee_analytics(employee_id):
+    """Pobierz metryki wydajności pracownika"""
+    try:
+        from repositories.analytics.analytics_repository import AnalyticsRepository
+        repo = AnalyticsRepository()
+        data = repo.get_employee_analytics(employee_id)
+        return jsonify({'success': True, **data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @employee_service_bp.route('/services/<int:service_id>/employees', methods=['GET'])
 @login_required
 @module_permission_required('services')
