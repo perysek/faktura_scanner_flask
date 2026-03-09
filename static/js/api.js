@@ -173,5 +173,11 @@ const API = {
         }),
         checkDuplicate: (nip, name) => API.post('/sellers/check-duplicate', { nip, name }),
         bulkUpdate: (id) => API.post(`/sellers/${id}/bulk-update`)
+    },
+
+    // Invoice-seller sync
+    invoiceSellerSync: {
+        check: () => API.get('/invoices/seller-sync-check'),
+        apply: (updates) => API.post('/invoices/seller-sync-apply', { updates }),
     }
 };
