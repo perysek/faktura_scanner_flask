@@ -11,6 +11,16 @@ let customEndDate = null;
 let revenueTrendChart = null;
 let servicesChart = null;
 let clientSplitChart = null;
+let profitBreakdownChart = null;
+let monthlyTrendChart = null;
+let newClientsChart = null;
+let cancellationRateChart = null;
+let avgTicketChart = null;
+let categoryMixChart = null;
+let costRatioChart = null;
+let employeeUtilisationChart = null;
+let visitFrequencyChart = null;
+let topClientsLoaded = false;
 
 // Chart.js color palette (Refined Minimal)
 const CHART_COLORS = {
@@ -133,7 +143,21 @@ async function loadDashboard() {
             loadRevenueTrend(),
             loadEmployees(),
             loadServices(),
-            loadClients()
+            loadClients(),
+            loadProfit(),
+            loadInsights(),
+            loadOccupancy(),
+            loadPeakHours(),
+            loadServiceAnalysis(),
+            loadMonthlyTrend(),
+            loadNewClients(),
+            loadCancellationRate(),
+            loadAvgTicket(),
+            loadCategoryMix(),
+            loadCostRatio(),
+            loadEmployeeUtilisation(),
+            loadVisitFrequency(),
+            loadTopClients()
         ]);
     } catch (error) {
         // Log error silently - empty states are handled by individual components
@@ -259,6 +283,7 @@ function applyCustomRange() {
     loadDashboard();
 }
 
+
 /**
  * Load and render revenue trend chart
  */
@@ -268,18 +293,12 @@ async function loadRevenueTrend() {
     const data = await response.json();
 
     if (!data.success) {
-        // Silently handle error - chart will show empty
         return;
     }
 
     const ctx = document.getElementById('revenueTrendChart');
+    if (revenueTrendChart) revenueTrendChart.destroy();
 
-    // Destroy existing chart
-    if (revenueTrendChart) {
-        revenueTrendChart.destroy();
-    }
-
-    // Create new chart
     revenueTrendChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -298,18 +317,12 @@ async function loadRevenueTrend() {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${formatCurrency(ctx.parsed.y)}`
-                    }
-                }
+                tooltip: { callbacks: { label: (ctx) => `${formatCurrency(ctx.parsed.y)}` } }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        callback: (val) => `${val.toLocaleString('pl-PL')} zł`
-                    }
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
                 }
             }
         }
@@ -402,34 +415,55 @@ async function loadClients() {
 
     // Render client split doughnut chart
     const ctx = document.getElementById('clientSplitChart');
+    const newCount = data.metrics.new_clients || 0;
+    const returningCount = data.metrics.returning_clients || 0;
 
     // Destroy existing chart
     if (clientSplitChart) {
         clientSplitChart.destroy();
     }
 
-    // Create new chart
-    clientSplitChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Nowi klienci', 'Powracający'],
-            datasets: [{
-                data: [
-                    data.metrics.new_clients,
-                    data.metrics.returning_clients
-                ],
-                backgroundColor: [CHART_COLORS.primary, CHART_COLORS.gray]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
+    if (newCount === 0 && returningCount === 0) {
+        // No data — show placeholder text so canvas area isn't blank
+        const wrapper = ctx ? ctx.parentElement : null;
+        if (wrapper) {
+            ctx.style.display = 'none';
+            if (!wrapper.querySelector('.no-data-msg')) {
+                const msg = document.createElement('p');
+                msg.className = 'no-data-msg text-center text-sm text-slate-400 pt-16';
+                msg.textContent = 'Brak danych w wybranym okresie';
+                wrapper.appendChild(msg);
+            }
         }
-    });
+    } else {
+        // Remove any existing no-data placeholder
+        if (ctx) {
+            ctx.style.display = '';
+            const wrapper = ctx.parentElement;
+            const msg = wrapper && wrapper.querySelector('.no-data-msg');
+            if (msg) msg.remove();
+        }
 
-    // Update retention rate
+        clientSplitChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Nowi klienci', 'Powracający'],
+                datasets: [{
+                    data: [newCount, returningCount],
+                    backgroundColor: [CHART_COLORS.primary, CHART_COLORS.green]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Update retention rate (retention_rate can be null when no prior-visit data)
     const retentionEl = document.getElementById('retentionRate');
-    retentionEl.textContent = `Wskaźnik retencji (90 dni): ${data.metrics.retention_rate.toFixed(1)}%`;
+    const retRate = data.metrics.retention_rate != null ? Number(data.metrics.retention_rate).toFixed(1) : '—';
+    retentionEl.textContent = `Wskaźnik retencji (90 dni): ${retRate}%`;
 
     // Render at-risk clients list
     renderAtRiskList(data.metrics.at_risk_clients);
@@ -509,4 +543,878 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Load profit breakdown KPIs and chart
+ */
+async function loadProfit() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/profit?${params}`);
+    const data = await response.json();
+
+    const empEl = document.getElementById('kpi-employee-costs');
+    const invEl = document.getElementById('kpi-invoice-costs');
+    const unpaidEl = document.getElementById('kpi-invoice-unpaid');
+    const netEl = document.getElementById('kpi-net-profit');
+    const changeEl = document.getElementById('kpi-net-profit-change');
+
+    if (!data.success) {
+        [empEl, invEl, netEl].forEach(el => { if (el) el.textContent = '0,00 zł'; });
+        return;
+    }
+
+    if (empEl) empEl.textContent = formatCurrency(data.employee_costs);
+    if (invEl) invEl.textContent = formatCurrency(data.invoice_costs);
+
+    // Unpaid invoice hint
+    if (unpaidEl) {
+        if (data.invoice_details.unpaid_count > 0) {
+            unpaidEl.textContent =
+                `${data.invoice_details.unpaid_count} niezapłaconych: ` +
+                `${formatCurrency(data.invoice_details.unpaid_amount)}`;
+            unpaidEl.className = 'text-xs text-red-500';
+        } else {
+            unpaidEl.textContent = 'Wszystkie faktury opłacone';
+            unpaidEl.className = 'text-xs text-green-600';
+        }
+    }
+
+    // Net profit — colour based on sign
+    if (netEl) {
+        netEl.textContent = formatCurrency(data.net_profit);
+        netEl.className = `text-2xl font-semibold mb-2 ${data.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`;
+    }
+
+    // Period change badge
+    if (changeEl && data.change) {
+        const pct = data.change.net_profit_pct;
+        const sign = pct >= 0 ? '+' : '';
+        const color = pct >= 0 ? 'text-green-600' : 'text-red-600';
+        const arrow = pct >= 0 ? '↑' : '↓';
+        changeEl.textContent = `${sign}${pct.toFixed(1)}% ${arrow} vs poprzedni okres`;
+        changeEl.className = `text-sm font-medium ${color}`;
+    } else if (changeEl) {
+        changeEl.textContent = '';
+    }
+
+    // Profit breakdown chart
+    const ctx = document.getElementById('profitBreakdownChart');
+    if (!ctx) return;
+
+    if (profitBreakdownChart) {
+        profitBreakdownChart.destroy();
+    }
+
+    const netProfit = data.net_profit;
+    const netColor = netProfit >= 0 ? 'rgba(34, 197, 94, 0.75)' : 'rgba(239, 68, 68, 0.75)';
+    const netLabel = netProfit >= 0 ? 'Zysk netto' : 'Strata netto';
+
+    profitBreakdownChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [''],
+            datasets: [
+                {
+                    label: 'Koszty pracownicze',
+                    data: [data.employee_costs],
+                    backgroundColor: 'rgba(234, 88, 12, 0.75)',
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Koszty faktur',
+                    data: [data.invoice_costs],
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: netLabel,
+                    data: [Math.abs(netProfit)],
+                    backgroundColor: netColor,
+                    borderColor: netColor.replace('0.75', '1'),
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.x)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (val) => `${val.toLocaleString('pl-PL')} zł`
+                    }
+                },
+                y: { stacked: true }
+            }
+        }
+    });
+}
+
+/**
+ * Load and render occupancy KPI cards
+ */
+async function loadOccupancy() {
+    const response = await fetch(`/api/analytics/occupancy?${buildParams()}`);
+    const data = await response.json();
+
+    const occupancyEl = document.getElementById('kpi-occupancy');
+    const occupancyDetailEl = document.getElementById('kpi-occupancy-detail');
+    const cancEl = document.getElementById('kpi-cancellation-rate');
+    const cancDetailEl = document.getElementById('kpi-cancellation-detail');
+    const nsEl = document.getElementById('kpi-noshow-rate');
+    const nsDetailEl = document.getElementById('kpi-noshow-detail');
+
+    if (!data.success) {
+        [occupancyEl, cancEl, nsEl].forEach(el => { if (el) el.textContent = '—'; });
+        return;
+    }
+
+    if (occupancyEl) occupancyEl.textContent = `${data.occupancy_rate.toFixed(1)}%`;
+    if (occupancyDetailEl) {
+        occupancyDetailEl.textContent =
+            `${data.completed} wizyt z ${data.theoretical_capacity} możliwych`;
+    }
+
+    if (cancEl) {
+        cancEl.textContent = `${data.cancellation_rate.toFixed(1)}%`;
+        cancEl.className = `text-2xl font-semibold mb-2 ${
+            data.cancellation_rate > 15 ? 'text-red-600' : 'text-slate-900'
+        }`;
+    }
+    if (cancDetailEl) cancDetailEl.textContent = `${data.cancelled} odwołań`;
+
+    if (nsEl) {
+        nsEl.textContent = `${data.no_show_rate.toFixed(1)}%`;
+        nsEl.className = `text-2xl font-semibold mb-2 ${
+            data.no_show_rate > 10 ? 'text-red-600' : 'text-slate-900'
+        }`;
+    }
+    if (nsDetailEl) nsDetailEl.textContent = `${data.no_shows} nieobecności`;
+}
+
+/**
+ * Load and render peak hours heatmap (HTML table, Mon-Sat × 8-20h)
+ */
+async function loadPeakHours() {
+    const container = document.getElementById('peakHoursHeatmap');
+    if (!container) return;
+
+    const response = await fetch(`/api/analytics/peak-hours?${buildParams()}`);
+    const data = await response.json();
+
+    if (!data.success || data.data.length === 0) {
+        container.innerHTML = '<p class="text-center text-slate-500 py-4">Brak danych</p>';
+        return;
+    }
+
+    // Polish day labels (0=Sun .. 6=Sat); we show Mon(1) through Sat(6)
+    const DAY_LABELS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+    const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6]; // Mon–Sat
+    const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8..20
+
+    // Build lookup: grid[dow][hour] = count
+    const grid = {};
+    let maxCount = 0;
+    for (const row of data.data) {
+        const d = row.day_of_week;
+        const h = row.hour_of_day;
+        if (!grid[d]) grid[d] = {};
+        grid[d][h] = (grid[d][h] || 0) + row.appointment_count;
+        if (grid[d][h] > maxCount) maxCount = grid[d][h];
+    }
+
+    const cellStyle = (count) => {
+        if (count === 0 || maxCount === 0) return 'background:transparent';
+        const opacity = Math.max(0.12, count / maxCount);
+        return `background:rgba(37,99,235,${opacity.toFixed(2)})`;
+    };
+
+    // Day columns get equal explicit widths; label col auto-shrinks to content (table-layout:auto)
+    const dayColWidth = (100 / DISPLAY_DAYS.length).toFixed(2) + '%';
+    let html = '<table style="border-collapse:collapse;width:100%">';
+
+    // Header row: day names
+    html += '<thead><tr>';
+    html += '<th style="padding:4px 8px;font-size:11px;color:#64748b;text-align:right;white-space:nowrap">Godz.</th>';
+    for (const dow of DISPLAY_DAYS) {
+        html += `<th style="padding:4px 12px;font-size:11px;color:#64748b;text-align:center;width:${dayColWidth}">${DAY_LABELS[dow]}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    // Data rows: one per hour
+    for (const hour of HOURS) {
+        html += '<tr>';
+        html += `<td style="padding:3px 8px;font-size:11px;color:#94a3b8;text-align:right;white-space:nowrap">${hour}:00</td>`;
+        for (const dow of DISPLAY_DAYS) {
+            const count = (grid[dow] && grid[dow][hour]) || 0;
+            const title = count > 0 ? `${DAY_LABELS[dow]} ${hour}:00 — ${count} wizyt` : '';
+            html += `<td title="${title}" style="padding:3px 6px;text-align:center;border-radius:3px;${cellStyle(count)}">`;
+            if (count > 0) {
+                html += `<span style="font-size:11px;color:#1e40af;font-weight:500">${count}</span>`;
+            }
+            html += '</td>';
+        }
+        html += '</tr>';
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+/**
+ * Load and render service price analysis table
+ */
+async function loadServiceAnalysis() {
+    const response = await fetch(`/api/analytics/service-analysis?${buildParams()}`);
+    const data = await response.json();
+
+    const tbody = document.getElementById('servicePriceTableBody');
+    if (!tbody) return;
+
+    if (!data.success) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-500">Błąd ładowania danych</td></tr>';
+        return;
+    }
+
+    if (data.services.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-500">Brak danych</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.services.filter(s => parseFloat(s.total_revenue) > 0).map(s => {
+        const discount = parseFloat(s.avg_discount_pct) || 0;
+        const discountColor = discount > 10 ? 'text-red-600' :
+                              discount > 0  ? 'text-amber-600' : 'text-green-600';
+        const rowClass = s.bookings === 0 ? 'text-slate-400' : '';
+        const hasBookings = s.bookings > 0;
+        return `
+            <tr class="${rowClass}">
+                <td class="${s.bookings === 0 ? 'italic' : 'font-medium'}">${escapeHtml(s.service_name)}</td>
+                <td><span class="text-xs">${escapeHtml(s.category || '')}</span></td>
+                <td class="text-right">${formatCurrency(s.catalogue_price)}</td>
+                <td class="text-right">${hasBookings ? formatCurrency(s.avg_charged) : '—'}</td>
+                <td class="text-right ${hasBookings ? discountColor : ''} font-medium">
+                    ${hasBookings ? `${discount.toFixed(1)}%` : '—'}
+                </td>
+                <td class="text-right">${s.bookings}</td>
+                <td class="text-right">${hasBookings ? formatCurrency(s.total_revenue) : '—'}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Load and render business insights panel
+ */
+async function loadInsights() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/insights?${params}`);
+    const data = await response.json();
+
+    const listEl = document.getElementById('insightsList');
+    if (!listEl) return;
+
+    if (!data.success || !data.insights || data.insights.length === 0) {
+        listEl.innerHTML = '<p class="text-center text-slate-500">Brak danych do analizy</p>';
+        return;
+    }
+
+    const typeStyles = {
+        alert:   'bg-red-50 border-red-200 text-red-700',
+        warning: 'bg-amber-50 border-amber-200 text-amber-700',
+        success: 'bg-green-50 border-green-200 text-green-700',
+        info:    'bg-blue-50 border-blue-200 text-blue-700'
+    };
+    const typeIcons = {
+        alert: '⚠️', warning: '⚡', success: '✓', info: 'ℹ'
+    };
+
+    listEl.innerHTML = data.insights.map(insight => {
+        const style = typeStyles[insight.type] || typeStyles.info;
+        const icon = typeIcons[insight.type] || 'ℹ';
+        return `
+            <div class="flex items-start gap-3 p-3 rounded border ${style}">
+                <span class="text-lg leading-none mt-0.5">${icon}</span>
+                <div>
+                    <div class="font-semibold text-sm">${escapeHtml(insight.title)}</div>
+                    <div class="text-sm mt-0.5">${escapeHtml(insight.message)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Load 12-month rolling profit trend chart (always relative to today, ignores period selector)
+ */
+async function loadMonthlyTrend() {
+    const response = await fetch('/api/analytics/monthly-trend');
+    const data = await response.json();
+    const ctx = document.getElementById('monthlyTrendChart');
+    if (!ctx || !data.success) return;
+
+    if (monthlyTrendChart) monthlyTrendChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    const labels = data.months.map(m => {
+        // Parse as local time per date-formatting rules (avoids UTC day-shift)
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    monthlyTrendChart = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Przychód',
+                    data: data.months.map(m => m.revenue),
+                    backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    type: 'bar',
+                    label: 'Koszty pracownicze',
+                    data: data.months.map(m => m.employee_costs),
+                    backgroundColor: 'rgba(234, 88, 12, 0.75)',
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    type: 'bar',
+                    label: 'Koszty faktur',
+                    data: data.months.map(m => m.invoice_costs),
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    type: 'line',
+                    label: 'Zysk netto',
+                    data: data.months.map(m => m.profit),
+                    borderColor: 'rgba(22, 163, 74, 1)',
+                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: data.months.map(m =>
+                        m.profit >= 0 ? 'rgba(22,163,74,1)' : 'rgba(239,68,68,1)'
+                    ),
+                    fill: false,
+                    tension: 0.3,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
+}
+
+async function loadNewClients() {
+    const response = await fetch('/api/analytics/rolling/new-clients');
+    const data = await response.json();
+    const ctx = document.getElementById('newClientsChart');
+    if (!ctx || !data.success) return;
+
+    if (newClientsChart) newClientsChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    newClientsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Nowi klienci',
+                data: data.months.map(m => m.new_clients),
+                borderColor: 'rgba(22, 163, 74, 1)',
+                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `Nowi klienci: ${ctx.parsed.y}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+async function loadCancellationRate() {
+    const response = await fetch('/api/analytics/rolling/cancellation-rate');
+    const data = await response.json();
+    const ctx = document.getElementById('cancellationRateChart');
+    if (!ctx || !data.success) return;
+
+    if (cancellationRateChart) cancellationRateChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    cancellationRateChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Odwołania',
+                    data: data.months.map(m => m.cancellation_pct),
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: 'Nieobecności',
+                    data: data.months.map(m => m.noshow_pct),
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val}%` }
+                }
+            }
+        }
+    });
+}
+
+async function loadAvgTicket() {
+    const response = await fetch('/api/analytics/rolling/avg-ticket');
+    const data = await response.json();
+    const ctx = document.getElementById('avgTicketChart');
+    if (!ctx || !data.success) return;
+
+    if (avgTicketChart) avgTicketChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    avgTicketChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Średni rachunek',
+                data: data.months.map(m => m.avg_ticket),
+                borderColor: 'rgba(37, 99, 235, 1)',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `Średni rachunek: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
+}
+
+async function loadCostRatio() {
+    const response = await fetch('/api/analytics/rolling/cost-ratio');
+    const data = await response.json();
+    const ctx = document.getElementById('costRatioChart');
+    if (!ctx || !data.success) return;
+
+    if (costRatioChart) costRatioChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const labels = data.months.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    costRatioChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Przychód',
+                    data: data.months.map(m => m.revenue),
+                    backgroundColor: 'rgba(37, 99, 235, 0.5)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'yPLN',
+                    order: 2
+                },
+                {
+                    type: 'line',
+                    label: 'Udział faktur (%)',
+                    data: data.months.map(m => m.ratio_pct),
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3,
+                    yAxisID: 'yPct',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.dataset.yAxisID === 'yPct'
+                            ? `${ctx.dataset.label}: ${ctx.parsed.y ?? 0}%`
+                            : `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                yPLN: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                },
+                yPct: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    ticks: { callback: (val) => `${val}%` }
+                }
+            }
+        }
+    });
+}
+
+async function loadCategoryMix() {
+    const response = await fetch('/api/analytics/rolling/category-mix');
+    const data = await response.json();
+    const ctx = document.getElementById('categoryMixChart');
+    if (!ctx || !data.success) return;
+
+    if (categoryMixChart) categoryMixChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    // Generate 12 month keys ending at previous month (no current in-progress month)
+    const today = new Date();
+    const monthKeys = [];
+    for (let i = 12; i >= 1; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        monthKeys.push(`${d.getFullYear()}-${mm}-01`);
+    }
+    const labels = monthKeys.map(k => {
+        const [y, mo] = k.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    // Collect unique categories from response
+    const categories = [...new Set(data.rows.map(r => r.category))].sort();
+
+    // Build lookup: month_start_prefix → category → revenue
+    // month_start from DB may be "2026-03-01", key format must match monthKeys
+    const lookup = {};
+    data.rows.forEach(r => {
+        // Normalise key: take YYYY-MM from month_start and append -01
+        const key = r.month_start.substring(0, 7) + '-01';
+        if (!lookup[key]) lookup[key] = {};
+        lookup[key][r.category] = parseFloat(r.revenue);
+    });
+
+    const CATEGORY_COLORS = [
+        'rgba(37,99,235,0.8)',   'rgba(22,163,74,0.8)',  'rgba(234,88,12,0.8)',
+        'rgba(168,85,247,0.8)', 'rgba(236,72,153,0.8)', 'rgba(20,184,166,0.8)',
+        'rgba(245,158,11,0.8)', 'rgba(239,68,68,0.8)',  'rgba(100,116,139,0.8)',
+        'rgba(14,165,233,0.8)'
+    ];
+
+    const datasets = categories.map((cat, i) => ({
+        label: cat,
+        data: monthKeys.map(k => (lookup[k] && lookup[k][cat]) || 0),
+        backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+        borderWidth: 0
+    }));
+
+    categoryMixChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
+}
+
+async function loadEmployeeUtilisation() {
+    const response = await fetch('/api/analytics/rolling/employee-utilisation');
+    const data = await response.json();
+    const ctx = document.getElementById('employeeUtilisationChart');
+    if (!ctx || !data.success) return;
+
+    if (employeeUtilisationChart) employeeUtilisationChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    // Collect unique sorted months from response
+    const monthKeys = [...new Set(data.rows.map(r => r.month_start))].sort();
+    const labels = monthKeys.map(k => {
+        const [y, mo] = k.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    const employees = [...new Set(data.rows.map(r => r.employee_name))].sort();
+
+    // Build lookup: employee → month_start → utilisation_pct
+    const lookup = {};
+    data.rows.forEach(r => {
+        if (!lookup[r.employee_name]) lookup[r.employee_name] = {};
+        lookup[r.employee_name][r.month_start] = parseFloat(r.utilisation_pct);
+    });
+
+    const EMP_COLORS = [
+        'rgba(37,99,235,1)',  'rgba(22,163,74,1)',  'rgba(234,88,12,1)',
+        'rgba(168,85,247,1)', 'rgba(236,72,153,1)', 'rgba(20,184,166,1)',
+        'rgba(245,158,11,1)', 'rgba(100,116,139,1)'
+    ];
+
+    const datasets = employees.map((emp, i) => ({
+        label: emp,
+        data: monthKeys.map(k => (lookup[emp] && lookup[emp][k]) || 0),
+        borderColor: EMP_COLORS[i % EMP_COLORS.length],
+        backgroundColor: EMP_COLORS[i % EMP_COLORS.length].replace(',1)', ',0.08)'),
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: false,
+        tension: 0.3
+    }));
+
+    employeeUtilisationChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val}%` }
+                }
+            }
+        }
+    });
+}
+
+async function loadVisitFrequency() {
+    const response = await fetch('/api/analytics/rolling/visit-frequency');
+    const data = await response.json();
+    const ctx = document.getElementById('visitFrequencyChart');
+    if (!ctx || !data.success) return;
+
+    if (visitFrequencyChart) visitFrequencyChart.destroy();
+
+    // Group into 5-visit bands: 1-5, 6-10, 11-15, ..., 46-50
+    const BAND_SIZE = 5;
+    const BANDS = 10;  // 10 bands of 5 = covers 1..50
+    const bandCounts = new Array(BANDS).fill(0);
+    data.distribution.forEach(d => {
+        const count = parseInt(d.visit_count);
+        const bandIdx = Math.min(Math.floor((count - 1) / BAND_SIZE), BANDS - 1);
+        bandCounts[bandIdx] += parseInt(d.client_count);
+    });
+
+    const labels = [];
+    const values = [];
+    for (let i = 0; i < BANDS; i++) {
+        const lo = i * BAND_SIZE + 1;
+        const hi = lo + BAND_SIZE - 1;
+        labels.push(`${lo}-${hi}`);
+        values.push(bandCounts[i]);
+    }
+
+    visitFrequencyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Klienci',
+                data: values,
+                backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `Klienci: ${ctx.parsed.y}`,
+                        title: (items) => `${items[0].label} wizyt`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    title: { display: true, text: 'Liczba wizyt w ostatnich 12 miesiącach' }
+                },
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+async function loadTopClients() {
+    const params = buildParams();
+    const response = await fetch(`/api/analytics/top-clients?${params}`);
+    const data = await response.json();
+    const tbody = document.getElementById('topClientsTableBody');
+    if (!tbody) return;
+
+    if (!data.success || !data.clients.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-500 py-2">Brak danych</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.clients.map((c, i) => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="py-1.5 text-slate-400 text-xs">${i + 1}</td>
+            <td class="py-1.5 font-medium">${escapeHtml(c.client_name)}</td>
+            <td class="py-1.5 text-right text-slate-600">${c.visits}</td>
+            <td class="py-1.5 text-right text-slate-600">${formatCurrency(c.revenue)}</td>
+        </tr>
+    `).join('');
 }
