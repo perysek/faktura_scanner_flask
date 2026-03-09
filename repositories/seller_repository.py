@@ -67,9 +67,16 @@ class SellerRepository(BaseRepository):
                 s.*,
                 COUNT(i.id) as actual_invoice_count,
                 SUM(CASE WHEN i.status = 'Opłacona' THEN i.amount ELSE 0 END) as total_paid,
-                SUM(CASE WHEN i.status = 'Nieopłacona' THEN i.amount ELSE 0 END) as total_unpaid
+                SUM(CASE WHEN i.status IN ('Nieopłacona', 'Przeterminowana') THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
-            LEFT JOIN invoices i ON s.id = i.seller_id
+            LEFT JOIN invoices i ON (
+                i.seller_id = s.id
+                OR (
+                    i.seller_id IS NULL
+                    AND s.seller_nip IS NOT NULL
+                    AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+                )
+            )
             WHERE s.seller_name ILIKE %s OR s.seller_nip ILIKE %s
             GROUP BY s.id
             ORDER BY s.seller_name
@@ -147,13 +154,20 @@ class SellerRepository(BaseRepository):
     def get_all_with_stats(self) -> List[Any]:
         """Pobierz wszystkich sprzedawców wraz z statystykami"""
         query = """
-            SELECT 
+            SELECT
                 s.*,
                 COUNT(i.id) as actual_invoice_count,
                 SUM(CASE WHEN i.status = 'Opłacona' THEN i.amount ELSE 0 END) as total_paid,
-                SUM(CASE WHEN i.status = 'Nieopłacona' THEN i.amount ELSE 0 END) as total_unpaid
+                SUM(CASE WHEN i.status IN ('Nieopłacona', 'Przeterminowana') THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
-            LEFT JOIN invoices i ON s.id = i.seller_id
+            LEFT JOIN invoices i ON (
+                i.seller_id = s.id
+                OR (
+                    i.seller_id IS NULL
+                    AND s.seller_nip IS NOT NULL
+                    AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+                )
+            )
             GROUP BY s.id
             ORDER BY s.seller_name
         """

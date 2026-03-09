@@ -197,14 +197,42 @@ class InvoiceRepository(BaseRepository):
 			)
 	
 	def get_by_seller(self, seller_id: int) -> List[Any]:
-		"""Pobierz wszystkie faktury dla danego sprzedawcy"""
+		"""Pobierz wszystkie faktury dla danego sprzedawcy.
+		Matches by seller_id FK, and also by seller_nip (normalized) for invoices
+		that were saved without a seller_id link.
+		"""
 		query = """
-            SELECT * FROM invoices
-            WHERE seller_id = %s
-            ORDER BY invoice_date DESC
+            SELECT i.* FROM invoices i
+            CROSS JOIN (SELECT id, seller_nip FROM sellers WHERE id = %s) s
+            WHERE i.seller_id = s.id
+               OR (
+                   i.seller_id IS NULL
+                   AND s.seller_nip IS NOT NULL
+                   AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+               )
+            ORDER BY i.invoice_date DESC
         """
 		return self._fetch_all(query, (seller_id,))
 	
+	def relink_to_sellers(self) -> int:
+		"""
+		Link unlinked invoices (seller_id IS NULL) to sellers by normalized NIP.
+		Normalizes invoice seller_nip on the fly (strips dashes/spaces) to match
+		the digits-only NIP stored in the sellers table.
+		Returns the number of invoices updated.
+		"""
+		query = """
+            UPDATE invoices
+            SET seller_id = sellers.id,
+                updated_at = CURRENT_TIMESTAMP
+            FROM sellers
+            WHERE invoices.seller_id IS NULL
+              AND invoices.seller_nip IS NOT NULL
+              AND regexp_replace(invoices.seller_nip, '[^0-9]', '', 'g') = sellers.seller_nip
+        """
+		cursor = self._execute(query)
+		return cursor.rowcount
+
 	def bulk_update_seller(self, old_seller_id: int, new_seller_id: int) -> int:
 		"""Zmień seller_id dla wszystkich faktur"""
 		query = """

@@ -11,11 +11,12 @@ from pathlib import Path
 from typing import Optional
 
 from flask import Blueprint, jsonify, request, current_app, send_file, session, \
-	Response
+	Response, stream_with_context
 from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 
+from config.database import DatabaseConnection
 from database.models import Invoice, UploadStaging
 from utils.validators import DateParser
 
@@ -358,7 +359,7 @@ def process_staged_files():
             logger.error(f"Global processing error: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
-    return Response(generate(), mimetype='text/event-stream')
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 
 @upload_bp.route('/finalize', methods=['POST'])
@@ -506,12 +507,19 @@ def finalize_uploads():
             current_app.staging_repo.delete_by_filename(session_id, filename)
             
         except Exception as e:
+            # Rollback the aborted PostgreSQL transaction so the shared connection
+            # is usable again for the next invoice in the batch.
+            try:
+                DatabaseConnection.get_connection().rollback()
+            except Exception:
+                pass
+
             error_msg = str(e)
-            if "UNIQUE constraint failed" in error_msg:
+            if "duplicate key value violates unique constraint" in error_msg:
                 error_msg = f"Duplikat numeru faktury: {invoice_number}"
-            
+
             logger.error(f"[FINALIZE] Failed to save {filename}: {error_msg}")
-            
+
             # Rollback file move if it happened
             if file_moved and os.path.exists(permanent_path):
                 try:

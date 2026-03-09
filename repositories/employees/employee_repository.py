@@ -19,6 +19,7 @@ class EmployeeRepository:
         return Employee(
             id=row['id'],
             user_id=row['user_id'],
+            forma_zatrudnienia_id=row['forma_zatrudnienia_id'],
             first_name=row['first_name'],
             last_name=row['last_name'],
             phone=row['phone'],
@@ -29,6 +30,7 @@ class EmployeeRepository:
             termination_date=parse_date(row['termination_date']),
             base_salary=float(row['base_salary']) if row['base_salary'] else None,
             commission_rate=float(row['commission_rate']) if row['commission_rate'] else None,
+            employer_cost_rate=float(row['employer_cost_rate']) if row['employer_cost_rate'] else 0.22,
             skills=row['skills'],
             specializations=row['specializations'],
             work_schedule=row['work_schedule'],
@@ -44,17 +46,18 @@ class EmployeeRepository:
         """Utwórz nowego pracownika"""
         query = """
             INSERT INTO employees (
-                user_id, first_name, last_name, phone, email, position,
+                user_id, forma_zatrudnienia_id, first_name, last_name, phone, email, position,
                 employment_status, hire_date, termination_date,
-                base_salary, commission_rate, skills, specializations,
+                base_salary, commission_rate, employer_cost_rate, skills, specializations,
                 work_schedule, max_appointments_per_day, notes, photo_path, is_active
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (
                 employee.user_id,
+                employee.forma_zatrudnienia_id,
                 employee.first_name,
                 employee.last_name,
                 employee.phone,
@@ -65,6 +68,7 @@ class EmployeeRepository:
                 employee.termination_date.isoformat() if employee.termination_date else None,
                 employee.base_salary,
                 employee.commission_rate,
+                employee.employer_cost_rate,
                 employee.skills,
                 employee.specializations,
                 employee.work_schedule,
@@ -152,6 +156,7 @@ class EmployeeRepository:
         query = """
             UPDATE employees
             SET user_id = %s,
+                forma_zatrudnienia_id = %s,
                 first_name = %s,
                 last_name = %s,
                 phone = %s,
@@ -162,6 +167,7 @@ class EmployeeRepository:
                 termination_date = %s,
                 base_salary = %s,
                 commission_rate = %s,
+                employer_cost_rate = %s,
                 skills = %s,
                 specializations = %s,
                 work_schedule = %s,
@@ -176,6 +182,7 @@ class EmployeeRepository:
             cursor = conn.cursor()
             cursor.execute(query, (
                 employee.user_id,
+                employee.forma_zatrudnienia_id,
                 employee.first_name,
                 employee.last_name,
                 employee.phone,
@@ -186,6 +193,7 @@ class EmployeeRepository:
                 employee.termination_date.isoformat() if employee.termination_date else None,
                 employee.base_salary,
                 employee.commission_rate,
+                employee.employer_cost_rate,
                 employee.skills,
                 employee.specializations,
                 employee.work_schedule,

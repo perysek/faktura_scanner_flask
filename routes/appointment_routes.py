@@ -697,3 +697,30 @@ def update_past_appointment_status(appointment_id):
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@appointment_bp.route('/clients/<int:client_id>/appointments', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_client_appointments(client_id):
+    """Pobierz historię wizyt klienta (wszystkie, posortowane malejąco po dacie)"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        repo = AppointmentRepository()
+        rows = repo.get_client_appointments(client_id, limit=limit)
+        appointments = []
+        for row in rows:
+            a = dict(row)
+            for key in ['total_price', 'discount_amount']:
+                if a.get(key) is not None:
+                    a[key] = float(a[key])
+            if a.get('appointment_date'):
+                a['appointment_date'] = str(a['appointment_date'])
+            if a.get('start_time'):
+                a['start_time'] = str(a['start_time'])
+            if a.get('end_time'):
+                a['end_time'] = str(a['end_time'])
+            appointments.append(a)
+        return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

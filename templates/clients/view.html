@@ -579,6 +579,39 @@
         </div>
     </div>
 
+    <!-- Appointment History -->
+    <div class="refined-card">
+        <div class="section-header">
+            <h2 class="section-title">Historia wizyt</h2>
+            <span id="appt-count-badge" style="font-size:0.75rem;color:var(--color-ink-subtle);"></span>
+        </div>
+
+        <div id="appt-loading" style="text-align:center;padding:1.5rem;color:var(--color-ink-subtle);font-size:0.875rem;">
+            Ładowanie historii wizyt...
+        </div>
+
+        <div id="appt-empty" style="display:none;text-align:center;padding:1.5rem;">
+            <span class="material-icons" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:0.5rem;">event_busy</span>
+            <p style="color:var(--color-ink-subtle);font-size:0.8125rem;">Brak historii wizyt</p>
+        </div>
+
+        <div id="appt-table-wrap" style="display:none;overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.8125rem;">
+                <thead>
+                    <tr style="background:var(--color-surface);">
+                        <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-subtle);border-bottom:1px solid var(--color-border);">Data</th>
+                        <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-subtle);border-bottom:1px solid var(--color-border);">Godziny</th>
+                        <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-subtle);border-bottom:1px solid var(--color-border);">Pracownik</th>
+                        <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-subtle);border-bottom:1px solid var(--color-border);">Status</th>
+                        <th style="padding:0.5rem 0.75rem;text-align:right;font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-subtle);border-bottom:1px solid var(--color-border);">Kwota</th>
+                        <th style="padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border);"></th>
+                    </tr>
+                </thead>
+                <tbody id="appt-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Actions -->
     <div class="refined-card">
         <div class="action-bar">
@@ -612,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPreferences();
     loadEmployees();
     loadServices();
+    loadAppointmentHistory();
 
     // Event listenery dla wzajemnego filtrowania
     document.getElementById('new-pref-service-id').addEventListener('change', async (e) => {
@@ -998,6 +1032,78 @@ async function removePreference(prefId) {
 }
 
 // Delete/deactivate client
+// ─── Appointment History ──────────────────────────────────────────────────────
+
+const STATUS_LABELS = {
+    scheduled: 'Zaplanowana', confirmed: 'Potwierdzona', in_progress: 'W trakcie',
+    completed: 'Zakończona', cancelled: 'Anulowana', no_show: 'Nieobecność'
+};
+const STATUS_COLORS = {
+    scheduled: '#2563eb', confirmed: '#059669', in_progress: '#d97706',
+    completed: '#2d6a4f', cancelled: '#dc2626', no_show: '#6b7280'
+};
+const STATUS_BG = {
+    scheduled: 'rgba(37,99,235,0.08)', confirmed: 'rgba(5,150,105,0.08)',
+    in_progress: 'rgba(217,119,6,0.08)', completed: 'rgba(45,106,79,0.08)',
+    cancelled: 'rgba(220,38,38,0.08)', no_show: 'rgba(107,114,128,0.08)'
+};
+
+async function loadAppointmentHistory() {
+    try {
+        const res = await fetch(`/api/clients/${CLIENT_ID}/appointments?limit=50`);
+        const data = await res.json();
+
+        document.getElementById('appt-loading').style.display = 'none';
+
+        const appts = data.appointments || data.data || data || [];
+        if (!Array.isArray(appts) || appts.length === 0) {
+            document.getElementById('appt-empty').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('appt-count-badge').textContent = `${appts.length} wizyt łącznie`;
+        document.getElementById('appt-table-wrap').style.display = 'block';
+
+        document.getElementById('appt-tbody').innerHTML = appts.map(a => {
+            const status = a.status || 'scheduled';
+            const dateStr = a.appointment_date ? a.appointment_date.split('T')[0] : '—';
+            // Parse as local time to avoid UTC off-by-one
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const displayDate = (y && m && d)
+                ? new Date(y, m - 1, d).toLocaleDateString('pl-PL', {day:'2-digit', month:'short', year:'numeric'})
+                : '—';
+            const start = (a.start_time || '').substring(0, 5);
+            const end   = (a.end_time   || '').substring(0, 5);
+            const employee = escapeHtml(a.employee_name || '—');
+            const price = a.total_price != null
+                ? parseFloat(a.total_price).toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' zł'
+                : '—';
+
+            return `<tr style="border-bottom:1px solid var(--color-border-subtle);">
+                <td style="padding:0.625rem 0.75rem;font-weight:500;">${displayDate}</td>
+                <td style="padding:0.625rem 0.75rem;color:var(--color-ink-muted);">${start}–${end}</td>
+                <td style="padding:0.625rem 0.75rem;">${employee}</td>
+                <td style="padding:0.625rem 0.75rem;">
+                    <span style="display:inline-flex;align-items:center;padding:0.2rem 0.5rem;font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;border-radius:1px;background:${STATUS_BG[status]||'rgba(0,0,0,0.05)'};color:${STATUS_COLORS[status]||'#525252'};">
+                        ${STATUS_LABELS[status] || status}
+                    </span>
+                </td>
+                <td style="padding:0.625rem 0.75rem;text-align:right;color:var(--color-ink-muted);">${price}</td>
+                <td style="padding:0.625rem 0.5rem;text-align:right;">
+                    <a href="/appointment/${a.id}" style="font-size:0.75rem;color:#2563eb;text-decoration:none;" title="Szczegóły">
+                        <span class="material-icons" style="font-size:1rem;vertical-align:middle;">open_in_new</span>
+                    </a>
+                </td>
+            </tr>`;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error loading appointment history:', err);
+        document.getElementById('appt-loading').style.display = 'none';
+        document.getElementById('appt-empty').style.display = 'block';
+    }
+}
+
 async function confirmDelete() {
     const isActive = {{ 'true' if client.is_active else 'false' }};
     const action = isActive ? 'dezaktywować' : 'usunąć';

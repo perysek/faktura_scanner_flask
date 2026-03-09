@@ -1034,3 +1034,96 @@ class AnalyticsRepository:
         cursor = conn.cursor()
         cursor.execute(query)
         return [dict(row) for row in cursor.fetchall()]
+
+    def get_employee_analytics(self, employee_id: int) -> Dict:
+        """Pobierz metryki wydajności dla pracownika."""
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+
+        # Query 1: Overall appointment KPIs
+        cursor.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE status NOT IN ('cancelled')) AS total_appointments,
+                COUNT(*) FILTER (WHERE status = 'completed') AS completed_appointments,
+                COUNT(*) FILTER (WHERE status = 'no_show') AS no_show_appointments,
+                COUNT(DISTINCT client_id) FILTER (WHERE status NOT IN ('cancelled')) AS total_clients,
+                COUNT(*) FILTER (WHERE status NOT IN ('cancelled') AND appointment_date >= CURRENT_DATE - INTERVAL '30 days') AS appointments_30d,
+                COUNT(*) FILTER (WHERE status = 'completed' AND appointment_date >= CURRENT_DATE - INTERVAL '30 days') AS completed_30d
+            FROM appointments
+            WHERE employee_id = %s
+        """, (employee_id,))
+        kpi = dict(cursor.fetchone())
+
+        # Query 2: Revenue from income_records
+        cursor.execute("""
+            SELECT
+                COALESCE(SUM(net_amount), 0) AS total_revenue,
+                COALESCE(SUM(commission_total), 0) AS total_commission,
+                COALESCE(AVG(net_amount), 0) AS avg_ticket,
+                COUNT(*) AS paid_count
+            FROM income_records
+            WHERE employee_id = %s
+        """, (employee_id,))
+        revenue = dict(cursor.fetchone())
+
+        # Query 3: 6-month monthly trend (completed appointments)
+        cursor.execute("""
+            WITH months AS (
+                SELECT generate_series(
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months'),
+                    DATE_TRUNC('month', CURRENT_DATE),
+                    '1 month'::interval
+                )::date AS month_start
+            )
+            SELECT
+                TO_CHAR(m.month_start, 'YYYY-MM') AS month,
+                TO_CHAR(m.month_start, 'Mon') AS month_short,
+                COUNT(a.id) FILTER (WHERE a.status = 'completed') AS completed,
+                COUNT(a.id) FILTER (WHERE a.status NOT IN ('cancelled')) AS total
+            FROM months m
+            LEFT JOIN appointments a ON a.employee_id = %s
+                AND DATE_TRUNC('month', a.appointment_date) = m.month_start
+            GROUP BY m.month_start
+            ORDER BY m.month_start
+        """, (employee_id,))
+        trend = [dict(r) for r in cursor.fetchall()]
+
+        # Query 4: Top 5 services (completed appointments)
+        cursor.execute("""
+            SELECT
+                s.name AS service_name,
+                s.category,
+                COUNT(*) AS count,
+                ROUND(COALESCE(AVG(aps.price_charged), 0), 2) AS avg_price
+            FROM appointment_services aps
+            JOIN services s ON s.id = aps.service_id
+            JOIN appointments a ON a.id = aps.appointment_id
+            WHERE a.employee_id = %s AND a.status = 'completed'
+            GROUP BY s.id, s.name, s.category
+            ORDER BY count DESC
+            LIMIT 5
+        """, (employee_id,))
+        top_services = [dict(r) for r in cursor.fetchall()]
+
+        # Query 5: Client preferences count
+        cursor.execute("""
+            SELECT COUNT(*) AS preferred_count
+            FROM client_preferences
+            WHERE preferred_employee_id = %s
+        """, (employee_id,))
+        pref_row = cursor.fetchone()
+        preferred_count = pref_row['preferred_count'] if pref_row else 0
+
+        # Convert Decimal to float for JSON serialization
+        for key in ['total_revenue', 'total_commission', 'avg_ticket']:
+            revenue[key] = float(revenue[key])
+        for row in top_services:
+            row['avg_price'] = float(row['avg_price'])
+
+        return {
+            'kpi': kpi,
+            'revenue': revenue,
+            'trend': trend,
+            'top_services': top_services,
+            'preferred_count': preferred_count,
+        }
