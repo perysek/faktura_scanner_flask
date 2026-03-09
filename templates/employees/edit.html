@@ -177,6 +177,66 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    .skill-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .skill-remove-btn {
+        padding: 0.375rem 0.625rem;
+        background: transparent;
+        color: var(--color-error);
+        border: 1px solid transparent;
+        border-radius: 2px;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+    }
+    .skill-remove-btn:hover { background: rgba(155,44,44,0.06); }
+
+    .chips-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        min-height: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.625rem;
+        background: rgba(37, 99, 235, 0.08);
+        color: #2563eb;
+        border-radius: 2px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .chip-remove { background: none; border: none; cursor: pointer; color: #2563eb; font-size: 0.875rem; padding: 0; }
+    .chip-add-row { display: flex; gap: 0.5rem; }
+
+    .schedule-grid { display: flex; flex-direction: column; gap: 0.375rem; }
+    .schedule-row {
+        display: grid;
+        grid-template-columns: 120px auto 1fr 16px 1fr;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .schedule-day-label { font-size: 0.8125rem; color: var(--color-ink-muted); }
+    .schedule-sep { text-align: center; color: var(--color-ink-subtle); font-size: 0.75rem; }
+    .schedule-time {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        background: white;
+        color: var(--color-ink);
+    }
+    .schedule-time:disabled { background: var(--color-surface-warm); color: var(--color-ink-subtle); }
+    .schedule-time:focus { outline: none; border-color: var(--color-ink-muted); }
 </style>
 {% endblock %}
 
@@ -232,6 +292,19 @@
                             <option value="terminated" {% if employee.employment_status == 'terminated' %}selected{% endif %}>Zwolniony</option>
                         </select>
                     </div>
+                    <div>
+                        <label for="forma_zatrudnienia_id" class="refined-label">Forma zatrudnienia</label>
+                        <select id="forma_zatrudnienia_id" name="forma_zatrudnienia_id" class="refined-select">
+                            <option value="">— nie wybrano —</option>
+                            {% for f in forma_options %}
+                            <option value="{{ f['id'] }}" {% if employee.forma_zatrudnienia_id == f['id'] %}selected{% endif %}>{{ f['nazwa'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="photo_path" class="refined-label">Ścieżka do zdjęcia</label>
+                        <input type="text" id="photo_path" name="photo_path" class="refined-input" value="{{ employee.photo_path if employee.photo_path else '' }}" placeholder="np. /static/photos/anna.jpg">
+                    </div>
                 </div>
             </section>
 
@@ -249,6 +322,54 @@
                         <input type="number" id="commission_rate" name="commission_rate" step="0.1" min="0" max="100" class="refined-input" value="{{ employee.commission_rate if employee.commission_rate else '' }}">
                         <p class="input-hint">Domyślna stawka prowizyjna od usług</p>
                     </div>
+                    <div>
+                        <label for="employer_cost_rate" class="refined-label">Koszt pracodawcy (ułamek)</label>
+                        <input type="number" id="employer_cost_rate" name="employer_cost_rate" step="0.01" min="0" max="1" class="refined-input" value="{{ employee.employer_cost_rate }}">
+                        <p class="input-hint">np. 0.22 = 22% ZUS/podatki/świadczenia</p>
+                    </div>
+                    <div>
+                        <label for="max_appointments_per_day" class="refined-label">Maks. wizyt dziennie</label>
+                        <input type="number" id="max_appointments_per_day" name="max_appointments_per_day" step="1" min="1" max="50" class="refined-input" value="{{ employee.max_appointments_per_day }}">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skills -->
+            <section>
+                <h2 class="section-title">Umiejętności</h2>
+                <div id="skills-container"></div>
+                <button type="button" class="refined-btn-secondary" style="font-size:0.75rem;padding:0.375rem 0.75rem;margin-top:0.5rem" onclick="addSkillRow()">
+                    + Dodaj umiejętność
+                </button>
+                <p class="input-hint" style="margin-top:0.5rem">Ocena 1–5: 1 = Podstawowy, 5 = Ekspert</p>
+            </section>
+
+            <!-- Specializations -->
+            <section>
+                <h2 class="section-title">Specjalizacje</h2>
+                <div class="chips-container" id="specs-chips"></div>
+                <div class="chip-add-row">
+                    <input type="text" id="spec-input" class="refined-input" style="max-width:260px" placeholder="np. Bridal, Balayage, Extensions">
+                    <button type="button" class="refined-btn-secondary" style="font-size:0.75rem;padding:0.375rem 0.75rem;white-space:nowrap" onclick="addSpec()">Dodaj</button>
+                </div>
+            </section>
+
+            <!-- Work Schedule -->
+            <section>
+                <h2 class="section-title">Harmonogram pracy</h2>
+                <div class="schedule-grid">
+                    {% set days = [('mon','Poniedziałek'),('tue','Wtorek'),('wed','Środa'),('thu','Czwartek'),('fri','Piątek'),('sat','Sobota'),('sun','Niedziela')] %}
+                    {% for day_key, day_name in days %}
+                    <div class="schedule-row">
+                        <label class="schedule-day-label">
+                            <input type="checkbox" id="sched-{{ day_key }}" onchange="toggleDay('{{ day_key }}')">
+                            {{ day_name }}
+                        </label>
+                        <input type="time" id="sched-{{ day_key }}-start" class="schedule-time" value="09:00" disabled>
+                        <span class="schedule-sep">–</span>
+                        <input type="time" id="sched-{{ day_key }}-end" class="schedule-time" value="17:00" disabled>
+                    </div>
+                    {% endfor %}
                 </div>
             </section>
 
@@ -281,62 +402,124 @@
 
 {% block extra_scripts %}
 <script>
-// Store original values
-let originalValues = {};
+// ── Pre-populated data from server ───────────────
+const INITIAL_SKILLS = {{ employee.get_skills_dict() | tojson }};
+const INITIAL_SPECS  = {{ employee.get_specializations_list() | tojson }};
+const INITIAL_SCHED  = {{ employee.get_work_schedule_dict() | tojson }};
 
-// Validation error handling utilities
-function showFieldError(fieldId, errorMessage) {
+// ── Skills ───────────────────────────────────────
+function addSkillRow(name = '', rating = 3) {
+    const container = document.getElementById('skills-container');
+    const div = document.createElement('div');
+    div.className = 'skill-row';
+    div.innerHTML = `
+        <input type="text" class="refined-input skill-name" placeholder="Nazwa umiejętności" value="${String(name).replace(/"/g,'&quot;')}">
+        <select class="refined-select skill-rating" style="min-width:160px">
+            ${[1,2,3,4,5].map(n => `<option value="${n}" ${n==rating?'selected':''}>${n} — ${['Podstawowy','Podstawowy+','Średni','Zaawansowany','Ekspert'][n-1]}</option>`).join('')}
+        </select>
+        <button type="button" class="skill-remove-btn" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function populateSkills(dict) {
+    Object.entries(dict).forEach(([name, rating]) => addSkillRow(name, rating));
+}
+
+// ── Specializations ──────────────────────────────
+let specsArray = [];
+
+function addSpec() {
+    const inp = document.getElementById('spec-input');
+    const val = inp.value.trim();
+    if (!val || specsArray.includes(val)) { inp.value = ''; return; }
+    specsArray.push(val);
+    renderChips();
+    inp.value = '';
+}
+
+function removeSpec(idx) {
+    specsArray.splice(idx, 1);
+    renderChips();
+}
+
+function renderChips() {
+    document.getElementById('specs-chips').innerHTML = specsArray.map((s, i) =>
+        `<span class="chip">${s.replace(/</g,'&lt;')}<button type="button" class="chip-remove" onclick="removeSpec(${i})">×</button></span>`
+    ).join('');
+}
+
+function populateSpecs(arr) {
+    specsArray = [...arr];
+    renderChips();
+}
+
+// ── Schedule ─────────────────────────────────────
+function toggleDay(day) {
+    const checked = document.getElementById(`sched-${day}`).checked;
+    document.getElementById(`sched-${day}-start`).disabled = !checked;
+    document.getElementById(`sched-${day}-end`).disabled = !checked;
+}
+
+function populateSchedule(sched) {
+    Object.entries(sched).forEach(([day, range]) => {
+        const cb = document.getElementById(`sched-${day}`);
+        if (!cb) return;
+        cb.checked = true;
+        toggleDay(day);
+        const parts = range.split('-');
+        if (parts.length >= 2) {
+            document.getElementById(`sched-${day}-start`).value = parts[0];
+            document.getElementById(`sched-${day}-end`).value = parts[1];
+        }
+    });
+}
+
+// ── Validation helpers ───────────────────────────
+function showFieldError(fieldId, msg) {
     clearFieldError(fieldId);
-
     const field = document.getElementById(fieldId);
     if (!field) return;
-
     field.classList.add('error');
-
-    const errorEl = document.createElement('span');
-    errorEl.className = 'field-error';
-    errorEl.id = `${fieldId}-error`;
-    errorEl.textContent = errorMessage;
-
-    field.parentElement.appendChild(errorEl);
+    const el = document.createElement('span');
+    el.className = 'field-error';
+    el.id = `${fieldId}-error`;
+    el.textContent = msg;
+    field.parentElement.appendChild(el);
     field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
     field.addEventListener('focus', () => clearFieldError(fieldId), { once: true });
 }
 
 function clearFieldError(fieldId) {
     const field = document.getElementById(fieldId);
     if (!field) return;
-
     field.classList.remove('error');
-    const errorEl = document.getElementById(`${fieldId}-error`);
-    if (errorEl) errorEl.remove();
+    const el = document.getElementById(`${fieldId}-error`);
+    if (el) el.remove();
 }
 
-function resetFieldToOriginal(fieldId) {
-    const field = document.getElementById(fieldId);
-    if (!field || !originalValues[fieldId]) return;
-
-    if (field.type === 'checkbox') {
-        field.checked = originalValues[fieldId];
-    } else {
-        field.value = originalValues[fieldId];
-    }
-}
-
-// Save original values on page load
-document.addEventListener('DOMContentLoaded', () => {
-    ['first_name', 'last_name', 'phone', 'email', 'position', 'hire_date',
-     'employment_status', 'base_salary', 'commission_rate', 'notes', 'is_active'].forEach(id => {
-        const field = document.getElementById(id);
-        if (field) {
-            originalValues[id] = field.type === 'checkbox' ? field.checked : field.value;
-        }
-    });
-});
-
+// ── Form submit ───────────────────────────────────
 document.getElementById('employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const skillsObj = {};
+    document.querySelectorAll('.skill-row').forEach(row => {
+        const name = row.querySelector('.skill-name').value.trim();
+        const rating = parseInt(row.querySelector('.skill-rating').value);
+        if (name) skillsObj[name] = rating;
+    });
+
+    const scheduleObj = {};
+    ['mon','tue','wed','thu','fri','sat','sun'].forEach(d => {
+        const cb = document.getElementById(`sched-${d}`);
+        if (cb && cb.checked) {
+            const start = document.getElementById(`sched-${d}-start`).value;
+            const end = document.getElementById(`sched-${d}-end`).value;
+            if (start && end) scheduleObj[d] = `${start}-${end}`;
+        }
+    });
+
+    const formaVal = document.getElementById('forma_zatrudnienia_id').value;
 
     const formData = {
         first_name: document.getElementById('first_name').value.trim(),
@@ -346,8 +529,15 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         position: document.getElementById('position').value.trim() || null,
         hire_date: document.getElementById('hire_date').value || null,
         employment_status: document.getElementById('employment_status').value,
+        forma_zatrudnienia_id: formaVal ? parseInt(formaVal) : null,
+        photo_path: document.getElementById('photo_path').value.trim() || null,
         base_salary: document.getElementById('base_salary').value ? parseFloat(document.getElementById('base_salary').value) : null,
         commission_rate: document.getElementById('commission_rate').value ? parseFloat(document.getElementById('commission_rate').value) : null,
+        employer_cost_rate: parseFloat(document.getElementById('employer_cost_rate').value) || 0.22,
+        max_appointments_per_day: parseInt(document.getElementById('max_appointments_per_day').value) || 8,
+        skills: Object.keys(skillsObj).length ? skillsObj : null,
+        specializations: specsArray.length ? specsArray : null,
+        work_schedule: Object.keys(scheduleObj).length ? scheduleObj : null,
         notes: document.getElementById('notes').value.trim() || null,
         is_active: document.getElementById('is_active').checked
     };
@@ -365,29 +555,10 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
             window.location.href = '/employee/{{ employee.id }}';
         } else {
             const errorMsg = data.error || 'Nieznany błąd';
-
-            // Identify field with error
             if (errorMsg.toLowerCase().includes('imię') || errorMsg.toLowerCase().includes('first')) {
                 showFieldError('first_name', errorMsg);
-                resetFieldToOriginal('first_name');
-            } else if (errorMsg.toLowerCase().includes('nazwisko') || errorMsg.toLowerCase().includes('last')) {
-                showFieldError('last_name', errorMsg);
-                resetFieldToOriginal('last_name');
-            } else if (errorMsg.toLowerCase().includes('telefon') || errorMsg.toLowerCase().includes('phone')) {
-                showFieldError('phone', errorMsg);
-                resetFieldToOriginal('phone');
-            } else if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('e-mail')) {
+            } else if (errorMsg.toLowerCase().includes('email')) {
                 showFieldError('email', errorMsg);
-                resetFieldToOriginal('email');
-            } else if (errorMsg.toLowerCase().includes('stanowisko') || errorMsg.toLowerCase().includes('position')) {
-                showFieldError('position', errorMsg);
-                resetFieldToOriginal('position');
-            } else if (errorMsg.toLowerCase().includes('pensja') || errorMsg.toLowerCase().includes('salary')) {
-                showFieldError('base_salary', errorMsg);
-                resetFieldToOriginal('base_salary');
-            } else if (errorMsg.toLowerCase().includes('prowizj') || errorMsg.toLowerCase().includes('commission')) {
-                showFieldError('commission_rate', errorMsg);
-                resetFieldToOriginal('commission_rate');
             } else {
                 showFieldError('first_name', errorMsg);
             }
@@ -396,6 +567,17 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         console.error('Error:', error);
         showFieldError('first_name', 'Błąd połączenia z serwerem');
     }
+});
+
+// ── Initialize pre-populated values ──────────────
+document.addEventListener('DOMContentLoaded', () => {
+    populateSkills(INITIAL_SKILLS);
+    populateSpecs(INITIAL_SPECS);
+    populateSchedule(INITIAL_SCHED);
+
+    document.getElementById('spec-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addSpec(); }
+    });
 });
 </script>
 {% endblock %}

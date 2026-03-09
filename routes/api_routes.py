@@ -95,6 +95,119 @@ def parse_date_string(date_str: Optional[str]) -> Optional[date]:
     return DateParser.parse(date_str)
 
 
+@api_bp.route('/invoices/seller-sync-check', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
+def invoice_seller_sync_check():
+    """Check all invoices for missing or incorrect seller_id links."""
+    try:
+        # Index all sellers by their normalized NIP and by id
+        all_seller_rows = current_app.seller_repo.get_all()
+        sellers_by_nip = {}
+        sellers_by_id = {}
+        for row in all_seller_rows:
+            if row['seller_nip']:
+                sellers_by_nip[row['seller_nip']] = row  # already normalized in sellers table
+            sellers_by_id[row['id']] = row
+
+        # Fetch raw invoice rows so we can read seller_id directly
+        cursor = current_app.invoice_repo._execute("""
+            SELECT id, invoice_number, seller_name, seller_nip, seller_id,
+                   amount, currency, invoice_date
+            FROM invoices
+            WHERE seller_nip IS NOT NULL AND seller_nip != ''
+            ORDER BY invoice_date DESC
+        """)
+        rows = cursor.fetchall()
+
+        unlinked = []   # seller_id IS NULL but a matching seller exists
+        wrong_link = [] # seller_id set but NIP does not match
+
+        for row in rows:
+            inv_nip_raw = row['seller_nip'] or ''
+            normalized = current_app.seller_service.normalize_nip(inv_nip_raw)
+            current_seller_id = row['seller_id']
+
+            if current_seller_id is None:
+                if normalized in sellers_by_nip:
+                    s = sellers_by_nip[normalized]
+                    unlinked.append({
+                        'invoice_id': row['id'],
+                        'invoice_number': row['invoice_number'],
+                        'invoice_seller_name': row['seller_name'],
+                        'invoice_nip': inv_nip_raw,
+                        'invoice_date': str(row['invoice_date']) if row['invoice_date'] else None,
+                        'amount': float(row['amount'] or 0),
+                        'currency': row['currency'],
+                        'suggested_seller_id': s['id'],
+                        'suggested_seller_name': s['seller_name'],
+                        'suggested_seller_nip': s['seller_nip'],
+                        'type': 'unlinked',
+                    })
+            else:
+                if current_seller_id in sellers_by_id:
+                    linked = sellers_by_id[current_seller_id]
+                    if (linked['seller_nip'] or '') != normalized and normalized in sellers_by_nip:
+                        correct = sellers_by_nip[normalized]
+                        wrong_link.append({
+                            'invoice_id': row['id'],
+                            'invoice_number': row['invoice_number'],
+                            'invoice_seller_name': row['seller_name'],
+                            'invoice_nip': inv_nip_raw,
+                            'invoice_date': str(row['invoice_date']) if row['invoice_date'] else None,
+                            'amount': float(row['amount'] or 0),
+                            'currency': row['currency'],
+                            'current_seller_id': current_seller_id,
+                            'current_seller_name': linked['seller_name'],
+                            'suggested_seller_id': correct['id'],
+                            'suggested_seller_name': correct['seller_name'],
+                            'suggested_seller_nip': correct['seller_nip'],
+                            'type': 'wrong_link',
+                        })
+
+        return jsonify({
+            'success': True,
+            'unlinked': unlinked,
+            'wrong_link': wrong_link,
+            'total': len(unlinked) + len(wrong_link),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/invoices/seller-sync-apply', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
+def invoice_seller_sync_apply():
+    """Apply confirmed seller link updates (invoice_id → seller_id)."""
+    try:
+        data = request.get_json()
+        updates = data.get('updates', [])  # [{invoice_id, seller_id}]
+
+        count = 0
+        for upd in updates:
+            invoice_id = upd.get('invoice_id')
+            seller_id = upd.get('seller_id')
+            if not invoice_id or not seller_id:
+                continue
+            inv_row = current_app.invoice_repo.get_by_id(invoice_id)
+            if inv_row:
+                invoice = current_app.invoice_repo.row_to_invoice(inv_row)
+                current_app.invoice_repo.update(invoice_id, invoice, seller_id=seller_id)
+                count += 1
+
+        if count > 0:
+            current_app.seller_repo.sync_invoice_counts()
+
+        return jsonify({
+            'success': True,
+            'message': f'Powiązano {count} faktur ze sprzedawcami',
+            'updated_count': count,
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @api_bp.route('/invoices', methods=['GET'])
 @login_required
 @module_permission_required('invoices')
@@ -1772,6 +1885,10 @@ def get_seller_invoices(seller_id: int):
 def sync_sellers():
     """Synchronize seller data with invoices - detect discrepancies"""
     try:
+        # First: link any unlinked invoices to their sellers by normalized NIP
+        current_app.invoice_repo.relink_to_sellers()
+        current_app.seller_repo.sync_invoice_counts()
+
         # Get all invoices
         all_invoice_rows = current_app.invoice_repo.get_all()
 
@@ -1957,12 +2074,16 @@ def sync_seller_invoice_counts():
     Recalculates invoice_count for all sellers based on current invoices table.
     """
     try:
-        # Sync all seller invoice counts
+        # Step 1: link invoices that have a matching seller NIP but no seller_id yet
+        linked_count = current_app.invoice_repo.relink_to_sellers()
+
+        # Step 2: recalculate invoice_count on all seller rows from the now-correct FKs
         updated_count = current_app.seller_repo.sync_invoice_counts()
 
         return jsonify({
             'success': True,
-            'message': f'Zsynchronizowano liczniki faktur dla {updated_count} sprzedawców',
+            'message': f'Powiazano {linked_count} faktur, zsynchronizowano liczniki dla {updated_count} sprzedawców',
+            'linked_count': linked_count,
             'updated_count': updated_count
         })
 
@@ -2636,6 +2757,7 @@ def get_employee(employee_id):
         employee_dict = {
             'id': employee.id,
             'user_id': employee.user_id,
+            'forma_zatrudnienia_id': employee.forma_zatrudnienia_id,
             'full_name': employee.full_name,
             'first_name': employee.first_name,
             'last_name': employee.last_name,
@@ -2647,6 +2769,7 @@ def get_employee(employee_id):
             'termination_date': employee.termination_date.isoformat() if employee.termination_date else None,
             'base_salary': employee.base_salary,
             'commission_rate': employee.commission_rate,
+            'employer_cost_rate': employee.employer_cost_rate,
             'skills': employee.get_skills_dict(),
             'specializations': employee.get_specializations_list(),
             'work_schedule': employee.get_work_schedule_dict(),
@@ -2691,6 +2814,7 @@ def create_employee_endpoint():
 
         employee = Employee(
             user_id=data.get('user_id'),
+            forma_zatrudnienia_id=int(data['forma_zatrudnienia_id']) if data.get('forma_zatrudnienia_id') else None,
             first_name=data.get('first_name'),
             last_name=data.get('last_name'),
             phone=data.get('phone'),
@@ -2700,11 +2824,13 @@ def create_employee_endpoint():
             hire_date=parse_date_string(data.get('hire_date')) if data.get('hire_date') else None,
             base_salary=float(data.get('base_salary')) if data.get('base_salary') else None,
             commission_rate=float(data.get('commission_rate')) if data.get('commission_rate') else None,
+            employer_cost_rate=float(data.get('employer_cost_rate', 0.22)),
             skills=json.dumps(data.get('skills')) if data.get('skills') else None,
             specializations=json.dumps(data.get('specializations')) if data.get('specializations') else None,
             work_schedule=json.dumps(data.get('work_schedule')) if data.get('work_schedule') else None,
             max_appointments_per_day=int(data.get('max_appointments_per_day', 8)),
             notes=data.get('notes'),
+            photo_path=data.get('photo_path'),
             is_active=data.get('is_active', True)
         )
 
@@ -2748,6 +2874,7 @@ def update_employee(employee_id):
         employee = Employee(
             id=employee_id,
             user_id=data.get('user_id'),
+            forma_zatrudnienia_id=int(data['forma_zatrudnienia_id']) if data.get('forma_zatrudnienia_id') else None,
             first_name=data.get('first_name'),
             last_name=data.get('last_name'),
             phone=data.get('phone'),
@@ -2758,6 +2885,7 @@ def update_employee(employee_id):
             termination_date=parse_date_string(data.get('termination_date')) if data.get('termination_date') else None,
             base_salary=float(data.get('base_salary')) if data.get('base_salary') else None,
             commission_rate=float(data.get('commission_rate')) if data.get('commission_rate') else None,
+            employer_cost_rate=float(data.get('employer_cost_rate', 0.22)),
             skills=json.dumps(data.get('skills')) if data.get('skills') else None,
             specializations=json.dumps(data.get('specializations')) if data.get('specializations') else None,
             work_schedule=json.dumps(data.get('work_schedule')) if data.get('work_schedule') else None,
@@ -2776,6 +2904,7 @@ def update_employee(employee_id):
                            ['first_name', 'last_name', 'phone', 'email',
                             'position', 'employment_status', 'hire_date',
                             'termination_date', 'base_salary', 'commission_rate',
+                            'employer_cost_rate', 'forma_zatrudnienia_id',
                             'max_appointments_per_day', 'notes', 'is_active'])
             return jsonify({
                 'success': True,
@@ -2837,5 +2966,128 @@ def get_employee_positions():
             'success': True,
             'positions': positions
         })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Formy zatrudnienia (employment types)
+# ---------------------------------------------------------------------------
+
+@api_bp.route('/formy-zatrudnienia', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_formy_zatrudnienia():
+    """Pobierz wszystkie formy zatrudnienia"""
+    try:
+        rows = current_app.forma_zatrudnienia_repo.get_all()
+        formy = [current_app.forma_zatrudnienia_repo.row_to_forma(r) for r in rows]
+        return jsonify({
+            'success': True,
+            'formy': [
+                {
+                    'id': f.id,
+                    'nazwa': f.nazwa,
+                    'uwagi': f.uwagi,
+                    'min_salary_required': f.min_salary_required,
+                    'granted_salary': f.granted_salary,
+                    'commision_included': f.commision_included,
+                }
+                for f in formy
+            ]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/formy-zatrudnienia', methods=['POST'])
+@login_required
+@module_permission_required('employees')
+def create_forma_zatrudnienia():
+    """Utwórz nową formę zatrudnienia"""
+    try:
+        data = request.get_json()
+        if not data.get('nazwa'):
+            return jsonify({'success': False, 'error': 'Nazwa jest wymagana'}), 400
+
+        from database.models import FormaZatrudnienia
+        forma = FormaZatrudnienia(
+            nazwa=data['nazwa'],
+            uwagi=data.get('uwagi'),
+            min_salary_required=bool(data.get('min_salary_required', False)),
+            granted_salary=bool(data.get('granted_salary', False)),
+            commision_included=bool(data.get('commision_included', False)),
+        )
+        forma_id = current_app.forma_zatrudnienia_repo.create(forma)
+        return jsonify({'success': True, 'id': forma_id, 'message': 'Forma zatrudnienia została utworzona'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_forma_zatrudnienia(forma_id):
+    """Pobierz formę zatrudnienia po ID"""
+    try:
+        row = current_app.forma_zatrudnienia_repo.get_by_id(forma_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Nie znaleziono formy zatrudnienia'}), 404
+        f = current_app.forma_zatrudnienia_repo.row_to_forma(row)
+        return jsonify({
+            'success': True,
+            'forma': {
+                'id': f.id,
+                'nazwa': f.nazwa,
+                'uwagi': f.uwagi,
+                'min_salary_required': f.min_salary_required,
+                'granted_salary': f.granted_salary,
+                'commision_included': f.commision_included,
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['PUT'])
+@login_required
+@module_permission_required('employees')
+def update_forma_zatrudnienia(forma_id):
+    """Zaktualizuj formę zatrudnienia"""
+    try:
+        existing = current_app.forma_zatrudnienia_repo.get_by_id(forma_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Nie znaleziono formy zatrudnienia'}), 404
+
+        data = request.get_json()
+        if not data.get('nazwa'):
+            return jsonify({'success': False, 'error': 'Nazwa jest wymagana'}), 400
+
+        from database.models import FormaZatrudnienia
+        forma = FormaZatrudnienia(
+            nazwa=data['nazwa'],
+            uwagi=data.get('uwagi'),
+            min_salary_required=bool(data.get('min_salary_required', False)),
+            granted_salary=bool(data.get('granted_salary', False)),
+            commision_included=bool(data.get('commision_included', False)),
+        )
+        success = current_app.forma_zatrudnienia_repo.update(forma_id, forma)
+        if success:
+            return jsonify({'success': True, 'message': 'Forma zatrudnienia została zaktualizowana'})
+        return jsonify({'success': False, 'error': 'Nie udało się zaktualizować'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('employees')
+def delete_forma_zatrudnienia(forma_id):
+    """Usuń formę zatrudnienia"""
+    try:
+        current_app.forma_zatrudnienia_repo.delete(forma_id)
+        return jsonify({'success': True, 'message': 'Forma zatrudnienia została usunięta'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 409
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
