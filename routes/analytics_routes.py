@@ -392,6 +392,15 @@ def get_rolling_visit_frequency():
     return jsonify({"success": True, "distribution": distribution})
 
 
+@analytics_bp.route('/analytics/rolling/satisfaction-rating', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_rolling_satisfaction_rating():
+    """Średnia ocena klientów (1–5) ogółem + per pracownik — ruchome okno 12M"""
+    data = repo.get_satisfaction_rating_monthly()
+    return jsonify({"success": True, **data})
+
+
 @analytics_bp.route('/analytics/insights', methods=['GET'])
 @login_required
 @module_permission_required('appointments')
