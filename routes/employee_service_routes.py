@@ -78,11 +78,19 @@ def assign_service(employee_id):
 @login_required
 @module_permission_required('employees')
 def update_employee_service(employee_id, es_id):
-    """Zaktualizuj cenowanie usługi dla pracownika"""
+    """Zaktualizuj cenowanie/ocenę usługi dla pracownika"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'error': 'Brak danych'}), 400
+
+        skill_rating = None
+        if 'skill_rating' in data:
+            sr = data['skill_rating']
+            if sr is not None:
+                if not isinstance(sr, int) or not (1 <= sr <= 5):
+                    return jsonify({'success': False, 'error': 'skill_rating musi być liczbą 1–5'}), 400
+                skill_rating = sr
 
         repo = EmployeeServiceRepository()
         success = repo.update(
@@ -90,9 +98,23 @@ def update_employee_service(employee_id, es_id):
             custom_price=Decimal(str(data['custom_price'])) if 'custom_price' in data else None,
             commission_rate=Decimal(str(data['commission_rate'])) if 'commission_rate' in data else None,
             duration_override=int(data['duration_override']) if 'duration_override' in data else None,
+            skill_rating=skill_rating,
             is_active=data.get('is_active')
         )
         return jsonify({'success': success})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@employee_service_bp.route('/employees/<int:employee_id>/services-with-ratings', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_services_with_ratings(employee_id):
+    """Pobierz przypisane usługi z oceną manualną i wyliczoną z wizyt klientów"""
+    try:
+        repo = EmployeeServiceRepository()
+        services = repo.get_services_with_dual_ratings(employee_id)
+        return jsonify({'success': True, 'services': services, 'count': len(services)})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

@@ -512,3 +512,16 @@ def get_employee_commission_trend(employee_id: int):
     months = int(request.args.get('months', 12))
     data = emp_repo.get_commission_trend(months)
     return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/satisfaction', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_satisfaction(employee_id: int):
+    """Satisfaction stats: avg_score, distribution, by_service_category, monthly_trend."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    months = int(request.args.get('months', 12))
+    data = emp_repo.get_satisfaction_stats(months)
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})

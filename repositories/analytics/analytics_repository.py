@@ -131,20 +131,35 @@ class AnalyticsRepository:
                 -- Profitability
                 COALESCE(SUM(i.net_amount), 0) -
                     (GREATEST(e.base_salary, COALESCE(SUM(i.commission_total), 0)) *
-                     (1 + COALESCE(e.employer_cost_rate, 0.22))) as net_profit
+                     (1 + COALESCE(e.employer_cost_rate, 0.22))) as net_profit,
+
+                -- Satisfaction
+                ROUND(sat.avg_satisfaction::numeric, 2) AS avg_satisfaction,
+                COALESCE(sat.scored_count, 0) AS scored_count
             FROM employees e
             LEFT JOIN appointments a ON a.employee_id = e.id
                 AND a.status = 'completed'
                 AND a.appointment_date BETWEEN %s AND %s
             LEFT JOIN income_records i ON i.appointment_id = a.id
+            LEFT JOIN (
+                SELECT employee_id,
+                       AVG(satisfaction_score) AS avg_satisfaction,
+                       COUNT(satisfaction_score) AS scored_count
+                FROM appointments
+                WHERE status = 'completed'
+                  AND satisfaction_score IS NOT NULL
+                  AND appointment_date BETWEEN %s AND %s
+                GROUP BY employee_id
+            ) sat ON sat.employee_id = e.id
             WHERE e.is_active = TRUE
-            GROUP BY e.id, e.first_name, e.last_name, e.base_salary, e.employer_cost_rate
+            GROUP BY e.id, e.first_name, e.last_name, e.base_salary, e.employer_cost_rate,
+                     sat.avg_satisfaction, sat.scored_count
             ORDER BY revenue_generated DESC
         """
 
         conn = DatabaseConnection.get_connection()
         cursor = conn.cursor()
-        cursor.execute(query, (start_date, end_date))
+        cursor.execute(query, (start_date, end_date, start_date, end_date))
         rows = cursor.fetchall()
 
         return [dict(row) for row in rows]

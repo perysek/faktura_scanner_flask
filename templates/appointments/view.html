@@ -60,6 +60,8 @@
     .addon-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; cursor: pointer; margin: 0.25rem; }
     .addon-btn:hover { border-color: #d97706; background: rgba(245,158,11,0.06); }
 
+    .star-btn.active { color: #f59e0b !important; }
+    .star-btn:hover { color: #fbbf24 !important; }
     .material-icons { font-size: 1rem; vertical-align: middle; }
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -116,6 +118,21 @@
     <div class="detail-card" id="notes-card" style="display: none;">
         <h2>Uwagi</h2>
         <p id="d-notes" style="font-size: 0.8125rem; color: var(--color-ink-muted);"></p>
+    </div>
+
+    <!-- Satisfaction Rating — visible only for completed appointments -->
+    <div class="detail-card" id="satisfaction-card" style="display:none;">
+        <h2>Ocena wizyty przez klienta</h2>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            {% for i in range(1,6) %}
+            <button class="star-btn" data-score="{{ i }}" style="font-size:1.75rem;background:none;border:none;cursor:pointer;padding:0.125rem;line-height:1;color:#d1d5db;transition:color 0.15s;">☆</button>
+            {% endfor %}
+            <span id="score-label" style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-left:0.5rem;">Brak oceny</span>
+        </div>
+        <button id="save-satisfaction-btn" class="btn-action primary" disabled style="opacity:0.4;">
+            <span class="material-icons">save</span>
+            Zapisz ocenę
+        </button>
     </div>
 </div>
 {% endblock %}
@@ -255,6 +272,11 @@ async function loadAppointment() {
         document.getElementById('addon-section').style.display = 'block';
         loadAvailableAddons();
     }
+
+    // Satisfaction widget — only for completed appointments
+    if (a.status === 'completed') {
+        initSatisfactionWidget(a.satisfaction_score || null);
+    }
 }
 
 async function changeStatus(status) {
@@ -333,6 +355,68 @@ async function addAddon(serviceId) {
             type: 'error'
         });
     }
+}
+
+// ── Satisfaction rating widget ────────────────────────────────────────
+let selectedScore = null;
+
+function initSatisfactionWidget(currentScore) {
+    const card = document.getElementById('satisfaction-card');
+    if (!card) return;
+    card.style.display = 'block';
+
+    const stars = card.querySelectorAll('.star-btn');
+    const label = document.getElementById('score-label');
+    const saveBtn = document.getElementById('save-satisfaction-btn');
+
+    function renderStars(score) {
+        stars.forEach(btn => {
+            const s = parseInt(btn.dataset.score);
+            btn.textContent = s <= score ? '★' : '☆';
+            btn.classList.toggle('active', s <= score);
+        });
+        label.textContent = score ? `${score} / 5 gwiazdek` : 'Brak oceny';
+    }
+
+    if (currentScore) {
+        selectedScore = currentScore;
+        renderStars(currentScore);
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+    }
+
+    stars.forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectedScore = parseInt(btn.dataset.score);
+            renderStars(selectedScore);
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+        });
+    });
+
+    saveBtn.addEventListener('click', async () => {
+        if (!selectedScore) return;
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = '0.6';
+        const resp = await fetch(`/api/appointments/${APPT_ID}/satisfaction`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({score: selectedScore})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            if (typeof Notifications !== 'undefined') {
+                Notifications.success(`Ocena ${selectedScore}/5 zapisana`);
+            }
+            saveBtn.textContent = '✓ Zapisano';
+        } else {
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+            if (typeof Notifications !== 'undefined') {
+                Notifications.error(data.error || 'Błąd zapisu oceny');
+            }
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadAppointment);

@@ -724,3 +724,20 @@ def get_client_appointments(client_id):
         return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/satisfaction', methods=['PATCH'])
+@login_required
+@module_permission_required('appointments')
+def set_satisfaction_score(appointment_id: int):
+    """Ustaw ocenę satysfakcji (1–5) dla zakończonej wizyty."""
+    data = request.get_json()
+    score = data.get('score') if data else None
+    if not isinstance(score, int) or score < 1 or score > 5:
+        return jsonify({'success': False, 'error': 'Wynik musi być liczbą całkowitą 1–5'}), 400
+    repo = AppointmentRepository()
+    ok = repo.update_satisfaction_score(appointment_id, score)
+    if not ok:
+        return jsonify({'success': False, 'error': 'Nie można ocenić — wizyta nie jest zakończona lub nie istnieje'}), 404
+    return jsonify({'success': True, 'appointment_id': appointment_id, 'score': score})
