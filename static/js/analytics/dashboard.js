@@ -20,6 +20,7 @@ let categoryMixChart = null;
 let costRatioChart = null;
 let employeeUtilisationChart = null;
 let visitFrequencyChart = null;
+let satisfactionRatingChart = null;
 let topClientsLoaded = false;
 
 // Chart.js color palette (Refined Minimal)
@@ -157,6 +158,7 @@ async function loadDashboard() {
             loadCostRatio(),
             loadEmployeeUtilisation(),
             loadVisitFrequency(),
+            loadSatisfactionRating(),
             loadTopClients()
         ]);
     } catch (error) {
@@ -1398,6 +1400,103 @@ async function loadVisitFrequency() {
                     title: { display: true, text: 'Liczba wizyt w ostatnich 12 miesiącach' }
                 },
                 y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+/**
+ * Load 12-month rolling satisfaction rating chart.
+ * Shows: one bold "Wszyscy" line (salon-wide avg) + one line per active employee.
+ */
+async function loadSatisfactionRating() {
+    const response = await fetch('/api/analytics/rolling/satisfaction-rating');
+    const data = await response.json();
+    const ctx = document.getElementById('satisfactionRatingChart');
+    if (!ctx || !data.success) return;
+
+    if (satisfactionRatingChart) satisfactionRatingChart.destroy();
+
+    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+    // Build labels from overall array (all 12 months are present)
+    const labels = data.overall.map(row => {
+        const [y, mo] = row.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    // "Wszyscy" dataset — salon-wide average
+    const overallDataset = {
+        label: 'Wszyscy',
+        data: data.overall.map(row => row.avg_score != null ? parseFloat(row.avg_score) : null),
+        borderColor: 'rgba(15, 23, 42, 1)',         // slate-900
+        backgroundColor: 'rgba(15, 23, 42, 0.06)',
+        borderWidth: 3,
+        pointRadius: 4,
+        fill: false,
+        tension: 0.3,
+        spanGaps: true
+    };
+
+    // Per-employee datasets
+    const EMP_COLORS = [
+        'rgba(37,99,235,1)',  'rgba(22,163,74,1)',  'rgba(234,88,12,1)',
+        'rgba(168,85,247,1)', 'rgba(236,72,153,1)', 'rgba(20,184,166,1)',
+        'rgba(245,158,11,1)', 'rgba(100,116,139,1)'
+    ];
+
+    // Collect unique month keys (ordered) from overall
+    const monthKeys = data.overall.map(row => row.month_start);
+
+    // Build lookup: employee_name → month_start → avg_score
+    const lookup = {};
+    data.by_employee.forEach(row => {
+        if (!lookup[row.employee_name]) lookup[row.employee_name] = {};
+        lookup[row.employee_name][row.month_start] = row.avg_score != null ? parseFloat(row.avg_score) : null;
+    });
+
+    const employees = [...new Set(data.by_employee.map(r => r.employee_name))].sort();
+
+    const empDatasets = employees.map((emp, i) => ({
+        label: emp,
+        data: monthKeys.map(k => (lookup[emp] && lookup[emp][k] !== undefined) ? lookup[emp][k] : null),
+        borderColor: EMP_COLORS[i % EMP_COLORS.length],
+        backgroundColor: EMP_COLORS[i % EMP_COLORS.length].replace(',1)', ',0.08)'),
+        borderWidth: 1.5,
+        pointRadius: 2.5,
+        fill: false,
+        tension: 0.3,
+        spanGaps: true
+    }));
+
+    satisfactionRatingChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [overallDataset, ...empDatasets] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            if (ctx.parsed.y == null) return null;
+                            return `${ctx.dataset.label}: ★ ${ctx.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    min: 1,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: (val) => `★ ${val}`
+                    }
+                }
             }
         }
     });
