@@ -249,7 +249,7 @@ async function loadWizyty() {
                 options: {
                     ...BASE_OPTS,
                     plugins: {
-                        legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 11 } } },
                     },
                     scales: {
                         x: { stacked: true },
@@ -453,8 +453,6 @@ async function saveSkillRating(esId, score) {
                 star.addEventListener('click', () => saveSkillRating(star.dataset.esId, parseInt(star.dataset.score)));
             });
         }
-        // Invalidate tab so radar re-renders on next open
-        loaded.umiejetnosci = false;
     } catch (e) {
         alert('Nie udało się zapisać oceny: ' + e.message);
     }
