@@ -291,6 +291,7 @@ class EmployeeService:
     custom_price: Optional[Decimal] = None
     commission_rate: Optional[Decimal] = None
     duration_override: Optional[int] = None
+    skill_rating: Optional[int] = None  # Manual 1-5 rating set by manager
     is_active: bool = True
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
@@ -325,6 +326,7 @@ class Appointment:
     notes: Optional[str] = None
     cancellation_reason: Optional[str] = None
     cancelled_at: Optional[datetime] = None
+    satisfaction_score: Optional[int] = None
     created_by: Optional[int] = None
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)

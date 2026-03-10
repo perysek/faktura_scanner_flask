@@ -31,6 +31,7 @@ class AppointmentRepository:
             notes=row['notes'],
             cancellation_reason=row['cancellation_reason'],
             cancelled_at=parse_dt(row['cancelled_at']),
+            satisfaction_score=row['satisfaction_score'] if 'satisfaction_score' in row.keys() else None,
             created_by=row['created_by'],
             created_at=parse_dt(row['created_at']),
             updated_at=parse_dt(row['updated_at'])
@@ -347,6 +348,20 @@ class AppointmentRepository:
             cursor.execute(query, params)
             conn.commit()
             return cursor.rowcount > 0
+
+    def update_satisfaction_score(self, appointment_id: int, score: int) -> bool:
+        """Ustaw ocenę satysfakcji (1–5) tylko dla zakończonych wizyt. Zwraca True jeśli zaktualizowano."""
+        query = """
+            UPDATE appointments
+            SET satisfaction_score = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND status = 'completed'
+            RETURNING id
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (score, appointment_id))
+            conn.commit()
+            return cursor.fetchone() is not None
 
     def update_total_price(self, appointment_id: int, new_total: Decimal) -> bool:
         """Zaktualizuj łączną cenę wizyty (po dodaniu mikrousługi)"""
