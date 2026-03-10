@@ -54,7 +54,7 @@ function createChart(id, config) {
 }
 
 /* ─── Tab switching ───────────────────────────────────────────────────── */
-const TABS = ['overview', 'przychody', 'wizyty', 'umiejetnosci'];
+const TABS = ['overview', 'przychody', 'wizyty', 'umiejetnosci', 'satysfakcja'];
 
 function loadTab(tabName) {
     TABS.forEach(t => {
@@ -68,6 +68,7 @@ function loadTab(tabName) {
     if (tabName === 'przychody')      loadPrzychody();
     if (tabName === 'wizyty')         loadWizyty();
     if (tabName === 'umiejetnosci')   loadUmiejetnosci();
+    if (tabName === 'satysfakcja')    loadSatysfakcja();
 }
 
 /* ─── Tab: Przegląd (Overview KPIs) ──────────────────────────────────── */
@@ -354,55 +355,187 @@ function renderHeatmap(data) {
     container.innerHTML = html;
 }
 
-/* ─── Tab: Umiejętności (Skills Radar) ───────────────────────────────── */
+/* ─── Tab: Umiejętności — dual-rating services table ─────────────────── */
 async function loadUmiejetnosci() {
     setTabLoading('umiejetnosci', true);
     try {
-        const res = await fetch(`/api/employees/${EMPLOYEE_ID}/analytics/skills-radar`);
+        const res = await fetch(`/api/employees/${EMPLOYEE_ID}/services-with-ratings`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const skills = json.data;
-
-        if (skills.length === 0) {
-            const el = document.getElementById('chart-skills');
-            if (el && el.parentElement) {
-                el.parentElement.innerHTML = '<p style="color:var(--color-ink-subtle);font-size:0.875rem;text-align:center;padding:2rem 0;">Brak danych o umiejętnościach</p>';
-            }
-        } else {
-            createChart('chart-skills', {
-                type: 'radar',
-                data: {
-                    labels: skills.map(s => s.skill),
-                    datasets: [{
-                        label: 'Poziom umiejętności',
-                        data: skills.map(s => s.rating),
-                        backgroundColor: CHART_COLORS.blueFill,
-                        borderColor: CHART_COLORS.blue,
-                        pointBackgroundColor: CHART_COLORS.blue,
-                        borderWidth: 2,
-                        pointRadius: 4,
-                    }],
-                },
-                options: {
-                    ...BASE_OPTS,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        r: {
-                            min: 0,
-                            max: 5,
-                            ticks: { stepSize: 1, font: { size: 11 } },
-                            pointLabels: { font: { size: 12 } },
-                            grid: { color: 'rgba(0,0,0,0.06)' },
-                        },
-                    },
-                },
-            });
-        }
+        renderSkillsTable(json.services);
     } catch (e) {
         setTabError('umiejetnosci', e.message);
     }
     setTabLoading('umiejetnosci', false);
 }
+
+function renderSkillsTable(services) {
+    const tbody = document.getElementById('skills-table-body');
+    if (!services.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--color-ink-subtle);padding:2rem;font-size:0.8125rem;">Brak przypisanych usług</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = services.map(svc => {
+        const manualStars = renderEditableStars(svc.es_id, svc.skill_rating);
+        const clientRating = svc.avg_client_rating !== null
+            ? `<span style="font-weight:600;color:var(--color-ink);">${svc.avg_client_rating.toFixed(1)}</span> <span style="color:#f59e0b;font-size:0.875rem;">${'★'.repeat(Math.round(svc.avg_client_rating))}${'☆'.repeat(5 - Math.round(svc.avg_client_rating))}</span>`
+            : '<span style="color:var(--color-ink-subtle);">—</span>';
+        const cat = svc.service_category || (svc.service_type === 'addon' ? 'Mikrousługa' : '—');
+        return `<tr style="border-bottom:1px solid var(--color-border-subtle);" data-es-id="${svc.es_id}">
+            <td style="padding:0.5rem;">${svc.service_name}</td>
+            <td style="padding:0.5rem;color:var(--color-ink-subtle);font-size:0.75rem;">${cat}</td>
+            <td style="padding:0.5rem;text-align:center;">${manualStars}</td>
+            <td style="padding:0.5rem;text-align:center;">${clientRating}</td>
+            <td style="padding:0.5rem;text-align:right;color:var(--color-ink-subtle);font-size:0.75rem;">${svc.scored_visits}</td>
+        </tr>`;
+    }).join('');
+
+    // Attach star-click handlers
+    tbody.querySelectorAll('.skill-star').forEach(star => {
+        star.addEventListener('click', () => saveSkillRating(star.dataset.esId, parseInt(star.dataset.score)));
+    });
+
+    // Show radar chart if ≥3 services have a manual rating
+    const rated = services.filter(s => s.skill_rating !== null);
+    if (rated.length >= 3) {
+        const wrap = document.getElementById('skills-radar-wrap');
+        if (wrap) wrap.style.display = '';
+        createChart('chart-skills', {
+            type: 'radar',
+            data: {
+                labels: rated.map(s => s.service_name),
+                datasets: [{
+                    label: 'Ocena manualna',
+                    data: rated.map(s => s.skill_rating),
+                    backgroundColor: CHART_COLORS.blueFill,
+                    borderColor: CHART_COLORS.blue,
+                    pointBackgroundColor: CHART_COLORS.blue,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                }],
+            },
+            options: {
+                ...BASE_OPTS,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, pointLabels: { font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                },
+            },
+        });
+    }
+}
+
+function renderEditableStars(esId, currentRating) {
+    return [1,2,3,4,5].map(n => {
+        const filled = currentRating !== null && n <= currentRating;
+        return `<button class="skill-star" data-es-id="${esId}" data-score="${n}"
+            style="background:none;border:none;cursor:pointer;padding:0.1rem;font-size:1.25rem;line-height:1;color:${filled ? '#f59e0b' : '#d1d5db'};transition:color 0.1s;"
+            title="Ustaw ocenę ${n}/5">${filled ? '★' : '☆'}</button>`;
+    }).join('');
+}
+
+async function saveSkillRating(esId, score) {
+    try {
+        const res = await fetch(`/api/employees/${EMPLOYEE_ID}/services/${esId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skill_rating: score }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Błąd zapisu');
+        // Refresh the row stars in-place
+        const row = document.querySelector(`tr[data-es-id="${esId}"]`);
+        if (row) {
+            const starCell = row.children[2];
+            starCell.innerHTML = renderEditableStars(esId, score);
+            starCell.querySelectorAll('.skill-star').forEach(star => {
+                star.addEventListener('click', () => saveSkillRating(star.dataset.esId, parseInt(star.dataset.score)));
+            });
+        }
+        // Invalidate tab so radar re-renders on next open
+        loaded.umiejetnosci = false;
+    } catch (e) {
+        alert('Nie udało się zapisać oceny: ' + e.message);
+    }
+}
+
+/* ─── Tab: Satysfakcja ───────────────────────────────────────────────── */
+async function loadSatysfakcja() {
+    setTabLoading('satysfakcja', true);
+    try {
+        const res = await fetch(`/api/employees/${EMPLOYEE_ID}/analytics/satisfaction`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const d = json.data;
+
+        // KPIs
+        setText('sat-avg', d.avg_score ? `${d.avg_score} ★` : '—');
+        setText('sat-count', d.total_scored ?? '—');
+
+        // Distribution
+        const dist = d.distribution || {};
+        const distEl = document.getElementById('sat-dist');
+        if (distEl) {
+            distEl.innerHTML = [5,4,3,2,1].map(n =>
+                `<div style="display:flex;align-items:center;gap:0.375rem;">
+                    <span style="width:2.5rem;font-size:0.6875rem;color:var(--color-ink-subtle);">${'★'.repeat(n)}</span>
+                    <div style="flex:1;background:var(--color-border-subtle);border-radius:2px;height:6px;overflow:hidden;">
+                        <div style="background:rgba(245,158,11,0.7);width:${d.total_scored > 0 ? Math.round((dist[n]||0)/d.total_scored*100) : 0}%;height:100%;border-radius:2px;"></div>
+                    </div>
+                    <span style="width:1.5rem;text-align:right;font-size:0.6875rem;color:var(--color-ink-subtle);">${dist[n]||0}</span>
+                </div>`
+            ).join('');
+        }
+
+        // Category table
+        const tbody = document.querySelector('#sat-category-table tbody');
+        if (tbody) {
+            tbody.innerHTML = d.by_service_category.length
+                ? d.by_service_category.map(r => {
+                    const stars = r.avg_score ? Math.round(r.avg_score) : 0;
+                    const starStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+                    return `<tr style="border-bottom:1px solid var(--color-border-subtle);">
+                        <td style="padding:0.4rem 0.5rem;">${escapeHtml(r.category)}</td>
+                        <td style="text-align:right;padding:0.4rem 0.5rem;color:#d97706;">${starStr} <span style="color:var(--color-ink-subtle);font-size:0.75rem;">(${r.avg_score ?? '—'})</span></td>
+                        <td style="text-align:right;padding:0.4rem 0.5rem;color:var(--color-ink-subtle);">${r.count}</td>
+                    </tr>`;
+                }).join('')
+                : '<tr><td colspan="3" style="text-align:center;color:var(--color-ink-subtle);padding:1rem;">Brak danych</td></tr>';
+        }
+
+        // Trend chart
+        if (d.monthly_trend.length > 0) {
+            createChart('chart-satisfaction-trend', {
+                type: 'line',
+                data: {
+                    labels: d.monthly_trend.map(r => r.month_label),
+                    datasets: [{
+                        label: 'Śr. ocena',
+                        data: d.monthly_trend.map(r => r.avg_score),
+                        borderColor: 'rgba(245,158,11,1)',
+                        backgroundColor: 'rgba(245,158,11,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        spanGaps: true,
+                    }],
+                },
+                options: {
+                    ...BASE_OPTS,
+                    scales: {
+                        y: { min: 0, max: 5, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                    },
+                    plugins: { legend: { display: false } },
+                },
+            });
+        }
+    } catch (e) {
+        setTabError('satysfakcja', e.message);
+    }
+    setTabLoading('satysfakcja', false);
+}
+
 
 /* ─── Helpers ─────────────────────────────────────────────────────────── */
 function setText(id, val) {
