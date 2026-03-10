@@ -340,6 +340,19 @@
       @apply bg-primary-100 text-primary-700 border border-primary-200;
   }
 
+  /* Analytics tab buttons */
+  .analytics-tab-btn {
+      @apply px-4 py-2 text-sm font-medium text-slate-500 border-b-2 border-transparent bg-transparent cursor-pointer;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+  }
+  .analytics-tab-btn:hover {
+      @apply text-slate-700;
+  }
+  .analytics-tab-active {
+      @apply text-primary-700 border-primary-600;
+  }
+
   /* Refined Table - Modern table styling */
   .refined-table {
       @apply w-full border-collapse;
