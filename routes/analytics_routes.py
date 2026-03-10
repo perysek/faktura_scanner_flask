@@ -410,3 +410,105 @@ def get_insights():
         "period": request.args.get('period', 'current_month'),
         "insights": insights
     })
+
+
+# ============================================================================
+# PER-EMPLOYEE ANALYTICS ENDPOINTS
+# ============================================================================
+
+def _get_employee_analytics_repo(employee_id: int):
+    """Return (repo, None) or (None, error_response) if employee not found."""
+    from flask import current_app
+    from repositories.employees.employee_analytics_repository import EmployeeAnalyticsRepository
+    row = current_app.employee_repo.get_by_id(employee_id)
+    if not row:
+        return None, (jsonify({"success": False, "error": "Pracownik nie znaleziony"}), 404)
+    return EmployeeAnalyticsRepository(employee_id), None
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/summary', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_summary(employee_id: int):
+    """KPI summary: revenue, employer cost, net profit, avg ticket, total appointments."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    months = int(request.args.get('months', 12))
+    data = emp_repo.get_summary(months)
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/revenue-trend', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_revenue_trend(employee_id: int):
+    """Monthly revenue + commission + appointments trend."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    months = int(request.args.get('months', 12))
+    data = emp_repo.get_revenue_trend(months)
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/services-mix', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_services_mix(employee_id: int):
+    """Top 10 services by appointment count."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    data = emp_repo.get_services_mix()
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/peak-hours', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_peak_hours(employee_id: int):
+    """Appointment heatmap data by day-of-week and hour-of-day."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    data = emp_repo.get_peak_hours()
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/client-split', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_client_split(employee_id: int):
+    """Monthly new vs returning client split."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    months = int(request.args.get('months', 12))
+    data = emp_repo.get_client_split(months)
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/skills-radar', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_skills_radar(employee_id: int):
+    """Skills parsed from employee record as [{skill, rating}]."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    data = emp_repo.get_skills_radar()
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})
+
+
+@analytics_bp.route('/employees/<int:employee_id>/analytics/commission-trend', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_employee_commission_trend(employee_id: int):
+    """Monthly base_salary vs commission_earned vs gross_salary trend."""
+    emp_repo, err = _get_employee_analytics_repo(employee_id)
+    if err:
+        return err
+    months = int(request.args.get('months', 12))
+    data = emp_repo.get_commission_trend(months)
+    return jsonify({"success": True, "employee_id": employee_id, "data": data})

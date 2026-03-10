@@ -207,8 +207,10 @@ def employees_list():
 @module_permission_required('employees')
 def create_employee():
     """Create new employee form"""
+    from repositories.users.user_repository import UserRepository
     forma_options = current_app.forma_zatrudnienia_repo.get_all()
-    return render_template('employees/create.html', forma_options=forma_options)
+    user_options = UserRepository().get_active_users()
+    return render_template('employees/create.html', forma_options=forma_options, user_options=user_options)
 
 
 @main_bp.route('/employee/<int:employee_id>')
@@ -239,8 +241,10 @@ def edit_employee(employee_id):
         return render_template('errors/404.html'), 404
 
     employee = current_app.employee_repo.row_to_employee(row)
+    from repositories.users.user_repository import UserRepository
     forma_options = current_app.forma_zatrudnienia_repo.get_all()
-    return render_template('employees/edit.html', employee=employee, forma_options=forma_options)
+    user_options = UserRepository().get_active_users()
+    return render_template('employees/edit.html', employee=employee, forma_options=forma_options, user_options=user_options)
 
 
 @main_bp.route('/formy-zatrudnienia')

@@ -302,6 +302,16 @@
                         </select>
                     </div>
                     <div>
+                        <label for="user_id" class="refined-label">Konto użytkownika</label>
+                        <select id="user_id" name="user_id" class="refined-select">
+                            <option value="">— brak konta —</option>
+                            {% for u in user_options %}
+                            <option value="{{ u.id }}" {% if employee.user_id == u.id %}selected{% endif %}>{{ u.full_name }} ({{ u.email }})</option>
+                            {% endfor %}
+                        </select>
+                        <p class="input-hint">Opcjonalne powiązanie z kontem logowania</p>
+                    </div>
+                    <div>
                         <label for="photo_path" class="refined-label">Ścieżka do zdjęcia</label>
                         <input type="text" id="photo_path" name="photo_path" class="refined-input" value="{{ employee.photo_path if employee.photo_path else '' }}" placeholder="np. /static/photos/anna.jpg">
                     </div>
