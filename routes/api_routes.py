@@ -2770,7 +2770,32 @@ def get_employees():
         employees = [current_app.employee_repo.row_to_employee(row) for row in rows]
         employees_data = []
 
+        # Fetch avg satisfaction per employee in a single query
+        employee_ids = [emp.id for emp in employees]
+        avg_satisfaction_map = {}
+        if employee_ids:
+            from config.database import get_db_connection
+            placeholders = ','.join(['%s'] * len(employee_ids))
+            sat_query = f"""
+                SELECT employee_id,
+                       ROUND(AVG(satisfaction_score)::numeric, 2) AS avg_satisfaction,
+                       COUNT(satisfaction_score) AS rated_count
+                FROM appointments
+                WHERE employee_id IN ({placeholders})
+                  AND satisfaction_score IS NOT NULL
+                GROUP BY employee_id
+            """
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute(sat_query, tuple(employee_ids))
+                for sat_row in cur.fetchall():
+                    avg_satisfaction_map[sat_row['employee_id']] = {
+                        'avg_satisfaction': float(sat_row['avg_satisfaction']),
+                        'rated_count': sat_row['rated_count']
+                    }
+
         for employee in employees:
+            sat_data = avg_satisfaction_map.get(employee.id, {})
             employee_dict = {
                 'id': employee.id,
                 'user_id': employee.user_id,
@@ -2786,7 +2811,9 @@ def get_employees():
                 'base_salary': employee.base_salary,
                 'commission_rate': employee.commission_rate,
                 'is_active': employee.is_active,
-                'created_at': employee.created_at.isoformat() if employee.created_at else None
+                'created_at': employee.created_at.isoformat() if employee.created_at else None,
+                'avg_satisfaction': sat_data.get('avg_satisfaction'),
+                'rated_count': sat_data.get('rated_count', 0)
             }
             employees_data.append(employee_dict)
 
