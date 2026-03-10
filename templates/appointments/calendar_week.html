@@ -839,6 +839,12 @@ function createAppointmentBlock(appointment) {
         content += `<div class="apt-notes" title="${escapeHtml(notes)}">${escapeHtml(truncate(notes, 20))}</div>`;
     }
 
+    if (appointment.satisfaction_score != null) {
+        const score = appointment.satisfaction_score;
+        const ratingColor = score >= 4 ? '#2d6a4f' : score >= 3 ? '#d97706' : '#dc2626';
+        content += `<div style="margin-top:0.0625rem;"><span style="font-size:0.5rem;font-weight:700;color:${ratingColor};" title="Ocena klienta: ${score}/5">★ ${score}</span></div>`;
+    }
+
     block.innerHTML = content;
 
     block.addEventListener('click', () => {
