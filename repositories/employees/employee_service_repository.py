@@ -25,6 +25,7 @@ class EmployeeServiceRepository:
             custom_price=Decimal(str(row['custom_price'])) if row['custom_price'] is not None else None,
             commission_rate=Decimal(str(row['commission_rate'])) if row['commission_rate'] is not None else None,
             duration_override=row['duration_override'],
+            skill_rating=row['skill_rating'] if 'skill_rating' in row.keys() else None,
             is_active=bool(row['is_active']),
             created_at=parse_dt(row['created_at']),
             updated_at=parse_dt(row['updated_at'])
@@ -56,6 +57,7 @@ class EmployeeServiceRepository:
     def update(self, es_id: int, custom_price: Optional[Decimal] = None,
                commission_rate: Optional[Decimal] = None,
                duration_override: Optional[int] = None,
+               skill_rating: Optional[int] = None,
                is_active: Optional[bool] = None) -> bool:
         """Zaktualizuj przypisanie usługi do pracownika"""
         updates = []
@@ -70,6 +72,9 @@ class EmployeeServiceRepository:
         if duration_override is not None:
             updates.append("duration_override = %s")
             params.append(duration_override)
+        if skill_rating is not None:
+            updates.append("skill_rating = %s")
+            params.append(skill_rating)
         if is_active is not None:
             updates.append("is_active = %s")
             params.append(is_active)
@@ -200,6 +205,57 @@ class EmployeeServiceRepository:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id, service_id))
             return cursor.fetchone()['cnt'] > 0
+
+    def get_services_with_dual_ratings(self, employee_id: int) -> List[dict]:
+        """Pobierz przypisane usługi z oceną manualną i wyliczoną z wizyt klientów.
+
+        Każdy wiersz zawiera:
+          - es_id, service_id, service_name, service_category, service_type
+          - skill_rating      — ręczna ocena 1-5 (NULL jeśli nieustawiona)
+          - avg_client_rating — średnia z satisfaction_score ukończonych wizyt (NULL jeśli brak)
+          - scored_visits     — liczba wizyt z oceną
+        """
+        query = """
+            SELECT
+                es.id                                                   AS es_id,
+                s.id                                                    AS service_id,
+                s.name                                                  AS service_name,
+                s.category                                              AS service_category,
+                s.service_type,
+                es.skill_rating,
+                ROUND(AVG(a.satisfaction_score)::numeric, 2)            AS avg_client_rating,
+                COUNT(a.satisfaction_score)                             AS scored_visits
+            FROM employee_services es
+            JOIN services s ON s.id = es.service_id
+            LEFT JOIN appointment_services aps ON aps.service_id = es.service_id
+            LEFT JOIN appointments a
+                ON  a.id          = aps.appointment_id
+                AND a.employee_id = %(eid)s
+                AND a.status      = 'completed'
+                AND a.satisfaction_score IS NOT NULL
+            WHERE es.employee_id = %(eid)s
+              AND es.is_active   = TRUE
+              AND s.is_active    = TRUE
+            GROUP BY es.id, s.id, s.name, s.category, s.service_type
+            ORDER BY s.service_type, s.category, s.name
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, {'eid': employee_id})
+            rows = cursor.fetchall()
+        return [
+            {
+                'es_id':             row['es_id'],
+                'service_id':        row['service_id'],
+                'service_name':      row['service_name'],
+                'service_category':  row['service_category'],
+                'service_type':      row['service_type'],
+                'skill_rating':      row['skill_rating'],
+                'avg_client_rating': float(row['avg_client_rating']) if row['avg_client_rating'] is not None else None,
+                'scored_visits':     row['scored_visits'],
+            }
+            for row in rows
+        ]
 
     def bulk_assign_services(self, employee_id: int, service_ids: List[int]) -> int:
         """Przypisz wiele usług do pracownika (pomija istniejące)"""

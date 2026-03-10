@@ -303,3 +303,108 @@ class EmployeeAnalyticsRepository:
             }
             for r in cursor.fetchall()
         ]
+
+    # ------------------------------------------------------------------
+    # 8. Satisfaction stats
+    # ------------------------------------------------------------------
+    def get_satisfaction_stats(self, months: int = 12) -> Dict:
+        """
+        Returns:
+            avg_score, total_scored, distribution {1..5},
+            by_service_category [{category, avg_score, count}],
+            monthly_trend [{month, month_label, avg_score, count}]
+        """
+        conn = self._conn()
+        cursor = conn.cursor()
+
+        # Overall avg + distribution
+        cursor.execute("""
+            SELECT
+                ROUND(AVG(a.satisfaction_score)::numeric, 2) AS avg_score,
+                COUNT(a.satisfaction_score) AS total_scored,
+                COUNT(*) FILTER (WHERE a.satisfaction_score = 1) AS score_1,
+                COUNT(*) FILTER (WHERE a.satisfaction_score = 2) AS score_2,
+                COUNT(*) FILTER (WHERE a.satisfaction_score = 3) AS score_3,
+                COUNT(*) FILTER (WHERE a.satisfaction_score = 4) AS score_4,
+                COUNT(*) FILTER (WHERE a.satisfaction_score = 5) AS score_5
+            FROM appointments a
+            WHERE a.employee_id = %(eid)s
+              AND a.status = 'completed'
+              AND a.satisfaction_score IS NOT NULL
+              AND a.appointment_date >= CURRENT_DATE - (%(months)s || ' months')::interval
+        """, {'eid': self.employee_id, 'months': months})
+        row = cursor.fetchone()
+        avg_score = float(row['avg_score']) if row and row['avg_score'] else None
+        total_scored = row['total_scored'] if row else 0
+        distribution = {
+            1: row['score_1'] or 0,
+            2: row['score_2'] or 0,
+            3: row['score_3'] or 0,
+            4: row['score_4'] or 0,
+            5: row['score_5'] or 0,
+        } if row else {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+
+        # By service category
+        cursor.execute("""
+            SELECT
+                COALESCE(s.category, 'Inne') AS category,
+                ROUND(AVG(a.satisfaction_score)::numeric, 2) AS avg_score,
+                COUNT(a.id) AS count
+            FROM appointments a
+            JOIN appointment_services aps ON aps.appointment_id = a.id
+            JOIN services s ON s.id = aps.service_id
+            WHERE a.employee_id = %(eid)s
+              AND a.status = 'completed'
+              AND a.satisfaction_score IS NOT NULL
+            GROUP BY s.category
+            ORDER BY avg_score DESC
+        """, {'eid': self.employee_id})
+        by_service_category = [
+            {
+                'category': r['category'],
+                'avg_score': float(r['avg_score']) if r['avg_score'] else None,
+                'count': r['count'],
+            }
+            for r in cursor.fetchall()
+        ]
+
+        # Monthly trend
+        cursor.execute("""
+            WITH months AS (
+                SELECT generate_series(
+                    DATE_TRUNC('month', CURRENT_DATE - (%(months)s || ' months')::interval),
+                    DATE_TRUNC('month', CURRENT_DATE),
+                    '1 month'::interval
+                )::date AS month_start
+            )
+            SELECT
+                TO_CHAR(m.month_start, 'YYYY-MM') AS month,
+                TO_CHAR(m.month_start, 'Mon YYYY') AS month_label,
+                ROUND(AVG(a.satisfaction_score)::numeric, 2) AS avg_score,
+                COUNT(a.satisfaction_score) AS count
+            FROM months m
+            LEFT JOIN appointments a
+                ON a.employee_id = %(eid)s
+                AND DATE_TRUNC('month', a.appointment_date) = m.month_start
+                AND a.status = 'completed'
+                AND a.satisfaction_score IS NOT NULL
+            GROUP BY m.month_start
+            ORDER BY m.month_start
+        """, {'eid': self.employee_id, 'months': months})
+        monthly_trend = [
+            {
+                'month': r['month'],
+                'month_label': r['month_label'],
+                'avg_score': float(r['avg_score']) if r['avg_score'] else None,
+                'count': r['count'],
+            }
+            for r in cursor.fetchall()
+        ]
+
+        return {
+            'avg_score': avg_score,
+            'total_scored': total_scored,
+            'distribution': distribution,
+            'by_service_category': by_service_category,
+            'monthly_trend': monthly_trend,
+        }

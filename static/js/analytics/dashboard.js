@@ -513,7 +513,7 @@ async function loadEmployees() {
     if (data.employees.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-ink-light">Brak danych</td>
+                <td colspan="8" class="text-center text-ink-light">Brak danych</td>
             </tr>
         `;
         return;
@@ -532,6 +532,11 @@ async function loadEmployees() {
             <td class="text-right ${emp.net_profit >= 0 ? 'text-green-600' : 'text-red-600'} font-medium">
                 ${formatCurrency(emp.net_profit)}
             </td>
+            <td class="text-right text-sm ${
+                emp.avg_satisfaction >= 4.5 ? 'text-green-600' :
+                emp.avg_satisfaction >= 3.5 ? 'text-amber-500' :
+                emp.avg_satisfaction ? 'text-red-500' : 'text-slate-400'
+            }">${emp.avg_satisfaction ? `${parseFloat(emp.avg_satisfaction).toFixed(1)} ★` : '—'}</td>
         </tr>
     `).join('');
 }
