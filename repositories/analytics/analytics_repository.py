@@ -1050,6 +1050,82 @@ class AnalyticsRepository:
         cursor.execute(query)
         return [dict(row) for row in cursor.fetchall()]
 
+    def get_satisfaction_rating_monthly(self) -> Dict:
+        """
+        Średnia ocena satysfakcji klientów (1–5) wg miesiąca — ostatnie 12 miesięcy.
+        Zwraca:
+          overall:     [{month_start, avg_score, scored_count}]
+          by_employee: [{month_start, employee_name, avg_score, scored_count}]
+        """
+        months_cte = """
+            WITH months AS (
+                SELECT generate_series(
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
+                    '1 month'::interval
+                )::date AS month_start
+            )
+        """
+
+        # --- overall salon average ---
+        overall_query = months_cte + """
+            , overall AS (
+                SELECT
+                    DATE_TRUNC('month', appointment_date)::date AS month_start,
+                    ROUND(AVG(satisfaction_score)::numeric, 2)  AS avg_score,
+                    COUNT(satisfaction_score)                    AS scored_count
+                FROM appointments
+                WHERE status = 'completed'
+                  AND satisfaction_score IS NOT NULL
+                  AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                GROUP BY DATE_TRUNC('month', appointment_date)::date
+            )
+            SELECT m.month_start,
+                   COALESCE(o.avg_score, NULL) AS avg_score,
+                   COALESCE(o.scored_count, 0) AS scored_count
+            FROM months m
+            LEFT JOIN overall o ON o.month_start = m.month_start
+            ORDER BY m.month_start
+        """
+
+        # --- per-employee average ---
+        by_employee_query = months_cte + """
+            , emp_monthly AS (
+                SELECT
+                    DATE_TRUNC('month', appointment_date)::date AS month_start,
+                    employee_id,
+                    ROUND(AVG(satisfaction_score)::numeric, 2)  AS avg_score,
+                    COUNT(satisfaction_score)                    AS scored_count
+                FROM appointments
+                WHERE status = 'completed'
+                  AND satisfaction_score IS NOT NULL
+                  AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
+            )
+            SELECT
+                m.month_start,
+                e.first_name || ' ' || e.last_name AS employee_name,
+                em.avg_score,
+                COALESCE(em.scored_count, 0)        AS scored_count
+            FROM months m
+            CROSS JOIN employees e
+            LEFT JOIN emp_monthly em
+                   ON em.month_start = m.month_start AND em.employee_id = e.id
+            WHERE e.is_active = TRUE
+            ORDER BY m.month_start, employee_name
+        """
+
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(overall_query)
+        overall = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute(by_employee_query)
+        by_employee = [dict(row) for row in cursor.fetchall()]
+
+        return {"overall": overall, "by_employee": by_employee}
+
     def get_employee_analytics(self, employee_id: int) -> Dict:
         """Pobierz metryki wydajności dla pracownika."""
         conn = DatabaseConnection.get_connection()

@@ -59,6 +59,7 @@
     <button onclick="scrollToSection('nav-services')"   class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Ceny usług</button>
     <button onclick="scrollToSection('nav-insights')"   class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Wskazówki</button>
     <button onclick="scrollToSection('nav-trends')"     class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Trendy roczne</button>
+    <button onclick="scrollToSection('nav-satisfaction-rating')" class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Ocena klientów</button>
 </div>
 
 <!-- Back-to-top button (hidden until scrolled; moved to <body> by JS for reliable fixed positioning) -->
@@ -385,6 +386,15 @@
     <p class="text-xs text-slate-400 mb-4">Ilu klientów odwiedziło salon 1×, 2×, 3×… w ostatnich 12 miesiącach</p>
     <div style="height: 280px;">
         <canvas id="visitFrequencyChart"></canvas>
+    </div>
+</div>
+
+<!-- Row 6: Satisfaction rating trend (full width multi-line) -->
+<div id="nav-satisfaction-rating" class="refined-card mb-6">
+    <h3 class="text-lg font-medium mb-1">Ocena klientów / miesiąc</h3>
+    <p class="text-xs text-slate-400 mb-4">Średnia ocena satysfakcji (1–5) — linia ogółem + per pracownik — ruchome okno 12 miesięcy</p>
+    <div style="height: 320px;">
+        <canvas id="satisfactionRatingChart"></canvas>
     </div>
 </div>
 {% endblock %}
