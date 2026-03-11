@@ -145,12 +145,13 @@
                     <th>Pracownik</th>
                     <th>Kwota</th>
                     <th>Status</th>
+                    <th>Ocena</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="appointments-tbody">
                 <tr>
-                    <td colspan="8" class="empty-state">
+                    <td colspan="9" class="empty-state">
                         <span class="material-icons empty-icon">calendar_today</span>
                         <p class="empty-text">Ładowanie wizyt...</p>
                     </td>
@@ -176,6 +177,12 @@ function escapeHtml(text) {
     if (!text) return '';
     const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function renderVisitRating(score) {
+    if (score == null) return '<span style="color:var(--color-ink-subtle)">—</span>';
+    const color = score >= 4 ? '#2d6a4f' : score >= 3 ? '#d97706' : '#dc2626';
+    return `<span style="color:${color};font-weight:600;">★ ${score}</span>`;
 }
 
 function formatDate(dateStr) {
@@ -278,7 +285,7 @@ async function loadAppointments() {
 
         if (data.success) {
             if (data.appointments.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
                 return;
             }
 
@@ -295,6 +302,7 @@ async function loadAppointments() {
                         <td>${escapeHtml(a.employee_name)}</td>
                         <td>${formatCurrency(a.total_price)}</td>
                         <td><span class="status-badge ${a.status}">${statusLabel}</span></td>
+                        <td>${renderVisitRating(a.satisfaction_score)}</td>
                         <td style="text-align:right;">
                             <a href="/appointment/${a.id}/edit?from=list" class="action-link">Modyfikuj</a><span class="action-separator">|</span><a href="/appointment/${a.id}?from=list" class="action-link">Szczegóły</a>
                         </td>
@@ -304,7 +312,7 @@ async function loadAppointments() {
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><p class="empty-text" style="color:#9b2c2c;">Błąd połączenia z serwerem</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><p class="empty-text" style="color:#9b2c2c;">Błąd połączenia z serwerem</p></td></tr>`;
     }
 }
 
