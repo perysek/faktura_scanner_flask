@@ -500,6 +500,79 @@ class AppointmentRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
+    def get_adjacent_appointments(self, appointment_id: int, mode: str = 'all') -> dict:
+        """
+        Zwraca ID poprzedniej i następnej wizyty.
+        mode='all'  – globalna kolejność wg (appointment_date, start_time)
+        mode='day'  – tylko wizyty z tego samego dnia, wg start_time
+        """
+        def row_to_dict(r):
+            if not r:
+                return None
+            return {
+                'id': r['id'],
+                'appointment_date': str(r['appointment_date']),
+                'start_time': str(r['start_time'])[:5],
+                'client_name': r['client_name']
+            }
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT appointment_date, start_time FROM appointments WHERE id = %s",
+                (appointment_id,)
+            )
+            current = cursor.fetchone()
+            if not current:
+                return {'prev': None, 'next': None}
+
+            cur_date = current['appointment_date']
+            cur_time = current['start_time']
+
+            if mode == 'day':
+                cursor.execute("""
+                    SELECT a.id, a.appointment_date, a.start_time,
+                           c.first_name || ' ' || c.last_name AS client_name
+                    FROM appointments a
+                    LEFT JOIN clients c ON c.id = a.client_id
+                    WHERE a.appointment_date = %s AND a.start_time < %s AND a.id != %s
+                    ORDER BY a.start_time DESC LIMIT 1
+                """, (cur_date, cur_time, appointment_id))
+                prev_row = cursor.fetchone()
+
+                cursor.execute("""
+                    SELECT a.id, a.appointment_date, a.start_time,
+                           c.first_name || ' ' || c.last_name AS client_name
+                    FROM appointments a
+                    LEFT JOIN clients c ON c.id = a.client_id
+                    WHERE a.appointment_date = %s AND a.start_time > %s AND a.id != %s
+                    ORDER BY a.start_time ASC LIMIT 1
+                """, (cur_date, cur_time, appointment_id))
+                next_row = cursor.fetchone()
+            else:  # mode='all'
+                cursor.execute("""
+                    SELECT a.id, a.appointment_date, a.start_time,
+                           c.first_name || ' ' || c.last_name AS client_name
+                    FROM appointments a
+                    LEFT JOIN clients c ON c.id = a.client_id
+                    WHERE (a.appointment_date, a.start_time) < (%s, %s) AND a.id != %s
+                    ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 1
+                """, (cur_date, cur_time, appointment_id))
+                prev_row = cursor.fetchone()
+
+                cursor.execute("""
+                    SELECT a.id, a.appointment_date, a.start_time,
+                           c.first_name || ' ' || c.last_name AS client_name
+                    FROM appointments a
+                    LEFT JOIN clients c ON c.id = a.client_id
+                    WHERE (a.appointment_date, a.start_time) > (%s, %s) AND a.id != %s
+                    ORDER BY a.appointment_date ASC, a.start_time ASC LIMIT 1
+                """, (cur_date, cur_time, appointment_id))
+                next_row = cursor.fetchone()
+
+        return {'prev': row_to_dict(prev_row), 'next': row_to_dict(next_row)}
+
     def get_past_pending_appointments(self) -> List[Any]:
         """
         Pobierz przeszłe wizyty które nie mają jeszcze finalnego statusu.

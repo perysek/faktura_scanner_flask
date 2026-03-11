@@ -30,12 +30,12 @@ class AppointmentServiceRepository:
         )
 
     def add_service(self, appt_svc: AppointmentService) -> int:
-        """Dodaj usługę główną do wizyty (przy rezerwacji)"""
+        """Dodaj usługę do wizyty (główna lub dodatek)"""
         query = """
             INSERT INTO appointment_services (
                 appointment_id, service_id, price_charged, duration_minutes,
                 commission_rate, commission_amount, is_addon, added_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, 0, NULL)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, NULL)
         RETURNING id
         """
         with get_db_connection() as conn:
@@ -46,7 +46,8 @@ class AppointmentServiceRepository:
                 str(appt_svc.price_charged),
                 appt_svc.duration_minutes,
                 str(appt_svc.commission_rate),
-                str(appt_svc.commission_amount)
+                str(appt_svc.commission_amount),
+                bool(appt_svc.is_addon),
             ))
             result_id = cursor.fetchone()["id"]
             conn.commit()
@@ -58,7 +59,7 @@ class AppointmentServiceRepository:
             INSERT INTO appointment_services (
                 appointment_id, service_id, price_charged, duration_minutes,
                 commission_rate, commission_amount, is_addon, added_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, 1, CURRENT_TIMESTAMP)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
         RETURNING id
         """
         with get_db_connection() as conn:
@@ -69,7 +70,8 @@ class AppointmentServiceRepository:
                 str(appt_svc.price_charged),
                 appt_svc.duration_minutes,
                 str(appt_svc.commission_rate),
-                str(appt_svc.commission_amount)
+                str(appt_svc.commission_amount),
+                True,  # add_addon_service is always is_addon=True
             ))
             result_id = cursor.fetchone()["id"]
             conn.commit()

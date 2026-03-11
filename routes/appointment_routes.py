@@ -7,7 +7,7 @@ from decimal import Decimal
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
-from config.auth_config import module_permission_required
+from config.auth_config import module_permission_required, role_required
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
@@ -257,22 +257,24 @@ def update_appointment(appointment_id):
         end_dt = start_dt + timedelta(minutes=total_duration)
         end_time = end_dt.time()
 
-        # Check for conflicts (exclude current appointment)
-        conflicts = repo.find_conflicting_appointments(
-            employee_id=int(data['employee_id']),
-            appointment_date=appointment_date,
-            start_time=start_time,
-            end_time=end_time,
-            exclude_appointment_id=appointment_id
-        )
+        force = data.get('force', False)
 
-        if conflicts:
-            conflict_start = conflicts[0]['start_time']
-            conflict_end = conflicts[0]['end_time']
-            return jsonify({
-                'success': False,
-                'error': f"Konflikt z wizytą o godz. {conflict_start}-{conflict_end}"
-            }), 400
+        # Check for conflicts (skip if force=True, e.g. superadmin override)
+        if not force:
+            conflicts = repo.find_conflicting_appointments(
+                employee_id=int(data['employee_id']),
+                appointment_date=appointment_date,
+                start_time=start_time,
+                end_time=end_time,
+                exclude_appointment_id=appointment_id
+            )
+            if conflicts:
+                conflict_start = conflicts[0]['start_time']
+                conflict_end = conflicts[0]['end_time']
+                return jsonify({
+                    'success': False,
+                    'error': f"Konflikt z wizytą o godz. {conflict_start}-{conflict_end}"
+                }), 400
 
         # Update appointment using business service
         service = AppointmentBusinessService()
@@ -285,7 +287,8 @@ def update_appointment(appointment_id):
             end_time=end_time,
             status=data['status'],
             notes=data.get('notes'),
-            services=data['services']
+            services=data['services'],
+            force_save=force,
         )
 
         entity_label = f"{data.get('appointment_date')} {data.get('start_time','')}"
@@ -741,3 +744,17 @@ def set_satisfaction_score(appointment_id: int):
     if not ok:
         return jsonify({'success': False, 'error': 'Nie można ocenić — wizyta nie jest zakończona lub nie istnieje'}), 404
     return jsonify({'success': True, 'appointment_id': appointment_id, 'score': score})
+
+
+@appointment_bp.route('/appointments/adjacent', methods=['GET'])
+@login_required
+@role_required('superuser')
+def get_adjacent_appointments():
+    """Zwróć ID poprzedniej i następnej wizyty (superuser only)."""
+    appointment_id = request.args.get('id', type=int)
+    mode = request.args.get('mode', 'all')  # 'all' | 'day'
+    if not appointment_id:
+        return jsonify({'success': False, 'error': 'Missing id'}), 400
+    repo = AppointmentRepository()
+    result = repo.get_adjacent_appointments(appointment_id, mode)
+    return jsonify({'success': True, **result})
