@@ -433,7 +433,8 @@ class AppointmentBusinessService:
         end_time: time,
         status: str,
         notes: Optional[str],
-        services: List[dict]
+        services: List[dict],
+        force_save: bool = False,
     ) -> dict:
         """
         Aktualizuj wizytę wraz z usługami.
@@ -477,31 +478,32 @@ class AppointmentBusinessService:
                     f"obecna data: {now.strftime('%Y-%m-%d %H:%M')}"
                 )
 
-        # 2b. Sprawdź konflikty pracownika (jeśli zmienia się pracownik/data/czas)
-        employee_conflicts = self.appt_repo.check_conflicts(
-            employee_id, appointment_date, start_time, end_time,
-            exclude_appointment_id=appointment_id
-        )
-        if employee_conflicts:
-            raise AppointmentError(
-                f"Konflikt czasowy — pracownik ma {len(employee_conflicts)} kolidującą wizytę/y"
+        # 2b. Sprawdź konflikty pracownika (pomijane gdy force_save=True)
+        if not force_save:
+            employee_conflicts = self.appt_repo.check_conflicts(
+                employee_id, appointment_date, start_time, end_time,
+                exclude_appointment_id=appointment_id
             )
+            if employee_conflicts:
+                raise AppointmentError(
+                    f"Konflikt czasowy — pracownik ma {len(employee_conflicts)} kolidującą wizytę/y"
+                )
 
-        # 2c. Sprawdź konflikty klienta (jeśli zmienia się klient/data/czas)
-        client_conflicts = self.appt_repo.check_client_conflicts(
-            client_id, appointment_date, start_time, end_time,
-            exclude_appointment_id=appointment_id
-        )
-        if client_conflicts:
-            conflict = client_conflicts[0]
-            conflict_time = f"{conflict['start_time']}-{conflict['end_time']}"
-            try:
-                employee_name = conflict['employee_name']
-            except (KeyError, TypeError):
-                employee_name = 'inny pracownik'
-            raise AppointmentError(
-                f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
+            # 2c. Sprawdź konflikty klienta
+            client_conflicts = self.appt_repo.check_client_conflicts(
+                client_id, appointment_date, start_time, end_time,
+                exclude_appointment_id=appointment_id
             )
+            if client_conflicts:
+                conflict = client_conflicts[0]
+                conflict_time = f"{conflict['start_time']}-{conflict['end_time']}"
+                try:
+                    employee_name = conflict['employee_name']
+                except (KeyError, TypeError):
+                    employee_name = 'inny pracownik'
+                raise AppointmentError(
+                    f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
+                )
 
         # 3. Policz sumę cen i czasu trwania
         total_price = sum(Decimal(str(s['price_charged'])) for s in services)
