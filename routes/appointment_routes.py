@@ -7,8 +7,7 @@ from decimal import Decimal
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
-from config.appointment_statuses import AppointmentStatus
-from config.auth_config import module_permission_required, role_required
+from config.auth_config import module_permission_required
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
@@ -258,24 +257,22 @@ def update_appointment(appointment_id):
         end_dt = start_dt + timedelta(minutes=total_duration)
         end_time = end_dt.time()
 
-        force = data.get('force', False)
+        # Check for conflicts (exclude current appointment)
+        conflicts = repo.find_conflicting_appointments(
+            employee_id=int(data['employee_id']),
+            appointment_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+            exclude_appointment_id=appointment_id
+        )
 
-        # Check for conflicts (skip if force=True, e.g. superadmin override)
-        if not force:
-            conflicts = repo.find_conflicting_appointments(
-                employee_id=int(data['employee_id']),
-                appointment_date=appointment_date,
-                start_time=start_time,
-                end_time=end_time,
-                exclude_appointment_id=appointment_id
-            )
-            if conflicts:
-                conflict_start = conflicts[0]['start_time']
-                conflict_end = conflicts[0]['end_time']
-                return jsonify({
-                    'success': False,
-                    'error': f"Konflikt z wizytą o godz. {conflict_start}-{conflict_end}"
-                }), 400
+        if conflicts:
+            conflict_start = conflicts[0]['start_time']
+            conflict_end = conflicts[0]['end_time']
+            return jsonify({
+                'success': False,
+                'error': f"Konflikt z wizytą o godz. {conflict_start}-{conflict_end}"
+            }), 400
 
         # Update appointment using business service
         service = AppointmentBusinessService()
@@ -288,11 +285,7 @@ def update_appointment(appointment_id):
             end_time=end_time,
             status=data['status'],
             notes=data.get('notes'),
-            services=data['services'],
-            force_save=force,
-            satisfaction_score=data.get('satisfaction_score'),
-            cancellation_reason=data.get('cancellation_reason'),
-            payment_method=data.get('payment_method'),
+            services=data['services']
         )
 
         entity_label = f"{data.get('appointment_date')} {data.get('start_time','')}"
@@ -651,10 +644,11 @@ def update_past_appointment_status(appointment_id):
             return jsonify({'success': False, 'error': 'Brak statusu'}), 400
 
         # Walidacja: czy status jest finalny
-        if new_status not in AppointmentStatus.FINAL:
+        ALLOWED_FINAL_STATUSES = ['completed', 'cancelled', 'no_show']
+        if new_status not in ALLOWED_FINAL_STATUSES:
             return jsonify({
                 'success': False,
-                'error': f'Dozwolone statusy: {", ".join(sorted(AppointmentStatus.FINAL))}'
+                'error': f'Dozwolone statusy: {", ".join(ALLOWED_FINAL_STATUSES)}'
             }), 400
 
         repo = AppointmentRepository()
@@ -676,7 +670,7 @@ def update_past_appointment_status(appointment_id):
             }), 400
 
         # Walidacja: czy status już nie jest finalny
-        if row['status'] in AppointmentStatus.FINAL:
+        if row['status'] in ALLOWED_FINAL_STATUSES:
             return jsonify({
                 'success': False,
                 'error': f'Wizyta ma już finalny status: {row["status"]}'
@@ -684,7 +678,7 @@ def update_past_appointment_status(appointment_id):
 
         # Aktualizacja statusu bezpośrednio (omijamy transition_status)
         old_status = row['status']
-        cancellation_reason = data.get('cancellation_reason') if new_status == AppointmentStatus.CANCELLED else None
+        cancellation_reason = data.get('cancellation_reason') if new_status == 'cancelled' else None
         success = repo.update_status(appointment_id, new_status, cancellation_reason)
 
         if success:
@@ -747,36 +741,3 @@ def set_satisfaction_score(appointment_id: int):
     if not ok:
         return jsonify({'success': False, 'error': 'Nie można ocenić — wizyta nie jest zakończona lub nie istnieje'}), 404
     return jsonify({'success': True, 'appointment_id': appointment_id, 'score': score})
-
-
-@appointment_bp.route('/appointments/first-on-date', methods=['GET'])
-@login_required
-@role_required('superuser')
-def get_first_appointment_on_date():
-    """Zwróć ID pierwszej (najwcześniejszej) wizyty w danym dniu (superuser only)."""
-    date_str = request.args.get('date')
-    if not date_str:
-        return jsonify({'success': False, 'error': 'Missing date'}), 400
-    try:
-        target_date = _parse_date(date_str)
-    except Exception:
-        return jsonify({'success': False, 'error': 'Invalid date format'}), 400
-    repo = AppointmentRepository()
-    appt_id = repo.get_first_appointment_id_on_date(target_date)
-    if not appt_id:
-        return jsonify({'success': False, 'error': 'No appointments on this date'})
-    return jsonify({'success': True, 'appointment_id': appt_id})
-
-
-@appointment_bp.route('/appointments/adjacent', methods=['GET'])
-@login_required
-@role_required('superuser')
-def get_adjacent_appointments():
-    """Zwróć ID poprzedniej i następnej wizyty (superuser only)."""
-    appointment_id = request.args.get('id', type=int)
-    mode = request.args.get('mode', 'day')  # 'day' | 'all'
-    if not appointment_id:
-        return jsonify({'success': False, 'error': 'Missing id'}), 400
-    repo = AppointmentRepository()
-    result = repo.get_adjacent_appointments(appointment_id, mode)
-    return jsonify({'success': True, **result})

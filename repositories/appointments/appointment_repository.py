@@ -4,7 +4,6 @@ Repository dla operacji na wizytach (appointments)
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date, time
-from config.appointment_statuses import AppointmentStatus
 from config.database import get_db_connection
 from database.models import Appointment
 from repositories.db_utils import parse_dt, parse_date, parse_time
@@ -208,13 +207,9 @@ class AppointmentRepository:
 
             employees = [dict(row) for row in cursor.fetchall()]
 
-            if not employees:
-                return {'employees': [], 'schedules': {}}
-
-            # Single query for ALL employees' appointments (fixes N+1)
-            emp_ids = [emp['id'] for emp in employees]
-            placeholders_appt = ','.join(['%s'] * len(emp_ids))
-            query_appointments = f"""
+            # Pobierz wizyty dla każdego pracownika (włącznie z anulowanymi dla statystyk)
+            schedules = {}
+            query_appointments = """
                 SELECT
                     a.*,
                     c.first_name || ' ' || c.last_name as client_name,
@@ -229,16 +224,14 @@ class AppointmentRepository:
                 JOIN employees e ON e.id = a.employee_id
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
-                WHERE a.employee_id IN ({placeholders_appt}) AND a.appointment_date = %s
+                WHERE a.employee_id = %s AND a.appointment_date = %s
                 GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
-                ORDER BY a.employee_id, a.start_time
+                ORDER BY a.start_time
             """
-            cursor.execute(query_appointments, (*emp_ids, schedule_date.isoformat()))
 
-            # Group results by employee_id
-            schedules = {emp['id']: [] for emp in employees}
-            for row in cursor.fetchall():
-                schedules[row['employee_id']].append(dict(row))
+            for emp in employees:
+                cursor.execute(query_appointments, (emp['id'], schedule_date.isoformat()))
+                schedules[emp['id']] = [dict(row) for row in cursor.fetchall()]
 
             return {
                 'employees': employees,
@@ -334,7 +327,7 @@ class AppointmentRepository:
     def update_status(self, appointment_id: int, new_status: str,
                        cancellation_reason: Optional[str] = None) -> bool:
         """Zaktualizuj status wizyty"""
-        if new_status == AppointmentStatus.CANCELLED:
+        if new_status == 'cancelled':
             query = """
                 UPDATE appointments
                 SET status = %s, cancellation_reason = %s, cancelled_at = CURRENT_TIMESTAMP,
@@ -384,17 +377,13 @@ class AppointmentRepository:
             return cursor.rowcount > 0
 
     def update(self, appointment_id: int, appt: Appointment) -> bool:
-        """Zaktualizuj wizytę (pełna aktualizacja — w tym satisfaction_score, cancellation_reason)"""
+        """Zaktualizuj wizytę"""
         query = """
             UPDATE appointments
             SET client_id = %s, employee_id = %s, appointment_date = %s,
                 start_time = %s, end_time = %s, status = %s,
                 total_price = %s, total_duration = %s, discount_amount = %s,
-                notes = %s,
-                satisfaction_score = %s,
-                cancellation_reason = %s,
-                cancelled_at = %s,
-                updated_at = CURRENT_TIMESTAMP
+                notes = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """
         with get_db_connection() as conn:
@@ -410,9 +399,6 @@ class AppointmentRepository:
                 appt.total_duration,
                 str(appt.discount_amount) if appt.discount_amount else '0',
                 appt.notes,
-                appt.satisfaction_score,
-                appt.cancellation_reason,
-                appt.cancelled_at,
                 appointment_id
             ))
             conn.commit()
@@ -513,113 +499,6 @@ class AppointmentRepository:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
-
-    def get_first_appointment_id_on_date(self, target_date) -> Optional[int]:
-        """Zwraca ID najwcześniejszej wizyty w danym dniu."""
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id FROM appointments WHERE appointment_date = %s ORDER BY start_time ASC LIMIT 1",
-                (target_date.isoformat(),)
-            )
-            row = cursor.fetchone()
-            return row['id'] if row else None
-
-    def get_adjacent_appointments(self, appointment_id: int, mode: str = 'day') -> dict:
-        """
-        Zwraca ID poprzedniej i następnej wizyty.
-        mode='day'  – wizyty tego samego dnia wg start_time; przy granicy dnia
-                      przechodzi do ostatniej wizyty poprzedniego / pierwszej następnego dnia
-        mode='all'  – globalna kolejność wg (appointment_date, start_time)
-        """
-        def row_to_dict(r):
-            if not r:
-                return None
-            return {
-                'id': r['id'],
-                'appointment_date': str(r['appointment_date']),
-                'start_time': str(r['start_time'])[:5],
-                'client_name': r['client_name']
-            }
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-
-            cursor.execute(
-                "SELECT appointment_date, start_time FROM appointments WHERE id = %s",
-                (appointment_id,)
-            )
-            current = cursor.fetchone()
-            if not current:
-                return {'prev': None, 'next': None}
-
-            cur_date = current['appointment_date']
-            cur_time = current['start_time']
-
-            if mode == 'day':
-                # prev: earlier visit same day, fallback → last visit of previous day
-                cursor.execute("""
-                    SELECT a.id, a.appointment_date, a.start_time,
-                           c.first_name || ' ' || c.last_name AS client_name
-                    FROM appointments a
-                    LEFT JOIN clients c ON c.id = a.client_id
-                    WHERE a.appointment_date = %s AND a.start_time < %s AND a.id != %s
-                    ORDER BY a.start_time DESC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
-                prev_row = cursor.fetchone()
-                if not prev_row:
-                    cursor.execute("""
-                        SELECT a.id, a.appointment_date, a.start_time,
-                               c.first_name || ' ' || c.last_name AS client_name
-                        FROM appointments a
-                        LEFT JOIN clients c ON c.id = a.client_id
-                        WHERE a.appointment_date < %s
-                        ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 1
-                    """, (cur_date,))
-                    prev_row = cursor.fetchone()
-
-                # next: later visit same day, fallback → first visit of next day
-                cursor.execute("""
-                    SELECT a.id, a.appointment_date, a.start_time,
-                           c.first_name || ' ' || c.last_name AS client_name
-                    FROM appointments a
-                    LEFT JOIN clients c ON c.id = a.client_id
-                    WHERE a.appointment_date = %s AND a.start_time > %s AND a.id != %s
-                    ORDER BY a.start_time ASC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
-                next_row = cursor.fetchone()
-                if not next_row:
-                    cursor.execute("""
-                        SELECT a.id, a.appointment_date, a.start_time,
-                               c.first_name || ' ' || c.last_name AS client_name
-                        FROM appointments a
-                        LEFT JOIN clients c ON c.id = a.client_id
-                        WHERE a.appointment_date > %s
-                        ORDER BY a.appointment_date ASC, a.start_time ASC LIMIT 1
-                    """, (cur_date,))
-                    next_row = cursor.fetchone()
-            else:  # mode='all'
-                cursor.execute("""
-                    SELECT a.id, a.appointment_date, a.start_time,
-                           c.first_name || ' ' || c.last_name AS client_name
-                    FROM appointments a
-                    LEFT JOIN clients c ON c.id = a.client_id
-                    WHERE (a.appointment_date, a.start_time) < (%s, %s) AND a.id != %s
-                    ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
-                prev_row = cursor.fetchone()
-
-                cursor.execute("""
-                    SELECT a.id, a.appointment_date, a.start_time,
-                           c.first_name || ' ' || c.last_name AS client_name
-                    FROM appointments a
-                    LEFT JOIN clients c ON c.id = a.client_id
-                    WHERE (a.appointment_date, a.start_time) > (%s, %s) AND a.id != %s
-                    ORDER BY a.appointment_date ASC, a.start_time ASC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
-                next_row = cursor.fetchone()
-
-        return {'prev': row_to_dict(prev_row), 'next': row_to_dict(next_row)}
 
     def get_past_pending_appointments(self) -> List[Any]:
         """
