@@ -4,7 +4,7 @@ Main page routes - renders Jinja templates
 from flask import Blueprint, render_template, current_app
 from flask_login import login_required, current_user
 
-from config.auth_config import module_permission_required
+from config.auth_config import module_permission_required, role_required
 
 main_bp = Blueprint('main', __name__)
 
@@ -313,6 +313,14 @@ def view_appointment(appointment_id):
 def edit_appointment(appointment_id):
     """Edit appointment"""
     return render_template('appointments/edit.html', appointment_id=appointment_id)
+
+
+@main_bp.route('/superadmin/visits/<int:appointment_id>')
+@login_required
+@role_required('superuser')
+def superadmin_edit_visit(appointment_id):
+    """Superuser-only power editor for any appointment"""
+    return render_template('appointments/superadmin_edit.html', appointment_id=appointment_id)
 
 
 # ============================================================================
