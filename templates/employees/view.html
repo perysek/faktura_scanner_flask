@@ -990,6 +990,11 @@ async function removeService(esId) {
 
         if (data.success) {
             loadAssignedServices();
+            // Refresh skills tab if currently visible so deleted service disappears
+            const skillsTab = document.getElementById('tab-umiejetnosci');
+            if (skillsTab && skillsTab.style.display !== 'none' && typeof loadUmiejetnosci === 'function') {
+                loadUmiejetnosci();
+            }
             if (typeof Notifications !== 'undefined') {
                 Notifications.success('Przypisanie usunięte');
             }

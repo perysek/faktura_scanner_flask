@@ -499,6 +499,7 @@
                     <th>Telefon</th>
                     <th>Prowizja</th>
                     <th>Status</th>
+                    <th>Ocena klientów</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -520,6 +521,14 @@
 function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function renderAvgRating(avg, count) {
+    if (avg == null) return '<span style="color: var(--color-ink-subtle)">—</span>';
+    const score = parseFloat(avg);
+    const color = score >= 4.5 ? '#2d6a4f' : score >= 3.5 ? '#059669' : score >= 2.5 ? '#d97706' : '#dc2626';
+    return `<span style="color:${color};font-weight:600;">★ ${score.toFixed(1)}</span>`
+         + `<span style="color:var(--color-ink-subtle);font-size:0.75rem;margin-left:0.25rem;">(${count})</span>`;
 }
 
 function getStatusBadge(employee) {
@@ -613,7 +622,7 @@ async function loadEmployees() {
             if (employees.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="empty-state">
+                        <td colspan="7" class="empty-state">
                             <span class="material-icons empty-icon">search_off</span>
                             <p class="empty-text">Nie znaleziono pracowników</p>
                         </td>
@@ -646,6 +655,7 @@ async function loadEmployees() {
                         <td>${phone}</td>
                         <td>${commission}</td>
                         <td>${getStatusBadge(emp)}</td>
+                        <td>${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
                         <td style="text-align: right;">
                             <a href="/employee/${emp.id}" class="action-link">Zobacz</a>
                             <span style="margin: 0 0.5rem; color: var(--color-border);">|</span>
