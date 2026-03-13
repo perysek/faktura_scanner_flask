@@ -746,13 +746,32 @@ def set_satisfaction_score(appointment_id: int):
     return jsonify({'success': True, 'appointment_id': appointment_id, 'score': score})
 
 
+@appointment_bp.route('/appointments/first-on-date', methods=['GET'])
+@login_required
+@role_required('superuser')
+def get_first_appointment_on_date():
+    """Zwróć ID pierwszej (najwcześniejszej) wizyty w danym dniu (superuser only)."""
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({'success': False, 'error': 'Missing date'}), 400
+    try:
+        target_date = _parse_date(date_str)
+    except Exception:
+        return jsonify({'success': False, 'error': 'Invalid date format'}), 400
+    repo = AppointmentRepository()
+    appt_id = repo.get_first_appointment_id_on_date(target_date)
+    if not appt_id:
+        return jsonify({'success': False, 'error': 'No appointments on this date'})
+    return jsonify({'success': True, 'appointment_id': appt_id})
+
+
 @appointment_bp.route('/appointments/adjacent', methods=['GET'])
 @login_required
 @role_required('superuser')
 def get_adjacent_appointments():
     """Zwróć ID poprzedniej i następnej wizyty (superuser only)."""
     appointment_id = request.args.get('id', type=int)
-    mode = request.args.get('mode', 'all')  # 'all' | 'day'
+    mode = request.args.get('mode', 'day')  # 'day' | 'all'
     if not appointment_id:
         return jsonify({'success': False, 'error': 'Missing id'}), 400
     repo = AppointmentRepository()
