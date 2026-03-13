@@ -500,11 +500,23 @@ class AppointmentRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
-    def get_adjacent_appointments(self, appointment_id: int, mode: str = 'all') -> dict:
+    def get_first_appointment_id_on_date(self, target_date) -> Optional[int]:
+        """Zwraca ID najwcześniejszej wizyty w danym dniu."""
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM appointments WHERE appointment_date = %s ORDER BY start_time ASC LIMIT 1",
+                (target_date.isoformat(),)
+            )
+            row = cursor.fetchone()
+            return row['id'] if row else None
+
+    def get_adjacent_appointments(self, appointment_id: int, mode: str = 'day') -> dict:
         """
         Zwraca ID poprzedniej i następnej wizyty.
+        mode='day'  – wizyty tego samego dnia wg start_time; przy granicy dnia
+                      przechodzi do ostatniej wizyty poprzedniego / pierwszej następnego dnia
         mode='all'  – globalna kolejność wg (appointment_date, start_time)
-        mode='day'  – tylko wizyty z tego samego dnia, wg start_time
         """
         def row_to_dict(r):
             if not r:
@@ -531,6 +543,7 @@ class AppointmentRepository:
             cur_time = current['start_time']
 
             if mode == 'day':
+                # prev: earlier visit same day, fallback → last visit of previous day
                 cursor.execute("""
                     SELECT a.id, a.appointment_date, a.start_time,
                            c.first_name || ' ' || c.last_name AS client_name
@@ -540,7 +553,18 @@ class AppointmentRepository:
                     ORDER BY a.start_time DESC LIMIT 1
                 """, (cur_date, cur_time, appointment_id))
                 prev_row = cursor.fetchone()
+                if not prev_row:
+                    cursor.execute("""
+                        SELECT a.id, a.appointment_date, a.start_time,
+                               c.first_name || ' ' || c.last_name AS client_name
+                        FROM appointments a
+                        LEFT JOIN clients c ON c.id = a.client_id
+                        WHERE a.appointment_date < %s
+                        ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 1
+                    """, (cur_date,))
+                    prev_row = cursor.fetchone()
 
+                # next: later visit same day, fallback → first visit of next day
                 cursor.execute("""
                     SELECT a.id, a.appointment_date, a.start_time,
                            c.first_name || ' ' || c.last_name AS client_name
@@ -550,6 +574,16 @@ class AppointmentRepository:
                     ORDER BY a.start_time ASC LIMIT 1
                 """, (cur_date, cur_time, appointment_id))
                 next_row = cursor.fetchone()
+                if not next_row:
+                    cursor.execute("""
+                        SELECT a.id, a.appointment_date, a.start_time,
+                               c.first_name || ' ' || c.last_name AS client_name
+                        FROM appointments a
+                        LEFT JOIN clients c ON c.id = a.client_id
+                        WHERE a.appointment_date > %s
+                        ORDER BY a.appointment_date ASC, a.start_time ASC LIMIT 1
+                    """, (cur_date,))
+                    next_row = cursor.fetchone()
             else:  # mode='all'
                 cursor.execute("""
                     SELECT a.id, a.appointment_date, a.start_time,

@@ -3,8 +3,6 @@
 {% block title %}Admin Wizyty #{{ appointment_id }} — Power Editor{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
     /* ── Power Panel Theme ── */
     :root {
@@ -19,12 +17,12 @@
         --pp-danger: #dc2626;
         --pp-success: #16a34a;
         --pp-warning: #d97706;
-        --pp-mono: 'IBM Plex Mono', monospace;
-        --pp-body: 'DM Sans', system-ui, sans-serif;
+        --pp-mono: 'Inter', system-ui, sans-serif;
+        --pp-body: 'Inter', system-ui, sans-serif;
         --ease: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    body { background: var(--pp-bg) !important; font-family: var(--pp-body); color: var(--pp-ink); }
+    body { background: var(--pp-bg) !important; font-family: var(--pp-body) !important; color: var(--pp-ink); }
 
     /* Override base.html main area — this page owns its own scroll */
     #main-content { overflow: hidden !important; padding: 0 !important; }
@@ -57,7 +55,7 @@
         border-bottom: 1px solid var(--pp-border);
         background: #f5f5f5;
     }
-    .pp-title { font-family: var(--pp-mono); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+    .pp-title { font-family: var(--pp-body); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
     .pp-id-badge { font-family: var(--pp-mono); font-size: 0.72rem; font-weight: 500; background: #111; color: var(--pp-blue); padding: 0.12rem 0.45rem; border-radius: 2px; }
     .superuser-badge { font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; background: rgba(220,38,38,0.1); color: var(--pp-danger); border: 1px solid rgba(220,38,38,0.3); padding: 0.12rem 0.45rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
 
@@ -82,15 +80,15 @@
     /* ── Cards ── */
     .pp-card { background: var(--pp-surface); border: 1px solid var(--pp-border); border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }
     .pp-card-header { padding: 0.5rem 0.875rem; border-bottom: 1px solid var(--pp-border); background: var(--pp-surface-warm); display: flex; align-items: center; gap: 0.5rem; }
-    .pp-card-title { font-family: var(--pp-mono); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); }
+    .pp-card-title { font-family: var(--pp-body); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); }
     .pp-card-body { padding: 0.875rem; }
 
     /* ── Form Elements ── */
     .pp-form-group { margin-bottom: 0.75rem; }
-    .pp-label { display: block; font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin-bottom: 0.25rem; }
+    .pp-label { display: block; font-family: var(--pp-body); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pp-ink-subtle); margin-bottom: 0.25rem; }
     .pp-input, .pp-select, .pp-textarea {
-        width: 100%; padding: 0.45rem 0.6rem;
-        font-family: var(--pp-body); font-size: 0.8125rem;
+        width: 100%; padding: 0.5rem 0.7rem;
+        font-family: var(--pp-body); font-size: 0.9375rem;
         border: 1px solid var(--pp-border); border-radius: 2px;
         background: white; color: var(--pp-ink); box-sizing: border-box;
         transition: border-color 0.15s, box-shadow 0.15s;
@@ -111,7 +109,7 @@
     .star-btn { background: none; border: none; cursor: pointer; padding: 0.1rem; color: #d1d5db; font-size: 1.4rem; line-height: 1; transition: color 0.1s, transform 0.1s; }
     .star-btn:hover, .star-btn.active { color: #f59e0b; }
     .star-btn:hover { transform: scale(1.15); }
-    .star-meta { font-family: var(--pp-mono); font-size: 0.62rem; color: var(--pp-ink-subtle); margin-top: 0.2rem; }
+    .star-meta { font-family: var(--pp-body); font-size: 0.75rem; color: var(--pp-ink-subtle); margin-top: 0.2rem; }
 
     /* ── Service rows with editable price + duration ── */
     .pp-service-list { list-style: none; padding: 0; margin: 0; }
@@ -123,43 +121,45 @@
     }
     .pp-service-item.addon { background: rgba(245,158,11,0.03); border-color: rgba(245,158,11,0.2); }
     .pp-svc-info { flex: 1; min-width: 0; }
-    .pp-svc-name { font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pp-svc-badge { font-size: 0.58rem; font-weight: 600; text-transform: uppercase; padding: 0.08rem 0.3rem; border-radius: 2px; margin-left: 0.3rem; }
+    .pp-svc-name { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pp-svc-badge { font-size: 0.62rem; font-weight: 600; text-transform: uppercase; padding: 0.08rem 0.3rem; border-radius: 2px; margin-left: 0.3rem; }
     .pp-svc-badge.main { background: rgba(37,99,235,0.1); color: var(--pp-blue); }
     .pp-svc-badge.addon { background: rgba(245,158,11,0.1); color: var(--pp-warning); }
 
     /* Inline editable fields in service row */
     .svc-field-group { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-    .svc-field-lbl { font-family: var(--pp-mono); font-size: 0.58rem; color: var(--pp-ink-subtle); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+    .svc-field-lbl { font-family: var(--pp-body); font-size: 0.67rem; color: var(--pp-ink-subtle); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
     .svc-inline-input {
-        width: 70px; padding: 0.3rem 0.4rem; font-size: 0.8rem; font-family: var(--pp-mono);
+        width: 96px; padding: 0.32rem 0.45rem; font-size: 0.875rem; font-family: var(--pp-mono);
         border: 1px solid var(--pp-border); border-radius: 2px; background: white;
         text-align: right; box-sizing: border-box; transition: border-color 0.12s, box-shadow 0.12s;
     }
     .svc-inline-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
-    .svc-inline-input.dur { width: 54px; }
+    .svc-inline-input.dur { width: 62px; }
 
     .btn-svc-remove { padding: 0.25rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; transition: all 0.1s; flex-shrink: 0; }
     .btn-svc-remove:hover { background: #fef2f2; border-color: var(--pp-danger); color: var(--pp-danger); }
     .btn-svc-remove svg { width: 13px; height: 13px; }
 
     /* ── Service picker ── */
-    .pp-svc-add-label { font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin: 0.75rem 0 0.3rem; display: block; }
+    .pp-svc-add-label { font-family: var(--pp-body); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pp-ink-subtle); margin: 0.75rem 0 0.3rem; display: block; }
     .pp-svc-picker { max-height: 170px; overflow-y: auto; border: 1px solid var(--pp-border); border-radius: 2px; }
-    .pp-svc-option { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--pp-border); }
+    .pp-svc-option { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--pp-border); }
     .pp-svc-option:last-child { border-bottom: none; }
-    .pp-svc-opt-name { font-size: 0.8rem; font-weight: 500; }
-    .pp-svc-opt-meta { font-family: var(--pp-mono); font-size: 0.68rem; color: var(--pp-ink-subtle); }
-    .btn-svc-add { padding: 0.25rem 0.55rem; font-size: 0.72rem; background: var(--pp-blue); color: white; border: none; border-radius: 2px; cursor: pointer; font-family: var(--pp-mono); font-weight: 500; white-space: nowrap; transition: background 0.15s; }
+    .pp-svc-opt-name { font-size: 0.9rem; font-weight: 500; }
+    .pp-svc-opt-meta { font-family: var(--pp-mono); font-size: 0.73rem; color: var(--pp-ink-subtle); }
+    .btn-svc-add { padding: 0.28rem 0.6rem; font-size: 0.8rem; background: var(--pp-blue); color: white; border: none; border-radius: 2px; cursor: pointer; font-family: var(--pp-body); font-weight: 500; white-space: nowrap; transition: background 0.15s; }
     .btn-svc-add:hover { background: #1d4ed8; }
 
     /* ── Summary ── */
     .pp-summary { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.75rem; margin-top: 0.625rem; }
-    .pp-sum-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--pp-mono); font-size: 0.78rem; padding: 0.15rem 0; color: var(--pp-ink-muted); }
-    .pp-sum-row.total { font-weight: 600; font-size: 0.9rem; color: var(--pp-ink); border-top: 1px solid var(--pp-border); margin-top: 0.35rem; padding-top: 0.35rem; }
-    /* Total price as editable input */
+    .pp-sum-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--pp-mono); font-size: 0.82rem; padding: 0.15rem 0; color: var(--pp-ink-muted); }
+    .pp-sum-row.total { font-weight: 600; font-size: 0.95rem; color: var(--pp-ink); border-top: 1px solid var(--pp-border); margin-top: 0.35rem; padding-top: 0.35rem; }
+    /* Total price wrapper (input + zł suffix) */
+    .sum-price-wrapper { display: flex; align-items: center; gap: 0.3rem; }
+    .sum-price-suffix { font-family: var(--pp-mono); font-size: 0.95rem; font-weight: 600; color: var(--pp-ink); white-space: nowrap; }
     .sum-price-input {
-        width: 110px; padding: 0.3rem 0.45rem; font-family: var(--pp-mono); font-size: 0.9rem; font-weight: 600;
+        width: 100px; padding: 0.3rem 0.45rem; font-family: var(--pp-mono); font-size: 0.95rem; font-weight: 600;
         border: 1px solid transparent; border-radius: 2px; background: transparent;
         text-align: right; color: var(--pp-ink); transition: border-color 0.15s, background 0.15s;
     }
@@ -181,12 +181,22 @@
         padding: 0.45rem 0.8rem;
         background: white; border: 1px solid var(--pp-border); border-radius: 3px;
         color: var(--pp-ink-muted); cursor: pointer;
-        font-family: var(--pp-mono); font-size: 0.72rem; font-weight: 500;
+        font-family: var(--pp-body); font-size: 0.875rem; font-weight: 500;
         transition: all 0.15s; white-space: nowrap;
     }
     .bar-nav-btn:hover:not(:disabled) { background: var(--pp-surface-warm); border-color: var(--pp-ink-subtle); color: var(--pp-ink); }
     .bar-nav-btn:disabled { opacity: 0.3; cursor: default; }
     .bar-nav-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+    /* Header date picker */
+    .pp-header-date {
+        font-family: var(--pp-mono); font-size: 0.75rem;
+        padding: 0.18rem 0.5rem; border: 1px solid var(--pp-border);
+        border-radius: 2px; background: white; color: var(--pp-ink);
+        cursor: pointer; margin-left: auto;
+        transition: border-color 0.15s;
+    }
+    .pp-header-date:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    .pp-header-date::-webkit-calendar-picker-indicator { opacity: 0.45; cursor: pointer; }
     /* Visit meta info */
     .bar-visit-info {
         display: flex; align-items: center; gap: 0.5rem;
@@ -197,22 +207,9 @@
     .bar-visit-date { color: var(--pp-ink-subtle); }
     .bar-visit-client { color: var(--pp-ink); font-weight: 500; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bar-sep { color: var(--pp-border); font-size: 0.8rem; }
-    /* Mode toggle — light theme */
-    .bar-mode-toggle {
-        display: flex; background: var(--pp-surface-warm);
-        border: 1px solid var(--pp-border); border-radius: 3px; overflow: hidden;
-    }
-    .bar-mode-btn {
-        padding: 0.28rem 0.65rem; background: transparent; border: none;
-        color: var(--pp-ink-subtle); cursor: pointer;
-        font-family: var(--pp-mono); font-size: 0.65rem; font-weight: 500;
-        letter-spacing: 0.04em; transition: all 0.12s;
-    }
-    .bar-mode-btn.active { background: var(--pp-blue); color: #fff; }
-    .bar-mode-btn:not(.active):hover { background: var(--pp-border); color: var(--pp-ink); }
     /* Shortcut hints */
-    .pp-shortcut-hint { font-family: var(--pp-mono); font-size: 0.65rem; color: var(--pp-ink-subtle); display: flex; gap: 0.75rem; flex: 1; justify-content: center; }
-    .pp-kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var(--pp-mono); font-size: 0.6rem; color: var(--pp-ink-muted); }
+    .pp-shortcut-hint { font-family: var(--pp-body); font-size: 0.75rem; color: var(--pp-ink-subtle); display: flex; gap: 0.75rem; flex: 1; justify-content: center; }
+    .pp-kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var(--pp-mono); font-size: 0.65rem; color: var(--pp-ink-muted); }
     /* Action buttons */
     .pp-btn-primary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1.25rem; background: var(--pp-blue); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 0.15s; }
     .pp-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
@@ -254,6 +251,9 @@
         <span class="pp-title">Edytor wizyty</span>
         <span class="pp-id-badge" id="header-id">#{{ appointment_id }}</span>
         <span class="superuser-badge">Superuser</span>
+        <input type="date" id="header-date-picker" class="pp-header-date"
+               title="Przejdź do pierwszej wizyty w wybranym dniu"
+               onchange="navigateToDate(this.value)">
     </div>
 
     <div class="pp-grid">
@@ -379,10 +379,13 @@
                         </div>
                         <div class="pp-sum-row total">
                             <span>Razem:</span>
-                            <input type="number" id="sum-price" class="sum-price-input"
-                                   min="0" step="0.01" value="0"
-                                   title="Całkowita cena (edytowalna — auto-aktualizuje się po zmianie cen usług)"
-                                   onblur="onTotalPriceBlur(this)">
+                            <div class="sum-price-wrapper">
+                                <input type="number" id="sum-price" class="sum-price-input"
+                                       min="0" step="0.01" value="0"
+                                       title="Całkowita cena (edytowalna — auto-aktualizuje się po zmianie cen usług)"
+                                       onblur="onTotalPriceBlur(this)">
+                                <span class="sum-price-suffix">zł</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -417,11 +420,6 @@
                 <span class="bar-visit-date" id="strip-date">—</span>
                 <span class="bar-sep">·</span>
                 <span class="bar-visit-client" id="strip-client">Ładowanie...</span>
-            </div>
-
-            <div class="bar-mode-toggle">
-                <button class="bar-mode-btn active" id="mode-all" onclick="setMode('all')">Wszystkie</button>
-                <button class="bar-mode-btn" id="mode-day" onclick="setMode('day')">Ten dzień</button>
             </div>
 
             <button class="bar-nav-btn" id="btn-next" onclick="navigate('next')" disabled title="Alt+→">
@@ -481,7 +479,6 @@ let currentServices = [];
 let availableServices = [];
 let adjPrev = null;
 let adjNext = null;
-let navMode = localStorage.getItem('superadmin_nav_mode') || 'all';
 let currentStar = 0;
 let forceAllowSave = false;
 let totalPriceOverride = null; // manual total price override
@@ -519,18 +516,27 @@ function cacheGet(key) {
 }
 
 // ══════════════════════════════════════════════════════
-//  NAVIGATION MODE
+//  DATE PICKER — jump to first visit on a given day
 // ══════════════════════════════════════════════════════
-function setMode(mode) {
-    navMode = mode;
-    localStorage.setItem('superadmin_nav_mode', mode);
-    document.getElementById('mode-all').classList.toggle('active', mode === 'all');
-    document.getElementById('mode-day').classList.toggle('active', mode === 'day');
-    loadAdjacent();
-}
-function applyStoredMode() {
-    document.getElementById('mode-all').classList.toggle('active', navMode === 'all');
-    document.getElementById('mode-day').classList.toggle('active', navMode === 'day');
+async function navigateToDate(dateStr) {
+    if (!dateStr) return;
+    showLoading(true);
+    try {
+        const data = await fetch(`/api/appointments/first-on-date?date=${dateStr}`).then(r => r.json());
+        if (data.success && data.appointment_id) {
+            history.pushState({apptId: data.appointment_id}, '', `/superadmin/visits/${data.appointment_id}`);
+            await loadVisit(data.appointment_id);
+        } else {
+            showToast('Brak wizyt w tym dniu', 'warning');
+            // Restore picker to current appointment's date
+            const picker = document.getElementById('header-date-picker');
+            if (picker && originalData) picker.value = originalData.appointment_date;
+        }
+    } catch(e) {
+        showToast('Błąd ładowania', 'error');
+    } finally {
+        showLoading(false);
+    }
 }
 
 // ══════════════════════════════════════════════════════
@@ -560,7 +566,7 @@ async function loadVisit(id) {
         // Fire appointment fetch + adjacent fetch in parallel — biggest speed win
         const [apptData, adjData] = await Promise.all([
             fetch(`/api/appointments/${id}`).then(r => r.json()),
-            fetch(`/api/appointments/adjacent?id=${id}&mode=${navMode}`).then(r => r.json())
+            fetch(`/api/appointments/adjacent?id=${id}&mode=day`).then(r => r.json())
         ]);
 
         if (!apptData.success) {
@@ -588,7 +594,7 @@ async function loadVisit(id) {
 // ══════════════════════════════════════════════════════
 async function loadAdjacent() {
     try {
-        const data = await fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=${navMode}`).then(r => r.json());
+        const data = await fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=day`).then(r => r.json());
         updateAdjacent(data);
     } catch(e) { console.error('Adjacent load failed', e); }
 }
@@ -672,9 +678,11 @@ function onEmployeeChange() {
 async function populateForm(apptData) {
     originalData = apptData.appointment;
 
-    // Nav strip
+    // Nav strip + header date picker
     document.getElementById('strip-date').textContent = fmtDate(originalData.appointment_date);
     document.getElementById('strip-client').textContent = originalData.client_name || '—';
+    const headerDatePicker = document.getElementById('header-date-picker');
+    if (headerDatePicker) headerDatePicker.value = originalData.appointment_date;
 
     // Basic fields
     document.getElementById('status-select').value = originalData.status;
@@ -983,12 +991,18 @@ async function saveChanges() {
         }).then(r => r.json());
 
         if (data.success) {
-            showToast('Zmiany zapisane', 'success', 1800);
+            showToast('Zmiany zapisane', 'success', 1400);
             originalData = {...originalData, ...payload};
             originalServices = JSON.parse(JSON.stringify(currentServices));
             forceAllowSave = false;
-            // Refresh adjacent after save (status/date change may shift order)
-            loadAdjacent();
+            // Capture next ID before potential adjacent refresh, then navigate
+            const nextId = adjNext?.id;
+            if (nextId) {
+                history.pushState({apptId: nextId}, '', `/superadmin/visits/${nextId}`);
+                await loadVisit(nextId);
+            } else {
+                loadAdjacent();
+            }
         } else {
             showToast(data.error || 'Błąd zapisu', 'error', 3500);
         }
@@ -1133,8 +1147,6 @@ function handleKeyboard(e) {
 //  INIT
 // ══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-    applyStoredMode();
-
     // Remove sidebar from tab order on this page (focus trap complement)
     document.querySelectorAll('aside a, aside button').forEach(el => el.tabIndex = -1);
 
@@ -1144,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load appointment data + adjacent in parallel
     const [apptData, adjData] = await Promise.all([
         fetch(`/api/appointments/${APPT_ID}`).then(r => r.json()),
-        fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=${navMode}`).then(r => r.json())
+        fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=day`).then(r => r.json())
     ]);
 
     updateAdjacent(adjData);
