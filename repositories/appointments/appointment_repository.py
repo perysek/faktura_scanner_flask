@@ -4,6 +4,7 @@ Repository dla operacji na wizytach (appointments)
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date, time
+from config.appointment_statuses import AppointmentStatus
 from config.database import get_db_connection
 from database.models import Appointment
 from repositories.db_utils import parse_dt, parse_date, parse_time
@@ -207,9 +208,13 @@ class AppointmentRepository:
 
             employees = [dict(row) for row in cursor.fetchall()]
 
-            # Pobierz wizyty dla każdego pracownika (włącznie z anulowanymi dla statystyk)
-            schedules = {}
-            query_appointments = """
+            if not employees:
+                return {'employees': [], 'schedules': {}}
+
+            # Single query for ALL employees' appointments (fixes N+1)
+            emp_ids = [emp['id'] for emp in employees]
+            placeholders_appt = ','.join(['%s'] * len(emp_ids))
+            query_appointments = f"""
                 SELECT
                     a.*,
                     c.first_name || ' ' || c.last_name as client_name,
@@ -224,14 +229,16 @@ class AppointmentRepository:
                 JOIN employees e ON e.id = a.employee_id
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
-                WHERE a.employee_id = %s AND a.appointment_date = %s
+                WHERE a.employee_id IN ({placeholders_appt}) AND a.appointment_date = %s
                 GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
-                ORDER BY a.start_time
+                ORDER BY a.employee_id, a.start_time
             """
+            cursor.execute(query_appointments, (*emp_ids, schedule_date.isoformat()))
 
-            for emp in employees:
-                cursor.execute(query_appointments, (emp['id'], schedule_date.isoformat()))
-                schedules[emp['id']] = [dict(row) for row in cursor.fetchall()]
+            # Group results by employee_id
+            schedules = {emp['id']: [] for emp in employees}
+            for row in cursor.fetchall():
+                schedules[row['employee_id']].append(dict(row))
 
             return {
                 'employees': employees,
@@ -327,7 +334,7 @@ class AppointmentRepository:
     def update_status(self, appointment_id: int, new_status: str,
                        cancellation_reason: Optional[str] = None) -> bool:
         """Zaktualizuj status wizyty"""
-        if new_status == 'cancelled':
+        if new_status == AppointmentStatus.CANCELLED:
             query = """
                 UPDATE appointments
                 SET status = %s, cancellation_reason = %s, cancelled_at = CURRENT_TIMESTAMP,

@@ -15,17 +15,19 @@ load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
 from flask import Flask, render_template
 from flask_login import LoginManager
 
-# Configure logging for debugging
+# Configure logging — DEBUG only in development, INFO in production
+_log_level = logging.DEBUG if os.environ.get('FLASK_ENV') == 'development' else logging.INFO
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=_log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),  # Console output
     ]
 )
-# Set specific loggers to appropriate levels
-logging.getLogger('utils.pdf_processor').setLevel(logging.DEBUG)
-logging.getLogger('services.ocr_service').setLevel(logging.DEBUG)
+# Verbose debug for core services only in development
+if _log_level == logging.DEBUG:
+    logging.getLogger('utils.pdf_processor').setLevel(logging.DEBUG)
+    logging.getLogger('services.ocr_service').setLevel(logging.DEBUG)
 
 # Import configuration
 from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
@@ -68,7 +70,11 @@ def create_app():
     app.json = PostgreSQLJSONProvider(app)
 
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production-flask-login-session-key-2026')
+    # SECRET_KEY: required in production, fallback only for development
+    secret_key = os.environ.get('SECRET_KEY')
+    if not secret_key and os.environ.get('FLASK_ENV') != 'development':
+        raise ValueError('SECRET_KEY environment variable must be set in production')
+    app.config['SECRET_KEY'] = secret_key or 'dev-only-insecure-key'
     app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['PDF_FOLDER'] = str(PDF_FOLDER)
@@ -158,6 +164,16 @@ def create_app():
     app.register_blueprint(roles_bp)
 
     # Error handlers
+    from exceptions import AppError
+    from flask import jsonify, request
+
+    @app.errorhandler(AppError)
+    def handle_app_error(e):
+        """Auto-convert AppError subclasses to JSON for API routes, HTML otherwise."""
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': str(e)}), e.status_code
+        return render_template('errors/500.html'), e.status_code
+
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('errors/404.html'), 404
