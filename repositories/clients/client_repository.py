@@ -12,7 +12,7 @@ from repositories.db_utils import parse_dt, parse_date
 class ClientRepository(BaseRepository):
     """Repository dla operacji na tabeli clients"""
 
-    _soft_delete = True
+    # _soft_delete = True  # Enable after running migration e9f0a1b2c3d4
 
     def __init__(self):
         super().__init__('clients')
