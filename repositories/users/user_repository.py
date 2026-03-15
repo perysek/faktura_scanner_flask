@@ -13,6 +13,8 @@ from repositories.db_utils import parse_dt
 class UserRepository(BaseRepository):
     """Repository dla operacji na użytkownikach"""
 
+    _columns = 'id, email, password_hash, full_name, role, is_active, last_login, created_at, updated_at'
+
     def __init__(self):
         super().__init__("users")
 
@@ -193,9 +195,8 @@ class UserRepository(BaseRepository):
         Przypisz pracownika do konta użytkownika.
         Wszystkie trzy operacje wykonywane atomowo w jednej transakcji.
         """
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        try:
+        with self.transaction() as conn:
+            cursor = conn.cursor()
             # Clear previous user link for this employee
             cursor.execute("UPDATE employees SET user_id = NULL WHERE id = %s", (employee_id,))
             # Clear previous employee link for this user
@@ -205,10 +206,6 @@ class UserRepository(BaseRepository):
             )
             # Link
             cursor.execute("UPDATE employees SET user_id = %s WHERE id = %s", (user_id, employee_id))
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
 
     def get_available_employees(self) -> list:
         """

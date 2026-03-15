@@ -8,6 +8,7 @@ from typing import List, Optional
 from database.models import (
     Appointment, AppointmentService, IncomeRecord
 )
+from config.appointment_statuses import AppointmentStatus
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
 from repositories.appointments.income_repository import IncomeRepository
@@ -15,14 +16,6 @@ from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_addon_repository import ServiceAddonRepository
 from repositories.employees.employee_service_repository import EmployeeServiceRepository
 from services.pricing_service import PricingService
-
-
-# Dozwolone przejścia statusów
-STATUS_TRANSITIONS = {
-    'scheduled': ['confirmed', 'cancelled', 'no_show'],
-    'confirmed': ['in_progress', 'cancelled'],
-    'in_progress': ['completed', 'cancelled'],
-}
 
 
 class AppointmentError(Exception):
@@ -139,12 +132,12 @@ class AppointmentBusinessService:
             raise AppointmentError("Wizyta nie istnieje")
 
         current_status = row['status']
-        allowed = STATUS_TRANSITIONS.get(current_status, [])
 
-        if new_status not in allowed:
+        if not AppointmentStatus.can_transition(current_status, new_status):
+            allowed = AppointmentStatus.VALID_TRANSITIONS.get(current_status, set())
             raise AppointmentError(
                 f"Nie można zmienić statusu z '{current_status}' na '{new_status}'. "
-                f"Dozwolone: {', '.join(allowed) if allowed else 'brak'}"
+                f"Dozwolone: {', '.join(sorted(allowed)) if allowed else 'brak'}"
             )
 
         return self.appt_repo.update_status(

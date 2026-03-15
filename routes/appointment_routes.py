@@ -7,6 +7,7 @@ from decimal import Decimal
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
+from config.appointment_statuses import AppointmentStatus
 from config.auth_config import module_permission_required, role_required
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
@@ -647,11 +648,10 @@ def update_past_appointment_status(appointment_id):
             return jsonify({'success': False, 'error': 'Brak statusu'}), 400
 
         # Walidacja: czy status jest finalny
-        ALLOWED_FINAL_STATUSES = ['completed', 'cancelled', 'no_show']
-        if new_status not in ALLOWED_FINAL_STATUSES:
+        if new_status not in AppointmentStatus.FINAL:
             return jsonify({
                 'success': False,
-                'error': f'Dozwolone statusy: {", ".join(ALLOWED_FINAL_STATUSES)}'
+                'error': f'Dozwolone statusy: {", ".join(sorted(AppointmentStatus.FINAL))}'
             }), 400
 
         repo = AppointmentRepository()
@@ -673,7 +673,7 @@ def update_past_appointment_status(appointment_id):
             }), 400
 
         # Walidacja: czy status już nie jest finalny
-        if row['status'] in ALLOWED_FINAL_STATUSES:
+        if row['status'] in AppointmentStatus.FINAL:
             return jsonify({
                 'success': False,
                 'error': f'Wizyta ma już finalny status: {row["status"]}'
@@ -681,7 +681,7 @@ def update_past_appointment_status(appointment_id):
 
         # Aktualizacja statusu bezpośrednio (omijamy transition_status)
         old_status = row['status']
-        cancellation_reason = data.get('cancellation_reason') if new_status == 'cancelled' else None
+        cancellation_reason = data.get('cancellation_reason') if new_status == AppointmentStatus.CANCELLED else None
         success = repo.update_status(appointment_id, new_status, cancellation_reason)
 
         if success:
