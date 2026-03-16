@@ -366,11 +366,11 @@
     <header class="page-header">
         <h1 class="page-title">Pulpit</h1>
         <div class="header-actions">
-            <button class="refresh-btn" onclick="refreshDashboard()" id="refresh-btn" title="Odswiez dane">
+            <button class="refresh-btn" onclick="refreshDashboard()" id="refresh-btn" title="Odśwież dane">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span id="refresh-label">Odswiez</span>
+                <span id="refresh-label">Odśwież</span>
             </button>
         </div>
     </header>
@@ -382,11 +382,11 @@
         </div>
         <div class="stat-card">
             <span class="stat-value" id="stat-paid">—</span>
-            <span class="stat-label">Oplacone</span>
+            <span class="stat-label">Opłacone</span>
         </div>
         <div class="stat-card">
             <span class="stat-value" id="stat-unpaid">—</span>
-            <span class="stat-label">Nieoplacone</span>
+            <span class="stat-label">Nieopłacone</span>
         </div>
         <div class="stat-card">
             <span class="stat-value" id="stat-amount-gross">—</span>
@@ -430,7 +430,7 @@
                 <a href="{{ url_for('main.invoices_list') }}" class="panel-link">Zobacz wszystkie →</a>
             </div>
             <div class="panel-content" id="recent-invoices-container">
-                <div class="empty-panel">Ladowanie...</div>
+                <div class="empty-panel">Ładowanie...</div>
             </div>
         </div>
 
@@ -446,7 +446,7 @@
                 <span class="panel-link" id="overdue-summary" style="font-weight: 600;">—</span>
             </div>
             <div class="panel-content" id="overdue-payments-container">
-                <div class="empty-panel">Ladowanie...</div>
+                <div class="empty-panel">Ładowanie...</div>
             </div>
         </div>
 
@@ -457,12 +457,12 @@
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Nadchodzace platnosci
+                    Nadchodzące płatności
                 </div>
                 <span class="panel-link" id="upcoming-summary" style="font-weight: 600;">—</span>
             </div>
             <div class="panel-content" id="upcoming-payments-container">
-                <div class="empty-panel">Ladowanie...</div>
+                <div class="empty-panel">Ładowanie...</div>
             </div>
         </div>
 
@@ -473,11 +473,11 @@
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
-                    Najczestsi dostawcy
+                    Najczęstsi dostawcy
                 </div>
             </div>
             <div class="panel-content" id="top-sellers-container">
-                <div class="empty-panel">Ladowanie...</div>
+                <div class="empty-panel">Ładowanie...</div>
             </div>
         </div>
     </div>
@@ -501,7 +501,7 @@ async function refreshDashboard() {
     const label = document.getElementById('refresh-label');
 
     if (btn) btn.classList.add('loading');
-    if (label) label.textContent = 'Ladowanie...';
+    if (label) label.textContent = 'Ładowanie...';
 
     try {
         await Promise.all([
@@ -513,11 +513,11 @@ async function refreshDashboard() {
             loadMonthlyChart()
         ]);
 
-        if (label) label.textContent = 'Odswiezono';
-        setTimeout(() => { if (label) label.textContent = 'Odswiez'; }, 2000);
+        if (label) label.textContent = 'Odświeżono';
+        setTimeout(() => { if (label) label.textContent = 'Odśwież'; }, 2000);
     } catch (error) {
         console.error('Error refreshing dashboard:', error);
-        if (label) label.textContent = 'Blad';
+        if (label) label.textContent = 'Błąd';
     } finally {
         if (btn) btn.classList.remove('loading');
     }
@@ -564,7 +564,7 @@ async function loadRecentInvoices() {
                     </div>
                     <div class="list-item-side">
                         <div class="list-item-amount">${formatCurrency(invoice.amount || 0, invoice.currency || 'PLN')}</div>
-                        <div class="list-item-meta"><span class="status-badge ${invoice.status === 'Opłacona' ? 'status-paid' : 'status-unpaid'}">${escapeHtml(invoice.status || 'Nieoplacona')}</span></div>
+                        <div class="list-item-meta"><span class="status-badge ${invoice.status === 'Opłacona' ? 'status-paid' : 'status-unpaid'}">${escapeHtml(invoice.status || 'Nieopłacona')}</span></div>
                     </div>
                 </a>
             `).join('');
@@ -573,7 +573,7 @@ async function loadRecentInvoices() {
         }
     } catch (error) {
         console.error('Error loading recent invoices:', error);
-        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Błąd ładowania</div></div>';
     }
 }
 
@@ -604,11 +604,11 @@ async function loadOverduePayments() {
             }).join('');
         } else {
             if (summary) summary.textContent = '0';
-            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><div class="empty-title">Brak zagleglosci</div><div class="empty-text">Wszystko oplacone na czas!</div></div>';
+            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><div class="empty-title">Brak zaległości</div><div class="empty-text">Wszystko opłacone na czas!</div></div>';
         }
     } catch (error) {
         console.error('Error loading overdue:', error);
-        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Błąd ładowania</div></div>';
     }
 }
 
@@ -631,7 +631,7 @@ async function loadUpcomingPayments() {
                     else if (daysUntil <= 7) urgencyClass = 'urgency-medium';
                 }
 
-                const daysText = daysUntil === 0 ? 'Dzis' : daysUntil === 1 ? 'Jutro' : `Za ${daysUntil} dni`;
+                const daysText = daysUntil === 0 ? 'Dziś' : daysUntil === 1 ? 'Jutro' : `Za ${daysUntil} dni`;
 
                 return `
                     <a href="/invoice/${invoice.id}/edit" class="list-item">
@@ -648,11 +648,11 @@ async function loadUpcomingPayments() {
             }).join('');
         } else {
             if (summary) summary.textContent = '0';
-            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><div class="empty-title">Brak nadchodzacych platnosci</div></div>';
+            container.innerHTML = '<div class="empty-panel"><svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><div class="empty-title">Brak nadchodzących płatności</div></div>';
         }
     } catch (error) {
         console.error('Error loading upcoming:', error);
-        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Błąd ładowania</div></div>';
     }
 }
 
@@ -686,7 +686,7 @@ async function loadTopSellers() {
         }
     } catch (error) {
         console.error('Error loading top sellers:', error);
-        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Blad ladowania</div></div>';
+        container.innerHTML = '<div class="empty-panel"><div class="empty-title">Błąd ładowania</div></div>';
     }
 }
 
