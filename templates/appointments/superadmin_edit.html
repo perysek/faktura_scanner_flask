@@ -136,6 +136,7 @@
     }
     .svc-inline-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
     .svc-inline-input.dur { width: 62px; }
+    .svc-inline-input.comm { width: 58px; }
 
     .btn-svc-remove { padding: 0.25rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; transition: all 0.1s; flex-shrink: 0; }
     .btn-svc-remove:hover { background: #fef2f2; border-color: var(--pp-danger); color: var(--pp-danger); }
@@ -150,6 +151,65 @@
     .pp-svc-opt-meta { font-family: var(--pp-mono); font-size: 0.73rem; color: var(--pp-ink-subtle); }
     .btn-svc-add { padding: 0.28rem 0.6rem; font-size: 0.8rem; background: var(--pp-blue); color: white; border: none; border-radius: 2px; cursor: pointer; font-family: var(--pp-body); font-weight: 500; white-space: nowrap; transition: background 0.15s; }
     .btn-svc-add:hover { background: #1d4ed8; }
+    /* ── Unassigned services multiselect dropdown ── */
+    .ua-select-wrapper { position: relative; }
+    .ua-trigger {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem 0.7rem; border: 1px solid var(--pp-border); border-radius: 2px;
+        background: white; cursor: pointer; user-select: none;
+        font-family: var(--pp-body); font-size: 0.875rem; color: var(--pp-ink-muted);
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .ua-trigger:hover { border-color: #aaa; }
+    .ua-trigger.open { border-color: var(--pp-blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .ua-trigger-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ua-chevron { flex-shrink: 0; color: var(--pp-ink-subtle); transition: transform 0.18s; }
+    .ua-trigger.open .ua-chevron { transform: rotate(180deg); }
+    .ua-dropdown {
+        display: none; position: fixed; z-index: 9500;
+        background: white; border: 1px solid var(--pp-border); border-radius: 3px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.13); overflow: hidden; flex-direction: column;
+    }
+    .ua-dropdown.open { display: flex; }
+    .ua-search-wrap { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--pp-border); flex-shrink: 0; }
+    .ua-search-input {
+        width: 100%; padding: 0.38rem 0.55rem; box-sizing: border-box;
+        font-family: var(--pp-body); font-size: 0.875rem;
+        border: 1px solid var(--pp-border); border-radius: 2px; background: var(--pp-surface-warm);
+        transition: border-color 0.15s;
+    }
+    .ua-search-input:focus { outline: none; border-color: var(--pp-blue); background: white; }
+    .ua-list { max-height: 195px; overflow-y: auto; }
+    .ua-list::-webkit-scrollbar { width: 4px; }
+    .ua-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+    .ua-item {
+        display: flex; align-items: center; gap: 0.55rem;
+        padding: 0.42rem 0.6rem; cursor: pointer; border-bottom: 1px solid var(--pp-border);
+        transition: background 0.1s;
+    }
+    .ua-item:last-child { border-bottom: none; }
+    .ua-item:hover { background: var(--pp-surface-warm); }
+    .ua-item.checked { background: rgba(37,99,235,0.05); }
+    .ua-item.checked:hover { background: rgba(37,99,235,0.09); }
+    .ua-cb { width: 14px; height: 14px; flex-shrink: 0; accent-color: var(--pp-blue); cursor: pointer; pointer-events: none; }
+    .ua-item-info { flex: 1; min-width: 0; }
+    .ua-item-name { font-size: 0.875rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ua-item-meta { font-family: var(--pp-mono); font-size: 0.72rem; color: var(--pp-ink-subtle); }
+    .ua-footer {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.45rem 0.6rem; border-top: 1px solid var(--pp-border);
+        background: var(--pp-surface-warm); flex-shrink: 0;
+    }
+    .ua-count { font-family: var(--pp-mono); font-size: 0.72rem; color: var(--pp-ink-subtle); }
+    .ua-add-btn {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.38rem 0.85rem; background: var(--pp-blue); color: white;
+        border: none; border-radius: 2px; font-family: var(--pp-body); font-size: 0.8rem;
+        font-weight: 500; cursor: pointer; transition: background 0.15s; white-space: nowrap;
+    }
+    .ua-add-btn:hover:not(:disabled) { background: #1d4ed8; }
+    .ua-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .ua-no-results { padding: 0.875rem; text-align: center; color: #999; font-family: var(--pp-mono); font-size: 0.78rem; }
 
     /* ── Summary ── */
     .pp-summary { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.75rem; margin-top: 0.625rem; }
@@ -391,6 +451,36 @@
                 </div>
             </div>
 
+            <!-- Unassigned services multiselect (TASK#3) -->
+            <div class="pp-card" id="unassigned-card" style="display:none">
+                <div class="pp-card-header">
+                    <span class="pp-card-title" style="color:var(--pp-warning)">Usługi nieprzypisane do pracownika</span>
+                    <span style="font-family:var(--pp-mono);font-size:0.58rem;color:#aaa;margin-left:auto">poza employee_services</span>
+                </div>
+                <div class="pp-card-body">
+                    <div class="ua-select-wrapper" id="ua-select-wrapper">
+                        <div class="ua-trigger" id="ua-trigger" onclick="toggleUnassignedDropdown()">
+                            <span class="ua-trigger-text" id="ua-trigger-text">Szukaj i wybierz usługi...</span>
+                            <svg class="ua-chevron" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div class="ua-dropdown" id="ua-dropdown">
+                            <div class="ua-search-wrap">
+                                <input type="text" id="ua-search" class="ua-search-input"
+                                       placeholder="Szukaj nazwy usługi..." oninput="filterUnassigned(this.value)">
+                            </div>
+                            <div class="ua-list" id="ua-list"></div>
+                            <div class="ua-footer">
+                                <span class="ua-count" id="ua-count">0 wybranych</span>
+                                <button class="ua-add-btn" id="ua-add-btn" onclick="addSelectedUnassigned()" disabled>
+                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    Dodaj wybrane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notes -->
             <div class="pp-card">
                 <div class="pp-card-header"><span class="pp-card-title">Uwagi</span></div>
@@ -476,7 +566,8 @@ let APPT_ID = {{ appointment_id }};
 let originalData = null;
 let originalServices = [];
 let currentServices = [];
-let availableServices = [];
+let availableServices = [];   // services assigned to current employee
+let allServices = [];          // all active services (for unassigned section — TASK#3)
 let adjPrev = null;
 let adjNext = null;
 let currentStar = 0;
@@ -661,10 +752,23 @@ function populateEmployeeSelect(employees) {
 
 async function loadEmployeeServices() {
     const eid = document.getElementById('employee-select').value;
-    if (!eid) { availableServices = []; renderServicePicker(); return; }
+    if (!eid) { availableServices = []; renderServicePicker(); renderUnassignedPicker(); return; }
     const data = await fetch(`/api/employees/${eid}/services`).then(r => r.json());
     availableServices = data.success ? data.services : [];
+    selectedUnassignedIds.clear();
     renderServicePicker();
+    renderUnassignedPicker();
+}
+
+// TASK#3: Load all active services once (cached in sessionStorage)
+async function loadAllServices() {
+    const cached = cacheGet('pp_all_services');
+    if (cached) { allServices = cached; return; }
+    const data = await fetch('/api/services?active_only=true').then(r => r.json());
+    if (data.success) {
+        allServices = data.services || [];
+        cacheSet('pp_all_services', allServices);
+    }
 }
 
 function onEmployeeChange() {
@@ -700,13 +804,14 @@ async function populateForm(apptData) {
     if (originalData.client_id) document.getElementById('client-select').value = originalData.client_id;
     if (originalData.employee_id) document.getElementById('employee-select').value = originalData.employee_id;
 
-    // Services
+    // Services (TASK#1: preserve appointment_service_id for diff; TASK#2: load commission_rate)
     currentServices = [...(apptData.main_services || []), ...(apptData.addon_services || [])].map(s => ({
         appointment_service_id: s.id,
         service_id: s.service_id,
         service_name: s.service_name,
         price_charged: parseFloat(s.price_charged || s.effective_price || 0),
         duration_minutes: parseInt(s.duration_minutes || s.effective_duration || 0),
+        commission_rate: parseFloat(s.commission_rate || 0),
         is_addon: s.is_addon || false
     }));
     originalServices = JSON.parse(JSON.stringify(currentServices));
@@ -715,7 +820,7 @@ async function populateForm(apptData) {
     updateSummary();
     onStatusChange();
 
-    // Load employee services for the picker (may hit cache if same employee)
+    // Load employee services for the picker — internally calls renderServicePicker + renderUnassignedPicker
     await loadEmployeeServices();
 }
 
@@ -769,6 +874,13 @@ function renderServices() {
                        onblur="onSvcDurBlur(${idx}, this)"
                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
             </div>
+            <div class="svc-field-group" title="Prowizja pracownika (%)">
+                <span class="svc-field-lbl">Prow%</span>
+                <input type="number" id="svc-comm-${idx}" class="svc-inline-input comm"
+                       value="${(s.commission_rate || 0).toFixed(2)}" min="0" max="100" step="0.01"
+                       onblur="onSvcCommBlur(${idx}, this)"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+            </div>
             <button class="btn-svc-remove" onclick="removeService(${idx})" title="Usuń usługę">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
@@ -795,6 +907,14 @@ function onSvcDurBlur(idx, input) {
     triggerConflictCheck();
 }
 
+// TASK#2: Commission rate blur handler
+function onSvcCommBlur(idx, input) {
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0 || val > 100) { input.value = (currentServices[idx].commission_rate || 0).toFixed(2); return; }
+    currentServices[idx].commission_rate = val;
+    input.value = val.toFixed(2);
+}
+
 // When user manually edits total price, store as override
 function onTotalPriceBlur(input) {
     const val = parseFloat(input.value);
@@ -809,14 +929,13 @@ function onTotalPriceBlur(input) {
 
 function renderServicePicker() {
     const picker = document.getElementById('service-picker');
-    if (!availableServices.length) { picker.style.display = 'none'; return; }
-
     const usedIds = new Set(currentServices.map(s => s.service_id));
     const available = availableServices.filter(s => !usedIds.has(s.service_id));
 
     if (!available.length) {
-        picker.style.display = 'block';
-        picker.innerHTML = '<div style="padding:0.75rem;text-align:center;color:#999;font-size:0.78rem">Wszystkie usługi dodane</div>';
+        picker.style.display = availableServices.length ? 'block' : 'none';
+        if (picker.style.display === 'block')
+            picker.innerHTML = '<div style="padding:0.75rem;text-align:center;color:#999;font-size:0.78rem">Wszystkie usługi pracownika dodane</div>';
         return;
     }
 
@@ -824,27 +943,202 @@ function renderServicePicker() {
     picker.innerHTML = available.map(s => {
         const price = s.effective_price || s.price_offered || 0;
         const dur = s.effective_duration || s.duration_minutes || 0;
+        const comm = s.effective_commission || 0;
         return `
         <div class="pp-svc-option">
             <div>
                 <div class="pp-svc-opt-name">${esc(s.service_name)}</div>
                 <div class="pp-svc-opt-meta">${dur} min · ${fmtPrice(price)}</div>
             </div>
-            <button class="btn-svc-add" onclick="addService(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', ${price}, ${dur})">+ Dodaj</button>
+            <button class="btn-svc-add" onclick="addService(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', ${price}, ${dur}, ${s.service_type === 'addon'}, ${comm})">+ Dodaj</button>
         </div>`;
     }).join('');
 }
 
-function addService(serviceId, serviceName, price, duration) {
-    currentServices.push({ appointment_service_id: null, service_id: serviceId, service_name: serviceName, price_charged: price, duration_minutes: duration, is_addon: true });
+// ══════════════════════════════════════════════════════
+//  UNASSIGNED SERVICES — searchable multiselect (TASK#3)
+// ══════════════════════════════════════════════════════
+let selectedUnassignedIds = new Set();
+let unassignedFilter = '';
+
+function getUnassignedServices() {
+    const usedIds = new Set(currentServices.map(s => s.service_id));
+    const employeeIds = new Set(availableServices.map(s => s.service_id));
+    return allServices.filter(s => !employeeIds.has(s.id) && !usedIds.has(s.id));
+}
+
+function renderUnassignedPicker() {
+    const card = document.getElementById('unassigned-card');
+    if (!card) return;
+    const unassigned = getUnassignedServices();
+
+    if (!unassigned.length) {
+        card.style.display = 'none';
+        closeUnassignedDropdown();
+        return;
+    }
+    card.style.display = 'block';
+
+    // Remove stale selections (service was just added to appointment)
+    const usedIds = new Set(currentServices.map(s => s.service_id));
+    for (const id of [...selectedUnassignedIds]) {
+        if (usedIds.has(id)) selectedUnassignedIds.delete(id);
+    }
+
+    updateUnassignedTrigger();
+    updateUnassignedFooter();
+    // Re-render list if dropdown is open
+    if (document.getElementById('ua-dropdown')?.classList.contains('open')) {
+        renderUnassignedList();
+    }
+}
+
+function renderUnassignedList() {
+    const unassigned = getUnassignedServices();
+    const q = unassignedFilter.trim().toLowerCase();
+    const filtered = q ? unassigned.filter(s => s.name.toLowerCase().includes(q)) : unassigned;
+    const list = document.getElementById('ua-list');
+    if (!list) return;
+
+    if (!filtered.length) {
+        list.innerHTML = '<div class="ua-no-results">Brak wyników dla "' + esc(unassignedFilter) + '"</div>';
+        return;
+    }
+    list.innerHTML = filtered.map(s => {
+        const checked = selectedUnassignedIds.has(s.id);
+        const price = s.price || 0;
+        const dur = s.duration_minutes || 0;
+        return `
+        <div class="ua-item${checked ? ' checked' : ''}" onclick="toggleUnassignedItem(${s.id}, this)">
+            <input type="checkbox" class="ua-cb" ${checked ? 'checked' : ''}>
+            <div class="ua-item-info">
+                <div class="ua-item-name">${esc(s.name)}</div>
+                <div class="ua-item-meta">${dur} min · ${fmtPrice(price)}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleUnassignedItem(serviceId, el) {
+    if (selectedUnassignedIds.has(serviceId)) {
+        selectedUnassignedIds.delete(serviceId);
+        el.classList.remove('checked');
+        el.querySelector('.ua-cb').checked = false;
+    } else {
+        selectedUnassignedIds.add(serviceId);
+        el.classList.add('checked');
+        el.querySelector('.ua-cb').checked = true;
+    }
+    updateUnassignedFooter();
+    updateUnassignedTrigger();
+}
+
+function updateUnassignedTrigger() {
+    const n = selectedUnassignedIds.size;
+    const el = document.getElementById('ua-trigger-text');
+    if (!el) return;
+    if (n === 0) { el.textContent = 'Szukaj i wybierz usługi...'; return; }
+    el.textContent = n === 1 ? '1 usługa wybrana' : n < 5 ? `${n} usługi wybrane` : `${n} usług wybranych`;
+}
+
+function updateUnassignedFooter() {
+    const n = selectedUnassignedIds.size;
+    const countEl = document.getElementById('ua-count');
+    const btn = document.getElementById('ua-add-btn');
+    if (countEl) countEl.textContent = n === 0 ? '0 wybranych' : `${n} wybranych`;
+    if (btn) {
+        btn.disabled = n === 0;
+        btn.innerHTML = n === 0
+            ? '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Dodaj wybrane'
+            : `<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Dodaj wybrane (${n})`;
+    }
+}
+
+function positionUnassignedDropdown() {
+    const trigger = document.getElementById('ua-trigger');
+    const dropdown = document.getElementById('ua-dropdown');
+    if (!trigger || !dropdown) return;
+    const rect = trigger.getBoundingClientRect();
+    // Prefer opening downward; flip up if not enough room below
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const dropH = Math.min(340, spaceBelow > 220 ? spaceBelow : rect.top - 8);
+    dropdown.style.left  = rect.left + 'px';
+    dropdown.style.width = rect.width + 'px';
+    dropdown.style.maxHeight = dropH + 'px';
+    if (spaceBelow >= 220) {
+        dropdown.style.top    = (rect.bottom + 4) + 'px';
+        dropdown.style.bottom = '';
+    } else {
+        dropdown.style.top    = '';
+        dropdown.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    }
+}
+
+function toggleUnassignedDropdown() {
+    const dropdown = document.getElementById('ua-dropdown');
+    if (!dropdown) return;
+    if (dropdown.classList.contains('open')) {
+        closeUnassignedDropdown();
+    } else {
+        positionUnassignedDropdown();
+        document.getElementById('ua-trigger').classList.add('open');
+        dropdown.classList.add('open');
+        unassignedFilter = '';
+        const search = document.getElementById('ua-search');
+        if (search) { search.value = ''; setTimeout(() => search.focus(), 40); }
+        renderUnassignedList();
+    }
+}
+
+function closeUnassignedDropdown() {
+    document.getElementById('ua-trigger')?.classList.remove('open');
+    document.getElementById('ua-dropdown')?.classList.remove('open');
+}
+
+function filterUnassigned(val) {
+    unassignedFilter = val;
+    renderUnassignedList();
+}
+
+function addSelectedUnassigned() {
+    const toAdd = getUnassignedServices().filter(s => selectedUnassignedIds.has(s.id));
+    if (!toAdd.length) return;
+    toAdd.forEach(s => {
+        currentServices.push({
+            appointment_service_id: null,
+            service_id: s.id,
+            service_name: s.name,
+            price_charged: s.price || 0,
+            duration_minutes: s.duration_minutes || 0,
+            commission_rate: 0,
+            is_addon: s.service_type === 'addon'
+        });
+    });
+    selectedUnassignedIds.clear();
     totalPriceOverride = null;
-    renderServices(); renderServicePicker(); updateSummary(); triggerConflictCheck();
+    closeUnassignedDropdown();
+    renderServices(); renderServicePicker(); renderUnassignedPicker(); updateSummary(); triggerConflictCheck();
+    showToast(`Dodano ${toAdd.length} usługę/i`, 'success', 1500);
+}
+
+function addService(serviceId, serviceName, price, duration, isAddon, commRate) {
+    currentServices.push({
+        appointment_service_id: null,
+        service_id: serviceId,
+        service_name: serviceName,
+        price_charged: price,
+        duration_minutes: duration,
+        commission_rate: parseFloat(commRate) || 0,
+        is_addon: !!isAddon
+    });
+    totalPriceOverride = null;
+    renderServices(); renderServicePicker(); renderUnassignedPicker(); updateSummary(); triggerConflictCheck();
 }
 
 function removeService(index) {
     currentServices.splice(index, 1);
     totalPriceOverride = null;
-    renderServices(); renderServicePicker(); updateSummary(); triggerConflictCheck();
+    renderServices(); renderServicePicker(); renderUnassignedPicker(); updateSummary(); triggerConflictCheck();
 }
 
 // ══════════════════════════════════════════════════════
@@ -920,7 +1214,7 @@ function forceSave() {
 // ══════════════════════════════════════════════════════
 //  RESET
 // ══════════════════════════════════════════════════════
-function resetFields() {
+async function resetFields() {
     if (!originalData) return;
     document.getElementById('status-select').value = originalData.status;
     document.getElementById('client-select').value = originalData.client_id;
@@ -935,8 +1229,14 @@ function resetFields() {
     currentServices = JSON.parse(JSON.stringify(originalServices));
     totalPriceOverride = null;
     forceAllowSave = false;
-    renderServices(); renderServicePicker(); updateSummary(); onStatusChange();
+    selectedUnassignedIds.clear();
+    closeUnassignedDropdown();
+    renderServices(); updateSummary(); onStatusChange();
     showToast('Zresetowano do oryginalnych wartości', 'info');
+    // Re-load employee services for the original employee so the service picker
+    // shows correct available services and commission rates (not stale data
+    // from a previously selected employee).
+    await loadEmployeeServices();
 }
 
 // ══════════════════════════════════════════════════════
@@ -968,9 +1268,11 @@ async function saveChanges() {
         satisfaction_score: currentStar || null,
         force: forceAllowSave,
         services: currentServices.map(s => ({
+            appointment_service_id: s.appointment_service_id || null,
             service_id: s.service_id,
             price_charged: parseFloat(s.price_charged),
             duration_minutes: parseInt(s.duration_minutes),
+            commission_rate: parseFloat(s.commission_rate || 0),
             is_addon: s.is_addon
         }))
     };
@@ -1068,10 +1370,11 @@ function getTabOrder() {
     add('appt-date');
     add('appt-time');
 
-    // Right panel — service rows (price, duration for each)
+    // Right panel — service rows (price, duration, commission for each)
     currentServices.forEach((_, idx) => {
         add(`svc-price-${idx}`);
         add(`svc-dur-${idx}`);
+        add(`svc-comm-${idx}`);
     });
 
     // Right panel — notes
@@ -1137,8 +1440,8 @@ function handleKeyboard(e) {
     // Alt+ArrowLeft/Right — navigate
     if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); navigate('prev'); }
     if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); navigate('next'); }
-    // Escape — close conflict modal
-    if (e.key === 'Escape') closeConflictModal();
+    // Escape — close conflict modal and unassigned dropdown
+    if (e.key === 'Escape') { closeConflictModal(); closeUnassignedDropdown(); }
     // Tab — handled by focus trap
     if (e.key === 'Tab') handleTab(e);
 }
@@ -1150,8 +1453,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Remove sidebar from tab order on this page (focus trap complement)
     document.querySelectorAll('aside a, aside button').forEach(el => el.tabIndex = -1);
 
-    // Load clients + employees (likely cached after first visit)
-    await Promise.all([loadClients(), loadEmployees()]);
+    // Load clients + employees + all services (cached after first visit)
+    await Promise.all([loadClients(), loadEmployees(), loadAllServices()]);
 
     // Load appointment data + adjacent in parallel
     const [apptData, adjData] = await Promise.all([
@@ -1165,6 +1468,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Register event listeners
     document.addEventListener('keydown', handleKeyboard);
     document.addEventListener('focusin', handleFocusIn);
+    // Close unassigned dropdown on outside click
+    document.addEventListener('click', e => {
+        const wrapper = document.getElementById('ua-select-wrapper');
+        const dropdown = document.getElementById('ua-dropdown');
+        if (wrapper && !wrapper.contains(e.target) && dropdown && !dropdown.contains(e.target))
+            closeUnassignedDropdown();
+    });
+    // Close/reposition dropdown on scroll or resize (fixed positioning drifts otherwise)
+    document.querySelector('.pp-col-right')?.addEventListener('scroll', closeUnassignedDropdown);
+    window.addEventListener('resize', closeUnassignedDropdown);
 
     // Push initial history state so back button works
     history.replaceState({apptId: APPT_ID}, '', window.location.pathname);

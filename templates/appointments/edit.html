@@ -562,5 +562,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('appt-date').addEventListener('change', checkConflicts);
     document.getElementById('appt-time').addEventListener('change', checkConflicts);
 });
+
+// Skróty klawiszowe: Ctrl+S = zapisz, Esc = anuluj
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        saveChanges();
+    }
+    if (e.key === 'Escape') {
+        if (document.querySelector('.modal-overlay')) return;
+        const cm = document.getElementById('confirm-modal');
+        if (cm && !cm.classList.contains('hidden')) return;
+        const tag = document.activeElement?.tagName;
+        if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+        window.location.href = '/appointment/{{ appointment_id }}';
+    }
+});
 </script>
 {% endblock %}

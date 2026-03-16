@@ -108,5 +108,21 @@
             errorDiv.style.display = 'block';
         }
     });
+
+// Skróty klawiszowe: Ctrl+S = zapisz, Esc = anuluj
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('create-form').requestSubmit();
+    }
+    if (e.key === 'Escape') {
+        if (document.querySelector('.modal-overlay')) return;
+        const cm = document.getElementById('confirm-modal');
+        if (cm && !cm.classList.contains('hidden')) return;
+        const tag = document.activeElement?.tagName;
+        if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+        window.location.href = '{{ url_for("roles.roles_list") }}';
+    }
+});
 </script>
 {% endblock %}

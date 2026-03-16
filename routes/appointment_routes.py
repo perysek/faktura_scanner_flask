@@ -290,6 +290,9 @@ def update_appointment(appointment_id):
             notes=data.get('notes'),
             services=data['services'],
             force_save=force,
+            satisfaction_score=data.get('satisfaction_score'),
+            cancellation_reason=data.get('cancellation_reason'),
+            payment_method=data.get('payment_method'),
         )
 
         entity_label = f"{data.get('appointment_date')} {data.get('start_time','')}"

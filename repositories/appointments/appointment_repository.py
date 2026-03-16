@@ -384,13 +384,17 @@ class AppointmentRepository:
             return cursor.rowcount > 0
 
     def update(self, appointment_id: int, appt: Appointment) -> bool:
-        """Zaktualizuj wizytę"""
+        """Zaktualizuj wizytę (pełna aktualizacja — w tym satisfaction_score, cancellation_reason)"""
         query = """
             UPDATE appointments
             SET client_id = %s, employee_id = %s, appointment_date = %s,
                 start_time = %s, end_time = %s, status = %s,
                 total_price = %s, total_duration = %s, discount_amount = %s,
-                notes = %s, updated_at = CURRENT_TIMESTAMP
+                notes = %s,
+                satisfaction_score = %s,
+                cancellation_reason = %s,
+                cancelled_at = %s,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """
         with get_db_connection() as conn:
@@ -406,6 +410,9 @@ class AppointmentRepository:
                 appt.total_duration,
                 str(appt.discount_amount) if appt.discount_amount else '0',
                 appt.notes,
+                appt.satisfaction_score,
+                appt.cancellation_reason,
+                appt.cancelled_at,
                 appointment_id
             ))
             conn.commit()
