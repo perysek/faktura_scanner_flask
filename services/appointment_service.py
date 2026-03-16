@@ -408,8 +408,14 @@ class AppointmentBusinessService:
         main_services = [s for s in services if not s['is_addon']]
         addon_services = [s for s in services if s['is_addon']]
 
+        # Dołącz payment_method z income_records (nie istnieje w appointments)
+        appt_dict = dict(appt_row)
+        income = self.income_repo.get_by_appointment(appointment_id)
+        if income:
+            appt_dict['payment_method'] = income['payment_method']
+
         return {
-            'appointment': dict(appt_row),
+            'appointment': appt_dict,
             'main_services': [dict(s) for s in main_services],
             'addon_services': [dict(s) for s in addon_services],
             'totals': totals,
@@ -428,50 +434,44 @@ class AppointmentBusinessService:
         notes: Optional[str],
         services: List[dict],
         force_save: bool = False,
+        satisfaction_score: Optional[int] = None,
+        cancellation_reason: Optional[str] = None,
+        payment_method: Optional[str] = None,
     ) -> dict:
         """
-        Aktualizuj wizytę wraz z usługami.
+        Aktualizuj wizytę wraz z usługami (diff strategy).
 
-        Obsługuje automatyczną aktualizację dochodów przy zmianie statusu:
-        - Zmiana NA 'completed' → tworzy rekord przychodu (wymaga daty w przeszłości)
-        - Zmiana Z 'completed' → usuwa rekord przychodu
+        TASK#1: Strategia diff — UPDATE istniejące, INSERT nowe, DELETE usunięte.
+        TASK#2: Obsługa commission_rate z payloadu lub auto-resolve z employee_services.
+        TASK#4: Aktualizacja income_record gdy status pozostaje 'completed' a ceny się zmieniły.
+        TASK#5: Aktualizacja tabel powiązanych — income_records, clients.last_visit_date.
 
         Args:
-            appointment_id: ID wizyty do aktualizacji
-            client_id: ID klienta
-            employee_id: ID pracownika
-            appointment_date: Data wizyty
-            start_time: Godzina rozpoczęcia
-            end_time: Godzina zakończenia
-            status: Status wizyty
-            notes: Uwagi
-            services: Lista usług [{service_id, price_charged, duration_minutes, is_addon}, ...]
-
-        Returns:
-            dict z potwierdzeniem i nowym totalem
+            services: [{appointment_service_id?, service_id, price_charged,
+                        duration_minutes, commission_rate?, is_addon}]
+            payment_method: Metoda płatności — aktualizuje income_records.payment_method
         """
-        from database.models import Appointment
-        from decimal import Decimal
-
         # 1. Sprawdź czy wizyta istnieje i pobierz stary status
         appt_row = self.appt_repo.get_by_id(appointment_id)
         if not appt_row:
             raise AppointmentError("Wizyta nie istnieje")
 
         old_status = appt_row['status']
+        old_client_id = appt_row['client_id']
+        old_employee_id = appt_row['employee_id']
+        old_appointment_date = appt_row['appointment_date']
 
         # 2. Walidacja: zmiana statusu na 'completed' wymaga daty w przeszłości
         if status == 'completed' and old_status != 'completed':
             appointment_datetime = datetime.combine(appointment_date, start_time)
-            now = datetime.now()
-            if appointment_datetime > now:
+            if appointment_datetime > datetime.now():
                 raise AppointmentError(
                     "Nie można zmienić statusu na 'zakończona' dla wizyty w przyszłości. "
                     f"Data wizyty: {appointment_datetime.strftime('%Y-%m-%d %H:%M')}, "
-                    f"obecna data: {now.strftime('%Y-%m-%d %H:%M')}"
+                    f"obecna data: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
                 )
 
-        # 2b. Sprawdź konflikty pracownika (pomijane gdy force_save=True)
+        # 2b. Sprawdź konflikty (pomijane gdy force_save=True)
         if not force_save:
             employee_conflicts = self.appt_repo.check_conflicts(
                 employee_id, appointment_date, start_time, end_time,
@@ -482,7 +482,6 @@ class AppointmentBusinessService:
                     f"Konflikt czasowy — pracownik ma {len(employee_conflicts)} kolidującą wizytę/y"
                 )
 
-            # 2c. Sprawdź konflikty klienta
             client_conflicts = self.appt_repo.check_client_conflicts(
                 client_id, appointment_date, start_time, end_time,
                 exclude_appointment_id=appointment_id
@@ -498,11 +497,22 @@ class AppointmentBusinessService:
                     f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
                 )
 
-        # 3. Policz sumę cen i czasu trwania
+        # 3. Policz sumy
         total_price = sum(Decimal(str(s['price_charged'])) for s in services)
         total_duration = sum(s['duration_minutes'] for s in services)
 
-        # 4. Zaktualizuj obiekt Appointment
+        # 4. Ustal cancelled_at: ustaw gdy zmiana na cancelled/no_show, wyczyść gdy zmiana Z
+        is_cancelling = status in ('cancelled', 'no_show') and old_status not in ('cancelled', 'no_show')
+        is_uncancelling = status not in ('cancelled', 'no_show') and old_status in ('cancelled', 'no_show')
+
+        if is_cancelling:
+            cancelled_at = datetime.now()
+        elif is_uncancelling:
+            cancelled_at = None
+        else:
+            cancelled_at = appt_row.get('cancelled_at')
+
+        # 5. Zaktualizuj appointment (wszystkie pola — superadmin bypass)
         appt = Appointment(
             id=appointment_id,
             client_id=client_id,
@@ -513,38 +523,67 @@ class AppointmentBusinessService:
             status=status,
             total_price=total_price,
             total_duration=total_duration,
-            notes=notes
+            notes=notes,
+            satisfaction_score=satisfaction_score,
+            cancellation_reason=cancellation_reason,
+            cancelled_at=cancelled_at,
         )
-
-        # 5. Zaktualizuj w bazie
         self.appt_repo.update(appointment_id, appt)
 
-        # 6. Usuń stare usługi i dodaj nowe
-        self.appt_svc_repo.delete_all_for_appointment(appointment_id)
+        # 6. DIFF strategy — aktualizuj usługi bez delete-all
+        pricing_svc = PricingService()
+
+        existing_rows = self.appt_svc_repo.get_all_for_appointment(appointment_id)
+        existing_by_id = {row['id']: row for row in existing_rows}
+        incoming_existing_ids = set()
 
         for svc in services:
-            from database.models import AppointmentService as AppointmentServiceModel
-            appt_svc = AppointmentServiceModel(
-                appointment_id=appointment_id,
-                service_id=int(svc['service_id']),
-                price_charged=Decimal(str(svc['price_charged'])),
-                duration_minutes=int(svc['duration_minutes']),
-                commission_rate=Decimal('0'),  # Można dodać logikę prowizji
-                commission_amount=Decimal('0'),
-                is_addon=bool(svc.get('is_addon', False))
-            )
-            self.appt_svc_repo.add_service(appt_svc)
+            price_charged = Decimal(str(svc['price_charged']))
+            appt_svc_id = svc.get('appointment_service_id')
 
-        # 7. Obsługa dochodów przy zmianie statusu
+            # Commission rate: from payload if explicitly provided, else resolve from employee_services
+            if svc.get('commission_rate') is not None:
+                commission_rate = Decimal(str(svc['commission_rate']))
+            else:
+                commission_rate = pricing_svc.resolve_commission(employee_id, int(svc['service_id'])) or Decimal('0')
+
+            commission_amount = (price_charged * commission_rate / Decimal('100')).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+            is_addon = bool(svc.get('is_addon', False))
+
+            if appt_svc_id and appt_svc_id in existing_by_id:
+                # UPDATE existing record — preserves id, added_at
+                self.appt_svc_repo.update_service(
+                    appt_svc_id, price_charged, int(svc['duration_minutes']),
+                    commission_rate, commission_amount, is_addon
+                )
+                incoming_existing_ids.add(appt_svc_id)
+            else:
+                # INSERT new record
+                new_svc = AppointmentService(
+                    appointment_id=appointment_id,
+                    service_id=int(svc['service_id']),
+                    price_charged=price_charged,
+                    duration_minutes=int(svc['duration_minutes']),
+                    commission_rate=commission_rate,
+                    commission_amount=commission_amount,
+                    is_addon=is_addon,
+                )
+                self.appt_svc_repo.add_service(new_svc)
+
+        # DELETE records removed by the user
+        for existing_id in existing_by_id:
+            if existing_id not in incoming_existing_ids:
+                self.appt_svc_repo.delete(existing_id)
+
+        # 7. TASK#4/5 — obsługa income_record i tabel powiązanych
         existing_income = self.income_repo.get_by_appointment(appointment_id)
 
         if status == 'completed' and old_status != 'completed':
-            # Zmiana NA 'completed' → utwórz rekord przychodu jeśli nie istnieje
+            # Zmiana NA 'completed' → utwórz income_record
             if not existing_income:
-                # Oblicz sumy dla rekordu przychodu
                 totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
-                commission_total = totals.get('total_commission', Decimal('0'))
-
                 income = IncomeRecord(
                     appointment_id=appointment_id,
                     client_id=client_id,
@@ -552,16 +591,35 @@ class AppointmentBusinessService:
                     total_amount=total_price,
                     discount_amount=Decimal('0'),
                     net_amount=total_price,
-                    commission_total=commission_total,
-                    payment_method=None,  # Można dodać do parametrów jeśli potrzebne
-                    payment_date=date.today()
+                    commission_total=Decimal(str(totals.get('total_commission', 0))),
+                    payment_method=payment_method,
+                    payment_date=appointment_date,
                 )
                 self.income_repo.create(income)
 
+            # Aktualizuj last_visit_date klienta
+            self.client_repo.update_last_visit(client_id, appointment_date)
+
         elif status != 'completed' and old_status == 'completed':
-            # Zmiana Z 'completed' na inny → usuń rekord przychodu
+            # Zmiana Z 'completed' → usuń income_record
             if existing_income:
                 self.income_repo.delete_by_appointment(appointment_id)
+
+        elif status == 'completed' and old_status == 'completed' and existing_income:
+            # TASK#4: status pozostaje 'completed' — aktualizuj income_record gdy zmieniły się ceny
+            totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
+            self.income_repo.update(
+                appointment_id=appointment_id,
+                total_amount=total_price,
+                net_amount=total_price,
+                commission_total=Decimal(str(totals.get('total_commission', 0))),
+                client_id=client_id if client_id != old_client_id else None,
+                employee_id=employee_id if employee_id != old_employee_id else None,
+                payment_method=payment_method,
+            )
+            # Aktualizuj last_visit_date gdy zmieniono datę wizyty
+            if appointment_date != old_appointment_date:
+                self.client_repo.update_last_visit(client_id, appointment_date)
 
         return {
             'appointment_id': appointment_id,

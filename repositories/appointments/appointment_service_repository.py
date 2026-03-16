@@ -162,6 +162,29 @@ class AppointmentServiceRepository:
             cursor.execute(query, (appointment_id, service_id))
             return cursor.fetchone()['cnt'] > 0
 
+    def update_service(self, appt_service_id: int, price_charged: Decimal,
+                       duration_minutes: int, commission_rate: Decimal,
+                       commission_amount: Decimal, is_addon: bool) -> bool:
+        """Zaktualizuj istniejącą usługę wizyty (diff strategy — bez zmiany added_at)"""
+        query = """
+            UPDATE appointment_services
+            SET price_charged = %s, duration_minutes = %s,
+                commission_rate = %s, commission_amount = %s, is_addon = %s
+            WHERE id = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (
+                str(price_charged),
+                duration_minutes,
+                str(commission_rate),
+                str(commission_amount),
+                bool(is_addon),
+                appt_service_id,
+            ))
+            conn.commit()
+            return cursor.rowcount > 0
+
     def delete(self, appt_service_id: int) -> bool:
         """Usuń usługę z wizyty"""
         query = "DELETE FROM appointment_services WHERE id = %s"

@@ -12,7 +12,7 @@ from repositories.db_utils import parse_dt, parse_date
 class InvoiceRepository(BaseRepository):
 	"""Repository dla operacji na fakturach"""
 
-	# _soft_delete = True  # Enable after running migration e9f0a1b2c3d4
+	_soft_delete = True
 
 	def __init__(self):
 		super().__init__("invoices")

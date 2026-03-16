@@ -1077,6 +1077,16 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAvailableServices();
     loadAssignedServices();
 });
+
+// Skrót klawiszowy: Esc = powrót do listy pracowników
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.querySelector('.modal-overlay')) return;
+        const cm = document.getElementById('confirm-modal');
+        if (cm && !cm.classList.contains('hidden')) return;
+        window.location.href = '{{ url_for("main.employees_list") }}';
+    }
+});
 </script>
 
 <!-- Modal System -->

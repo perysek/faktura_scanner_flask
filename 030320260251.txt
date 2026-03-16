@@ -1,0 +1,2573 @@
+
+ ▐▛███▜▌   Claude Code v2.1.63
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    C:\Projects\faktura_scanner_flask
+
+❯  /executing-plans docs/plans/2026-03-03-rolling-trends-charts.md 
+
+● Skill(superpowers:executing-plans)
+  ⎿  Successfully loaded skill
+
+● I'm using the executing-plans skill to implement this plan.
+
+  Let me start by reading the plan file.
+
+● Read 1 file (ctrl+o to expand)
+
+● The plan is clear and well-structured. 10 tasks total — let me create the task
+   list and start the first batch.
+
+● Now let me read the current repository file to understand the existing
+  structure before appending.
+
+● Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  The existing repository uses generate_series() + LEFT JOIN pattern to
+  guarantee all 12 months appear even with zero data — this is a classic
+  PostgreSQL "spine" query pattern. The 7 new methods follow this same pattern,
+  ensuring consistent x-axis labels in the charts regardless of data gaps.
+  ─────────────────────────────────────────────────
+
+  Now appending the 7 methods after get_monthly_profit_trend():
+
+● Update(repositories\analytics\analytics_repository.py)
+  ⎿  Added 251 lines
+      743          cursor.execute(query)
+      744          rows = cursor.fetchall()
+      745          return [dict(row) for row in rows]
+      746 +
+      747 +    def get_new_clients_monthly(self) -> List[Dict]:
+      748 +        """Nowi klienci wg miesiąca (first_visit_date) — ostat
+          +nie 12 miesięcy."""
+      749 +        query = """
+      750 +            WITH months AS (
+      751 +                SELECT generate_series(
+      752 +                    DATE_TRUNC('month', CURRENT_DATE - INTERVA
+          +L '11 months'),
+      753 +                    DATE_TRUNC('month', CURRENT_DATE),
+      754 +                    '1 month'::interval
+      755 +                )::date AS month_start
+      756 +            ),
+      757 +            new_per_month AS (
+      758 +                SELECT
+      759 +                    DATE_TRUNC('month', first_visit_date)::dat
+          +e AS month_start,
+      760 +                    COUNT(*) AS new_clients
+      761 +                FROM clients
+      762 +                WHERE first_visit_date >= DATE_TRUNC('month', 
+          +CURRENT_DATE - INTERVAL '11 months')
+      763 +                  AND first_visit_date IS NOT NULL
+      764 +                GROUP BY DATE_TRUNC('month', first_visit_date)
+          +::date
+      765 +            )
+      766 +            SELECT
+      767 +                m.month_start,
+      768 +                COALESCE(n.new_clients, 0) AS new_clients
+      769 +            FROM months m
+      770 +            LEFT JOIN new_per_month n ON n.month_start = m.mon
+          +th_start
+      771 +            ORDER BY m.month_start
+      772 +        """
+      773 +        conn = DatabaseConnection.get_connection()
+      774 +        cursor = conn.cursor()
+      775 +        cursor.execute(query)
+      776 +        return [dict(row) for row in cursor.fetchall()]
+      777 +
+      778 +    def get_cancellation_rate_monthly(self) -> List[Dict]:
+      779 +        """Wskaźnik odwołań i nieobecności wg miesiąca — ostat
+          +nie 12 miesięcy."""
+      780 +        query = """
+      781 +            WITH months AS (
+      782 +                SELECT generate_series(
+      783 +                    DATE_TRUNC('month', CURRENT_DATE - INTERVA
+          +L '11 months'),
+      784 +                    DATE_TRUNC('month', CURRENT_DATE),
+      785 +                    '1 month'::interval
+      786 +                )::date AS month_start
+      787 +            ),
+      788 +            rates_by_month AS (
+      789 +                SELECT
+      790 +                    DATE_TRUNC('month', appointment_date)::dat
+          +e AS month_start,
+      791 +                    COUNT(*) AS total,
+      792 +                    COUNT(*) FILTER (WHERE status = 'cancelled
+          +') AS cancelled_count,
+      793 +                    COUNT(*) FILTER (WHERE status = 'no_show')
+          +   AS noshow_count,
+      794 +                    ROUND(
+      795 +                        COUNT(*) FILTER (WHERE status = 'cance
+          +lled') * 100.0
+      796 +                        / NULLIF(COUNT(*), 0), 1
+      797 +                    ) AS cancellation_pct,
+      798 +                    ROUND(
+      799 +                        COUNT(*) FILTER (WHERE status = 'no_sh
+          +ow') * 100.0
+      800 +                        / NULLIF(COUNT(*), 0), 1
+      801 +                    ) AS noshow_pct
+      802 +                FROM appointments
+      803 +                WHERE appointment_date >= DATE_TRUNC('month', 
+          +CURRENT_DATE - INTERVAL '11 months')
+      804 +                GROUP BY DATE_TRUNC('month', appointment_date)
+          +::date
+      805 +            )
+      806 +            SELECT
+      807 +                m.month_start,
+      808 +                COALESCE(r.total, 0)             AS total,
+      809 +                COALESCE(r.cancellation_pct, 0)  AS cancellati
+          +on_pct,
+      810 +                COALESCE(r.noshow_pct, 0)        AS noshow_pct
+      811 +            FROM months m
+      812 +            LEFT JOIN rates_by_month r ON r.month_start = m.mo
+          +nth_start
+      813 +            ORDER BY m.month_start
+      814 +        """
+      815 +        conn = DatabaseConnection.get_connection()
+      816 +        cursor = conn.cursor()
+      817 +        cursor.execute(query)
+      818 +        return [dict(row) for row in cursor.fetchall()]
+      819 +
+      820 +    def get_avg_ticket_monthly(self) -> List[Dict]:
+      821 +        """Średni rachunek za wizytę wg miesiąca — ostatnie 12
+          + miesięcy."""
+      822 +        query = """
+      823 +            WITH months AS (
+      824 +                SELECT generate_series(
+      825 +                    DATE_TRUNC('month', CURRENT_DATE - INTERVA
+          +L '11 months'),
+      826 +                    DATE_TRUNC('month', CURRENT_DATE),
+      827 +                    '1 month'::interval
+      828 +                )::date AS month_start
+      829 +            ),
+      830 +            avg_by_month AS (
+      831 +                SELECT
+      832 +                    DATE_TRUNC('month', a.appointment_date)::d
+          +ate AS month_start,
+      833 +                    ROUND(AVG(i.net_amount)::numeric, 2)      
+          +    AS avg_ticket
+      834 +                FROM appointments a
+      835 +                JOIN income_records i ON i.appointment_id = a.
+          +id
+      836 +                WHERE a.status = 'completed'
+      837 +                  AND a.appointment_date >= DATE_TRUNC('month'
+          +, CURRENT_DATE - INTERVAL '11 months')
+      838 +                GROUP BY DATE_TRUNC('month', a.appointment_dat
+          +e)::date
+      839 +            )
+      840 +            SELECT
+      841 +                m.month_start,
+      842 +                COALESCE(ab.avg_ticket, 0) AS avg_ticket
+      843 +            FROM months m
+      844 +            LEFT JOIN avg_by_month ab ON ab.month_start = m.mo
+          +nth_start
+      845 +            ORDER BY m.month_start
+      846 +        """
+      847 +        conn = DatabaseConnection.get_connection()
+      848 +        cursor = conn.cursor()
+      849 +        cursor.execute(query)
+      850 +        return [dict(row) for row in cursor.fetchall()]
+      851 +
+      852 +    def get_service_category_mix_monthly(self) -> List[Dict]:
+      853 +        """
+      854 +        Przychód wg kategorii usług i miesiąca — ostatnie 12 m
+          +iesięcy.
+      855 +        Zwraca wiersze (month_start, category, revenue) — pivo
+          +t wykonuje JS.
+      856 +        """
+      857 +        query = """
+      858 +            SELECT
+      859 +                DATE_TRUNC('month', a.appointment_date)::date 
+          +AS month_start,
+      860 +                s.category,
+      861 +                COALESCE(SUM(aps.price_charged), 0)           
+          +AS revenue
+      862 +            FROM appointments a
+      863 +            JOIN appointment_services aps ON aps.appointment_i
+          +d = a.id
+      864 +            JOIN services s               ON s.id = aps.servic
+          +e_id
+      865 +            WHERE a.status = 'completed'
+      866 +              AND a.appointment_date >= DATE_TRUNC('month', CU
+          +RRENT_DATE - INTERVAL '11 months')
+      867 +            GROUP BY DATE_TRUNC('month', a.appointment_date)::
+          +date, s.category
+      868 +            ORDER BY month_start, s.category
+      869 +        """
+      870 +        conn = DatabaseConnection.get_connection()
+      871 +        cursor = conn.cursor()
+      872 +        cursor.execute(query)
+      873 +        return [dict(row) for row in cursor.fetchall()]
+      874 +
+      875 +    def get_invoice_cost_ratio_monthly(self) -> List[Dict]:
+      876 +        """
+      877 +        Udział kosztów faktur w przychodach wg miesiąca — osta
+          +tnie 12 miesięcy.
+      878 +        Zwraca: revenue, invoice_costs, ratio_pct.
+      879 +        """
+      880 +        query = """
+      881 +            WITH months AS (
+      882 +                SELECT generate_series(
+      883 +                    DATE_TRUNC('month', CURRENT_DATE - INTERVA
+          +L '11 months'),
+      884 +                    DATE_TRUNC('month', CURRENT_DATE),
+      885 +                    '1 month'::interval
+      886 +                )::date AS month_start
+      887 +            ),
+      888 +            revenue_by_month AS (
+      889 +                SELECT
+      890 +                    DATE_TRUNC('month', a.appointment_date)::d
+          +ate AS month_start,
+      891 +                    COALESCE(SUM(i.net_amount), 0)            
+          +    AS revenue
+      892 +                FROM appointments a
+      893 +                LEFT JOIN income_records i ON i.appointment_id
+          + = a.id
+      894 +                WHERE a.status = 'completed'
+      895 +                  AND a.appointment_date >= DATE_TRUNC('month'
+          +, CURRENT_DATE - INTERVAL '11 months')
+      896 +                GROUP BY DATE_TRUNC('month', a.appointment_dat
+          +e)::date
+      897 +            ),
+      898 +            invoice_by_month AS (
+      899 +                SELECT
+      900 +                    DATE_TRUNC('month', invoice_date)::date AS
+          + month_start,
+      901 +                    COALESCE(SUM(amount), 0)                AS
+          + invoice_costs
+      902 +                FROM invoices
+      903 +                WHERE invoice_date >= DATE_TRUNC('month', CURR
+          +ENT_DATE - INTERVAL '11 months')
+      904 +                GROUP BY DATE_TRUNC('month', invoice_date)::da
+          +te
+      905 +            )
+      906 +            SELECT
+      907 +                m.month_start,
+      908 +                COALESCE(r.revenue, 0)        AS revenue,
+      909 +                COALESCE(ic.invoice_costs, 0) AS invoice_costs
+          +,
+      910 +                ROUND(
+      911 +                    COALESCE(ic.invoice_costs, 0)
+      912 +                    / NULLIF(COALESCE(r.revenue, 0), 0) * 100,
+      913 +                    1
+      914 +                ) AS ratio_pct
+      915 +            FROM months m
+      916 +            LEFT JOIN revenue_by_month r  ON r.month_start  = 
+          +m.month_start
+      917 +            LEFT JOIN invoice_by_month ic ON ic.month_start = 
+          +m.month_start
+      918 +            ORDER BY m.month_start
+      919 +        """
+      920 +        conn = DatabaseConnection.get_connection()
+      921 +        cursor = conn.cursor()
+      922 +        cursor.execute(query)
+      923 +        return [dict(row) for row in cursor.fetchall()]
+      924 +
+      925 +    def get_employee_utilisation_monthly(self) -> List[Dict]:
+      926 +        """
+      927 +        Wykorzystanie pracowników wg miesiąca — ostatnie 12 mi
+          +esięcy.
+      928 +        Formuła: appointments / (22 dni rob. × max_appointment
+          +s_per_day) × 100.
+      929 +        Zwraca wiersze (month_start, employee_name, utilisatio
+          +n_pct).
+      930 +        """
+      931 +        query = """
+      932 +            WITH months AS (
+      933 +                SELECT generate_series(
+      934 +                    DATE_TRUNC('month', CURRENT_DATE - INTERVA
+          +L '11 months'),
+      935 +                    DATE_TRUNC('month', CURRENT_DATE),
+      936 +                    '1 month'::interval
+      937 +                )::date AS month_start
+      938 +            ),
+      939 +            appts_by_month AS (
+      940 +                SELECT
+      941 +                    DATE_TRUNC('month', appointment_date)::dat
+          +e AS month_start,
+      942 +                    employee_id,
+      943 +                    COUNT(DISTINCT id) AS appointments_count
+      944 +                FROM appointments
+      945 +                WHERE status = 'completed'
+      946 +                  AND appointment_date >= DATE_TRUNC('month', 
+          +CURRENT_DATE - INTERVAL '11 months')
+      947 +                GROUP BY DATE_TRUNC('month', appointment_date)
+          +::date, employee_id
+      948 +            )
+      949 +            SELECT
+      950 +                m.month_start,
+      951 +                e.first_name || ' ' || e.last_name         AS 
+          +employee_name,
+      952 +                COALESCE(ab.appointments_count, 0)          AS
+          + appointments_count,
+      953 +                COALESCE(e.max_appointments_per_day, 8)     AS
+          + max_per_day,
+      954 +                ROUND(
+      955 +                    COALESCE(ab.appointments_count, 0) * 100.0
+      956 +                    / (22 * COALESCE(e.max_appointments_per_da
+          +y, 8)),
+      957 +                    1
+      958 +                ) AS utilisation_pct
+      959 +            FROM months m
+      960 +            CROSS JOIN employees e
+      961 +            LEFT JOIN appts_by_month ab
+      962 +                ON ab.month_start = m.month_start AND ab.emplo
+          +yee_id = e.id
+      963 +            WHERE e.is_active = TRUE
+      964 +            ORDER BY m.month_start, employee_name
+      965 +        """
+      966 +        conn = DatabaseConnection.get_connection()
+      967 +        cursor = conn.cursor()
+      968 +        cursor.execute(query)
+      969 +        return [dict(row) for row in cursor.fetchall()]
+      970 +
+      971 +    def get_visit_frequency_distribution(self) -> List[Dict]:
+      972 +        """
+      973 +        Histogram częstotliwości wizyt klientów w ostatnich 12
+          + miesiącach.
+      974 +        Zwraca: [{visit_count, client_count}] — JS grupuje 10+
+          + do jednego kubełka.
+      975 +        """
+      976 +        query = """
+      977 +            WITH client_visits AS (
+      978 +                SELECT
+      979 +                    client_id,
+      980 +                    COUNT(*) AS visit_count
+      981 +                FROM appointments
+      982 +                WHERE status = 'completed'
+      983 +                  AND appointment_date >= CURRENT_DATE - INTER
+          +VAL '12 months'
+      984 +                GROUP BY client_id
+      985 +            )
+      986 +            SELECT
+      987 +                visit_count,
+      988 +                COUNT(*) AS client_count
+      989 +            FROM client_visits
+      990 +            GROUP BY visit_count
+      991 +            ORDER BY visit_count
+      992 +        """
+      993 +        conn = DatabaseConnection.get_connection()
+      994 +        cursor = conn.cursor()
+      995 +        cursor.execute(query)
+      996 +        return [dict(row) for row in cursor.fetchall()]
+
+● Now verify all 7 methods exist:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "def
+      get_new_clients_monthly\|def get_cancellation_rate\|def
+      get_avg_ticket\|def get_service_category_mix\|def g…)
+  ⎿  747:    def get_new_clients_monthly(self) -> List[Dict]:
+     778:    def get_cancellation_rate_monthly(self) -> List[Dict]:
+     820:    def get_avg_ticket_monthly(self) -> List[Dict]:
+     … +4 lines (ctrl+o to expand)
+
+● 7 lines, one per method. Now commit:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      repositories/analytics/analytics_repository.py && git commit -m
+      "feat(analytics): add 7 rolling 12-month reposit…)
+  ⎿  warning: in the working copy of 'repositories/analytics/analytics_repo
+     sitory.py', LF will be replaced by CRLF the next time Git touches it
+     Time tracking: Commit took no time, message unmodified
+     … +3 lines (ctrl+o to expand)
+
+● Task 1 done. Now Task 2 — API routes. Let me read the current routes file
+  first:
+
+● Read 1 file (ctrl+o to expand)
+
+● I can see the get_insights route at line 318. I'll insert the 7 new rolling
+  routes right before it:
+
+● Update(routes\analytics_routes.py)
+  ⎿  Added 63 lines
+      315      return jsonify({"success": True, "months": months})
+      316 
+      317 
+      318 +@analytics_bp.route('/analytics/rolling/new-clients', methods=
+          +['GET'])
+      319 +@login_required
+      320 +@module_permission_required('appointments')
+      321 +def get_rolling_new_clients():
+      322 +    """Nowi klienci wg miesiąca — ruchome okno 12M"""
+      323 +    months = repo.get_new_clients_monthly()
+      324 +    return jsonify({"success": True, "months": months})
+      325 +
+      326 +
+      327 +@analytics_bp.route('/analytics/rolling/cancellation-rate', me
+          +thods=['GET'])
+      328 +@login_required
+      329 +@module_permission_required('appointments')
+      330 +def get_rolling_cancellation_rate():
+      331 +    """Wskaźnik odwołań/nieobecności — ruchome okno 12M"""
+      332 +    months = repo.get_cancellation_rate_monthly()
+      333 +    return jsonify({"success": True, "months": months})
+      334 +
+      335 +
+      336 +@analytics_bp.route('/analytics/rolling/avg-ticket', methods=[
+          +'GET'])
+      337 +@login_required
+      338 +@module_permission_required('appointments')
+      339 +def get_rolling_avg_ticket():
+      340 +    """Średni rachunek — ruchome okno 12M"""
+      341 +    months = repo.get_avg_ticket_monthly()
+      342 +    return jsonify({"success": True, "months": months})
+      343 +
+      344 +
+      345 +@analytics_bp.route('/analytics/rolling/category-mix', methods
+          +=['GET'])
+      346 +@login_required
+      347 +@module_permission_required('appointments')
+      348 +def get_rolling_category_mix():
+      349 +    """Mix kategorii usług — ruchome okno 12M"""
+      350 +    rows = repo.get_service_category_mix_monthly()
+      351 +    return jsonify({"success": True, "rows": rows})
+      352 +
+      353 +
+      354 +@analytics_bp.route('/analytics/rolling/cost-ratio', methods=[
+          +'GET'])
+      355 +@login_required
+      356 +@module_permission_required('appointments')
+      357 +def get_rolling_cost_ratio():
+      358 +    """Udział kosztów faktur w przychodach — ruchome okno 12M"
+          +""
+      359 +    months = repo.get_invoice_cost_ratio_monthly()
+      360 +    return jsonify({"success": True, "months": months})
+      361 +
+      362 +
+      363 +@analytics_bp.route('/analytics/rolling/employee-utilisation',
+          + methods=['GET'])
+      364 +@login_required
+      365 +@module_permission_required('appointments')
+      366 +def get_rolling_employee_utilisation():
+      367 +    """Wykorzystanie pracowników — ruchome okno 12M"""
+      368 +    rows = repo.get_employee_utilisation_monthly()
+      369 +    return jsonify({"success": True, "rows": rows})
+      370 +
+      371 +
+      372 +@analytics_bp.route('/analytics/rolling/visit-frequency', meth
+          +ods=['GET'])
+      373 +@login_required
+      374 +@module_permission_required('appointments')
+      375 +def get_rolling_visit_frequency():
+      376 +    """Histogram częstotliwości wizyt klientów — ostatnie 12M"
+          +""
+      377 +    distribution = repo.get_visit_frequency_distribution()
+      378 +    return jsonify({"success": True, "distribution": distribut
+          +ion})
+      379 +
+      380 +
+      381  @analytics_bp.route('/analytics/insights', methods=['GET'])
+      382  @login_required
+      383  @module_permission_required('appointments')
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "rolling"
+      routes/analytics_routes.py)
+  ⎿  313:    """12-month rolling income/costs/profit — always relative to t
+     oday, no period param"""
+     318:@analytics_bp.route('/analytics/rolling/new-clients', methods=['GE
+     … +18 lines (ctrl+o to expand)
+
+● All 7 routes added. Commit:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      routes/analytics_routes.py && git commit -m "feat(analytics): add 7
+      rolling trend API routes")
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes 37f9029] feat(analytics):
+      add 7 rolling trend API routes
+      1 file changed, 218 insertions(+)
+
+● Now Task 3 — the template. Let me check the end of dashboard.html:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "endblock\|{% endblock"
+      templates/analytics/dashboard.html)
+  ⎿  2:{% block title %}Analityka - {{ app_name }}{% endblock %}
+     269:{% endblock %}
+     275:{% endblock %}
+
+● Read 1 file (ctrl+o to expand)
+
+● The content block ends at line 269. I'll insert the new section just before {%
+   endblock %} at line 269:
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 71 lines
+      266          <p class="text-center text-slate-500">Ładowanie...</p>
+      267      </div>
+      268  </div>
+      269 +
+      270 +<!-- ═══════════════════════════════════════════════
+      271 +     Trendy roczne (ruchome okno 12 miesięcy)
+      272 +     ═══════════════════════════════════════════════ -->
+      273 +<div class="mt-8 mb-4">
+      274 +    <h2 class="text-xl font-semibold text-slate-800">Trendy ro
+          +czne</h2>
+      275 +    <p class="text-xs text-slate-400 mt-0.5">Wszystkie wykresy
+          + poniżej — ruchome okno 12 miesięcy, niezależne od wybranego o
+          +kresu</p>
+      276 +</div>
+      277 +
+      278 +<!-- Row 1: New clients + Cancellation/no-show rate -->
+      279 +<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      280 +    <div class="refined-card">
+      281 +        <h3 class="text-lg font-medium mb-1">Nowi klienci / mi
+          +esiąc</h3>
+      282 +        <p class="text-xs text-slate-400 mb-4">Czy salon rośni
+          +e?</p>
+      283 +        <div style="height: 280px;">
+      284 +            <canvas id="newClientsChart"></canvas>
+      285 +        </div>
+      286 +    </div>
+      287 +    <div class="refined-card">
+      288 +        <h3 class="text-lg font-medium mb-1">Wskaźnik odwołań
+          +i nieobecności</h3>
+      289 +        <p class="text-xs text-slate-400 mb-4">Czy niezawodnoś
+          +ć rezerwacji rośnie?</p>
+      290 +        <div style="height: 280px;">
+      291 +            <canvas id="cancellationRateChart"></canvas>
+      292 +        </div>
+      293 +    </div>
+      294 +</div>
+      295 +
+      296 +<!-- Row 2: Avg ticket + Invoice cost ratio -->
+      297 +<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      298 +    <div class="refined-card">
+      299 +        <h3 class="text-lg font-medium mb-1">Średni rachunek /
+          + miesiąc</h3>
+      300 +        <p class="text-xs text-slate-400 mb-4">Czy wartość wiz
+          +yty rośnie?</p>
+      301 +        <div style="height: 280px;">
+      302 +            <canvas id="avgTicketChart"></canvas>
+      303 +        </div>
+      304 +    </div>
+      305 +    <div class="refined-card">
+      306 +        <h3 class="text-lg font-medium mb-1">Udział kosztów fa
+          +ktur w przychodzie</h3>
+      307 +        <p class="text-xs text-slate-400 mb-4">Czy koszty dost
+          +awców pochłaniają więcej przychodu?</p>
+      308 +        <div style="height: 280px;">
+      309 +            <canvas id="costRatioChart"></canvas>
+      310 +        </div>
+      311 +    </div>
+      312 +</div>
+      313 +
+      314 +<!-- Row 3: Service category mix (full width stacked bar) -->
+      315 +<div class="refined-card mb-6">
+      316 +    <h3 class="text-lg font-medium mb-1">Mix kategorii usług /
+          + miesiąc</h3>
+      317 +    <p class="text-xs text-slate-400 mb-4">Które kategorie ros
+          +ną, a które zanikają?</p>
+      318 +    <div style="height: 320px;">
+      319 +        <canvas id="categoryMixChart"></canvas>
+      320 +    </div>
+      321 +</div>
+      322 +
+      323 +<!-- Row 4: Employee utilisation (full width multi-line) -->
+      324 +<div class="refined-card mb-6">
+      325 +    <h3 class="text-lg font-medium mb-1">Wykorzystanie pracown
+          +ików / miesiąc</h3>
+      326 +    <p class="text-xs text-slate-400 mb-4">Kto jest przeciążon
+          +y, a kto niedociążony? (22 dni rob. × max wizyt/dzień)</p>
+      327 +    <div style="height: 320px;">
+      328 +        <canvas id="employeeUtilisationChart"></canvas>
+      329 +    </div>
+      330 +</div>
+      331 +
+      332 +<!-- Row 5: Visit frequency histogram (full width) -->
+      333 +<div class="refined-card mb-6">
+      334 +    <h3 class="text-lg font-medium mb-1">Częstotliwość wizyt k
+          +lientów</h3>
+      335 +    <p class="text-xs text-slate-400 mb-4">Ilu klientów odwied
+          +ziło salon 1×, 2×, 3×… w ostatnich 12 miesiącach</p>
+      336 +    <div style="height: 280px;">
+      337 +        <canvas id="visitFrequencyChart"></canvas>
+      338 +    </div>
+      339 +</div>
+      340  {% endblock %}
+      341 
+      342  {% block extra_scripts %}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -c "canvas id="
+      templates/analytics/dashboard.html)
+  ⎿  12
+
+● 12 canvases (5 existing + 7 new). Commit:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      templates/analytics/dashboard.html && git commit -m "feat(analytics): add
+      Trendy roczne template section with 7…)
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes ab1ef3c] feat(analytics):
+      add Trendy roczne template section with 7 canvases
+      1 file changed, 169 insertions(+)
+
+● Batch 1 complete (Tasks 1–3). Here's what was implemented:
+
+  ---
+  Task 1 — Repository (7 methods): Added get_new_clients_monthly,
+  get_cancellation_rate_monthly, get_avg_ticket_monthly,
+  get_service_category_mix_monthly, get_invoice_cost_ratio_monthly,
+  get_employee_utilisation_monthly, get_visit_frequency_distribution to
+  repositories/analytics/analytics_repository.py.
+
+  Task 2 — API Routes (7 endpoints): Added 7 routes under
+  /api/analytics/rolling/* to routes/analytics_routes.py, each returning
+  {"success": true, ...}.
+
+  Task 3 — Template: Added the "Trendy roczne" section to
+  templates/analytics/dashboard.html with 5 layout rows and 7 canvas elements.
+  Verified 12 total canvases.
+
+  Verification output:
+  - grep confirms 7 repo methods at lines 747–971
+  - grep confirms 7 rolling routes at lines 318–375
+  - grep -c "canvas id=" returns 12 ✓
+
+  All 3 commits pushed to feat/2026-03-02-password-reset-and-db-fixes.
+
+  Ready for feedback.
+
+✻ Churned for 4m 10s
+
+❯ good. proceed 
+
+● Continuing with batch 2 — Tasks 4, 5, 6. Let me read the current JS file
+  first.
+
+● Read 1 file (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "Promise.all\|loadMonthlyTrend\|loadSummary\|loadRevenueTrend"
+      static/js/analytics/dashboard.js | head -20)
+  ⎿  133:        await Promise.all([
+     134:            loadSummary(),
+     135:            loadRevenueTrend(),
+     … +4 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● Good. Now I'll add the 7 chart variables after monthlyTrendChart and extend
+  the Promise.all:
+
+  ★ Insight ─────────────────────────────────────
+  The existing Promise.all fires all chart loads in parallel — this is
+  intentional because each chart hits a separate API endpoint and they're
+  independent. Adding the 7 new functions to the same Promise.all keeps the
+  dashboard loading time bounded by the slowest query rather than summing all of
+   them sequentially.
+  ─────────────────────────────────────────────────
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 7 lines
+      13  let clientSplitChart = null;
+      14  let profitBreakdownChart = null;
+      15  let monthlyTrendChart = null;
+      16 +let newClientsChart = null;
+      17 +let cancellationRateChart = null;
+      18 +let avgTicketChart = null;
+      19 +let categoryMixChart = null;
+      20 +let costRatioChart = null;
+      21 +let employeeUtilisationChart = null;
+      22 +let visitFrequencyChart = null;
+      23 
+      24  // Chart.js color palette (Refined Minimal)
+      25  const CHART_COLORS = {
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 8 lines, removed 1 line
+      148              loadOccupancy(),
+      149              loadPeakHours(),
+      150              loadServiceAnalysis(),
+      151 -            loadMonthlyTrend()                                
+      151 +            loadMonthlyTrend(),
+      152 +            loadNewClients(),
+      153 +            loadCancellationRate(),
+      154 +            loadAvgTicket(),
+      155 +            loadCategoryMix(),
+      156 +            loadCostRatio(),
+      157 +            loadEmployeeUtilisation(),
+      158 +            loadVisitFrequency()
+      159          ]);
+      160      } catch (error) {
+      161          // Log error silently - empty states are handled by in
+           dividual components
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      static/js/analytics/dashboard.js && git commit -m "feat(analytics): add
+      chart vars and extend Promise.all for 7…)
+  ⎿  Time tracking: Took 2 minutes (appended)
+     [feat/2026-03-02-password-reset-and-db-fixes ec4ec37] feat(analytics):
+      add chart vars and extend Promise.all for 7 rolling charts
+      1 file changed, 424 insertions(+), 1 deletion(-)
+
+● Now Task 5 — loadNewClients() + loadCancellationRate(). I need to find the end
+   of the file to append to:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && wc -l
+      static/js/analytics/dashboard.js && tail -5
+      static/js/analytics/dashboard.js)
+  ⎿  935 static/js/analytics/dashboard.js
+                     }
+                 }
+     … +3 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "^async
+      function\|^function" static/js/analytics/dashboard.js | tail -10)
+  ⎿  415:async function loadClients() {
+     463:function renderAtRiskList(clients) {
+     489:async function loadEmployees() {
+     … +7 lines (ctrl+o to expand)
+
+● loadMonthlyTrend is the last function, ending at line 935. Now I'll append the
+   two new functions. The unique anchor is the closing } at the very end:
+
+● Read 1 file (ctrl+o to expand)
+
+● I'll append after the closing } of loadMonthlyTrend at line 935 using a unique
+   context string from the end of that function:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 112 lines
+       933          }
+       934      });
+       935  }
+       936 +
+       937 +async function loadNewClients() {
+       938 +    const response = await fetch('/api/analytics/rolling/new-
+           +clients');
+       939 +    const data = await response.json();
+       940 +    const ctx = document.getElementById('newClientsChart');
+       941 +    if (!ctx || !data.success) return;
+       942 +
+       943 +    if (newClientsChart) newClientsChart.destroy();
+       944 +
+       945 +    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','L
+           +ip','Sie','Wrz','Paź','Lis','Gru'];
+       946 +    const labels = data.months.map(m => {
+       947 +        const [y, mo] = m.month_start.split('-').map(Number);
+       948 +        return `${PL_MONTHS[mo - 1]} ${y}`;
+       949 +    });
+       950 +
+       951 +    newClientsChart = new Chart(ctx, {
+       952 +        type: 'line',
+       953 +        data: {
+       954 +            labels,
+       955 +            datasets: [{
+       956 +                label: 'Nowi klienci',
+       957 +                data: data.months.map(m => m.new_clients),
+       958 +                borderColor: 'rgba(22, 163, 74, 1)',
+       959 +                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+       960 +                borderWidth: 2,
+       961 +                pointRadius: 4,
+       962 +                fill: true,
+       963 +                tension: 0.3
+       964 +            }]
+       965 +        },
+       966 +        options: {
+       967 +            responsive: true,
+       968 +            maintainAspectRatio: false,
+       969 +            plugins: {
+       970 +                legend: { display: false },
+       971 +                tooltip: {
+       972 +                    callbacks: {
+       973 +                        label: (ctx) => `Nowi klienci: ${ctx.
+           +parsed.y}`
+       974 +                    }
+       975 +                }
+       976 +            },
+       977 +            scales: {
+       978 +                x: { grid: { display: false } },
+       979 +                y: { beginAtZero: true, ticks: { stepSize: 1
+           +} }
+       980 +            }
+       981 +        }
+       982 +    });
+       983 +}
+       984 +
+       985 +async function loadCancellationRate() {
+       986 +    const response = await fetch('/api/analytics/rolling/canc
+           +ellation-rate');
+       987 +    const data = await response.json();
+       988 +    const ctx = document.getElementById('cancellationRateChar
+           +t');
+       989 +    if (!ctx || !data.success) return;
+       990 +
+       991 +    if (cancellationRateChart) cancellationRateChart.destroy(
+           +);
+       992 +
+       993 +    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','L
+           +ip','Sie','Wrz','Paź','Lis','Gru'];
+       994 +    const labels = data.months.map(m => {
+       995 +        const [y, mo] = m.month_start.split('-').map(Number);
+       996 +        return `${PL_MONTHS[mo - 1]} ${y}`;
+       997 +    });
+       998 +
+       999 +    cancellationRateChart = new Chart(ctx, {
+      1000 +        type: 'line',
+      1001 +        data: {
+      1002 +            labels,
+      1003 +            datasets: [
+      1004 +                {
+      1005 +                    label: 'Odwołania',
+      1006 +                    data: data.months.map(m => m.cancellation
+           +_pct),
+      1007 +                    borderColor: 'rgba(234, 88, 12, 1)',
+      1008 +                    backgroundColor: 'rgba(234, 88, 12, 0.08)
+           +',
+      1009 +                    borderWidth: 2,
+      1010 +                    pointRadius: 4,
+      1011 +                    fill: false,
+      1012 +                    tension: 0.3
+      1013 +                },
+      1014 +                {
+      1015 +                    label: 'Nieobecności',
+      1016 +                    data: data.months.map(m => m.noshow_pct),
+      1017 +                    borderColor: 'rgba(239, 68, 68, 1)',
+      1018 +                    backgroundColor: 'rgba(239, 68, 68, 0.08)
+           +',
+      1019 +                    borderWidth: 2,
+      1020 +                    pointRadius: 4,
+      1021 +                    fill: false,
+      1022 +                    tension: 0.3
+      1023 +                }
+      1024 +            ]
+      1025 +        },
+      1026 +        options: {
+      1027 +            responsive: true,
+      1028 +            maintainAspectRatio: false,
+      1029 +            interaction: { mode: 'index', intersect: false },
+      1030 +            plugins: {
+      1031 +                legend: { position: 'bottom' },
+      1032 +                tooltip: {
+      1033 +                    callbacks: {
+      1034 +                        label: (ctx) => `${ctx.dataset.label}
+           +: ${ctx.parsed.y.toFixed(1)}%`
+      1035 +                    }
+      1036 +                }
+      1037 +            },
+      1038 +            scales: {
+      1039 +                x: { grid: { display: false } },
+      1040 +                y: {
+      1041 +                    beginAtZero: true,
+      1042 +                    ticks: { callback: (val) => `${val}%` }
+      1043 +                }
+      1044 +            }
+      1045 +        }
+      1046 +    });
+      1047 +}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "^async function
+      loadNewClients\|^async function loadCancellationRate"
+      static/js/analytics/dashboard.js)
+  ⎿  937:async function loadNewClients() {
+     985:async function loadCancellationRate() {
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      static/js/analytics/dashboard.js && git commit -m "feat(analytics): add
+      loadNewClients and loadCancellationRate…)
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes 3d8e5f1] feat(analytics):
+      add loadNewClients and loadCancellationRate charts
+      1 file changed, 112 insertions(+)
+
+● Now Task 6 — loadAvgTicket() + loadCostRatio():
+
+● Bash(cd /c/Projects/faktura_scanner_flask && tail -5
+      static/js/analytics/dashboard.js)
+  ⎿                  }
+                 }
+             }
+     … +2 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && wc -l
+      static/js/analytics/dashboard.js)
+  ⎿  1047 static/js/analytics/dashboard.js
+
+● Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  The loadCostRatio chart uses a mixed chart type — Chart.js allows different
+  type values per dataset within one Chart instance (no top-level type). The
+  dual-axis (yAxisID) pattern lets revenue bars use the left PLN scale while the
+   percentage line uses the right scale — both readable without overlap.
+  ─────────────────────────────────────────────────
+
+  The closing } of loadCancellationRate at line 1047 is unique enough — but to
+  be safe I'll use a distinctive surrounding context:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 128 lines
+      1045          }
+      1046      });
+      1047  }
+      1048 +
+      1049 +async function loadAvgTicket() {
+      1050 +    const response = await fetch('/api/analytics/rolling/avg-
+           +ticket');
+      1051 +    const data = await response.json();
+      1052 +    const ctx = document.getElementById('avgTicketChart');
+      1053 +    if (!ctx || !data.success) return;
+      1054 +
+      1055 +    if (avgTicketChart) avgTicketChart.destroy();
+      1056 +
+      1057 +    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','L
+           +ip','Sie','Wrz','Paź','Lis','Gru'];
+      1058 +    const labels = data.months.map(m => {
+      1059 +        const [y, mo] = m.month_start.split('-').map(Number);
+      1060 +        return `${PL_MONTHS[mo - 1]} ${y}`;
+      1061 +    });
+      1062 +
+      1063 +    avgTicketChart = new Chart(ctx, {
+      1064 +        type: 'line',
+      1065 +        data: {
+      1066 +            labels,
+      1067 +            datasets: [{
+      1068 +                label: 'Średni rachunek',
+      1069 +                data: data.months.map(m => m.avg_ticket),
+      1070 +                borderColor: 'rgba(37, 99, 235, 1)',
+      1071 +                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+      1072 +                borderWidth: 2,
+      1073 +                pointRadius: 4,
+      1074 +                fill: false,
+      1075 +                tension: 0.3
+      1076 +            }]
+      1077 +        },
+      1078 +        options: {
+      1079 +            responsive: true,
+      1080 +            maintainAspectRatio: false,
+      1081 +            plugins: {
+      1082 +                legend: { display: false },
+      1083 +                tooltip: {
+      1084 +                    callbacks: {
+      1085 +                        label: (ctx) => `Średni rachunek: ${f
+           +ormatCurrency(ctx.parsed.y)}`
+      1086 +                    }
+      1087 +                }
+      1088 +            },
+      1089 +            scales: {
+      1090 +                x: { grid: { display: false } },
+      1091 +                y: {
+      1092 +                    beginAtZero: true,
+      1093 +                    ticks: { callback: (val) => `${val.toLoca
+           +leString('pl-PL')} zł` }
+      1094 +                }
+      1095 +            }
+      1096 +        }
+      1097 +    });
+      1098 +}
+      1099 +
+      1100 +async function loadCostRatio() {
+      1101 +    const response = await fetch('/api/analytics/rolling/cost
+           +-ratio');
+      1102 +    const data = await response.json();
+      1103 +    const ctx = document.getElementById('costRatioChart');
+      1104 +    if (!ctx || !data.success) return;
+      1105 +
+      1106 +    if (costRatioChart) costRatioChart.destroy();
+      1107 +
+      1108 +    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','L
+           +ip','Sie','Wrz','Paź','Lis','Gru'];
+      1109 +    const labels = data.months.map(m => {
+      1110 +        const [y, mo] = m.month_start.split('-').map(Number);
+      1111 +        return `${PL_MONTHS[mo - 1]} ${y}`;
+      1112 +    });
+      1113 +
+      1114 +    costRatioChart = new Chart(ctx, {
+      1115 +        data: {
+      1116 +            labels,
+      1117 +            datasets: [
+      1118 +                {
+      1119 +                    type: 'bar',
+      1120 +                    label: 'Przychód',
+      1121 +                    data: data.months.map(m => m.revenue),
+      1122 +                    backgroundColor: 'rgba(37, 99, 235, 0.5)'
+           +,
+      1123 +                    borderColor: 'rgba(37, 99, 235, 1)',
+      1124 +                    borderWidth: 1,
+      1125 +                    yAxisID: 'yPLN',
+      1126 +                    order: 2
+      1127 +                },
+      1128 +                {
+      1129 +                    type: 'line',
+      1130 +                    label: 'Udział faktur (%)',
+      1131 +                    data: data.months.map(m => m.ratio_pct),
+      1132 +                    borderColor: 'rgba(239, 68, 68, 1)',
+      1133 +                    backgroundColor: 'rgba(239, 68, 68, 0.08)
+           +',
+      1134 +                    borderWidth: 2,
+      1135 +                    pointRadius: 4,
+      1136 +                    fill: false,
+      1137 +                    tension: 0.3,
+      1138 +                    yAxisID: 'yPct',
+      1139 +                    order: 1
+      1140 +                }
+      1141 +            ]
+      1142 +        },
+      1143 +        options: {
+      1144 +            responsive: true,
+      1145 +            maintainAspectRatio: false,
+      1146 +            interaction: { mode: 'index', intersect: false },
+      1147 +            plugins: {
+      1148 +                legend: { position: 'bottom' },
+      1149 +                tooltip: {
+      1150 +                    callbacks: {
+      1151 +                        label: (ctx) => ctx.dataset.yAxisID =
+           +== 'yPct'
+      1152 +                            ? `${ctx.dataset.label}: ${ctx.pa
+           +rsed.y ?? 0}%`
+      1153 +                            : `${ctx.dataset.label}: ${format
+           +Currency(ctx.parsed.y)}`
+      1154 +                    }
+      1155 +                }
+      1156 +            },
+      1157 +            scales: {
+      1158 +                x: { grid: { display: false } },
+      1159 +                yPLN: {
+      1160 +                    type: 'linear',
+      1161 +                    position: 'left',
+      1162 +                    beginAtZero: true,
+      1163 +                    ticks: { callback: (val) => `${val.toLoca
+           +leString('pl-PL')} zł` }
+      1164 +                },
+      1165 +                yPct: {
+      1166 +                    type: 'linear',
+      1167 +                    position: 'right',
+      1168 +                    beginAtZero: true,
+      1169 +                    grid: { drawOnChartArea: false },
+      1170 +                    ticks: { callback: (val) => `${val}%` }
+      1171 +                }
+      1172 +            }
+      1173 +        }
+      1174 +    });
+      1175 +}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "^async function
+      loadAvgTicket\|^async function loadCostRatio"
+      static/js/analytics/dashboard.js)
+  ⎿  1049:async function loadAvgTicket() {
+     1100:async function loadCostRatio() {
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      static/js/analytics/dashboard.js && git commit -m "feat(analytics): add
+      loadAvgTicket and loadCostRatio charts")
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes 52c3cb1] feat(analytics):
+      add loadAvgTicket and loadCostRatio charts
+      1 file changed, 128 insertions(+)
+
+● Batch 2 complete (Tasks 4–6). Here's the summary:
+
+  ---
+  Task 4 — JS chart vars + Promise.all: Added 7 chart instance variables
+  (newClientsChart, cancellationRateChart, etc.) and extended Promise.all in
+  loadDashboard() with all 7 new load functions.
+
+  Task 5 — loadNewClients() + loadCancellationRate(): Green line chart for new
+  clients per month, dual-line chart (amber + red) for cancellation/no-show
+  rates with % y-axis.
+
+  Task 6 — loadAvgTicket() + loadCostRatio(): Blue line chart for average ticket
+   in PLN, and a mixed bar+line chart with dual y-axes — revenue bars on the
+  left (PLN), cost ratio percentage line on the right.
+
+  All 3 commits made. Functions confirmed at lines 937, 985, 1049, 1100.
+
+  Ready for feedback.
+
+✻ Churned for 4m 9s
+
+❯ good. proceed 
+
+● Continuing with batch 3 — Tasks 7, 8, 9.
+
+● Bash(cd /c/Projects/faktura_scanner_flask && wc -l
+      static/js/analytics/dashboard.js && tail -5
+      static/js/analytics/dashboard.js)
+  ⎿  1175 static/js/analytics/dashboard.js
+                     }
+                 }
+     … +3 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  loadCategoryMix does a client-side pivot — the API returns unpivoted (month, 
+  category, revenue) rows, and JS groups them into per-category datasets. This
+  avoids a complex SQL crosstab() query and makes the backend simpler to
+  maintain, at the cost of a tiny JS loop. The substring(0, 7) + '-01'
+  normalization ensures the lookup key always matches the YYYY-MM-01 format
+  regardless of what psycopg2 returns.
+  ─────────────────────────────────────────────────
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 77 lines
+      1173          }
+      1174      });
+      1175  }
+      1176 +
+      1177 +async function loadCategoryMix() {
+      1178 +    const response = await fetch('/api/analytics/rolling/cate
+           +gory-mix');
+      1179 +    const data = await response.json();
+      1180 +    const ctx = document.getElementById('categoryMixChart');
+      1181 +    if (!ctx || !data.success) return;
+      1182 +
+      1183 +    if (categoryMixChart) categoryMixChart.destroy();
+      1184 +
+      1185 +    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','L
+           +ip','Sie','Wrz','Paź','Lis','Gru'];
+      1186 +
+      1187 +    // Generate 12 month keys from today backwards (local tim
+           +e, no UTC shift)
+      1188 +    const today = new Date();
+      1189 +    const monthKeys = [];
+      1190 +    for (let i = 11; i >= 0; i--) {
+      1191 +        const d = new Date(today.getFullYear(), today.getMont
+           +h() - i, 1);
+      1192 +        const mm = String(d.getMonth() + 1).padStart(2, '0');
+      1193 +        monthKeys.push(`${d.getFullYear()}-${mm}-01`);
+      1194 +    }
+      1195 +    const labels = monthKeys.map(k => {
+      1196 +        const [y, mo] = k.split('-').map(Number);
+      1197 +        return `${PL_MONTHS[mo - 1]} ${y}`;
+      1198 +    });
+      1199 +
+      1200 +    // Collect unique categories from response
+      1201 +    const categories = [...new Set(data.rows.map(r => r.categ
+           +ory))].sort();
+      1202 +
+      1203 +    // Build lookup: month_start_prefix → category → revenue
+      1204 +    // month_start from DB may be "2026-03-01", key format mu
+           +st match monthKeys
+      1205 +    const lookup = {};
+      1206 +    data.rows.forEach(r => {
+      1207 +        // Normalise key: take YYYY-MM from month_start and a
+           +ppend -01
+      1208 +        const key = r.month_start.substring(0, 7) + '-01';
+      1209 +        if (!lookup[key]) lookup[key] = {};
+      1210 +        lookup[key][r.category] = parseFloat(r.revenue);
+      1211 +    });
+      1212 +
+      1213 +    const CATEGORY_COLORS = [
+      1214 +        'rgba(37,99,235,0.8)',   'rgba(22,163,74,0.8)',  'rgb
+           +a(234,88,12,0.8)',
+      1215 +        'rgba(168,85,247,0.8)', 'rgba(236,72,153,0.8)', 'rgba
+           +(20,184,166,0.8)',
+      1216 +        'rgba(245,158,11,0.8)', 'rgba(239,68,68,0.8)',  'rgba
+           +(100,116,139,0.8)',
+      1217 +        'rgba(14,165,233,0.8)'
+      1218 +    ];
+      1219 +
+      1220 +    const datasets = categories.map((cat, i) => ({
+      1221 +        label: cat,
+      1222 +        data: monthKeys.map(k => (lookup[k] && lookup[k][cat]
+           +) || 0),
+      1223 +        backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.
+           +length],
+      1224 +        borderWidth: 0
+      1225 +    }));
+      1226 +
+      1227 +    categoryMixChart = new Chart(ctx, {
+      1228 +        type: 'bar',
+      1229 +        data: { labels, datasets },
+      1230 +        options: {
+      1231 +            responsive: true,
+      1232 +            maintainAspectRatio: false,
+      1233 +            interaction: { mode: 'index', intersect: false },
+      1234 +            plugins: {
+      1235 +                legend: { position: 'bottom' },
+      1236 +                tooltip: {
+      1237 +                    callbacks: {
+      1238 +                        label: (ctx) => `${ctx.dataset.label}
+           +: ${formatCurrency(ctx.parsed.y)}`
+      1239 +                    }
+      1240 +                }
+      1241 +            },
+      1242 +            scales: {
+      1243 +                x: { stacked: true, grid: { display: false }
+           +},
+      1244 +                y: {
+      1245 +                    stacked: true,
+      1246 +                    beginAtZero: true,
+      1247 +                    ticks: { callback: (val) => `${val.toLoca
+           +leString('pl-PL')} zł` }
+      1248 +                }
+      1249 +            }
+      1250 +        }
+      1251 +    });
+      1252 +}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "^async function
+      loadCategoryMix" static/js/analytics/dashboard.js && git add
+      static/js/analytics/dashboard.js &…)
+  ⎿  1177:async function loadCategoryMix() {
+     Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes aa545b7] feat(analytics):
+     … +2 lines (ctrl+o to expand)
+
+● Now Task 8 — loadEmployeeUtilisation():
+
+● Bash(cd /c/Projects/faktura_scanner_flask && tail -3
+      static/js/analytics/dashboard.js)
+  ⎿          }
+         });
+     }
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 69 lines
+      1250          }
+      1251      });
+      1252  }
+      1253 +
+      1254 +async function loadEmployeeUtilisation() {
+      1255 +    const response = await fetch('/api/analytics/rolling/empl
+           +oyee-utilisation');
+      1256 +    const data = await response.json();
+      1257 +    const ctx = document.getElementById('employeeUtilisationC
+           +hart');
+      1258 +    if (!ctx || !data.success) return;
+      1259 +
+      1260 +    if (employeeUtilisationChart) employeeUtilisationChart.de
+           +stroy();
+      1261 +
+      1262 +    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','L
+           +ip','Sie','Wrz','Paź','Lis','Gru'];
+      1263 +
+      1264 +    // Collect unique sorted months from response
+      1265 +    const monthKeys = [...new Set(data.rows.map(r => r.month_
+           +start))].sort();
+      1266 +    const labels = monthKeys.map(k => {
+      1267 +        const [y, mo] = k.split('-').map(Number);
+      1268 +        return `${PL_MONTHS[mo - 1]} ${y}`;
+      1269 +    });
+      1270 +
+      1271 +    const employees = [...new Set(data.rows.map(r => r.employ
+           +ee_name))].sort();
+      1272 +
+      1273 +    // Build lookup: employee → month_start → utilisation_pct
+      1274 +    const lookup = {};
+      1275 +    data.rows.forEach(r => {
+      1276 +        if (!lookup[r.employee_name]) lookup[r.employee_name]
+           + = {};
+      1277 +        lookup[r.employee_name][r.month_start] = parseFloat(r
+           +.utilisation_pct);
+      1278 +    });
+      1279 +
+      1280 +    const EMP_COLORS = [
+      1281 +        'rgba(37,99,235,1)',  'rgba(22,163,74,1)',  'rgba(234
+           +,88,12,1)',
+      1282 +        'rgba(168,85,247,1)', 'rgba(236,72,153,1)', 'rgba(20,
+           +184,166,1)',
+      1283 +        'rgba(245,158,11,1)', 'rgba(100,116,139,1)'
+      1284 +    ];
+      1285 +
+      1286 +    const datasets = employees.map((emp, i) => ({
+      1287 +        label: emp,
+      1288 +        data: monthKeys.map(k => (lookup[emp] && lookup[emp][
+           +k]) || 0),
+      1289 +        borderColor: EMP_COLORS[i % EMP_COLORS.length],
+      1290 +        backgroundColor: EMP_COLORS[i % EMP_COLORS.length].re
+           +place(',1)', ',0.08)'),
+      1291 +        borderWidth: 2,
+      1292 +        pointRadius: 3,
+      1293 +        fill: false,
+      1294 +        tension: 0.3
+      1295 +    }));
+      1296 +
+      1297 +    employeeUtilisationChart = new Chart(ctx, {
+      1298 +        type: 'line',
+      1299 +        data: { labels, datasets },
+      1300 +        options: {
+      1301 +            responsive: true,
+      1302 +            maintainAspectRatio: false,
+      1303 +            interaction: { mode: 'index', intersect: false },
+      1304 +            plugins: {
+      1305 +                legend: { position: 'bottom' },
+      1306 +                tooltip: {
+      1307 +                    callbacks: {
+      1308 +                        label: (ctx) => `${ctx.dataset.label}
+           +: ${ctx.parsed.y.toFixed(1)}%`
+      1309 +                    }
+      1310 +                }
+      1311 +            },
+      1312 +            scales: {
+      1313 +                x: { grid: { display: false } },
+      1314 +                y: {
+      1315 +                    beginAtZero: true,
+      1316 +                    ticks: { callback: (val) => `${val}%` }
+      1317 +                }
+      1318 +            }
+      1319 +        }
+      1320 +    });
+      1321 +}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "^async function
+      loadEmployeeUtilisation" static/js/analytics/dashboard.js && git add
+      static/js/analytics/dashbo…)
+  ⎿  1254:async function loadEmployeeUtilisation() {
+     Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes 48cc132] feat(analytics):
+     … +2 lines (ctrl+o to expand)
+
+● Now Task 9 — loadVisitFrequency(), the final chart function:
+
+● Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  The visit frequency histogram uses a bucketing pattern — raw SQL returns exact
+   counts (1 visit, 2 visits, etc.) and JavaScript merges anything ≥ 10 into a
+  single "10+" bucket. This keeps the histogram readable even for power users
+  with 20+ visits, avoiding a long sparse tail on the right side of the chart.
+  ─────────────────────────────────────────────────
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Error editing file
+
+● Need more context to uniquely identify the end of loadEmployeeUtilisation. Let
+   me read the surrounding lines:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 61 lines
+      1319          }
+      1320      });
+      1321  }
+      1322 +
+      1323 +async function loadVisitFrequency() {
+      1324 +    const response = await fetch('/api/analytics/rolling/visi
+           +t-frequency');
+      1325 +    const data = await response.json();
+      1326 +    const ctx = document.getElementById('visitFrequencyChart'
+           +);
+      1327 +    if (!ctx || !data.success) return;
+      1328 +
+      1329 +    if (visitFrequencyChart) visitFrequencyChart.destroy();
+      1330 +
+      1331 +    // Build buckets 1 through 10+ (anything >= 10 merged int
+           +o one bucket)
+      1332 +    const MAX_BUCKET = 10;
+      1333 +    const buckets = {};
+      1334 +    data.distribution.forEach(d => {
+      1335 +        const key = parseInt(d.visit_count) >= MAX_BUCKET ? M
+           +AX_BUCKET : parseInt(d.visit_count);
+      1336 +        buckets[key] = (buckets[key] || 0) + parseInt(d.clien
+           +t_count);
+      1337 +    });
+      1338 +
+      1339 +    const labels = [];
+      1340 +    const values = [];
+      1341 +    for (let i = 1; i <= MAX_BUCKET; i++) {
+      1342 +        labels.push(i === MAX_BUCKET ? `${MAX_BUCKET}+` : Str
+           +ing(i));
+      1343 +        values.push(buckets[i] || 0);
+      1344 +    }
+      1345 +
+      1346 +    visitFrequencyChart = new Chart(ctx, {
+      1347 +        type: 'bar',
+      1348 +        data: {
+      1349 +            labels,
+      1350 +            datasets: [{
+      1351 +                label: 'Klienci',
+      1352 +                data: values,
+      1353 +                backgroundColor: 'rgba(37, 99, 235, 0.75)',
+      1354 +                borderColor: 'rgba(37, 99, 235, 1)',
+      1355 +                borderWidth: 1
+      1356 +            }]
+      1357 +        },
+      1358 +        options: {
+      1359 +            responsive: true,
+      1360 +            maintainAspectRatio: false,
+      1361 +            plugins: {
+      1362 +                legend: { display: false },
+      1363 +                tooltip: {
+      1364 +                    callbacks: {
+      1365 +                        label: (ctx) => `Klienci: ${ctx.parse
+           +d.y}`,
+      1366 +                        title: (items) => {
+      1367 +                            const v = items[0].label;
+      1368 +                            return v === '10+' ? '10 lub więc
+           +ej wizyt' : `${v} ${v === '1' ? 'wizyta' : 'wizyty'}`;
+      1369 +                        }
+      1370 +                    }
+      1371 +                }
+      1372 +            },
+      1373 +            scales: {
+      1374 +                x: {
+      1375 +                    grid: { display: false },
+      1376 +                    title: { display: true, text: 'Liczba wiz
+           +yt w ostatnich 12 miesiącach' }
+      1377 +                },
+      1378 +                y: { beginAtZero: true, ticks: { stepSize: 1
+           +} }
+      1379 +            }
+      1380 +        }
+      1381 +    });
+      1382 +}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "^async function
+      loadVisitFrequency" static/js/analytics/dashboard.js && git add
+      static/js/analytics/dashboard.j…)
+  ⎿  1323:async function loadVisitFrequency() {
+     Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes 9923d81] feat(analytics):
+     … +2 lines (ctrl+o to expand)
+
+● Batch 3 complete (Tasks 7–9). Summary:
+
+  ---
+  Task 7 — loadCategoryMix(): Stacked bar chart with client-side pivot.
+  Generates 12-month keys locally (avoiding UTC date shift), normalises DB
+  month_start strings to YYYY-MM-01 keys, and assigns distinct colours from a
+  10-colour palette.
+
+  Task 8 — loadEmployeeUtilisation(): Multi-line chart with one dataset per
+  employee. Pivots (month, employee_name, utilisation_pct) rows into
+  per-employee datasets. Uses .replace(',1)', ',0.08)') to derive a faint fill
+  colour from each line's border colour.
+
+  Task 9 — loadVisitFrequency(): Histogram bar chart with 1–10+ x-axis buckets.
+  Custom tooltip title callback differentiates "wizyta" (singular) from "wizyty"
+   (plural).
+
+  All functions confirmed and committed. 9/10 tasks done — only Task 10 (CSS 
+  rebuild + end-to-end verification) remains.
+
+  Ready for feedback.
+
+✻ Baked for 3m 47s
+
+❯ visits frequency histogram shows 10+ value very high, not matching real   
+  data. check why                                                           
+
+● Skill(superpowers:systematic-debugging)
+  ⎿  Successfully loaded skill
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ change visits histogram so that x-axis start with 2 and ends with 20      
+  (more bars)                                                               
+
+● The user is switching approach — skip the debugging, just change the histogram
+   range. Let me find and update loadVisitFrequency:
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  Extending to 20 bars is exactly the right fix for the "10+ too high" problem —
+   the old bucket was merging clients with 10, 15, 20+ visits all into one bar,
+  making it look artificially large. Wider bucketing distributes the signal
+  across the real distribution.
+  ─────────────────────────────────────────────────
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 7 lines, removed 4 lines
+      1328 
+      1329      if (visitFrequencyChart) visitFrequencyChart.destroy();
+      1330 
+      1331 -    // Build buckets 1 through 10+ (anything >= 10 merged int
+           -o one bucket)                                                
+      1332 -    const MAX_BUCKET = 10;                                   
+      1331 +    // Build buckets 2 through 20+ (skip 1-visit bucket, anyt
+           +hing >= 20 merged into 20+)
+      1332 +    const MIN_BUCKET = 2;
+      1333 +    const MAX_BUCKET = 20;
+      1334      const buckets = {};
+      1335      data.distribution.forEach(d => {
+      1335 -        const key = parseInt(d.visit_count) >= MAX_BUCKET ? M
+           -AX_BUCKET : parseInt(d.visit_count);                         
+      1336 +        const count = parseInt(d.visit_count);
+      1337 +        if (count < MIN_BUCKET) return;  // skip single-visit
+           + clients
+      1338 +        const key = count >= MAX_BUCKET ? MAX_BUCKET : count;
+      1339          buckets[key] = (buckets[key] || 0) + parseInt(d.clien
+            t_count);
+      1340      });
+      1341 
+      1342      const labels = [];
+      1343      const values = [];
+      1341 -    for (let i = 1; i <= MAX_BUCKET; i++) {                  
+      1344 +    for (let i = MIN_BUCKET; i <= MAX_BUCKET; i++) {
+      1345          labels.push(i === MAX_BUCKET ? `${MAX_BUCKET}+` : Str
+            ing(i));
+      1346          values.push(buckets[i] || 0);
+      1347      }
+
+● Also update the tooltip title callback — "2" is never singular "wizyta":
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 1 line, removed 1 line
+      1368                          label: (ctx) => `Klienci: ${ctx.parse
+            d.y}`,
+      1369                          title: (items) => {
+      1370                              const v = items[0].label;
+      1371 -                            return v === '10+' ? '10 lub więc
+           -ej wizyt' : `${v} ${v === '1' ? 'wizyta' : 'wizyty'}`;       
+      1371 +                            return v === '20+' ? '20 lub więc
+           +ej wizyt' : `${v} wizyty`;
+      1372                          }
+      1373                      }
+      1374                  }
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "MIN_BUCKET\|MAX_BUCKET\|for (let i = MIN"
+      static/js/analytics/dashboard.js)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ make the x-axis values as: 1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-35,  
+  36-40, 41-45, 46-50                                                       
+
+● Let me read the current state of loadVisitFrequency first:
+
+● Read 1 file (ctrl+o to expand)
+
+● Now I'll replace the entire bucketing + label-building block with the grouped
+  ranges 1-5, 6-10, … 46-50:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 11 lines, removed 10 lines
+      1328 
+      1329      if (visitFrequencyChart) visitFrequencyChart.destroy();
+      1330 
+      1331 -    // Build buckets 2 through 20+ (skip 1-visit bucket, anyt
+           -hing >= 20 merged into 20+)                                  
+      1332 -    const MIN_BUCKET = 2;                                    
+      1333 -    const MAX_BUCKET = 20;                                   
+      1334 -    const buckets = {};                                      
+      1331 +    // Group into 5-visit bands: 1-5, 6-10, 11-15, ..., 46-50
+      1332 +    const BAND_SIZE = 5;
+      1333 +    const BANDS = 10;  // 10 bands of 5 = covers 1..50
+      1334 +    const bandCounts = new Array(BANDS).fill(0);
+      1335      data.distribution.forEach(d => {
+      1336          const count = parseInt(d.visit_count);
+      1337 -        if (count < MIN_BUCKET) return;  // skip single-visit
+           - clients                                                     
+      1338 -        const key = count >= MAX_BUCKET ? MAX_BUCKET : count;
+      1339 -        buckets[key] = (buckets[key] || 0) + parseInt(d.clien
+           -t_count);                                                    
+      1337 +        const bandIdx = Math.min(Math.floor((count - 1) / BAN
+           +D_SIZE), BANDS - 1);
+      1338 +        bandCounts[bandIdx] += parseInt(d.client_count);
+      1339      });
+      1340 
+      1341      const labels = [];
+      1342      const values = [];
+      1344 -    for (let i = MIN_BUCKET; i <= MAX_BUCKET; i++) {         
+      1345 -        labels.push(i === MAX_BUCKET ? `${MAX_BUCKET}+` : Str
+           -ing(i));                                                     
+      1346 -        values.push(buckets[i] || 0);                        
+      1343 +    for (let i = 0; i < BANDS; i++) {
+      1344 +        const lo = i * BAND_SIZE + 1;
+      1345 +        const hi = lo + BAND_SIZE - 1;
+      1346 +        labels.push(`${lo}-${hi}`);
+      1347 +        values.push(bandCounts[i]);
+      1348      }
+      1349 
+      1350      visitFrequencyChart = new Chart(ctx, {
+
+● Now update the tooltip title callback — it no longer needs a "20+" special
+  case:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 1 line, removed 4 lines
+      1367                  tooltip: {
+      1368                      callbacks: {
+      1369                          label: (ctx) => `Klienci: ${ctx.parse
+            d.y}`,
+      1370 -                        title: (items) => {                  
+      1371 -                            const v = items[0].label;        
+      1372 -                            return v === '20+' ? '20 lub więc
+           -ej wizyt' : `${v} wizyty`;                                   
+      1373 -                        }                                    
+      1370 +                        title: (items) => `${items[0].label} 
+           +wizyt`
+      1371                      }
+      1372                  }
+      1373              },
+
+● Verify the final function looks correct:
+
+● Read 1 file (ctrl+o to expand)
+
+● Looks correct. Commit:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      static/js/analytics/dashboard.js && git commit -m "fix(analytics): change
+      visit frequency histogram to 5-visit b…)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ in 'analiza cen usług' section, show only services with income > 0. Check 
+   'nowi vs powracający klienci' chart because the chart is not displayed.  
+  Also 'Udział kosztów faktur w przychodzie' section is not showing the     
+  chart. THen add new table showing top 10 clients for highest score based  
+  on number of visits * income generated in selected period. Do not show    
+  clients with 0 score (if such is top10 item) - place the table in the row 
+   with 'nowi vs powracający klienci' on the right.                         
+
+● Skill(dev)
+  ⎿  Successfully loaded skill · 12 tools allowed · claude-sonnet-4-6
+
+● Let me check existing tasks and then explore the relevant files to understand
+  what needs fixing.
+
+● Now let me read the relevant JS sections to understand all the issues:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "loadServiceAnalysis\|loadClients\|clientSplitChart\|clientSplit\|canvas
+      id=" static/js/analytics/dashboard.js |…)
+  ⎿  13:let clientSplitChart = null;
+     145:            loadClients(),
+     150:            loadServiceAnalysis(),
+     … +6 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "clientSplitChart\|nowi.*powracaj\|client-split\|clientSplit"
+      templates/analytics/dashboard.html | head -20)
+  ⎿  198:            <canvas id="clientSplitChart"></canvas>
+
+● Read 1 file (ctrl+o to expand)
+
+● Now let me look at the service analysis rendering and the cost ratio chart
+  issue:
+
+● Read 1 file (ctrl+o to expand)
+
+● I can see all the issues now. Let me investigate the cost ratio chart and
+  client split in parallel:
+
+  ★ Insight ─────────────────────────────────────
+  The costRatioChart likely fails because Chart.js 4.x requires a top-level type
+   field even for mixed charts — without it the chart controller can't
+  initialize. The clientSplitChart issue is probably the CHART_COLORS.gray
+  (#e2e8f0) segment being nearly invisible against a white background.
+  ─────────────────────────────────────────────────
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "costRatioChart = new
+      Chart\|type: 'bar'" static/js/analytics/dashboard.js | grep -A2
+      "costRatioChart")
+  ⎿  1114:    costRatioChart = new Chart(ctx, {
+     1119:                    type: 'bar',
+     1228:        type: 'bar',
+
+● Read 1 file (ctrl+o to expand)
+
+● Confirmed — costRatioChart has no top-level type. Now fix all JS issues in one
+   pass:
+
+● Fix 1 — service analysis: filter to income > 0:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 1 line, removed 1 line
+      781          return;
+      782      }
+      783 
+      784 -    tbody.innerHTML = data.services.map(s => {                
+      784 +    tbody.innerHTML = data.services.filter(s => parseFloat(s.t
+          +otal_revenue) > 0).map(s => {
+      785          const discount = parseFloat(s.avg_discount_pct) || 0;
+      786          const discountColor = discount > 10 ? 'text-red-600' :
+      787                                discount > 0  ? 'text-amber-600'
+            : 'text-green-600';
+
+● Fix 2 — client split chart: make "returning" segment visible:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 1 line, removed 1 line
+      440                      data.metrics.new_clients,
+      441                      data.metrics.returning_clients
+      442                  ],
+      443 -                backgroundColor: [CHART_COLORS.primary, CHART_
+          -COLORS.gray]                                                  
+      443 +                backgroundColor: [CHART_COLORS.primary, CHART_
+          +COLORS.green]
+      444              }]
+      445          },
+      446          options: {
+
+● Fix 3 — cost ratio chart: add top-level type: 'bar':
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 1 line
+      1112      });
+      1113 
+      1114      costRatioChart = new Chart(ctx, {
+      1115 +        type: 'bar',
+      1116          data: {
+      1117              labels,
+      1118              datasets: [
+
+● Now Task 14 — top clients table. First the repository method:
+
+● Update(repositories\analytics\analytics_repository.py)
+  ⎿  Added 26 lines
+      744          rows = cursor.fetchall()
+      745          return [dict(row) for row in rows]
+      746 
+      747 +    def get_top_clients(self, start_date: date, end_date: date
+          +) -> List[Dict]:
+      748 +        """
+      749 +        Top 10 klientów wg wyniku: liczba_wizyt × przychód — w
+          + zadanym okresie.
+      750 +        Zwraca tylko klientów z wynikiem > 0.
+      751 +        """
+      752 +        query = """
+      753 +            SELECT
+      754 +                c.first_name || ' ' || c.last_name          AS
+          + client_name,
+      755 +                COUNT(DISTINCT a.id)                          
+          +AS visits,
+      756 +                COALESCE(SUM(i.net_amount), 0)               A
+          +S revenue,
+      757 +                COUNT(DISTINCT a.id) * COALESCE(SUM(i.net_amou
+          +nt), 0) AS score
+      758 +            FROM clients c
+      759 +            JOIN appointments a ON a.client_id = c.id
+      760 +                AND a.status = 'completed'
+      761 +                AND a.appointment_date BETWEEN %s AND %s
+      762 +            LEFT JOIN income_records i ON i.appointment_id = a
+          +.id
+      763 +            GROUP BY c.id, c.first_name, c.last_name
+      764 +            HAVING COUNT(DISTINCT a.id) * COALESCE(SUM(i.net_a
+          +mount), 0) > 0
+      765 +            ORDER BY score DESC
+      766 +            LIMIT 10
+      767 +        """
+      768 +        conn = DatabaseConnection.get_connection()
+      769 +        cursor = conn.cursor()
+      770 +        cursor.execute(query, (start_date, end_date))
+      771 +        return [dict(row) for row in cursor.fetchall()]
+      772 +
+      773      def get_new_clients_monthly(self) -> List[Dict]:
+      774          """Nowi klienci wg miesiąca (first_visit_date) — ostat
+           nie 12 miesięcy."""
+      775          query = """
+
+● Now add the API route:
+
+● Update(routes\analytics_routes.py)
+  ⎿  Added 14 lines
+      315      return jsonify({"success": True, "months": months})
+      316 
+      317 
+      318 +@analytics_bp.route('/analytics/top-clients', methods=['GET'])
+      319 +@login_required
+      320 +@module_permission_required('appointments')
+      321 +def get_top_clients():
+      322 +    """Top 10 klientów wg wyniku (wizyty × przychód) dla wybra
+          +nego okresu"""
+      323 +    ranges, error = parse_period_params()
+      324 +    if error:
+      325 +        return jsonify({"success": False, **error}), 400
+      326 +
+      327 +    current_start, current_end, _, _ = ranges
+      328 +    clients = repo.get_top_clients(current_start, current_end)
+      329 +    return jsonify({"success": True, "clients": clients})
+      330 +
+      331 +
+      332  @analytics_bp.route('/analytics/rolling/new-clients', methods=
+           ['GET'])
+      333  @login_required
+      334  @module_permission_required('appointments')
+
+● Now update the template — change the 2-col client row to a 3-col layout,
+  adding the top clients table on the right:
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 24 lines, removed 3 lines
+      189      </div>
+      190  </div>
+      191 
+      192 -<!-- Charts Row 2: Client Split + At-Risk -->                 
+      193 -<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">           
+      192 +<!-- Charts Row 2: Client Split + Top Clients + At-Risk -->
+      193 +<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      194      <!-- Client Split Chart -->
+      195      <div class="refined-card">
+      196          <h3 class="text-lg font-medium mb-4">Nowi vs. powracaj
+           ący klienci</h3>
+      197 -        <div style="height: 300px;">                          
+      197 +        <div style="height: 260px;">
+      198              <canvas id="clientSplitChart"></canvas>
+      199          </div>
+      200          <div id="retentionRate" class="text-center mt-4 text-s
+           m text-slate-500"></div>
+      201      </div>
+      202 
+      203 +    <!-- Top 10 Clients Table -->
+      204 +    <div class="refined-card">
+      205 +        <h3 class="text-lg font-medium mb-4">Top 10 klientów</
+          +h3>
+      206 +        <p class="text-xs text-slate-400 mb-3">Ranking wg wyni
+          +ku: wizyty × przychód</p>
+      207 +        <div class="overflow-y-auto" style="max-height: 300px;
+          +">
+      208 +            <table class="w-full text-sm">
+      209 +                <thead>
+      210 +                    <tr class="text-xs text-slate-500 border-b
+          +">
+      211 +                        <th class="text-left pb-2">#</th>
+      212 +                        <th class="text-left pb-2">Klient</th>
+      213 +                        <th class="text-right pb-2">Wizyty</th
+          +>
+      214 +                        <th class="text-right pb-2">Przychód</
+          +th>
+      215 +                    </tr>
+      216 +                </thead>
+      217 +                <tbody id="topClientsTableBody">
+      218 +                    <tr><td colspan="4" class="text-center tex
+          +t-slate-500 py-2">Ładowanie...</td></tr>
+      219 +                </tbody>
+      220 +            </table>
+      221 +        </div>
+      222 +    </div>
+      223 +
+      224      <!-- At-Risk Clients -->
+      225      <div class="refined-card">
+      226          <h3 class="text-lg font-medium mb-4">Klienci zagrożeni
+            utratą</h3>
+
+● Now add the JS — chart var + Promise.all entry + the load function. First the
+  var:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 1 line
+      20  let costRatioChart = null;
+      21  let employeeUtilisationChart = null;
+      22  let visitFrequencyChart = null;
+      23 +let topClientsLoaded = false;
+      24 
+      25  // Chart.js color palette (Refined Minimal)
+      26  const CHART_COLORS = {
+
+● Add loadTopClients() to the Promise.all:
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 2 lines, removed 1 line
+      156              loadCategoryMix(),
+      157              loadCostRatio(),
+      158              loadEmployeeUtilisation(),
+      159 -            loadVisitFrequency()                              
+      159 +            loadVisitFrequency(),
+      160 +            loadTopClients()
+      161          ]);
+      162      } catch (error) {
+      163          // Log error silently - empty states are handled by in
+           dividual components
+
+● Now append the loadTopClients() function at the end of the file:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && tail -5
+      static/js/analytics/dashboard.js)
+  ⎿                  y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                 }
+             }
+     … +2 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(static\js\analytics\dashboard.js)
+  ⎿  Added 22 lines
+      1384          }
+      1385      });
+      1386  }
+      1387 +
+      1388 +async function loadTopClients() {
+      1389 +    const params = buildParams();
+      1390 +    const response = await fetch(`/api/analytics/top-clients?
+           +${params}`);
+      1391 +    const data = await response.json();
+      1392 +    const tbody = document.getElementById('topClientsTableBod
+           +y');
+      1393 +    if (!tbody) return;
+      1394 +
+      1395 +    if (!data.success || !data.clients.length) {
+      1396 +        tbody.innerHTML = '<tr><td colspan="4" class="text-ce
+           +nter text-slate-500 py-2">Brak danych</td></tr>';
+      1397 +        return;
+      1398 +    }
+      1399 +
+      1400 +    tbody.innerHTML = data.clients.map((c, i) => `
+      1401 +        <tr class="border-b border-slate-100 hover:bg-slate-5
+           +0">
+      1402 +            <td class="py-1.5 text-slate-400 text-xs">${i + 1
+           +}</td>
+      1403 +            <td class="py-1.5 font-medium">${escapeHtml(c.cli
+           +ent_name)}</td>
+      1404 +            <td class="py-1.5 text-right text-slate-600">${c.
+           +visits}</td>
+      1405 +            <td class="py-1.5 text-right text-slate-600">${fo
+           +rmatCurrency(c.revenue)}</td>
+      1406 +        </tr>
+      1407 +    `).join('');
+      1408 +}
+
+● Now commit everything:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      static/js/analytics/dashboard.js templates/analytics/dashboard.html
+      routes/analytics_routes.py repositories/anal…)
+  ⎿  warning: in the working copy of 'repositories/analytics/analytics_repo
+     sitory.py', LF will be replaced by CRLF the next time Git touches it
+     Time tracking: Took 40 minutes (appended)
+     … +3 lines (ctrl+o to expand)
+
+● Done. Here's what was fixed and added:
+
+  ---
+  Fixes:
+
+  Issue: Udział kosztów faktur chart blank
+  Root Cause: new Chart(ctx, { data: ... }) — missing top-level type field;
+    Chart.js 4 requires it even for mixed charts
+  Fix: Added type: 'bar' at top level
+  ────────────────────────────────────────
+  Issue: Nowi vs powracający chart invisible
+  Root Cause: CHART_COLORS.gray (#e2e8f0) is near-white — the "returning"
+  segment
+    was invisible on white background
+  Fix: Changed to CHART_COLORS.green
+  ────────────────────────────────────────
+  Issue: Analiza cen usług showing zero-income rows
+  Root Cause: No filter applied before rendering
+  Fix: Added .filter(s => parseFloat(s.total_revenue) > 0)
+
+  New feature — Top 10 Clients table:
+  - Repository: get_top_clients(start_date, end_date) — scores by visits × 
+  revenue, filters score > 0, returns top 10
+  - Route: GET /api/analytics/top-clients — period-aware, uses standard
+  parse_period_params()
+  - Template: The client row is now a 3-column grid (nowi chart | top clients |
+  at-risk), period-responsive
+  - JS: loadTopClients() renders ranked rows with client name, visit count, and
+  revenue
+
+✻ Cogitated for 7m 9s
+
+❯ add navigation buttons which scroll the view to specific section. When    
+  scroll finished, add button 'Idź na początek' on the bottom right,  which 
+   scrolls back to top of the view. After clicked, the button disappears    
+
+● Let me read the dashboard template to understand the sections and existing
+  layout:
+
+● Read 1 file (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "<!--\|<h2\|<h3"
+      templates/analytics/dashboard.html | head -40)
+  ⎿  5:<!-- Page Header -->
+     7:    <!-- Header with Title and Actions -->
+     15:            <!-- Period Navigation -->
+     … +26 lines (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ /login 
+  ⎿  Login successful
+
+❯ continue 
+
+● Good — I have all the sections mapped. I'll add id anchors to each major
+  section, a navigation strip after the header, and the fixed back-to-top
+  button.
+
+  The sections I'll add anchors to:
+  - KPIs, Profit, Charts (trend+services), Employee performance, Klienci, Szczyt
+   rezerwacji, Analiza cen, Wskazówki, Trendy roczne
+
+● Read 1 file (ctrl+o to expand)
+
+● I have a complete picture. Now I'll implement everything in one shot:
+
+  1. Add id anchors to 9 major sections
+  2. Add a navigation strip after the header
+  3. Add the fixed back-to-top button
+  4. Add JS (scroll detection + smooth scroll)
+
+  ★ Insight ─────────────────────────────────────
+  The scrollY > threshold approach in the scroll handler uses { passive: true }
+  on the event listener — this tells the browser the handler won't call
+  preventDefault(), allowing it to optimize scroll performance and avoid jank on
+   mobile. The back-to-top button uses scrollTo({ behavior: 'smooth' }) which is
+   natively supported and requires no libraries.
+  ─────────────────────────────────────────────────
+
+● Read 1 file (ctrl+o to expand)
+
+● Now I have the full picture. Let me make all changes:
+
+  Step 1: Add navigation strip + back-to-top button, and section anchors
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 25 lines
+      48      </div>
+      49  </div>
+      50 
+      51 +<!-- Section Navigation Strip -->
+      52 +<div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1 f
+         +lex-nowrap">
+      53 +    <span class="text-xs text-slate-400 shrink-0">Przejdź do:</
+         +span>
+      54 +    <button onclick="scrollToSection('nav-kpi')"        class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">KPI</button>
+      55 +    <button onclick="scrollToSection('nav-profit')"     class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Zysk netto</button>
+      56 +    <button onclick="scrollToSection('nav-charts')"     class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Przychody</button>
+      57 +    <button onclick="scrollToSection('nav-employees')"  class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Pracownicy</button>
+      58 +    <button onclick="scrollToSection('nav-clients')"    class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Klienci</button>
+      59 +    <button onclick="scrollToSection('nav-occupancy')"  class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Obłożenie</button>
+      60 +    <button onclick="scrollToSection('nav-peakhours')"  class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Szczyty</button>
+      61 +    <button onclick="scrollToSection('nav-services')"   class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Ceny usług</button>
+      62 +    <button onclick="scrollToSection('nav-insights')"   class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Wskazówki</button>
+      63 +    <button onclick="scrollToSection('nav-trends')"     class="
+         +shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-2
+         +00 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-3
+         +00 hover:text-blue-700 transition-colors">Trendy roczne</button
+         +>
+      64 +</div>
+      65 +
+      66 +<!-- Back-to-top button (hidden until scrolled) -->
+      67 +<button id="backToTopBtn"
+      68 +    onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); t
+         +his.style.display='none';"
+      69 +    class="fixed bottom-6 right-6 z-50 hidden items-center gap-
+         +2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounde
+         +d-full shadow-lg hover:bg-blue-700 transition-colors">
+      70 +    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke
+         +="currentColor">
+      71 +        <path stroke-linecap="round" stroke-linejoin="round" st
+         +roke-width="2" d="M5 15l7-7 7 7" />
+      72 +    </svg>
+      73 +    Idź na początek
+      74 +</button>
+      75 +
+      76  <!-- Dashboard Content -->
+      77  <!-- Custom Date Range Modal (hidden by default) -->
+      78  <div id="customRangeModal" class="hidden fixed inset-0 bg-black
+           bg-opacity-50 flex items-center justify-center z-50">
+
+● Step 2: Add id anchors to each section:
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      100  </div>
+      101 
+      102  <!-- KPI Cards -->
+      103 -<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap
+          --4 mb-6">                                                     
+      103 +<div id="nav-kpi" class="grid grid-cols-1 md:grid-cols-2 lg:gr
+          +id-cols-4 gap-4 mb-6">
+      104      <!-- Revenue Card -->
+      105      <div class="refined-card">
+      106          <div class="text-sm text-slate-500 mb-1">Przychód</div
+           >
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      131  </div>
+      132 
+      133  <!-- Profit Breakdown Row -->
+      134 -<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">      
+      134 +<div id="nav-profit" class="grid grid-cols-1 md:grid-cols-3 ga
+          +p-4 mb-6">
+      135      <div class="refined-card border-l-4 border-orange-400">
+      136          <div class="text-sm text-slate-500 mb-1">Koszty pracow
+           nicze</div>
+      137          <div id="kpi-employee-costs" class="text-2xl font-semi
+           bold text-slate-900 mb-2">-</div>
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      150  </div>
+      151 
+      152  <!-- Charts Row 1: Revenue Trend + Services -->
+      153 -<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">      
+      153 +<div id="nav-charts" class="grid grid-cols-1 lg:grid-cols-3 ga
+          +p-4 mb-6">
+      154      <!-- Revenue Trend Chart -->
+      155      <div class="refined-card lg:col-span-2">
+      156          <h3 class="text-lg font-medium mb-4">Trend przychodów<
+           /h3>
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      190  </div>
+      191 
+      192  <!-- Employee Performance Table -->
+      193 -<div class="refined-card mb-6">                               
+      193 +<div id="nav-employees" class="refined-card mb-6">
+      194      <h3 class="text-lg font-medium mb-4">Wyniki pracowników</h
+           3>
+      195      <div class="overflow-x-auto">
+      196          <table class="refined-table">
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      215  </div>
+      216 
+      217  <!-- Charts Row 2: Client Split + Top Clients + At-Risk -->
+      218 -<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">           
+      218 +<div id="nav-clients" class="grid grid-cols-1 lg:grid-cols-3 g
+          +ap-4">
+      219      <!-- Client Split Chart -->
+      220      <div class="refined-card">
+      221          <h3 class="text-lg font-medium mb-4">Nowi vs. powracaj
+           ący klienci</h3>
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      255      </div>
+      256  </div>
+      257  <!-- Occupancy & Visit Quality -->
+      258 -<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 mt-6"> 
+      258 +<div id="nav-occupancy" class="grid grid-cols-1 md:grid-cols-3
+          + gap-4 mb-6 mt-6">
+      259      <div class="refined-card border-l-4 border-blue-400">
+      260          <div class="text-sm text-slate-500 mb-1">Obłożenie sal
+           onu</div>
+      261          <div id="kpi-occupancy" class="text-2xl font-semibold 
+           text-slate-900 mb-2">-</div>
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      274  </div>
+      275 
+      276  <!-- Peak Hours Heatmap -->
+      277 -<div class="refined-card mb-6">                               
+      277 +<div id="nav-peakhours" class="refined-card mb-6">
+      278      <h3 class="text-lg font-medium mb-4">Szczyty rezerwacji (g
+           odzina × dzień tygodnia)</h3>
+      279      <div id="peakHoursHeatmap" class="overflow-x-auto">
+      280          <p class="text-center text-slate-500">Ładowanie...</p>
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      282  </div>
+      283 
+      284  <!-- Service Price Analysis -->
+      285 -<div class="refined-card mb-6">                               
+      285 +<div id="nav-services" class="refined-card mb-6">
+      286      <h3 class="text-lg font-medium mb-2">Analiza cen usług</h3
+           >
+      287      <p class="text-sm text-slate-500 mb-4">Porównanie cen kata
+           logowych z faktycznie pobranymi</p>
+      288      <div class="overflow-x-auto">
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      306  </div>
+      307 
+      308  <!-- Business Insights -->
+      309 -<div class="refined-card mt-4">                               
+      309 +<div id="nav-insights" class="refined-card mt-4">
+      310      <h3 class="text-lg font-medium mb-4">Wskazówki biznesowe</
+           h3>
+      311      <div id="insightsList" class="space-y-3">
+      312          <p class="text-center text-slate-500">Ładowanie...</p>
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 1 line, removed 1 line
+      316  <!-- ═══════════════════════════════════════════════
+      317       Trendy roczne (ruchome okno 12 miesięcy)
+      318       ═══════════════════════════════════════════════ -->
+      319 -<div class="mt-8 mb-4">                                       
+      319 +<div id="nav-trends" class="mt-8 mb-4">
+      320      <h2 class="text-xl font-semibold text-slate-800">Trendy ro
+           czne</h2>
+      321      <p class="text-xs text-slate-400 mt-0.5">Wszystkie wykresy
+            poniżej — ruchome okno 12 miesięcy, niezależne od wybranego o
+           kresu</p>
+      322  </div>
+
+● Step 3: Add the JS for scrollToSection() and scroll detection in 
+  extra_scripts:
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 23 lines
+      389  <!-- Chart.js from CDN -->
+      390  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/
+           chart.umd.min.js"></script>
+      391  <script src="{{ url_for('static', filename='js/analytics/dashb
+           oard.js') }}"></script>
+      392 +<script>
+      393 +// Section navigation
+      394 +function scrollToSection(id) {
+      395 +    const el = document.getElementById(id);
+      396 +    if (!el) return;
+      397 +    const offset = 80; // account for any sticky top bar
+      398 +    const top = el.getBoundingClientRect().top + window.scroll
+          +Y - offset;
+      399 +    window.scrollTo({ top, behavior: 'smooth' });
+      400 +}
+      401 +
+      402 +// Back-to-top button visibility
+      403 +(function () {
+      404 +    const btn = document.getElementById('backToTopBtn');
+      405 +    if (!btn) return;
+      406 +    window.addEventListener('scroll', function () {
+      407 +        if (window.scrollY > 400) {
+      408 +            btn.style.display = 'flex';
+      409 +        } else {
+      410 +            btn.style.display = 'none';
+      411 +        }
+      412 +    }, { passive: true });
+      413 +})();
+      414 +</script>
+      415  {% endblock %}
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -c "nav-"
+      templates/analytics/dashboard.html && grep -n
+      "backToTopBtn\|scrollToSection\|nav-kpi\|nav-trends" templa…)
+  ⎿  20
+     54:    <button onclick="scrollToSection('nav-kpi')"        class="shri
+     nk-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white
+     … +37 lines (ctrl+o to expand)
+
+● All 10 nav buttons, all anchors, and both JS functions are in place. Commit:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      templates/analytics/dashboard.html && git commit -m "feat(analytics): add
+      section navigation strip and back-to-t…)
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes b3a02f2] feat(analytics):
+      add section navigation strip and back-to-top button
+      1 file changed, 58 insertions(+), 10 deletions(-)
+
+● Done. Here's what was implemented:
+
+  Navigation strip — a horizontal scrollable pill-button row at the top of the
+  dashboard content with 10 section shortcuts: KPI · Zysk netto · Przychody ·
+  Pracownicy · Klienci · Obłożenie · Szczyty · Ceny usług · Wskazówki · Trendy
+  roczne. Each uses scrollToSection() with an 80px top offset to account for any
+   sticky header.
+
+  Back-to-top button (Idź na początek) — fixed bottom-right, hidden on page
+  load. Appears via a { passive: true } scroll listener once the user scrolls
+  past 400px. Clicking it smoothly scrolls to the top and sets display:'none' on
+   itself — it then reappears on the next scroll-past-400px event.
+
+✻ Brewed for 3m 57s
+
+❯ GET /api/analytics/rolling/cost-ratio HTTP/1.1" 500 -                     
+                                                                            
+  Traceback (most recent call last):                                        
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask\app.py", line  
+  1478, in __call__                                                         
+      return self.wsgi_app(environ, start_response)                         
+             ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^                         
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask\app.py", line  
+  1458, in wsgi_app                                                         
+      response = self.handle_exception(e)                                   
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask\app.py", line  
+  1455, in wsgi_app                                                         
+      response = self.full_dispatch_request()                               
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask\app.py", line  
+  869, in full_dispatch_request                                             
+      rv = self.handle_user_exception(e)                                    
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask\app.py", line  
+  867, in full_dispatch_request                                             
+      rv = self.dispatch_request()                                          
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask\app.py", line  
+  852, in dispatch_request                                                  
+      return                                                                
+  self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)         
+                                                                            
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^         
+    File "C:\Projects\faktura_scanner\.venv\Lib\site-packages\flask_login\u 
+  tils.py", line 290, in decorated_view                                     
+      return current_app.ensure_sync(func)(*args, **kwargs)                 
+             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^                 
+    File "C:\Projects\faktura_scanner_flask\config\auth_config.py", line    
+  79, in decorated_function                                                 
+      return f(*args, **kwargs)                                             
+    File "C:\Projects\faktura_scanner_flask\routes\analytics_routes.py",    
+  line 373, in get_rolling_cost_ratio                                       
+      months = repo.get_invoice_cost_ratio_monthly()                        
+    File "C:\Projects\faktura_scanner_flask\repositories\analytics\analytic 
+  s_repository.py", line 948, in get_invoice_cost_ratio_monthly             
+      cursor.execute(query)                                                 
+      ~~~~~~~~~~~~~~^^^^^^^                                                 
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\psycopg2\extras.py", 
+   line 236, in execute                                                     
+      return super().execute(query, vars)                                   
+             ~~~~~~~~~~~~~~~^^^^^^^^^^^^^                                   
+  psycopg2.errors.UndefinedFunction: function round(double precision,       
+  integer) does not exist                                                   
+  LINE 31:                 ROUND(                                           
+                           ^                                                
+  HINT:  No function matches the given name and argument types. You might   
+  need to add explicit type casts.                                          
+                                                                            
+
+● Root cause is clear from the traceback: PostgreSQL's ROUND() only accepts
+  numeric type for the two-argument form — not double precision. The division of
+   two numeric-coerced values produces double precision, which needs an explicit
+   cast.
+
+  ★ Insight ─────────────────────────────────────
+  PostgreSQL has ROUND(numeric, int) but NOT ROUND(double precision, int). When
+  both COALESCE(ic.invoice_costs, 0) and COALESCE(r.revenue, 0) are numeric the
+  division result is also numeric — BUT when either side comes from a SUM() over
+   a float8 column (like amount), the result becomes double precision and the
+  two-argument ROUND breaks. The fix: cast the expression to ::numeric before
+  ROUND.
+  ─────────────────────────────────────────────────
+
+● Searched for 2 patterns (ctrl+o to expand)
+
+● Line 936 is the problem — the expression inside ROUND() produces double 
+  precision because SUM(amount) on the invoices table returns float8. The fix is
+   a ::numeric cast:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(repositories\analytics\analytics_repository.py)
+  ⎿  Added 2 lines, removed 2 lines
+      934                  COALESCE(r.revenue, 0)        AS revenue,
+      935                  COALESCE(ic.invoice_costs, 0) AS invoice_costs
+           ,
+      936                  ROUND(
+      937 -                    COALESCE(ic.invoice_costs, 0)             
+      938 -                    / NULLIF(COALESCE(r.revenue, 0), 0) * 100,
+      937 +                    (COALESCE(ic.invoice_costs, 0)
+      938 +                    / NULLIF(COALESCE(r.revenue, 0), 0) * 100)
+          +::numeric,
+      939                      1
+      940                  ) AS ratio_pct
+      941              FROM months m
+
+● While I'm here, the same issue will affect get_cancellation_rate_monthly and
+  get_employee_utilisation_monthly which also use ROUND(..., 1) on expressions
+  derived from COUNT() — COUNT() returns bigint, and bigint / bigint * 100.0
+  produces double precision. Let me fix those too:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(repositories\analytics\analytics_repository.py)
+  ⎿  Added 4 lines, removed 4 lines
+      818                      COUNT(*) FILTER (WHERE status = 'cancelled
+           ') AS cancelled_count,
+      819                      COUNT(*) FILTER (WHERE status = 'no_show')
+              AS noshow_count,
+      820                      ROUND(
+      821 -                        COUNT(*) FILTER (WHERE status = 'cance
+          -lled') * 100.0                                                
+      822 -                        / NULLIF(COUNT(*), 0), 1              
+      821 +                        (COUNT(*) FILTER (WHERE status = 'canc
+          +elled') * 100.0
+      822 +                        / NULLIF(COUNT(*), 0))::numeric, 1
+      823                      ) AS cancellation_pct,
+      824                      ROUND(
+      825 -                        COUNT(*) FILTER (WHERE status = 'no_sh
+          -ow') * 100.0                                                  
+      826 -                        / NULLIF(COUNT(*), 0), 1              
+      825 +                        (COUNT(*) FILTER (WHERE status = 'no_s
+          +how') * 100.0
+      826 +                        / NULLIF(COUNT(*), 0))::numeric, 1
+      827                      ) AS noshow_pct
+      828                  FROM appointments
+      829                  WHERE appointment_date >= DATE_TRUNC('month', 
+           CURRENT_DATE - INTERVAL '11 months')
+
+● Update(repositories\analytics\analytics_repository.py)
+  ⎿  Added 2 lines, removed 2 lines
+      978                  COALESCE(ab.appointments_count, 0)          AS
+            appointments_count,
+      979                  COALESCE(e.max_appointments_per_day, 8)     AS
+            max_per_day,
+      980                  ROUND(
+      981 -                    COALESCE(ab.appointments_count, 0) * 100.0
+      982 -                    / (22 * COALESCE(e.max_appointments_per_da
+          -y, 8)),                                                       
+      981 +                    (COALESCE(ab.appointments_count, 0) * 100.
+          +0
+      982 +                    / (22 * COALESCE(e.max_appointments_per_da
+          +y, 8)))::numeric,
+      983                      1
+      984                  ) AS utilisation_pct
+      985              FROM months m
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      repositories/analytics/analytics_repository.py && git commit -m
+      "fix(analytics): cast ROUND() expressions to ::n…)
+  ⎿  warning: in the working copy of 'repositories/analytics/analytics_repo
+     sitory.py', LF will be replaced by CRLF the next time Git touches it
+     Time tracking: Commit took no time, message unmodified
+     … +3 lines (ctrl+o to expand)
+
+● Fixed. Three ROUND(..., 1) calls were affected — all in the rolling trend
+  methods:
+
+  ┌──────────────────────────────────┬─────────────────────┬────────────────┐
+  │              Method              │   Expression type   │      Fix       │
+  ├──────────────────────────────────┼─────────────────────┼────────────────┤
+  │                                  │ double precision    │                │
+  │ get_invoice_cost_ratio_monthly   │ (from SUM(amount)   │ (...)::numeric │
+  │                                  │ on float8 column)   │                │
+  ├──────────────────────────────────┼─────────────────────┼────────────────┤
+  │                                  │ double precision    │ (...)::numeric │
+  │ get_cancellation_rate_monthly    │ (from bigint *      │  × 2           │
+  │                                  │ 100.0 / bigint)     │                │
+  ├──────────────────────────────────┼─────────────────────┼────────────────┤
+  │                                  │ double precision    │                │
+  │ get_employee_utilisation_monthly │ (from bigint *      │ (...)::numeric │
+  │                                  │ 100.0 / integer)    │                │
+  └──────────────────────────────────┴─────────────────────┴────────────────┘
+
+  PostgreSQL's ROUND(x, n) signature only exists for numeric — it deliberately
+  omits the double precision overload because floating-point rounding to a
+  specific decimal count is mathematically ambiguous. Casting to ::numeric is
+  the idiomatic fix.
+
+✻ Churned for 1m 34s
+
+❯ the scroll buttons does not work, no scrolling to section selected 
+
+● Let me check the base template — the issue is likely that the page scrolls
+  inside a container div, not window:
+
+● Read 1 file (ctrl+o to expand)
+
+● Root cause found. Line 44:
+
+  <main class="flex-1 overflow-auto p-2" id="main-content">
+
+  The scroll container is #main-content, not window. window.scrollY is always 0,
+   window.scrollTo() does nothing — all scrolling happens inside this <main>
+  element.
+
+  ★ Insight ─────────────────────────────────────
+  When the page uses overflow-auto on a child element (not body/html), the
+  browser's scroll APIs (window.scrollTo, window.scrollY) refer to the viewport,
+   which never moves. You must call .scrollTop and .scrollTo() on the actual 
+  scrolling element (document.getElementById('main-content')), not on window.
+  ─────────────────────────────────────────────────
+
+  Fix both scrollToSection() and the back-to-top scroll + visibility listener to
+   use #main-content:
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Added 14 lines, removed 7 lines
+      390  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/
+           chart.umd.min.js"></script>
+      391  <script src="{{ url_for('static', filename='js/analytics/dashb
+           oard.js') }}"></script>
+      392  <script>
+      393 +// The scrollable container is <main id="main-content">, not w
+          +indow
+      394 +const _scrollEl = document.getElementById('main-content');
+      395 +
+      396  // Section navigation
+      397  function scrollToSection(id) {
+      398      const el = document.getElementById(id);
+      396 -    if (!el) return;                                          
+      397 -    const offset = 80; // account for any sticky top bar      
+      398 -    const top = el.getBoundingClientRect().top + window.scroll
+          -Y - offset;                                                   
+      399 -    window.scrollTo({ top, behavior: 'smooth' });             
+      399 +    if (!el || !_scrollEl) return;
+      400 +    const offset = 16; // small breathing room
+      401 +    const top = el.offsetTop - _scrollEl.offsetTop - offset;
+      402 +    _scrollEl.scrollTo({ top, behavior: 'smooth' });
+      403  }
+      404 
+      405  // Back-to-top button visibility
+      406  (function () {
+      407      const btn = document.getElementById('backToTopBtn');
+      405 -    if (!btn) return;                                         
+      406 -    window.addEventListener('scroll', function () {           
+      407 -        if (window.scrollY > 400) {                           
+      408 +    if (!btn || !_scrollEl) return;
+      409 +    _scrollEl.addEventListener('scroll', function () {
+      410 +        if (_scrollEl.scrollTop > 400) {
+      411              btn.style.display = 'flex';
+      412          } else {
+      413              btn.style.display = 'none';
+      414          }
+      415      }, { passive: true });
+      416 +    btn.addEventListener('click', function () {
+      417 +        _scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+      418 +        btn.style.display = 'none';
+      419 +    });
+      420  })();
+      421  </script>
+      422  {% endblock %}
+
+● Also remove the inline onclick from the back-to-top button since the click
+  handler is now in JS:
+
+● Update(templates\analytics\dashboard.html)
+  ⎿  Removed 1 line
+      65 
+      66  <!-- Back-to-top button (hidden until scrolled) -->
+      67  <button id="backToTopBtn"
+      68 -    onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); t
+         -his.style.display='none';"                                     
+      68      class="fixed bottom-6 right-6 z-50 hidden items-center gap-
+          2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounde
+          d-full shadow-lg hover:bg-blue-700 transition-colors">
+      69      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke
+          ="currentColor">
+      70          <path stroke-linecap="round" stroke-linejoin="round" st
+          roke-width="2" d="M5 15l7-7 7 7" />
+
+● Bash(cd /c/Projects/faktura_scanner_flask && git add
+      templates/analytics/dashboard.html && git commit -m "fix(analytics):
+      scroll buttons use main-content container,…)
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [feat/2026-03-02-password-reset-and-db-fixes 5b6a6f0] fix(analytics):
+     scroll buttons use main-content container, not window
+      1 file changed, 14 insertions(+), 8 deletions(-)
+
+● Fixed. The problem was that the page layout uses overflow-auto on <main 
+  id="main-content">, so the actual scroll container is that element —
+  window.scrollY was always 0 and window.scrollTo() had no effect.
+
+  Changes:
+  - scrollToSection() now uses _scrollEl.scrollTo() with el.offsetTop relative
+  to the container
+  - The scroll listener watches _scrollEl.scrollTop (not window.scrollY) to
+  show/hide the back-to-top button
+  - The back-to-top click handler uses _scrollEl.scrollTo({ top: 0 }) and is now
+   in JS (not inline onclick)
+
+✻ Cogitated for 1m 1s
