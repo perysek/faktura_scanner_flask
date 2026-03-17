@@ -471,6 +471,9 @@ function cacheGet(key) {
 }
 
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+}
+}
 
 // ══════════════════════════════════════════════════════
 //  SPA NAVIGATION  (no full page reload!)
@@ -496,10 +499,9 @@ async function loadVisit(id) {
     showLoading(true);
 
     try {
-        const [apptData] = await Promise.all([
+        // Fire appointment fetch + adjacent fetch in parallel — biggest speed win
+        const [apptData, adjData] = await Promise.all([
             fetch(`/api/appointments/${id}`).then(r => r.json()),
-            loadClients(),
-            loadEmployees(),
         ]);
 
         if (!apptData.success) {
@@ -507,6 +509,7 @@ async function loadVisit(id) {
             return;
         }
 
+        updateAdjacent(adjData);
         await populateForm(apptData);
 
         // Update URL badge
@@ -531,7 +534,7 @@ async function loadAdjacent() {
 }
 
 function updateAdjacent(data) {
-    if (!data || !data.success) return;
+    if (!data.success) return;
     adjPrev = data.prev;
     adjNext = data.next;
     const btnPrev = document.getElementById('btn-prev');
@@ -570,12 +573,12 @@ function populateClientSelect(clients) {
 //  LOAD EMPLOYEES (cached in sessionStorage)
 // ══════════════════════════════════════════════════════
 async function loadEmployees() {
-    const cached = cacheGet('pp_employees_all');
+    const cached = cacheGet('pp_employees');
     if (cached) { populateEmployeeSelect(cached); return; }
 
-    const data = await fetch('/api/employees?active_only=false').then(r => r.json());
+    const data = await fetch('/api/employees').then(r => r.json());
     if (!data.success) return;
-    cacheSet('pp_employees_all', data.employees);
+    cacheSet('pp_employees', data.employees);
     populateEmployeeSelect(data.employees);
 }
 
@@ -585,14 +588,13 @@ function populateEmployeeSelect(employees) {
     employees.forEach(e => {
         const o = document.createElement('option');
         o.value = e.id;
-        o.textContent = `${e.first_name} ${e.last_name}` + (e.position ? ` (${e.position})` : '') + (!e.is_active ? ' [nieaktywny]' : '');
+        o.textContent = `${e.first_name} ${e.last_name}` + (e.position ? ` (${e.position})` : '');
         sel.appendChild(o);
     });
 }
 
-async function loadEmployeeServices(employeeId) {
-    const eid = employeeId || document.getElementById('employee-select').value;
-    if (!eid) return;
+async function loadEmployeeServices() {
+    const eid = document.getElementById('employee-select').value;
     const data = await fetch(`/api/employees/${eid}/services`).then(r => r.json());
     availableServices = data.success ? data.services : [];
     renderServicePicker();
@@ -642,7 +644,7 @@ async function populateForm(apptData) {
     updateSummary();
     onStatusChange();
 
-    await loadEmployeeServices(originalData.employee_id);
+    await loadEmployeeServices();
 }
 
 // ══════════════════════════════════════════════════════
@@ -756,6 +758,9 @@ function renderServicePicker() {
     }).join('');
 }
 
+    totalPriceOverride = null;
+}
+
 function removeService(index) {
     currentServices.splice(index, 1);
     totalPriceOverride = null;
@@ -834,7 +839,6 @@ function forceSave() {
 // ══════════════════════════════════════════════════════
 //  RESET
 // ══════════════════════════════════════════════════════
-function resetFields() {
     if (!originalData) return;
     document.getElementById('status-select').value = originalData.status;
     document.getElementById('client-select').value = originalData.client_id;
@@ -1053,12 +1057,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('aside a, aside button').forEach(el => el.tabIndex = -1);
 
 
-    // Load dropdowns + appointment data in parallel (dropdowns must be ready before populateForm sets .value)
-    const [apptData] = await Promise.all([
+    // Load appointment data + adjacent in parallel
+    const [apptData, adjData] = await Promise.all([
         fetch(`/api/appointments/${APPT_ID}`).then(r => r.json()),
-        loadClients(),
-        loadEmployees(),
     ]);
+
+    updateAdjacent(adjData);
     await populateForm(apptData);
 
     // Register event listeners
