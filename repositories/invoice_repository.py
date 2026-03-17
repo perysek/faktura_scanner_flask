@@ -11,7 +11,9 @@ from repositories.db_utils import parse_dt, parse_date
 
 class InvoiceRepository(BaseRepository):
 	"""Repository dla operacji na fakturach"""
-	
+
+	_soft_delete = True
+
 	def __init__(self):
 		super().__init__("invoices")
 	

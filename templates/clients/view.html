@@ -1147,6 +1147,16 @@ async function confirmDelete() {
         });
     }
 }
+
+// Skrót klawiszowy: Esc = powrót do listy klientów
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.querySelector('.modal-overlay')) return;
+        const cm = document.getElementById('confirm-modal');
+        if (cm && !cm.classList.contains('hidden')) return;
+        window.location.href = '{{ url_for("main.clients_list") }}';
+    }
+});
 </script>
 
 <!-- Modal System -->

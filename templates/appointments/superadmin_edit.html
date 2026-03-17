@@ -3,8 +3,6 @@
 {% block title %}Admin Wizyty #{{ appointment_id }} — Power Editor{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
     /* ── Power Panel Theme ── */
     :root {
@@ -19,12 +17,9 @@
         --pp-danger: #dc2626;
         --pp-success: #16a34a;
         --pp-warning: #d97706;
-        --pp-mono: 'IBM Plex Mono', monospace;
-        --pp-body: 'DM Sans', system-ui, sans-serif;
         --ease: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    body { background: var(--pp-bg) !important; font-family: var(--pp-body); color: var(--pp-ink); }
 
     /* Override base.html main area — this page owns its own scroll */
     #main-content { overflow: hidden !important; padding: 0 !important; }
@@ -57,7 +52,6 @@
         border-bottom: 1px solid var(--pp-border);
         background: #f5f5f5;
     }
-    .pp-title { font-family: var(--pp-mono); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
     .pp-id-badge { font-family: var(--pp-mono); font-size: 0.72rem; font-weight: 500; background: #111; color: var(--pp-blue); padding: 0.12rem 0.45rem; border-radius: 2px; }
     .superuser-badge { font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; background: rgba(220,38,38,0.1); color: var(--pp-danger); border: 1px solid rgba(220,38,38,0.3); padding: 0.12rem 0.45rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
 
@@ -82,7 +76,6 @@
     /* ── Cards ── */
     .pp-card { background: var(--pp-surface); border: 1px solid var(--pp-border); border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }
     .pp-card-header { padding: 0.5rem 0.875rem; border-bottom: 1px solid var(--pp-border); background: var(--pp-surface-warm); display: flex; align-items: center; gap: 0.5rem; }
-    .pp-card-title { font-family: var(--pp-mono); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); }
     .pp-card-body { padding: 0.875rem; }
 
     /* ── Form Elements ── */
@@ -111,7 +104,6 @@
     .star-btn { background: none; border: none; cursor: pointer; padding: 0.1rem; color: #d1d5db; font-size: 1.4rem; line-height: 1; transition: color 0.1s, transform 0.1s; }
     .star-btn:hover, .star-btn.active { color: #f59e0b; }
     .star-btn:hover { transform: scale(1.15); }
-    .star-meta { font-family: var(--pp-mono); font-size: 0.62rem; color: var(--pp-ink-subtle); margin-top: 0.2rem; }
 
     /* ── Service rows with editable price + duration ── */
     .pp-service-list { list-style: none; padding: 0; margin: 0; }

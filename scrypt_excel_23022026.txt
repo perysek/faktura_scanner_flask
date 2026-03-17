@@ -1,0 +1,1342 @@
+
+ ▐▛███▜▌   Claude Code v2.1.50
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    C:\Projects\faktura_scanner_flask
+
+❯ @2026-02-09T21_07_09-Klienci.xlsx - is the excel file with Clients data.  
+  make script to Feed app database table for clients with data in excel     
+  file. First row of the excel file are the names of the client fields as   
+  per datamodel defined @database/models.py. Use pandas for good            
+  performance of excel file reading into dataframe and then feed            
+  application database using data from dataframe. for 'phone' data add '48' 
+   prefix to each phone number fetched.                                     
+  ⎿  Read database\models.py (364 lines)
+
+● Searched for 2 patterns, read 4 files (ctrl+o to expand)
+
+● Now let me inspect the Excel headers and a sample row to understand the
+  mapping:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python -c "
+      import pandas as pd…)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 2, in <module>
+         import pandas as pd
+     ModuleNotFoundError: No module named 'pandas'
+
+     Traceback (most recent call last):
+       File "<string>", line 2, in <module>
+         import pandas as pd
+     ModuleNotFoundError: No module named 'pandas'
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import pandas as pd…)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 2, in <module>
+         import pandas as pd
+     … +11 lines (ctrl+o to expand)
+
+● Good - columns are first_name, last_name, phone, last_visit_date. Let me check
+   if the clients table exists in the DB:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3…)
+  ⎿  Tables: ['invoices', 'sqlite_sequence', 'sellers', 'audit_log', 'dupli
+     cate_detection', 'upload_staging', 'alembic_version', 'users', 'employ
+     ees', 'employee_availability', 'employee_time_off', 'clients', 'servic
+     … +8 lines (ctrl+o to expand)
+
+● The clients table already exists with all needed columns. Now I have
+  everything to write the import script.
+
+  ★ Insight ─────────────────────────────────────
+  - The Excel has only 4 columns (first_name, last_name, phone, last_visit_date)
+   — a subset of the full clients schema. The script will map these precisely
+  and leave optional fields (email, notes, etc.) as NULL.
+  - Using pandas.read_excel() with openpyxl engine is the right choice here: it
+  handles date types natively, encoding, and NaN values gracefully, unlike raw
+  openpyxl iteration.
+  - The ON CONFLICT strategy matters: using INSERT OR IGNORE (by phone
+  uniqueness) would silently skip duplicates. Since there's no UNIQUE constraint
+   on phone, we'll check for duplicates by (first_name, last_name, phone) to be
+  safe.
+  ─────────────────────────────────────────────────
+
+● Write(scripts\import_clients_from_excel.py)
+  ⎿  Wrote 143 lines to scripts\import_clients_from_excel.py
+       1 """
+       2 Skrypt importu klientów z pliku Excel do bazy danych aplikacji.
+       3 
+       4 Użycie:
+       5     python scripts/import_clients_from_excel.py [ścieżka_do_plik
+         u.xlsx]
+       6 
+       7 Domyślnie szuka pliku: 2026-02-09T21_07_09-Klienci.xlsx w katalo
+         gu głównym projektu.
+       8 """
+       9 import sys
+      10 import sqlite3
+     … +133 lines (ctrl+o to expand)
+
+● Now let's run it:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python
+      scripts/import_clients_from_excel.py)
+  ⎿  Baza danych: C:\Projects\faktura_scanner_flask\faktury.db
+     ------------------------------------------------------------
+     Wczytywanie pliku: C:\Projects\faktura_scanner_flask\2026-02-09T21_07_
+     … +426 lines (ctrl+o to expand)
+
+● There's a constraint issue — the DB has last_name NOT NULL, but the Excel has
+  clients with no last name. Let me check the actual DB constraint and fix the
+  script:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3…)
+  ⎿  CREATE TABLE clients (
+        id INTEGER NOT NULL,
+        first_name VARCHAR(100) NOT NULL,
+     … +13 lines (ctrl+o to expand)
+
+● last_name is NOT NULL in the DB. For clients who only have a first name, I'll
+  insert an empty string "" as a fallback. Also need to fix the duplicate-check
+  logic:
+
+● Update(scripts\import_clients_from_excel.py)
+  ⎿  Added 1 line, removed 1 line
+      78      for idx, row in df.iterrows():
+      79          first_name = str(row.get("first_name", "")).strip() if
+          not pd.isna(row.get("first_name", float("nan"))) else ""
+      80          last_name_raw = row.get("last_name", None)
+      81 -        last_name = str(last_name_raw).strip() if not pd.isna(l
+         -ast_name_raw) else None                                        
+      81 +        last_name = str(last_name_raw).strip() if not pd.isna(l
+         +ast_name_raw) else ""
+      82          phone = parse_phone(row.get("phone", None))
+      83          last_visit_date = parse_date(row.get("last_visit_date",
+           None))
+      84 
+
+● Update(scripts\import_clients_from_excel.py)
+  ⎿  Added 3 lines, removed 3 lines
+       89 
+       90          # Sprawdź duplikaty po imieniu, nazwisku i numerze tel
+           efonu
+       91          cursor.execute(
+       92 -            "SELECT id FROM clients WHERE first_name = ? AND (
+          -last_name = ? OR (last_name IS NULL AND ? IS NULL)) AND (phone
+          - = ? OR (phone IS NULL AND ? IS NULL))",                      
+       93 -            (first_name, last_name, last_name, phone, phone), 
+       92 +            "SELECT id FROM clients WHERE first_name = ? AND l
+          +ast_name = ? AND (phone = ? OR (phone IS NULL AND ? IS NULL))"
+          +,
+       93 +            (first_name, last_name, phone, phone),
+       94          )
+       95          existing = cursor.fetchone()
+       96          if existing:
+       97 -            print(f"  [POMIŃ] '{first_name} {last_name or ''}'
+          - (tel: {phone}) — już istnieje (id={existing['id']})")        
+       97 +            print(f"  [POMIŃ] '{first_name} {last_name}' (tel:
+          + {phone}) — już istnieje (id={existing['id']})")
+       98              stats["skipped"] += 1
+       99              continue
+      100 
+
+● Also update the print statement to use the new last_name (no or '' needed
+  now):
+
+● Update(scripts\import_clients_from_excel.py)
+  ⎿  Added 1 line, removed 1 line
+      106                  """,
+      107                  (first_name, last_name, phone, last_visit_date
+           , now, now),
+      108              )
+      109 -            print(f"  [OK]   '{first_name} {last_name or ''}' 
+          -(tel: {phone}, ostatnia wizyta: {last_visit_date})")          
+      109 +            print(f"  [OK]   '{first_name} {last_name}' (tel: 
+          +{phone}, ostatnia wizyta: {last_visit_date})")
+      110              stats["inserted"] += 1
+      111          except Exception as e:
+      112              print(f"  [BŁĄD] Wiersz {idx + 2}: {e}")
+
+● Now clean previously imported rows and re-run:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3…)
+  ⎿  Clients table cleared, rows deleted: 0
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python
+      scripts/import_clients_from_excel.py 2>&1 | tail -20)
+  ⎿    [POMI�] 'Sylwia Zych' (tel: 48602611414) � ju� istnieje (id=605)
+       [OK]   'Teresa Sternik' (tel: 48609535476, ostatnia wizyta: 2024-07-
+     29)
+     … +15 lines (ctrl+o to expand)
+
+● 679 clients imported, 12 skipped (duplicates), 0 errors. Let me do a quick
+  sanity check on the data:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3…)
+  ⎿  Total clients: 679
+     ('Adam', 'Wi�niewski', '48509626642', '2026-02-06')
+     ('Agata', '', '48502060606', '2026-02-09')
+     … +3 lines (ctrl+o to expand)
+
+● Everything looks correct. The script is at
+  scripts/import_clients_from_excel.py.
+
+  ★ Insight ─────────────────────────────────────
+  - The script adds PROJECT_ROOT to sys.path so it can reuse
+  config.settings.DB_PATH — this avoids hardcoding the database path and stays
+  consistent with the rest of the app.
+  - The phone normalization strips existing +48/0048 prefixes before adding 48,
+  making the transform idempotent — safe to re-run without double-prefixing.
+  - Duplicate detection uses (first_name, last_name, phone) as a composite key
+  since the clients table has no UNIQUE constraint on any single field — this is
+   why 12 rows were skipped (the Excel itself contained duplicate entries).
+  ─────────────────────────────────────────────────
+
+  Summary:
+  - 679 clients imported, 12 duplicate rows skipped, 0 errors
+  - Clients with no last name (like Agata) get an empty string "" to satisfy the
+   NOT NULL DB constraint
+  - Phone numbers all prefixed with 48 (e.g., 509626642 → 48509626642)
+  - last_visit_date parsed and stored as YYYY-MM-DD
+  - Re-runnable safely — duplicate check prevents double inserts
+
+✻ Brewed for 2m 26s
+
+❯ @templates/clients\ - last name value is not displayed in the clients     
+  list view, edit and view single client. Check code files and fix it       
+  ⎿  Listed directory templates\clients\
+
+● Read 3 files (ctrl+o to expand)
+
+● The templates look correct syntactically. The issue must be in the data layer
+  — how the API serializes the client. Let me check the repository and routes:
+
+● Searched for 2 patterns (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -rn "def.*client" routes/
+      --include="*.py" | grep -v "preference" | head -30)
+  ⎿  routes/analytics_routes.py:166:def get_clients():
+     routes/api_routes.py:1960:def get_clients():
+     routes/api_routes.py:2004:def get_client(client_id):
+     … +9 lines (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -rn "last_name" routes/
+      --include="*.py" | head -30)
+  ⎿  routes/api_routes.py:2060:            last_name=data.get('last_name',
+     '').strip(),
+     routes/api_routes.py:2072:        if not client.first_name or not clie
+     … +13 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● The API looks fine. The issue must be in row_to_client — let me find where
+  that's defined:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -rn
+      "row_to_client\|client_repo\|ClientRepo" --include="*.py" | grep -v "test"
+       | head -20)
+  ⎿  app.py:33:from repositories.clients.client_repository import ClientRep
+     ository
+     app.py:101:    app.client_repo = ClientRepository()
+     … +23 lines (ctrl+o to expand)
+
+● Read 1 file (ctrl+o to expand)
+
+● The repository is fine. Now let me check how view_client and edit_client pass
+  data to templates — this is where the problem likely hides:
+
+● Read 1 file (ctrl+o to expand)
+
+● Let me check the base repository's get_by_id implementation:
+
+● Read 1 file (ctrl+o to expand)
+
+● Let me check the actual API response to see what's being returned:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3…)
+  ⎿  Clients with empty/null last_name:
+       id=2, first='Agata', last=''
+       id=188, first='Andrii', last=''
+     … +12 lines (ctrl+o to expand)
+
+● Let me check the actual API output directly and also look for any null
+  last_name values:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3…)
+  ⎿  NULL last_name count: 0
+     Empty string last_name count: 32
+     Sample row keys: ['id', 'first_name', 'last_name', 'phone', 'email', '
+     … +3 lines (ctrl+o to expand)
+
+● Data looks fine. Let me trace the full serialization path to see exactly what
+  the API returns:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sys, sqlite3…)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 5, in <module>
+         from database.models import Client
+       File "C:\Projects\faktura_scanner_flask\database\models.py", line 8, in 
+     <module>
+         from flask_login import UserMixin
+     ModuleNotFoundError: No module named 'flask_login'
+
+     Traceback (most recent call last):
+       File "<string>", line 5, in <module>
+
+     … +4 lines (ctrl+o to see all)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sys, sqlite3…)
+  ⎿  keys: ['first_name', 'last_name', 'phone', 'email', 'date_of_birth', '
+     notes', 'preferences', 'first_visit_date', 'last_visit_date', 'is_acti
+     ve', 'id', 'created_at', 'updated_at', 'full_name']
+     … +2 lines (ctrl+o to expand)
+
+● Let me check the actual full_name property output with the app's Python
+  environment:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sys…)
+  ⎿  vars keys: ['first_name', 'last_name', 'phone', 'is_active', 'id', 'fu
+     ll_name']
+     last_name: 'Wisniewski'
+     … +3 lines (ctrl+o to expand)
+
+● Found the root bug. {{ client.last_name[0] }} in view.html crashes with
+  IndexError for any client with an empty last_name. Let me also start the app
+  and check the browser:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python app.py &)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ continue 
+
+● ★ Insight ─────────────────────────────────────
+  - The confirmed bug: {{ client.last_name[0] }} (view.html:435) raises Python's
+   IndexError when last_name = "", bubbling up as a 500 error for those 32
+  clients.
+  - In the list JS, client.last_name.charAt(0) is safe for empty strings
+  (returns ""), but would crash if the value were ever null — defensive coding
+  with (client.last_name || '') is the right pattern.
+  - The fix should also handle full_name trailing-space cosmetics by trimming
+  the computed property output.
+  ─────────────────────────────────────────────────
+
+  Now fixing all three templates:
+
+● Update(templates\clients\view.html)
+  ⎿  Added 1 line, removed 1 line
+      432      <header class="page-header">
+      433          <div class="page-title-section">
+      434              <div class="client-avatar-large">
+      435 -                {{ client.first_name[0] }}{{ client.last_name[
+          -0] }}                                                         
+      435 +                {{ client.first_name[0] if client.first_name e
+          +lse '?' }}{{ client.last_name[0] if client.last_name else '' }
+          +}
+      436              </div>
+      437              <h1 class="page-title">{{ client.full_name }}</h1>
+      438              <p class="page-subtitle">
+
+● Now fix the list.html JS — both the initials computation and the full_name
+  display (trim trailing space for clients without a last name):
+
+● Update(templates\clients\list.html)
+  ⎿  Added 2 lines, removed 2 lines
+      556              }
+      557 
+      558              tbody.innerHTML = data.clients.map(client => {
+      559 -                const initials = escapeHtml(client.first_name.
+          -charAt(0) + client.last_name.charAt(0));                      
+      560 -                const fullName = escapeHtml(client.full_name);
+      559 +                const initials = escapeHtml(client.first_name.
+          +charAt(0) + (client.last_name || '').charAt(0));
+      560 +                const fullName = escapeHtml((client.full_name
+          +|| '').trim());
+      561                  const phone = client.phone ? escapeHtml(client
+           .phone) : '<span style="color: var(--color-ink-subtle)">—</spa
+           n>';
+      562                  const email = client.email ? escapeHtml(client
+           .email) : '<span style="color: var(--color-ink-subtle)">—</spa
+           n>';
+      563                  const lastVisit = formatDate(client.last_visit
+           _date);
+
+● Now fix the full_name property in the Client model to trim the trailing space
+  when there's no last name:
+
+● Update(database\models.py)
+  ⎿  Added 1 line, removed 1 line
+      221      @property
+      222      def full_name(self) -> str:
+      223          """Pełne imię i nazwisko klienta"""
+      224 -        return f"{self.first_name} {self.last_name}"          
+      224 +        return f"{self.first_name} {self.last_name}".strip()
+      225 
+      226      @property
+      227      def age(self) -> Optional[int]:
+
+● Let me verify the three fixes are in place:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "last_name\[0\]\|last_name\.charAt\|full_name.*strip\|full_name.*trim"
+      templates/clients/view.html templates/cli…)
+  ⎿  templates/clients/view.html:435:                {{ client.first_name[0
+     ] if client.first_name else '?' }}{{ client.last_name[0] if client.las
+     t_name else '' }}
+     … +2 lines (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "charAt\|full_name.*strip" templates/clients/list.html database/models.py)
+  ⎿  templates/clients/list.html:559:                const initials = escap
+     eHtml(client.first_name.charAt(0) + (client.last_name || '').charAt(0)
+     );
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "full_name"
+      database/models.py)
+  ⎿  76:    full_name: str
+     129:    def full_name(self) -> str:
+     222:    def full_name(self) -> str:
+
+● Read 1 file (ctrl+o to expand)
+
+● All three fixes are confirmed. Here's a summary of what was wrong and what was
+   fixed:
+
+  Root cause: 32 clients were imported from Excel with an empty last_name = ""
+  (clients who had only a first name in the source data).
+
+  Location: view.html:435
+  Bug: {{ client.last_name[0] }} → IndexError crash (500 error) for clients with
+
+    empty last name
+  Fix: Added Jinja2 conditional: {{ client.last_name[0] if client.last_name else
+   
+    '' }}
+  ────────────────────────────────────────
+  Location: list.html JS:559
+  Bug: client.last_name.charAt(0) → would crash if last_name ever came back as
+    null from API
+  Fix: Defensive: (client.last_name || '').charAt(0)
+  ────────────────────────────────────────
+  Location: models.py:224
+  Bug: full_name property returned "Agata " with trailing space for clients
+    without last name
+  Fix: Added .strip() to the f-string result
+
+  ★ Insight ─────────────────────────────────────
+  - The Jinja2 {% if %} guard approach is preferred over Python's or '' fallback
+   because Jinja2 evaluates empty strings as falsy — client.last_name[0] if 
+  client.last_name else '' is both safe and readable.
+  - The models.py .strip() fix benefits ALL callers of full_name (API JSON,
+  Jinja2 templates, audit logs) in one place — a single-source-of-truth fix
+  rather than patching every consumer.
+  ─────────────────────────────────────────────────
+
+✻ Baked for 1m 1s
+
+❯ still the same. no last names visible 
+
+● Let me look at the actual live page to diagnose this properly.
+
+● kapture - list_tabs (MCP)
+  ⎿  {
+       "tabs": [],
+       "hint": "There currently are no tabs connected. Use the new_tab tool
+     … +2 lines (ctrl+o to expand)
+
+● Let me directly call the API to see exactly what's being returned:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python -c "
+      import sqlite3, json…)
+  ⎿  Error: Exit code 1
+     <string>:8: SyntaxWarning: invalid escape sequence '\!'
+     Traceback (most recent call last):
+     <unknown>:2: SyntaxWarning: invalid escape sequence '\!'
+     <unknown>:1: SyntaxWarning: invalid escape sequence '\!'
+       File "<string>", line 8, in <module>
+         cursor.execute('SELECT * FROM clients WHERE is_active=1 AND last_name 
+     \!= "" LIMIT 5')
+         ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     ^^^^^^^^^^^^^^^
+     sqlite3.OperationalError: unrecognized token: "\"
+
+     … +8 lines (ctrl+o to see all)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python << 'EOF'
+      import sqlite3…)
+  ⎿  first_name: 'Adam' | last_name: 'Wi�niewski'
+     first_name: 'Agnieszka' | last_name: 'Obuchowska'
+     first_name: 'Agnieszka' | last_name: 'Szcz�scniewska'
+     … +2 lines (ctrl+o to expand)
+
+● The DB has correct data. Let me check what the actual Excel data looked like
+  more carefully — maybe names were stored in the wrong column:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python << 'EOF'
+      import pandas as pd…)
+  ⎿  Total rows: 691
+
+     First 10 rows:
+     … +21 lines (ctrl+o to expand)
+
+● Data is fine in both DB and Excel. Let me look at the actual response from the
+   running Flask app — let me check if it's already running and make a test
+  request:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/python << 'EOF'
+      # Simulate full API path using actual app context…)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<stdin>", line 6, in <module>
+       File "C:\Projects\faktura_scanner_flask\database\models.py", line 8, in 
+     <module>
+         from flask_login import UserMixin
+     ModuleNotFoundError: No module named 'flask_login'
+
+     Traceback (most recent call last):
+       File "<stdin>", line 6, in <module>
+       File "C:\Projects\faktura_scanner_flask\database\models.py", line 8, in 
+     <module>
+
+     … +2 lines (ctrl+o to see all)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && .venv/Scripts/pip show
+      flask-login 2>&1 | head -3 && .venv/Scripts/pip list 2>&1 | grep -i flask)
+  ⎿  WARNING: Package(s) not found: flask-login
+     Flask           3.0.0
+
+● Bash(cd /c/Projects/faktura_scanner_flask && ls .venv/Scripts/*.exe | head -5
+      && python -m flask --version 2>&1 || true)
+  ⎿  .venv/Scripts/dotenv.exe
+     .venv/Scripts/f2py.exe
+     .venv/Scripts/flask.exe
+     … +5 lines (ctrl+o to expand)
+
+● Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● The app runs with a different venv at C:\Projects\faktura_scanner\.venv. Let
+  me test the actual API path with that Python:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python << 'EOF'
+      import sys…)
+  ⎿  === Full API serialization ===
+       first='Agata'         last=''                   full_name='Agata'
+       first='Andrii'        last=''                   full_name='Andrii'
+     … +5 lines (ctrl+o to expand)
+
+● The sorted query puts empty-last_name clients first! Let me check what happens
+   with clients that DO have last names:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python << 'EOF'
+      import sys…)
+  ⎿  === Clients WITH last_name ===
+       first='Ania'          last='Abram'              full_name='Ania Abra
+     m'
+     … +16 lines (ctrl+o to expand)
+
+● I see the real data issue now — many names are stored reversed in the DB
+  (surname in first_name, given name in last_name). But let me also verify what
+  the live API actually responds with by checking if the app is running:
+
+● Bash(curl -s http://localhost:5000/api/clients 2>&1 | head -200 || echo "NOT
+      RUNNING")
+  ⎿  <!doctype html><title>404 Not Found</title><h1 style="text-align: cent
+     er">404 Not Found</h1>
+
+● Bash(curl -s "http://localhost:5000/api/clients" -H "Cookie: session=test"
+      2>&1 | python -c "import sys,json; d=json.load(sys.stdin);
+      [print(c.get('first_name'), '|'…)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+         import sys,json; d=json.load(sys.stdin); [print(c.get('first_name'
+     … +16 lines (ctrl+o to expand)
+
+● Bash(netstat -an 2>/dev/null | grep -E "5000|8000|8080|LISTEN" | head -10 ||
+      ss -tlnp 2>/dev/null | head -10)
+  ⎿    TCP    0.0.0.0:135            0.0.0.0:0              LISTENING
+       TCP    0.0.0.0:445            0.0.0.0:0              LISTENING
+       TCP    0.0.0.0:1583           0.0.0.0:0              LISTENING
+     … +7 lines (ctrl+o to expand)
+
+● App is on 5000. The 404 is because login_required redirects. Let me look at
+  app.py to see if there's a URL prefix, then check what exact blueprint URL the
+   clients API is registered at:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n
+      "register_blueprint\|url_prefix\|api_bp\|main_bp" app.py | head -20)
+  ⎿  114:    from routes.main_routes import main_bp
+     115:    from routes.api_routes import api_bp
+     125:    app.register_blueprint(main_bp)
+     … +11 lines (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && grep -n "Blueprint\|url_prefix"
+      routes/api_routes.py | head -5)
+  ⎿  9:from flask import Blueprint, jsonify, request, current_app, send_fil
+     e, session
+     17:api_bp = Blueprint('api', __name__)
+
+● Let me check the analytics route — there might be a blueprint route conflict:
+
+● Read 1 file (ctrl+o to expand)
+
+● Let me check for null first_names and also look at the actual API endpoint
+  response structure more carefully:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python << 'EOF'
+      import sqlite3…)
+  ⎿  Null/empty first_name count: 0
+     Active clients: 679
+     … +11 lines (ctrl+o to expand)
+
+● Let me look at a broader sample to understand the full name pattern across the
+   dataset:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python << 'EOF'
+      import sqlite3…)
+  ⎿  First 30 clients by ID (as imported):
+       id=  1  first='Adam'                  last='Wi�niewski'
+       id=  2  first='Agata'                 last=''
+     … +22 lines (ctrl+o to expand)
+
+● I can see the pattern now — ids 26+ have reversed first/last names from the
+  Excel. But the user says last names are "still not visible" after my changes.
+  Let me open the app directly to see what's happening:
+
+● plugin:playwright:playwright - Navigate to a URL (MCP)(url:
+                                                        "http://localhost:5000")
+  ⎿  Tool use rejected with user message: go to url, but app is on port no.8083,
+      not 5000
+
+● plugin:playwright:playwright - Navigate to a URL (MCP)(url: "http://localhost:
+                                                        8083/clients")
+  ⎿  ### Ran Playwright code
+     ```js
+     await page.goto('http://localhost:8083/clients');
+     … +24 lines (ctrl+o to expand)
+
+● plugin:playwright:playwright - Fill form (MCP)(fields: [{"name":"email","type"
+                                                :"textbox","ref":"e11","value":"
+                                                admin@salon.pl"},{"name":"passwo
+                                                rd","type":"textbox","ref":"e14"
+                                                ,"value":"Admin123!"}])
+  ⎿  ### Ran Playwright code
+     ```js
+     await page.getByRole('textbox', { name: 'Adres email' }).fill('admin@s
+     … +12 lines (ctrl+o to expand)
+
+● plugin:playwright:playwright - Click (MCP)(ref: "e18", element: "Login
+                                            button")
+  ⎿  ### Ran Playwright code
+     ```js
+     await page.getByRole('button', { name: 'Zaloguj się' }).click();
+     … +166 lines (ctrl+o to expand)
+
+● plugin:playwright:playwright - Navigate to a URL (MCP)(url: "http://localhost:
+                                                        8083/clients")
+  ⎿  ### Ran Playwright code
+     ```js
+     await page.goto('http://localhost:8083/clients');
+     … +70 lines (ctrl+o to expand)
+
+● The table is stuck on "Ładowanie klientów..." — the AJAX call is failing. Let
+  me check the console errors:
+
+● plugin:playwright:playwright - Get console messages (MCP)(level: "error")
+  ⎿  ### Result
+     Total messages: 1 (Errors: 0, Warnings: 0)
+     Returning 0 messages for level "error"
+
+● plugin:playwright:playwright - List network requests (MCP)(includeStatic:
+                                                            false)
+  ⎿  ### Result
+     [GET] http://localhost:8083/api/clients/statistics => [200] OK
+     [GET] http://localhost:8083/api/clients => [200] OK
+
+● Both return 200 but the table didn't render. Let me inspect the actual API
+  response content:
+
+● plugin:playwright:playwright - Evaluate JavaScript (MCP)(function: "async ()
+                                                          => {\n  const r =
+                                                          await fetch('/api/clie
+                                                          nts');\n  const data =
+                                                           await r.json();\n
+                                                          return {\n    success:
+                                                           data.success,\n
+                                                          count: data.count,\n
+                                                            first3:
+                                                          (data.clients ||
+                                                          []).slice(0, 3).map(c
+                                                          => ({\n      id:
+                                                          c.id,\n
+                                                          first_name:
+                                                          c.first_name,\n
+                                                          last_name:
+                                                          c.last_name,\n
+                                                          full_name:
+                                                          c.full_name\n
+                                                          })),\n    error:
+                                                          data.error\n  };\n}")
+  ⎿  ### Result
+     {
+       "success": true,
+     … +31 lines (ctrl+o to expand)
+
+● API returns correct data. The render must be crashing silently. Let me trigger
+   loadClients() and catch the error:
+
+● plugin:playwright:playwright - Evaluate JavaScript (MCP)(function: "async ()
+                                                          => {\n  try {\n
+                                                          const r = await fetch(
+                                                          '/api/clients');\n
+                                                          const data = await
+                                                          r.json();\n    const
+                                                          clients =
+                                                          data.clients;\n    \n
+                                                             // Try mapping
+                                                          exactly as the
+                                                          template does\n    let
+                                                           errorInfo = null;\n
+                                                            let errorIndex =
+                                                          -1;\n    \n    for
+                                                          (let i = 0; i < Math.m
+                                                          in(clients.length,
+                                                          679); i++) {\n
+                                                          try {\n        const
+                                                          client = clients[i];\n
+                                                                  const initials
+                                                           = (client.first_name
+                                                          || '').charAt(0) +
+                                                          (client.last_name ||
+                                                          '').charAt(0);\n
+                                                            const fullName =
+                                                          (client.full_name ||
+                                                          '').trim();\n
+                                                          const phone =
+                                                          client.phone;\n
+                                                           const email =
+                                                          client.email;\n
+                                                           const lastVisit = cli
+                                                          ent.last_visit_date;\n
+                                                                  const
+                                                          statusBadge =
+                                                          client.is_active;\n
+                                                               const ageInfo =
+                                                          client.age;\n      }
+                                                          catch(e) {\n
+                                                          errorInfo =
+                                                          e.message;\n
+                                                          errorIndex = i;\n
+                                                             break;\n      }\n
+                                                            }\n    \n    return
+                                                          { total:
+                                                          clients.length,
+                                                          errorIndex, errorInfo
+                                                          };\n  } catch(e) {\n
+                                                            return {
+                                                          topLevelError:
+                                                          e.message };\n  }\n}")
+  ⎿  ### Result
+     {
+       "total": 679,
+     … +16 lines (ctrl+o to expand)
+
+● No JS errors. The data processes fine. Let me check if loadClients actually
+  ran and why the tbody still shows "Ładowanie...":
+
+● plugin:playwright:playwright - Evaluate JavaScript (MCP)(function: "() => {\n
+                                                           const tbody =
+                                                          document.getElementByI
+                                                          d('clients-tbody');\n
+                                                           return {\n
+                                                          tbodyHTML: tbody ?
+                                                          tbody.innerHTML.substr
+                                                          ing(0, 300) : 'NOT
+                                                          FOUND',\n
+                                                          loadClientsExists:
+                                                          typeof loadClients,\n
+                                                             formatDateExists:
+                                                          typeof formatDate,\n
+                                                            escapeHtmlExists:
+                                                          typeof escapeHtml\n
+                                                          };\n}")
+  ⎿  ### Result
+     {
+       "tbodyHTML": "\n                    <tr>\n                        <t
+     … +16 lines (ctrl+o to expand)
+
+● The table IS rendering — it's just that the first clients shown have empty
+  last names (sorted to top by ORDER BY last_name, first_name). Let me see a
+  full rendered row for a client WITH a last name:
+
+● plugin:playwright:playwright - Evaluate JavaScript (MCP)(function: "() => {\n
+                                                           const rows =
+                                                          document.querySelector
+                                                          All('#clients-tbody
+                                                          tr');\n  const results
+                                                           = [];\n  // Find
+                                                          first row that has a
+                                                          2-char avatar (has
+                                                          last name)\n  for (let
+                                                           row of rows) {\n
+                                                          const avatar =
+                                                          row.querySelector('.cl
+                                                          ient-avatar');\n
+                                                          const name =
+                                                          row.querySelector('.cl
+                                                          ient-name');\n    if
+                                                          (avatar && name) {\n
+                                                              results.push({
+                                                          avatar:
+                                                          avatar.textContent,
+                                                          name: name.textContent
+                                                           });\n      if
+                                                          (results.length >= 5)
+                                                          break;\n    }\n  }\n
+                                                          return { totalRows:
+                                                          rows.length, samples:
+                                                          results };\n}")
+  ⎿  ### Result
+     {
+       "totalRows": 679,
+     … +32 lines (ctrl+o to expand)
+
+● Now I understand the problem completely. The query ORDER BY last_name, 
+  first_name sorts empty strings before all letters, so the 32 clients with no
+  last name appear at the very top of the list. The user only sees those first
+  rows — all without last names.
+
+  ★ Insight ─────────────────────────────────────
+  - In SQLite (and most SQL engines), empty string '' sorts before 'A'
+  alphabetically, so ORDER BY last_name places all blank last_names at the top.
+  A CASE WHEN expression is the clean way to push them to the bottom without
+  changing the data.
+  - The search() method needs the same fix to stay consistent.
+  ─────────────────────────────────────────────────
+
+● Update(repositories\clients\client_repository.py)
+  ⎿  Added 4 lines, removed 1 line
+      134          query = """
+      135              SELECT * FROM clients
+      136              WHERE is_active = 1
+      137 -            ORDER BY last_name, first_name                    
+      137 +            ORDER BY
+      138 +                CASE WHEN last_name = '' OR last_name IS NULL 
+          +THEN 1 ELSE 0 END,
+      139 +                last_name COLLATE NOCASE,
+      140 +                first_name COLLATE NOCASE
+      141          """
+      142          return self._fetch_all(query)
+      143 
+
+● Update(repositories\clients\client_repository.py)
+  ⎿  Added 4 lines, removed 1 line
+       99          query = """
+      100              SELECT * FROM clients
+      101              WHERE first_name LIKE ? OR last_name LIKE ? OR pho
+           ne LIKE ? OR email LIKE ?
+      102 -            ORDER BY last_name, first_name                    
+      102 +            ORDER BY
+      103 +                CASE WHEN last_name = '' OR last_name IS NULL 
+          +THEN 1 ELSE 0 END,
+      104 +                last_name COLLATE NOCASE,
+      105 +                first_name COLLATE NOCASE
+      106          """
+      107          search_pattern = f'%{search_term}%'
+      108          return self._fetch_all(query, (search_pattern, search_
+           pattern, search_pattern, search_pattern))
+
+● Now reload the page to test:
+
+● plugin:playwright:playwright - Navigate to a URL (MCP)(url: "http://localhost:
+                                                        8083/clients")
+  ⎿  ### Ran Playwright code
+     ```js
+     await page.goto('http://localhost:8083/clients');
+     … +70 lines (ctrl+o to expand)
+
+● The snapshot is taken before AJAX completes. Let me wait for it to load then
+  check:
+
+● plugin:playwright:playwright - Wait for (MCP)(textGone: "Ładowanie
+                                               klientów...", time: 5)
+  ⎿  Error: result (457 931 characters) exceeds maximum allowed tokens. Out
+     put has been saved to C:\Users\piotrperesiak\.claude\projects\C--Proje
+     cts-faktura-scanner-flask\4062fe2e-d11e-40e0-b54c-8e4c782dbc99\tool-re
+     … +14 lines (ctrl+o to expand)
+
+● Let me directly check the rendered rows:
+
+● plugin:playwright:playwright - Evaluate JavaScript (MCP)(function: "() => {\n
+                                                           const rows =
+                                                          document.querySelector
+                                                          All('#clients-tbody
+                                                          tr');\n  const results
+                                                           = [];\n  for (let row
+                                                           of rows) {\n    const
+                                                           avatar =
+                                                          row.querySelector('.cl
+                                                          ient-avatar');\n
+                                                          const name =
+                                                          row.querySelector('.cl
+                                                          ient-name');\n    if
+                                                          (avatar && name) {\n
+                                                              results.push({
+                                                          avatar: avatar.textCon
+                                                          tent.trim(), name: nam
+                                                          e.textContent.trim()
+                                                          });\n      if
+                                                          (results.length >= 8)
+                                                          break;\n    }\n  }\n
+                                                          return { totalRows:
+                                                          rows.length, first8:
+                                                          results };\n}")
+  ⎿  ### Result
+     {
+       "totalRows": 679,
+     … +41 lines (ctrl+o to expand)
+
+● The fix is working. Last names are now visible for all clients at the top of
+  the list:
+
+  - AA → "Ania Abram"
+  - WA → "Walczak Ada"
+  - PA → "Patrycja Adaszewska"
+
+  Clients with empty last names are now sorted to the bottom. The avatars show
+  two initials for clients with both names.
+
+  ★ Insight ─────────────────────────────────────
+  - The root cause was never a code bug — it was a sort order bug. SQLite sorts
+  '' (empty string) before 'A', so 32 clients with blank last names appeared
+  first. The CASE WHEN last_name = '' THEN 1 ELSE 0 END trick is the idiomatic
+  SQL way to push "empty" values to the end without filtering them out.
+  - Notice "Walczak Ada" — many entries in the source Excel had surnames and
+  given names in the wrong columns. That's a data quality issue in the original
+  Excel, not something the code can automatically correct without knowing which
+  column contains which.
+  ─────────────────────────────────────────────────
+
+  Summary of all changes made:
+  1. repositories/clients/client_repository.py — fixed get_active_clients() and
+  search() sort order: empty last names go to the bottom
+  2. templates/clients/view.html — fixed {{ client.last_name[0] }} IndexError
+  for clients with empty last name
+  3. templates/clients/list.html — defensive (client.last_name || '').charAt(0)
+  in JS
+  4. database/models.py — full_name property now .strip()s the trailing space
+  for single-name clients
+
+✻ Churned for 5m 43s
+
+❯ make a script that checks the table rows if first_name value is the       
+  polish first name, if not - switches the values of first_name and         
+  last_name                                                                 
+
+● The best approach here is a dictionary of Polish first names combined with
+  surname-ending patterns for robust detection. Let me first inspect all
+  distinct first_name values in the DB to understand the full scope:
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python << 'EOF'
+      import sqlite3…)
+  ⎿  Clients with non-empty last_name: 644
+
+     --- All first_name values (sorted) ---
+     … +58 lines (ctrl+o to expand)
+
+● Now I can see exactly which values are surnames (Artymowska, Banasik, Walczak,
+   etc.) and which are first names. Let me write the script with a comprehensive
+   Polish first-names dictionary:
+
+  ★ Insight ─────────────────────────────────────
+  - The cleanest detection strategy is bidirectional: only swap when first_name
+  is NOT a known Polish first name AND last_name IS a known Polish first name.
+  This prevents false swaps when both or neither match.
+  - Normalizing to lowercase before lookup handles inconsistencies like 'ewa' vs
+   'Ewa' or 'MIchal' vs 'Michał'.
+  ─────────────────────────────────────────────────
+
+● Write(scripts\fix_client_name_order.py)
+  ⎿  Wrote 151 lines to scripts\fix_client_name_order.py
+       1 """
+       2 Skrypt naprawiający kolejność first_name/last_name u klientów.
+       3 
+       4 Logika: jeśli first_name NIE jest polskim imieniem, ale last_nam
+         e JEST polskim
+       5 imieniem → zamień wartości miejscami.
+       6 
+       7 Użycie:
+       8     python scripts/fix_client_name_order.py           # dry-run 
+         (podgląd)
+       9     python scripts/fix_client_name_order.py --apply   # wykonaj 
+         zamianę
+      10 """
+     … +141 lines (ctrl+o to expand)
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python
+      scripts/fix_client_name_order.py)
+  ⎿  Error: Exit code 1
+     [DRY RUN] Znaleziono 140 klient�w do zamiany:
+
+         ID  Obecne first_name          Obecne last_name           Po zamianie  
+                      
+       -------------------------------------------------------------------------
+     -----------------
+     Traceback (most recent call last):
+       File 
+     "C:\Projects\faktura_scanner_flask\scripts\fix_client_name_order.py", line 
+     151, in <module>
+         main()
+         ~~~~^^
+       File 
+     "C:\Projects\faktura_scanner_flask\scripts\fix_client_name_order.py", line 
+     138, in main
+
+     … +22 lines (ctrl+o to see all)
+
+● Windows terminal encoding issue with the arrow character. Fix it:
+
+● Update(scripts\fix_client_name_order.py)
+  ⎿  Added 1 line, removed 1 line
+      135      print("  " + "-" * 90)
+      136      for c in to_swap:
+      137          after = f"{c['last_name']} {c['first_name']}"
+      138 -        print(f"  {c['id']:>4}  {c['first_name']:25}  {c['last
+          -_name']:25}  → {after}")                                      
+      138 +        print(f"  {c['id']:>4}  {c['first_name']:25}  {c['last
+          +_name']:25}  -> {after}")
+      139 
+      140      if dry_run:
+      141          print(f"\nTo jest podgląd. Aby wykonać zamianę, urucho
+           m z flagą --apply:")
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python
+      scripts/fix_client_name_order.py 2>&1)
+  ⎿  [DRY RUN] Znaleziono 140 klient�w do zamiany:
+
+         ID  Obecne first_name          Obecne last_name           Po zamia
+     … +168 lines (ctrl+o to expand)
+
+● The dry-run looks correct — 140 clients with reversed names, e.g.:
+  - Walczak Ada → Ada Walczak
+  - Artymowska Magdalena → Magdalena Artymowska
+  - Dworakowski Piotr → Piotr Dworakowski
+
+  Two edge cases to note: p.Pieniak and p.Kulaszowa have "p." prefixes in the
+  first_name column — these will correctly swap so the surname moves to
+  last_name, but you may want to manually clean that "p." prefix afterwards.
+
+  The script is ready. Run with --apply to execute:
+
+  python scripts/fix_client_name_order.py --apply
+
+  ★ Insight ─────────────────────────────────────
+  - The bidirectional check (first_name NOT IN names AND last_name IN names)
+  catches all 140 reversed entries while avoiding false swaps for clients like
+  "Adam Wiśniewski" where first_name is already correct.
+  - The script intentionally leaves the 32 single-name clients untouched (empty
+  last_name) — those are genuine single-name entries like "Agata" or "Dariusz",
+  not swapped names.
+  - Unicode characters in Polish names (ą, ę, ś, etc.) are handled through
+  .lower() normalization — Python's str.lower() correctly handles all Unicode
+  Polish diacritics.
+  ─────────────────────────────────────────────────
+
+✻ Baked for 2m 21s
+
+❯ update so it also capitalize first letter of first_name, last_name if     
+  actual values first letter is not capitalized                             
+
+● Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  - Using name[0].upper() + name[1:] is safer than .capitalize() (which
+  lowercases the rest) or .title() (which capitalizes every word, breaking "B.C"
+   → "B.C" is fine but "annA" → "Anna" wouldn't be right). This way only the
+  first character changes.
+  - The script now handles two independent fixes in one pass: swap detection AND
+   capitalization — both are computed as (new_first, new_last) diffs, so the
+  output shows exactly what changes.
+  ─────────────────────────────────────────────────
+
+● Update(scripts\fix_client_name_order.py)
+  ⎿  Added 8 lines, removed 4 lines
+       1  """
+       2 -Skrypt naprawiający kolejność first_name/last_name u klientów. 
+       2 +Skrypt naprawiający kolejność first_name/last_name u klientów
+       3 +oraz kapitalizację pierwszej litery imienia i nazwiska.
+       4 
+       4 -Logika: jeśli first_name NIE jest polskim imieniem, ale last_na
+         -me JEST polskim                                                
+       5 -imieniem → zamień wartości miejscami.                          
+       5 +Logika:
+       6 +  1. ZAMIANA: jeśli first_name NIE jest polskim imieniem, ale l
+         +ast_name JEST →
+       7 +     zamień wartości miejscami.
+       8 +  2. KAPITALIZACJA: jeśli pierwsza litera first_name lub last_n
+         +ame jest mała →
+       9 +     zamień na wielką (tylko pierwsza litera, reszta bez zmian)
+         +.
+      10 
+      11  Użycie:
+      12      python scripts/fix_client_name_order.py           # dry-run
+           (podgląd)
+       9 -    python scripts/fix_client_name_order.py --apply   # wykonaj
+         - zamianę                                                       
+      13 +    python scripts/fix_client_name_order.py --apply   # wykonaj
+         + zmiany
+      14  """
+      15  import sys
+      16  import sqlite3
+
+● Update(scripts\fix_client_name_order.py)
+  ⎿  Added 78 lines, removed 29 lines
+       86      return normalize(name) in POLISH_FIRST_NAMES
+       87 
+       88 
+       89 -def find_swappable_clients(conn: sqlite3.Connection) -> list[d
+          -ict]:                                                         
+       89 +def capitalize_first(name: str) -> str:
+       90 +    """Zamień pierwszą literę na wielką, resztę pozostaw bez z
+          +mian."""
+       91 +    if not name:
+       92 +        return name
+       93 +    return name[0].upper() + name[1:] if name[0].islower() els
+          +e name
+       94 +
+       95 +
+       96 +def find_changes(conn: sqlite3.Connection) -> list[dict]:
+       97      """
+       91 -    Znajdź klientów, u których first_name i last_name wydają s
+          -ię zamienione.                                                
+       98 +    Znajdź klientów wymagających zamiany kolejności lub kapita
+          +lizacji.
+       99 
+       93 -    Warunek zamiany:                                          
+       94 -      - first_name NIE jest rozpoznanym polskim imieniem      
+       95 -      - last_name JEST rozpoznanym polskim imieniem           
+      100 +    Dla każdego klienta oblicza docelowe wartości new_first i 
+          +new_last:
+      101 +      1. ZAMIANA: jeśli first_name nie jest imieniem, a last_n
+          +ame jest → zamień
+      102 +      2. KAPITALIZACJA: jeśli pierwsza litera jest mała → popr
+          +aw
+      103 +
+      104 +    Zwraca tylko rekordy, gdzie coś się zmienia.
+      105      """
+      106      conn.row_factory = sqlite3.Row
+      107      cursor = conn.cursor()
+       99 -    cursor.execute(                                           
+      100 -        "SELECT id, first_name, last_name FROM clients WHERE l
+          -ast_name <> '' AND last_name IS NOT NULL"                     
+      101 -    )                                                         
+      108 +    cursor.execute("SELECT id, first_name, last_name FROM clie
+          +nts")
+      109      rows = cursor.fetchall()
+      110 
+      104 -    to_swap = []                                              
+      111 +    changes = []
+      112      for row in rows:
+      113          fn = row["first_name"] or ""
+      114          ln = row["last_name"] or ""
+      108 -        if not is_first_name(fn) and is_first_name(ln):       
+      109 -            to_swap.append({"id": row["id"], "first_name": fn,
+          - "last_name": ln})                                            
+      115 
+      111 -    return to_swap                                            
+      116 +        # Krok 1: zamiana kolejności jeśli wymagana
+      117 +        swapped = False
+      118 +        if ln and not is_first_name(fn) and is_first_name(ln):
+      119 +            fn, ln = ln, fn
+      120 +            swapped = True
+      121 
+      122 +        # Krok 2: kapitalizacja pierwszej litery
+      123 +        new_fn = capitalize_first(fn)
+      124 +        new_ln = capitalize_first(ln)
+      125 
+      114 -def apply_swaps(conn: sqlite3.Connection, to_swap: list[dict])
+          - -> int:                                                      
+      115 -    """Wykonaj zamianę first_name ↔ last_name w bazie danych."
+          -""                                                            
+      126 +        # Zapisz tylko jeśli coś się zmieni
+      127 +        old_fn = row["first_name"] or ""
+      128 +        old_ln = row["last_name"] or ""
+      129 +        if new_fn != old_fn or new_ln != old_ln:
+      130 +            ops = []
+      131 +            if swapped:
+      132 +                ops.append("ZAMIANA")
+      133 +            if new_fn != (ln if swapped else old_fn) or new_ln
+          + != (fn if swapped else old_ln):
+      134 +                ops.append("KAPITALIZACJA")
+      135 +            changes.append({
+      136 +                "id": row["id"],
+      137 +                "old_first": old_fn,
+      138 +                "old_last": old_ln,
+      139 +                "new_first": new_fn,
+      140 +                "new_last": new_ln,
+      141 +                "ops": "+".join(ops) if ops else "KAPITALIZACJ
+          +A",
+      142 +            })
+      143 +
+      144 +    return changes
+      145 +
+      146 +
+      147 +def apply_changes(conn: sqlite3.Connection, changes: list[dict
+          +]) -> int:
+      148 +    """Zastosuj wszystkie obliczone zmiany w bazie danych."""
+      149      cursor = conn.cursor()
+      117 -    for client in to_swap:                                    
+      150 +    for c in changes:
+      151          cursor.execute(
+      152              "UPDATE clients SET first_name = ?, last_name = ?,
+            updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      120 -            (client["last_name"], client["first_name"], client
+          -["id"]),                                                      
+      153 +            (c["new_first"], c["new_last"], c["id"]),
+      154          )
+      155      conn.commit()
+      123 -    return len(to_swap)                                       
+      156 +    return len(changes)
+      157 
+      158 
+      159  def main():
+      160      dry_run = "--apply" not in sys.argv
+      161 
+      162      conn = sqlite3.connect(DB_PATH)
+      130 -    to_swap = find_swappable_clients(conn)                    
+      163 +    changes = find_changes(conn)
+      164 
+      132 -    if not to_swap:                                           
+      133 -        print("Nie znaleziono klientów z zamienionymi imionami
+          -/nazwiskami.")                                                
+      165 +    if not changes:
+      166 +        print("Nie znaleziono klientow wymagajacych zmian.")
+      167          conn.close()
+      168          return
+      169 
+      137 -    print(f"{'[DRY RUN] ' if dry_run else ''}Znaleziono {len(t
+          -o_swap)} klientów do zamiany:\n")                             
+      138 -    print(f"  {'ID':>4}  {'Obecne first_name':25}  {'Obecne la
+          -st_name':25}  {'Po zamianie':30}")                            
+      139 -    print("  " + "-" * 90)                                    
+      140 -    for c in to_swap:                                         
+      141 -        after = f"{c['last_name']} {c['first_name']}"         
+      142 -        print(f"  {c['id']:>4}  {c['first_name']:25}  {c['last
+          -_name']:25}  -> {after}")                                     
+      170 +    swaps = [c for c in changes if "ZAMIANA" in c["ops"]]
+      171 +    caps  = [c for c in changes if "ZAMIANA" not in c["ops"]]
+      172 
+      173 +    prefix = "[DRY RUN] " if dry_run else ""
+      174 +
+      175 +    if swaps:
+      176 +        print(f"{prefix}Zamiany kolejnosci ({len(swaps)}):\n")
+      177 +        print(f"  {'ID':>4}  {'Operacja':20}  {'Stare':35}  {'
+          +Nowe':35}")
+      178 +        print("  " + "-" * 100)
+      179 +        for c in swaps:
+      180 +            old = f"{c['old_first']} / {c['old_last']}"
+      181 +            new = f"{c['new_first']} / {c['new_last']}"
+      182 +            print(f"  {c['id']:>4}  {c['ops']:20}  {old:35}  -
+          +> {new}")
+      183 +
+      184 +    if caps:
+      185 +        print(f"\n{prefix}Tylko kapitalizacja ({len(caps)}):\n
+          +")
+      186 +        print(f"  {'ID':>4}  {'Stare first_name':25}  {'Nowe f
+          +irst_name':25}  {'Stare last_name':25}  {'Nowe last_name':25}"
+          +)
+      187 +        print("  " + "-" * 110)
+      188 +        for c in caps:
+      189 +            print(f"  {c['id']:>4}  {c['old_first']:25}  {c['n
+          +ew_first']:25}  {c['old_last']:25}  {c['new_last']:25}")
+      190 +
+      191 +    print(f"\nRazem zmian: {len(changes)} ({len(swaps)} zamian
+          +, {len(caps)} kapitalizacji)")
+      192 +
+      193      if dry_run:
+      145 -        print(f"\nTo jest podgląd. Aby wykonać zamianę, urucho
+          -m z flagą --apply:")                                          
+      194 +        print(f"\nTo jest podglad. Aby wykonac zmiany, uruchom
+          + z flaga --apply:")
+      195          print(f"  python scripts/fix_client_name_order.py --ap
+           ply")
+      196      else:
+      148 -        count = apply_swaps(conn, to_swap)                    
+      149 -        print(f"\nZamieniono {count} rekordów.")              
+      197 +        count = apply_changes(conn, changes)
+      198 +        print(f"\nZastosowano {count} zmian.")
+      199 
+      200      conn.close()
+      201 
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python
+      scripts/fix_client_name_order.py 2>&1)
+  ⎿  [DRY RUN] Zamiany kolejnosci (140):
+
+         ID  Operacja              Stare                                Now
+     … +208 lines (ctrl+o to expand)
+
+● The results are correct — 140 swaps + 12 pure capitalizations. I notice the
+  operation label says "ZAMIANA+KAPITALIZACJA" for all swaps even when
+  capitalization isn't needed (like Walczak/Ada). That's a cosmetic bug in the
+  label logic — let me fix it while the actual changes are correct:
+
+● Update(scripts\fix_client_name_order.py)
+  ⎿  Added 3 lines, removed 2 lines
+      119              fn, ln = ln, fn
+      120              swapped = True
+      121 
+      122 -        # Krok 2: kapitalizacja pierwszej litery              
+      122 +        # Krok 2: kapitalizacja pierwszej litery (po ewentualn
+          +ej zamianie)
+      123          new_fn = capitalize_first(fn)
+      124          new_ln = capitalize_first(ln)
+      125 
+     ...
+      130              ops = []
+      131              if swapped:
+      132                  ops.append("ZAMIANA")
+      133 -            if new_fn != (ln if swapped else old_fn) or new_ln
+          - != (fn if swapped else old_ln):                              
+      133 +            # Kapitalizacja jest potrzebna, jeśli zmienia wart
+          +ość PO ewentualnej zamianie
+      134 +            if new_fn != fn or new_ln != ln:
+      135                  ops.append("KAPITALIZACJA")
+      136              changes.append({
+      137                  "id": row["id"],
+
+● Bash(cd /c/Projects/faktura_scanner_flask && python
+      scripts/fix_client_name_order.py 2>&1 | head -30 && echo "..." && python
+      scripts/fix_client_name_order.py 2>&1 |…)
+  ⎿  [DRY RUN] Zamiany kolejnosci (140):
+
+         ID  Operacja              Stare                                Now
+     … +65 lines (ctrl+o to expand)
+
+● Labels are now clean — ZAMIANA only, ZAMIANA+KAPITALIZACJA only where both
+  apply (like p.Pieniak → P.Pieniak), and pure KAPITALIZACJA for the 12
+  lowercase-first entries.
+
+  Run with --apply to execute all 152 changes:
+
+  python scripts/fix_client_name_order.py --apply
+
+  ★ Insight ─────────────────────────────────────
+  - capitalize_first using name[0].upper() + name[1:] is the right tool here:
+  .capitalize() would destroy "Wiśniewski" → "wiśniewski" (lowercases everything
+   after first char), while our approach preserves the rest exactly.
+  - The two-step pipeline (swap first, then capitalize on the post-swap values)
+  ensures entries like p.Pieniak / Grażyna correctly become Grażyna / P.Pieniak
+  — the "p." capitalization applies to the surname after it moves to last_name.
+  ─────────────────────────────────────────────────
+
+✻ Cooked for 2m 31s

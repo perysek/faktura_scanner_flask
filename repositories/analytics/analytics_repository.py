@@ -725,6 +725,11 @@ class AnalyticsRepository:
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY a.employee_id, DATE_TRUNC('month', a.appointment_date)::date
             ),
+            active_employees AS (
+                SELECT id, base_salary, employer_cost_rate
+                FROM employees
+                WHERE is_active = TRUE
+            ),
             employee_costs_by_month AS (
                 SELECT
                     m.month_start,
@@ -733,10 +738,9 @@ class AnalyticsRepository:
                         * (1 + COALESCE(e.employer_cost_rate, 0.22))
                     ), 0) AS employee_costs
                 FROM months m
-                CROSS JOIN employees e
+                CROSS JOIN active_employees e
                 LEFT JOIN commission_by_month cm
                     ON cm.employee_id = e.id AND cm.month_start = m.month_start
-                WHERE e.is_active = TRUE
                 GROUP BY m.month_start
             ),
             invoice_costs_by_month AS (

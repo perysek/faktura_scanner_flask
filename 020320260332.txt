@@ -1,0 +1,3479 @@
+
+ ▐▛███▜▌   Claude Code v2.1.59
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    C:\Projects\faktura_scanner_flask
+
+❯ @Logo.png - how can I have this logo on the top of the sidebar instead of 
+   existing labels "My way beauty salon'?                                   
+  ⎿  Read Logo.png (181.6KB)
+
+● Read 2 files (ctrl+o to expand)
+
+● Now I can see the "Logo Section" at the top of the sidebar (lines 2-14). I
+  need to:
+  1. Copy Logo.png to the static/ directory so Flask can serve it
+  2. Replace the SVG icon + text labels with an <img> tag
+
+  Let me check if there's already a logo in static:
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(cp "C:/Projects/faktura_scanner_flask/Logo.png"
+      "C:/Projects/faktura_scanner_flask/static/Logo.png")
+  ⎿  Done
+
+● ★ Insight ─────────────────────────────────────
+  - Flask only serves files inside the static/ folder via url_for('static', 
+  filename=...). Files in the project root are not accessible to the browser —
+  they must be copied/moved into static/.
+  - The logo is a black-on-white PNG. On a dark sidebar (bg-slate-900), we can
+  use CSS filter: invert(1) to flip it to white-on-transparent without needing a
+   separate asset. Alternatively, using a white-background container works too,
+  but inverted is cleaner.
+  ─────────────────────────────────────────────────
+
+  Now I'll replace the Logo Section in the sidebar. The logo is black on a white
+   background, so I'll give it a small white/light container pill to keep it
+  readable against the dark sidebar:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 4 lines, removed 11 lines
+       1  <aside class="w-64 bg-slate-900 text-white flex flex-col shadow
+          -xl">
+       2      <!-- Logo Section -->
+       3 -    <div class="px-6 py-2 border-b border-slate-700/50 flex ite
+         -ms-center gap-2">                                              
+       4 -        <div class="w-10 h-10 bg-gradient-to-br from-primary-50
+         -0 to-primary-600 rounded-xl flex items-center justify-center te
+         -xt-white shadow-lg">                                           
+       5 -            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24
+         -" stroke="currentColor">                                       
+       6 -                <path stroke-linecap="round" stroke-linejoin="r
+         -ound" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2
+         - 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V
+         -19a2 2 0 01-2 2z" />                                           
+       7 -            </svg>                                             
+       8 -        </div>                                                 
+       9 -        <div>                                                  
+      10 -            <h1 class="font-bold text-lg tracking-tight">MyWay<
+         -/h1>                                                           
+      11 -          <p class="text-sm text-slate-400">Beauty Salon</p>   
+      12 -            <p class="text-xs text-slate-400">Management System
+         -</p>                                                           
+      13 -        </div>                                                 
+       3 +    <div class="px-4 py-4 border-b border-slate-700/50 flex ite
+         +ms-center justify-center">
+       4 +        <img src="{{ url_for('static', filename='Logo.png') }}"
+       5 +             alt="MyWay Nails &amp; Beauty"
+       6 +             class="w-full max-w-[180px] h-auto object-contain 
+         +brightness-0 invert">
+       7      </div>
+       8 
+       9      {% if current_user.is_authenticated %}
+
+● ★ Insight ─────────────────────────────────────
+  - brightness-0 invert is a TailwindCSS filter combination: brightness-0
+  collapses all pixels to pure black, then invert flips black → white. This
+  makes any black-on-white logo render as white-on-transparent — perfect for
+  dark sidebars without needing a second logo asset.
+  - max-w-[180px] uses Tailwind's arbitrary value syntax (square brackets) to
+  set an exact pixel cap. Combined with w-full and h-auto, the logo scales
+  responsively within the 256px sidebar while never overflowing.
+  ─────────────────────────────────────────────────
+
+  The change is done. Here's what was replaced and why each decision was made:
+
+  ┌────────────────────────┬───────────────────┬────────────────────────────┐
+  │         Before         │       After       │           Reason           │
+  ├────────────────────────┼───────────────────┼────────────────────────────┤
+  │ SVG icon + text labels │ <img> tag         │ Actual logo instead of     │
+  │                        │                   │ generic branding           │
+  ├────────────────────────┼───────────────────┼────────────────────────────┤
+  │ flex items-center      │ flex              │ Logo looks better centered │
+  │ gap-2 (left-aligned)   │ justify-center    │  in the sidebar            │
+  │                        │ (centered)        │                            │
+  ├────────────────────────┼───────────────────┼────────────────────────────┤
+  │ Hardcoded text "MyWay  │ alt attribute     │ Accessibility preserved,   │
+  │ / Beauty Salon /       │ only              │ no duplicate text          │
+  │ Management System"     │                   │                            │
+  ├────────────────────────┼───────────────────┼────────────────────────────┤
+  │                        │                   │ Black logo becomes white   │
+  │ —                      │ brightness-0      │ to match the dark sidebar  │
+  │                        │ invert CSS filter │ theme without a separate   │
+  │                        │                   │ file                       │
+  └────────────────────────┴───────────────────┴────────────────────────────┘
+
+  The logo will now appear at the top of your sidebar, displayed in white
+  against the dark background. Verify it looks good by running python app.py and
+   opening the browser.
+
+✻ Churned for 45s
+
+❯ now make a temporary app start file to test small changes in the project  
+  and run in dev server on my local machine with postgresql database that   
+  is currently working in parallel on vultr server                          
+
+● Let me first understand the current app structure and database config:
+
+● Searched for 2 patterns, read 5 files (ctrl+o to expand)
+
+● Good. I have the full picture. The app already uses DATABASE_URL via .env +
+  python-dotenv. The plan is:
+
+  1. Create .env.local — local overrides pointing to Vultr's PostgreSQL (via SSH
+   tunnel — the safe approach, no firewall hole needed)
+  2. Create run_dev.py — loads .env.local with priority over .env, runs Flask in
+   debug mode on port 5000
+
+  ★ Insight ─────────────────────────────────────
+  - Never open PostgreSQL port 5432 to the internet. Instead, SSH
+  port-forwarding (ssh -N -L 5432:localhost:5432 root@VULTR_IP) creates an
+  encrypted tunnel. Your local app sees localhost:5432 but traffic flows
+  securely to the remote Postgres — zero firewall changes needed.
+  - python-dotenv loads env vars in insertion order. To make .env.local win over
+   .env, call load_dotenv('.env.local', override=True) after
+  load_dotenv('.env'). This is the standard twelve-factor pattern for
+  environment layering.
+  ─────────────────────────────────────────────────
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● .env.local is already gitignored. Now creating both files:
+
+● Write(.env.local)
+  ⎿  Wrote 31 lines to .env.local
+       1 # ============================================================
+       2 #  LOCAL DEV OVERRIDES  —  Never commit this file
+       3 #  Connects to the Vultr PostgreSQL database via SSH tunnel.
+       4 #
+       5 #  STEP 1 — open an SSH tunnel in a separate terminal:
+       6 #    ssh -N -L 5432:localhost:5432 root@<VULTR_IP>
+       7 #    (uses ssh_vultr key:  ssh -i ssh_vultr -N -L 5432:localhost
+         :5432 root@<VULTR_IP>)
+       8 #
+       9 #  STEP 2 — run the dev server:
+      10 #    python run_dev.py
+     … +21 lines (ctrl+o to expand)
+
+● Write(run_dev.py)
+  ⎿  Wrote 50 lines to run_dev.py
+       1 """
+       2 Local development runner.
+       3 
+       4 Usage:
+       5     1. Open SSH tunnel in a separate terminal:
+       6        ssh -i ssh_vultr -N -L 5432:localhost:5432 root@<VULTR_IP
+         >
+       7 
+       8     2. Fill in .env.local with real DB credentials (copy from Vu
+         ltr .env)
+       9 
+      10     3. Run this file:
+     … +40 lines (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  - db_url.split('@')[-1] splits on @ to print only the host/dbname part of the
+  connection string, keeping credentials out of the terminal log — a small but
+  important habit for shared screens/logs.
+  - use_reloader=True with host='127.0.0.1' means Flask auto-restarts when you
+  save any .py or template file, but the port is only reachable from your own
+  machine. 0.0.0.0 (the Vultr default in app.py:176) would expose it on all
+  network interfaces — fine for a VPS, wrong for a dev laptop.
+  ─────────────────────────────────────────────────
+
+  ---
+  Here's the full workflow to use it:
+
+  1. Get DB credentials from Vultr (one-time):
+  # SSH into Vultr and read the .env
+  ssh -i ssh_vultr root@<VULTR_IP>
+  cat /opt/faktura-scanner/.env
+  # Copy DB_USER, DB_PASSWORD, DB_NAME values
+
+  2. Fill in .env.local (replace the placeholders):
+  DATABASE_URL=postgresql://faktura_user:actual_password@localhost:5432/faktura_
+  db
+
+  3. Open SSH tunnel (Terminal A — keep it running):
+  ssh -i ssh_vultr -N -L 5432:localhost:5432 root@<VULTR_IP>
+
+  4. Run dev server (Terminal B):
+  python run_dev.py
+  # → http://localhost:5000
+
+  The tunnel maps Vultr's PostgreSQL to your localhost:5432 — no firewall
+  changes needed on the server, and all traffic is encrypted through SSH. The
+  production app on Vultr continues running on port 8083 unaffected.
+
+✻ Churned for 1m 14s
+
+❯ bind [127.0.0.1]:5432: Permission denied                                  
+  channel_setup_fwd_listener_tcpip: cannot listen to port: 5432             
+  Could not request local forwarding.                                       
+                                                                            
+
+● Port 5432 is already taken — you have a local PostgreSQL installation running
+  on it. The fix is to forward to a different local port (5433) and update
+  DATABASE_URL to match.
+
+  Fix the SSH tunnel command:
+  ssh -i ssh_vultr -N -L 5433:localhost:5432 root@<VULTR_IP>
+  #                        ^^^^^ local port changed to 5433
+
+  And update .env.local — change the port in DATABASE_URL:
+
+● Read 1 file (ctrl+o to expand)
+
+● I can see the file has the production server content accidentally appended at
+  the bottom (lines 33-49) — those Linux paths would override the Windows ones.
+  I'll clean up the file and fix the port in one go:
+
+● Write(.env.local)
+  ⎿  Added 29 lines, removed 49 lines
+       1 -# ============================================================
+       2 -#  LOCAL DEV OVERRIDES  —  Never commit this file             
+       3 -#  Connects to the Vultr PostgreSQL database via SSH tunnel.  
+       4 -#                                                             
+       5 -#  STEP 1 — open an SSH tunnel in a separate terminal:        
+       6 -#    ssh -N -L 5432:localhost:5432 root@<VULTR_IP>            
+       7 -#    (uses ssh_vultr key:  ssh -i ssh_vultr -N -L 5432:localhos
+         -t:5432 root@<VULTR_IP>)                                       
+       8 -#                                                             
+       9 -#  STEP 2 — run the dev server:                               
+      10 -#    python run_dev.py                                        
+      11 -#                                                             
+      12 -#  The tunnel maps Vultr's localhost:5432 → your localhost:5432
+         -                                                               
+      13 -#  so DATABASE_URL below points to "localhost" but traffic is e
+         -ncrypted.                                                     
+      14 -# ============================================================
+      15 -                                                              
+      16 -# Flask dev mode                                              
+      17 -FLASK_ENV=development                                         
+      18 -SECRET_KEY=dev-local-secret-key-not-for-production            
+      19 -                                                              
+      20 -# PostgreSQL via SSH tunnel                                   
+      21 -# Replace <DB_USER>, <DB_PASSWORD>, <DB_NAME> with values from 
+         -Vultr .env                                                    
+      22 -DATABASE_URL=postgresql://faktura_user:choose_a_strong_password
+         -_here@localhost:5432/faktura_db                               
+      23 -                                                              
+      24 -# Windows paths — Tesseract and Poppler local installations   
+      25 -TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe    
+      26 -POPPLER_PATH=C:\poppler\Library\bin                           
+      27 -                                                              
+      28 -# Local file storage (inside project folder, gitignored)      
+      29 -UPLOAD_FOLDER=uploads                                         
+      30 -PDF_FOLDER=pdfs                                               
+      31 -TEMP_DIR=assets/temp                                          
+      32 -                                                              
+      33 -# Flask                                                       
+      34 -SECRET_KEY=00aa612c1cc0ba7f04ef05f005dca2746c7efa10999b5f533b81
+         -33ee4c954f28                                                  
+      35 -FLASK_ENV=production                                          
+      36 -                                                              
+      37 -# PostgreSQL — format: postgresql://user:password@host:port/dbn
+         -ame                                                           
+      38 -DATABASE_URL=postgresql://faktura_user:choose_a_strong_password
+         -_here@localhost:5432/faktura_db                               
+      39 -                                                              
+      40 -# Tesseract OCR (Linux path after apt-get install tesseract-ocr
+         -)                                                             
+      41 -TESSERACT_CMD=/usr/bin/tesseract                              
+      42 -                                                              
+      43 -# Poppler (Linux path after apt-get install poppler-utils)    
+      44 -POPPLER_PATH=/usr/bin                                         
+      45 -                                                              
+      46 -# File storage — use absolute paths on your server            
+      47 -UPLOAD_FOLDER=/opt/my-way-beauty-salon/data/uploads           
+      48 -PDF_FOLDER=/opt/my-way-beauty-salon/data/pdfs                 
+      49 -TEMP_DIR=/opt/my-way-beauty-salon/data/temp                    
+       1   No newline at end of file
+       2 +# ============================================================
+       3 +#  LOCAL DEV OVERRIDES  —  Never commit this file
+       4 +#  Connects to the Vultr PostgreSQL database via SSH tunnel.
+       5 +#
+       6 +#  STEP 1 — open an SSH tunnel in a separate terminal:
+       7 +#    ssh -i ssh_vultr -N -L 5433:localhost:5432 root@<VULTR_IP>
+       8 +#
+       9 +#  STEP 2 — run the dev server:
+      10 +#    python run_dev.py
+      11 +#
+      12 +#  Port 5432 is taken by local PostgreSQL, so the tunnel uses
+      13 +#  local port 5433 → Vultr's 5432. Traffic is SSH-encrypted.
+      14 +# ============================================================
+      15 +
+      16 +# Flask dev mode
+      17 +FLASK_ENV=development
+      18 +SECRET_KEY=dev-local-secret-key-not-for-production
+      19 +
+      20 +# PostgreSQL via SSH tunnel (local port 5433 → Vultr port 5432)
+      21 +DATABASE_URL=postgresql://faktura_user:choose_a_strong_password
+         +_here@localhost:5433/faktura_db
+      22 +
+      23 +# Windows paths — Tesseract and Poppler local installations
+      24 +TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+      25 +POPPLER_PATH=C:\poppler\Library\bin
+      26 +
+      27 +# Local file storage (inside project folder, gitignored)
+      28 +UPLOAD_FOLDER=uploads
+      29 +PDF_FOLDER=pdfs
+      30 +TEMP_DIR=assets/temp
+
+● Also update the guard check in run_dev.py — it was checking for <DB_USER> but
+  the placeholder is now choose_a_strong_password_here:
+
+● Update(run_dev.py)
+  ⎿  Added 1 line, removed 1 line
+      20 
+      21  # Verify the tunnel / database URL is configured before importi
+          ng anything else.
+      22  db_url = os.environ.get('DATABASE_URL', '')
+      23 -if not db_url or '<DB_USER>' in db_url:                        
+      23 +if not db_url or 'choose_a_strong_password_here' in db_url:
+      24      print()
+      25      print("=" * 60)
+      26      print("  ERROR: DATABASE_URL not configured in .env.local")
+
+● ★ Insight ─────────────────────────────────────
+  - When multiple lines define the same key in a .env file, python-dotenv uses
+  the first occurrence by default. The appended production content would have
+  silently won on TESSERACT_CMD and POPPLER_PATH because those Linux paths came
+  last — a subtle bug that's hard to debug.
+  - SSH tunnel ports don't need to match the remote port. -L 5433:localhost:5432
+   means: "bind local 5433, forward to the remote machine's localhost:5432". Any
+   unused local port works — 5433 is the conventional choice when 5432 is busy.
+  ─────────────────────────────────────────────────
+
+  Updated workflow:
+
+  # Terminal A — SSH tunnel (keep running)
+  ssh -i ssh_vultr -N -L 5433:localhost:5432 root@<VULTR_IP>
+
+  # Terminal B — dev server
+  python run_dev.py
+  # → http://localhost:5000
+
+  Also make sure the actual password is set in .env.local — replace
+  choose_a_strong_password_here with the real password from the Vultr server's
+  /opt/my-way-beauty-salon/.env (or wherever it's stored on Vultr).
+
+✻ Cooked for 39s
+
+❯ (.venv) C:\Projects\faktura_scanner_flask> python run_dev.py              
+  2026-03-02 02:21:55,995 - utils.pdf_processor - INFO - OpenCV loaded      
+  successfully                                                              
+  2026-03-02 02:21:56,053 - utils.pdf_processor - INFO - PyMuPDF loaded     
+  successfully - hybrid PDF processing enabled                              
+  2026-03-02 02:21:56,053 - utils.pdf_processor - INFO - Tesseract CMD:     
+  C:\Program Files\Tesseract-OCR\tesseract.exe                              
+  2026-03-02 02:21:56,053 - utils.pdf_processor - INFO - Poppler PATH:      
+  C:\poppler\Library\bin                                                    
+  Traceback (most recent call last):                                        
+    File "C:\Projects\faktura_scanner_flask\run_dev.py", line 35, in        
+  <module>                                                                  
+      app = create_app()                                                    
+    File "C:\Projects\faktura_scanner_flask\app.py", line 111, in           
+  create_app                                                                
+      initialize_database()                                                 
+      ~~~~~~~~~~~~~~~~~~~^^                                                 
+    File "C:\Projects\faktura_scanner_flask\config\database.py", line 57,   
+  in initialize_database                                                    
+      conn = psycopg2.connect(                                              
+          get_database_url(),                                               
+          cursor_factory=psycopg2.extras.RealDictCursor                     
+      )                                                                     
+    File "C:\Projects\faktura_scanner\.venv\Lib\site-packages\psycopg2\__in 
+  it__.py", line 135, in connect                                            
+      conn = _connect(dsn, connection_factory=connection_factory,           
+  **kwasync)                                                                
+  psycopg2.OperationalError: connection to server at "localhost" (::1),     
+  port 5433 failed: server closed the connection unexpectedly               
+          This probably means the server terminated abnormally              
+          before or while processing the request.                           
+
+● The error shows localhost (::1) — that's the clue. On Windows, localhost
+  resolves to IPv6 (::1) but SSH tunnels bind on IPv4 (127.0.0.1). They don't
+  match, so the connection is immediately dropped.
+
+  Fix: replace localhost with 127.0.0.1 in the DATABASE_URL:
+
+● Update(.env.local)
+  ⎿  Added 1 line, removed 1 line
+      17  SECRET_KEY=dev-local-secret-key-not-for-production
+      18 
+      19  # PostgreSQL via SSH tunnel (local port 5433 → Vultr port 5432)
+      20 -DATABASE_URL=postgresql://faktura_user:choose_a_strong_password
+         -_here@localhost:5433/faktura_db                                
+      20 +DATABASE_URL=postgresql://faktura_user:choose_a_strong_password
+         +_here@127.0.0.1:5433/faktura_db
+      21 
+      22  # Windows paths — Tesseract and Poppler local installations
+      23  TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+
+● ★ Insight ─────────────────────────────────────
+  - On modern Windows, localhost resolves to IPv6 ::1 first (per RFC 6724
+  address selection rules), while SSH's -L tunnel binds only to 127.0.0.1 (IPv4)
+   by default. Using 127.0.0.1 explicitly forces IPv4 and skips the DNS lookup
+  entirely — faster and unambiguous.
+  - This same localhost vs 127.0.0.1 mismatch is a very common Windows gotcha
+  with any port-forwarded service (Redis, MySQL, etc.), not just PostgreSQL
+  tunnels.
+  ─────────────────────────────────────────────────
+
+  Also confirm the SSH tunnel is actually running before retrying. In a separate
+   terminal:
+
+  ssh -i ssh_vultr -N -L 5433:127.0.0.1:5432 root@<VULTR_IP>
+
+  Note 127.0.0.1:5432 on the remote side too — more explicit than localhost for
+  the same reason. Then run:
+
+  python run_dev.py
+
+✻ Cooked for 30s
+
+❯ ============================================================              
+    MyWay Dev Server — connecting to Vultr PostgreSQL                       
+    DB: 127.0.0.1:5433/faktura_db                                           
+    URL: http://localhost:5000                                              
+  ============================================================              
+                                                                            
+   * Serving Flask app 'app'                                                
+   * Debug mode: on                                                         
+  Została podjęta próba uzyskania dostępu do gniazda w sposób zabroniony    
+  przez                                                                     
+  przypisane do niego uprawnienia dostępu                                   
+  (.venv) PS C:\Projects\faktura_scanner_flask>                             
+
+● That Polish error is Windows socket permission error (WinError 10013) — port 
+  5000 is blocked on Windows. Since Windows 10, port 5000 is reserved by the
+  system (used by Hyper-V or AirPlay-like services). Just change the dev port:
+
+● Update(run_dev.py)
+  ⎿  Added 1 line, removed 1 line
+      45      app.run(
+      46          debug=True,
+      47          host='127.0.0.1',   # local only, not exposed on the ne
+          twork
+      48 -        port=5000,                                             
+      48 +        port=5001,
+      49          use_reloader=True,  # auto-restart on file changes
+      50      )
+
+● Update(run_dev.py)
+  ⎿  Added 1 line, removed 1 line
+      39      print("=" * 60)
+      40      print("  MyWay Dev Server — connecting to Vultr PostgreSQL"
+          )
+      41      print(f"  DB: {db_url.split('@')[-1]}")   # show host/dbnam
+          e, hide credentials
+      42 -    print("  URL: http://localhost:5000")                      
+      42 +    print("  URL: http://localhost:5001")
+      43      print("=" * 60)
+      44      print()
+      45      app.run(
+
+● ★ Insight ─────────────────────────────────────
+  - Microsoft reserves many ports dynamically on Windows 10/11 via the "TCP
+  dynamic port range" — including 5000, which conflicts with Flask's default.
+  You can see the full list with netsh interface ipv4 show excludedportrange 
+  protocol=tcp.
+  - Port 5001 is typically free. If it ever gets blocked too, other safe choices
+   are 8080, 8000, or 8888.
+  ─────────────────────────────────────────────────
+
+  python run_dev.py
+  # → http://localhost:5001
+
+❯ Make the logo text White 
+
+● The current brightness-0 invert filter turns everything white — including the
+  white background of the PNG, creating a solid white box. To get transparent
+  background with white text, I need invert + mix-blend-screen:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 1 line, removed 1 line
+      3      <div class="px-4 py-4 border-b border-slate-700/50 flex item
+         s-center justify-center">
+      4          <img src="{{ url_for('static', filename='Logo.png') }}"
+      5               alt="MyWay Nails &amp; Beauty"
+      6 -             class="w-full max-w-[180px] h-auto object-contain b
+        -rightness-0 invert">                                            
+      6 +             class="w-full max-w-[180px] h-auto object-contain i
+        +nvert mix-blend-screen">
+      7      </div>
+      8 
+      9      {% if current_user.is_authenticated %}
+
+● ★ Insight ─────────────────────────────────────
+  - How mix-blend-mode: screen works here: invert flips black text → white text
+  and white background → black background. screen blend mode makes pure black
+  (0,0,0) completely transparent — so the black background from the inverted
+  image disappears, leaving only the white text floating on the dark sidebar. No
+   extra PNG assets needed.
+  - This technique works for any black-on-white logo PNG. The pipeline is:
+  invert (flip colors) → screen (erase the black, keep the white). It's the CSS
+  equivalent of "multiply" blend mode in Photoshop for dark-on-light logos.
+  ─────────────────────────────────────────────────
+
+  Refresh the page and the logo text should now appear white with no white box
+  behind it.
+
+✻ Crunched for 43s
+
+❯ no change. NOte that .png picture is the logo text on transparent         
+  background                                                                
+
+● If the background is already transparent, the fix is simpler — just filter: 
+  invert(1) inverts black→white, transparency stays transparent. No
+  mix-blend-mode needed.
+
+  The likely reason there's "no change" is that invert and mix-blend-screen
+  aren't in the compiled output.css (Tailwind only includes classes it sees
+  during build). Using inline style bypasses that entirely:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 2 lines, removed 1 line
+       3      <div class="px-4 py-4 border-b border-slate-700/50 flex ite
+          ms-center justify-center">
+       4          <img src="{{ url_for('static', filename='Logo.png') }}"
+       5               alt="MyWay Nails &amp; Beauty"
+       6 -             class="w-full max-w-[180px] h-auto object-contain 
+         -invert mix-blend-screen">                                      
+       6 +             class="w-full max-w-[180px] h-auto object-contain"
+       7 +             style="filter: invert(1);">
+       8      </div>
+       9 
+      10      {% if current_user.is_authenticated %}
+
+● ★ Insight ─────────────────────────────────────
+  - Tailwind's JIT/AOT compiler scans template files for class names at build
+  time and only includes classes it finds. If a class like invert or
+  mix-blend-screen wasn't in any template when npm run build:css last ran, it
+  won't be in output.css — so the class name is present in the HTML but has no
+  CSS rule behind it. Inline style always works regardless of build state.
+  - For a transparent-background PNG: filter: invert(1) is all you need. CSS
+  filters apply per-pixel, so transparent pixels (alpha=0) pass through
+  unchanged — only the black ink pixels flip to white.
+  ─────────────────────────────────────────────────
+
+  Refresh the page — the logo should now appear white on the dark sidebar.
+
+❯ I want the logo picture to fill all sidebar available width 
+
+● Remove the max-w-[180px] cap and the horizontal padding on the container:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 2 lines, removed 2 lines
+      1  <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-
+         xl">
+      2      <!-- Logo Section -->
+      3 -    <div class="px-4 py-4 border-b border-slate-700/50 flex item
+        -s-center justify-center">                                       
+      3 +    <div class="py-4 border-b border-slate-700/50 flex items-cen
+        +ter justify-center">
+      4          <img src="{{ url_for('static', filename='Logo.png') }}"
+      5               alt="MyWay Nails &amp; Beauty"
+      6 -             class="w-full max-w-[180px] h-auto object-contain" 
+      6 +             class="w-full h-auto object-contain"
+      7               style="filter: invert(1);">
+      8      </div>
+      9 
+
+● w-full now lets the image stretch to the full container width. If it looks too
+   edge-to-edge, add back a small padding like px-2 or px-3 on the wrapping div
+  to give it a little breathing room. Refresh to check.
+
+❯ I edited the logo .png picture. How to update in the app view 
+
+● Since the filename (Logo.png) stays the same, the browser is just showing a
+  cached version. Hard-refresh to clear it:
+
+  - Windows: Ctrl + Shift + R or Ctrl + F5
+
+  That's it — Flask serves the file directly from disk on every request, so no
+  rebuild or restart needed.
+
+❯ I want to add some padding on left and right to logo picture element 
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 1 line, removed 1 line
+      1  <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-
+         xl">
+      2      <!-- Logo Section -->
+      3 -    <div class="py-4 border-b border-slate-700/50 flex items-cen
+        -ter justify-center">                                            
+      3 +    <div class="px-4 py-4 border-b border-slate-700/50 flex item
+        +s-center justify-center">
+      4          <img src="{{ url_for('static', filename='Logo.png') }}"
+      5               alt="MyWay Nails &amp; Beauty"
+      6               class="w-full h-auto object-contain"
+
+● px-4 adds 1rem (16px) on each side. If you want more or less, use px-2 (8px),
+  px-6 (24px), or px-8 (32px). Refresh to see the result.
+
+❯ add also a text label below logo centered with text 'Beauty Salon         
+  Management'                                                               
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 2 lines, removed 1 line
+       1  <aside class="w-64 bg-slate-900 text-white flex flex-col shadow
+          -xl">
+       2      <!-- Logo Section -->
+       3 -    <div class="px-4 py-4 border-b border-slate-700/50 flex ite
+         -ms-center justify-center">                                     
+       3 +    <div class="px-4 py-4 border-b border-slate-700/50 flex fle
+         +x-col items-center gap-2">
+       4          <img src="{{ url_for('static', filename='Logo.png') }}"
+       5               alt="MyWay Nails &amp; Beauty"
+       6               class="w-full h-auto object-contain"
+       7               style="filter: invert(1);">
+       8 +        <p class="text-xs text-slate-400 tracking-widest upperc
+         +ase text-center">Beauty Salon Management</p>
+       9      </div>
+      10 
+      11      {% if current_user.is_authenticated %}
+
+● tracking-widest spreads the letters apart slightly, giving the subtitle a
+  refined label feel that complements the logo without competing with it.
+  Refresh to check.
+
+❯ on each view change the side bar logo is rerendered and not visible for   
+  half second. How to fix that                                              
+
+● This happens because every navigation is a full page reload (Flask SSR) — the
+  browser has to re-request and repaint the image each time. The fix is a <link 
+  rel="preload"> in <head>, which tells the browser to fetch the logo at the
+  highest priority before it even starts rendering the page body:
+
+● Update(templates\base.html)
+  ⎿  Added 3 lines
+      16      <!-- Material Icons (Legacy Support) -->
+      17      <link href="https://fonts.googleapis.com/icon?family=Materi
+          al+Icons" rel="stylesheet">
+      18 
+      19 +    <!-- Preload sidebar logo to prevent flash on page navigati
+         +on -->
+      20 +    <link rel="preload" as="image" href="{{ url_for('static', f
+         +ilename='Logo.png') }}">
+      21 +
+      22      {% block extra_head %}{% endblock %}
+      23 
+      24      <!-- Page-specific CSS -->
+
+● ★ Insight ─────────────────────────────────────
+  - <link rel="preload" as="image"> is a resource hint — the browser starts
+  fetching the image in parallel with parsing the HTML, before it reaches the
+  <img> tag in the sidebar. By the time the browser renders the sidebar, the
+  image is already in memory.
+  - After the first page load, the browser caches Logo.png normally. The preload
+   hint matters most on subsequent navigations when the cache is warm but the
+  image hasn't been painted yet in the new document — it closes the gap between
+  "HTML received" and "image ready to display".
+  ─────────────────────────────────────────────────
+
+  Refresh and navigate between pages — the logo should now appear immediately
+  without the half-second blank.
+
+✻ Sautéed for 38s
+
+❯ it looks good at first nav view change, but further view changes behave   
+  with blank half second                                                    
+
+● The preload only helps the first hit — on subsequent navigations the browser
+  still has to re-parse and repaint. The definitive fix is to inline the logo as
+   a base64 data URI directly in the HTML. No network request = zero flash,
+  every time.
+
+  The cleanest way is a Flask context processor that reads the file once at
+  startup:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(app.py)
+  ⎿  Added 1 line
+      2  FakturaScanner - Flask Web Application
+      3  Main Flask application with Jinja templates, TailwindCSS, and Ja
+         vaScript
+      4  """
+      5 +import base64
+      6  import logging
+      7  import os
+      8  from datetime import datetime, date, time
+
+● Update(app.py)
+  ⎿  Added 10 lines, removed 1 line
+      160      def internal_error(error):
+      161          return render_template('errors/500.html'), 500
+      162 
+      163 +    # Pre-encode sidebar logo as base64 data URI (eliminates f
+          +lash on navigation)
+      164 +    logo_path = app.static_folder + '/Logo.png'
+      165 +    try:
+      166 +        with open(logo_path, 'rb') as f:
+      167 +            logo_data_uri = 'data:image/png;base64,' + base64.
+          +b64encode(f.read()).decode()
+      168 +    except FileNotFoundError:
+      169 +        logo_data_uri = ''
+      170 +
+      171      # Context processors
+      172      @app.context_processor
+      173      def inject_globals():
+      174          return {
+      175              'app_name': APP_NAME,
+      176              'version': VERSION,
+      169 -            'now': datetime.now                               
+      177 +            'now': datetime.now,
+      178 +            'logo_data_uri': logo_data_uri,
+      179          }
+      180 
+      181      return app
+
+● Now use logo_data_uri in the sidebar instead of the file URL, and remove the
+  preload hint since it's no longer needed:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Error editing file
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 1 line, removed 1 line
+      1  <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-
+         xl">
+      2      <!-- Logo Section -->
+      3      <div class="px-4 py-4 border-b border-slate-700/50 flex flex
+         -col items-center gap-1">
+      4 -        <img src="{{ url_for('static', filename='Logo.png') }}" 
+      4 +        <img src="{{ logo_data_uri }}"
+      5               alt="MyWay Nails &amp; Beauty"
+      6               class="w-full h-auto object-contain"
+      7               style="filter: invert(1);">
+
+● Also remove the now-redundant preload hint from base.html:
+
+● Update(templates\base.html)
+  ⎿  Removed 3 lines
+      16      <!-- Material Icons (Legacy Support) -->
+      17      <link href="https://fonts.googleapis.com/icon?family=Materi
+          al+Icons" rel="stylesheet">
+      18 
+      19 -    <!-- Preload sidebar logo to prevent flash on page navigati
+         -on -->                                                         
+      20 -    <link rel="preload" as="image" href="{{ url_for('static', f
+         -ilename='Logo.png') }}">                                       
+      21 -                                                               
+      19      {% block extra_head %}{% endblock %}
+      20 
+      21      <!-- Page-specific CSS -->
+
+● ★ Insight ─────────────────────────────────────
+  - A base64 data URI embeds the entire binary file as a string directly inside
+  the HTML. The browser never makes a second HTTP request for it — the image is
+  already decoded and ready to paint the moment the <img> tag is parsed. This is
+   the only technique that guarantees zero flash on every navigation.
+  - The encoding happens once at startup in the context processor, not on every
+  request. The logo_data_uri string is computed into memory and reused for every
+   rendered template — so there's no per-request file I/O cost.
+  - Trade-off: the base64 string is ~33% larger than the original binary. For a
+  small logo PNG (typically 10–50 KB) this is negligible — but you wouldn't want
+   to do this for large images.
+  ─────────────────────────────────────────────────
+
+  Restart run_dev.py (the encoding happens at startup) then navigate between
+  pages — the logo should be instant on every view.
+
+✻ Crunched for 59s
+
+❯ make all menu items with gap and py pagging set same as it is in 'pulpit' 
+   first menu Item                                                          
+
+● Read 1 file (ctrl+o to expand)
+
+● All the other items have gap-2 py-3 while Pulpit has gap-1 py-1. I'll do a
+  targeted replace-all on just those two values inside the <a> link classes:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 12 lines, removed 12 lines
+      29          <div class="px-2 mt-6 mb-2 text-xs font-semibold text-s
+          late-500 uppercase tracking-wider">Finanse</div>
+      30 
+      31          <a href="{{ url_for('main.invoices_list') }}"
+      32 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      32 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      33             {% if request.endpoint == 'main.invoices_list' %}bg-
+          gradient-to-r from-primary-600/20 to-primary-600/10 text-primar
+          y-400 border border-primary-500/10{% else %}text-slate-400 hove
+          r:bg-slate-800 hover:text-white{% endif %}">
+      34              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      35                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2
+           2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V
+          19a2 2 0 01-2 2z" />
+     ...
+      38          </a>
+      39 
+      40          <a href="{{ url_for('main.sellers_list') }}"
+      41 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      41 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      42             {% if request.endpoint == 'main.sellers_list' %}bg-g
+          radient-to-r from-primary-600/20 to-primary-600/10 text-primary
+          -400 border border-primary-500/10{% else %}text-slate-400 hover
+          :bg-slate-800 hover:text-white{% endif %}">
+      43              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      44                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v
+          16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v
+          -5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+     ...
+      47          </a>
+      48 
+      49          <a href="{{ url_for('main.upload') }}"
+      50 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      50 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      51             {% if request.endpoint == 'main.upload' %}bg-gradien
+          t-to-r from-primary-600/20 to-primary-600/10 text-primary-400 b
+          order border-primary-500/10{% else %}text-slate-400 hover:bg-sl
+          ate-800 hover:text-white{% endif %}">
+      52              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      53                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9
+           6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+     ...
+      56          </a>
+      57 
+      58          <a href="{{ url_for('main.income_dashboard') }}"
+      59 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      59 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      60             {% if request.endpoint == 'main.income_dashboard' %}
+          bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-pri
+          mary-400 border border-primary-500/10{% else %}text-slate-400 h
+          over:bg-slate-800 hover:text-white{% endif %}">
+      61              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      62                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2
+           3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v
+          8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0
+           0118 0z" />
+     ...
+      65          </a>
+      66 
+      67          <a href="{{ url_for('main.analytics_dashboard') }}"
+      68 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      68 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      69             {% if request.endpoint == 'main.analytics_dashboard'
+           %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-
+          primary-400 border border-primary-500/10{% else %}text-slate-40
+          0 hover:bg-slate-800 hover:text-white{% endif %}">
+      70              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      71                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v
+          6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10
+          m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2
+          v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+     ...
+      79          <div class="px-2 mt-6 mb-2 text-xs font-semibold text-s
+          late-500 uppercase tracking-wider">Salon</div>
+      80 
+      81          <a href="{{ url_for('main.appointments_calendar') }}"
+      82 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      82 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      83             {% if request.endpoint in ['main.appointments_list',
+           'main.appointments_calendar', 'main.create_appointment', 'main
+          .view_appointment'] %}bg-gradient-to-r from-primary-600/20 to-p
+          rimary-600/10 text-primary-400 border border-primary-500/10{% e
+          lse %}text-slate-400 hover:bg-slate-800 hover:text-white{% endi
+          f %}">
+      84              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      85                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00
+          2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+     ...
+      88          </a>
+      89 
+      90          <a href="{{ url_for('main.clients_list') }}"
+      91 -           class="flex items-center gap-2 px-4 py-3 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      91 +           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      92             {% if request.endpoint == 'main.clients_list' %}bg-g
+          radient-to-r from-primary-600/20 to-primary-600/10 text-primary
+          -400 border border-primary-500/10{% else %}text-slate-400 hover
+          :bg-slate-800 hover:text-white{% endif %}">
+      93              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      94                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 2
+          0H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.35
+          6-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 01
+          9.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 0
+          14 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+     ...
+      102          <div class="px-2 mt-6 mb-2 text-xs font-semibold text-
+           slate-500 uppercase tracking-wider">Zarządzanie</div>
+      103 
+      104          <a href="{{ url_for('main.employees_list') }}"
+      105 -           class="flex items-center gap-2 px-4 py-3 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      105 +           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      106             {% if request.endpoint == 'main.employees_list' %}b
+           g-gradient-to-r from-primary-600/20 to-primary-600/10 text-pri
+           mary-400 border border-primary-500/10{% else %}text-slate-400 
+           hover:bg-slate-800 hover:text-white{% endif %}">
+      107              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      108                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c
+           -3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v
+           2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10
+           a2 2 0 002 2z" />
+     ...
+      111          </a>
+      112 
+      113          <a href="{{ url_for('main.services_list') }}"
+      114 -           class="flex items-center gap-2 px-4 py-3 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      114 +           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      115             {% if request.endpoint == 'main.services_list' %}bg
+           -gradient-to-r from-primary-600/20 to-primary-600/10 text-prim
+           ary-400 border border-primary-500/10{% else %}text-slate-400 h
+           over:bg-slate-800 hover:text-white{% endif %}">
+      116              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      117                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 1
+           0h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+     ...
+      125 
+      126          {% if current_user.role in ['superuser', 'admin', 'acc
+           ountant'] %}
+      127          <a href="{{ url_for('main.history') }}"
+      128 -           class="flex items-center gap-2 px-4 py-3 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      128 +           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      129             {% if request.endpoint == 'main.history' %}bg-gradi
+           ent-to-r from-primary-600/20 to-primary-600/10 text-primary-40
+           0 border border-primary-500/10{% else %}text-slate-400 hover:b
+           g-slate-800 hover:text-white{% endif %}">
+      130              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      131                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0
+            0118 0z" />
+     ...
+      136 
+      137          {% if current_user.role in ['superuser', 'admin'] %}
+      138          <a href="{{ url_for('main.email_settings') }}"
+      139 -           class="flex items-center gap-2 px-4 py-3 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      139 +           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      140             {% if request.endpoint == 'main.email_settings' %}b
+           g-gradient-to-r from-primary-600/20 to-primary-600/10 text-pri
+           mary-400 border border-primary-500/10{% else %}text-slate-400 
+           hover:bg-slate-800 hover:text-white{% endif %}">
+      141              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      142                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.75
+           6 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2
+           .37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1
+           .724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.72
+           4 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 
+           1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.7
+           24 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724
+            0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.0
+           7 2.572-1.065z" />
+     ...
+      147          {% endif %}
+      148 
+      149          <a href="{{ url_for('auth.profile') }}"
+      150 -           class="flex items-center gap-2 px-4 py-3 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      150 +           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      151             {% if request.endpoint == 'auth.profile' %}bg-gradi
+           ent-to-r from-primary-600/20 to-primary-600/10 text-primary-40
+           0 border border-primary-500/10{% else %}text-slate-400 hover:b
+           g-slate-800 hover:text-white{% endif %}">
+      152              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      153                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 
+           14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+
+● All 11 menu items now use gap-1 py-1 — consistent with Pulpit. Refresh to see
+  the tighter, uniform spacing.
+
+❯ change to py-2 
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 13 lines, removed 13 lines
+      16          <div class="px-2 mb-2 text-xs font-semibold text-slate-
+          500 uppercase tracking-wider">Menu Główne</div>
+      17 
+      18          <a href="{{ url_for('main.dashboard') }}"
+      19 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      19 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      20             {% if request.endpoint == 'main.dashboard' %}bg-grad
+          ient-to-r from-primary-600/20 to-primary-600/10 text-primary-40
+          0 border border-primary-500/10{% else %}text-slate-400 hover:bg
+          -slate-800 hover:text-white{% endif %}">
+      21              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      22                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 
+          0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2
+           0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2
+           2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v
+          2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+     ...
+      29          <div class="px-2 mt-6 mb-2 text-xs font-semibold text-s
+          late-500 uppercase tracking-wider">Finanse</div>
+      30 
+      31          <a href="{{ url_for('main.invoices_list') }}"
+      32 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      32 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      33             {% if request.endpoint == 'main.invoices_list' %}bg-
+          gradient-to-r from-primary-600/20 to-primary-600/10 text-primar
+          y-400 border border-primary-500/10{% else %}text-slate-400 hove
+          r:bg-slate-800 hover:text-white{% endif %}">
+      34              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      35                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2
+           2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V
+          19a2 2 0 01-2 2z" />
+     ...
+      38          </a>
+      39 
+      40          <a href="{{ url_for('main.sellers_list') }}"
+      41 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      41 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      42             {% if request.endpoint == 'main.sellers_list' %}bg-g
+          radient-to-r from-primary-600/20 to-primary-600/10 text-primary
+          -400 border border-primary-500/10{% else %}text-slate-400 hover
+          :bg-slate-800 hover:text-white{% endif %}">
+      43              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      44                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v
+          16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v
+          -5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+     ...
+      47          </a>
+      48 
+      49          <a href="{{ url_for('main.upload') }}"
+      50 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      50 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      51             {% if request.endpoint == 'main.upload' %}bg-gradien
+          t-to-r from-primary-600/20 to-primary-600/10 text-primary-400 b
+          order border-primary-500/10{% else %}text-slate-400 hover:bg-sl
+          ate-800 hover:text-white{% endif %}">
+      52              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      53                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9
+           6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+     ...
+      56          </a>
+      57 
+      58          <a href="{{ url_for('main.income_dashboard') }}"
+      59 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      59 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      60             {% if request.endpoint == 'main.income_dashboard' %}
+          bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-pri
+          mary-400 border border-primary-500/10{% else %}text-slate-400 h
+          over:bg-slate-800 hover:text-white{% endif %}">
+      61              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      62                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2
+           3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v
+          8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0
+           0118 0z" />
+     ...
+      65          </a>
+      66 
+      67          <a href="{{ url_for('main.analytics_dashboard') }}"
+      68 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      68 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      69             {% if request.endpoint == 'main.analytics_dashboard'
+           %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-
+          primary-400 border border-primary-500/10{% else %}text-slate-40
+          0 hover:bg-slate-800 hover:text-white{% endif %}">
+      70              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      71                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v
+          6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10
+          m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2
+          v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+     ...
+      79          <div class="px-2 mt-6 mb-2 text-xs font-semibold text-s
+          late-500 uppercase tracking-wider">Salon</div>
+      80 
+      81          <a href="{{ url_for('main.appointments_calendar') }}"
+      82 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      82 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      83             {% if request.endpoint in ['main.appointments_list',
+           'main.appointments_calendar', 'main.create_appointment', 'main
+          .view_appointment'] %}bg-gradient-to-r from-primary-600/20 to-p
+          rimary-600/10 text-primary-400 border border-primary-500/10{% e
+          lse %}text-slate-400 hover:bg-slate-800 hover:text-white{% endi
+          f %}">
+      84              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      85                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00
+          2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+     ...
+      88          </a>
+      89 
+      90          <a href="{{ url_for('main.clients_list') }}"
+      91 -           class="flex items-center gap-1 px-4 py-1 rounded-xl 
+         -text-sm font-medium transition-all duration-200 group          
+      91 +           class="flex items-center gap-1 px-4 py-2 rounded-xl 
+         +text-sm font-medium transition-all duration-200 group
+      92             {% if request.endpoint == 'main.clients_list' %}bg-g
+          radient-to-r from-primary-600/20 to-primary-600/10 text-primary
+          -400 border border-primary-500/10{% else %}text-slate-400 hover
+          :bg-slate-800 hover:text-white{% endif %}">
+      93              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24
+          " stroke="currentColor">
+      94                  <path stroke-linecap="round" stroke-linejoin="r
+          ound" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 2
+          0H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.35
+          6-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 01
+          9.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 0
+          14 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+     ...
+      102          <div class="px-2 mt-6 mb-2 text-xs font-semibold text-
+           slate-500 uppercase tracking-wider">Zarządzanie</div>
+      103 
+      104          <a href="{{ url_for('main.employees_list') }}"
+      105 -           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      105 +           class="flex items-center gap-1 px-4 py-2 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      106             {% if request.endpoint == 'main.employees_list' %}b
+           g-gradient-to-r from-primary-600/20 to-primary-600/10 text-pri
+           mary-400 border border-primary-500/10{% else %}text-slate-400 
+           hover:bg-slate-800 hover:text-white{% endif %}">
+      107              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      108                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c
+           -3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v
+           2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10
+           a2 2 0 002 2z" />
+     ...
+      111          </a>
+      112 
+      113          <a href="{{ url_for('main.services_list') }}"
+      114 -           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      114 +           class="flex items-center gap-1 px-4 py-2 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      115             {% if request.endpoint == 'main.services_list' %}bg
+           -gradient-to-r from-primary-600/20 to-primary-600/10 text-prim
+           ary-400 border border-primary-500/10{% else %}text-slate-400 h
+           over:bg-slate-800 hover:text-white{% endif %}">
+      116              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      117                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 1
+           0h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+     ...
+      125 
+      126          {% if current_user.role in ['superuser', 'admin', 'acc
+           ountant'] %}
+      127          <a href="{{ url_for('main.history') }}"
+      128 -           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      128 +           class="flex items-center gap-1 px-4 py-2 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      129             {% if request.endpoint == 'main.history' %}bg-gradi
+           ent-to-r from-primary-600/20 to-primary-600/10 text-primary-40
+           0 border border-primary-500/10{% else %}text-slate-400 hover:b
+           g-slate-800 hover:text-white{% endif %}">
+      130              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      131                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0
+            0118 0z" />
+     ...
+      136 
+      137          {% if current_user.role in ['superuser', 'admin'] %}
+      138          <a href="{{ url_for('main.email_settings') }}"
+      139 -           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      139 +           class="flex items-center gap-1 px-4 py-2 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      140             {% if request.endpoint == 'main.email_settings' %}b
+           g-gradient-to-r from-primary-600/20 to-primary-600/10 text-pri
+           mary-400 border border-primary-500/10{% else %}text-slate-400 
+           hover:bg-slate-800 hover:text-white{% endif %}">
+      141              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      142                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.75
+           6 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2
+           .37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1
+           .724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.72
+           4 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 
+           1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.7
+           24 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724
+            0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.0
+           7 2.572-1.065z" />
+     ...
+      147          {% endif %}
+      148 
+      149          <a href="{{ url_for('auth.profile') }}"
+      150 -           class="flex items-center gap-1 px-4 py-1 rounded-xl
+          - text-sm font-medium transition-all duration-200 group        
+      150 +           class="flex items-center gap-1 px-4 py-2 rounded-xl
+          + text-sm font-medium transition-all duration-200 group
+      151             {% if request.endpoint == 'auth.profile' %}bg-gradi
+           ent-to-r from-primary-600/20 to-primary-600/10 text-primary-40
+           0 border border-primary-500/10{% else %}text-slate-400 hover:b
+           g-slate-800 hover:text-white{% endif %}">
+      152              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 2
+           4" stroke="currentColor">
+      153                  <path stroke-linecap="round" stroke-linejoin="
+           round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 
+           14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+
+● Done — all menu items now use py-2.
+
+❯ move 'pulpit' menu item to 'finanse' section in first position and remove 
+   'menu główne' section                                                    
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 3 lines, removed 6 lines
+      12 
+      13      <!-- Navigation -->
+      14      <nav class="flex-1 px-4 py-2 space-y-0.5 overflow-y-auto">
+      15 -        <!-- Dashboard (all roles) -->                         
+      16 -        <div class="px-2 mb-2 text-xs font-semibold text-slate-
+         -500 uppercase tracking-wider">Menu Główne</div>                
+      15 +        <!-- Invoices Module (superuser, admin, accountant) -->
+      16 +        {% if current_user.role in ['superuser', 'admin', 'acco
+         +untant'] %}
+      17 +        <div class="px-2 mb-2 text-xs font-semibold text-slate-
+         +500 uppercase tracking-wider">Finanse</div>
+      18 
+      19          <a href="{{ url_for('main.dashboard') }}"
+      20             class="flex items-center gap-1 px-4 py-2 rounded-xl 
+          text-sm font-medium transition-all duration-200 group
+     ...
+      25              Pulpit
+      26          </a>
+      27 
+      27 -        <!-- Invoices Module (superuser, admin, accountant) -->
+      28 -        {% if current_user.role in ['superuser', 'admin', 'acco
+         -untant'] %}                                                    
+      29 -        <div class="px-2 mt-6 mb-2 text-xs font-semibold text-s
+         -late-500 uppercase tracking-wider">Finanse</div>               
+      30 -                                                               
+      28          <a href="{{ url_for('main.invoices_list') }}"
+      29             class="flex items-center gap-1 px-4 py-2 rounded-xl 
+          text-sm font-medium transition-all duration-200 group
+      30             {% if request.endpoint == 'main.invoices_list' %}bg-
+          gradient-to-r from-primary-600/20 to-primary-600/10 text-primar
+          y-400 border border-primary-500/10{% else %}text-slate-400 hove
+          r:bg-slate-800 hover:text-white{% endif %}">
+
+● Also remove the mt-6 top margin that was separating Finanse from the old
+  section above it — it's now the first section so it doesn't need extra
+  spacing:
+
+● Update(templates\components\sidebar.html)
+  ⎿  Added 1 line, removed 1 line
+      14      <nav class="flex-1 px-4 py-2 space-y-0.5 overflow-y-auto">
+      15          <!-- Invoices Module (superuser, admin, accountant) -->
+      16          {% if current_user.role in ['superuser', 'admin', 'acco
+          untant'] %}
+      17 -        <div class="px-2 mb-2 text-xs font-semibold text-slate-
+         -500 uppercase tracking-wider">Finanse</div>                    
+      17 +        <div class="px-2 mt-2 mb-2 text-xs font-semibold text-s
+         +late-500 uppercase tracking-wider">Finanse</div>
+      18 
+      19          <a href="{{ url_for('main.dashboard') }}"
+      20             class="flex items-center gap-1 px-4 py-2 rounded-xl 
+          text-sm font-medium transition-all duration-200 group
+
+● Done. "Menu Główne" section is removed, and Pulpit now sits at the top of the
+  Finanse section. Refresh to check.
+
+❯ @templates/history/list_refined.html - current view shows history of      
+  changes in invoices records. Implement changes logs for the rest of app   
+  functionalities: import invoices events, sellers, apppointments, clients, 
+   services and appointment_services, employees_services, employees, login  
+  events                                                                    
+  ⎿  Read templates\history\list_refined.html (473 lines)
+
+● Explore(Explore audit/history architecture)
+  ⎿  Done (28 tool uses · 106.7k tokens · 1m 23s)
+  (ctrl+o to expand)
+
+● Let me read all the relevant files before planning:
+
+● Read 5 files (ctrl+o to expand)
+
+● Now let me read the api_routes.py sections for sellers, clients, services,
+  employees, and the upload route:
+
+● Explore(Find CRUD endpoints in api_routes)
+  ⎿  Done (20 tool uses · 86.3k tokens · 46s)
+  (ctrl+o to expand)
+
+● I have everything I need. Let me now implement this systematically across all
+  layers.
+
+  ★ Insight ─────────────────────────────────────
+  - The key architectural change is making audit_log entity-agnostic by adding
+  entity_type + entity_id + entity_label columns while keeping invoice_id for
+  backward compat. PostgreSQL's ALTER TABLE ... ADD COLUMN IF NOT EXISTS is
+  idempotent — safe to run on every startup.
+  - Login events are a special case: they have no entity_id (no row being
+  modified), just a user_name and a new value like the IP address. Modelling
+  them as entity_type='login' with field_name='session' fits the existing schema
+   cleanly.
+  ─────────────────────────────────────────────────
+
+● Read 2 files (ctrl+o to expand)
+
+● Good. Now I have everything. Let me implement all 8 files:
+
+● Read 2 files (ctrl+o to expand)
+
+● Now I have everything. Let me implement all files:
+
+  Step 1 — Schema migration (idempotent ALTER TABLE statements)
+
+● Update(database\schema.sql)
+  ⎿  Added 31 lines, removed 3 lines
+      41  -- Tabela historii zmian (audit log)
+      42  CREATE TABLE IF NOT EXISTS audit_log (
+      43      id SERIAL PRIMARY KEY,
+      44 -    invoice_id INTEGER NOT NULL,                               
+      44 +    invoice_id INTEGER,
+      45      action TEXT DEFAULT 'UPDATE',
+      46 -    field_name TEXT NOT NULL,                                  
+      46 +    field_name TEXT,
+      47      old_value TEXT,
+      48      new_value TEXT,
+      49      changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      50 -    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE 
+         -CASCADE                                                        
+      50 +    entity_type TEXT DEFAULT 'invoice',
+      51 +    entity_id INTEGER,
+      52 +    entity_label TEXT,
+      53 +    user_id INTEGER,
+      54 +    user_name TEXT
+      55  );
+      56 
+      57  CREATE INDEX IF NOT EXISTS idx_audit_invoice ON audit_log(invoi
+          ce_id);
+      58 +CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity
+         +_type, entity_id);
+      59 +CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit_log(ch
+         +anged_at DESC);
+      60 
+      61 +-- Migration: extend existing audit_log for multi-entity suppor
+         +t (idempotent)
+      62 +DO $$
+      63 +BEGIN
+      64 +    -- Drop FK constraint so invoice_id can be nullable (login/
+         +import events have no invoice)
+      65 +    EXECUTE (
+      66 +        SELECT 'ALTER TABLE audit_log DROP CONSTRAINT ' || cons
+         +traint_name
+      67 +        FROM information_schema.table_constraints
+      68 +        WHERE table_name = 'audit_log' AND constraint_type = 'F
+         +OREIGN KEY'
+      69 +        LIMIT 1
+      70 +    );
+      71 +EXCEPTION WHEN others THEN NULL;
+      72 +END $$;
+      73 +
+      74 +DO $$ BEGIN ALTER TABLE audit_log ALTER COLUMN invoice_id DROP
+         +NOT NULL; EXCEPTION WHEN others THEN NULL; END $$;
+      75 +DO $$ BEGIN ALTER TABLE audit_log ALTER COLUMN field_name DROP
+         +NOT NULL;  EXCEPTION WHEN others THEN NULL; END $$;
+      76 +ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_type  TEX
+         +T DEFAULT 'invoice';
+      77 +ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_id    INT
+         +EGER;
+      78 +ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_label TEX
+         +T;
+      79 +ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_id      INT
+         +EGER;
+      80 +ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_name    TEX
+         +T;
+      81 +UPDATE audit_log SET entity_type = 'invoice' WHERE entity_type
+         +IS NULL;
+      82 +
+      83  -- Tabela duplikatów
+      84  CREATE TABLE IF NOT EXISTS duplicate_detection (
+      85      id SERIAL PRIMARY KEY,
+
+● Step 2 — AuditRepository: add log_event(), update get_all()
+
+● Write(repositories\audit_repository.py)
+  ⎿  Added 83 lines, removed 33 lines
+      1  """
+      2  Repository dla historii zmian (audit log)
+      3  """
+      4 -from typing import Any, List, Optional                          
+      4 +from typing import List, Optional
+      5 
+      6  from repositories.base_repository import BaseRepository
+      7 
+     ...
+       12      def __init__(self):
+       13          super().__init__("audit_log")
+       14 
+       15 -    def log_change(                                           
+       16 -            self, invoice_id: int, field_name: str, old_value:
+          - str,                                                         
+       17 -            new_value: str, action: str = 'UPDATE'            
+       15 +    def log_event(
+       16 +        self,
+       17 +        entity_type: str,
+       18 +        action: str,
+       19 +        entity_id: Optional[int] = None,
+       20 +        entity_label: Optional[str] = None,
+       21 +        field_name: Optional[str] = None,
+       22 +        old_value: Optional[str] = None,
+       23 +        new_value: Optional[str] = None,
+       24 +        user_id: Optional[int] = None,
+       25 +        user_name: Optional[str] = None,
+       26 +        invoice_id: Optional[int] = None,
+       27      ):
+       19 -        """Zapisz zmianę pola faktury"""                      
+       28 +        """Zapisz zdarzenie dla dowolnej encji aplikacji"""
+       29          query = """
+       21 -            INSERT INTO audit_log (invoice_id, field_name, old
+          -_value, new_value, action)                                    
+       22 -            VALUES (%s, %s, %s, %s, %s)                       
+       30 +            INSERT INTO audit_log
+       31 +                (entity_type, entity_id, entity_label, invoice
+          +_id,
+       32 +                 action, field_name, old_value, new_value, use
+          +r_id, user_name)
+       33 +            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+       34          """
+       24 -        self._execute(query, (invoice_id, field_name, old_valu
+          -e, new_value, action))                                        
+       35 +        self._execute(query, (
+       36 +            entity_type, entity_id, entity_label, invoice_id,
+       37 +            action, field_name, old_value, new_value, user_id,
+          + user_name,
+       38 +        ))
+       39 
+       40 +    def log_change(
+       41 +        self, invoice_id: int, field_name: str, old_value: str
+          +,
+       42 +        new_value: str, action: str = 'UPDATE',
+       43 +        user_id: Optional[int] = None, user_name: Optional[str
+          +] = None,
+       44 +    ):
+       45 +        """Zapisz zmianę pola faktury (backward-compatible wra
+          +pper)"""
+       46 +        self.log_event(
+       47 +            entity_type='invoice',
+       48 +            action=action,
+       49 +            entity_id=invoice_id,
+       50 +            entity_label=None,
+       51 +            field_name=field_name,
+       52 +            old_value=old_value,
+       53 +            new_value=new_value,
+       54 +            user_id=user_id,
+       55 +            user_name=user_name,
+       56 +            invoice_id=invoice_id,
+       57 +        )
+       58 +
+       59      def get_by_invoice_id(self, invoice_id: int) -> List[dict]
+           :
+       27 -        """Pobierz historię zmian faktury (wrapper for get_all
+          -)"""                                                          
+       28 -        return self.get_all(invoice_id)                       
+       60 +        """Pobierz historię zmian faktury"""
+       61 +        return self.get_all(invoice_id=invoice_id)
+       62 
+       30 -    def get_all(self, invoice_id: Optional[int] = None) -> Lis
+          -t[dict]:                                                      
+       63 +    def get_all(
+       64 +        self,
+       65 +        invoice_id: Optional[int] = None,
+       66 +        entity_type: Optional[str] = None,
+       67 +    ) -> List[dict]:
+       68          """
+       32 -        Pobierz historię zmian (płaska lista)                 
+       33 -        Zwraca listę obiektów pasujących do oczekiwań API/Fron
+          -tend                                                          
+       69 +        Pobierz historię zmian z opcjonalnym filtrowaniem.
+       70 +        Zwraca listę pasującą do oczekiwań API/Frontend.
+       71          """
+       72          params = []
+       36 -        query = """                                           
+       37 -            SELECT                                            
+       73 +        conditions = []
+       74 +
+       75 +        if invoice_id:
+       76 +            conditions.append("a.invoice_id = %s")
+       77 +            params.append(invoice_id)
+       78 +
+       79 +        if entity_type:
+       80 +            conditions.append("a.entity_type = %s")
+       81 +            params.append(entity_type)
+       82 +
+       83 +        where_clause = ("WHERE " + " AND ".join(conditions)) i
+          +f conditions else ""
+       84 +
+       85 +        query = f"""
+       86 +            SELECT
+       87                  a.id,
+       88 +                a.entity_type,
+       89 +                a.entity_id,
+       90 +                a.entity_label,
+       91                  a.invoice_id,
+       92                  a.action,
+       93                  a.field_name,
+       94                  a.old_value,
+       95                  a.new_value,
+       96 +                a.user_id,
+       97 +                a.user_name,
+       98                  a.changed_at,
+       99                  i.invoice_number
+      100              FROM audit_log a
+      101              LEFT JOIN invoices i ON a.invoice_id = i.id
+      102 +            {where_clause}
+      103 +            ORDER BY a.changed_at DESC, a.id DESC
+      104          """
+       49 -                                                              
+       50 -        if invoice_id:                                        
+       51 -            query += " WHERE a.invoice_id = %s"               
+       52 -            params.append(invoice_id)                         
+       53 -                                                              
+       54 -        query += " ORDER BY a.changed_at DESC, a.id DESC"     
+       55 -                                                              
+      105 +
+      106          rows = self._fetch_all(query, tuple(params))
+       57 -                                                              
+      107 +
+      108          results = []
+      109          for row in rows:
+      110              results.append({
+      111                  'id': row['id'],
+      112 +                'entity_type': row['entity_type'] or 'invoice'
+          +,
+      113 +                'entity_id': row['entity_id'],
+      114 +                'entity_label': row['entity_label'],
+      115                  'invoice_id': row['invoice_id'],
+      116                  'invoice_number': row['invoice_number'],
+      117                  'action': row['action'],
+      118                  'field_name': row['field_name'],
+      119                  'old_value': row['old_value'],
+      120                  'new_value': row['new_value'],
+       68 -                'timestamp': row['changed_at']                
+      121 +                'user_id': row['user_id'],
+      122 +                'user_name': row['user_name'],
+      123 +                'timestamp': row['changed_at'],
+      124              })
+       70 -                                                              
+      125 +
+      126          return results
+      127 
+      128      def get_details_by_ids(self, ids_list: List[int]) -> List[
+           dict]:
+      129          """Pobierz szczegóły zmian dla podanych ID"""
+      130          if not ids_list:
+      131              return []
+       77 -                                                              
+      132 +
+      133          placeholders = ','.join(['%s'] * len(ids_list))
+      134          query = f"""
+       80 -            SELECT                                            
+       81 -                field_name,                                   
+       82 -                old_value,                                    
+       83 -                new_value                                     
+      135 +            SELECT field_name, old_value, new_value
+      136              FROM audit_log
+      137              WHERE id IN ({placeholders})
+      138          """
+       87 -                                                              
+      139          rows = self._fetch_all(query, tuple(ids_list))
+       89 -                                                              
+       90 -        return [dict(row) for row in rows]                    
+      140   No newline at end of file
+      141 +        return [dict(row) for row in rows]
+
+● Step 3 — Update AuditEntry model
+
+● Update(database\models.py)
+  ⎿  Added 11 lines, removed 6 lines
+      43 
+      44  @dataclass
+      45  class AuditEntry:
+      46 -    """Model wpisu historii zmian"""                           
+      47 -    invoice_id: int                                            
+      48 -    field_name: str                                            
+      49 -    old_value: Optional[str]                                   
+      50 -    new_value: Optional[str]                                   
+      51 -    action: str = "UPDATE"                                     
+      46 +    """Model wpisu historii zmian — obsługuje wszystkie encje a
+         +plikacji"""
+      47 +    entity_type: str                   # invoice, appointment, 
+         +client, service, employee, seller, import, login
+      48 +    action: str                        # CREATE, UPDATE, DELETE
+         +, LOGIN, LOGOUT, IMPORT
+      49 +    entity_id: Optional[int] = None
+      50 +    entity_label: Optional[str] = None
+      51 +    invoice_id: Optional[int] = None   # backward compat
+      52 +    field_name: Optional[str] = None
+      53 +    old_value: Optional[str] = None
+      54 +    new_value: Optional[str] = None
+      55 +    user_id: Optional[int] = None
+      56 +    user_name: Optional[str] = None
+      57      changed_at: datetime = field(default_factory=datetime.now)
+      58      id: Optional[int] = None
+      59 
+
+● Step 4 — Login/logout audit in auth routes
+
+● Update(routes\auth\routes.py)
+  ⎿  Added 2 lines, removed 1 line
+       1  """
+       2  Trasy autentykacji - logowanie, wylogowanie, profil
+       3  """
+       4 -from flask import Blueprint, render_template, request, redirect
+         -, url_for, flash                                               
+       4 +from flask import Blueprint, render_template, request, redirect
+         +, url_for, flash, current_app
+       5  from flask_login import login_user, logout_user, login_required
+          , current_user
+       6  from repositories.users.user_repository import UserRepository
+       7 +from repositories.audit_repository import AuditRepository
+       8  from services.auth.auth_service import AuthService
+       9 
+      10  # Create blueprint
+
+● Update(routes\auth\routes.py)
+  ⎿  Added 18 lines, removed 2 lines
+      35          success, user, error_message = auth_service.authenticat
+          e(email, password)
+      36 
+      37          if success:
+      38 -            # Zaloguj użytkownika (Flask-Login)                
+      38              login_user(user, remember=remember)
+      39              flash(f'Witaj, {user.full_name}!', 'success')
+      40 
+      42 -            # Przekieruj do next URL lub dashboard             
+      41 +            try:
+      42 +                AuditRepository().log_event(
+      43 +                    entity_type='login', action='LOGIN',
+      44 +                    entity_label=user.email,
+      45 +                    new_value=request.remote_addr,
+      46 +                    user_id=user.id, user_name=user.full_name,
+      47 +                )
+      48 +            except Exception:
+      49 +                pass
+      50 +
+      51              next_page = request.args.get('next')
+      52              if next_page:
+      53                  return redirect(next_page)
+      54              return redirect(url_for('main.dashboard'))
+      55          else:
+      56 +            try:
+      57 +                AuditRepository().log_event(
+      58 +                    entity_type='login', action='LOGIN_FAILED',
+      59 +                    entity_label=email,
+      60 +                    new_value=request.remote_addr,
+      61 +                )
+      62 +            except Exception:
+      63 +                pass
+      64              flash(error_message, 'error')
+      65              return render_template('auth/login.html', email=ema
+          il)
+      66 
+
+● Update(routes\auth\routes.py)
+  ⎿  Added 8 lines
+      71  @login_required
+      72  def logout():
+      73      """Wylogowanie użytkownika"""
+      74 +    try:
+      75 +        AuditRepository().log_event(
+      76 +            entity_type='login', action='LOGOUT',
+      77 +            entity_label=current_user.email,
+      78 +            user_id=current_user.id, user_name=current_user.ful
+         +l_name,
+      79 +        )
+      80 +    except Exception:
+      81 +        pass
+      82      logout_user()
+      83      flash('Zostałeś wylogowany', 'info')
+      84      return redirect(url_for('auth.login'))
+
+● Step 5 — Appointment routes audit logging
+
+● Update(routes\appointment_routes.py)
+  ⎿  Added 17 lines
+      11  from services.appointment_service import AppointmentBusinessSer
+          vice, AppointmentError
+      12  from repositories.appointments.appointment_repository import Ap
+          pointmentRepository
+      13  from repositories.appointments.appointment_service_repository i
+          mport AppointmentServiceRepository
+      14 +from repositories.audit_repository import AuditRepository
+      15 
+      16 +
+      17 +def _audit(entity_type, action, entity_id=None, entity_label=No
+         +ne,
+      18 +           field_name=None, old_value=None, new_value=None):
+      19 +    """Helper: log audit event with current user context, silen
+         +tly ignores errors."""
+      20 +    try:
+      21 +        uid = current_user.id if current_user.is_authenticated
+         +else None
+      22 +        uname = current_user.full_name if current_user.is_authe
+         +nticated else None
+      23 +        AuditRepository().log_event(
+      24 +            entity_type=entity_type, action=action,
+      25 +            entity_id=entity_id, entity_label=entity_label,
+      26 +            field_name=field_name, old_value=old_value, new_val
+         +ue=new_value,
+      27 +            user_id=uid, user_name=uname,
+      28 +        )
+      29 +    except Exception:
+      30 +        pass
+      31 +
+      32  appointment_bp = Blueprint('appointments', __name__)
+      33 
+      34 
+
+● Update(routes\appointment_routes.py)
+  ⎿  Added 4 lines
+       98              created_by=current_user.id if current_user.is_auth
+           enticated else None
+       99          )
+      100 
+      101 +        appt_date = data.get('appointment_date', '')
+      102 +        _audit('appointment', 'CREATE', entity_id=result.get('
+          +appointment_id'),
+      103 +               entity_label=f"{appt_date} {data.get('start_tim
+          +e','')}",
+      104 +               new_value=f"klient={data.get('client_id')} prac
+          +ownik={data.get('employee_id')}")
+      105          return jsonify({'success': True, **result}), 201
+      106      except AppointmentError as e:
+      107          return jsonify({'success': False, 'error': str(e)}), 4
+           00
+
+● Update(routes\appointment_routes.py)
+  ⎿  Added 3 lines
+      276              services=data['services']
+      277          )
+      278 
+      279 +        _audit('appointment', 'UPDATE', entity_id=appointment_
+          +id,
+      280 +               entity_label=f"{data.get('appointment_date')} {
+          +data.get('start_time','')}",
+      281 +               new_value=f"status={data.get('status')}")
+      282          return jsonify({'success': True, **result})
+      283      except AppointmentError as e:
+      284          import traceback
+
+● Update(routes\appointment_routes.py)
+  ⎿  Added 4 lines
+      306              appointment_id, new_status,
+      307              cancellation_reason=data.get('cancellation_reason'
+           )
+      308          )
+      309 +        if success:
+      310 +            _audit('appointment', 'STATUS_CHANGE', entity_id=a
+          +ppointment_id,
+      311 +                   field_name='status', new_value=new_status,
+      312 +                   old_value=data.get('cancellation_reason'))
+      313          return jsonify({'success': success})
+      314      except AppointmentError as e:
+      315          return jsonify({'success': False, 'error': str(e)}), 4
+           00
+
+● Update(routes\appointment_routes.py)
+  ⎿  Added 2 lines
+      336              if isinstance(result[key], Decimal):
+      337                  result[key] = float(result[key])
+      338 
+      339 +        _audit('appointment', 'COMPLETE', entity_id=appointmen
+          +t_id,
+      340 +               field_name='status', new_value='completed')
+      341          return jsonify({'success': True, **result})
+      342      except AppointmentError as e:
+      343          return jsonify({'success': False, 'error': str(e)}), 4
+           00
+
+● Step 6 — api_routes.py: update /api/history endpoint + add audit to 
+  seller/client/service/employee CRUD
+
+● Update(routes\api_routes.py)
+  ⎿  Added 6 lines, removed 3 lines
+      1205 
+      1206  @api_bp.route('/history', methods=['GET'])
+      1207  @login_required
+      1208 -@module_permission_required('invoices')                      
+      1208  def get_history():
+      1210 -    """Get audit history"""                                  
+      1209 +    """Get audit history — all entity types"""
+      1210      try:
+      1211          invoice_id = request.args.get('invoice_id', type=int)
+      1212 +        entity_type = request.args.get('entity_type')  # filt
+           +er by type
+      1213 
+      1214 -        entries = current_app.audit_repo.get_all(invoice_id) 
+      1214 +        entries = current_app.audit_repo.get_all(
+      1215 +            invoice_id=invoice_id,
+      1216 +            entity_type=entity_type,
+      1217 +        )
+      1218 
+      1219          return jsonify({
+      1220              'success': True,
+
+● Now I need to add a shared _audit() helper at the top of api_routes.py and
+  then patch each CRUD endpoint. Let me find the imports section:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(routes\api_routes.py)
+  ⎿  Added 17 lines
+      13  from config.auth_config import module_permission_required
+      14  from database.models import Invoice
+      15  from utils.validators import DateParser
+      16 +from repositories.audit_repository import AuditRepository
+      17 
+      18  api_bp = Blueprint('api', __name__)
+      19 
+      20 
+      21 +def _audit(entity_type, action, entity_id=None, entity_label=No
+         +ne,
+      22 +           field_name=None, old_value=None, new_value=None):
+      23 +    """Log audit event with current user context. Silently igno
+         +res errors."""
+      24 +    try:
+      25 +        uid = current_user.id if current_user.is_authenticated
+         +else None
+      26 +        uname = current_user.full_name if current_user.is_authe
+         +nticated else None
+      27 +        AuditRepository().log_event(
+      28 +            entity_type=entity_type, action=action,
+      29 +            entity_id=entity_id, entity_label=entity_label,
+      30 +            field_name=field_name, old_value=old_value, new_val
+         +ue=new_value,
+      31 +            user_id=uid, user_name=uname,
+      32 +        )
+      33 +    except Exception:
+      34 +        pass
+      35 +
+      36 +
+      37  # Supported file extensions for upload
+      38  ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png', 'tiff', 'tif
+          ', 'bmp'}
+      39  IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'tiff', 'tif', 'bmp'}
+
+● Now patch sellers, clients, services, employees. Let me read the exact code
+  around each insertion point:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(routes\api_routes.py)
+  ⎿  Added 3 lines
+      1628          seller_id = current_app.seller_repo.create(new_seller
+            )
+      1629          new_seller.id = seller_id
+      1630 
+      1631 +        _audit('seller', 'CREATE', entity_id=seller_id,
+      1632 +               entity_label=f"{normalized_name} ({normalized_
+           +nip})")
+      1633 +
+      1634          return jsonify({
+      1635              'success': True,
+      1636              'message': 'Sprzedawca zostal utworzony',
+
+● Update(routes\api_routes.py)
+  ⎿  Added 4 lines
+      1441              current_app.seller_repo.update_address(seller_id,
+             data['address'])
+      1442              changes.append("Address updated")
+      1443 
+      1444 +        _audit('seller', 'UPDATE', entity_id=seller_id,
+      1445 +               entity_label=seller.seller_name,
+      1446 +               new_value='; '.join(changes) if changes else '
+           +no changes')
+      1447 +
+      1448          return jsonify({
+      1449              'success': True,
+      1450              'message': 'Seller updated successfully',
+
+● Update(routes\api_routes.py)
+  ⎿  Added 4 lines
+      1674          # Delete the seller
+      1675          current_app.seller_repo.delete(seller_id)
+      1676 
+      1677 +        _audit('seller', 'DELETE', entity_id=seller_id,
+      1678 +               entity_label=f"{seller.seller_name} ({seller.s
+           +eller_nip})",
+      1679 +               old_value=f"{invoice_count} faktur")
+      1680 +
+      1681          return jsonify({
+      1682              'success': True,
+      1683              'message': f'Sprzedawca i {invoice_count} faktur 
+            zostalo usunietych',
+
+● Now clients, services, employees — read the exact code around each return:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(routes\api_routes.py)
+  ⎿  Added 3 lines
+      2109          # Save to database
+      2110          client_id = current_app.client_repo.create(client)
+      2111 
+      2112 +        _audit('client', 'CREATE', entity_id=client_id,
+      2113 +               entity_label=f"{client.first_name} {client.las
+           +t_name}")
+      2114 +
+      2115          return jsonify({
+      2116              'success': True,
+      2117              'message': 'Klient został utworzony',
+
+● Update(routes\api_routes.py)
+  ⎿  Added 2 lines
+      2160          success = current_app.client_repo.update(client_id, c
+            lient)
+      2161 
+      2162          if success:
+      2163 +            _audit('client', 'UPDATE', entity_id=client_id,
+      2164 +                   entity_label=f"{client.first_name} {client
+           +.last_name}")
+      2165              return jsonify({
+      2166                  'success': True,
+      2167                  'message': 'Klient został zaktualizowany'
+
+● Update(routes\api_routes.py)
+  ⎿  Added 2 lines, removed 1 line
+      2186          if not row:
+      2187              return jsonify({'success': False, 'error': 'Clien
+            t not found'}), 404
+      2188 
+      2189 -        # Deactivate instead of delete                       
+      2189 +        client_name = f"{row.get('first_name','')} {row.get('
+           +last_name','')}".strip()
+      2190          success = current_app.client_repo.deactivate(client_i
+            d)
+      2191 
+      2192          if success:
+      2193 +            _audit('client', 'DELETE', entity_id=client_id, e
+           +ntity_label=client_name)
+      2194              return jsonify({
+      2195                  'success': True,
+      2196                  'message': 'Klient został dezaktywowany'
+
+● Now services and employees — read those sections:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(routes\api_routes.py)
+  ⎿  Added 4 lines
+      2404 
+      2405          service_id = current_app.service_repo.create(service)
+      2406 
+      2407 +        _audit('service', 'CREATE', entity_id=service_id,
+      2408 +               entity_label=service.name,
+      2409 +               new_value=f"{service.price} {service.currency}
+           + / {service.duration_minutes}min")
+      2410 +
+      2411          return jsonify({
+      2412              'success': True,
+      2413              'service_id': service_id,
+
+● Update(routes\api_routes.py)
+  ⎿  Added 2 lines
+      2447          success = current_app.service_repo.update(service_id,
+             service)
+      2448 
+      2449          if success:
+      2450 +            _audit('service', 'UPDATE', entity_id=service_id,
+      2451 +                   entity_label=service.name)
+      2452              return jsonify({
+      2453                  'success': True,
+      2454                  'message': 'Usługa została zaktualizowana pom
+            yślnie'
+
+● Update(routes\api_routes.py)
+  ⎿  Added 3 lines
+      2465  def delete_service(service_id):
+      2466      """Delete (deactivate) service"""
+      2467      try:
+      2468 +        existing = current_app.service_repo.get_by_id(service
+           +_id)
+      2469 +        service_name = existing['name'] if existing else str(
+           +service_id)
+      2470          success = current_app.service_repo.delete(service_id)
+      2471 
+      2472          if success:
+      2473 +            _audit('service', 'DELETE', entity_id=service_id,
+           + entity_label=service_name)
+      2474              return jsonify({
+      2475                  'success': True,
+      2476                  'message': 'Usługa została dezaktywowana'
+
+● Update(routes\api_routes.py)
+  ⎿  Added 4 lines
+      2655 
+      2656          employee_id = current_app.employee_repo.create(employ
+            ee)
+      2657 
+      2658 +        _audit('employee', 'CREATE', entity_id=employee_id,
+      2659 +               entity_label=f"{employee.first_name} {employee
+           +.last_name}",
+      2660 +               new_value=employee.position)
+      2661 +
+      2662          return jsonify({
+      2663              'success': True,
+      2664              'employee_id': employee_id,
+
+● Update(routes\api_routes.py)
+  ⎿  Added 2 lines
+      2715          success = current_app.employee_repo.update(employee_i
+            d, employee)
+      2716 
+      2717          if success:
+      2718 +            _audit('employee', 'UPDATE', entity_id=employee_i
+           +d,
+      2719 +                   entity_label=f"{employee.first_name} {empl
+           +oyee.last_name}")
+      2720              return jsonify({
+      2721                  'success': True,
+      2722                  'message': 'Pracownik został zaktualizowany p
+            omyślnie'
+
+● Update(routes\api_routes.py)
+  ⎿  Added 3 lines
+      2733  def delete_employee(employee_id):
+      2734      """Delete (deactivate) employee"""
+      2735      try:
+      2736 +        existing = current_app.employee_repo.get_by_id(employ
+           +ee_id)
+      2737 +        emp_name = f"{existing['first_name']} {existing['last
+           +_name']}" if existing else str(employee_id)
+      2738          success = current_app.employee_repo.delete(employee_i
+            d)
+      2739 
+      2740          if success:
+      2741 +            _audit('employee', 'DELETE', entity_id=employee_i
+           +d, entity_label=emp_name)
+      2742              return jsonify({
+      2743                  'success': True,
+      2744                  'message': 'Pracownik został dezaktywowany'
+
+● Step 7 — Import event logging in upload_routes.py
+
+● Update(routes\upload_routes.py)
+  ⎿  Added 17 lines
+      474              # Save to database with seller_id
+      475              invoice_id = current_app.invoice_repo.create(invoi
+           ce, seller_id=seller_id)
+      476 
+      477 +            # Log import event
+      478 +            try:
+      479 +                from repositories.audit_repository import Audi
+          +tRepository
+      480 +                from flask_login import current_user
+      481 +                uid = current_user.id if current_user.is_authe
+          +nticated else None
+      482 +                uname = current_user.full_name if current_user
+          +.is_authenticated else None
+      483 +                AuditRepository().log_event(
+      484 +                    entity_type='import', action='IMPORT',
+      485 +                    entity_id=invoice_id,
+      486 +                    entity_label=f"{invoice.invoice_number} — 
+          +{invoice.seller_name}",
+      487 +                    new_value=filename,
+      488 +                    user_id=uid, user_name=uname,
+      489 +                    invoice_id=invoice_id,
+      490 +                )
+      491 +            except Exception:
+      492 +                pass
+      493 +
+      494              # Increment seller invoice count if seller was lin
+           ked
+      495              if seller_id:
+      496                  current_app.seller_repo.increment_invoice_coun
+           t(seller_id)
+
+● Step 8 — Update the frontend: list_refined.html
+
+● Write(templates\history\list_refined.html)
+  ⎿  Added 536 lines, removed 472 lines
+        1 -{% extends "base.html" %}                                    
+        2 -                                                             
+        3 -{% block title %}Historia — FakturaScanner{% endblock %}     
+        4 -{% block page_title %}{% endblock %}                         
+        5 -{% block page_subtitle %}{% endblock %}                      
+        6 -{% block breadcrumb %}{% endblock %}                         
+        7 -                                                             
+        8 -{% block extra_css %}                                        
+        9 -<style>                                                      
+       10 -    :root {                                                  
+       11 -        --color-ink: #1a1a1a;                                
+       12 -        --color-ink-muted: #525252;                          
+       13 -        --color-ink-subtle: #8a8a8a;                         
+       14 -        --color-surface: #fafafa;                            
+       15 -        --color-surface-warm: #f7f6f3;                       
+       16 -        --color-border: #e8e6e1;                             
+       17 -        --color-border-subtle: #f0eeea;                      
+       18 -        --color-accent: #c9a227;                             
+       19 -        --color-success: #2d6a4f;                            
+       20 -        --color-warning: #9a6700;                            
+       21 -        --color-error: #9b2c2c;                              
+       22 -        --color-info: #1e6091;                               
+       23 -        --font-body: 'Inter', system-ui, sans-serif;         
+       24 -        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);      
+       25 -    }                                                        
+       26 -                                                             
+       27 -    body { background: var(--color-surface-warm) !important; }
+          -                                                              
+       28 -    #main-content {                                          
+       29 -        background: var(--color-surface-warm);               
+       30 -        padding: 1rem 1.5rem !important;                     
+       31 -        display: flex;                                       
+       32 -        flex-direction: column;                              
+       33 -        overflow: hidden !important;                         
+       34 -    }                                                        
+       35 -                                                             
+       36 -    .refined-page {                                          
+       37 -        font-family: var(--font-body);                       
+       38 -        color: var(--color-ink);                             
+       39 -        display: flex;                                       
+       40 -        flex-direction: column;                              
+       41 -        height: 100%;                                        
+       42 -        overflow: hidden;                                    
+       43 -    }                                                        
+       44 -                                                             
+       45 -    .page-header {                                           
+       46 -        display: flex;                                       
+       47 -        align-items: center;                                 
+       48 -        justify-content: space-between;                      
+       49 -        margin-bottom: 1rem;                                 
+       50 -        flex-shrink: 0;                                      
+       51 -    }                                                        
+       52 -                                                             
+       53 -    .page-title {                                            
+       54 -        font-size: 1.5rem;                                   
+       55 -        font-weight: 600;                                    
+       56 -        letter-spacing: -0.02em;                             
+       57 -        color: var(--color-ink);                             
+       58 -        margin: 0;                                           
+       59 -    }                                                        
+       60 -                                                             
+       61 -    .filter-bar {                                            
+       62 -        display: flex;                                       
+       63 -        align-items: center;                                 
+       64 -        gap: 1rem;                                           
+       65 -        margin-bottom: 0.75rem;                              
+       66 -        flex-shrink: 0;                                      
+       67 -    }                                                        
+       68 -                                                             
+       69 -    .filter-label {                                          
+       70 -        font-size: 0.75rem;                                  
+       71 -        font-weight: 500;                                    
+       72 -        color: var(--color-ink-muted);                       
+       73 -        white-space: nowrap;                                 
+       74 -    }                                                        
+       75 -                                                             
+       76 -    .filter-select {                                         
+       77 -        padding: 0.5rem 2rem 0.5rem 0.75rem;                 
+       78 -        font-size: 0.8125rem;                                
+       79 -        color: var(--color-ink);                             
+       80 -        background: white url("data:image/svg+xml,%3Csvg xmlns
+          -='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' 
+          -stroke='%238a8a8a'%3E%3Cpath stroke-linecap='round' stroke-lin
+          -ejoin='round' stroke-width='1.5' d='M19 9l-7 7-7-7'/%3E%3C/svg
+          -%3E") no-repeat right 0.5rem center;                         
+       81 -        background-size: 1rem;                               
+       82 -        border: 1px solid var(--color-border);               
+       83 -        border-radius: 2px;                                  
+       84 -        appearance: none;                                    
+       85 -        cursor: pointer;                                     
+       86 -        min-width: 250px;                                    
+       87 -        transition: all 0.2s ease;                           
+       88 -    }                                                        
+       89 -    .filter-select:focus {                                   
+       90 -        outline: none;                                       
+       91 -        border-color: var(--color-ink-muted);                
+       92 -        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);        
+       93 -    }                                                        
+       94 -                                                             
+       95 -    .table-container {                                       
+       96 -        background: white;                                   
+       97 -        border: 1px solid var(--color-border);               
+       98 -        border-radius: 2px;                                  
+       99 -        display: flex;                                       
+      100 -        flex-direction: column;                              
+      101 -        flex: 1;                                             
+      102 -        min-height: 0;                                       
+      103 -        overflow: hidden;                                    
+      104 -    }                                                        
+      105 -                                                             
+      106 -    .table-scroll-wrapper {                                  
+      107 -        flex: 1;                                             
+      108 -        min-height: 0;                                       
+      109 -        overflow: hidden;                                    
+      110 -        display: flex;                                       
+      111 -        flex-direction: column;                              
+      112 -    }                                                        
+      113 -                                                             
+      114 -    .table-scroll-wrapper > table:first-child {              
+      115 -        padding-right: 6px;                                  
+      116 -    }                                                        
+      117 -                                                             
+      118 -    .refined-table {                                         
+      119 -        width: 100%;                                         
+      120 -        border-collapse: collapse;                           
+      121 -        table-layout: fixed;                                 
+      122 -    }                                                        
+      123 -                                                             
+      124 -    .refined-table thead {                                   
+      125 -        background: var(--color-surface);                    
+      126 -    }                                                        
+      127 -                                                             
+      128 -    .refined-table th {                                      
+      129 -        padding: 0.5rem 1rem;                                
+      130 -        font-size: 0.6875rem;                                
+      131 -        font-weight: 500;                                    
+      132 -        text-transform: uppercase;                           
+      133 -        letter-spacing: 0.12em;                              
+      134 -        color: var(--color-ink-subtle);                      
+      135 -        text-align: left;                                    
+      136 -        border-bottom: 1px solid var(--color-border);        
+      137 -        white-space: nowrap;                                 
+      138 -    }                                                        
+      139 -                                                             
+      140 -    .refined-table td {                                      
+      141 -        padding: 0.5rem 1rem;                                
+      142 -        font-size: 0.8125rem;                                
+      143 -        color: var(--color-ink);                             
+      144 -        border-bottom: 1px solid var(--color-border-subtle); 
+      145 -        vertical-align: middle;                              
+      146 -    }                                                        
+      147 -                                                             
+      148 -    .refined-table tbody tr { transition: background-color 0.2
+          -s ease; }                                                    
+      149 -    .refined-table tbody tr:hover { background: var(--color-su
+          -rface); }                                                    
+      150 -    .refined-table tbody tr:last-child td { border-bottom: non
+          -e; }                                                         
+      151 -                                                             
+      152 -    .tbody-scroll {                                          
+      153 -        flex: 1;                                             
+      154 -        overflow-y: auto;                                    
+      155 -        overflow-x: hidden;                                  
+      156 -    }                                                        
+      157 -    .tbody-scroll::-webkit-scrollbar { width: 6px; }         
+      158 -    .tbody-scroll::-webkit-scrollbar-track { background: var(-
+          --color-surface); }                                           
+      159 -    .tbody-scroll::-webkit-scrollbar-thumb { background: var(-
+          --color-border); border-radius: 3px; }                        
+      160 -                                                             
+      161 -    /* Column widths */                                      
+      162 -    .col-timestamp { width: 14%; }                           
+      163 -    .col-action { width: 10%; }                              
+      164 -    .col-invoice-id { width: 8%; }                           
+      165 -    .col-invoice-number { width: 14%; }                      
+      166 -    .col-field { width: 12%; }                               
+      167 -    .col-old { width: 21%; }                                 
+      168 -    .col-new { width: 21%; }                                 
+      169 -                                                             
+      170 -    .timestamp-value {                                       
+      171 -        font-size: 0.75rem;                                  
+      172 -        color: var(--color-ink-muted);                       
+      173 -        white-space: nowrap;                                 
+      174 -    }                                                        
+      175 -    .timestamp-date { font-weight: 500; color: var(--color-ink
+          -); }                                                         
+      176 -                                                             
+      177 -    .action-badge {                                          
+      178 -        display: inline-flex;                                
+      179 -        align-items: center;                                 
+      180 -        gap: 0.25rem;                                        
+      181 -        padding: 0.25rem 0.5rem;                             
+      182 -        font-size: 0.625rem;                                 
+      183 -        font-weight: 600;                                    
+      184 -        text-transform: uppercase;                           
+      185 -        letter-spacing: 0.05em;                              
+      186 -        border-radius: 2px;                                  
+      187 -    }                                                        
+      188 -    .action-badge svg { width: 0.75rem; height: 0.75rem; }   
+      189 -                                                             
+      190 -    .action-create { background: rgba(45, 106, 79, 0.1); color
+          -: var(--color-success); }                                    
+      191 -    .action-update { background: rgba(30, 96, 145, 0.1); color
+          -: var(--color-info); }                                       
+      192 -    .action-delete { background: rgba(155, 44, 44, 0.1); color
+          -: var(--color-error); }                                      
+      193 -                                                             
+      194 -    .invoice-id {                                            
+      195 -        font-family: 'SF Mono', 'Fira Code', monospace;      
+      196 -        font-size: 0.6875rem;                                
+      197 -        color: var(--color-ink-subtle);                      
+      198 -    }                                                        
+      199 -                                                             
+      200 -    .invoice-number {                                        
+      201 -        font-weight: 500;                                    
+      202 -        color: var(--color-ink);                             
+      203 -    }                                                        
+      204 -                                                             
+      205 -    .field-badge {                                           
+      206 -        display: inline-block;                               
+      207 -        padding: 0.25rem 0.5rem;                             
+      208 -        font-size: 0.6875rem;                                
+      209 -        font-weight: 500;                                    
+      210 -        background: var(--color-surface);                    
+      211 -        color: var(--color-ink-muted);                       
+      212 -        border-radius: 2px;                                  
+      213 -    }                                                        
+      214 -                                                             
+      215 -    .value-old {                                             
+      216 -        color: var(--color-ink-subtle);                      
+      217 -        text-decoration: line-through;                       
+      218 -        opacity: 0.7;                                        
+      219 -        font-size: 0.75rem;                                  
+      220 -        word-break: break-word;                              
+      221 -    }                                                        
+      222 -                                                             
+      223 -    .value-new {                                             
+      224 -        color: var(--color-ink);                             
+      225 -        font-weight: 500;                                    
+      226 -        font-size: 0.75rem;                                  
+      227 -        word-break: break-word;                              
+      228 -    }                                                        
+      229 -                                                             
+      230 -    .value-empty {                                           
+      231 -        color: var(--color-ink-subtle);                      
+      232 -        font-style: italic;                                  
+      233 -        opacity: 0.5;                                        
+      234 -    }                                                        
+      235 -                                                             
+      236 -    .empty-state {                                           
+      237 -        padding: 3rem 2rem;                                  
+      238 -        text-align: center;                                  
+      239 -        flex: 1;                                             
+      240 -        display: flex;                                       
+      241 -        flex-direction: column;                              
+      242 -        align-items: center;                                 
+      243 -        justify-content: center;                             
+      244 -    }                                                        
+      245 -    .empty-icon { width: 3rem; height: 3rem; color: var(--colo
+          -r-ink-subtle); opacity: 0.3; margin-bottom: 1rem; }          
+      246 -    .empty-title { font-size: 1.125rem; font-weight: 500; colo
+          -r: var(--color-ink); margin-bottom: 0.25rem; }               
+      247 -    .empty-text { color: var(--color-ink-subtle); font-size: 0
+          -.875rem; margin-bottom: 1.5rem; max-width: 300px; }          
+      248 -                                                             
+      249 -    .btn-refined {                                           
+      250 -        display: inline-flex;                                
+      251 -        align-items: center;                                 
+      252 -        gap: 0.375rem;                                       
+      253 -        padding: 0.5rem 0.875rem;                            
+      254 -        font-family: var(--font-body);                       
+      255 -        font-size: 0.75rem;                                  
+      256 -        font-weight: 400;                                    
+      257 -        border-radius: 2px;                                  
+      258 -        transition: all 0.25s var(--ease-out-expo);          
+      259 -        cursor: pointer;                                     
+      260 -        text-decoration: none;                               
+      261 -        background: var(--color-ink);                        
+      262 -        color: white;                                        
+      263 -        border: none;                                        
+      264 -    }                                                        
+      265 -    .btn-refined:hover {                                     
+      266 -        background: #333;                                    
+      267 -        transform: translateY(-1px);                         
+      268 -    }                                                        
+      269 -                                                             
+      270 -    .pagination-bar {                                        
+      271 -        display: flex;                                       
+      272 -        align-items: center;                                 
+      273 -        justify-content: space-between;                      
+      274 -        padding: 0.5rem 1rem;                                
+      275 -        border-top: 1px solid var(--color-border-subtle);    
+      276 -        background: var(--color-surface);                    
+      277 -        font-size: 0.75rem;                                  
+      278 -        color: var(--color-ink-muted);                       
+      279 -        flex-shrink: 0;                                      
+      280 -    }                                                        
+      281 -    .pagination-count { font-weight: 500; color: var(--color-i
+          -nk); }                                                       
+      282 -                                                             
+      283 -    .skeleton-bar {                                          
+      284 -        height: 0.75rem;                                     
+      285 -        background: linear-gradient(90deg, var(--color-border-
+          -subtle) 0%, var(--color-surface) 50%, var(--color-border-subtl
+          -e) 100%);                                                    
+      286 -        background-size: 200% 100%;                          
+      287 -        animation: shimmer 1.8s ease-in-out infinite;        
+      288 -        border-radius: 1px;                                  
+      289 -    }                                                        
+      290 -    @keyframes shimmer { 0% { background-position: 200% 0; } 1
+          -00% { background-position: -200% 0; } }                      
+      291 -                                                             
+      292 -    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) for
+          -wards; }                                                     
+      293 -    @keyframes fadeIn { from { opacity: 0; transform: translat
+          -eY(8px); } to { opacity: 1; transform: translateY(0); } }    
+      294 -                                                             
+      295 -    .stagger-row { opacity: 0; animation: fadeIn 0.35s var(--e
+          -ase-out-expo) forwards; }                                    
+      296 -                                                             
+      297 -    @media (max-width: 1024px) {                             
+      298 -        .col-invoice-id, .col-old { display: none; }         
+      299 -    }                                                        
+      300 -    @media (max-width: 768px) {                              
+      301 -        .filter-select { min-width: 200px; }                 
+      302 -    }                                                        
+      303 -</style>                                                     
+      304 -{% endblock %}                                               
+      305 -                                                             
+      306 -{% block content %}                                          
+      307 -<div class="refined-page fade-in">                           
+      308 -    <header class="page-header">                             
+      309 -        <h1 class="page-title">Historia zmian</h1>           
+      310 -    </header>                                                
+      311 -                                                             
+      312 -    <div class="filter-bar">                                 
+      313 -        <span class="filter-label">Filtruj po fakturze:</span>
+          -                                                              
+      314 -        <select id="invoice-filter" class="filter-select" onch
+          -ange="loadHistory()">                                        
+      315 -            <option value="">Wszystkie faktury</option>      
+      316 -        </select>                                            
+      317 -    </div>                                                   
+      318 -                                                             
+      319 -    <div class="table-container">                            
+      320 -        <div class="table-scroll-wrapper">                   
+      321 -            <table class="refined-table" style="flex-shrink: 0
+          -;">                                                          
+      322 -                <colgroup>                                   
+      323 -                    <col class="col-timestamp"><col class="col
+          --action"><col class="col-invoice-id">                        
+      324 -                    <col class="col-invoice-number"><col class
+          -="col-field"><col class="col-old"><col class="col-new">      
+      325 -                </colgroup>                                  
+      326 -                <thead>                                      
+      327 -                    <tr>                                     
+      328 -                        <th>Data i czas</th>                 
+      329 -                        <th>Akcja</th>                       
+      330 -                        <th class="col-invoice-id">ID</th>   
+      331 -                        <th>Nr faktury</th>                  
+      332 -                        <th>Pole</th>                        
+      333 -                        <th class="col-old">Bylo</th>        
+      334 -                        <th>Zmieniono na</th>                
+      335 -                    </tr>                                    
+      336 -                </thead>                                     
+      337 -            </table>                                         
+      338 -                                                             
+      339 -            <div class="tbody-scroll">                       
+      340 -                <table class="refined-table" id="historyTable"
+          ->                                                            
+      341 -                    <colgroup>                               
+      342 -                        <col class="col-timestamp"><col class=
+          -"col-action"><col class="col-invoice-id">                    
+      343 -                        <col class="col-invoice-number"><col c
+          -lass="col-field"><col class="col-old"><col class="col-new">  
+      344 -                    </colgroup>                              
+      345 -                    <tbody id="history-tbody">               
+      346 -                        <tr class="skeleton-row"><td><div clas
+          -s="skeleton-bar" style="width:70%"></div></td><td><div class="
+          -skeleton-bar" style="width:60%"></div></td><td><div class="ske
+          -leton-bar" style="width:40%"></div></td><td><div class="skelet
+          -on-bar" style="width:80%"></div></td><td><div class="skeleton-
+          -bar" style="width:50%"></div></td><td><div class="skeleton-bar
+          -" style="width:70%"></div></td><td><div class="skeleton-bar" s
+          -tyle="width:75%"></div></td></tr>                            
+      347 -                        <tr class="skeleton-row"><td><div clas
+          -s="skeleton-bar" style="width:65%"></div></td><td><div class="
+          -skeleton-bar" style="width:55%"></div></td><td><div class="ske
+          -leton-bar" style="width:35%"></div></td><td><div class="skelet
+          -on-bar" style="width:75%"></div></td><td><div class="skeleton-
+          -bar" style="width:45%"></div></td><td><div class="skeleton-bar
+          -" style="width:65%"></div></td><td><div class="skeleton-bar" s
+          -tyle="width:80%"></div></td></tr>                            
+      348 -                        <tr class="skeleton-row"><td><div clas
+          -s="skeleton-bar" style="width:75%"></div></td><td><div class="
+          -skeleton-bar" style="width:50%"></div></td><td><div class="ske
+          -leton-bar" style="width:45%"></div></td><td><div class="skelet
+          -on-bar" style="width:70%"></div></td><td><div class="skeleton-
+          -bar" style="width:55%"></div></td><td><div class="skeleton-bar
+          -" style="width:60%"></div></td><td><div class="skeleton-bar" s
+          -tyle="width:70%"></div></td></tr>                            
+      349 -                    </tbody>                                 
+      350 -                </table>                                     
+      351 -                                                             
+      352 -                <div id="empty-state" class="empty-state" styl
+          -e="display: none;">                                          
+      353 -                    <svg class="empty-icon" fill="none" viewBo
+          -x="0 0 24 24" stroke="currentColor">                         
+      354 -                        <path stroke-linecap="round" stroke-li
+          -nejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18
+          - 0 9 9 0 0118 0z" />                                         
+      355 -                    </svg>                                   
+      356 -                    <h3 class="empty-title">Brak historii zmia
+          -n</h3>                                                       
+      357 -                    <p class="empty-text">Historia zmian bedzi
+          -e widoczna po dodaniu lub edycji faktur.</p>                 
+      358 -                    <a href="{{ url_for('main.invoices_list') 
+          -}}" class="btn-refined">                                     
+      359 -                        <svg width="14" height="14" fill="none
+          -" viewBox="0 0 24 24" stroke="currentColor">                 
+      360 -                            <path stroke-linecap="round" strok
+          -e-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a
+          -2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a
+          -1 1 0 01.293.707V19a2 2 0 01-2 2z" />                        
+      361 -                        </svg>                               
+      362 -                        Zobacz faktury                       
+      363 -                    </a>                                     
+      364 -                </div>                                       
+      365 -            </div>                                           
+      366 -        </div>                                               
+      367 -                                                             
+      368 -        <div class="pagination-bar">                         
+      369 -            <span>Wyswietlono <span class="pagination-count" i
+          -d="visible-count">0</span> wpisow</span>                     
+      370 -        </div>                                               
+      371 -    </div>                                                   
+      372 -</div>                                                       
+      373 -{% endblock %}                                               
+      374 -                                                             
+      375 -{% block extra_scripts %}                                    
+      376 -<script>                                                     
+      377 -document.addEventListener('DOMContentLoaded', () => {        
+      378 -    loadHistory();                                           
+      379 -    loadInvoicesForFilter();                                 
+      380 -});                                                          
+      381 -                                                             
+      382 -async function loadHistory() {                               
+      383 -    const invoiceId = document.getElementById('invoice-filter'
+          -).value;                                                     
+      384 -    const tbody = document.getElementById('history-tbody');  
+      385 -    const emptyState = document.getElementById('empty-state');
+          -                                                              
+      386 -    const table = document.getElementById('historyTable');   
+      387 -                                                             
+      388 -    try {                                                    
+      389 -        const data = await API.history.getAll(invoiceId || nul
+          -l);                                                          
+      390 -                                                             
+      391 -        if (data.success) {                                  
+      392 -            document.getElementById('visible-count').textConte
+          -nt = data.entries.length;                                    
+      393 -                                                             
+      394 -            if (data.entries.length === 0) {                 
+      395 -                tbody.innerHTML = '';                        
+      396 -                emptyState.style.display = 'flex';           
+      397 -                return;                                      
+      398 -            }                                                
+      399 -                                                             
+      400 -            emptyState.style.display = 'none';               
+      401 -                                                             
+      402 -            tbody.innerHTML = data.entries.map((entry, index) 
+          -=> {                                                         
+      403 -                const delay = Math.min(index * 0.02, 0.3);   
+      404 -                                                             
+      405 -                let actionClass = 'action-update';           
+      406 -                let actionIcon = '<svg fill="none" viewBox="0 
+          -0 24 24" stroke="currentColor"><path stroke-linecap="round" st
+          -roke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2
+          -v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2
+          -.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>';             
+      407 -                                                             
+      408 -                if (entry.action === 'CREATE') {             
+      409 -                    actionClass = 'action-create';           
+      410 -                    actionIcon = '<svg fill="none" viewBox="0 
+          -0 24 24" stroke="currentColor"><path stroke-linecap="round" st
+          -roke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m
+          --6 0H6" /></svg>';                                           
+      411 -                } else if (entry.action === 'DELETE') {      
+      412 -                    actionClass = 'action-delete';           
+      413 -                    actionIcon = '<svg fill="none" viewBox="0 
+          -0 24 24" stroke="currentColor"><path stroke-linecap="round" st
+          -roke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2
+          - 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-
+          -10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';       
+      414 -                }                                            
+      415 -                                                             
+      416 -                const timestamp = formatTimestamp(entry.timest
+          -amp);                                                        
+      417 -                                                             
+      418 -                return `                                     
+      419 -                    <tr class="stagger-row" style="animation-d
+          -elay: ${delay}s">                                            
+      420 -                        <td>                                 
+      421 -                            <span class="timestamp-value">   
+      422 -                                <span class="timestamp-date">$
+          -{timestamp.date}</span> ${timestamp.time}                    
+      423 -                            </span>                          
+      424 -                        </td>                                
+      425 -                        <td>                                 
+      426 -                            <span class="action-badge ${action
+          -Class}">                                                     
+      427 -                                ${actionIcon}                
+      428 -                                ${entry.action}              
+      429 -                            </span>                          
+      430 -                        </td>                                
+      431 -                        <td class="col-invoice-id"><span class
+          -="invoice-id">${entry.invoice_id}</span></td>                
+      432 -                        <td><span class="invoice-number">${ent
+          -ry.invoice_number || '<span class="value-empty">—</span>'}</sp
+          -an></td>                                                     
+      433 -                        <td>${entry.field_name ? `<span class=
+          -"field-badge">${escapeHtml(entry.field_name)}</span>` : '<span
+          - class="value-empty">—</span>'}</td>                         
+      434 -                        <td class="col-old">${entry.old_value 
+          -? `<span class="value-old">${escapeHtml(entry.old_value)}</spa
+          -n>` : '<span class="value-empty">brak</span>'}</td>          
+      435 -                        <td>${entry.new_value ? `<span class="
+          -value-new">${escapeHtml(entry.new_value)}</span>` : '<span cla
+          -ss="value-empty">brak</span>'}</td>                          
+      436 -                    </tr>                                    
+      437 -                `;                                           
+      438 -            }).join('');                                     
+      439 -        }                                                    
+      440 -    } catch (error) {                                        
+      441 -        console.error('Error loading history:', error);      
+      442 -        Notifications.error('Blad ladowania historii');      
+      443 -    }                                                        
+      444 -}                                                            
+      445 -                                                             
+      446 -function formatTimestamp(timestamp) {                        
+      447 -    if (!timestamp) return { date: '—', time: '' };          
+      448 -    const d = new Date(timestamp);                           
+      449 -    const date = `${d.getDate().toString().padStart(2,'0')}.${
+          -(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()
+          -.toString().slice(-2)}`;                                     
+      450 -    const time = `${d.getHours().toString().padStart(2,'0')}:$
+          -{d.getMinutes().toString().padStart(2,'0')}`;                
+      451 -    return { date, time };                                   
+      452 -}                                                            
+      453 -                                                             
+      454 -async function loadInvoicesForFilter() {                     
+      455 -    try {                                                    
+      456 -        const data = await API.invoices.getAll();            
+      457 -        if (data.success) {                                  
+      458 -            const select = document.getElementById('invoice-fi
+          -lter');                                                      
+      459 -            select.innerHTML = '<option value="">Wszystkie fak
+          -tury</option>';                                              
+      460 -            data.invoices.forEach(invoice => {               
+      461 -                const option = document.createElement('option'
+          -);                                                           
+      462 -                option.value = invoice.id;                   
+      463 -                option.textContent = `${invoice.invoice_number
+          - || 'Brak numeru'} — ${invoice.seller_name || 'Brak nazwy'}`;
+      464 -                select.appendChild(option);                  
+      465 -            });                                              
+      466 -        }                                                    
+      467 -    } catch (error) {                                        
+      468 -        console.error('Error loading invoices:', error);     
+      469 -    }                                                        
+      470 -}                                                            
+      471 -</script>                                                    
+      472 -{% endblock %}                                               
+        1 +{% extends "base.html" %}
+        2 +
+        3 +{% block title %}Historia — MyWay{% endblock %}
+        4 +{% block page_title %}{% endblock %}
+        5 +{% block page_subtitle %}{% endblock %}
+        6 +{% block breadcrumb %}{% endblock %}
+        7 +
+        8 +{% block extra_css %}
+        9 +<style>
+       10 +    :root {
+       11 +        --color-ink: #1a1a1a;
+       12 +        --color-ink-muted: #525252;
+       13 +        --color-ink-subtle: #8a8a8a;
+       14 +        --color-surface: #fafafa;
+       15 +        --color-surface-warm: #f7f6f3;
+       16 +        --color-border: #e8e6e1;
+       17 +        --color-border-subtle: #f0eeea;
+       18 +        --color-accent: #c9a227;
+       19 +        --color-success: #2d6a4f;
+       20 +        --color-warning: #9a6700;
+       21 +        --color-error: #9b2c2c;
+       22 +        --color-info: #1e6091;
+       23 +        --font-body: 'Inter', system-ui, sans-serif;
+       24 +        --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+       25 +    }
+       26 +
+       27 +    body { background: var(--color-surface-warm) !important; }
+       28 +    #main-content {
+       29 +        background: var(--color-surface-warm);
+       30 +        padding: 1rem 1.5rem !important;
+       31 +        display: flex;
+       32 +        flex-direction: column;
+       33 +        overflow: hidden !important;
+       34 +    }
+       35 +
+       36 +    .refined-page {
+       37 +        font-family: var(--font-body);
+       38 +        color: var(--color-ink);
+       39 +        display: flex;
+       40 +        flex-direction: column;
+       41 +        height: 100%;
+       42 +        overflow: hidden;
+       43 +    }
+       44 +
+       45 +    .page-header {
+       46 +        display: flex;
+       47 +        align-items: center;
+       48 +        justify-content: space-between;
+       49 +        margin-bottom: 0.75rem;
+       50 +        flex-shrink: 0;
+       51 +    }
+       52 +
+       53 +    .page-title {
+       54 +        font-size: 1.5rem;
+       55 +        font-weight: 600;
+       56 +        letter-spacing: -0.02em;
+       57 +        color: var(--color-ink);
+       58 +        margin: 0;
+       59 +    }
+       60 +
+       61 +    /* Tab filter bar */
+       62 +    .tab-bar {
+       63 +        display: flex;
+       64 +        align-items: center;
+       65 +        gap: 0.25rem;
+       66 +        margin-bottom: 0.75rem;
+       67 +        flex-shrink: 0;
+       68 +        border-bottom: 1px solid var(--color-border);
+       69 +        padding-bottom: 0;
+       70 +    }
+       71 +
+       72 +    .tab-btn {
+       73 +        display: inline-flex;
+       74 +        align-items: center;
+       75 +        gap: 0.375rem;
+       76 +        padding: 0.5rem 0.875rem;
+       77 +        font-size: 0.75rem;
+       78 +        font-weight: 500;
+       79 +        color: var(--color-ink-muted);
+       80 +        background: none;
+       81 +        border: none;
+       82 +        border-bottom: 2px solid transparent;
+       83 +        cursor: pointer;
+       84 +        margin-bottom: -1px;
+       85 +        transition: all 0.15s ease;
+       86 +        white-space: nowrap;
+       87 +    }
+       88 +    .tab-btn:hover { color: var(--color-ink); }
+       89 +    .tab-btn.active {
+       90 +        color: var(--color-ink);
+       91 +        border-bottom-color: var(--color-ink);
+       92 +    }
+       93 +    .tab-count {
+       94 +        display: inline-flex;
+       95 +        align-items: center;
+       96 +        justify-content: center;
+       97 +        min-width: 1.25rem;
+       98 +        height: 1.25rem;
+       99 +        padding: 0 0.3rem;
+      100 +        font-size: 0.625rem;
+      101 +        font-weight: 600;
+      102 +        background: var(--color-border);
+      103 +        color: var(--color-ink-muted);
+      104 +        border-radius: 999px;
+      105 +    }
+      106 +    .tab-btn.active .tab-count {
+      107 +        background: var(--color-ink);
+      108 +        color: white;
+      109 +    }
+      110 +
+      111 +    .table-container {
+      112 +        background: white;
+      113 +        border: 1px solid var(--color-border);
+      114 +        border-radius: 2px;
+      115 +        display: flex;
+      116 +        flex-direction: column;
+      117 +        flex: 1;
+      118 +        min-height: 0;
+      119 +        overflow: hidden;
+      120 +    }
+      121 +
+      122 +    .table-scroll-wrapper {
+      123 +        flex: 1;
+      124 +        min-height: 0;
+      125 +        overflow: hidden;
+      126 +        display: flex;
+      127 +        flex-direction: column;
+      128 +    }
+      129 +
+      130 +    .refined-table {
+      131 +        width: 100%;
+      132 +        border-collapse: collapse;
+      133 +        table-layout: fixed;
+      134 +    }
+      135 +
+      136 +    .refined-table thead { background: var(--color-surface); }
+      137 +
+      138 +    .refined-table th {
+      139 +        padding: 0.5rem 1rem;
+      140 +        font-size: 0.6875rem;
+      141 +        font-weight: 500;
+      142 +        text-transform: uppercase;
+      143 +        letter-spacing: 0.12em;
+      144 +        color: var(--color-ink-subtle);
+      145 +        text-align: left;
+      146 +        border-bottom: 1px solid var(--color-border);
+      147 +        white-space: nowrap;
+      148 +    }
+      149 +
+      150 +    .refined-table td {
+      151 +        padding: 0.5rem 1rem;
+      152 +        font-size: 0.8125rem;
+      153 +        color: var(--color-ink);
+      154 +        border-bottom: 1px solid var(--color-border-subtle);
+      155 +        vertical-align: middle;
+      156 +    }
+      157 +
+      158 +    .refined-table tbody tr { transition: background-color 0.2
+          +s ease; }
+      159 +    .refined-table tbody tr:hover { background: var(--color-su
+          +rface); }
+      160 +    .refined-table tbody tr:last-child td { border-bottom: non
+          +e; }
+      161 +
+      162 +    .tbody-scroll {
+      163 +        flex: 1;
+      164 +        overflow-y: auto;
+      165 +        overflow-x: hidden;
+      166 +    }
+      167 +    .tbody-scroll::-webkit-scrollbar { width: 6px; }
+      168 +    .tbody-scroll::-webkit-scrollbar-track { background: var(-
+          +-color-surface); }
+      169 +    .tbody-scroll::-webkit-scrollbar-thumb { background: var(-
+          +-color-border); border-radius: 3px; }
+      170 +
+      171 +    /* Column widths */
+      172 +    .col-timestamp    { width: 12%; }
+      173 +    .col-entity-type  { width: 10%; }
+      174 +    .col-action       { width: 9%; }
+      175 +    .col-entity-label { width: 18%; }
+      176 +    .col-field        { width: 10%; }
+      177 +    .col-old          { width: 17%; }
+      178 +    .col-new          { width: 17%; }
+      179 +    .col-user         { width: 7%; }
+      180 +
+      181 +    .timestamp-value { font-size: 0.75rem; color: var(--color-
+          +ink-muted); white-space: nowrap; }
+      182 +    .timestamp-date  { font-weight: 500; color: var(--color-in
+          +k); }
+      183 +
+      184 +    /* Entity type badges */
+      185 +    .entity-badge {
+      186 +        display: inline-flex;
+      187 +        align-items: center;
+      188 +        gap: 0.2rem;
+      189 +        padding: 0.2rem 0.5rem;
+      190 +        font-size: 0.6rem;
+      191 +        font-weight: 600;
+      192 +        text-transform: uppercase;
+      193 +        letter-spacing: 0.06em;
+      194 +        border-radius: 2px;
+      195 +    }
+      196 +    .entity-invoice    { background: rgba(30,96,145,0.1);  col
+          +or: #1e6091; }
+      197 +    .entity-appointment{ background: rgba(106,27,154,0.1); col
+          +or: #6a1b9a; }
+      198 +    .entity-client     { background: rgba(0,121,107,0.1);  col
+          +or: #00796b; }
+      199 +    .entity-employee   { background: rgba(230,81,0,0.1);   col
+          +or: #e65100; }
+      200 +    .entity-service    { background: rgba(21,101,192,0.1); col
+          +or: #1565c0; }
+      201 +    .entity-seller     { background: rgba(74,20,140,0.1);  col
+          +or: #4a148c; }
+      202 +    .entity-import     { background: rgba(45,106,79,0.1);  col
+          +or: #2d6a4f; }
+      203 +    .entity-login      { background: rgba(97,97,97,0.1);   col
+          +or: #424242; }
+      204 +
+      205 +    /* Action badges */
+      206 +    .action-badge {
+      207 +        display: inline-flex;
+      208 +        align-items: center;
+      209 +        gap: 0.25rem;
+      210 +        padding: 0.2rem 0.45rem;
+      211 +        font-size: 0.6rem;
+      212 +        font-weight: 600;
+      213 +        text-transform: uppercase;
+      214 +        letter-spacing: 0.05em;
+      215 +        border-radius: 2px;
+      216 +    }
+      217 +    .action-badge svg { width: 0.7rem; height: 0.7rem; }
+      218 +    .action-create       { background: rgba(45,106,79,0.1);  c
+          +olor: var(--color-success); }
+      219 +    .action-update       { background: rgba(30,96,145,0.1);  c
+          +olor: var(--color-info); }
+      220 +    .action-delete       { background: rgba(155,44,44,0.1);  c
+          +olor: var(--color-error); }
+      221 +    .action-import       { background: rgba(45,106,79,0.12); c
+          +olor: #1b5e20; }
+      222 +    .action-login        { background: rgba(97,97,97,0.1);   c
+          +olor: #424242; }
+      223 +    .action-login-failed { background: rgba(155,44,44,0.12); c
+          +olor: var(--color-error); }
+      224 +    .action-logout       { background: rgba(150,150,150,0.1);c
+          +olor: #666; }
+      225 +    .action-status       { background: rgba(154,103,0,0.1);  c
+          +olor: var(--color-warning); }
+      226 +    .action-complete     { background: rgba(45,106,79,0.15); c
+          +olor: var(--color-success); }
+      227 +
+      228 +    .entity-label-text { font-weight: 500; color: var(--color-
+          +ink); font-size: 0.8rem; }
+      229 +
+      230 +    .field-badge {
+      231 +        display: inline-block;
+      232 +        padding: 0.2rem 0.45rem;
+      233 +        font-size: 0.6875rem;
+      234 +        font-weight: 500;
+      235 +        background: var(--color-surface);
+      236 +        color: var(--color-ink-muted);
+      237 +        border-radius: 2px;
+      238 +    }
+      239 +
+      240 +    .value-old { color: var(--color-ink-subtle); text-decorati
+          +on: line-through; opacity: 0.7; font-size: 0.75rem; word-break
+          +: break-word; }
+      241 +    .value-new { color: var(--color-ink); font-weight: 500; fo
+          +nt-size: 0.75rem; word-break: break-word; }
+      242 +    .value-empty { color: var(--color-ink-subtle); font-style:
+          + italic; opacity: 0.5; }
+      243 +
+      244 +    .user-chip {
+      245 +        display: inline-flex;
+      246 +        align-items: center;
+      247 +        gap: 0.2rem;
+      248 +        font-size: 0.7rem;
+      249 +        color: var(--color-ink-muted);
+      250 +        white-space: nowrap;
+      251 +        overflow: hidden;
+      252 +        text-overflow: ellipsis;
+      253 +        max-width: 100%;
+      254 +    }
+      255 +
+      256 +    .empty-state {
+      257 +        padding: 3rem 2rem;
+      258 +        text-align: center;
+      259 +        flex: 1;
+      260 +        display: flex;
+      261 +        flex-direction: column;
+      262 +        align-items: center;
+      263 +        justify-content: center;
+      264 +    }
+      265 +    .empty-icon { width: 3rem; height: 3rem; color: var(--colo
+          +r-ink-subtle); opacity: 0.3; margin-bottom: 1rem; }
+      266 +    .empty-title { font-size: 1.125rem; font-weight: 500; colo
+          +r: var(--color-ink); margin-bottom: 0.25rem; }
+      267 +    .empty-text { color: var(--color-ink-subtle); font-size: 0
+          +.875rem; max-width: 300px; }
+      268 +
+      269 +    .pagination-bar {
+      270 +        display: flex;
+      271 +        align-items: center;
+      272 +        justify-content: space-between;
+      273 +        padding: 0.5rem 1rem;
+      274 +        border-top: 1px solid var(--color-border-subtle);
+      275 +        background: var(--color-surface);
+      276 +        font-size: 0.75rem;
+      277 +        color: var(--color-ink-muted);
+      278 +        flex-shrink: 0;
+      279 +    }
+      280 +    .pagination-count { font-weight: 500; color: var(--color-i
+          +nk); }
+      281 +
+      282 +    .skeleton-bar {
+      283 +        height: 0.75rem;
+      284 +        background: linear-gradient(90deg, var(--color-border-
+          +subtle) 0%, var(--color-surface) 50%, var(--color-border-subtl
+          +e) 100%);
+      285 +        background-size: 200% 100%;
+      286 +        animation: shimmer 1.8s ease-in-out infinite;
+      287 +        border-radius: 1px;
+      288 +    }
+      289 +    @keyframes shimmer { 0% { background-position: 200% 0; } 1
+          +00% { background-position: -200% 0; } }
+      290 +
+      291 +    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) for
+          +wards; }
+      292 +    @keyframes fadeIn { from { opacity: 0; transform: translat
+          +eY(8px); } to { opacity: 1; transform: translateY(0); } }
+      293 +
+      294 +    .stagger-row { opacity: 0; animation: fadeIn 0.35s var(--e
+          +ase-out-expo) forwards; }
+      295 +
+      296 +    @media (max-width: 1200px) {
+      297 +        .col-old, .col-user { display: none; }
+      298 +    }
+      299 +</style>
+      300 +{% endblock %}
+      301 +
+      302 +{% block content %}
+      303 +<div class="refined-page fade-in">
+      304 +    <header class="page-header">
+      305 +        <h1 class="page-title">Historia zdarzeń</h1>
+      306 +    </header>
+      307 +
+      308 +    <!-- Entity type tabs -->
+      309 +    <div class="tab-bar" id="tab-bar">
+      310 +        <button class="tab-btn active" data-type="" onclick="s
+          +witchTab(this, '')">
+      311 +            Wszystkie <span class="tab-count" id="count-all">—
+          +</span>
+      312 +        </button>
+      313 +        <button class="tab-btn" data-type="invoice" onclick="s
+          +witchTab(this, 'invoice')">
+      314 +            Faktury <span class="tab-count" id="count-invoice"
+          +>—</span>
+      315 +        </button>
+      316 +        <button class="tab-btn" data-type="import" onclick="sw
+          +itchTab(this, 'import')">
+      317 +            Import <span class="tab-count" id="count-import">—
+          +</span>
+      318 +        </button>
+      319 +        <button class="tab-btn" data-type="appointment" onclic
+          +k="switchTab(this, 'appointment')">
+      320 +            Wizyty <span class="tab-count" id="count-appointme
+          +nt">—</span>
+      321 +        </button>
+      322 +        <button class="tab-btn" data-type="client" onclick="sw
+          +itchTab(this, 'client')">
+      323 +            Klienci <span class="tab-count" id="count-client">
+          +—</span>
+      324 +        </button>
+      325 +        <button class="tab-btn" data-type="employee" onclick="
+          +switchTab(this, 'employee')">
+      326 +            Pracownicy <span class="tab-count" id="count-emplo
+          +yee">—</span>
+      327 +        </button>
+      328 +        <button class="tab-btn" data-type="service" onclick="s
+          +witchTab(this, 'service')">
+      329 +            Usługi <span class="tab-count" id="count-service">
+          +—</span>
+      330 +        </button>
+      331 +        <button class="tab-btn" data-type="seller" onclick="sw
+          +itchTab(this, 'seller')">
+      332 +            Dostawcy <span class="tab-count" id="count-seller"
+          +>—</span>
+      333 +        </button>
+      334 +        <button class="tab-btn" data-type="login" onclick="swi
+          +tchTab(this, 'login')">
+      335 +            Logowania <span class="tab-count" id="count-login"
+          +>—</span>
+      336 +        </button>
+      337 +    </div>
+      338 +
+      339 +    <div class="table-container">
+      340 +        <div class="table-scroll-wrapper">
+      341 +            <!-- Fixed header -->
+      342 +            <table class="refined-table" style="flex-shrink: 0
+          +;">
+      343 +                <colgroup>
+      344 +                    <col class="col-timestamp"><col class="col
+          +-entity-type"><col class="col-action">
+      345 +                    <col class="col-entity-label"><col class="
+          +col-field">
+      346 +                    <col class="col-old"><col class="col-new">
+          +<col class="col-user">
+      347 +                </colgroup>
+      348 +                <thead>
+      349 +                    <tr>
+      350 +                        <th>Data i czas</th>
+      351 +                        <th>Moduł</th>
+      352 +                        <th>Akcja</th>
+      353 +                        <th>Obiekt</th>
+      354 +                        <th>Pole</th>
+      355 +                        <th class="col-old">Było</th>
+      356 +                        <th>Zmieniono na</th>
+      357 +                        <th>Użytkownik</th>
+      358 +                    </tr>
+      359 +                </thead>
+      360 +            </table>
+      361 +
+      362 +            <div class="tbody-scroll">
+      363 +                <table class="refined-table" id="historyTable"
+          +>
+      364 +                    <colgroup>
+      365 +                        <col class="col-timestamp"><col class=
+          +"col-entity-type"><col class="col-action">
+      366 +                        <col class="col-entity-label"><col cla
+          +ss="col-field">
+      367 +                        <col class="col-old"><col class="col-n
+          +ew"><col class="col-user">
+      368 +                    </colgroup>
+      369 +                    <tbody id="history-tbody">
+      370 +                        <tr class="skeleton-row"><td><div clas
+          +s="skeleton-bar" style="width:70%"></div></td><td><div class="
+          +skeleton-bar" style="width:60%"></div></td><td><div class="ske
+          +leton-bar" style="width:50%"></div></td><td><div class="skelet
+          +on-bar" style="width:80%"></div></td><td><div class="skeleton-
+          +bar" style="width:40%"></div></td><td><div class="skeleton-bar
+          +" style="width:70%"></div></td><td><div class="skeleton-bar" s
+          +tyle="width:75%"></div></td><td><div class="skeleton-bar" styl
+          +e="width:55%"></div></td></tr>
+      371 +                        <tr class="skeleton-row"><td><div clas
+          +s="skeleton-bar" style="width:65%"></div></td><td><div class="
+          +skeleton-bar" style="width:55%"></div></td><td><div class="ske
+          +leton-bar" style="width:45%"></div></td><td><div class="skelet
+          +on-bar" style="width:75%"></div></td><td><div class="skeleton-
+          +bar" style="width:35%"></div></td><td><div class="skeleton-bar
+          +" style="width:65%"></div></td><td><div class="skeleton-bar" s
+          +tyle="width:80%"></div></td><td><div class="skeleton-bar" styl
+          +e="width:50%"></div></td></tr>
+      372 +                        <tr class="skeleton-row"><td><div clas
+          +s="skeleton-bar" style="width:75%"></div></td><td><div class="
+          +skeleton-bar" style="width:50%"></div></td><td><div class="ske
+          +leton-bar" style="width:55%"></div></td><td><div class="skelet
+          +on-bar" style="width:70%"></div></td><td><div class="skeleton-
+          +bar" style="width:45%"></div></td><td><div class="skeleton-bar
+          +" style="width:60%"></div></td><td><div class="skeleton-bar" s
+          +tyle="width:70%"></div></td><td><div class="skeleton-bar" styl
+          +e="width:60%"></div></td></tr>
+      373 +                    </tbody>
+      374 +                </table>
+      375 +
+      376 +                <div id="empty-state" class="empty-state" styl
+          +e="display: none;">
+      377 +                    <svg class="empty-icon" fill="none" viewBo
+          +x="0 0 24 24" stroke="currentColor">
+      378 +                        <path stroke-linecap="round" stroke-li
+          +nejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18
+          + 0 9 9 0 0118 0z" />
+      379 +                    </svg>
+      380 +                    <h3 class="empty-title">Brak zdarzeń</h3>
+      381 +                    <p class="empty-text">Zdarzenia pojawią si
+          +ę po wykonaniu operacji w aplikacji.</p>
+      382 +                </div>
+      383 +            </div>
+      384 +        </div>
+      385 +
+      386 +        <div class="pagination-bar">
+      387 +            <span>Wyświetlono <span class="pagination-count" i
+          +d="visible-count">0</span> wpisów</span>
+      388 +        </div>
+      389 +    </div>
+      390 +</div>
+      391 +{% endblock %}
+      392 +
+      393 +{% block extra_scripts %}
+      394 +<script>
+      395 +let allEntries = [];
+      396 +let currentType = '';
+      397 +
+      398 +const ENTITY_LABELS = {
+      399 +    invoice:     'Faktura',
+      400 +    appointment: 'Wizyta',
+      401 +    client:      'Klient',
+      402 +    employee:    'Pracownik',
+      403 +    service:     'Usługa',
+      404 +    seller:      'Dostawca',
+      405 +    import:      'Import',
+      406 +    login:       'Logowanie',
+      407 +};
+      408 +
+      409 +const ACTION_LABELS = {
+      410 +    CREATE:       { label: 'Dodano',     cls: 'action-create'
+          +},
+      411 +    UPDATE:       { label: 'Edytowano',  cls: 'action-update'
+          +},
+      412 +    DELETE:       { label: 'Usunięto',   cls: 'action-delete'
+          +},
+      413 +    IMPORT:       { label: 'Import',     cls: 'action-import'
+          +},
+      414 +    LOGIN:        { label: 'Zalogowano', cls: 'action-login' }
+          +,
+      415 +    LOGIN_FAILED: { label: 'Błąd login', cls: 'action-login-fa
+          +iled' },
+      416 +    LOGOUT:       { label: 'Wylogowano', cls: 'action-logout'
+          +},
+      417 +    STATUS_CHANGE:{ label: 'Status',     cls: 'action-status'
+          +},
+      418 +    COMPLETE:     { label: 'Zakończono', cls: 'action-complete
+          +' },
+      419 +};
+      420 +
+      421 +document.addEventListener('DOMContentLoaded', () => {
+      422 +    loadHistory();
+      423 +});
+      424 +
+      425 +function switchTab(btn, type) {
+      426 +    document.querySelectorAll('.tab-btn').forEach(b => b.class
+          +List.remove('active'));
+      427 +    btn.classList.add('active');
+      428 +    currentType = type;
+      429 +    renderTable(type ? allEntries.filter(e => e.entity_type ==
+          += type) : allEntries);
+      430 +}
+      431 +
+      432 +async function loadHistory() {
+      433 +    const tbody = document.getElementById('history-tbody');
+      434 +    const emptyState = document.getElementById('empty-state');
+      435 +
+      436 +    try {
+      437 +        const data = await API.get('/history');
+      438 +
+      439 +        if (!data.success) {
+      440 +            Notifications.error('Błąd ładowania historii');
+      441 +            return;
+      442 +        }
+      443 +
+      444 +        allEntries = data.entries;
+      445 +
+      446 +        // Update tab counts
+      447 +        updateTabCounts(allEntries);
+      448 +
+      449 +        // Render initial view (all)
+      450 +        renderTable(allEntries);
+      451 +
+      452 +    } catch (error) {
+      453 +        console.error('Error loading history:', error);
+      454 +        Notifications.error('Błąd ładowania historii');
+      455 +    }
+      456 +}
+      457 +
+      458 +function updateTabCounts(entries) {
+      459 +    document.getElementById('count-all').textContent = entries
+          +.length;
+      460 +    const types = ['invoice','import','appointment','client','
+          +employee','service','seller','login'];
+      461 +    types.forEach(type => {
+      462 +        const el = document.getElementById('count-' + type);
+      463 +        if (el) el.textContent = entries.filter(e => e.entity_
+          +type === type).length;
+      464 +    });
+      465 +}
+      466 +
+      467 +function renderTable(entries) {
+      468 +    const tbody = document.getElementById('history-tbody');
+      469 +    const emptyState = document.getElementById('empty-state');
+      470 +
+      471 +    document.getElementById('visible-count').textContent = ent
+          +ries.length;
+      472 +
+      473 +    if (entries.length === 0) {
+      474 +        tbody.innerHTML = '';
+      475 +        emptyState.style.display = 'flex';
+      476 +        return;
+      477 +    }
+      478 +
+      479 +    emptyState.style.display = 'none';
+      480 +
+      481 +    tbody.innerHTML = entries.map((entry, index) => {
+      482 +        const delay = Math.min(index * 0.015, 0.25);
+      483 +        const ts = formatTimestamp(entry.timestamp);
+      484 +
+      485 +        const entityType = entry.entity_type || 'invoice';
+      486 +        const entityCls  = 'entity-' + entityType;
+      487 +        const entityLbl  = ENTITY_LABELS[entityType] || entity
+          +Type;
+      488 +
+      489 +        const actionInfo = ACTION_LABELS[entry.action] || { la
+          +bel: entry.action, cls: 'action-update' };
+      490 +
+      491 +        const label = entry.entity_label || entry.invoice_numb
+          +er || '';
+      492 +
+      493 +        const oldVal = entry.old_value
+      494 +            ? `<span class="value-old">${escapeHtml(entry.old_
+          +value)}</span>`
+      495 +            : `<span class="value-empty">—</span>`;
+      496 +
+      497 +        const newVal = entry.new_value
+      498 +            ? `<span class="value-new">${escapeHtml(entry.new_
+          +value)}</span>`
+      499 +            : `<span class="value-empty">—</span>`;
+      500 +
+      501 +        const fieldCell = entry.field_name
+      502 +            ? `<span class="field-badge">${escapeHtml(entry.fi
+          +eld_name)}</span>`
+      503 +            : `<span class="value-empty">—</span>`;
+      504 +
+      505 +        const userCell = entry.user_name
+      506 +            ? `<span class="user-chip" title="${escapeHtml(ent
+          +ry.user_name)}">${escapeHtml(entry.user_name.split(' ')[0])}</
+          +span>`
+      507 +            : `<span class="value-empty">—</span>`;
+      508 +
+      509 +        return `
+      510 +            <tr class="stagger-row" style="animation-delay:${d
+          +elay}s">
+      511 +                <td>
+      512 +                    <span class="timestamp-value">
+      513 +                        <span class="timestamp-date">${ts.date
+          +}</span> ${ts.time}
+      514 +                    </span>
+      515 +                </td>
+      516 +                <td><span class="entity-badge ${entityCls}">${
+          +entityLbl}</span></td>
+      517 +                <td><span class="action-badge ${actionInfo.cls
+          +}">${actionInfo.label}</span></td>
+      518 +                <td><span class="entity-label-text" title="${e
+          +scapeHtml(label)}">${escapeHtml(label) || '<span class="value-
+          +empty">—</span>'}</span></td>
+      519 +                <td>${fieldCell}</td>
+      520 +                <td class="col-old">${oldVal}</td>
+      521 +                <td>${newVal}</td>
+      522 +                <td>${userCell}</td>
+      523 +            </tr>
+      524 +        `;
+      525 +    }).join('');
+      526 +}
+      527 +
+      528 +function formatTimestamp(timestamp) {
+      529 +    if (!timestamp) return { date: '—', time: '' };
+      530 +    const d = new Date(timestamp);
+      531 +    const date = `${d.getDate().toString().padStart(2,'0')}.${
+          +(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()
+          +.toString().slice(-2)}`;
+      532 +    const time = `${d.getHours().toString().padStart(2,'0')}:$
+          +{d.getMinutes().toString().padStart(2,'0')}`;
+      533 +    return { date, time };
+      534 +}
+      535 +</script>
+      536 +{% endblock %}
+
+● Also update the JS api.js history helper to support the new entity_type param:
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● Update(static\js\api.js)
+  ⎿  File must be read first
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(static\js\api.js)
+  ⎿  Added 4 lines, removed 2 lines
+      141 
+      142      // History endpoints
+      143      history: {
+      144 -        getAll: (invoiceId = null) => {                       
+      145 -            const params = invoiceId ? { invoice_id: invoiceId
+          - } : {};                                                      
+      144 +        getAll: (invoiceId = null, entityType = null) => {
+      145 +            const params = {};
+      146 +            if (invoiceId) params.invoice_id = invoiceId;
+      147 +            if (entityType) params.entity_type = entityType;
+      148              return API.get('/history', params);
+      149          },
+      150          getDetails: (ids) => API.post('/history/details', { id
+           s: ids })
+
+● ★ Insight ─────────────────────────────────────
+  - The tab filtering is done entirely client-side — loadHistory() fetches all
+  entries once, stores them in allEntries, and switchTab() just re-renders from
+  that in-memory array. This avoids a round-trip per tab click and keeps the UI
+  instant.
+  - The _audit() helper in both route files uses try/except: pass deliberately —
+   audit logging is a side effect and must never crash a business operation. The
+   pattern "fire and forget, silent on error" is the standard approach for
+  non-critical observability calls.
+  - The DO $$ BEGIN ... EXCEPTION WHEN others THEN NULL; END $$ blocks in the
+  migration are PostgreSQL's equivalent of "run this only if it hasn't been done
+   already" — since ALTER COLUMN DROP NOT NULL fails if the column is already
+  nullable, wrapping it in an exception block makes the migration idempotent and
+   safe to run on every server restart.
+  ─────────────────────────────────────────────────
+
+  Restart run_dev.py to apply the schema migrations (they run at startup via
+  initialize_database()), then navigate to Historia. You'll see:
+
+  - Tabbed filter bar (Wszystkie / Faktury / Import / Wizyty / Klienci /
+  Pracownicy / Usługi / Dostawcy / Logowania)
+  - Color-coded Moduł badge column per entity type
+  - Użytkownik column showing who performed each action
+  - Login/logout events appear immediately after next login
+
+✻ Worked for 11m 56s
+
+❯ (.venv) PS C:\Projects\faktura_scanner_flask>  python run_dev.py          
+  2026-03-02 03:31:08,809 - utils.pdf_processor - INFO - OpenCV loaded      
+  successfully                                                              
+  2026-03-02 03:31:08,869 - utils.pdf_processor - INFO - PyMuPDF loaded     
+  successfully - hybrid PDF processing enabled                              
+  2026-03-02 03:31:08,869 - utils.pdf_processor - INFO - Tesseract CMD:     
+  C:\Program Files\Tesseract-OCR\tesseract.exe                              
+  2026-03-02 03:31:08,869 - utils.pdf_processor - INFO - Poppler PATH:      
+  C:\poppler\Library\bin                                                    
+  Traceback (most recent call last):                                        
+    File "C:\Projects\faktura_scanner_flask\run_dev.py", line 35, in        
+  <module>                                                                  
+      app = create_app()                                                    
+    File "C:\Projects\faktura_scanner_flask\app.py", line 112, in           
+  create_app                                                                
+      initialize_database()                                                 
+      ~~~~~~~~~~~~~~~~~~~^^                                                 
+    File "C:\Projects\faktura_scanner_flask\config\database.py", line 71,   
+  in initialize_database                                                    
+                                                                            
+      cursor.execute(stmt)                                                  
+      ~~~~~~~~~~~~~~^^^^^^                                                  
+    File                                                                    
+  "C:\Projects\faktura_scanner\.venv\Lib\site-packages\psycopg2\extras.py", 
+   line 236, in execute                                                     
+                                                                            
+      return super().execute(query, vars)                                   
+             ~~~~~~~~~~~~~~~^^^^^^^^^^^^^                                   
+  psycopg2.errors.UndefinedColumn: column "entity_type" does not exist      
+                                                                            
+  ⎿  Interrupted · What should Claude do instead?

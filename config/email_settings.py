@@ -1,7 +1,13 @@
 """
 Email account settings configuration
+
+Credentials priority:
+  1. Environment variables (IMAP_EMAIL, IMAP_PASSWORD) — preferred, never persisted to disk
+  2. JSON config file — for non-sensitive settings (server, port, dates)
+  Password is NEVER written to the JSON file.
 """
 import json
+import os
 from datetime import date
 from pathlib import Path
 
@@ -14,16 +20,31 @@ class EmailSettings:
 		self.settings = self.load_settings()
 
 	def load_settings(self) -> dict:
-		"""Load email settings from config file"""
+		"""Load email settings — env vars override JSON for credentials"""
+		settings = self.get_default_settings()
+
+		# Load non-sensitive settings from JSON
 		if self.config_file.exists():
 			try:
 				with open(self.config_file, 'r', encoding='utf-8') as f:
-					return json.load(f)
+					file_settings = json.load(f)
+				# Merge file settings (excluding password)
+				for key, value in file_settings.items():
+					if key != 'password':
+						settings[key] = value
+					elif not os.environ.get('IMAP_PASSWORD'):
+						# Fallback: use file password only if env var not set
+						settings['password'] = value
 			except Exception as e:
 				print(f"Error loading email settings: {e}")
-				return self.get_default_settings()
-		else:
-			return self.get_default_settings()
+
+		# Environment variables take priority for credentials
+		if os.environ.get('IMAP_EMAIL'):
+			settings['email'] = os.environ['IMAP_EMAIL']
+		if os.environ.get('IMAP_PASSWORD'):
+			settings['password'] = os.environ['IMAP_PASSWORD']
+
+		return settings
 
 	def get_default_settings(self) -> dict:
 		"""Get default email settings"""
@@ -37,10 +58,12 @@ class EmailSettings:
 		}
 
 	def save_settings(self, settings: dict) -> bool:
-		"""Save email settings to config file"""
+		"""Save email settings to config file — password is excluded from file"""
 		try:
+			# Never persist password to disk
+			file_settings = {k: v for k, v in settings.items() if k != 'password'}
 			with open(self.config_file, 'w', encoding='utf-8') as f:
-				json.dump(settings, f, indent=4, ensure_ascii=False)
+				json.dump(file_settings, f, indent=4, ensure_ascii=False)
 			self.settings = settings
 			return True
 		except Exception as e:

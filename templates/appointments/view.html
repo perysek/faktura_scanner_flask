@@ -420,6 +420,17 @@ function initSatisfactionWidget(currentScore) {
 }
 
 document.addEventListener('DOMContentLoaded', loadAppointment);
+
+// Skrót klawiszowy: Esc = powrót (dynamiczny URL z przycisku #back-button)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.querySelector('.modal-overlay')) return;
+        const cm = document.getElementById('confirm-modal');
+        if (cm && !cm.classList.contains('hidden')) return;
+        const backBtn = document.getElementById('back-button');
+        if (backBtn && backBtn.href) window.location.href = backBtn.href;
+    }
+});
 </script>
 
 <!-- Modal System -->

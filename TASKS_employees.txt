@@ -1,0 +1,15 @@
+TASKS:
+#1:
+Add column 'forma zatrudnienia' to employee datamodel and make db migration.
+Add table formy_zatrudnienia with column 'nazwa', 'uwagi' + columns type boolean: min_salary_required, granted_salary, commision_included
+Add feature of creating/editing/deleting/modifying rows for forma zatrudnienia table. Make table display and create/modify form templates + add new sidebar nav item 'Rodzaje zatrudnienia' in section 'zarządzanie'. Edit/Delete table row to be triggered by action buttons for each item in table view.
+
+
+#2:
+brainstorm 10 proposals for analytics metrics/charts/indicators/trends of employees. use existing employee datamodel and linked tables/datamodels via FK for brainstorming. Consider employee performance metrics for skills rating/competence gap analysis, training needs, specializations, weakness, area for improvement, appointments allocation analysis considering client preferences for employee-service and skills ratings, specialization. Display these insights in the employee view on the bottom. Propose data display layout, sections, tabs, buttons etc. Maintain current GUI styling pattern used in this project.
+
+#3:
+update create/edit form templates for employees to ensure all datamodel fields that can be manually edited are included. 
+
+#4: 
+Update employee view template to ensure all employee datamodel fields are displayed + added insights from task#2.
