@@ -80,10 +80,7 @@
 
     /* ── Form Elements ── */
     .pp-form-group { margin-bottom: 0.75rem; }
-    .pp-label { display: block; font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin-bottom: 0.25rem; }
     .pp-input, .pp-select, .pp-textarea {
-        width: 100%; padding: 0.45rem 0.6rem;
-        font-family: var(--pp-body); font-size: 0.8125rem;
         border: 1px solid var(--pp-border); border-radius: 2px;
         background: white; color: var(--pp-ink); box-sizing: border-box;
         transition: border-color 0.15s, box-shadow 0.15s;
@@ -115,43 +112,29 @@
     }
     .pp-service-item.addon { background: rgba(245,158,11,0.03); border-color: rgba(245,158,11,0.2); }
     .pp-svc-info { flex: 1; min-width: 0; }
-    .pp-svc-name { font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pp-svc-badge { font-size: 0.58rem; font-weight: 600; text-transform: uppercase; padding: 0.08rem 0.3rem; border-radius: 2px; margin-left: 0.3rem; }
     .pp-svc-badge.main { background: rgba(37,99,235,0.1); color: var(--pp-blue); }
     .pp-svc-badge.addon { background: rgba(245,158,11,0.1); color: var(--pp-warning); }
 
     /* Inline editable fields in service row */
     .svc-field-group { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-    .svc-field-lbl { font-family: var(--pp-mono); font-size: 0.58rem; color: var(--pp-ink-subtle); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
     .svc-inline-input {
-        width: 70px; padding: 0.3rem 0.4rem; font-size: 0.8rem; font-family: var(--pp-mono);
         border: 1px solid var(--pp-border); border-radius: 2px; background: white;
         text-align: right; box-sizing: border-box; transition: border-color 0.12s, box-shadow 0.12s;
     }
     .svc-inline-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
-    .svc-inline-input.dur { width: 54px; }
 
     .btn-svc-remove { padding: 0.25rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; transition: all 0.1s; flex-shrink: 0; }
     .btn-svc-remove:hover { background: #fef2f2; border-color: var(--pp-danger); color: var(--pp-danger); }
     .btn-svc-remove svg { width: 13px; height: 13px; }
 
     /* ── Service picker ── */
-    .pp-svc-add-label { font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin: 0.75rem 0 0.3rem; display: block; }
     .pp-svc-picker { max-height: 170px; overflow-y: auto; border: 1px solid var(--pp-border); border-radius: 2px; }
-    .pp-svc-option { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--pp-border); }
     .pp-svc-option:last-child { border-bottom: none; }
-    .pp-svc-opt-name { font-size: 0.8rem; font-weight: 500; }
-    .pp-svc-opt-meta { font-family: var(--pp-mono); font-size: 0.68rem; color: var(--pp-ink-subtle); }
-    .btn-svc-add { padding: 0.25rem 0.55rem; font-size: 0.72rem; background: var(--pp-blue); color: white; border: none; border-radius: 2px; cursor: pointer; font-family: var(--pp-mono); font-weight: 500; white-space: nowrap; transition: background 0.15s; }
     .btn-svc-add:hover { background: #1d4ed8; }
 
     /* ── Summary ── */
     .pp-summary { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.75rem; margin-top: 0.625rem; }
-    .pp-sum-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--pp-mono); font-size: 0.78rem; padding: 0.15rem 0; color: var(--pp-ink-muted); }
-    .pp-sum-row.total { font-weight: 600; font-size: 0.9rem; color: var(--pp-ink); border-top: 1px solid var(--pp-border); margin-top: 0.35rem; padding-top: 0.35rem; }
-    /* Total price as editable input */
     .sum-price-input {
-        width: 110px; padding: 0.3rem 0.45rem; font-family: var(--pp-mono); font-size: 0.9rem; font-weight: 600;
         border: 1px solid transparent; border-radius: 2px; background: transparent;
         text-align: right; color: var(--pp-ink); transition: border-color 0.15s, background 0.15s;
     }
@@ -173,7 +156,6 @@
         padding: 0.45rem 0.8rem;
         background: white; border: 1px solid var(--pp-border); border-radius: 3px;
         color: var(--pp-ink-muted); cursor: pointer;
-        font-family: var(--pp-mono); font-size: 0.72rem; font-weight: 500;
         transition: all 0.15s; white-space: nowrap;
     }
     .bar-nav-btn:hover:not(:disabled) { background: var(--pp-surface-warm); border-color: var(--pp-ink-subtle); color: var(--pp-ink); }
@@ -189,22 +171,7 @@
     .bar-visit-date { color: var(--pp-ink-subtle); }
     .bar-visit-client { color: var(--pp-ink); font-weight: 500; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bar-sep { color: var(--pp-border); font-size: 0.8rem; }
-    /* Mode toggle — light theme */
-    .bar-mode-toggle {
-        display: flex; background: var(--pp-surface-warm);
-        border: 1px solid var(--pp-border); border-radius: 3px; overflow: hidden;
-    }
-    .bar-mode-btn {
-        padding: 0.28rem 0.65rem; background: transparent; border: none;
-        color: var(--pp-ink-subtle); cursor: pointer;
-        font-family: var(--pp-mono); font-size: 0.65rem; font-weight: 500;
-        letter-spacing: 0.04em; transition: all 0.12s;
-    }
-    .bar-mode-btn.active { background: var(--pp-blue); color: #fff; }
-    .bar-mode-btn:not(.active):hover { background: var(--pp-border); color: var(--pp-ink); }
     /* Shortcut hints */
-    .pp-shortcut-hint { font-family: var(--pp-mono); font-size: 0.65rem; color: var(--pp-ink-subtle); display: flex; gap: 0.75rem; flex: 1; justify-content: center; }
-    .pp-kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var(--pp-mono); font-size: 0.6rem; color: var(--pp-ink-muted); }
     /* Action buttons */
     .pp-btn-primary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1.25rem; background: var(--pp-blue); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 0.15s; }
     .pp-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
@@ -411,11 +378,6 @@
                 <span class="bar-visit-client" id="strip-client">Ładowanie...</span>
             </div>
 
-            <div class="bar-mode-toggle">
-                <button class="bar-mode-btn active" id="mode-all" onclick="setMode('all')">Wszystkie</button>
-                <button class="bar-mode-btn" id="mode-day" onclick="setMode('day')">Ten dzień</button>
-            </div>
-
             <button class="bar-nav-btn" id="btn-next" onclick="navigate('next')" disabled title="Alt+→">
                 Następna
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -470,10 +432,8 @@ let APPT_ID = {{ appointment_id }};
 let originalData = null;
 let originalServices = [];
 let currentServices = [];
-let availableServices = [];
 let adjPrev = null;
 let adjNext = null;
-let navMode = localStorage.getItem('superadmin_nav_mode') || 'all';
 let currentStar = 0;
 let forceAllowSave = false;
 let totalPriceOverride = null; // manual total price override
@@ -511,18 +471,8 @@ function cacheGet(key) {
 }
 
 // ══════════════════════════════════════════════════════
-//  NAVIGATION MODE
 // ══════════════════════════════════════════════════════
-function setMode(mode) {
-    navMode = mode;
-    localStorage.setItem('superadmin_nav_mode', mode);
-    document.getElementById('mode-all').classList.toggle('active', mode === 'all');
-    document.getElementById('mode-day').classList.toggle('active', mode === 'day');
-    loadAdjacent();
 }
-function applyStoredMode() {
-    document.getElementById('mode-all').classList.toggle('active', navMode === 'all');
-    document.getElementById('mode-day').classList.toggle('active', navMode === 'day');
 }
 
 // ══════════════════════════════════════════════════════
@@ -552,7 +502,6 @@ async function loadVisit(id) {
         // Fire appointment fetch + adjacent fetch in parallel — biggest speed win
         const [apptData, adjData] = await Promise.all([
             fetch(`/api/appointments/${id}`).then(r => r.json()),
-            fetch(`/api/appointments/adjacent?id=${id}&mode=${navMode}`).then(r => r.json())
         ]);
 
         if (!apptData.success) {
@@ -580,7 +529,6 @@ async function loadVisit(id) {
 // ══════════════════════════════════════════════════════
 async function loadAdjacent() {
     try {
-        const data = await fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=${navMode}`).then(r => r.json());
         updateAdjacent(data);
     } catch(e) { console.error('Adjacent load failed', e); }
 }
@@ -647,7 +595,6 @@ function populateEmployeeSelect(employees) {
 
 async function loadEmployeeServices() {
     const eid = document.getElementById('employee-select').value;
-    if (!eid) { availableServices = []; renderServicePicker(); return; }
     const data = await fetch(`/api/employees/${eid}/services`).then(r => r.json());
     availableServices = data.success ? data.services : [];
     renderServicePicker();
@@ -664,7 +611,6 @@ function onEmployeeChange() {
 async function populateForm(apptData) {
     originalData = apptData.appointment;
 
-    // Nav strip
     document.getElementById('strip-date').textContent = fmtDate(originalData.appointment_date);
     document.getElementById('strip-client').textContent = originalData.client_name || '—';
 
@@ -684,7 +630,6 @@ async function populateForm(apptData) {
     if (originalData.client_id) document.getElementById('client-select').value = originalData.client_id;
     if (originalData.employee_id) document.getElementById('employee-select').value = originalData.employee_id;
 
-    // Services
     currentServices = [...(apptData.main_services || []), ...(apptData.addon_services || [])].map(s => ({
         appointment_service_id: s.id,
         service_id: s.service_id,
@@ -699,7 +644,6 @@ async function populateForm(apptData) {
     updateSummary();
     onStatusChange();
 
-    // Load employee services for the picker (may hit cache if same employee)
     await loadEmployeeServices();
 }
 
@@ -793,14 +737,10 @@ function onTotalPriceBlur(input) {
 
 function renderServicePicker() {
     const picker = document.getElementById('service-picker');
-    if (!availableServices.length) { picker.style.display = 'none'; return; }
-
     const usedIds = new Set(currentServices.map(s => s.service_id));
     const available = availableServices.filter(s => !usedIds.has(s.service_id));
 
     if (!available.length) {
-        picker.style.display = 'block';
-        picker.innerHTML = '<div style="padding:0.75rem;text-align:center;color:#999;font-size:0.78rem">Wszystkie usługi dodane</div>';
         return;
     }
 
@@ -814,21 +754,16 @@ function renderServicePicker() {
                 <div class="pp-svc-opt-name">${esc(s.service_name)}</div>
                 <div class="pp-svc-opt-meta">${dur} min · ${fmtPrice(price)}</div>
             </div>
-            <button class="btn-svc-add" onclick="addService(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', ${price}, ${dur})">+ Dodaj</button>
         </div>`;
     }).join('');
 }
 
-function addService(serviceId, serviceName, price, duration) {
-    currentServices.push({ appointment_service_id: null, service_id: serviceId, service_name: serviceName, price_charged: price, duration_minutes: duration, is_addon: true });
     totalPriceOverride = null;
-    renderServices(); renderServicePicker(); updateSummary(); triggerConflictCheck();
 }
 
 function removeService(index) {
     currentServices.splice(index, 1);
     totalPriceOverride = null;
-    renderServices(); renderServicePicker(); updateSummary(); triggerConflictCheck();
 }
 
 // ══════════════════════════════════════════════════════
@@ -904,7 +839,6 @@ function forceSave() {
 // ══════════════════════════════════════════════════════
 //  RESET
 // ══════════════════════════════════════════════════════
-function resetFields() {
     if (!originalData) return;
     document.getElementById('status-select').value = originalData.status;
     document.getElementById('client-select').value = originalData.client_id;
@@ -919,7 +853,6 @@ function resetFields() {
     currentServices = JSON.parse(JSON.stringify(originalServices));
     totalPriceOverride = null;
     forceAllowSave = false;
-    renderServices(); renderServicePicker(); updateSummary(); onStatusChange();
     showToast('Zresetowano do oryginalnych wartości', 'info');
 }
 
@@ -975,11 +908,9 @@ async function saveChanges() {
         }).then(r => r.json());
 
         if (data.success) {
-            showToast('Zmiany zapisane', 'success', 1800);
             originalData = {...originalData, ...payload};
             originalServices = JSON.parse(JSON.stringify(currentServices));
             forceAllowSave = false;
-            // Refresh adjacent after save (status/date change may shift order)
             loadAdjacent();
         } else {
             showToast(data.error || 'Błąd zapisu', 'error', 3500);
@@ -1046,7 +977,6 @@ function getTabOrder() {
     add('appt-date');
     add('appt-time');
 
-    // Right panel — service rows (price, duration for each)
     currentServices.forEach((_, idx) => {
         add(`svc-price-${idx}`);
         add(`svc-dur-${idx}`);
@@ -1115,8 +1045,6 @@ function handleKeyboard(e) {
     // Alt+ArrowLeft/Right — navigate
     if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); navigate('prev'); }
     if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); navigate('next'); }
-    // Escape — close conflict modal
-    if (e.key === 'Escape') closeConflictModal();
     // Tab — handled by focus trap
     if (e.key === 'Tab') handleTab(e);
 }
@@ -1125,18 +1053,13 @@ function handleKeyboard(e) {
 //  INIT
 // ══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-    applyStoredMode();
-
     // Remove sidebar from tab order on this page (focus trap complement)
     document.querySelectorAll('aside a, aside button').forEach(el => el.tabIndex = -1);
 
-    // Load clients + employees (likely cached after first visit)
-    await Promise.all([loadClients(), loadEmployees()]);
 
     // Load appointment data + adjacent in parallel
     const [apptData, adjData] = await Promise.all([
         fetch(`/api/appointments/${APPT_ID}`).then(r => r.json()),
-        fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=${navMode}`).then(r => r.json())
     ]);
 
     updateAdjacent(adjData);

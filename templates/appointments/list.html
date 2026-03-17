@@ -164,6 +164,7 @@
 
 {% block extra_scripts %}
 <script>
+const IS_SUPERUSER = {{ (current_user.role == 'superuser') | tojson }};
 const STATUS_LABELS = {
     'scheduled': 'Zaplanowana',
     'confirmed': 'Potwierdzona',
@@ -304,7 +305,7 @@ async function loadAppointments() {
                         <td><span class="status-badge ${a.status}">${statusLabel}</span></td>
                         <td>${renderVisitRating(a.satisfaction_score)}</td>
                         <td style="text-align:right;">
-                            <a href="/appointment/${a.id}/edit?from=list" class="action-link">Modyfikuj</a><span class="action-separator">|</span><a href="/appointment/${a.id}?from=list" class="action-link">Szczegóły</a>
+                            <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list`}" class="action-link">Modyfikuj</a><span class="action-separator">|</span><a href="/appointment/${a.id}?from=list" class="action-link">Szczegóły</a>
                         </td>
                     </tr>
                 `;

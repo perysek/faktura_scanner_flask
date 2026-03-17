@@ -1,10 +1,11 @@
 """
 Main page routes - renders Jinja templates
 """
-from flask import Blueprint, render_template, current_app
+from flask import Blueprint, render_template, redirect, url_for, current_app
 from flask_login import login_required, current_user
 
 from config.auth_config import module_permission_required, role_required
+from config.database import get_db_connection
 
 main_bp = Blueprint('main', __name__)
 
@@ -313,6 +314,20 @@ def view_appointment(appointment_id):
 def edit_appointment(appointment_id):
     """Edit appointment"""
     return render_template('appointments/edit.html', appointment_id=appointment_id)
+
+
+@main_bp.route('/superadmin/visits/latest')
+@login_required
+@role_required('superuser')
+def superadmin_edit_latest():
+    """Redirect to the most recently created appointment in the power editor"""
+    conn = get_db_connection()
+    with conn.cursor() as cur:
+        cur.execute('SELECT id FROM appointments ORDER BY id DESC LIMIT 1')
+        row = cur.fetchone()
+    if not row:
+        return redirect(url_for('main.appointments_list'))
+    return redirect(url_for('main.superadmin_edit_visit', appointment_id=row['id']))
 
 
 @main_bp.route('/superadmin/visits/<int:appointment_id>')
