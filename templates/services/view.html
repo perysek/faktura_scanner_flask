@@ -687,6 +687,16 @@ async function confirmDelete() {
         });
     }
 }
+
+// Skrót klawiszowy: Esc = powrót do listy usług
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.querySelector('.modal-overlay')) return;
+        const cm = document.getElementById('confirm-modal');
+        if (cm && !cm.classList.contains('hidden')) return;
+        window.location.href = '{{ url_for("main.services_list") }}';
+    }
+});
 </script>
 
 <!-- Modal System -->

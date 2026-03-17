@@ -1,0 +1,10 @@
+# Dev/test dependencies — NOT installed on production
+-r requirements.txt
+
+# Testing
+pytest==8.3.4
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+
+# Factory pattern for test data
+factory-boy==3.3.1

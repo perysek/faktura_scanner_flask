@@ -505,11 +505,11 @@
         </div>
         <div class="stat-item">
             <span class="stat-value" id="stat-paid">—</span>
-            <span class="stat-label">Oplacone</span>
+            <span class="stat-label">Opłacone</span>
         </div>
         <div class="stat-item">
             <span class="stat-value" id="stat-unpaid">—</span>
-            <span class="stat-label">Nieoplacone</span>
+            <span class="stat-label">Nieopłacone</span>
         </div>
     </div>
 
@@ -535,8 +535,8 @@
                         <th class="sortable">NIP</th>
                         <th class="sortable">Nazwa</th>
                         <th style="text-align: center;">Faktury</th>
-                        <th style="text-align: right;">Oplacone</th>
-                        <th style="text-align: right;">Nieoplacone</th>
+                        <th style="text-align: right;">Opłacone</th>
+                        <th style="text-align: right;">Nieopłacone</th>
                         <th class="col-updated">Aktualizacja</th>
                         <th></th>
                     </tr>
@@ -691,7 +691,7 @@ async function loadSellers() {
         }
     } catch (error) {
         console.error('Error loading sellers:', error);
-        Notifications.error('Blad ladowania sprzedawcow');
+        Notifications.error('Błąd ładowania sprzedawców');
     }
 }
 
@@ -796,11 +796,11 @@ async function confirmDeleteSeller(sellerId) {
                     Notifications.success('Sprzedawca zostal usuniety');
                     loadSellers();
                 } else {
-                    Notifications.error(result.error || 'Blad usuwania');
+                    Notifications.error(result.error || 'Błąd usuwania');
                 }
             } catch (error) {
                 Modals.close(loadingModal);
-                Notifications.error('Blad usuwania sprzedawcy');
+                Notifications.error('Błąd usuwania sprzedawcy');
             }
         }
     });
@@ -814,12 +814,12 @@ async function syncSellers() {
         if (result.success) {
             showSyncResults(result);
         } else {
-            Notifications.error(result.error || 'Blad synchronizacji');
+            Notifications.error(result.error || 'Błąd synchronizacji');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Sync error:', error);
-        Notifications.error('Blad synchronizacji: ' + error.message);
+        Notifications.error('Błąd synchronizacji: ' + error.message);
     }
 }
 
@@ -991,12 +991,12 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
             // Re-run sync to refresh the inline view
             await refreshSyncResults();
         } else {
-            Notifications.error(result.error || 'Blad naprawiania niezgodnosci');
+            Notifications.error(result.error || 'Błąd naprawiania niezgodności');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fixing discrepancy:', error);
-        Notifications.error('Blad naprawiania: ' + error.message);
+        Notifications.error('Błąd naprawiania:' + error.message);
     }
 }
 
@@ -1012,12 +1012,12 @@ async function addMissingSeller(nip, name) {
             // Re-run sync to refresh the inline view
             await refreshSyncResults();
         } else {
-            Notifications.error(result.error || 'Blad dodawania sprzedawcy');
+            Notifications.error(result.error || 'Błąd dodawania sprzedawcy');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error adding missing seller:', error);
-        Notifications.error('Blad dodawania: ' + error.message);
+        Notifications.error('Błąd dodawania:' + error.message);
     }
 }
 
@@ -1029,7 +1029,7 @@ async function refreshSyncResults() {
         }
     } catch (error) {
         console.error('Error refreshing sync results:', error);
-        Notifications.error('Blad odswiezania: ' + error.message);
+        Notifications.error('Błąd odświeżania:' + error.message);
     }
 }
 </script>

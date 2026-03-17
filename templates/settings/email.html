@@ -413,12 +413,12 @@ function setupForm() {
             if (result.success) {
                 Notifications.success('Ustawienia zostaly zapisane');
             } else {
-                Notifications.error('Blad zapisywania ustawien');
+                Notifications.error('Błąd zapisywania ustawień');
             }
         } catch (error) {
             Modals.close(loadingModal);
             console.error('Save error:', error);
-            Notifications.error('Blad zapisywania: ' + error.message);
+            Notifications.error('Błąd zapisywania: ' + error.message);
         }
     });
 }
@@ -430,7 +430,7 @@ async function testConnection() {
     const password = document.getElementById('password').value;
 
     if (!server || !email || !password) {
-        Notifications.warning('Prosze wypelnic wszystkie wymagane pola');
+        Notifications.warning('Proszę wypełnić wszystkie wymagane pola');
         return;
     }
 
@@ -447,14 +447,14 @@ async function testConnection() {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success('Polaczenie z serwerem IMAP zostalo nawiazane pomyslnie!');
+            Notifications.success('Połączenie z serwerem IMAP zostało nawiązane pomyślnie!');
         } else {
-            Notifications.error('Nie udalo sie polaczyc z serwerem. Sprawdz ustawienia i sprobuj ponownie.');
+            Notifications.error('Nie udało się połączyć z serwerem. Sprawdź ustawienia i spróbuj ponownie.');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Test error:', error);
-        Notifications.error('Blad testowania polaczenia: ' + error.message);
+        Notifications.error('Błąd testowania połączenia: ' + error.message);
     }
 }
 

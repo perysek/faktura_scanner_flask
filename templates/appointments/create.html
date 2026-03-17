@@ -311,6 +311,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cancelBtn.href = backUrl;
 
+    // Skróty klawiszowe: Ctrl+S = zapisz, Esc = anuluj
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            document.getElementById('btn-save').click();
+        }
+        if (e.key === 'Escape') {
+            if (document.querySelector('.modal-overlay')) return;
+            const cm = document.getElementById('confirm-modal');
+            if (cm && !cm.classList.contains('hidden')) return;
+            const tag = document.activeElement?.tagName;
+            if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+            const btn = document.getElementById('btn-cancel');
+            if (btn) window.location.href = btn.href;
+        }
+    });
+
     // Load form data
     loadClients();
     loadEmployees().then(() => {

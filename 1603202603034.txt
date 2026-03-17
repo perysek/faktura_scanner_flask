@@ -1,0 +1,1985 @@
+╭─── Claude Code v2.1.76 ──────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                Welcome back Piotrek!               │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ Recent activity         │
+│                        ▘▘ ▝▝                       │ No recent activity      │
+│   Sonnet 4.6 · Claude Pro · perysek@proton.me's    │                         │
+│   Organization                                     │                         │
+│         C:\projects\faktura_scanner_flask          │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+> /mcp                                                                          
+  ⎿  MCP dialog dismissed
+
+> in @templates/appointments/superadmin_edit.html when service is added to      
+appointment - it is visible as addon, but should be main. Any service which is  
+main is saved as 'addon'. why                                                   
+  ⎿  Read templates\appointments\superadmin_edit.html (1177 lines)
+
+● Zanim napiszę kod, przejrzę backend, żeby zrozumieć co API zwraca dla usług
+  pracownika.
+
+● Searched for 3 patterns (ctrl+o to expand)
+
+● Znalazłem! Teraz sprawdzę, co dokładnie zwraca API
+  /api/employees/{id}/services.
+
+● Read 2 files (ctrl+o to expand)
+
+● Ora sprawdzę model services żeby zobaczyć pola service_type i is_addon.
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● Znalazłem przyczynę. Dwa błędy naraz.
+
+  ★ Insight ─────────────────────────────────────
+  Tabela services ma service_type = 'main' | 'addon' — to czy usługa jest główna
+   czy dodatkiem jest właściwością samej usługi. Natomiast
+  appointment_services.is_addon to flaga przy konkretnym przypisaniu do wizyty.
+  Te dwie rzeczy muszą być spójne. Tutaj informacja z service_type gubi się po
+  drodze.
+  ─────────────────────────────────────────────────
+
+  Dwa błędy w kodzie JavaScript:
+
+  1. addService hardkoduje is_addon: true (linia 839) — każda nowo dodana
+  usługa, niezależnie od jej service_type, ląduje jako addon.
+  2. renderServicePicker nie przekazuje service_type (linia 833) —
+  s.service_type jest w danych z API (query robi SELECT s.service_type), ale nie
+   jest wysyłany do addService.
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Error editing file
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line, removed 1 line
+      830                  <div class="pp-svc-opt-name">${esc(s.service_n
+           ame)}</div>
+      831                  <div class="pp-svc-opt-meta">${dur} min · ${fm
+           tPrice(price)}</div>
+      832              </div>
+      833 -            <button class="btn-svc-add" onclick="addService(${
+          -s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', $
+          -{price}, ${dur})">+ Dodaj</button>                            
+      833 +            <button class="btn-svc-add" onclick="addService(${
+          +s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', $
+          +{price}, ${dur}, ${s.service_type === 'addon'})">+ Dodaj</butt
+          +on>
+      834          </div>`;
+      835      }).join('');
+      836  }
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 2 lines
+      835      }).join('');
+      836  }
+      837 
+      838 -function addService(serviceId, serviceName, price, duration) {
+      839 -    currentServices.push({ appointment_service_id: null, servi
+          -ce_id: serviceId, service_name: serviceName, price_charged: pr
+          -ice, duration_minutes: duration, is_addon: true });           
+      838 +function addService(serviceId, serviceName, price, duration, i
+          +sAddon) {
+      839 +    currentServices.push({ appointment_service_id: null, servi
+          +ce_id: serviceId, service_name: serviceName, price_charged: pr
+          +ice, duration_minutes: duration, is_addon: !!isAddon });
+      840      totalPriceOverride = null;
+      841      renderServices(); renderServicePicker(); updateSummary();
+           triggerConflictCheck();
+      842  }
+
+● ★ Insight ─────────────────────────────────────
+  Użyłem !!isAddon zamiast samego isAddon, bo ${s.service_type === 'addon'} w
+  template literal wstrzykuje ciąg "true" lub "false" do atrybutu onclick.
+  JavaScript traktuje nieopakowany string "false" jako truthy (niepusty string),
+   dlatego !! wymusza konwersję do prawdziwego booleana.
+  ─────────────────────────────────────────────────
+
+  Podsumowanie zmian:
+
+  ┌──────────────────────┬──────────────────────┬──────────────────────────┐
+  │       Miejsce        │        Przed         │            Po            │
+  ├──────────────────────┼──────────────────────┼──────────────────────────┤
+  │ renderServicePicker  │ addService(...,      │ addService(..., ${dur},  │
+  │ (linia 833)          │ ${dur})              │ ${s.service_type ===     │
+  │                      │                      │ 'addon'})                │
+  ├──────────────────────┼──────────────────────┼──────────────────────────┤
+  │                      │ function             │ function addService(..., │
+  │ addService (linia    │ addService(...,      │  duration, isAddon) +    │
+  │ 838-839)             │ duration) +          │ is_addon: !!isAddon      │
+  │                      │ is_addon: true       │                          │
+  └──────────────────────┴──────────────────────┴──────────────────────────┘
+
+  Teraz gdy klikniesz "Dodaj" w pickerze, usługa z service_type = 'main'
+  zostanie zapisana jako is_addon: false (usługa główna), a usługa z
+  service_type = 'addon' jako is_addon: true.
+
+✻ Churned for 1m 32s
+
+> @templates/appointments/superadmin_edit.html zapisuje usunięcie i ponowne     
+dodanie usługi do wizyty w ten sposób, że zapisuje tylko pola w formularzu, a   
+pozostałe dotyczące usługi są zapisywane jako puste.                            
+  ⎿  Read templates\appointments\superadmin_edit.html (1177 lines)
+
+● Muszę zobaczyć jak backend obsługuje zapis usług przy PUT 
+  /api/appointments/:id.
+
+● Searched for 2 patterns, read 2 files (ctrl+o to expand)
+
+● Teraz widzę pełny obraz. Sprawdzę jeszcze add_service w repozytorium i model
+  AppointmentService.
+
+● Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Teraz widzę pełny obraz. Sprawdzę jeszcze jak liczona jest prowizja, żeby
+  naprawić backend.
+
+● Searched for 2 patterns, read 2 files (ctrl+o to expand)
+
+● Mam pełny obraz. Oto dokładna diagnoza:
+
+  ★ Insight ─────────────────────────────────────
+  Backend stosuje strategię delete-all + re-insert (linia 523) zamiast diff. To
+  prostsze, ale wymaga, żeby każde pole AppointmentService było przekazywane
+  przy każdym zapisie. Pole commission_rate jest obliczane z relacji
+  employee_services — nie ze stanu formularza — więc trzeba je wyznaczyć
+  ponownie przy każdym zapisie.
+  ─────────────────────────────────────────────────
+
+  Diagnoza — dwa miejsca:
+
+  1. appointment_service.py linia 532-533 — commission_rate i commission_amount
+  hardkodowane na Decimal('0') zamiast być wyznaczane z employee_services. Każdy
+   zapis niszczy dane prowizji.
+  2. Frontend linia ~970 — payload nie wysyła appointment_service_id (więc
+  backend nie może robić UPDATE zamiast DELETE+INSERT, co jest OK przy tej
+  architekturze).
+
+  Naprawię backend — wyznaczę commission_rate z
+  PricingService.resolve_commission i przeliczę commission_amount:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(services\appointment_service.py)
+  ⎿  Added 13 lines, removed 4 lines
+      520          self.appt_repo.update(appointment_id, appt)
+      521 
+      522          # 6. Usuń stare usługi i dodaj nowe
+      523 +        from database.models import AppointmentService as Appo
+          +intmentServiceModel
+      524 +        from services.pricing_service import PricingService
+      525 +        from decimal import ROUND_HALF_UP
+      526 +
+      527 +        pricing_svc = PricingService()
+      528          self.appt_svc_repo.delete_all_for_appointment(appointm
+           ent_id)
+      529 
+      530          for svc in services:
+      526 -            from database.models import AppointmentService as 
+          -AppointmentServiceModel                                       
+      531 +            price_charged = Decimal(str(svc['price_charged']))
+      532 +            commission_rate = pricing_svc.resolve_commission(e
+          +mployee_id, int(svc['service_id'])) or Decimal('0')
+      533 +            commission_amount = (price_charged * commission_ra
+          +te / Decimal('100')).quantize(
+      534 +                Decimal('0.01'), rounding=ROUND_HALF_UP
+      535 +            )
+      536              appt_svc = AppointmentServiceModel(
+      537                  appointment_id=appointment_id,
+      538                  service_id=int(svc['service_id']),
+      530 -                price_charged=Decimal(str(svc['price_charged']
+          -)),                                                           
+      539 +                price_charged=price_charged,
+      540                  duration_minutes=int(svc['duration_minutes']),
+      532 -                commission_rate=Decimal('0'),  # Można dodać l
+          -ogikę prowizji                                                
+      533 -                commission_amount=Decimal('0'),               
+      541 +                commission_rate=commission_rate,
+      542 +                commission_amount=commission_amount,
+      543                  is_addon=bool(svc.get('is_addon', False))
+      544              )
+      545              self.appt_svc_repo.add_service(appt_svc)
+
+● ★ Insight ─────────────────────────────────────
+  commission_rate pochodzi z relacji employee_services (stawka procentowa
+  przypisana do pracownika dla tej usługi). commission_amount to kwota prowizji
+  przeliczona od aktualnej ceny price_charged — nie od ceny domyślnej. Dzięki
+  temu jeśli admin zmienił cenę usługi w formularzu, prowizja kwotowa jest
+  odpowiednio przeliczona.
+  ─────────────────────────────────────────────────
+
+  Co zmieniłem i dlaczego:
+
+  Było: commission_rate=Decimal('0')
+  Jest: pricing_svc.resolve_commission(employee_id, service_id)
+  Powód: Odczyt rzeczywistej stawki z employee_services
+  ────────────────────────────────────────
+  Było: commission_amount=Decimal('0')
+  Jest: price_charged * commission_rate / 100
+  Powód: Przeliczenie od faktycznej ceny
+
+  resolve_commission zwraca None gdy pracownik nie ma tej usługi w
+  employee_services (np. usługa dodana ręcznie przez superadmina) — w tym
+  przypadku or Decimal('0') zachowuje bezpieczeństwo bez rzucania wyjątku.
+
+✻ Cogitated for 2m 1s
+
+> zmień strategię zapisu z delete-all + re-insert na diff. TASK#2: dodaj pole   
+edycji commission_rate dla tej wizyty. TASK#3: aktualnie można                  
+dodawać/modyfikować usługi do wizyty tylko takie, które są przypisane do        
+pracownika. dodaj dodatkową opcję dodawania usług nieprzypisanych do pracownika 
+ (sekcja oznaczona jako 'usługi nieprzypisane do pracownika'. TASK#4: dodaj     
+(jeżeli nie ma) aktualizację powiązanego z wizytą income record jeżeli zmieni   
+się cena usługi, prowizja. TASK#5: sprawdź wszystkie relacje do innych tabel    
+bazy danych i aktualizuj kod, żeby wszystkie zmieniane pola były aktualizowane  
+w tabelach powiązanych. Umieść notyfikacje o błędzie, jeżeli jest konflikt      
+podczas aktualizacji wszystkich tabel powiązanych.                              
+
+● To jest spory zakres zmian. Najpierw zbadają architekturę bazy, żeby mieć
+  pełny obraz przed pisaniem kodu.
+  ⎿  Interrupted · What should Claude do instead?
+
+> /model                                                                        
+  ⎿  Kept model as Sonnet 4.6 (default)
+
+> continue                                                                      
+
+● Dobrze, ruszam z całym zakresem. Najpierw szybki rekonesans architektury bazy,
+   potem implementacja task po tasku.
+
+● Explore(Explore DB models and related tables)
+  ⎿  Done (12 tool uses · 75.6k tokens · 1m 27s)
+  (ctrl+o to expand)
+
+● Teraz mam pełny obraz. Zacznę implementację. To duże zmiany — będę robić task
+  po tasku, czytając pliki których potrzebuję.
+
+● Searched for 6 patterns, read 4 files (ctrl+o to expand)
+
+● Mam wszystko czego potrzebuję. Teraz implementacja — task po tasku, plik po
+  pliku.
+
+  ★ Insight ─────────────────────────────────────
+  Strategia diff jest lepsza od delete-all+re-insert bo: (1) zachowuje PK i FK
+  do powiązanych tabel, (2) nie traci historycznych danych (added_at), (3)
+  ogranicza liczbę operacji DB do faktycznie zmienionych rekordów.
+  ─────────────────────────────────────────────────
+
+  Krok 1 — appointment_service_repository.py — metoda update_service
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(repositories\appointments\appointment_service_repository.py)
+  ⎿  Added 23 lines
+      162              cursor.execute(query, (appointment_id, service_id)
+           )
+      163              return cursor.fetchone()['cnt'] > 0
+      164 
+      165 +    def update_service(self, appt_service_id: int, price_charg
+          +ed: Decimal,
+      166 +                       duration_minutes: int, commission_rate:
+          + Decimal,
+      167 +                       commission_amount: Decimal, is_addon: b
+          +ool) -> bool:
+      168 +        """Zaktualizuj istniejącą usługę wizyty (diff strategy
+          + — bez zmiany added_at)"""
+      169 +        query = """
+      170 +            UPDATE appointment_services
+      171 +            SET price_charged = %s, duration_minutes = %s,
+      172 +                commission_rate = %s, commission_amount = %s, 
+          +is_addon = %s
+      173 +            WHERE id = %s
+      174 +        """
+      175 +        with get_db_connection() as conn:
+      176 +            cursor = conn.cursor()
+      177 +            cursor.execute(query, (
+      178 +                str(price_charged),
+      179 +                duration_minutes,
+      180 +                str(commission_rate),
+      181 +                str(commission_amount),
+      182 +                bool(is_addon),
+      183 +                appt_service_id,
+      184 +            ))
+      185 +            conn.commit()
+      186 +            return cursor.rowcount > 0
+      187 +
+      188      def delete(self, appt_service_id: int) -> bool:
+      189          """Usuń usługę z wizyty"""
+      190          query = "DELETE FROM appointment_services WHERE id = %
+           s"
+
+● Krok 2 — income_repository.py — metoda update
+
+● Update(repositories\appointments\income_repository.py)
+  ⎿  Added 31 lines
+      175              cursor.execute(query, (start_date, end_date))
+      176              return cursor.fetchall()
+      177 
+      178 +    def update(self, appointment_id: int, total_amount: Decima
+          +l,
+      179 +               net_amount: Decimal, commission_total: Decimal,
+      180 +               client_id: Optional[int] = None,
+      181 +               employee_id: Optional[int] = None,
+      182 +               payment_method: Optional[str] = None) -> bool:
+      183 +        """Zaktualizuj istniejący rekord przychodu (TASK#4/5)"
+          +""
+      184 +        parts = [
+      185 +            "total_amount = %s",
+      186 +            "net_amount = %s",
+      187 +            "commission_total = %s",
+      188 +        ]
+      189 +        params = [str(total_amount), str(net_amount), str(comm
+          +ission_total)]
+      190 +
+      191 +        if client_id is not None:
+      192 +            parts.append("client_id = %s")
+      193 +            params.append(client_id)
+      194 +        if employee_id is not None:
+      195 +            parts.append("employee_id = %s")
+      196 +            params.append(employee_id)
+      197 +        if payment_method is not None:
+      198 +            parts.append("payment_method = %s")
+      199 +            params.append(payment_method)
+      200 +
+      201 +        params.append(appointment_id)
+      202 +        query = f"UPDATE income_records SET {', '.join(parts)}
+          + WHERE appointment_id = %s"
+      203 +        with get_db_connection() as conn:
+      204 +            cursor = conn.cursor()
+      205 +            cursor.execute(query, tuple(params))
+      206 +            conn.commit()
+      207 +            return cursor.rowcount > 0
+      208 +
+      209      def delete_by_appointment(self, appointment_id: int) -> bo
+           ol:
+      210          """Usuń rekord przychodu dla wizyty (używane przy cofn
+           ięciu statusu 'completed')"""
+      211          query = "DELETE FROM income_records WHERE appointment_
+           id = %s"
+
+● Krok 3 — appointment_repository.py — rozszerzenie update() o brakujące pola
+
+● Update(repositories\appointments\appointment_repository.py)
+  ⎿  Added 9 lines, removed 2 lines
+      384              return cursor.rowcount > 0
+      385 
+      386      def update(self, appointment_id: int, appt: Appointment) -
+           > bool:
+      387 -        """Zaktualizuj wizytę"""                              
+      387 +        """Zaktualizuj wizytę (pełna aktualizacja — w tym sati
+          +sfaction_score, cancellation_reason)"""
+      388          query = """
+      389              UPDATE appointments
+      390              SET client_id = %s, employee_id = %s, appointment_
+           date = %s,
+      391                  start_time = %s, end_time = %s, status = %s,
+      392                  total_price = %s, total_duration = %s, discoun
+           t_amount = %s,
+      393 -                notes = %s, updated_at = CURRENT_TIMESTAMP    
+      393 +                notes = %s,
+      394 +                satisfaction_score = %s,
+      395 +                cancellation_reason = %s,
+      396 +                cancelled_at = %s,
+      397 +                updated_at = CURRENT_TIMESTAMP
+      398              WHERE id = %s
+      399          """
+      400          with get_db_connection() as conn:
+     ...
+      410                  appt.total_duration,
+      411                  str(appt.discount_amount) if appt.discount_amo
+           unt else '0',
+      412                  appt.notes,
+      413 +                appt.satisfaction_score,
+      414 +                appt.cancellation_reason,
+      415 +                appt.cancelled_at,
+      416                  appointment_id
+      417              ))
+      418              conn.commit()
+
+● Krok 4 — appointment_service.py — pełna przebudowa update_appointment
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(services\appointment_service.py)
+  ⎿  Added 98 lines, removed 55 lines
+      428          notes: Optional[str],
+      429          services: List[dict],
+      430          force_save: bool = False,
+      431 +        satisfaction_score: Optional[int] = None,
+      432 +        cancellation_reason: Optional[str] = None,
+      433 +        payment_method: Optional[str] = None,
+      434      ) -> dict:
+      435          """
+      433 -        Aktualizuj wizytę wraz z usługami.                    
+      436 +        Aktualizuj wizytę wraz z usługami (diff strategy).
+      437 
+      435 -        Obsługuje automatyczną aktualizację dochodów przy zmia
+          -nie statusu:                                                  
+      436 -        - Zmiana NA 'completed' → tworzy rekord przychodu (wym
+          -aga daty w przeszłości)                                       
+      437 -        - Zmiana Z 'completed' → usuwa rekord przychodu       
+      438 +        TASK#1: Strategia diff — UPDATE istniejące, INSERT now
+          +e, DELETE usunięte.
+      439 +        TASK#2: Obsługa commission_rate z payloadu lub auto-re
+          +solve z employee_services.
+      440 +        TASK#4: Aktualizacja income_record gdy status pozostaj
+          +e 'completed' a ceny się zmieniły.
+      441 +        TASK#5: Aktualizacja tabel powiązanych — income_record
+          +s, clients.last_visit_date.
+      442 
+      443          Args:
+      440 -            appointment_id: ID wizyty do aktualizacji         
+      441 -            client_id: ID klienta                             
+      442 -            employee_id: ID pracownika                        
+      443 -            appointment_date: Data wizyty                     
+      444 -            start_time: Godzina rozpoczęcia                   
+      445 -            end_time: Godzina zakończenia                     
+      446 -            status: Status wizyty                             
+      447 -            notes: Uwagi                                      
+      448 -            services: Lista usług [{service_id, price_charged,
+          - duration_minutes, is_addon}, ...]                            
+      449 -                                                              
+      450 -        Returns:                                              
+      451 -            dict z potwierdzeniem i nowym totalem             
+      444 +            services: [{appointment_service_id?, service_id, p
+          +rice_charged,
+      445 +                        duration_minutes, commission_rate?, is
+          +_addon}]
+      446 +            payment_method: Metoda płatności — aktualizuje inc
+          +ome_records.payment_method
+      447          """
+      453 -        from database.models import Appointment               
+      454 -        from decimal import Decimal                           
+      455 -                                                              
+      448          # 1. Sprawdź czy wizyta istnieje i pobierz stary statu
+           s
+      449          appt_row = self.appt_repo.get_by_id(appointment_id)
+      450          if not appt_row:
+      451              raise AppointmentError("Wizyta nie istnieje")
+      452 
+      453          old_status = appt_row['status']
+      454 +        old_client_id = appt_row['client_id']
+      455 +        old_employee_id = appt_row['employee_id']
+      456 +        old_appointment_date = appt_row['appointment_date']
+      457 
+      458          # 2. Walidacja: zmiana statusu na 'completed' wymaga d
+           aty w przeszłości
+      459          if status == 'completed' and old_status != 'completed'
+           :
+      460              appointment_datetime = datetime.combine(appointmen
+           t_date, start_time)
+      466 -            now = datetime.now()                              
+      467 -            if appointment_datetime > now:                    
+      461 +            if appointment_datetime > datetime.now():
+      462                  raise AppointmentError(
+      463                      "Nie można zmienić statusu na 'zakończona'
+            dla wizyty w przyszłości. "
+      464                      f"Data wizyty: {appointment_datetime.strft
+           ime('%Y-%m-%d %H:%M')}, "
+      471 -                    f"obecna data: {now.strftime('%Y-%m-%d %H:
+          -%M')}"                                                        
+      465 +                    f"obecna data: {datetime.now().strftime('%
+          +Y-%m-%d %H:%M')}"
+      466                  )
+      467 
+      474 -        # 2b. Sprawdź konflikty pracownika (pomijane gdy force
+          -_save=True)                                                   
+      468 +        # 2b. Sprawdź konflikty (pomijane gdy force_save=True)
+      469          if not force_save:
+      470              employee_conflicts = self.appt_repo.check_conflict
+           s(
+      471                  employee_id, appointment_date, start_time, end
+           _time,
+     ...
+      476                      f"Konflikt czasowy — pracownik ma {len(emp
+           loyee_conflicts)} kolidującą wizytę/y"
+      477                  )
+      478 
+      485 -            # 2c. Sprawdź konflikty klienta                   
+      479              client_conflicts = self.appt_repo.check_client_con
+           flicts(
+      480                  client_id, appointment_date, start_time, end_t
+           ime,
+      481                  exclude_appointment_id=appointment_id
+     ...
+      491                      f"Konflikt czasowy — klient ma już wizytę 
+           o {conflict_time} z {employee_name}"
+      492                  )
+      493 
+      501 -        # 3. Policz sumę cen i czasu trwania                  
+      494 +        # 3. Policz sumy
+      495          total_price = sum(Decimal(str(s['price_charged'])) for
+            s in services)
+      496          total_duration = sum(s['duration_minutes'] for s in se
+           rvices)
+      497 
+      505 -        # 4. Zaktualizuj obiekt Appointment                   
+      498 +        # 4. Ustal cancelled_at: ustaw gdy zmiana na cancelled
+          +/no_show, wyczyść gdy zmiana Z
+      499 +        is_cancelling = status in ('cancelled', 'no_show') and
+          + old_status not in ('cancelled', 'no_show')
+      500 +        is_uncancelling = status not in ('cancelled', 'no_show
+          +') and old_status in ('cancelled', 'no_show')
+      501 +
+      502 +        if is_cancelling:
+      503 +            cancelled_at = datetime.now()
+      504 +        elif is_uncancelling:
+      505 +            cancelled_at = None
+      506 +        else:
+      507 +            cancelled_at = appt_row.get('cancelled_at')
+      508 +
+      509 +        # 5. Zaktualizuj appointment (wszystkie pola — superad
+          +min bypass)
+      510          appt = Appointment(
+      511              id=appointment_id,
+      512              client_id=client_id,
+     ...
+      517              status=status,
+      518              total_price=total_price,
+      519              total_duration=total_duration,
+      516 -            notes=notes                                       
+      520 +            notes=notes,
+      521 +            satisfaction_score=satisfaction_score,
+      522 +            cancellation_reason=cancellation_reason,
+      523 +            cancelled_at=cancelled_at,
+      524          )
+      518 -                                                              
+      519 -        # 5. Zaktualizuj w bazie                              
+      525          self.appt_repo.update(appointment_id, appt)
+      526 
+      522 -        # 6. Usuń stare usługi i dodaj nowe                   
+      523 -        from database.models import AppointmentService as Appo
+          -intmentServiceModel                                           
+      524 -        from services.pricing_service import PricingService   
+      525 -        from decimal import ROUND_HALF_UP                     
+      526 -                                                              
+      527 +        # 6. DIFF strategy — aktualizuj usługi bez delete-all
+      528          pricing_svc = PricingService()
+      528 -        self.appt_svc_repo.delete_all_for_appointment(appointm
+          -ent_id)                                                       
+      529 
+      530 +        existing_rows = self.appt_svc_repo.get_all_for_appoint
+          +ment(appointment_id)
+      531 +        existing_by_id = {row['id']: row for row in existing_r
+          +ows}
+      532 +        incoming_existing_ids = set()
+      533 +
+      534          for svc in services:
+      535              price_charged = Decimal(str(svc['price_charged']))
+      532 -            commission_rate = pricing_svc.resolve_commission(e
+          -mployee_id, int(svc['service_id'])) or Decimal('0')           
+      536 +            appt_svc_id = svc.get('appointment_service_id')
+      537 +
+      538 +            # Commission rate: from payload if explicitly prov
+          +ided, else resolve from employee_services
+      539 +            if svc.get('commission_rate') is not None:
+      540 +                commission_rate = Decimal(str(svc['commission_
+          +rate']))
+      541 +            else:
+      542 +                commission_rate = pricing_svc.resolve_commissi
+          +on(employee_id, int(svc['service_id'])) or Decimal('0')
+      543 +
+      544              commission_amount = (price_charged * commission_ra
+           te / Decimal('100')).quantize(
+      545                  Decimal('0.01'), rounding=ROUND_HALF_UP
+      546              )
+      536 -            appt_svc = AppointmentServiceModel(               
+      537 -                appointment_id=appointment_id,                
+      538 -                service_id=int(svc['service_id']),            
+      539 -                price_charged=price_charged,                  
+      540 -                duration_minutes=int(svc['duration_minutes']),
+      541 -                commission_rate=commission_rate,              
+      542 -                commission_amount=commission_amount,          
+      543 -                is_addon=bool(svc.get('is_addon', False))     
+      544 -            )                                                 
+      545 -            self.appt_svc_repo.add_service(appt_svc)          
+      547 +            is_addon = bool(svc.get('is_addon', False))
+      548 
+      547 -        # 7. Obsługa dochodów przy zmianie statusu            
+      549 +            if appt_svc_id and appt_svc_id in existing_by_id:
+      550 +                # UPDATE existing record — preserves id, added
+          +_at
+      551 +                self.appt_svc_repo.update_service(
+      552 +                    appt_svc_id, price_charged, int(svc['durat
+          +ion_minutes']),
+      553 +                    commission_rate, commission_amount, is_add
+          +on
+      554 +                )
+      555 +                incoming_existing_ids.add(appt_svc_id)
+      556 +            else:
+      557 +                # INSERT new record
+      558 +                new_svc = AppointmentService(
+      559 +                    appointment_id=appointment_id,
+      560 +                    service_id=int(svc['service_id']),
+      561 +                    price_charged=price_charged,
+      562 +                    duration_minutes=int(svc['duration_minutes
+          +']),
+      563 +                    commission_rate=commission_rate,
+      564 +                    commission_amount=commission_amount,
+      565 +                    is_addon=is_addon,
+      566 +                )
+      567 +                self.appt_svc_repo.add_service(new_svc)
+      568 +
+      569 +        # DELETE records removed by the user
+      570 +        for existing_id in existing_by_id:
+      571 +            if existing_id not in incoming_existing_ids:
+      572 +                self.appt_svc_repo.delete(existing_id)
+      573 +
+      574 +        # 7. TASK#4/5 — obsługa income_record i tabel powiązan
+          +ych
+      575          existing_income = self.income_repo.get_by_appointment(
+           appointment_id)
+      576 
+      577          if status == 'completed' and old_status != 'completed'
+           :
+      551 -            # Zmiana NA 'completed' → utwórz rekord przychodu 
+          -jeśli nie istnieje                                            
+      578 +            # Zmiana NA 'completed' → utwórz income_record
+      579              if not existing_income:
+      553 -                # Oblicz sumy dla rekordu przychodu           
+      580                  totals = self.appt_svc_repo.get_appointment_to
+           tals(appointment_id)
+      555 -                commission_total = totals.get('total_commissio
+          -n', Decimal('0'))                                             
+      556 -                                                              
+      581                  income = IncomeRecord(
+      582                      appointment_id=appointment_id,
+      583                      client_id=client_id,
+     ...
+      585                      total_amount=total_price,
+      586                      discount_amount=Decimal('0'),
+      587                      net_amount=total_price,
+      564 -                    commission_total=commission_total,        
+      565 -                    payment_method=None,  # Można dodać do par
+          -ametrów jeśli potrzebne                                       
+      566 -                    payment_date=date.today()                 
+      588 +                    commission_total=Decimal(str(totals.get('t
+          +otal_commission', 0))),
+      589 +                    payment_method=payment_method,
+      590 +                    payment_date=appointment_date,
+      591                  )
+      592                  self.income_repo.create(income)
+      593 
+      594 +            # Aktualizuj last_visit_date klienta
+      595 +            self.client_repo.update_last_visit(client_id, appo
+          +intment_date)
+      596 +
+      597          elif status != 'completed' and old_status == 'complete
+           d':
+      571 -            # Zmiana Z 'completed' na inny → usuń rekord przyc
+          -hodu                                                          
+      598 +            # Zmiana Z 'completed' → usuń income_record
+      599              if existing_income:
+      600                  self.income_repo.delete_by_appointment(appoint
+           ment_id)
+      601 
+      602 +        elif status == 'completed' and old_status == 'complete
+          +d' and existing_income:
+      603 +            # TASK#4: status pozostaje 'completed' — aktualizu
+          +j income_record gdy zmieniły się ceny
+      604 +            totals = self.appt_svc_repo.get_appointment_totals
+          +(appointment_id)
+      605 +            self.income_repo.update(
+      606 +                appointment_id=appointment_id,
+      607 +                total_amount=total_price,
+      608 +                net_amount=total_price,
+      609 +                commission_total=Decimal(str(totals.get('total
+          +_commission', 0))),
+      610 +                client_id=client_id if client_id != old_client
+          +_id else None,
+      611 +                employee_id=employee_id if employee_id != old_
+          +employee_id else None,
+      612 +                payment_method=payment_method,
+      613 +            )
+      614 +            # Aktualizuj last_visit_date gdy zmieniono datę wi
+          +zyty
+      615 +            if appointment_date != old_appointment_date:
+      616 +                self.client_repo.update_last_visit(client_id,
+          +appointment_date)
+      617 +
+      618          return {
+      619              'appointment_id': appointment_id,
+      620              'total_price': float(total_price),
+
+● Krok 5 — appointment_routes.py — przekazanie nowych pól
+
+● Update(routes\appointment_routes.py)
+  ⎿  Added 3 lines
+      290              notes=data.get('notes'),
+      291              services=data['services'],
+      292              force_save=force,
+      293 +            satisfaction_score=data.get('satisfaction_score'),
+      294 +            cancellation_reason=data.get('cancellation_reason'
+          +),
+      295 +            payment_method=data.get('payment_method'),
+      296          )
+      297 
+      298          entity_label = f"{data.get('appointment_date')} {data.
+           get('start_time','')}"
+
+● Krok 6 — Frontend — wszystkie 4 taski jednocześnie
+
+  ★ Insight ─────────────────────────────────────
+  Dla TASK#3 "usługi nieprzypisane" używam osobnego allServices cache —
+  ładowanego raz z /api/services, niezależnie od pracownika. Picker filtruje:
+  sekcja 1 = availableServices minus usedIds, sekcja 2 = allServices minus 
+  employeeServiceIds minus usedIds.
+  ─────────────────────────────────────────────────
+
+  Teraz duże zmiany w szablonie — najpierw przeczytam kluczowe fragmenty:
+
+● Read 1 file (ctrl+o to expand)
+
+● Teraz wszystkie zmiany frontendowe. Zacznę od CSS, potem JS.
+
+  CSS — nowe style dla commission_rate pola i sekcji "nieprzypisane":
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line
+      136      }
+      137      .svc-inline-input:focus { outline: none; border-color: var
+           (--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+      138      .svc-inline-input.dur { width: 62px; }
+      139 +    .svc-inline-input.comm { width: 58px; }
+      140 
+      141      .btn-svc-remove { padding: 0.25rem; background: white; bor
+           der: 1px solid var(--pp-border); border-radius: 2px; cursor: p
+           ointer; color: var(--pp-ink-subtle); line-height: 1; transitio
+           n: all 0.1s; flex-shrink: 0; }
+      142      .btn-svc-remove:hover { background: #fef2f2; border-color:
+            var(--pp-danger); color: var(--pp-danger); }
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 4 lines
+      151      .pp-svc-opt-meta { font-family: var(--pp-mono); font-size:
+            0.73rem; color: var(--pp-ink-subtle); }
+      152      .btn-svc-add { padding: 0.28rem 0.6rem; font-size: 0.8rem;
+            background: var(--pp-blue); color: white; border: none; borde
+           r-radius: 2px; cursor: pointer; font-family: var(--pp-body); f
+           ont-weight: 500; white-space: nowrap; transition: background 0
+           .15s; }
+      153      .btn-svc-add:hover { background: #1d4ed8; }
+      154 +    .btn-svc-add.unassigned { background: var(--pp-warning); }
+      155 +    .btn-svc-add.unassigned:hover { background: #b45309; }
+      156 +    .pp-svc-section-label { font-size: 0.64rem; font-weight: 6
+          +00; text-transform: uppercase; letter-spacing: 0.07em; color:
+          +var(--pp-ink-subtle); padding: 0.35rem 0.6rem 0.15rem; border-
+          +top: 1px solid var(--pp-border); background: var(--pp-surface-
+          +warm); }
+      157 +    .pp-svc-option.unassigned { background: rgba(245,158,11,0.
+          +04); }
+      158 
+      159      /* ── Summary ── */
+      160      .pp-summary { background: var(--pp-surface-warm); border:
+           1px solid var(--pp-border); border-radius: 2px; padding: 0.75r
+           em; margin-top: 0.625rem; }
+
+● STATE — dodaj allServices:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 1 line
+      481  let originalData = null;
+      482  let originalServices = [];
+      483  let currentServices = [];
+      484 -let availableServices = [];                                   
+      484 +let availableServices = [];   // services assigned to current 
+          +employee
+      485 +let allServices = [];          // all active services (for una
+          +ssigned section — TASK#3)
+      486  let adjPrev = null;
+      487  let adjNext = null;
+      488  let currentStar = 0;
+
+● populateForm — dodaj commission_rate do currentServices:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 1 line
+      706      if (originalData.client_id) document.getElementById('clien
+           t-select').value = originalData.client_id;
+      707      if (originalData.employee_id) document.getElementById('emp
+           loyee-select').value = originalData.employee_id;
+      708 
+      709 -    // Services                                               
+      709 +    // Services (TASK#1: preserve appointment_service_id for d
+          +iff; TASK#2: load commission_rate)
+      710      currentServices = [...(apptData.main_services || []), ...(
+           apptData.addon_services || [])].map(s => ({
+      711          appointment_service_id: s.id,
+      712          service_id: s.service_id,
+      713          service_name: s.service_name,
+      714          price_charged: parseFloat(s.price_charged || s.effecti
+           ve_price || 0),
+      715          duration_minutes: parseInt(s.duration_minutes || s.eff
+           ective_duration || 0),
+      716 +        commission_rate: parseFloat(s.commission_rate || 0),
+      717          is_addon: s.is_addon || false
+      718      }));
+      719      originalServices = JSON.parse(JSON.stringify(currentServic
+           es));
+
+● loadEmployeeServices + nowa loadAllServices (TASK#3):
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 11 lines
+      673      renderServicePicker();
+      674  }
+      675 
+      676 +// TASK#3: Load all active services once (cached in sessionSto
+          +rage)
+      677 +async function loadAllServices() {
+      678 +    const cached = cacheGet('pp_all_services');
+      679 +    if (cached) { allServices = cached; return; }
+      680 +    const data = await fetch('/api/services?active_only=true')
+          +.then(r => r.json());
+      681 +    if (data.success) {
+      682 +        allServices = data.services || [];
+      683 +        cacheSet('pp_all_services', allServices);
+      684 +    }
+      685 +}
+      686 +
+      687  function onEmployeeChange() {
+      688      loadEmployeeServices();
+      689      triggerConflictCheck();
+
+● renderServices — dodaj pole commission_rate (TASK#2):
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 7 lines
+      787                         onblur="onSvcDurBlur(${idx}, this)"
+      788                         onkeydown="if(event.key==='Enter'){even
+           t.preventDefault();this.blur();}">
+      789              </div>
+      790 +            <div class="svc-field-group" title="Prowizja praco
+          +wnika (%)">
+      791 +                <span class="svc-field-lbl">Prow%</span>
+      792 +                <input type="number" id="svc-comm-${idx}" clas
+          +s="svc-inline-input comm"
+      793 +                       value="${(s.commission_rate || 0).toFix
+          +ed(2)}" min="0" max="100" step="0.01"
+      794 +                       onblur="onSvcCommBlur(${idx}, this)"
+      795 +                       onkeydown="if(event.key==='Enter'){even
+          +t.preventDefault();this.blur();}">
+      796 +            </div>
+      797              <button class="btn-svc-remove" onclick="removeServ
+           ice(${idx})" title="Usuń usługę">
+      798                  <svg fill="none" viewBox="0 0 24 24" stroke="c
+           urrentColor"><path stroke-linecap="round" stroke-linejoin="rou
+           nd" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7
+           .862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h
+           -4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      799              </button>
+
+● Dodaj onSvcCommBlur handler:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 8 lines
+      820      triggerConflictCheck();
+      821  }
+      822 
+      823 +// TASK#2: Commission rate blur handler
+      824 +function onSvcCommBlur(idx, input) {
+      825 +    const val = parseFloat(input.value);
+      826 +    if (isNaN(val) || val < 0 || val > 100) { input.value = (c
+          +urrentServices[idx].commission_rate || 0).toFixed(2); return;
+          +}
+      827 +    currentServices[idx].commission_rate = val;
+      828 +    input.value = val.toFixed(2);
+      829 +}
+      830 +
+      831  // When user manually edits total price, store as override
+      832  function onTotalPriceBlur(input) {
+      833      const val = parseFloat(input.value);
+
+● addService — dodaj commission_rate param:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 10 lines, removed 2 lines
+      868      }).join('');
+      869  }
+      870 
+      871 -function addService(serviceId, serviceName, price, duration, i
+          -sAddon) {                                                     
+      872 -    currentServices.push({ appointment_service_id: null, servi
+          -ce_id: serviceId, service_name: serviceName, price_charged: pr
+          -ice, duration_minutes: duration, is_addon: !!isAddon });      
+      871 +function addService(serviceId, serviceName, price, duration, i
+          +sAddon, commRate) {
+      872 +    currentServices.push({
+      873 +        appointment_service_id: null,
+      874 +        service_id: serviceId,
+      875 +        service_name: serviceName,
+      876 +        price_charged: price,
+      877 +        duration_minutes: duration,
+      878 +        commission_rate: parseFloat(commRate) || 0,
+      879 +        is_addon: !!isAddon
+      880 +    });
+      881      totalPriceOverride = null;
+      882      renderServices(); renderServicePicker(); updateSummary();
+           triggerConflictCheck();
+      883  }
+
+● renderServicePicker — pełny rewrite z dwoma sekcjami (TASK#3):
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 46 lines, removed 18 lines
+      842 
+      843  function renderServicePicker() {
+      844      const picker = document.getElementById('service-picker');
+      845 -    if (!availableServices.length) { picker.style.display = 'n
+          -one'; return; }                                               
+      846 -                                                              
+      845      const usedIds = new Set(currentServices.map(s => s.service
+           _id));
+      848 -    const available = availableServices.filter(s => !usedIds.h
+          -as(s.service_id));                                            
+      846 +    const employeeServiceIds = new Set(availableServices.map(s
+          + => s.service_id));
+      847 
+      850 -    if (!available.length) {                                  
+      851 -        picker.style.display = 'block';                       
+      852 -        picker.innerHTML = '<div style="padding:0.75rem;text-a
+          -lign:center;color:#999;font-size:0.78rem">Wszystkie usługi dod
+          -ane</div>';                                                   
+      848 +    // Section 1: employee-assigned services not yet in appoin
+          +tment
+      849 +    const employeeAvailable = availableServices.filter(s => !u
+          +sedIds.has(s.service_id));
+      850 +
+      851 +    // Section 2 (TASK#3): all services not assigned to employ
+          +ee and not yet in appointment
+      852 +    const unassigned = allServices.filter(s => !employeeServic
+          +eIds.has(s.id) && !usedIds.has(s.id));
+      853 +
+      854 +    if (!employeeAvailable.length && !unassigned.length) {
+      855 +        picker.style.display = availableServices.length || all
+          +Services.length ? 'block' : 'none';
+      856 +        if (picker.style.display === 'block')
+      857 +            picker.innerHTML = '<div style="padding:0.75rem;te
+          +xt-align:center;color:#999;font-size:0.78rem">Wszystkie dostęp
+          +ne usługi dodane</div>';
+      858          return;
+      859      }
+      860 
+      861      picker.style.display = 'block';
+      857 -    picker.innerHTML = available.map(s => {                   
+      858 -        const price = s.effective_price || s.price_offered || 
+          -0;                                                            
+      859 -        const dur = s.effective_duration || s.duration_minutes
+          - || 0;                                                        
+      860 -        return `                                              
+      861 -        <div class="pp-svc-option">                           
+      862 -            <div>                                             
+      863 -                <div class="pp-svc-opt-name">${esc(s.service_n
+          -ame)}</div>                                                   
+      864 -                <div class="pp-svc-opt-meta">${dur} min · ${fm
+          -tPrice(price)}</div>                                          
+      865 -            </div>                                            
+      866 -            <button class="btn-svc-add" onclick="addService(${
+          -s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', $
+          -{price}, ${dur}, ${s.service_type === 'addon'})">+ Dodaj</butt
+          -on>                                                           
+      867 -        </div>`;                                              
+      868 -    }).join('');                                              
+      862 +    let html = '';
+      863 +
+      864 +    if (employeeAvailable.length) {
+      865 +        html += employeeAvailable.map(s => {
+      866 +            const price = s.effective_price || s.price_offered
+          + || 0;
+      867 +            const dur = s.effective_duration || s.duration_min
+          +utes || 0;
+      868 +            const comm = s.effective_commission || 0;
+      869 +            return `
+      870 +            <div class="pp-svc-option">
+      871 +                <div>
+      872 +                    <div class="pp-svc-opt-name">${esc(s.servi
+          +ce_name)}</div>
+      873 +                    <div class="pp-svc-opt-meta">${dur} min · 
+          +${fmtPrice(price)}</div>
+      874 +                </div>
+      875 +                <button class="btn-svc-add" onclick="addServic
+          +e(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}
+          +', ${price}, ${dur}, ${s.service_type === 'addon'}, ${comm})">
+          ++ Dodaj</button>
+      876 +            </div>`;
+      877 +        }).join('');
+      878 +    }
+      879 +
+      880 +    if (unassigned.length) {
+      881 +        html += `<div class="pp-svc-section-label">Usługi niep
+          +rzypisane do pracownika</div>`;
+      882 +        html += unassigned.map(s => {
+      883 +            const price = s.price || 0;
+      884 +            const dur = s.duration_minutes || 0;
+      885 +            return `
+      886 +            <div class="pp-svc-option unassigned">
+      887 +                <div>
+      888 +                    <div class="pp-svc-opt-name">${esc(s.name)
+          +}</div>
+      889 +                    <div class="pp-svc-opt-meta">${dur} min · 
+          +${fmtPrice(price)}</div>
+      890 +                </div>
+      891 +                <button class="btn-svc-add unassigned" onclick
+          +="addService(${s.id}, '${esc(s.name).replace(/'/g,"\\'")}', ${
+          +price}, ${dur}, ${s.service_type === 'addon'}, 0)">+ Dodaj</bu
+          +tton>
+      892 +            </div>`;
+      893 +        }).join('');
+      894 +    }
+      895 +
+      896 +    picker.innerHTML = html;
+      897  }
+      898 
+      899  function addService(serviceId, serviceName, price, duration, i
+           sAddon, commRate) {
+
+● resetFields — dodaj commission_rate:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line
+      1005      totalPriceOverride = null;
+      1006      forceAllowSave = false;
+      1007      renderServices(); renderServicePicker(); updateSummary();
+             onStatusChange();
+      1008 +
+      1009      showToast('Zresetowano do oryginalnych wartości', 'info')
+            ;
+      1010  }
+      1011 
+
+● saveChanges — wyślij appointment_service_id i commission_rate (TASK#1 + 
+  TASK#2):
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines
+      1038          satisfaction_score: currentStar || null,
+      1039          force: forceAllowSave,
+      1040          services: currentServices.map(s => ({
+      1041 +            appointment_service_id: s.appointment_service_id
+           +|| null,
+      1042              service_id: s.service_id,
+      1043              price_charged: parseFloat(s.price_charged),
+      1044              duration_minutes: parseInt(s.duration_minutes),
+      1045 +            commission_rate: parseFloat(s.commission_rate ||
+           +0),
+      1046              is_addon: s.is_addon
+      1047          }))
+      1048      };
+
+● INIT — dodaj loadAllServices do inicjalizacji:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 2 lines
+      1222      // Remove sidebar from tab order on this page (focus trap
+             complement)
+      1223      document.querySelectorAll('aside a, aside button').forEac
+            h(el => el.tabIndex = -1);
+      1224 
+      1225 -    // Load clients + employees (likely cached after first vi
+           -sit)                                                         
+      1226 -    await Promise.all([loadClients(), loadEmployees()]);     
+      1225 +    // Load clients + employees + all services (cached after 
+           +first visit)
+      1226 +    await Promise.all([loadClients(), loadEmployees(), loadAl
+           +lServices()]);
+      1227 
+      1228      // Load appointment data + adjacent in parallel
+      1229      const [apptData, adjData] = await Promise.all([
+
+● Dodaj svc-comm-* do getTabOrder (focus trap):
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 1 line
+      1140      add('appt-date');
+      1141      add('appt-time');
+      1142 
+      1143 -    // Right panel — service rows (price, duration for each) 
+      1143 +    // Right panel — service rows (price, duration, commissio
+           +n for each)
+      1144      currentServices.forEach((_, idx) => {
+      1145          add(`svc-price-${idx}`);
+      1146          add(`svc-dur-${idx}`);
+      1147 +        add(`svc-comm-${idx}`);
+      1148      });
+      1149 
+      1150      // Right panel — notes
+
+● Teraz sprawdzę czy /api/services rzeczywiście obsługuje active_only param:
+
+● Read 1 file (ctrl+o to expand)
+
+● Sprawdzę czy superuser ma dostęp do /api/services:
+
+● Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● Ostatni problem: payment_method jest w income_records, nie w appointments.
+  get_appointment_details go nie zwraca, więc formularz zawsze pokazuje puste
+  pole. Naprawię to:
+
+● Update(services\appointment_service.py)
+  ⎿  Added 7 lines, removed 1 line
+      408          main_services = [s for s in services if not s['is_addo
+           n']]
+      409          addon_services = [s for s in services if s['is_addon']
+           ]
+      410 
+      411 +        # Dołącz payment_method z income_records (nie istnieje
+          + w appointments)
+      412 +        appt_dict = dict(appt_row)
+      413 +        income = self.income_repo.get_by_appointment(appointme
+          +nt_id)
+      414 +        if income:
+      415 +            appt_dict['payment_method'] = income['payment_meth
+          +od']
+      416 +
+      417          return {
+      412 -            'appointment': dict(appt_row),                    
+      418 +            'appointment': appt_dict,
+      419              'main_services': [dict(s) for s in main_services],
+      420              'addon_services': [dict(s) for s in addon_services
+           ],
+      421              'totals': totals,
+
+● Teraz szybka weryfikacja — sprawdzam czy wszystkie edycje się spójnie złożyły:
+
+● Searched for 3 patterns (ctrl+o to expand)
+
+● Wszystko się zgadza. Jeszcze jedna weryfikacja — upewniam się że
+  get_appointment_totals zwraca klucz total_commission:
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● Dobrze. Wszystkie zmiany zintegrowane. Podsumowanie co zostało zrobione:
+
+  ★ Insight ─────────────────────────────────────
+  W diff strategy: klucz appointment_service_id jest jedyną "kotwicą" łączącą
+  rekord frontendu z rekordem DB. Gdy usługa jest usunięta i ponownie dodana,
+  jej ID jest null → INSERT (nowy rekord, nowe id, added_at = NULL). Oryginalne
+  rekordy których ID nie ma w payloadzie → DELETE. To zachowuje historię
+  added_at dla usług które nie były ruszane.
+  ─────────────────────────────────────────────────
+
+  ---
+  Podsumowanie zmian — 5 plików backendowych + 1 szablon
+
+  TASK: #1 diff
+  Plik: appointment_service_repository.py
+  Co zostało zrobione: Dodano update_service()
+  ────────────────────────────────────────
+  TASK: #1 diff
+  Plik: appointment_service.py
+  Co zostało zrobione: Diff loop: UPDATE/INSERT/DELETE zamiast delete-all
+  ────────────────────────────────────────
+  TASK: #1 diff
+  Plik: superadmin_edit.html
+  Co zostało zrobione: appointment_service_id w payloadzie
+  ────────────────────────────────────────
+  TASK: #2 commission
+  Plik: superadmin_edit.html
+  Co zostało zrobione: Pole Prow% w wierszu usługi, handler onSvcCommBlur
+  ────────────────────────────────────────
+  TASK: #2 commission
+  Plik: appointment_service.py
+  Co zostało zrobione: commission_rate z payloadu lub auto-resolve
+  ────────────────────────────────────────
+  TASK: #3 unassigned
+  Plik: superadmin_edit.html
+  Co zostało zrobione: loadAllServices, sekcja "Usługi nieprzypisane" w pickerze
+  ────────────────────────────────────────
+  TASK: #4 income update
+  Plik: income_repository.py
+  Co zostało zrobione: Dodano update()
+  ────────────────────────────────────────
+  TASK: #4 income update
+  Plik: appointment_service.py
+  Co zostało zrobione: Przy completed→completed → income_repo.update()
+  ────────────────────────────────────────
+  TASK: #5 related tables
+  Plik: appointment_repository.py
+  Co zostało zrobione: update() obejmuje cancellation_reason,
+  satisfaction_score,
+    cancelled_at
+  ────────────────────────────────────────
+  TASK: #5 related tables
+  Plik: appointment_service.py
+  Co zostało zrobione: cancelled_at obliczane per zmiana statusu; income
+    aktualizuje client_id, employee_id; client.last_visit_date przy zmianie daty
+  ────────────────────────────────────────
+  TASK: #5 related tables
+  Plik: appointment_routes.py
+  Co zostało zrobione: Przekazuje satisfaction_score, cancellation_reason,
+    payment_method
+  ────────────────────────────────────────
+  TASK: bonus
+  Plik: appointment_service.py
+  Co zostało zrobione: get_appointment_details zwraca payment_method z
+    income_records
+
+✻ Worked for 9m 38s
+
+> zmodyfikuj layout dla dodanego 'usługi nieprzypisane' przenosząc listę usług  
+nieprzypisanych do oddzielnej sekcji (container) i użyj pole dropdown z online  
+search field i multichoice jako elementu UI do dodawania usług nieprzypisanych. 
+
+● Przeczytam aktualny stan szablonu, żeby zobaczyć dokładnie co modyfikuję.
+
+● Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  Zamiast Select2/Choices.js (zewnętrzne biblioteki), buduję własny multiselect 
+  dropdown w vanilla JS — kontrola nad stylem jest pełna, brak dependency, a
+  wzorzec "trigger + dropdown z search + checkboxes" to tylko ~150 linii JS.
+  Dropdown zamyka się na kliknięcie poza (listener na document), filtrowanie
+  jest synchroniczne (lokalna tablica), więc brak potrzeby debounce.
+  ─────────────────────────────────────────────────
+
+● Read 1 file (ctrl+o to expand)
+
+● Krok 1 — zamień stare style unassigned na pełny CSS dla multiselect:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 59 lines, removed 4 lines
+      151      .pp-svc-opt-meta { font-family: var(--pp-mono); font-size:
+            0.73rem; color: var(--pp-ink-subtle); }
+      152      .btn-svc-add { padding: 0.28rem 0.6rem; font-size: 0.8rem;
+            background: var(--pp-blue); color: white; border: none; borde
+           r-radius: 2px; cursor: pointer; font-family: var(--pp-body); f
+           ont-weight: 500; white-space: nowrap; transition: background 0
+           .15s; }
+      153      .btn-svc-add:hover { background: #1d4ed8; }
+      154 -    .btn-svc-add.unassigned { background: var(--pp-warning); }
+      155 -    .btn-svc-add.unassigned:hover { background: #b45309; }    
+      156 -    .pp-svc-section-label { font-size: 0.64rem; font-weight: 6
+          -00; text-transform: uppercase; letter-spacing: 0.07em; color: 
+          -var(--pp-ink-subtle); padding: 0.35rem 0.6rem 0.15rem; border-
+          -top: 1px solid var(--pp-border); background: var(--pp-surface-
+          -warm); }                                                      
+      157 -    .pp-svc-option.unassigned { background: rgba(245,158,11,0.
+          -04); }                                                        
+      154 +    /* ── Unassigned services multiselect dropdown ── */
+      155 +    .ua-select-wrapper { position: relative; }
+      156 +    .ua-trigger {
+      157 +        display: flex; align-items: center; gap: 0.5rem;
+      158 +        padding: 0.5rem 0.7rem; border: 1px solid var(--pp-bor
+          +der); border-radius: 2px;
+      159 +        background: white; cursor: pointer; user-select: none;
+      160 +        font-family: var(--pp-body); font-size: 0.875rem; colo
+          +r: var(--pp-ink-muted);
+      161 +        transition: border-color 0.15s, box-shadow 0.15s;
+      162 +    }
+      163 +    .ua-trigger:hover { border-color: #aaa; }
+      164 +    .ua-trigger.open { border-color: var(--pp-blue); box-shado
+          +w: 0 0 0 3px rgba(37,99,235,0.12); }
+      165 +    .ua-trigger-text { flex: 1; overflow: hidden; text-overflo
+          +w: ellipsis; white-space: nowrap; }
+      166 +    .ua-chevron { flex-shrink: 0; color: var(--pp-ink-subtle);
+          + transition: transform 0.18s; }
+      167 +    .ua-trigger.open .ua-chevron { transform: rotate(180deg);
+          +}
+      168 +    .ua-dropdown {
+      169 +        display: none; position: absolute; top: calc(100% + 4p
+          +x); left: 0; right: 0; z-index: 300;
+      170 +        background: white; border: 1px solid var(--pp-border);
+          + border-radius: 3px;
+      171 +        box-shadow: 0 8px 28px rgba(0,0,0,0.13); overflow: hid
+          +den; flex-direction: column;
+      172 +    }
+      173 +    .ua-dropdown.open { display: flex; }
+      174 +    .ua-search-wrap { padding: 0.45rem 0.5rem; border-bottom:
+          +1px solid var(--pp-border); flex-shrink: 0; }
+      175 +    .ua-search-input {
+      176 +        width: 100%; padding: 0.38rem 0.55rem; box-sizing: bor
+          +der-box;
+      177 +        font-family: var(--pp-body); font-size: 0.875rem;
+      178 +        border: 1px solid var(--pp-border); border-radius: 2px
+          +; background: var(--pp-surface-warm);
+      179 +        transition: border-color 0.15s;
+      180 +    }
+      181 +    .ua-search-input:focus { outline: none; border-color: var(
+          +--pp-blue); background: white; }
+      182 +    .ua-list { max-height: 195px; overflow-y: auto; }
+      183 +    .ua-list::-webkit-scrollbar { width: 4px; }
+      184 +    .ua-list::-webkit-scrollbar-thumb { background: #d1d5db; b
+          +order-radius: 2px; }
+      185 +    .ua-item {
+      186 +        display: flex; align-items: center; gap: 0.55rem;
+      187 +        padding: 0.42rem 0.6rem; cursor: pointer; border-botto
+          +m: 1px solid var(--pp-border);
+      188 +        transition: background 0.1s;
+      189 +    }
+      190 +    .ua-item:last-child { border-bottom: none; }
+      191 +    .ua-item:hover { background: var(--pp-surface-warm); }
+      192 +    .ua-item.checked { background: rgba(37,99,235,0.05); }
+      193 +    .ua-item.checked:hover { background: rgba(37,99,235,0.09);
+          + }
+      194 +    .ua-cb { width: 14px; height: 14px; flex-shrink: 0; accent
+          +-color: var(--pp-blue); cursor: pointer; pointer-events: none;
+          + }
+      195 +    .ua-item-info { flex: 1; min-width: 0; }
+      196 +    .ua-item-name { font-size: 0.875rem; font-weight: 500; ove
+          +rflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      197 +    .ua-item-meta { font-family: var(--pp-mono); font-size: 0.
+          +72rem; color: var(--pp-ink-subtle); }
+      198 +    .ua-footer {
+      199 +        display: flex; align-items: center; justify-content: s
+          +pace-between;
+      200 +        padding: 0.45rem 0.6rem; border-top: 1px solid var(--p
+          +p-border);
+      201 +        background: var(--pp-surface-warm); flex-shrink: 0;
+      202 +    }
+      203 +    .ua-count { font-family: var(--pp-mono); font-size: 0.72re
+          +m; color: var(--pp-ink-subtle); }
+      204 +    .ua-add-btn {
+      205 +        display: inline-flex; align-items: center; gap: 0.3rem
+          +;
+      206 +        padding: 0.38rem 0.85rem; background: var(--pp-blue);
+          +color: white;
+      207 +        border: none; border-radius: 2px; font-family: var(--p
+          +p-body); font-size: 0.8rem;
+      208 +        font-weight: 500; cursor: pointer; transition: backgro
+          +und 0.15s; white-space: nowrap;
+      209 +    }
+      210 +    .ua-add-btn:hover:not(:disabled) { background: #1d4ed8; }
+      211 +    .ua-add-btn:disabled { opacity: 0.4; cursor: not-allowed;
+          +}
+      212 +    .ua-no-results { padding: 0.875rem; text-align: center; co
+          +lor: #999; font-family: var(--pp-mono); font-size: 0.78rem; }
+      213 
+      214      /* ── Summary ── */
+      215      .pp-summary { background: var(--pp-surface-warm); border:
+           1px solid var(--pp-border); border-radius: 2px; padding: 0.75r
+           em; margin-top: 0.625rem; }
+
+● Krok 2 — dodaj nową kartę HTML w prawym panelu:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 30 lines
+      451                  </div>
+      452              </div>
+      453 
+      454 +            <!-- Unassigned services multiselect (TASK#3) -->
+      455 +            <div class="pp-card" id="unassigned-card" style="d
+          +isplay:none">
+      456 +                <div class="pp-card-header">
+      457 +                    <span class="pp-card-title" style="color:v
+          +ar(--pp-warning)">Usługi nieprzypisane do pracownika</span>
+      458 +                    <span style="font-family:var(--pp-mono);fo
+          +nt-size:0.58rem;color:#aaa;margin-left:auto">poza employee_ser
+          +vices</span>
+      459 +                </div>
+      460 +                <div class="pp-card-body">
+      461 +                    <div class="ua-select-wrapper" id="ua-sele
+          +ct-wrapper">
+      462 +                        <div class="ua-trigger" id="ua-trigger
+          +" onclick="toggleUnassignedDropdown()">
+      463 +                            <span class="ua-trigger-text" id="
+          +ua-trigger-text">Szukaj i wybierz usługi...</span>
+      464 +                            <svg class="ua-chevron" width="13"
+          + height="13" fill="none" viewBox="0 0 24 24" stroke="currentCo
+          +lor"><path stroke-linecap="round" stroke-linejoin="round" stro
+          +ke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      465 +                        </div>
+      466 +                        <div class="ua-dropdown" id="ua-dropdo
+          +wn">
+      467 +                            <div class="ua-search-wrap">
+      468 +                                <input type="text" id="ua-sear
+          +ch" class="ua-search-input"
+      469 +                                       placeholder="Szukaj naz
+          +wy usługi..." oninput="filterUnassigned(this.value)">
+      470 +                            </div>
+      471 +                            <div class="ua-list" id="ua-list">
+          +</div>
+      472 +                            <div class="ua-footer">
+      473 +                                <span class="ua-count" id="ua-
+          +count">0 wybranych</span>
+      474 +                                <button class="ua-add-btn" id=
+          +"ua-add-btn" onclick="addSelectedUnassigned()" disabled>
+      475 +                                    <svg width="11" height="11
+          +" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path
+          +stroke-linecap="round" stroke-linejoin="round" stroke-width="2
+          +" d="M12 4v16m8-8H4"/></svg>
+      476 +                                    Dodaj wybrane
+      477 +                                </button>
+      478 +                            </div>
+      479 +                        </div>
+      480 +                    </div>
+      481 +                </div>
+      482 +            </div>
+      483 +
+      484              <!-- Notes -->
+      485              <div class="pp-card">
+      486                  <div class="pp-card-header"><span class="pp-ca
+           rd-title">Uwagi</span></div>
+
+● Krok 3 — uprość renderServicePicker — usuń sekcję "nieprzypisane":
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 157 lines, removed 40 lines
+       928  function renderServicePicker() {
+       929      const picker = document.getElementById('service-picker');
+       930      const usedIds = new Set(currentServices.map(s => s.servic
+            e_id));
+       931 -    const employeeServiceIds = new Set(availableServices.map(
+           -s => s.service_id));                                         
+       931 +    const available = availableServices.filter(s => !usedIds.
+           +has(s.service_id));
+       932 
+       933 -    // Section 1: employee-assigned services not yet in appoi
+           -ntment                                                       
+       934 -    const employeeAvailable = availableServices.filter(s => !
+           -usedIds.has(s.service_id));                                  
+       935 -                                                             
+       936 -    // Section 2 (TASK#3): all services not assigned to emplo
+           -yee and not yet in appointment                               
+       937 -    const unassigned = allServices.filter(s => !employeeServi
+           -ceIds.has(s.id) && !usedIds.has(s.id));                      
+       938 -                                                             
+       939 -    if (!employeeAvailable.length && !unassigned.length) {   
+       940 -        picker.style.display = availableServices.length || al
+           -lServices.length ? 'block' : 'none';                         
+       933 +    if (!available.length) {
+       934 +        picker.style.display = availableServices.length ? 'bl
+           +ock' : 'none';
+       935          if (picker.style.display === 'block')
+       942 -            picker.innerHTML = '<div style="padding:0.75rem;t
+           -ext-align:center;color:#999;font-size:0.78rem">Wszystkie dost
+           -ępne usługi dodane</div>';                                   
+       936 +            picker.innerHTML = '<div style="padding:0.75rem;t
+           +ext-align:center;color:#999;font-size:0.78rem">Wszystkie usłu
+           +gi pracownika dodane</div>';
+       937          return;
+       938      }
+       939 
+       940      picker.style.display = 'block';
+       947 -    let html = '';                                           
+       941 +    picker.innerHTML = available.map(s => {
+       942 +        const price = s.effective_price || s.price_offered ||
+           + 0;
+       943 +        const dur = s.effective_duration || s.duration_minute
+           +s || 0;
+       944 +        const comm = s.effective_commission || 0;
+       945 +        return `
+       946 +        <div class="pp-svc-option">
+       947 +            <div>
+       948 +                <div class="pp-svc-opt-name">${esc(s.service_
+           +name)}</div>
+       949 +                <div class="pp-svc-opt-meta">${dur} min · ${f
+           +mtPrice(price)}</div>
+       950 +            </div>
+       951 +            <button class="btn-svc-add" onclick="addService($
+           +{s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}',
+           + ${price}, ${dur}, ${s.service_type === 'addon'}, ${comm})">+
+           + Dodaj</button>
+       952 +        </div>`;
+       953 +    }).join('');
+       954 +}
+       955 
+       949 -    if (employeeAvailable.length) {                          
+       950 -        html += employeeAvailable.map(s => {                 
+       951 -            const price = s.effective_price || s.price_offere
+           -d || 0;                                                      
+       952 -            const dur = s.effective_duration || s.duration_mi
+           -nutes || 0;                                                  
+       953 -            const comm = s.effective_commission || 0;        
+       954 -            return `                                         
+       955 -            <div class="pp-svc-option">                      
+       956 -                <div>                                        
+       957 -                    <div class="pp-svc-opt-name">${esc(s.serv
+           -ice_name)}</div>                                             
+       958 -                    <div class="pp-svc-opt-meta">${dur} min ·
+           - ${fmtPrice(price)}</div>                                    
+       959 -                </div>                                       
+       960 -                <button class="btn-svc-add" onclick="addServi
+           -ce(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'"
+           -)}', ${price}, ${dur}, ${s.service_type === 'addon'}, ${comm}
+           -)">+ Dodaj</button>                                          
+       961 -            </div>`;                                         
+       962 -        }).join('');                                         
+       956 +// ══════════════════════════════════════════════════════
+       957 +//  UNASSIGNED SERVICES — searchable multiselect (TASK#3)
+       958 +// ══════════════════════════════════════════════════════
+       959 +let selectedUnassignedIds = new Set();
+       960 +let unassignedFilter = '';
+       961 +
+       962 +function getUnassignedServices() {
+       963 +    const usedIds = new Set(currentServices.map(s => s.servic
+           +e_id));
+       964 +    const employeeIds = new Set(availableServices.map(s => s.
+           +service_id));
+       965 +    return allServices.filter(s => !employeeIds.has(s.id) &&
+           +!usedIds.has(s.id));
+       966 +}
+       967 +
+       968 +function renderUnassignedPicker() {
+       969 +    const card = document.getElementById('unassigned-card');
+       970 +    if (!card) return;
+       971 +    const unassigned = getUnassignedServices();
+       972 +
+       973 +    if (!unassigned.length) {
+       974 +        card.style.display = 'none';
+       975 +        closeUnassignedDropdown();
+       976 +        return;
+       977      }
+       978 +    card.style.display = 'block';
+       979 
+       965 -    if (unassigned.length) {                                 
+       966 -        html += `<div class="pp-svc-section-label">Usługi nie
+           -przypisane do pracownika</div>`;                             
+       967 -        html += unassigned.map(s => {                        
+       968 -            const price = s.price || 0;                      
+       969 -            const dur = s.duration_minutes || 0;             
+       970 -            return `                                         
+       971 -            <div class="pp-svc-option unassigned">           
+       972 -                <div>                                        
+       973 -                    <div class="pp-svc-opt-name">${esc(s.name
+           -)}</div>                                                     
+       974 -                    <div class="pp-svc-opt-meta">${dur} min ·
+           - ${fmtPrice(price)}</div>                                    
+       975 -                </div>                                       
+       976 -                <button class="btn-svc-add unassigned" onclic
+           -k="addService(${s.id}, '${esc(s.name).replace(/'/g,"\\'")}', 
+           -${price}, ${dur}, ${s.service_type === 'addon'}, 0)">+ Dodaj<
+           -/button>                                                     
+       977 -            </div>`;                                         
+       978 -        }).join('');                                         
+       980 +    // Remove stale selections (service was just added to app
+           +ointment)
+       981 +    const usedIds = new Set(currentServices.map(s => s.servic
+           +e_id));
+       982 +    for (const id of [...selectedUnassignedIds]) {
+       983 +        if (usedIds.has(id)) selectedUnassignedIds.delete(id)
+           +;
+       984      }
+       985 
+       981 -    picker.innerHTML = html;                                 
+       986 +    updateUnassignedTrigger();
+       987 +    updateUnassignedFooter();
+       988 +    // Re-render list if dropdown is open
+       989 +    if (document.getElementById('ua-dropdown')?.classList.con
+           +tains('open')) {
+       990 +        renderUnassignedList();
+       991 +    }
+       992  }
+       993 
+       994 +function renderUnassignedList() {
+       995 +    const unassigned = getUnassignedServices();
+       996 +    const q = unassignedFilter.trim().toLowerCase();
+       997 +    const filtered = q ? unassigned.filter(s => s.name.toLowe
+           +rCase().includes(q)) : unassigned;
+       998 +    const list = document.getElementById('ua-list');
+       999 +    if (!list) return;
+      1000 +
+      1001 +    if (!filtered.length) {
+      1002 +        list.innerHTML = '<div class="ua-no-results">Brak wyn
+           +ików dla "' + esc(unassignedFilter) + '"</div>';
+      1003 +        return;
+      1004 +    }
+      1005 +    list.innerHTML = filtered.map(s => {
+      1006 +        const checked = selectedUnassignedIds.has(s.id);
+      1007 +        const price = s.price || 0;
+      1008 +        const dur = s.duration_minutes || 0;
+      1009 +        return `
+      1010 +        <div class="ua-item${checked ? ' checked' : ''}" oncl
+           +ick="toggleUnassignedItem(${s.id}, this)">
+      1011 +            <input type="checkbox" class="ua-cb" ${checked ?
+           +'checked' : ''}>
+      1012 +            <div class="ua-item-info">
+      1013 +                <div class="ua-item-name">${esc(s.name)}</div
+           +>
+      1014 +                <div class="ua-item-meta">${dur} min · ${fmtP
+           +rice(price)}</div>
+      1015 +            </div>
+      1016 +        </div>`;
+      1017 +    }).join('');
+      1018 +}
+      1019 +
+      1020 +function toggleUnassignedItem(serviceId, el) {
+      1021 +    if (selectedUnassignedIds.has(serviceId)) {
+      1022 +        selectedUnassignedIds.delete(serviceId);
+      1023 +        el.classList.remove('checked');
+      1024 +        el.querySelector('.ua-cb').checked = false;
+      1025 +    } else {
+      1026 +        selectedUnassignedIds.add(serviceId);
+      1027 +        el.classList.add('checked');
+      1028 +        el.querySelector('.ua-cb').checked = true;
+      1029 +    }
+      1030 +    updateUnassignedFooter();
+      1031 +    updateUnassignedTrigger();
+      1032 +}
+      1033 +
+      1034 +function updateUnassignedTrigger() {
+      1035 +    const n = selectedUnassignedIds.size;
+      1036 +    const el = document.getElementById('ua-trigger-text');
+      1037 +    if (!el) return;
+      1038 +    if (n === 0) { el.textContent = 'Szukaj i wybierz usługi.
+           +..'; return; }
+      1039 +    el.textContent = n === 1 ? '1 usługa wybrana' : n < 5 ? `
+           +${n} usługi wybrane` : `${n} usług wybranych`;
+      1040 +}
+      1041 +
+      1042 +function updateUnassignedFooter() {
+      1043 +    const n = selectedUnassignedIds.size;
+      1044 +    const countEl = document.getElementById('ua-count');
+      1045 +    const btn = document.getElementById('ua-add-btn');
+      1046 +    if (countEl) countEl.textContent = n === 0 ? '0 wybranych
+           +' : `${n} wybranych`;
+      1047 +    if (btn) {
+      1048 +        btn.disabled = n === 0;
+      1049 +        btn.innerHTML = n === 0
+      1050 +            ? '<svg width="11" height="11" fill="none" viewBo
+           +x="0 0 24 24" stroke="currentColor"><path stroke-linecap="rou
+           +nd" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H
+           +4"/></svg> Dodaj wybrane'
+      1051 +            : `<svg width="11" height="11" fill="none" viewBo
+           +x="0 0 24 24" stroke="currentColor"><path stroke-linecap="rou
+           +nd" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H
+           +4"/></svg> Dodaj wybrane (${n})`;
+      1052 +    }
+      1053 +}
+      1054 +
+      1055 +function toggleUnassignedDropdown() {
+      1056 +    const dropdown = document.getElementById('ua-dropdown');
+      1057 +    if (!dropdown) return;
+      1058 +    if (dropdown.classList.contains('open')) {
+      1059 +        closeUnassignedDropdown();
+      1060 +    } else {
+      1061 +        document.getElementById('ua-trigger').classList.add('
+           +open');
+      1062 +        dropdown.classList.add('open');
+      1063 +        unassignedFilter = '';
+      1064 +        const search = document.getElementById('ua-search');
+      1065 +        if (search) { search.value = ''; setTimeout(() => sea
+           +rch.focus(), 40); }
+      1066 +        renderUnassignedList();
+      1067 +    }
+      1068 +}
+      1069 +
+      1070 +function closeUnassignedDropdown() {
+      1071 +    document.getElementById('ua-trigger')?.classList.remove('
+           +open');
+      1072 +    document.getElementById('ua-dropdown')?.classList.remove(
+           +'open');
+      1073 +}
+      1074 +
+      1075 +function filterUnassigned(val) {
+      1076 +    unassignedFilter = val;
+      1077 +    renderUnassignedList();
+      1078 +}
+      1079 +
+      1080 +function addSelectedUnassigned() {
+      1081 +    const toAdd = getUnassignedServices().filter(s => selecte
+           +dUnassignedIds.has(s.id));
+      1082 +    if (!toAdd.length) return;
+      1083 +    toAdd.forEach(s => {
+      1084 +        currentServices.push({
+      1085 +            appointment_service_id: null,
+      1086 +            service_id: s.id,
+      1087 +            service_name: s.name,
+      1088 +            price_charged: s.price || 0,
+      1089 +            duration_minutes: s.duration_minutes || 0,
+      1090 +            commission_rate: 0,
+      1091 +            is_addon: s.service_type === 'addon'
+      1092 +        });
+      1093 +    });
+      1094 +    selectedUnassignedIds.clear();
+      1095 +    totalPriceOverride = null;
+      1096 +    closeUnassignedDropdown();
+      1097 +    renderServices(); renderServicePicker(); renderUnassigned
+           +Picker(); updateSummary(); triggerConflictCheck();
+      1098 +    showToast(`Dodano ${toAdd.length} usługę/i`, 'success', 1
+           +500);
+      1099 +}
+      1100 +
+      1101  function addService(serviceId, serviceName, price, duration,
+            isAddon, commRate) {
+      1102      currentServices.push({
+      1103          appointment_service_id: null,
+
+● Krok 4 — zaktualizuj miejsca gdzie usługi się zmieniają, żeby przebudowywały 
+  oba pickery:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 2 lines
+      1109          is_addon: !!isAddon
+      1110      });
+      1111      totalPriceOverride = null;
+      1112 -    renderServices(); renderServicePicker(); updateSummary();
+           - triggerConflictCheck();                                     
+      1112 +    renderServices(); renderServicePicker(); renderUnassigned
+           +Picker(); updateSummary(); triggerConflictCheck();
+      1113  }
+      1114 
+      1115  function removeService(index) {
+      1116      currentServices.splice(index, 1);
+      1117      totalPriceOverride = null;
+      1118 -    renderServices(); renderServicePicker(); updateSummary();
+           - triggerConflictCheck();                                     
+      1118 +    renderServices(); renderServicePicker(); renderUnassigned
+           +Picker(); updateSummary(); triggerConflictCheck();
+      1119  }
+      1120 
+      1121  // ══════════════════════════════════════════════════════
+
+● populateForm — dodaj renderUnassignedPicker po załadowaniu usług:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line
+      820 
+      821      // Load employee services for the picker (may hit cache if
+            same employee)
+      822      await loadEmployeeServices();
+      823 +    renderUnassignedPicker();
+      824  }
+      825 
+      826  // ══════════════════════════════════════════════════════
+
+● loadEmployeeServices — aktualizuj unassigned picker gdy zmienia się pracownik:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 3 lines, removed 1 line
+      752 
+      753  async function loadEmployeeServices() {
+      754      const eid = document.getElementById('employee-select').val
+           ue;
+      755 -    if (!eid) { availableServices = []; renderServicePicker();
+          - return; }                                                    
+      755 +    if (!eid) { availableServices = []; renderServicePicker();
+          + renderUnassignedPicker(); return; }
+      756      const data = await fetch(`/api/employees/${eid}/services`)
+           .then(r => r.json());
+      757      availableServices = data.success ? data.services : [];
+      758 +    selectedUnassignedIds.clear();
+      759      renderServicePicker();
+      760 +    renderUnassignedPicker();
+      761  }
+      762 
+      763  // TASK#3: Load all active services once (cached in sessionSto
+           rage)
+
+● resetFields — wyczyść selekcje przy resecie:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 3 lines, removed 1 line
+      1209      currentServices = JSON.parse(JSON.stringify(originalServi
+            ces));
+      1210      totalPriceOverride = null;
+      1211      forceAllowSave = false;
+      1212 -    renderServices(); renderServicePicker(); updateSummary();
+           - onStatusChange();                                           
+      1212 +    selectedUnassignedIds.clear();
+      1213 +    closeUnassignedDropdown();
+      1214 +    renderServices(); renderServicePicker(); renderUnassigned
+           +Picker(); updateSummary(); onStatusChange();
+      1215 
+      1216      showToast('Zresetowano do oryginalnych wartości', 'info')
+            ;
+      1217  }
+
+● Dodaj listener zamykający dropdown przy kliknięciu poza:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines, removed 2 lines
+      1417      // Alt+ArrowLeft/Right — navigate
+      1418      if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault
+            (); navigate('prev'); }
+      1419      if (e.altKey && e.key === 'ArrowRight') { e.preventDefaul
+            t(); navigate('next'); }
+      1420 -    // Escape — close conflict modal                         
+      1421 -    if (e.key === 'Escape') closeConflictModal();            
+      1420 +    // Escape — close conflict modal and unassigned dropdown
+      1421 +    if (e.key === 'Escape') { closeConflictModal(); closeUnas
+           +signedDropdown(); }
+      1422      // Tab — handled by focus trap
+      1423      if (e.key === 'Tab') handleTab(e);
+      1424  }
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 5 lines
+      1445      // Register event listeners
+      1446      document.addEventListener('keydown', handleKeyboard);
+      1447      document.addEventListener('focusin', handleFocusIn);
+      1448 +    // Close unassigned dropdown on outside click
+      1449 +    document.addEventListener('click', e => {
+      1450 +        const wrapper = document.getElementById('ua-select-wr
+           +apper');
+      1451 +        if (wrapper && !wrapper.contains(e.target)) closeUnas
+           +signedDropdown();
+      1452 +    });
+      1453 
+      1454      // Push initial history state so back button works
+      1455      history.replaceState({apptId: APPT_ID}, '', window.locati
+            on.pathname);
+
+● Weryfikacja końcowa — sprawdzam spójność kluczowych elementów:
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● Wszystko spójne.
+
+  ★ Insight ─────────────────────────────────────
+  Dropdown używa pointer-events: none na checkboxach — cały <div 
+  class="ua-item"> jest klikany, a checkbox jest tylko wizualnym wskaźnikiem. To
+   eliminuje problem gdzie kliknięcie checkboxa generowało dwa zdarzenia (na
+  checkbox + na div). Alternatywne podejście: event.stopPropagation() na
+  checkbox, ale prowadzi to do trudnych w debugowaniu race conditions.
+  ─────────────────────────────────────────────────
+
+  Co się zmieniło:
+
+  HTML — nowa karta #unassigned-card między sekcją usług a notatkami, ukryta
+  domyślnie (display:none). Zawiera:
+  - ua-trigger — klikalny "fake select" z chevronem
+  - ua-dropdown — absolutnie pozycjonowany panel z search inputem, listą z
+  checkboxami i footer z licznikiem + przyciskiem
+
+  CSS — ~60 linii nowych stylów dla całego widgetu, usunięte stare style
+  .unassigned inline
+
+  JS — nowe funkcje: getUnassignedServices, renderUnassignedPicker,
+  renderUnassignedList, toggleUnassignedItem, updateUnassignedTrigger,
+  updateUnassignedFooter, toggleUnassignedDropdown, closeUnassignedDropdown,
+  filterUnassigned, addSelectedUnassigned
+
+  Zachowanie:
+  - Karta pojawia się automatycznie gdy są usługi poza przypisaniami pracownika
+  - Zmiana pracownika → karta się przelicza, selekcje czyszczone
+  - Escape i kliknięcie poza → dropdown się zamyka
+  - Po dodaniu usług trigger pokazuje "2 usługi wybrane" → po kliknięciu "Dodaj
+  wybrane (2)" usługi trafiają do currentServices z commission_rate: 0
+
+✻ Sautéed for 3m 48s
+
+> po kliknięciu dropdown, widoczne jest tylko rozwinięte pole 'search', cała    
+lista jest niewidoczna, bo ogranicza ją wysokości elementu <div> (containera    
+dla dropdown)                                                                   
+
+● Klasyczny problem: position: absolute dziecko jest przycinane przez overflow: 
+  hidden na .pp-card i overflow-y: auto na .pp-col-right. Rozwiązanie: zmiana na
+   position: fixed z dynamicznym pozycjonowaniem przez getBoundingClientRect().
+
+  ★ Insight ─────────────────────────────────────
+  position: absolute jest względem najbliższego przodka z position != static —
+  ale jeśli jakikolwiek przodek ma overflow: hidden/auto/scroll, ten overflow
+  będzie przycinał zawartość. position: fixed jest zawsze względem viewportu i
+  nie jest przycinany przez żaden overflow. Wadą jest to, że element "nie
+  podąża" za scrollem — trzeba to obsłużyć ręcznie.
+  ─────────────────────────────────────────────────
+
+● Read 1 file (ctrl+o to expand)
+
+● CSS — zamień position: absolute na fixed (bez top/left/right — ustawiane przez
+   JS):
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line, removed 1 line
+      166      .ua-chevron { flex-shrink: 0; color: var(--pp-ink-subtle);
+            transition: transform 0.18s; }
+      167      .ua-trigger.open .ua-chevron { transform: rotate(180deg);
+           }
+      168      .ua-dropdown {
+      169 -        display: none; position: absolute; top: calc(100% + 4p
+          -x); left: 0; right: 0; z-index: 300;                          
+      169 +        display: none; position: fixed; z-index: 9500;
+      170          background: white; border: 1px solid var(--pp-border);
+            border-radius: 3px;
+      171          box-shadow: 0 8px 28px rgba(0,0,0,0.13); overflow: hid
+           den; flex-direction: column;
+      172      }
+
+● JS — zaktualizuj toggleUnassignedDropdown i dodaj positionUnassignedDropdown +
+   scroll handler:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 21 lines
+      1055      }
+      1056  }
+      1057 
+      1058 +function positionUnassignedDropdown() {
+      1059 +    const trigger = document.getElementById('ua-trigger');
+      1060 +    const dropdown = document.getElementById('ua-dropdown');
+      1061 +    if (!trigger || !dropdown) return;
+      1062 +    const rect = trigger.getBoundingClientRect();
+      1063 +    // Prefer opening downward; flip up if not enough room be
+           +low
+      1064 +    const spaceBelow = window.innerHeight - rect.bottom - 8;
+      1065 +    const dropH = Math.min(340, spaceBelow > 220 ? spaceBelow
+           + : rect.top - 8);
+      1066 +    dropdown.style.left  = rect.left + 'px';
+      1067 +    dropdown.style.width = rect.width + 'px';
+      1068 +    dropdown.style.maxHeight = dropH + 'px';
+      1069 +    if (spaceBelow >= 220) {
+      1070 +        dropdown.style.top    = (rect.bottom + 4) + 'px';
+      1071 +        dropdown.style.bottom = '';
+      1072 +    } else {
+      1073 +        dropdown.style.top    = '';
+      1074 +        dropdown.style.bottom = (window.innerHeight - rect.to
+           +p + 4) + 'px';
+      1075 +    }
+      1076 +}
+      1077 +
+      1078  function toggleUnassignedDropdown() {
+      1079      const dropdown = document.getElementById('ua-dropdown');
+      1080      if (!dropdown) return;
+      1081      if (dropdown.classList.contains('open')) {
+      1082          closeUnassignedDropdown();
+      1083      } else {
+      1084 +        positionUnassignedDropdown();
+      1085          document.getElementById('ua-trigger').classList.add('
+            open');
+      1086          dropdown.classList.add('open');
+      1087          unassignedFilter = '';
+
+● INIT — dodaj scroll/resize listenery zamykające dropdown:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 6 lines, removed 1 line
+      1469      // Close unassigned dropdown on outside click
+      1470      document.addEventListener('click', e => {
+      1471          const wrapper = document.getElementById('ua-select-wr
+            apper');
+      1472 -        if (wrapper && !wrapper.contains(e.target)) closeUnas
+           -signedDropdown();                                            
+      1472 +        const dropdown = document.getElementById('ua-dropdown
+           +');
+      1473 +        if (wrapper && !wrapper.contains(e.target) && dropdow
+           +n && !dropdown.contains(e.target))
+      1474 +            closeUnassignedDropdown();
+      1475      });
+      1476 +    // Close/reposition dropdown on scroll or resize (fixed p
+           +ositioning drifts otherwise)
+      1477 +    document.querySelector('.pp-col-right')?.addEventListener
+           +('scroll', closeUnassignedDropdown);
+      1478 +    window.addEventListener('resize', closeUnassignedDropdown
+           +);
+      1479 
+      1480      // Push initial history state so back button works
+      1481      history.replaceState({apptId: APPT_ID}, '', window.locati
+            on.pathname);
+
+● Gotowe. Co się zmieniło i dlaczego:
+
+  Problem: Lista niewidoczna
+  Przyczyna: .pp-card { overflow: hidden } + .pp-col-right { overflow-y: auto }
+    obcinały potomka absolute
+  Rozwiązanie: Zmiana na position: fixed — wychodzi poza wszelki overflow
+  ────────────────────────────────────────
+  Problem: Pozycja dropdownu
+  Przyczyna: fixed nie wie gdzie jest trigger
+  Rozwiązanie: getBoundingClientRect() na triggerze → top/left/width ustawiane
+    dynamicznie w JS
+  ────────────────────────────────────────
+  Problem: Scroll przeskakuje
+  Przyczyna: Trigger scrolluje, dropdown stoi w miejscu
+  Rozwiązanie: closeUnassignedDropdown przy scroll .pp-col-right i window.resize
+  ────────────────────────────────────────
+  Problem: Flip-up
+  Przyczyna: Brak miejsca pod triggerem gdy jest na dole strony
+  Rozwiązanie: Oblicza spaceBelow — jeśli < 220px, dropdown otwiera się do góry
+
+✻ Churned for 1m 12s

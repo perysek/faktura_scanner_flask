@@ -27,6 +27,18 @@ module.exports = {
           500: '#10b981',  // Main accent
           600: '#059669',
         },
+        brand: {
+          50:  '#fdf8ec',
+          100: '#f9eecc',
+          200: '#f2d98a',
+          300: '#e8c050',
+          400: '#d9a82e',
+          500: '#c9a227',  // Gold accent — matches --color-accent in content pages
+          600: '#a8851f',
+          700: '#866817',
+          800: '#644e11',
+          900: '#42330b',
+        },
         slate: {
           50: '#f8fafc',
           100: '#f1f5f9',

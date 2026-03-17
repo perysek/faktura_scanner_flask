@@ -1,0 +1,16 @@
+##TASK A:
+Add users management module. Features:
+#1 Create user: fields according to datamodel + linking to employee as mandatory.
+#2 Superuser account cannot be created and is reserved for salon owner (but editable for superuser itself)
+#3 Editing users data
+#4 module to be accessible only by superuser and admin account
+
+##TASK B:
+Add module for creating new user roles and editing existing roles
+#1 Each role access level based on switching on/off access to each app module (as per side bar nav items/views)
+#2 roles access management module to be accessible only for superuser.
+#3 populate roles as already set with all modules switched on (will be changed prior deployment)
+
+Module A, B - navigation menu items to be places in section 'system', above existing item 'profil'
+
+

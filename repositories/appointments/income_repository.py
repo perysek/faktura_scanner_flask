@@ -175,6 +175,37 @@ class IncomeRepository:
             cursor.execute(query, (start_date, end_date))
             return cursor.fetchall()
 
+    def update(self, appointment_id: int, total_amount: Decimal,
+               net_amount: Decimal, commission_total: Decimal,
+               client_id: Optional[int] = None,
+               employee_id: Optional[int] = None,
+               payment_method: Optional[str] = None) -> bool:
+        """Zaktualizuj istniejący rekord przychodu (TASK#4/5)"""
+        parts = [
+            "total_amount = %s",
+            "net_amount = %s",
+            "commission_total = %s",
+        ]
+        params = [str(total_amount), str(net_amount), str(commission_total)]
+
+        if client_id is not None:
+            parts.append("client_id = %s")
+            params.append(client_id)
+        if employee_id is not None:
+            parts.append("employee_id = %s")
+            params.append(employee_id)
+        if payment_method is not None:
+            parts.append("payment_method = %s")
+            params.append(payment_method)
+
+        params.append(appointment_id)
+        query = f"UPDATE income_records SET {', '.join(parts)} WHERE appointment_id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(params))
+            conn.commit()
+            return cursor.rowcount > 0
+
     def delete_by_appointment(self, appointment_id: int) -> bool:
         """Usuń rekord przychodu dla wizyty (używane przy cofnięciu statusu 'completed')"""
         query = "DELETE FROM income_records WHERE appointment_id = %s"

@@ -803,18 +803,16 @@ def delete_invoice(invoice_id: int):
         if seller_id:
             current_app.seller_repo.decrement_invoice_count(seller_id)
         
-        # Log deletion (using special field 'status' or just generic 'deleted')
-        # FIXME: Logging DELETE action causes IntegrityError because audit_log has 
-        # FOREIGN KEY(invoice_id) ON DELETE CASCADE. The log entry is either rejected
-        # (if logged after) or deleted (if logged before).
-        # To fix this, we need soft delete or removing FK constraint.
-        # current_app.audit_repo.log_change(
-        #    invoice_id=invoice_id,
-        #    field_name='status',
-        #    old_value='active',
-        #    new_value='deleted',
-        #    action='DELETE'
-        # )
+        # Log deletion — FK constraint removed in schema.sql, so invoice_id=None is safe
+        current_app.audit_repo.log_event(
+            entity_type='invoice',
+            action='DELETE',
+            entity_id=invoice_id,
+            entity_label=getattr(invoice, 'invoice_number', None),
+            field_name='status',
+            old_value='active',
+            new_value='deleted',
+        )
 
 
         return jsonify({

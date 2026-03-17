@@ -3,6 +3,7 @@ Email service for fetching invoice PDFs via IMAP
 """
 import email
 import imaplib
+import logging
 import os
 import re
 import time
@@ -80,10 +81,11 @@ class EmailService:
 		if self.imap and self.connected:
 			try:
 				self.imap.logout()
-				self.connected = False
 				print("✅ Rozłączono z serwerem email")
-			except:
-				pass
+			except (imaplib.IMAP4.abort, imaplib.IMAP4.error, OSError) as e:
+				logging.warning(f"Email disconnect error: {e}")
+			finally:
+				self.connected = False
 
 	def _list_folders(self) -> List[str]:
 		"""
