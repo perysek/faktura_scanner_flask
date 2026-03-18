@@ -46,7 +46,7 @@ const Modals = {
             <div class="modal-content ${sizeClasses[size]}">
                 <div class="modal-header">
                     <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(title)}</h3>
-                    <button class="modal-close text-gray-400 hover:text-gray-600 transition-colors">
+                    <button class="modal-close text-gray-400 hover:text-gray-600 transition-colors" aria-label="Zamknij okno dialogowe">
                         <span class="material-icons">close</span>
                     </button>
                 </div>

@@ -146,7 +146,7 @@
                 <label id="employeeLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Wybór pracownika</label>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <!-- Employee Pagination -->
-                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" disabled>
+                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" aria-label="Poprzedni pracownik" disabled>
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -155,7 +155,7 @@
                     <select id="employeeSelect" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);">
                         <option value="">Ładowanie...</option>
                     </select>
-                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" disabled>
+                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" aria-label="Następny pracownik" disabled>
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
@@ -184,7 +184,7 @@
 
                 <!-- Month Navigation -->
                 <div style="display: flex; gap: 0.5rem; align-items: end;">
-                    <button id="prevMonthBtn" class="refined-btn-secondary" title="Poprzedni miesiąc">
+                    <button id="prevMonthBtn" class="refined-btn-secondary" title="Poprzedni miesiąc" aria-label="Poprzedni miesiąc">
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -193,7 +193,7 @@
                         <label for="monthLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Miesiąc</label>
                         <div class="month-label" id="monthLabel" style="min-height: 32px; display: flex; align-items: center; justify-content: center;">Miesiąc</div>
                     </div>
-                    <button id="nextMonthBtn" class="refined-btn-secondary" title="Następny miesiąc">
+                    <button id="nextMonthBtn" class="refined-btn-secondary" title="Następny miesiąc" aria-label="Następny miesiąc">
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
