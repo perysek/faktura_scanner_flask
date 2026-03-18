@@ -259,11 +259,11 @@
                 </div>
                 <div class="pp-card-body">
                     <div class="star-widget" id="star-widget">
-                        <button class="star-btn" data-star="1" onclick="setStar(1)" title="1 — Bardzo źle">★</button>
-                        <button class="star-btn" data-star="2" onclick="setStar(2)" title="2 — Słabo">★</button>
-                        <button class="star-btn" data-star="3" onclick="setStar(3)" title="3 — Przeciętnie">★</button>
-                        <button class="star-btn" data-star="4" onclick="setStar(4)" title="4 — Dobrze">★</button>
-                        <button class="star-btn" data-star="5" onclick="setStar(5)" title="5 — Znakomicie">★</button>
+                        <button class="star-btn" data-star="1" onclick="setStar(1)" title="1 — Bardzo źle" aria-label="1 — Bardzo źle">★</button>
+                        <button class="star-btn" data-star="2" onclick="setStar(2)" title="2 — Słabo" aria-label="2 — Słabo">★</button>
+                        <button class="star-btn" data-star="3" onclick="setStar(3)" title="3 — Przeciętnie" aria-label="3 — Przeciętnie">★</button>
+                        <button class="star-btn" data-star="4" onclick="setStar(4)" title="4 — Dobrze" aria-label="4 — Dobrze">★</button>
+                        <button class="star-btn" data-star="5" onclick="setStar(5)" title="5 — Znakomicie" aria-label="5 — Znakomicie">★</button>
                     </div>
                     <div class="star-meta" id="star-meta">Brak oceny</div>
                 </div>
@@ -349,7 +349,7 @@
 
         <!-- Zone 1: Navigation (prev / visit info / mode toggle / next) -->
         <div class="bar-nav-cluster">
-            <button class="bar-nav-btn" id="btn-prev" onclick="navigate('prev')" disabled title="Alt+←">
+            <button class="bar-nav-btn" id="btn-prev" onclick="navigate('prev')" disabled title="Alt+←" aria-label="Alt+←">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Poprzednia
             </button>
@@ -362,7 +362,7 @@
                 <span class="bar-visit-client" id="strip-client">Ładowanie...</span>
             </div>
 
-            <button class="bar-nav-btn" id="btn-next" onclick="navigate('next')" disabled title="Alt+→">
+            <button class="bar-nav-btn" id="btn-next" onclick="navigate('next')" disabled title="Alt+→" aria-label="Alt+→">
                 Następna
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -679,7 +679,7 @@ function renderServices() {
                        onblur="onSvcDurBlur(${idx}, this)"
                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
             </div>
-            <button class="btn-svc-remove" onclick="removeService(${idx})" title="Usuń usługę">
+            <button class="btn-svc-remove" onclick="removeService(${idx})" title="Usuń usługę" aria-label="Usuń usługę">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
         </li>
