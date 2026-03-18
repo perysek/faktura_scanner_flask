@@ -489,7 +489,7 @@ function renderEmployeeHeaders() {
         if (stats.completed > 0) {
             statsEl.innerHTML += `
                 <span class="employee-stat" title="Zakończone">
-                    <span class="employee-stat-dot" style="background: #2d6a4f;"></span>
+                    <span class="employee-stat-dot" style="background: var(--color-success);"></span>
                     ${stats.completed}
                 </span>
             `;
