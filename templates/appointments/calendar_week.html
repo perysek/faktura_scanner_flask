@@ -155,7 +155,7 @@
                 <label id="employeeLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Wybór pracownika</label>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <!-- Employee Pagination -->
-                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" disabled>
+                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" aria-label="Poprzedni pracownik" disabled>
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -163,7 +163,7 @@
                     <div id="employeePagination" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; min-height: 32px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
                         Ładowanie...
                     </div>
-                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" disabled>
+                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" aria-label="Następny pracownik" disabled>
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
@@ -196,7 +196,7 @@
 
                 <!-- Week Navigation -->
                 <div style="display: flex; gap: 0.5rem; align-items: end;">
-                    <button id="prevWeekBtn" class="refined-btn-secondary" title="Poprzedni tydzień">
+                    <button id="prevWeekBtn" class="refined-btn-secondary" title="Poprzedni tydzień" aria-label="Poprzedni tydzień">
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -205,7 +205,7 @@
                         <label for="weekLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Tydzień</label>
                         <div class="week-label" id="weekLabel" style="min-height: 32px; display: flex; align-items: center; justify-content: center;">Tydzień</div>
                     </div>
-                    <button id="nextWeekBtn" class="refined-btn-secondary" title="Następny tydzień">
+                    <button id="nextWeekBtn" class="refined-btn-secondary" title="Następny tydzień" aria-label="Następny tydzień">
                         <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>

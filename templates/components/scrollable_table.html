@@ -247,14 +247,14 @@
 {% if href %}
 <a href="{{ href }}"
    class="{{ size_classes[size] }} rounded-lg transition-colors {{ color_classes[color] }} btn-press"
-   title="{{ title }}">
+   title="{{ title }}" aria-label="{{ title }}">
     <span class="material-icons {{ icon_sizes[size] }}">{{ icon }}</span>
 </a>
 {% else %}
 <button type="button"
         onclick="{{ onclick }}"
         class="{{ size_classes[size] }} rounded-lg transition-colors {{ color_classes[color] }} btn-press"
-        title="{{ title }}">
+        title="{{ title }}" aria-label="{{ title }}">
     <span class="material-icons {{ icon_sizes[size] }}">{{ icon }}</span>
 </button>
 {% endif %}
@@ -274,7 +274,7 @@
         id="toggle-search-btn"
         onclick="toggleTableSearch('{{ target_id }}')"
         class="p-2 rounded-lg transition-all {{ 'bg-primary-50 text-primary-600' if active else 'text-slate-400 hover:text-primary-600 hover:bg-primary-50' }}"
-        title="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}">
+        title="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}" aria-label="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}">
     <span class="material-icons text-xl">filter_list</span>
 </button>
 {% endmacro %}
