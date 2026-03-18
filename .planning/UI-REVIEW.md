@@ -1,8 +1,10 @@
-# UI Review — MyWay Nails & Beauty (Retroactive Audit)
+# UI Review — MyWay Nails & Beauty (Re-Audit)
 
-**Audited:** 2026-03-16
+**Audited:** 2026-03-18
+**Previous audit:** 2026-03-16 — scored 15/24
 **Baseline:** Abstract 6-pillar standards (no UI-SPEC.md exists)
-**Screenshots:** Not captured — Playwright unavailable; Flask dev server detected at localhost:5000
+**Screenshots:** Not captured — no dev server running on localhost:3000/5000/5173/8080
+**Scope:** 52 HTML templates, tailwind.config.js, static/css/input.css
 
 ---
 
@@ -10,225 +12,326 @@
 
 | Pillar | Score | Key Finding |
 |--------|-------|-------------|
-| 1. Copywriting | 2/4 | Pervasive missing Polish diacritics across 5+ templates; dashboard error strings unpolished |
-| 2. Visuals | 3/4 | Strong calendar and dashboard layouts; sidebar "Admin Wizyty" link hardcodes appointment_id=1 |
-| 3. Color | 2/4 | Split design system: Tailwind primary=blue, page CSS accent=gold (#c9a227); 689 hardcoded hex values across 45 files |
-| 4. Typography | 2/4 | Content pages bypass Tailwind text scale entirely with custom rem values (0.6875rem, 0.8125rem, 1.25rem) |
-| 5. Spacing | 3/4 | Sidebar uses Tailwind scale cleanly; content pages use custom CSS pixel-rem values, inconsistent with base layout |
-| 6. Experience Design | 3/4 | Good state coverage (loading, empty, error); sidebar section headers not keyboard-accessible; near-zero aria usage |
+| 1. Copywriting | 3/4 | All major diacritic regressions fixed; one instance remains in sellers/edit.html |
+| 2. Visuals | 3/4 | Hardcoded appointment_id=1 fixed; sidebar click-to-toggle wired; icon-only buttons still lack aria-label |
+| 3. Color | 3/4 | brand-500 gold token added to tailwind.config.js; 689 hardcoded hex values remain; brand tokens unused in templates |
+| 4. Typography | 2/4 | 45 of 52 templates re-declare :root font sizes; page-title varies 1.375–1.75rem across calendar/content pages; custom sub-px sizes persist |
+| 5. Spacing | 3/4 | !important overrides on #main-content padding found in 14+ templates; inconsistent max-width between pages (800–1600px) |
+| 6. Experience Design | 3/4 | Keyboard shortcuts (Ctrl+S, Esc) added to forms; sidebar click-to-toggle added; aria coverage still near-zero; 404 CTA routes to invoices_list not dashboard |
 
-**Overall: 15/24**
+**Overall: 17/24** (up from 15/24)
+
+---
+
+## Changes Since Previous Audit
+
+### Improvements
+- **Critical bug fixed:** `sidebar.html` line 186 now uses `url_for('main.superadmin_edit_latest')` instead of the hardcoded `appointment_id=1` route. Active state detection also includes the new route endpoint.
+- **Sidebar click-to-toggle added:** `sidebar.html` lines 295–310 wire a `click` event listener on each `.sidebar-section-header` with proper expand/collapse and `section.dataset.active` state tracking. The previous audit flagged this as non-functional.
+- **Sidebar role labels humanized:** `sidebar.html` line 226 now renders a dict mapping (`'superuser': 'Superadmin'`, `'accountant': 'Księgowa'`, `'receptionist': 'Recepcjonistka'`, `'stylist': 'Stylistka'`) instead of the raw `current_user.role | capitalize`.
+- **Missing diacritics substantially fixed:** The previous audit found 12+ instances across `dashboard/index.html` and `settings/email.html`. Current grep across all 52 templates finds only one remaining instance (`sellers/edit.html` line 445: `"Ladowanie..."`).
+- **Gold brand token added to Tailwind:** `tailwind.config.js` lines 30–41 add a `brand` color scale with `brand-500: '#c9a227'`. The comment explicitly notes it matches `--color-accent` in content pages.
+- **`appointments/list.html` date parsing fixed:** `getDateFromInput()` uses `new Date(dateStr + 'T12:00:00')` to avoid UTC timezone offset — consistent with the project's date handling guidance.
+
+### Regressions / Unchanged Problems
+- The 689 hardcoded hex color occurrences remain unchanged — the `brand-*` tokens were added to the config but are not used in any template yet.
+- The 45-of-52 templates pattern of per-template `:root` CSS variable blocks is unchanged.
+- Accessibility (aria coverage) remains near-zero across content pages.
 
 ---
 
 ## Top 3 Priority Fixes
 
-1. **Missing Polish diacritics in user-facing strings** — Users see "Odswiez", "Oplacone", "Blad ladowania", "zagleglosci", "Najczestsi dostawcy", "Nadchodzace platnosci" — looks unfinished and unprofessional — Fix: add missing characters in `templates/dashboard/index.html` lines 373, 385, 389, 460, 476, 517, 520, 576, 607 and `templates/settings/email.html` lines 416, 421, 457
+1. **Adopt the brand-* Tailwind tokens in templates** — The gold `brand-500` (#c9a227) token exists in `tailwind.config.js` but zero templates use it. Every content page that references `var(--color-accent)` in JavaScript-generated DOM or inline color strings (`#c9a227`, `#d97706`) should be updated to use `brand-*` utilities. This reduces the hardcoded hex count from 689, makes the gold accent theme-changeable in one place, and resolves the two-system color inconsistency. Start with `invoices/list_refined.html`, `dashboard/index.html`, and `sellers/list_refined.html`.
 
-2. **Hardcoded appointment_id=1 in sidebar "Admin Wizyty" link** — Superadmin navigates to the wrong visit on every click; link is broken by design — Fix: change `url_for('main.superadmin_edit_visit', appointment_id=1)` in `sidebar.html` line 186 to a dedicated admin landing route (e.g., redirect to appointments list or a dedicated superadmin dashboard route) that does not require a hardcoded entity ID
+2. **Extract the shared :root CSS block into static/css/input.css** — 45 of 52 templates declare an identical or near-identical `:root { --color-ink: ... }` block. Any future brand-color change requires editing ~45 files. Move the shared custom properties into `input.css` under `@layer base { :root { ... } }`. Templates that need page-specific overrides can still declare them locally. This also eliminates the `!important` fights between `base.html`'s `<main class="p-2">` and each page's `#main-content { padding: 1rem 1.5rem !important }`.
 
-3. **Split color design system: Tailwind blue vs. page-level gold** — Components built at different times use two unrelated accent colors; `primary` in Tailwind config resolves to blue (#3b82f6) while dashboard/invoices/calendar pages define `--color-accent: #c9a227` (gold) and render charts, badges, and hover states in that color — Fix: either extend `tailwind.config.js` with a `gold` or `brand` key that maps to `#c9a227` and use it consistently, or replace page-level `--color-accent` references with the existing Tailwind primary scale
+3. **Add aria-label to all icon-only buttons** — Calendar pagination buttons (`prevDayBtn`, `nextDayBtn`, `prevEmployeesBtn`, `nextEmployeesBtn` in `calendar.html` lines 209–238) use `title` attributes which are tooltip-only and do not serve screen readers. The analytics dashboard period navigation buttons (`prevPeriod`, `nextPeriod` in `analytics/dashboard.html` lines 17–29) have `title` but no `aria-label`. Fix: add `aria-label="Poprzedni dzień"` (etc.) to each button alongside the existing `title`. Also add `aria-label` to the confirm modal close `×` button (`confirm_modal.html` line 27) and the flash message dismiss button (`flash_messages.html` line 31).
 
 ---
 
 ## Detailed Findings
 
-### Pillar 1: Copywriting (2/4)
+### Pillar 1: Copywriting (3/4)
 
-**Missing diacritics — dashboard/index.html**
+**Improvement since last audit:** The 12+ missing-diacritic strings in `dashboard/index.html` and `settings/email.html` have been corrected. The `sellers/list_refined.html` errors cited in the previous audit (`Blad ladowania sprzedawcow`, `Blad usuwania`, etc.) are also fixed.
 
-The dashboard template has multiple Polish strings with missing accented characters, likely from development shortcuts. These appear in DOM text visible to all users:
+**One remaining instance:**
 
-- Line 373: `"Odswiez"` should be `"Odśwież"`
-- Line 374 (button label): `"Odswiez dane"` (title attr) → `"Odśwież dane"`
-- Line 385: `"Oplacone"` → `"Opłacone"`
-- Line 389: `"Nieoplacone"` → `"Nieopłacone"`
-- Line 460: `"Nadchodzace platnosci"` → `"Nadchodzące płatności"`
-- Line 476: `"Najczestsi dostawcy"` → `"Najczęstsi dostawcy"`
-- Line 516–517: `"Odswiezono"` / `"Odswiez"` → `"Odświeżono"` / `"Odśwież"`
-- Line 520: `"Blad"` → `"Błąd"`
-- Lines 576, 611, 655, 689: `"Blad ladowania"` → `"Błąd ładowania"`
-- Line 607: `"Brak zagleglosci"` → `"Brak zaległości"`, `"Wszystko oplacone na czas!"` → `"Wszystko opłacone na czas!"`
+- `templates/sellers/edit.html` line 445: `"Ladowanie..."` should be `"Ładowanie..."` — this is the only remaining missing-diacritic issue found across all 52 templates.
 
-**Missing diacritics — settings/email.html**
+**Strong copy patterns found across the full template set:**
 
-- Lines 416, 421: `"Blad zapisywania..."` → `"Błąd zapisywania..."`
-- Line 457: `"Blad testowania..."` → `"Błąd testowania..."`
+- Appointment form `create.html` uses `"Zarezerwuj wizytę"` (not generic "Submit") and `"Zapisywanie..."` feedback during save
+- Error recovery messages are specific: "Nie udało się połączyć z serwerem. Spróbuj ponownie." (`appointments/create.html` line 259)
+- Empty states are contextual: `"Brak wizyt w wybranym zakresie"`, `"Nie znaleziono klientów"`, `"Ładowanie klientów..."` (clients/list.html)
+- The `forgot_password.html` copy is careful — it uses a neutral notice to avoid email enumeration: "Jeśli konto z podanym adresem istnieje, poniżej znajdziesz link..." (line 219)
+- Status labels are consistent across all calendar/list/view pages: `STATUS_LABELS` object is defined locally in each template with identical Polish values
 
-**sellers/list_refined.html (multiple lines)**
+**Minor observations:**
 
-"Blad ladowania sprzedawcow", "Blad usuwania", "Blad synchronizacji", "Blad odswiezania" — all missing diacritics
-
-**Positive observations:**
-
-- Empty states use meaningful messages: "Brak wizyt w wybranym zakresie", "Brak zaplanowanych wizyt", "Wszystko opłacone na czas!"
-- Calendar status labels ("Zaplanowana", "Potwierdzona", "W trakcie") are clear and domain-appropriate
-- Destructive actions use "Zmień dane" / "Zapisz mimo to" rather than generic "Cancel/OK"
+- `404.html` "Powrót do strony głównej" button routes to `main.invoices_list`, not an actual home/dashboard. For non-accountant roles (receptionists, stylists) who have no access to invoices, this button will result in a redirect or permission error. A more universal CTA would route to `main.dashboard`.
+- `analytics/dashboard.html` "Idź na początek" back-to-top button label is functional but slightly informal; "Powrót na górę" is more consistent with the app's formal-register copy.
 
 ---
 
 ### Pillar 2: Visuals (3/4)
 
-**Sidebar — strong implementation, one critical bug**
+**Improvements since last audit:**
 
-The sidebar hover-expand pattern is well-executed. Active section stays open, inactive sections collapse on hover. Chevron rotation provides clear affordance. User avatar with gradient initials is a polished touch.
+- The hardcoded `appointment_id=1` bug in the sidebar "Admin Wizyty" link is fixed.
+- Sidebar section headers now have JavaScript-driven click-to-toggle (`sidebar.html` lines 295–310). `header.style.cursor = 'pointer'` is set programmatically, overriding the template's `cursor-default`.
 
-Critical bug: `sidebar.html` line 186 — the "Admin Wizyty" link is:
-```
-url_for('main.superadmin_edit_visit', appointment_id=1)
-```
-This hardcodes entity ID 1 and will navigate to a specific (possibly unrelated) appointment on every click. This link appears in the System section visible to superusers only, but the navigation target is wrong by design.
+**Remaining issues:**
 
-**Sidebar section headers suggest interactivity they don't offer**
+**Calendar icon-only buttons lack aria-label**
 
-Section headers (`sidebar-section-header`) show a chevron icon that animates on expand/collapse, but the header itself has `cursor-default select-none` — click does nothing. The hover behavior only triggers on `mouseenter` of the entire `.sidebar-section` div. Users who try to click the header label to toggle will be confused.
+`appointments/calendar.html` lines 209–238: four navigation buttons (`prevEmployeesBtn`, `nextEmployeesBtn`, `prevDayBtn`, `nextDayBtn`) have only `title` attributes. Titles are hover-tooltip only and not announced by screen readers. Same pattern in `analytics/dashboard.html` lines 17, 25 (`prevPeriod`, `nextPeriod`).
 
-**Dashboard visual hierarchy — good**
+**Confirm modal close button has no accessible label**
 
-The dashboard layout correctly uses a full-width chart at top, then a 2-column grid of panels. Stat cards provide scannable KPIs. Loading state text (`"Ladowanie..."`) appears immediately before data loads, which is appropriate.
+`components/confirm_modal.html` line 27: the close `×` button (`<button type="button" onclick="closeConfirmModal()">`) has no `aria-label` or visible text. The SVG path is purely decorative without a label.
 
-**Calendar — strong**
+**Flash messages dismiss button lacks accessible label**
 
-The day-view calendar with employee columns, coverage stat card, and color-coded appointment blocks provides excellent at-a-glance information density. The appointment block status colors (blue/green/amber/dark-green/red) are visually distinct.
+`components/flash_messages.html` line 31: the `×` dismiss button (`<button onclick="this.parentElement.remove()">`) has no `aria-label`.
 
-**Icon-only buttons without labels**
+**Superadmin edit page has its own visual language**
 
-Calendar pagination arrows (`prevDayBtn`, `nextDayBtn`, `prevEmployeesBtn`, `nextEmployeesBtn`) have `title` attributes but no `aria-label`. Titles require hover and don't serve screen readers reliably.
+`appointments/superadmin_edit.html` defines a distinct "Power Panel" theme (dark `#0f0f0f` background, blue accent `--pp-blue`, compact typography) that intentionally differs from the app's "Refined Minimal" aesthetic. This is a conscious design choice for a superuser-only tool and is not a defect, but it means the superadmin experience is visually discontinuous with the rest of the app.
+
+**Visual hierarchy is strong overall**
+
+The shared pattern of `page-title` (1.75rem, weight 600) + `page-subtitle` (0.8125rem, weight 300) + stat cards + table/calendar is consistent across clients, employees, services, and appointment list pages. The `client-avatar` blue gradient is repeated across `clients/list.html` and `clients/view.html` consistently.
 
 ---
 
-### Pillar 3: Color (2/4)
+### Pillar 3: Color (3/4)
 
-**Two competing accent color systems**
+**Improvement since last audit:**
 
-The Tailwind config (`tailwind.config.js` lines 13–24) defines:
-- `primary-500` = `#3b82f6` (blue)
-- `accent-500` = `#10b981` (green)
+`tailwind.config.js` lines 30–41 add the `brand` color scale:
+```
+brand-500: '#c9a227'   // Gold accent — matches --color-accent in content pages
+```
+The config comment explicitly calls out the mapping. This is the correct structural fix.
 
-The sidebar uses `primary-400/500/600/700` (blue) for active states and the user avatar gradient.
+**Not yet applied:**
 
-Meanwhile, `dashboard/index.html`, `invoices/list_refined.html`, and `appointments/calendar.html` each define in their own `<style>` blocks:
-- `--color-accent: #c9a227` (gold/amber)
+Despite the token existing in the config, zero templates reference `brand-*` utilities. All gold usages are still hardcoded:
+- `--color-accent: #c9a227` in `:root` blocks across `invoices/list_refined.html`, `sellers/list_refined.html`, `history/list_refined.html`, `dashboard/index.html`, `auth/login.html`, `auth/profile.html`, `auth/forgot_password.html`, `auth/reset_password.html`, `users/list.html`
+- `#c9a227` and `#d97706` inline in JS-generated appointment block HTML (`calendar.html` lines 97, 633)
 
-This gold accent is used for:
-- Chart hover bars (`hoverBackgroundColor`)
-- Invoice status badges (`status-unpaid`)
-- Appointment add-on text color (`#d97706` orange-adjacent)
-- Coverage bar color transitions
+**Hardcoded hex count:** 689 occurrences across all templates (unchanged from previous audit).
 
-The result is that the primary navigation chrome (sidebar) is blue while the primary content areas are gold-toned. These two systems never meet and produce a visual discontinuity at the sidebar/content boundary.
+**The two color systems are structurally still present:**
 
-**Hardcoded hex count: 689 occurrences across 45 files**
+| System | Used by | Accent color |
+|--------|---------|-------------|
+| Tailwind `primary-*` | `sidebar.html`, `flash_messages.html`, `confirm_modal.html` | Blue (#3b82f6) |
+| CSS `--color-accent` | All 9 content-page templates that set it | Gold (#c9a227) |
 
-Notable patterns:
-- `#2563eb`, `#059669`, `#d97706`, `#dc2626` — appointment status colors hardcoded in JS-generated HTML inside `calendar.html` (lines 80–84, 489–518) rather than referenced from CSS classes
-- `#3b82f6`, `#10b981`, `#6366f1`, `#f59e0b`, `#94a3b8` — seller initial avatar colors hardcoded inline in `dashboard/index.html` line 664
+The `brand-*` token in `tailwind.config.js` bridges the gap structurally, but the bridge is not yet used in HTML.
 
-These hardcoded colors cannot be theme-changed and create maintenance risk.
+**What works well:**
 
-**What works well:** The semantic status color model (blue=scheduled, green=confirmed, amber=in-progress, dark-green=completed, red=cancelled) is consistent across the calendar, list, and view templates.
+The semantic appointment status color model (blue=scheduled, green=confirmed, amber=in-progress, dark-green=completed, red=cancelled) is consistent across `calendar.html`, `list.html`, `view.html`, and `edit.html`. Both the CSS class-based `.status-badge` and the JavaScript-generated `appointment-block` colors use the same values.
 
 ---
 
 ### Pillar 4: Typography (2/4)
 
-**Content pages bypass Tailwind text scale entirely**
+**Score unchanged from previous audit.**
 
-The sidebar, base layout, and component macros use Tailwind's text scale (`text-xs`, `text-sm`, `text-base`, etc.) consistently.
+**Per-template :root blocks create a fragmented type scale:**
 
-However, `dashboard/index.html`, `invoices/list_refined.html`, and `appointments/calendar.html` each declare a local `<style>` block with custom font sizes in `rem` units:
+45 of 52 templates define their own `:root { ... }` block. Most include font-size declarations for classes like `.page-title`, `.page-subtitle`, `.stat-value`. These are not shared via a stylesheet; they are copied into each template. The practical effect is:
 
-| Class | Value | Tailwind equivalent |
-|-------|-------|---------------------|
-| `.stat-value` | `1.25rem` | `text-xl` |
-| `.page-title` (dashboard) | `1.5rem` | `text-2xl` |
-| `.page-title` (calendar) | `1.75rem` | `text-[1.75rem]` (nonstandard) |
-| `.list-item-title` | `0.8125rem` | between `text-xs` and `text-sm` |
-| `.list-item-subtitle` | `0.6875rem` | between `text-xs` and `text-sm` |
-| `.stat-label` | `0.6875rem` | same |
-| `.appointment-status-badge` | `0.5625rem` | smaller than `text-xs` |
+| Class | Declared sizes found |
+|-------|---------------------|
+| `.page-title` | `1.375rem` (week/month calendars), `1.5rem` (dashboard, invoices, history, create), `1.75rem` (list pages, forms) |
+| `.page-subtitle` | `0.8125rem` (most pages), `0.75rem` (week/month calendars) |
+| `.stat-value` | `1.25rem` (dashboard), `1.5rem` (income), `1.75rem` (clients, employees, services) |
+| `.stat-label` | `0.6875rem` (most pages), `0.75rem` (clients) |
 
-The `0.6875rem` and `0.5625rem` values fall between Tailwind's named steps and will produce inconsistent rendering compared to components that use the standard scale.
+Three pages (week calendar, month calendar) use `page-title: 1.375rem` while all other pages use `1.75rem` — creating a perceivable headline inconsistency when navigating between Wizyty views.
 
-**Font weights across audited files:** `font-medium` (500), `font-semibold` (600), `font-bold` (700), `font-light` (300) — 4 weights in use, which is acceptable, but mixing CSS `font-weight: 600` declarations with Tailwind `font-semibold` means identical weight values come from two different systems.
+**Sub-Tailwind font sizes persist:**
 
-**What works well:** The type hierarchy within each individual page is internally consistent. Headings are large and weighted, labels are small and muted, data values are medium-sized and bold.
+The following sizes are below the Tailwind `text-xs` (0.75rem) threshold:
+- `0.6875rem` — table header cells, stat labels (appears in ~15 templates)
+- `0.625rem` — calendar appointment details, employee stat dots
+- `0.5625rem` — appointment status badges in calendar blocks
+
+These do not break readability but cannot be managed through the Tailwind scale without arbitrary values.
+
+**Tailwind font classes found in templates:**
+
+| Class | Count |
+|-------|-------|
+| `text-sm` | 70 |
+| `text-xs` | 29 |
+| `text-lg` | 27 |
+| `text-2xl` | 11 |
+| `text-xl` | 2 |
+| `text-base` | 1 |
+| `text-3xl` | 1 |
+
+The `text-lg` count (27) is driven largely by the analytics dashboard which uses Tailwind directly rather than custom CSS. The analytics page is the only content page that uses Tailwind classes for typography — all other content pages use custom CSS `font-size` declarations.
+
+**Font weights:**
+
+| Class | Count |
+|-------|-------|
+| `font-medium` | 52 |
+| `font-semibold` | 23 |
+| `font-bold` | 1 |
+
+Three weights in the Tailwind-class system. However, per-page CSS also declares `font-weight: 600` (semibold) and `font-weight: 300` (light) via custom properties, meaning there are effectively 4 weights in use across the system, mixed between two authoring approaches.
 
 ---
 
 ### Pillar 5: Spacing (3/4)
 
-**Sidebar — clean Tailwind spacing**
+**Score unchanged from previous audit.**
 
-The sidebar uses Tailwind spacing classes throughout: `px-4 py-2`, `px-4 py-3`, `px-2 mb-1`, `py-1`, `gap-1`, `gap-2`, `p-2`. No arbitrary values. Spacing is consistent between all nav items (`px-4 py-2`).
+**!important padding overrides in 14+ templates:**
 
-Minor inconsistency: the user info panel bottom div uses `p-2` while the top logo/header uses `px-4 py-2` — the logout button ends up with less horizontal padding than nav items. This creates a slight misalignment at the bottom of the sidebar.
+The layout `base.html` line 44 sets `<main class="flex-1 overflow-auto p-2" id="main-content">`. Pages that need different padding override this with:
+```css
+#main-content { padding: 1rem 1.5rem !important; overflow: hidden !important; }
+```
+This pattern appears in: `dashboard/index.html`, `invoices/list_refined.html`, `invoices/create.html`, `invoices/edit.html`, `sellers/list_refined.html`, `history/list_refined.html`, `auth/profile.html`, `auth/change_password.html`, `appointments/superadmin_edit.html`, `errors/404.html`, `errors/500.html`, and others (14+ total). The `!important` indicates a structural mismatch — the base layout's `p-2` serves as a fallback that most pages have to fight.
 
-**Content pages — custom CSS spacing**
+**max-width inconsistency across page types:**
 
-Dashboard and invoices list bypass Tailwind for layout spacing:
-- `padding: 1rem 1.5rem`
-- `gap: 0.75rem`
-- `margin-bottom: 1rem`
-- `padding: 0.75rem 1rem`
+| Template | max-width |
+|----------|-----------|
+| `clients/create.html` | 800px |
+| `appointments/create.html`, `view.html`, `edit.html` | 900–1000px |
+| `clients/list.html`, `employees/list.html`, `services/list.html` | 1400px |
+| `appointments/calendar_week.html`, `calendar_month.html` | 1600px |
+| `appointments/calendar.html`, `invoices/list_refined.html` | No max-width (full-width) |
+| `roles/list.html` | 1200px |
 
-This is not inherently wrong (content pages have design freedom) but means the `p-2` override in `base.html` line 44 (`<main class="flex-1 overflow-auto p-2">`) and the page's own `#main-content { padding: 1rem 1.5rem !important; }` override fight each other. The `!important` on line 38 of `dashboard/index.html` is a maintenance risk.
+There is no consistent content-width scale. Six different values across comparable pages.
 
-**Arbitrary value usage**
+**Inline `style="display: ..."` for visibility state:** 144 occurrences of inline `display` style attributes vs. class-based visibility toggling. This mixes layout decisions into JavaScript and makes CSS-only responsive overrides harder.
 
-No Tailwind arbitrary values (e.g., `[13px]`) were found in the sidebar or audited content templates. The custom CSS approach avoids that pattern but creates equivalent fragmentation.
+**Positive: appointment creation form spacing**
 
-**Positive:** The `space-y-0.5` on `.sidebar-section-items` achieves tight but readable nav item stacking — a well-chosen scale value.
+The `appointments/create.html` form-card system (`padding: 2rem`, `gap: 1rem` grid, `margin-bottom: 1.5rem` cards) produces comfortable vertical rhythm. The summary-box `padding: 1rem` inside cards maintains visual separation without being wasteful.
 
 ---
 
 ### Pillar 6: Experience Design (3/4)
 
-**Loading states — well implemented**
+**Improvements since last audit:**
 
-- Dashboard: panels show "Ladowanie..." text before async data arrives; refresh button shows spinner animation (`.loading svg` animation)
-- Calendar: `loadingOverlay` with spinner covers the timeline grid during fetch
-- Calendar employee pagination label shows "Ładowanie..." during initial load
+- **Keyboard shortcuts added:** `appointments/create.html` (lines 315–329), `clients/create.html` (lines 385–399), and other form templates implement `Ctrl+S` = save and `Esc` = cancel with proper guards (does not fire when modal is open, does not fire from input/textarea focus).
+- **Sidebar click-to-toggle:** Section headers now fire a `click` event to expand/collapse sections, with restore-on-leave behavior. Previously headers were hover-only.
+- **`appointments/list.html` timezone-safe date parsing:** `getDateFromInput()` appends `T12:00:00` to avoid UTC midnight off-by-one bugs.
 
-**Error states — functional but unpolished**
+**Loading states — comprehensive coverage:**
 
-Error handling is consistent across the codebase (try/catch in all async functions), but error messages lack diacritics (see Pillar 1). The dashboard error state renders just `<div class="empty-title">Blad ladowania</div>` with no recovery action or retry button.
+- `appointments/list.html` initial tbody: `"Ładowanie wizyt..."` Material Icons placeholder
+- `clients/list.html` initial tbody: `"Ładowanie klientów..."`
+- `roles/list.html`: dedicated `#loading-state` div with `"Ładowanie..."`
+- `superadmin_edit.html`: full-page `pp-loading-overlay` with spinner
+- Calendar templates: `loadingOverlay` shown during API fetches
 
-**Empty states — good**
+**Error states — good coverage, one UX gap:**
 
-- Dashboard panels show icon + title for empty data
-- Calendar shows a centered empty state with icon, "Brak wizyt", and description text
-- The overdue-payments empty state correctly shows a positive message: "Brak zaległości — Wszystko opłacone na czas!" (though with missing diacritics)
+- All async functions in all audited templates use `try/catch` with user-facing error messages
+- Error messages are now properly diacriticked: `"Błąd połączenia z serwerem"`, `"Błąd rezerwacji"`
+- Gap: none of the async error states offer a retry action. The calendar day view shows `"Błąd ładowania wizyt"` but no retry button. Pattern from `dashboard/index.html` (which has a manual refresh button) is not replicated in calendar or client list pages.
 
-**Missing: Accessibility / keyboard interaction**
+**Accessibility — near-zero aria coverage (unchanged):**
 
-Aria usage is nearly absent across the template suite — only 3 `aria-label` attributes were found across all 50+ templates. Specific gaps:
+The entire template suite has approximately 4 `aria-*` attributes:
+- `flash_messages.html` line 9: `role="alert"` on flash notifications
+- `confirm_modal.html` line 2: `aria-labelledby`, `role="dialog"`, `aria-modal="true"`
 
-- Sidebar section headers: click-to-toggle is not wired (hover only), no keyboard equivalent
-- Calendar pagination arrow buttons (`prevDayBtn`, etc.): have `title` attributes but no `aria-label`
-- Employee stat dots in calendar headers are purely decorative SVG/spans with no text alternative
-- The sidebar `sidebar-section-header` elements use `cursor-default` which overrides UA pointer and makes the chevron icon misleading on mouse and invisible on keyboard
+No `aria-label` on any icon-only button across the 50 content templates. No `aria-live` regions for async content updates (appointment list, client list, stat cards load silently). No skip-navigation link.
 
-**Destructive action confirmations — present**
+**Destructive action confirmations — well implemented:**
 
-`components/confirm_modal.html` is included in base.html and used across 34 templates. Confirmation dialogs are present for deletes. This is well-handled.
+`confirm_modal.html` supports `danger`, `warning`, and `info` types with appropriate icon/color. Escape key closes the modal. Focus is sent to the cancel button on open (`setTimeout` focus, line 127–130). The `confirmDelete()` helper provides a consistent string "Ta operacja jest nieodwracalna." across all delete operations.
 
-**Role display in sidebar footer**
+**Role-based empty states:**
 
-`<p class="text-xs text-slate-400 capitalize">{{ current_user.role }}</p>` displays raw role strings like "superuser", "receptionist". `capitalize` only uppercases the first letter — "Superuser" is acceptable but "Receptionist" is shown where a human-readable label like "Recepcjonistka" would be more appropriate for a Polish-language app.
+`appointments/create.html` lines 166–168: when no employee is selected, the services container shows "Wybierz pracownika, aby zobaczyć dostępne usługi" rather than an empty box. When an employee with no services is selected, it shows "Brak przypisanych usług dla tego pracownika" (line 186). Both are informative.
+
+---
+
+## Registry Audit
+
+Not applicable — no `components.json` found (shadcn not initialized).
 
 ---
 
 ## Files Audited
 
-- `templates/components/sidebar.html` — primary focus, hover-expand nav
-- `templates/base.html` — layout shell
-- `templates/dashboard/index.html` — dashboard with Chart.js, async panels
-- `templates/invoices/list_refined.html` — invoice list with filters and table
-- `templates/appointments/calendar.html` — day-view timeline calendar
-- `templates/components/scrollable_table.html` — reusable table macro
-- `templates/components/form_fields.html` — reusable form macro
-- `templates/components/confirm_modal.html` — destructive action modal
-- `tailwind.config.js` — color token definitions
-- `static/css/input.css` — global Tailwind component classes
-- `.planning/codebase/ARCHITECTURE.md` — project context
+**Core layout:**
+- `templates/base.html`
+- `templates/components/sidebar.html`
+- `templates/components/confirm_modal.html`
+- `templates/components/flash_messages.html`
+- `templates/components/form_fields.html`
+- `templates/components/scrollable_table.html`
+
+**Dashboard & analytics:**
+- `templates/dashboard/index.html`
+- `templates/analytics/dashboard.html`
+- `templates/income/dashboard.html`
+
+**Appointments (all 7):**
+- `templates/appointments/calendar.html`
+- `templates/appointments/calendar_week.html`
+- `templates/appointments/calendar_month.html`
+- `templates/appointments/list.html`
+- `templates/appointments/create.html`
+- `templates/appointments/edit.html`
+- `templates/appointments/view.html`
+- `templates/appointments/superadmin_edit.html`
+
+**Invoices:**
+- `templates/invoices/list_refined.html`
+- `templates/invoices/create.html`
+- `templates/invoices/edit.html`
+- `templates/invoices/upload.html`
+
+**Clients:**
+- `templates/clients/list.html`
+- `templates/clients/create.html`
+- `templates/clients/edit.html`
+- `templates/clients/view.html`
+
+**Employees:**
+- `templates/employees/list.html`
+
+**Services:**
+- `templates/services/list.html`
+
+**Sellers:**
+- `templates/sellers/list_refined.html`
+- `templates/sellers/edit.html`
+
+**Users & roles:**
+- `templates/users/list.html`
+- `templates/roles/list.html`
+
+**Auth:**
+- `templates/auth/login.html`
+- `templates/auth/profile.html`
+- `templates/auth/forgot_password.html`
+
+**Errors:**
+- `templates/errors/404.html`
+
+**History:**
+- `templates/history/list_refined.html`
+
+**Config:**
+- `tailwind.config.js`
+- `static/css/input.css`
