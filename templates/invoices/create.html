@@ -702,10 +702,10 @@ function setupFileUpload() {
             previewContainer.style.justifyContent = 'center';
             previewContainer.innerHTML = `
                 <div style="text-align: center;">
-                    <svg style="width: 4rem; height: 4rem; color: #8a8a8a; margin: 0 auto 1rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg style="width: 4rem; height: 4rem; color: var(--color-ink-subtle); margin: 0 auto 1rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <p style="color: #525252;">${file.name}</p>
+                    <p style="color: var(--color-ink-muted);">${file.name}</p>
                 </div>
             `;
         }

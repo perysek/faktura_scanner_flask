@@ -11,7 +11,7 @@
     .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
     .refined-table { width: 100%; border-collapse: collapse; }
     .refined-table th { padding: 0.625rem 1rem; text-align: left; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); border-bottom: 1px solid var(--color-border); }
-    .refined-table td { padding: 0.875rem 1rem; font-size: 0.8125rem; border-bottom: 1px solid var(--color-border-subtle, #f0eeea); vertical-align: middle; }
+    .refined-table td { padding: 0.875rem 1rem; font-size: 0.8125rem; border-bottom: 1px solid var(--color-border-subtle, var(--color-border-subtle)); vertical-align: middle; }
     .refined-table tr:last-child td { border-bottom: none; }
     .refined-table tr:hover td { background: var(--color-surface); }
     .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 2px; font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.03em; }
@@ -78,7 +78,7 @@
     <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div class="relative bg-white max-w-md w-full transform transition-all duration-200 scale-95 opacity-0 pointer-events-auto"
              id="reset-pw-panel"
-             style="border-radius: 2px; border: 1px solid #e8e6e1; box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
+             style="border-radius: 2px; border: 1px solid var(--color-border); box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
 
             <!-- Header -->
             <div style="padding: 1.5rem 1.5rem 1rem;">
@@ -90,11 +90,11 @@
                         </svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 style="font-size: 1rem; font-weight: 600; color: #1a1a1a; line-height: 1.3;" id="reset-pw-modal-title">Resetuj hasło</h3>
-                        <p style="font-size: 0.8125rem; color: #525252; margin-top: 0.125rem;" id="reset-pw-subtitle"></p>
+                        <h3 style="font-size: 1rem; font-weight: 600; color: var(--color-ink); line-height: 1.3;" id="reset-pw-modal-title">Resetuj hasło</h3>
+                        <p style="font-size: 0.8125rem; color: var(--color-ink-muted); margin-top: 0.125rem;" id="reset-pw-subtitle"></p>
                     </div>
                     <button type="button" onclick="closeResetPwModal()"
-                            style="background: none; border: none; cursor: pointer; color: #8a8a8a; padding: 0.25rem; border-radius: 2px; line-height: 0; transition: color 0.15s;"
+                            style="background: none; border: none; cursor: pointer; color: var(--color-ink-subtle); padding: 0.25rem; border-radius: 2px; line-height: 0; transition: color 0.15s;"
                             onmouseover="this.style.color='#525252'" onmouseout="this.style.color='#8a8a8a'">
                         <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -105,26 +105,26 @@
 
             <!-- Body -->
             <div style="padding: 0 1.5rem 1rem;">
-                <div id="reset-pw-error" class="hidden" style="margin-bottom: 0.75rem; padding: 0.625rem 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 2px; font-size: 0.8125rem; color: #9b2c2c;"></div>
-                <div id="reset-pw-success" class="hidden" style="margin-bottom: 0.75rem; padding: 0.625rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 2px; font-size: 0.8125rem; color: #2d6a4f;"></div>
+                <div id="reset-pw-error" class="hidden" style="margin-bottom: 0.75rem; padding: 0.625rem 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 2px; font-size: 0.8125rem; color: var(--color-error);"></div>
+                <div id="reset-pw-success" class="hidden" style="margin-bottom: 0.75rem; padding: 0.625rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 2px; font-size: 0.8125rem; color: var(--color-success);"></div>
                 <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; margin-bottom: 0.375rem;" for="reset-pw-new">Nowe hasło</label>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem;" for="reset-pw-new">Nowe hasło</label>
                     <input type="password" id="reset-pw-new" minlength="8" autocomplete="new-password"
-                           style="width: 100%; border: 1px solid #e8e6e1; border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: #1a1a1a; background: white; outline: none; box-sizing: border-box;"
+                           style="width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: var(--color-ink); background: white; outline: none; box-sizing: border-box;"
                            placeholder="Minimum 8 znaków"
                            onfocus="this.style.borderColor='#1a1a1a'" onblur="this.style.borderColor='#e8e6e1'">
                 </div>
                 <div>
-                    <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; margin-bottom: 0.375rem;" for="reset-pw-confirm">Potwierdź hasło</label>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem;" for="reset-pw-confirm">Potwierdź hasło</label>
                     <input type="password" id="reset-pw-confirm" autocomplete="new-password"
-                           style="width: 100%; border: 1px solid #e8e6e1; border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: #1a1a1a; background: white; outline: none; box-sizing: border-box;"
+                           style="width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: var(--color-ink); background: white; outline: none; box-sizing: border-box;"
                            placeholder="Powtórz nowe hasło"
                            onfocus="this.style.borderColor='#1a1a1a'" onblur="this.style.borderColor='#e8e6e1'">
                 </div>
             </div>
 
             <!-- Footer -->
-            <div style="padding: 0.875rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.625rem; background: #f7f6f3; border-top: 1px solid #e8e6e1; border-radius: 0 0 2px 2px;">
+            <div style="padding: 0.875rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.625rem; background: var(--color-surface-warm); border-top: 1px solid var(--color-border); border-radius: 0 0 2px 2px;">
                 <button type="button" onclick="closeResetPwModal()" class="btn-ghost">Anuluj</button>
                 <button type="button" id="reset-pw-submit" class="btn-primary">Zapisz hasło</button>
             </div>
