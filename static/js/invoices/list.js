@@ -631,26 +631,26 @@ async function openSellerSyncModal() {
 function showSellerSyncModal(items) {
     const rows = items.map((item, i) => {
         const typeLabel = item.type === 'unlinked'
-            ? '<span style="color:#9a6700;font-size:0.75rem;">brak powiązania</span>'
-            : '<span style="color:#9b2c2c;font-size:0.75rem;">błędne powiązanie</span>';
+            ? '<span style="color:var(--color-warning);font-size:0.75rem;">brak powiązania</span>'
+            : '<span style="color:var(--color-error);font-size:0.75rem;">błędne powiązanie</span>';
 
         const currentInfo = item.type === 'wrong_link'
-            ? `<div style="font-size:0.7rem;color:#8a8a8a;">Było: ${escapeHtml(item.current_seller_name || '—')}</div>`
+            ? `<div style="font-size:0.7rem;color:var(--color-ink-subtle);">Było: ${escapeHtml(item.current_seller_name || '—')}</div>`
             : '';
 
         return `
-            <tr style="border-bottom:1px solid #f0eeea;">
+            <tr style="border-bottom:1px solid var(--color-border-subtle);">
                 <td style="padding:0.5rem 0.25rem;width:2rem;vertical-align:middle;">
                     <input type="checkbox" class="sync-item-cb" data-idx="${i}" checked
-                           style="width:1rem;height:1rem;cursor:pointer;accent-color:#c9a227;">
+                           style="width:1rem;height:1rem;cursor:pointer;accent-color:var(--color-accent);">
                 </td>
                 <td style="padding:0.5rem 0.5rem;vertical-align:middle;">
                     <span style="font-family:monospace;font-size:0.8rem;">${escapeHtml(item.invoice_number || '—')}</span>
-                    <div style="font-size:0.7rem;color:#8a8a8a;">${item.invoice_date || ''}</div>
+                    <div style="font-size:0.7rem;color:var(--color-ink-subtle);">${item.invoice_date || ''}</div>
                 </td>
                 <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.8rem;">
                     ${escapeHtml(item.invoice_seller_name || '—')}
-                    <div style="font-family:monospace;font-size:0.7rem;color:#8a8a8a;">${escapeHtml(item.invoice_nip || '—')}</div>
+                    <div style="font-family:monospace;font-size:0.7rem;color:var(--color-ink-subtle);">${escapeHtml(item.invoice_nip || '—')}</div>
                 </td>
                 <td style="padding:0.5rem 0.5rem;vertical-align:middle;font-size:0.8rem;">
                     ${escapeHtml(item.suggested_seller_name || '—')}
@@ -661,23 +661,23 @@ function showSellerSyncModal(items) {
     }).join('');
 
     const content = `
-        <div style="margin-bottom:0.75rem;padding:0.75rem 1rem;background:#f7f6f3;border-radius:6px;font-size:0.85rem;color:#525252;">
+        <div style="margin-bottom:0.75rem;padding:0.75rem 1rem;background:var(--color-surface-warm);border-radius:6px;font-size:0.85rem;color:var(--color-ink-muted);">
             Znaleziono <strong>${items.length}</strong> faktur wymagających aktualizacji powiązania ze sprzedawcą.
             Odznacz wiersze, których nie chcesz zmieniać.
         </div>
         <div style="margin-bottom:0.5rem;display:flex;gap:1rem;">
-            <button onclick="sellerSyncToggleAll(true)"  style="font-size:0.75rem;color:#c9a227;background:none;border:none;cursor:pointer;padding:0;">Zaznacz wszystkie</button>
-            <button onclick="sellerSyncToggleAll(false)" style="font-size:0.75rem;color:#c9a227;background:none;border:none;cursor:pointer;padding:0;">Odznacz wszystkie</button>
+            <button onclick="sellerSyncToggleAll(true)"  style="font-size:0.75rem;color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;">Zaznacz wszystkie</button>
+            <button onclick="sellerSyncToggleAll(false)" style="font-size:0.75rem;color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;">Odznacz wszystkie</button>
         </div>
-        <div style="max-height:360px;overflow-y:auto;border:1px solid #e8e6e1;border-radius:6px;">
+        <div style="max-height:360px;overflow-y:auto;border:1px solid var(--color-border);border-radius:6px;">
             <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="sync-items-table">
                 <thead>
-                    <tr style="background:#f7f6f3;position:sticky;top:0;">
+                    <tr style="background:var(--color-surface-warm);position:sticky;top:0;">
                         <th style="padding:0.4rem 0.25rem;width:2rem;"></th>
-                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Nr faktury</th>
-                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Sprzedawca (faktura)</th>
-                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Sprzedawca (baza)</th>
-                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:#525252;">Typ</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Nr faktury</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Sprzedawca (faktura)</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Sprzedawca (baza)</th>
+                        <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Typ</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
