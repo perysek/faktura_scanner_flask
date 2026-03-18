@@ -3,12 +3,48 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+      /* Text Colors */
+      --color-ink: #1a1a1a;
+      --color-ink-muted: #525252;
+      --color-ink-subtle: #8a8a8a;
+
+      /* Surface Colors */
+      --color-surface: #fafafa;
+      --color-surface-warm: #f7f6f3;
+
+      /* Border Colors */
+      --color-border: #e8e6e1;
+      --color-border-subtle: #f0eeea;
+
+      /* Brand / Accent */
+      --color-accent: #c9a227;
+      --color-accent-muted: rgba(201, 162, 39, 0.12);
+
+      /* Semantic Colors */
+      --color-success: #2d6a4f;
+      --color-warning: #9a6700;
+      --color-error: #9b2c2c;
+      --color-info: #1e6091;
+
+      /* Typography */
+      --font-display: 'Inter', system-ui, sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+
+      /* Easing */
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
   html {
       @apply h-full;
   }
 
   body {
-      @apply h-full bg-gradient-to-br from-slate-50 to-slate-100 font-sans antialiased text-slate-800;
+      @apply h-full antialiased;
+      background: var(--color-surface-warm);
+      font-family: var(--font-body);
+      color: var(--color-ink);
   }
 
   /* Global Transitions */
