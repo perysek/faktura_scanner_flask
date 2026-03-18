@@ -78,8 +78,8 @@ const PastVisitsScanner = {
      */
     createModalContent(appointments) {
         return `
-            <div style="margin-bottom: 1rem; padding: 0.75rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 2px;">
-                <p style="font-size: 0.875rem; color: #78350f; margin: 0;">
+            <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--color-warning-bg, #fffbeb); border: 1px solid var(--color-warning-border, #fcd34d); border-radius: 2px;">
+                <p style="font-size: 0.875rem; color: var(--color-warning, #78350f); margin: 0;">
                     <strong>Uwaga:</strong> Poniższe wizyty zakończyły się, ale nie mają jeszcze finalnego statusu.
                     Wybierz odpowiedni status dla każdej wizyty.
                 </p>
@@ -87,15 +87,15 @@ const PastVisitsScanner = {
 
             <div style="max-height: 500px; overflow-y: auto;">
                 <table class="refined-table" style="width: 100%; border-collapse: collapse;">
-                    <thead style="position: sticky; top: 0; background: #fafafa; z-index: 10;">
+                    <thead style="position: sticky; top: 0; background: var(--color-surface); z-index: 10;">
                         <tr>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Klient</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Pracownik</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Data</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Godzina</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Usługi</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Obecny status</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #525252; border-bottom: 1px solid #e8e6e1;">Nowy status</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Klient</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Pracownik</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Data</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Godzina</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Usługi</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Obecny status</th>
+                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Nowy status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -117,9 +117,9 @@ const PastVisitsScanner = {
         };
 
         const statusBadges = {
-            'scheduled': 'background: rgba(59,130,246,0.08); color: #2563eb;',
-            'confirmed': 'background: rgba(16,185,129,0.08); color: #059669;',
-            'in_progress': 'background: rgba(245,158,11,0.08); color: #d97706;'
+            'scheduled': `background: ${cssVarAlpha('color-status-scheduled', 0.08)}; color: ${cssVar('color-status-scheduled')};`,
+            'confirmed': `background: ${cssVarAlpha('color-status-confirmed', 0.08)}; color: ${cssVar('color-status-confirmed')};`,
+            'in_progress': `background: ${cssVarAlpha('color-status-in-progress', 0.08)}; color: ${cssVar('color-status-in-progress')};`
         };
 
         const currentStatusLabel = statusLabels[appointment.status] || appointment.status;
@@ -129,12 +129,12 @@ const PastVisitsScanner = {
         const formattedTime = `${this.formatTime(appointment.start_time)} - ${this.formatTime(appointment.end_time)}`;
 
         return `
-            <tr data-appointment-id="${appointment.id}" style="border-bottom: 1px solid #f0eeea;">
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: #1a1a1a;">${this.escapeHtml(appointment.client_name)}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: #1a1a1a;">${this.escapeHtml(appointment.employee_name)}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: #1a1a1a;">${formattedDate}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: #1a1a1a; white-space: nowrap;">${formattedTime}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: #525252; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${this.escapeHtml(appointment.service_names || 'Brak')}">${this.escapeHtml(appointment.service_names || 'Brak')}</td>
+            <tr data-appointment-id="${appointment.id}" style="border-bottom: 1px solid var(--color-border-subtle);">
+                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink);">${this.escapeHtml(appointment.client_name)}</td>
+                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink);">${this.escapeHtml(appointment.employee_name)}</td>
+                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink);">${formattedDate}</td>
+                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink); white-space: nowrap;">${formattedTime}</td>
+                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${this.escapeHtml(appointment.service_names || 'Brak')}">${this.escapeHtml(appointment.service_names || 'Brak')}</td>
                 <td style="padding: 0.75rem;">
                     <span style="display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 2px; ${currentStatusStyle}">
                         ${currentStatusLabel}
@@ -144,7 +144,7 @@ const PastVisitsScanner = {
                     <select
                         class="status-dropdown"
                         data-appointment-id="${appointment.id}"
-                        style="padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid #e8e6e1; border-radius: 2px; background: white; color: #1a1a1a; width: 100%; max-width: 180px; cursor: pointer;"
+                        style="padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); width: 100%; max-width: 180px; cursor: pointer;"
                     >
                         <option value="">-- Wybierz --</option>
                         <option value="completed">Zakończona</option>

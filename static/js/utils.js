@@ -3,6 +3,31 @@
  */
 
 /**
+ * Read a CSS custom property value from :root.
+ * Accepts with or without leading --.
+ * @param {string} name - e.g. 'color-ink' or '--color-ink'
+ * @returns {string} trimmed value, e.g. '#1a1a1a'
+ */
+function cssVar(name) {
+    const prop = name.startsWith('--') ? name : `--${name}`;
+    return getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+}
+
+/**
+ * Read a CSS custom property (hex) and return an rgba() string with given alpha.
+ * @param {string} name - CSS custom property name
+ * @param {number} alpha - alpha channel 0–1
+ * @returns {string} e.g. 'rgba(37,99,235,0.75)'
+ */
+function cssVarAlpha(name, alpha) {
+    const hex = cssVar(name);
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
  * Format date to Polish locale
  */
 function formatDate(dateString) {

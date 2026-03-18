@@ -3,20 +3,20 @@
  * Depends on Chart.js 4.4.0 (loaded via CDN in view.html).
  */
 
-/* ─── Chart color palette ─────────────────────────────────────────────── */
+/* ─── Chart color palette (reads CSS custom properties) ───────────────── */
 const CHART_COLORS = {
-    blue:   'rgba(37,99,235,1)',
-    blueFill: 'rgba(37,99,235,0.15)',
-    green:  'rgba(45,106,79,1)',
-    greenFill: 'rgba(45,106,79,0.15)',
-    purple: 'rgba(126,34,206,1)',
-    purpleFill: 'rgba(126,34,206,0.15)',
-    amber:  'rgba(180,83,9,1)',
-    amberFill: 'rgba(180,83,9,0.15)',
-    red:    'rgba(185,28,28,1)',
-    redFill:'rgba(185,28,28,0.12)',
-    cyan:   'rgba(8,145,178,1)',
-    cyanFill: 'rgba(8,145,178,0.15)',
+    blue:       cssVar('color-chart-blue'),
+    blueFill:   cssVarAlpha('color-chart-blue', 0.15),
+    green:      cssVar('color-status-completed'),
+    greenFill:  cssVarAlpha('color-status-completed', 0.15),
+    purple:     cssVar('color-chart-purple'),
+    purpleFill: cssVarAlpha('color-chart-purple', 0.15),
+    amber:      cssVarAlpha('color-chart-amber', 1),
+    amberFill:  cssVarAlpha('color-chart-amber', 0.15),
+    red:        cssVar('color-chart-red'),
+    redFill:    cssVarAlpha('color-chart-red', 0.12),
+    cyan:       cssVarAlpha('color-chart-teal', 1),
+    cyanFill:   cssVarAlpha('color-chart-teal', 0.15),
 };
 
 /* ─── Shared chart options ──────────────────────────────────────────────── */
@@ -275,7 +275,7 @@ async function loadWizyty() {
                         data: mix.map(s => s.appointment_count),
                         backgroundColor: palette,
                         borderWidth: 1,
-                        borderColor: '#fff',
+                        borderColor: 'white',
                     }],
                 },
                 options: {
@@ -342,10 +342,10 @@ function renderHeatmap(data) {
             html += `<td title="${escapeHtml(title)}" style="
                 padding:3px 2px;
                 text-align:center;
-                background:rgba(37,99,235,${opacity.toFixed(2)});
+                background:${cssVarAlpha('color-chart-blue', opacity)};
                 border-radius:2px;
                 min-width:24px;
-                color:${count > 0 ? (opacity > 0.5 ? '#fff' : 'var(--color-ink)') : 'transparent'};
+                color:${count > 0 ? (opacity > 0.5 ? 'white' : 'var(--color-ink)') : 'transparent'};
                 font-size:0.625rem;
             ">${count > 0 ? count : ''}</td>`;
         });
@@ -379,7 +379,7 @@ function renderSkillsTable(services) {
     tbody.innerHTML = services.map(svc => {
         const manualStars = renderEditableStars(svc.es_id, svc.skill_rating);
         const clientRating = svc.avg_client_rating !== null
-            ? `<span style="font-weight:600;color:var(--color-ink);">${svc.avg_client_rating.toFixed(1)}</span> <span style="color:#f59e0b;font-size:0.875rem;">${'★'.repeat(Math.round(svc.avg_client_rating))}${'☆'.repeat(5 - Math.round(svc.avg_client_rating))}</span>`
+            ? `<span style="font-weight:600;color:var(--color-ink);">${svc.avg_client_rating.toFixed(1)}</span> <span style="color:var(--color-star-filled);font-size:0.875rem;">${'★'.repeat(Math.round(svc.avg_client_rating))}${'☆'.repeat(5 - Math.round(svc.avg_client_rating))}</span>`
             : '<span style="color:var(--color-ink-subtle);">—</span>';
         const cat = svc.service_category || (svc.service_type === 'addon' ? 'Mikrousługa' : '—');
         return `<tr style="border-bottom:1px solid var(--color-border-subtle);" data-es-id="${svc.es_id}">
@@ -430,7 +430,7 @@ function renderEditableStars(esId, currentRating) {
     return [1,2,3,4,5].map(n => {
         const filled = currentRating !== null && n <= currentRating;
         return `<button class="skill-star" data-es-id="${esId}" data-score="${n}"
-            style="background:none;border:none;cursor:pointer;padding:0.1rem;font-size:1.25rem;line-height:1;color:${filled ? '#f59e0b' : '#d1d5db'};transition:color 0.1s;"
+            style="background:none;border:none;cursor:pointer;padding:0.1rem;font-size:1.25rem;line-height:1;color:${filled ? 'var(--color-star-filled)' : 'var(--color-star-empty)'};transition:color 0.1s;"
             title="Ustaw ocenę ${n}/5">${filled ? '★' : '☆'}</button>`;
     }).join('');
 }
@@ -495,7 +495,7 @@ async function loadSatysfakcja() {
                     const starStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
                     return `<tr style="border-bottom:1px solid var(--color-border-subtle);">
                         <td style="padding:0.4rem 0.5rem;">${escapeHtml(r.category)}</td>
-                        <td style="text-align:right;padding:0.4rem 0.5rem;color:#d97706;">${starStr} <span style="color:var(--color-ink-subtle);font-size:0.75rem;">(${r.avg_score ?? '—'})</span></td>
+                        <td style="text-align:right;padding:0.4rem 0.5rem;color:var(--color-status-in-progress);">${starStr} <span style="color:var(--color-ink-subtle);font-size:0.75rem;">(${r.avg_score ?? '—'})</span></td>
                         <td style="text-align:right;padding:0.4rem 0.5rem;color:var(--color-ink-subtle);">${r.count}</td>
                     </tr>`;
                 }).join('')

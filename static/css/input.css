@@ -31,6 +31,30 @@
       --font-display: 'Inter', system-ui, sans-serif;
       --font-body: 'Inter', system-ui, sans-serif;
 
+      /* Status Colors — appointment lifecycle */
+      --color-status-scheduled: #2563eb;
+      --color-status-confirmed: #059669;
+      --color-status-in-progress: #d97706;
+      --color-status-completed: #2d6a4f;
+      --color-status-cancelled: #9b2c2c;
+      --color-status-no-show: #6b7280;
+
+      /* Chart Palette */
+      --color-chart-blue: #2563eb;
+      --color-chart-green: #16a34a;
+      --color-chart-orange: #ea580c;
+      --color-chart-red: #ef4444;
+      --color-chart-purple: #7c3aed;
+      --color-chart-pink: #db2777;
+      --color-chart-teal: #14b8a6;
+      --color-chart-amber: #f59e0b;
+      --color-chart-slate: #64748b;
+      --color-chart-sky: #0ea5e9;
+
+      /* Star / Rating */
+      --color-star-filled: #f59e0b;
+      --color-star-empty: #d1d5db;
+
       /* Easing */
       --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
       --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);

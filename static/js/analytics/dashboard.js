@@ -23,14 +23,14 @@ let visitFrequencyChart = null;
 let satisfactionRatingChart = null;
 let topClientsLoaded = false;
 
-// Chart.js color palette (Refined Minimal)
+// Chart.js color palette — reads CSS custom properties at runtime
 const CHART_COLORS = {
-    primary: '#2563eb',    // Blue
-    purple: '#7c3aed',
-    pink: '#db2777',
-    orange: '#ea580c',
-    green: '#65a30d',
-    gray: '#e2e8f0'
+    primary: cssVar('color-chart-blue'),
+    purple:  cssVar('color-chart-purple'),
+    pink:    cssVar('color-chart-pink'),
+    orange:  cssVar('color-chart-orange'),
+    green:   cssVar('color-chart-green'),
+    gray:    cssVar('color-border')
 };
 
 /**
@@ -309,7 +309,7 @@ async function loadRevenueTrend() {
                 label: 'Przychód',
                 data: data.data.map(d => d.revenue),
                 borderColor: CHART_COLORS.primary,
-                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                backgroundColor: cssVarAlpha('color-chart-blue', 0.1),
                 fill: true,
                 tension: 0.3
             }]
@@ -614,7 +614,7 @@ async function loadProfit() {
     }
 
     const netProfit = data.net_profit;
-    const netColor = netProfit >= 0 ? 'rgba(34, 197, 94, 0.75)' : 'rgba(239, 68, 68, 0.75)';
+    const netColor = netProfit >= 0 ? cssVarAlpha('color-chart-green', 0.75) : cssVarAlpha('color-chart-red', 0.75);
     const netLabel = netProfit >= 0 ? 'Zysk netto' : 'Strata netto';
 
     profitBreakdownChart = new Chart(ctx, {
@@ -625,15 +625,15 @@ async function loadProfit() {
                 {
                     label: 'Koszty pracownicze',
                     data: [data.employee_costs],
-                    backgroundColor: 'rgba(234, 88, 12, 0.75)',
-                    borderColor: 'rgba(234, 88, 12, 1)',
+                    backgroundColor: cssVarAlpha('color-chart-orange', 0.75),
+                    borderColor: cssVar('color-chart-orange'),
                     borderWidth: 1
                 },
                 {
                     label: 'Koszty faktur',
                     data: [data.invoice_costs],
-                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: cssVarAlpha('color-chart-red', 0.75),
+                    borderColor: cssVar('color-chart-red'),
                     borderWidth: 1
                 },
                 {
@@ -747,7 +747,7 @@ async function loadPeakHours() {
     const cellStyle = (count) => {
         if (count === 0 || maxCount === 0) return 'background:transparent';
         const opacity = Math.max(0.12, count / maxCount);
-        return `background:rgba(37,99,235,${opacity.toFixed(2)})`;
+        return `background:${cssVarAlpha('color-chart-blue', opacity)}`;
     };
 
     // Day columns get equal explicit widths; label col auto-shrinks to content (table-layout:auto)
@@ -756,23 +756,22 @@ async function loadPeakHours() {
 
     // Header row: day names
     html += '<thead><tr>';
-    html += '<th style="padding:4px 8px;font-size:11px;color:#64748b;text-align:right;white-space:nowrap">Godz.</th>';
+    html += '<th style="padding:4px 8px;font-size:11px;color:var(--color-chart-slate);text-align:right;white-space:nowrap">Godz.</th>';
     for (const dow of DISPLAY_DAYS) {
-        html += `<th style="padding:4px 12px;font-size:11px;color:#64748b;text-align:center;width:${dayColWidth}">${DAY_LABELS[dow]}</th>`;
+        html += `<th style="padding:4px 12px;font-size:11px;color:var(--color-chart-slate);text-align:center;width:${dayColWidth}">${DAY_LABELS[dow]}</th>`;
     }
     html += '</tr></thead><tbody>';
 
     // Data rows: one per hour
     for (const hour of HOURS) {
         html += '<tr>';
-        html += `<td style="padding:3px 8px; font-size:11px;color:#94a3b8;text-align:right;
-        white-space:nowrap">${hour}:00</td>`;
+        html += `<td style="padding:3px 8px;font-size:11px;color:var(--color-ink-subtle);text-align:right;white-space:nowrap">${hour}:00</td>`;
         for (const dow of DISPLAY_DAYS) {
             const count = (grid[dow] && grid[dow][hour]) || 0;
             const title = count > 0 ? `${DAY_LABELS[dow]} ${hour}:00 — ${count} wizyt` : '';
             html += `<td title="${title}" style="padding:7px 6px;text-align:center;border-radius:5px;${cellStyle(count)}">`;
             if (count > 0) {
-                html += `<span style="font-size:11px;color:#1e40af;font-weight:500">${count}</span>`;
+                html += `<span style="font-size:11px;color:var(--color-status-scheduled);font-weight:500">${count}</span>`;
             }
             html += '</td>';
         }
@@ -893,8 +892,8 @@ async function loadMonthlyTrend() {
                     type: 'bar',
                     label: 'Przychód',
                     data: data.months.map(m => m.revenue),
-                    backgroundColor: 'rgba(37, 99, 235, 0.75)',
-                    borderColor: 'rgba(37, 99, 235, 1)',
+                    backgroundColor: cssVarAlpha('color-chart-blue', 0.75),
+                    borderColor: cssVar('color-chart-blue'),
                     borderWidth: 1,
                     order: 2
                 },
@@ -902,8 +901,8 @@ async function loadMonthlyTrend() {
                     type: 'bar',
                     label: 'Koszty pracownicze',
                     data: data.months.map(m => m.employee_costs),
-                    backgroundColor: 'rgba(234, 88, 12, 0.75)',
-                    borderColor: 'rgba(234, 88, 12, 1)',
+                    backgroundColor: cssVarAlpha('color-chart-orange', 0.75),
+                    borderColor: cssVar('color-chart-orange'),
                     borderWidth: 1,
                     order: 2
                 },
@@ -911,8 +910,8 @@ async function loadMonthlyTrend() {
                     type: 'bar',
                     label: 'Koszty faktur',
                     data: data.months.map(m => m.invoice_costs),
-                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: cssVarAlpha('color-chart-red', 0.75),
+                    borderColor: cssVar('color-chart-red'),
                     borderWidth: 1,
                     order: 2
                 },
@@ -920,12 +919,12 @@ async function loadMonthlyTrend() {
                     type: 'line',
                     label: 'Zysk netto',
                     data: data.months.map(m => m.profit),
-                    borderColor: 'rgba(22, 163, 74, 1)',
-                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                    borderColor: cssVar('color-chart-green'),
+                    backgroundColor: cssVarAlpha('color-chart-green', 0.08),
                     borderWidth: 2.5,
                     pointRadius: 4,
                     pointBackgroundColor: data.months.map(m =>
-                        m.profit >= 0 ? 'rgba(22,163,74,1)' : 'rgba(239,68,68,1)'
+                        m.profit >= 0 ? cssVar('color-chart-green') : cssVar('color-chart-red')
                     ),
                     fill: false,
                     tension: 0.3,
@@ -977,8 +976,8 @@ async function loadNewClients() {
             datasets: [{
                 label: 'Nowi klienci',
                 data: data.months.map(m => m.new_clients),
-                borderColor: 'rgba(22, 163, 74, 1)',
-                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                borderColor: cssVar('color-chart-green'),
+                backgroundColor: cssVarAlpha('color-chart-green', 0.1),
                 borderWidth: 2,
                 pointRadius: 4,
                 fill: true,
@@ -1026,8 +1025,8 @@ async function loadCancellationRate() {
                 {
                     label: 'Odwołania',
                     data: data.months.map(m => m.cancellation_pct),
-                    borderColor: 'rgba(234, 88, 12, 1)',
-                    backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                    borderColor: cssVar('color-chart-orange'),
+                    backgroundColor: cssVarAlpha('color-chart-orange', 0.08),
                     borderWidth: 2,
                     pointRadius: 4,
                     fill: false,
@@ -1036,8 +1035,8 @@ async function loadCancellationRate() {
                 {
                     label: 'Nieobecności',
                     data: data.months.map(m => m.noshow_pct),
-                    borderColor: 'rgba(239, 68, 68, 1)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderColor: cssVar('color-chart-red'),
+                    backgroundColor: cssVarAlpha('color-chart-red', 0.08),
                     borderWidth: 2,
                     pointRadius: 4,
                     fill: false,
@@ -1089,8 +1088,8 @@ async function loadAvgTicket() {
             datasets: [{
                 label: 'Średni rachunek',
                 data: data.months.map(m => m.avg_ticket),
-                borderColor: 'rgba(37, 99, 235, 1)',
-                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                borderColor: cssVar('color-chart-blue'),
+                backgroundColor: cssVarAlpha('color-chart-blue', 0.08),
                 borderWidth: 2,
                 pointRadius: 4,
                 fill: false,
@@ -1142,8 +1141,8 @@ async function loadCostRatio() {
                     type: 'bar',
                     label: 'Przychód',
                     data: data.months.map(m => m.revenue),
-                    backgroundColor: 'rgba(37, 99, 235, 0.5)',
-                    borderColor: 'rgba(37, 99, 235, 1)',
+                    backgroundColor: cssVarAlpha('color-chart-blue', 0.5),
+                    borderColor: cssVar('color-chart-blue'),
                     borderWidth: 1,
                     yAxisID: 'yPLN',
                     order: 2
@@ -1152,8 +1151,8 @@ async function loadCostRatio() {
                     type: 'line',
                     label: 'Udział faktur (%)',
                     data: data.months.map(m => m.ratio_pct),
-                    borderColor: 'rgba(239, 68, 68, 1)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderColor: cssVar('color-chart-red'),
+                    backgroundColor: cssVarAlpha('color-chart-red', 0.08),
                     borderWidth: 2,
                     pointRadius: 4,
                     fill: false,
@@ -1234,11 +1233,11 @@ async function loadCategoryMix() {
     });
 
     const CATEGORY_COLORS = [
-        'rgba(37,99,235,0.8)',   'rgba(22,163,74,0.8)',  'rgba(234,88,12,0.8)',
-        'rgba(168,85,247,0.8)', 'rgba(236,72,153,0.8)', 'rgba(20,184,166,0.8)',
-        'rgba(245,158,11,0.8)', 'rgba(239,68,68,0.8)',  'rgba(100,116,139,0.8)',
-        'rgba(14,165,233,0.8)'
-    ];
+        'color-chart-blue', 'color-chart-green', 'color-chart-orange',
+        'color-chart-purple', 'color-chart-pink', 'color-chart-teal',
+        'color-chart-amber', 'color-chart-red', 'color-chart-slate',
+        'color-chart-sky'
+    ].map(v => cssVarAlpha(v, 0.8));
 
     const datasets = categories.map((cat, i) => ({
         label: cat,
@@ -1300,17 +1299,17 @@ async function loadEmployeeUtilisation() {
         lookup[r.employee_name][r.month_start] = parseFloat(r.utilisation_pct);
     });
 
-    const EMP_COLORS = [
-        'rgba(37,99,235,1)',  'rgba(22,163,74,1)',  'rgba(234,88,12,1)',
-        'rgba(168,85,247,1)', 'rgba(236,72,153,1)', 'rgba(20,184,166,1)',
-        'rgba(245,158,11,1)', 'rgba(100,116,139,1)'
+    const EMP_COLOR_KEYS = [
+        'color-chart-blue', 'color-chart-green', 'color-chart-orange',
+        'color-chart-purple', 'color-chart-pink', 'color-chart-teal',
+        'color-chart-amber', 'color-chart-slate'
     ];
 
     const datasets = employees.map((emp, i) => ({
         label: emp,
         data: monthKeys.map(k => (lookup[emp] && lookup[emp][k]) || 0),
-        borderColor: EMP_COLORS[i % EMP_COLORS.length],
-        backgroundColor: EMP_COLORS[i % EMP_COLORS.length].replace(',1)', ',0.08)'),
+        borderColor: cssVar(EMP_COLOR_KEYS[i % EMP_COLOR_KEYS.length]),
+        backgroundColor: cssVarAlpha(EMP_COLOR_KEYS[i % EMP_COLOR_KEYS.length], 0.08),
         borderWidth: 2,
         pointRadius: 3,
         fill: false,
@@ -1377,8 +1376,8 @@ async function loadVisitFrequency() {
             datasets: [{
                 label: 'Klienci',
                 data: values,
-                backgroundColor: 'rgba(37, 99, 235, 0.75)',
-                borderColor: 'rgba(37, 99, 235, 1)',
+                backgroundColor: cssVarAlpha('color-chart-blue', 0.75),
+                borderColor: cssVar('color-chart-blue'),
                 borderWidth: 1
             }]
         },
@@ -1429,8 +1428,8 @@ async function loadSatisfactionRating() {
     const overallDataset = {
         label: 'Wszyscy',
         data: data.overall.map(row => row.avg_score != null ? parseFloat(row.avg_score) : null),
-        borderColor: 'rgba(15, 23, 42, 1)',         // slate-900
-        backgroundColor: 'rgba(15, 23, 42, 0.06)',
+        borderColor: cssVar('color-ink'),
+        backgroundColor: cssVarAlpha('color-ink', 0.06),
         borderWidth: 3,
         pointRadius: 4,
         fill: false,
@@ -1439,10 +1438,10 @@ async function loadSatisfactionRating() {
     };
 
     // Per-employee datasets
-    const EMP_COLORS = [
-        'rgba(37,99,235,1)',  'rgba(22,163,74,1)',  'rgba(234,88,12,1)',
-        'rgba(168,85,247,1)', 'rgba(236,72,153,1)', 'rgba(20,184,166,1)',
-        'rgba(245,158,11,1)', 'rgba(100,116,139,1)'
+    const EMP_COLOR_KEYS_SAT = [
+        'color-chart-blue', 'color-chart-green', 'color-chart-orange',
+        'color-chart-purple', 'color-chart-pink', 'color-chart-teal',
+        'color-chart-amber', 'color-chart-slate'
     ];
 
     // Collect unique month keys (ordered) from overall
@@ -1460,8 +1459,8 @@ async function loadSatisfactionRating() {
     const empDatasets = employees.map((emp, i) => ({
         label: emp,
         data: monthKeys.map(k => (lookup[emp] && lookup[emp][k] !== undefined) ? lookup[emp][k] : null),
-        borderColor: EMP_COLORS[i % EMP_COLORS.length],
-        backgroundColor: EMP_COLORS[i % EMP_COLORS.length].replace(',1)', ',0.08)'),
+        borderColor: cssVar(EMP_COLOR_KEYS_SAT[i % EMP_COLOR_KEYS_SAT.length]),
+        backgroundColor: cssVarAlpha(EMP_COLOR_KEYS_SAT[i % EMP_COLOR_KEYS_SAT.length], 0.08),
         borderWidth: 1.5,
         pointRadius: 2.5,
         fill: false,
