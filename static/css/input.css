@@ -34,10 +34,17 @@
       /* Status Colors — appointment lifecycle */
       --color-status-scheduled: #2563eb;
       --color-status-confirmed: #059669;
+      --color-status-confirmed-dark: #047857;
       --color-status-in-progress: #d97706;
       --color-status-completed: #2d6a4f;
       --color-status-cancelled: #9b2c2c;
       --color-status-no-show: #6b7280;
+
+      /* Info Panel (blue tones) */
+      --color-info-bg: #eff6ff;
+      --color-info-border: #bfdbfe;
+      --color-info-text: #1e40af;
+      --color-info-text-dark: #1e3a8a;
 
       /* Chart Palette */
       --color-chart-blue: #2563eb;
