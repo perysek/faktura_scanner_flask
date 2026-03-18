@@ -647,7 +647,7 @@ async function loadEmployees() {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="empty-state">
-                        <p class="empty-text" style="color: #9b2c2c;">Błąd ładowania: ${escapeHtml(data.error)}</p>
+                        <p class="empty-text" style="color: var(--color-error);">Błąd ładowania: ${escapeHtml(data.error)}</p>
                     </td>
                 </tr>
             `;
@@ -657,7 +657,7 @@ async function loadEmployees() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" class="empty-state">
-                    <p class="empty-text" style="color: #9b2c2c;">Błąd połączenia z serwerem</p>
+                    <p class="empty-text" style="color: var(--color-error);">Błąd połączenia z serwerem</p>
                 </td>
             </tr>
         `;

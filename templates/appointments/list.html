@@ -299,7 +299,7 @@ async function loadAppointments() {
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
-        tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><p class="empty-text" style="color:#9b2c2c;">Błąd połączenia z serwerem</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p></td></tr>`;
     }
 }
 
