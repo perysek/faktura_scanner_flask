@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Checkpoint 02-layout-spacing-02-01-PLAN.md Task 3 (human-verify)
-last_updated: "2026-03-19T05:51:52.344Z"
+stopped_at: Checkpoint 02-layout-spacing-02-03-PLAN.md Task 3 (human-verify)
+last_updated: "2026-03-19T15:33:23.191Z"
 last_activity: 2026-03-19 — Completed 01-03 (strip local stat-value/stat-label redeclarations)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 100
 ---
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100% (Phase 1 plans complete)
 | Phase 01-css-architecture P01 | 2 | 2 tasks | 1 files |
 | Phase 01-css-architecture P02 | 9 | 3 tasks | 38 files |
 | Phase 02-layout-spacing P01 | 2 | 2 tasks | 2 files |
+| Phase 02-layout-spacing P03 | 7 | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting current work:
 - [Phase 01-css-architecture]: invoices/list_refined.html responsive media query preserved: 1.25rem at max-width:1024px is legitimate override
 - [Phase 02-layout-spacing]: base.html #main-content changed from p-2 to p-0 — root cause fix for 13 !important padding fights
 - [Phase 02-layout-spacing]: analytics/dashboard.html uses .analytics-page { padding: 1rem 1.5rem } — no max-width, full-width page per SPAC-02
+- [Phase 02-layout-spacing]: 3-value max-width scale applied: 900px (forms/detail), 1400px (lists), none (calendars + dashboards) per SPAC-02
 
 ### Pending Todos
 
@@ -84,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T05:51:52.340Z
-Stopped at: Checkpoint 02-layout-spacing-02-01-PLAN.md Task 3 (human-verify)
+Last session: 2026-03-19T15:33:02.759Z
+Stopped at: Checkpoint 02-layout-spacing-02-03-PLAN.md Task 3 (human-verify)
 Resume file: None
