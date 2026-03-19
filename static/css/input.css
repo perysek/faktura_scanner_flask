@@ -26,6 +26,9 @@
       --color-warning: #9a6700;
       --color-error: #9b2c2c;
       --color-info: #1e6091;
+      --color-purple: #7e22ce;
+      --color-purple-bg: #f5f3ff;
+      --color-purple-badge: rgba(126, 34, 206, 0.15);
 
       /* Typography */
       --font-display: 'Inter', system-ui, sans-serif;
@@ -33,11 +36,29 @@
 
       /* Status Colors — appointment lifecycle */
       --color-status-scheduled: #2563eb;
+      --color-status-scheduled-bg: #eff6ff;
+      --color-status-scheduled-badge: rgba(59, 130, 246, 0.15);
       --color-status-confirmed: #059669;
+      --color-status-confirmed-dark: #047857;
+      --color-status-confirmed-bg: #ecfdf5;
+      --color-status-confirmed-badge: rgba(16, 185, 129, 0.15);
       --color-status-in-progress: #d97706;
+      --color-status-in-progress-bg: #fffbeb;
+      --color-status-in-progress-badge: rgba(245, 158, 11, 0.15);
       --color-status-completed: #2d6a4f;
-      --color-status-cancelled: #9b2c2c;
+      --color-status-completed-bg: #f0fdf4;
+      --color-status-cancelled: #dc2626;
+      --color-status-cancelled-dark: #b91c1c;
+      --color-status-cancelled-bg: #fef2f2;
+      --color-status-cancelled-badge: rgba(220, 38, 38, 0.15);
       --color-status-no-show: #6b7280;
+      --color-chart-blue-dark: #1d4ed8;
+
+      /* Info Panel (blue tones) */
+      --color-info-bg: #eff6ff;
+      --color-info-border: #bfdbfe;
+      --color-info-text: #1e40af;
+      --color-info-text-dark: #1e3a8a;
 
       /* Chart Palette */
       --color-chart-blue: #2563eb;

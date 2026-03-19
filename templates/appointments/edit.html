@@ -38,11 +38,11 @@
     .service-item-name { font-size: 0.8125rem; font-weight: 500; margin-bottom: 0.125rem; }
     .service-item-meta { font-size: 0.75rem; color: var(--color-ink-subtle); }
     .service-item-badge { font-size: 0.6875rem; padding: 0.125rem 0.5rem; border-radius: 2px; margin-left: 0.5rem; }
-    .service-item-badge.main { background: rgba(59,130,246,0.08); color: #2563eb; }
-    .service-item-badge.addon { background: rgba(245,158,11,0.08); color: #d97706; }
+    .service-item-badge.main { background: rgba(59,130,246,0.08); color: var(--color-status-scheduled); }
+    .service-item-badge.addon { background: rgba(245,158,11,0.08); color: var(--color-status-in-progress); }
     .service-item-price { font-size: 0.875rem; font-weight: 600; margin-right: 1rem; }
     .btn-remove { padding: 0.25rem 0.5rem; font-size: 0.75rem; background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; color: var(--color-danger); }
-    .btn-remove:hover { background: #fef2f2; border-color: var(--color-danger); }
+    .btn-remove:hover { background: var(--color-status-cancelled-bg); border-color: var(--color-danger); }
 
     .add-service-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle); }
     .service-picker { max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 2px; margin-top: 0.5rem; }
@@ -53,18 +53,18 @@
     .service-option-name { font-size: 0.8125rem; font-weight: 500; }
     .service-option-meta { font-size: 0.75rem; color: var(--color-ink-subtle); }
     .btn-add-service { padding: 0.375rem 0.75rem; font-size: 0.75rem; background: var(--color-ink); color: white; border: none; border-radius: 2px; cursor: pointer; }
-    .btn-add-service:hover { background: #333; }
+    .btn-add-service:hover { background: var(--color-ink-muted); }
 
     .summary-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; margin-top: 1rem; }
     .summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
     .summary-row.total { font-weight: 600; font-size: 1rem; border-top: 1px solid var(--color-border); margin-top: 0.5rem; padding-top: 0.5rem; }
 
-    .conflict-warning { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 2px; padding: 1rem; margin-top: 1rem; color: var(--color-danger); font-size: 0.8125rem; display: none; }
+    .conflict-warning { background: var(--color-status-cancelled-bg); border: 1px solid #fca5a5; border-radius: 2px; padding: 1rem; margin-top: 1rem; color: var(--color-danger); font-size: 0.8125rem; display: none; }
     .conflict-warning .material-icons { vertical-align: middle; margin-right: 0.5rem; }
 
     .btn-bar { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
     .refined-btn-primary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 500; background: var(--color-ink); color: white; border-radius: 2px; border: none; cursor: pointer; }
-    .refined-btn-primary:hover { background: #333; }
+    .refined-btn-primary:hover { background: var(--color-ink-muted); }
     .refined-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
     .material-icons { font-size: 1rem; vertical-align: middle; }
