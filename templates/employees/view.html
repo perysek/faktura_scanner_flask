@@ -35,7 +35,7 @@
         width: 5rem;
         height: 5rem;
         border-radius: 50%;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, var(--color-status-scheduled) 0%, var(--color-chart-blue-dark) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -116,7 +116,7 @@
 
     .field-value.highlight {
         font-weight: 600;
-        color: #7e22ce;
+        color: var(--color-purple);
     }
 
     /* Status Badge */
@@ -134,7 +134,7 @@
     .status-badge.active { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
     .status-badge.on-leave { background: rgba(234, 88, 12, 0.08); color: #c2410c; }
     .status-badge.terminated { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
-    .status-badge.inactive { background: rgba(107, 114, 128, 0.08); color: #4b5563; }
+    .status-badge.inactive { background: rgba(107, 114, 128, 0.08); color: var(--color-ink-muted); }
 
     /* Buttons */
     .refined-btn-primary {
@@ -156,7 +156,7 @@
     }
 
     .refined-btn-primary:hover {
-        background: #333;
+        background: var(--color-ink-muted);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
@@ -243,7 +243,7 @@
     .service-table tbody tr:last-child td { border-bottom: none; }
     .service-table tbody tr:hover { background: var(--color-surface); }
 
-    .price-custom { color: #7e22ce; font-weight: 500; }
+    .price-custom { color: var(--color-purple); font-weight: 500; }
     .price-default { color: var(--color-ink-subtle); }
 
     /* Inline Add Form */
@@ -431,7 +431,7 @@
             <div>
                 <label class="field-label">Koszt pracodawcy (ZUS/podatki)</label>
                 <p class="field-value">
-                    <span class="status-badge" style="background:rgba(37,99,235,0.08);color:#2563eb;">
+                    <span class="status-badge" style="background:rgba(37,99,235,0.08);color:var(--color-status-scheduled);">
                         {{ (employee.employer_cost_rate * 100) | round(1) }}%
                     </span>
                 </p>
@@ -466,7 +466,7 @@
             <label class="field-label" style="margin-bottom:0.75rem;display:block">Specjalizacje</label>
             <div style="display:flex;flex-wrap:wrap;gap:0.375rem">
                 {% for spec in specs %}
-                <span style="display:inline-flex;align-items:center;padding:0.25rem 0.75rem;background:rgba(37,99,235,0.08);color:#2563eb;border-radius:2px;font-size:0.75rem;font-weight:500;">{{ spec }}</span>
+                <span style="display:inline-flex;align-items:center;padding:0.25rem 0.75rem;background:rgba(37,99,235,0.08);color:var(--color-status-scheduled);border-radius:2px;font-size:0.75rem;font-weight:500;">{{ spec }}</span>
                 {% endfor %}
             </div>
         </div>
@@ -588,7 +588,7 @@
             <div id="tab-error-overview" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
                 <div style="background:rgba(37,99,235,0.05);border:1px solid rgba(37,99,235,0.15);border-radius:2px;padding:1rem;">
-                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:#2563eb;margin-bottom:0.375rem;">Przychód</div>
+                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-status-scheduled);margin-bottom:0.375rem;">Przychód</div>
                     <div id="kpi-revenue" style="font-size:1.25rem;font-weight:600;color:var(--color-ink);">—</div>
                     <div style="font-size:0.7rem;color:var(--color-ink-subtle);margin-top:0.125rem;">łącznie (12 mies.)</div>
                 </div>
@@ -603,7 +603,7 @@
                     <div style="font-size:0.7rem;color:var(--color-ink-subtle);margin-top:0.125rem;">przychód − koszt</div>
                 </div>
                 <div style="background:rgba(126,34,206,0.05);border:1px solid rgba(126,34,206,0.15);border-radius:2px;padding:1rem;">
-                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:#7e22ce;margin-bottom:0.375rem;">Śr. wizyta</div>
+                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-purple);margin-bottom:0.375rem;">Śr. wizyta</div>
                     <div id="kpi-avg-ticket" style="font-size:1.25rem;font-weight:600;color:var(--color-ink);">—</div>
                     <div id="kpi-appointments" style="font-size:0.7rem;color:var(--color-ink-subtle);margin-top:0.125rem;">wizyt łącznie</div>
                 </div>
@@ -707,12 +707,12 @@
             <!-- KPI row -->
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
                 <div style="background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:2px;padding:1rem;">
-                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:#d97706;margin-bottom:0.375rem;">Śr. ocena</div>
+                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-status-in-progress);margin-bottom:0.375rem;">Śr. ocena</div>
                     <div id="sat-avg" style="font-size:1.5rem;font-weight:600;color:var(--color-ink);">—</div>
                     <div style="font-size:0.7rem;color:var(--color-ink-subtle);margin-top:0.125rem;">na 5 gwiazdek</div>
                 </div>
                 <div style="background:rgba(37,99,235,0.05);border:1px solid rgba(37,99,235,0.15);border-radius:2px;padding:1rem;">
-                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:#2563eb;margin-bottom:0.375rem;">Ocenionych wizyt</div>
+                    <div style="font-size:0.6875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-status-scheduled);margin-bottom:0.375rem;">Ocenionych wizyt</div>
                     <div id="sat-count" style="font-size:1.5rem;font-weight:600;color:var(--color-ink);">—</div>
                     <div style="font-size:0.7rem;color:var(--color-ink-subtle);margin-top:0.125rem;">z oceną klienta</div>
                 </div>

@@ -26,6 +26,9 @@
       --color-warning: #9a6700;
       --color-error: #9b2c2c;
       --color-info: #1e6091;
+      --color-purple: #7e22ce;
+      --color-purple-bg: #f5f3ff;
+      --color-purple-badge: rgba(126, 34, 206, 0.15);
 
       /* Typography */
       --font-display: 'Inter', system-ui, sans-serif;

@@ -118,7 +118,7 @@
     }
 
     .btn-refined-primary:hover {
-        background: #333;
+        background: var(--color-ink-muted);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
@@ -1422,7 +1422,7 @@ async function openSellerSyncModal() {
 
 function showSellerSyncModal(items) {
     const rows = items.map((item, i) => {
-        const typeColor = item.type === 'unlinked' ? '#9a6700' : '#9b2c2c';
+        const typeColor = item.type === 'unlinked' ? 'var(--color-warning)' : 'var(--color-error)';
         const typeText  = item.type === 'unlinked' ? 'brak powiązania' : 'błędne powiązanie';
         const matchBadge = item.match_reason === 'nazwa'
             ? '<span style="font-size:0.68rem;background:#e8f4fd;color:#1a6fa8;padding:1px 5px;border-radius:3px;">wg nazwy</span>'

@@ -43,7 +43,7 @@
         width: 5rem;
         height: 5rem;
         border-radius: 50%;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, var(--color-status-scheduled) 0%, var(--color-chart-blue-dark) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -130,7 +130,7 @@
 
     .status-badge.inactive {
         background: rgba(107, 114, 128, 0.08);
-        color: #4b5563;
+        color: var(--color-ink-muted);
     }
 
     /* Buttons */
@@ -153,7 +153,7 @@
     }
 
     .refined-btn-primary:hover {
-        background: #333;
+        background: var(--color-ink-muted);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
@@ -790,7 +790,7 @@ function showFieldError(fieldId, errorMessage) {
 
     // Dodaj klasę błędu
     field.classList.add('error');
-    field.style.borderColor = '#DC3545';
+    field.style.borderColor = 'var(--color-status-cancelled)';
     field.style.boxShadow = '0 0 0 3px rgba(220, 53, 69, 0.1)';
 
     // Utwórz element błędu
@@ -798,7 +798,7 @@ function showFieldError(fieldId, errorMessage) {
     if (!errorEl) {
         errorEl = document.createElement('span');
         errorEl.id = `${fieldId}-error`;
-        errorEl.style.color = '#DC3545';
+        errorEl.style.color = 'var(--color-status-cancelled)';
         errorEl.style.fontSize = '0.6875rem';
         errorEl.style.display = 'block';
         errorEl.style.marginTop = '0.375rem';
@@ -1007,8 +1007,8 @@ const STATUS_LABELS = {
     completed: 'Zakończona', cancelled: 'Anulowana', no_show: 'Nieobecność'
 };
 const STATUS_COLORS = {
-    scheduled: '#2563eb', confirmed: '#059669', in_progress: '#d97706',
-    completed: '#2d6a4f', cancelled: '#dc2626', no_show: '#6b7280'
+    scheduled: 'var(--color-status-scheduled)', confirmed: 'var(--color-status-confirmed)', in_progress: 'var(--color-status-in-progress)',
+    completed: 'var(--color-status-completed)', cancelled: 'var(--color-status-cancelled)', no_show: 'var(--color-status-no-show)'
 };
 const STATUS_BG = {
     scheduled: 'rgba(37,99,235,0.08)', confirmed: 'rgba(5,150,105,0.08)',
@@ -1058,7 +1058,7 @@ async function loadAppointmentHistory() {
                 </td>
                 <td style="padding:0.625rem 0.75rem;text-align:right;color:var(--color-ink-muted);">${price}</td>
                 <td style="padding:0.625rem 0.5rem;text-align:right;">
-                    <a href="/appointment/${a.id}" style="font-size:0.75rem;color:#2563eb;text-decoration:none;" title="Szczegóły" aria-label="Szczegóły">
+                    <a href="/appointment/${a.id}" style="font-size:0.75rem;color:var(--color-status-scheduled);text-decoration:none;" title="Szczegóły" aria-label="Szczegóły">
                         <span class="material-icons" style="font-size:1rem;vertical-align:middle;">open_in_new</span>
                     </a>
                 </td>
