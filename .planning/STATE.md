@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-css-architecture-01-03-PLAN.md
-last_updated: "2026-03-19T04:24:27Z"
+stopped_at: Completed 01-css-architecture-01-02-PLAN.md
+last_updated: "2026-03-19T04:33:02.898Z"
 last_activity: 2026-03-19 — Completed 01-03 (strip local stat-value/stat-label redeclarations)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
   completed_plans: 3
   percent: 100
@@ -51,6 +51,7 @@ Progress: [██████████] 100% (Phase 1 plans complete)
 
 *Updated after each plan completion*
 | Phase 01-css-architecture P01 | 2 | 2 tasks | 1 files |
+| Phase 01-css-architecture P02 | 9 | 3 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ Recent decisions affecting current work:
 - [Phase 01-css-architecture]: .page-title set to 1.75rem and .stat-value to 1.25rem as unified targets; typography canonical source is @layer components in input.css
 - [Phase 01-css-architecture 01-03]: .stat-label variant sizes (0.75rem) standardized to global 0.6875rem — delta below perceptibility, single canonical source preferred
 - [Phase 01-css-architecture 01-03]: sellers/edit.html compact .stat-value { font-size: 1rem; } is documented intentional exception; income/dashboard.html color modifiers are feature-local semantic deltas
+- [Phase 01-css-architecture]: services/view.html .page-subtitle kept: has display:flex layout deltas beyond global definition
+- [Phase 01-css-architecture]: roles/list + users/list .page-title blocks deleted entirely: no local delta, only global-matching properties
+- [Phase 01-css-architecture]: invoices/list_refined.html responsive media query preserved: 1.25rem at max-width:1024px is legitimate override
 
 ### Pending Todos
 
@@ -77,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T04:24:27Z
-Stopped at: Completed 01-css-architecture-01-03-PLAN.md
+Last session: 2026-03-19T04:33:02.894Z
+Stopped at: Completed 01-css-architecture-01-02-PLAN.md
 Resume file: None
