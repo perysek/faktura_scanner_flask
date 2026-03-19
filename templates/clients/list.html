@@ -78,14 +78,14 @@
         justify-content: center;
     }
 
-    .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: #2563eb; }
+    .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); }
     .stat-icon.green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
-    .stat-icon.purple { background: rgba(147, 51, 234, 0.08); color: #7e22ce; }
+    .stat-icon.purple { background: rgba(147, 51, 234, 0.08); color: var(--color-purple); }
     .stat-icon.pink { background: rgba(236, 72, 153, 0.08); color: #be185d; }
 
-    .stat-value.blue { color: #2563eb; }
+    .stat-value.blue { color: var(--color-status-scheduled); }
     .stat-value.green { color: var(--color-success); }
-    .stat-value.purple { color: #7e22ce; }
+    .stat-value.purple { color: var(--color-purple); }
     .stat-value.pink { color: #be185d; }
 
     /* Search Card */
@@ -147,7 +147,7 @@
     }
 
     .refined-btn-primary:hover {
-        background: #333;
+        background: var(--color-ink-muted);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
@@ -233,7 +233,7 @@
         width: 2.5rem;
         height: 2.5rem;
         border-radius: 50%;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, var(--color-status-scheduled) 0%, var(--color-chart-blue-dark) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -278,12 +278,12 @@
 
     .status-badge.inactive {
         background: rgba(107, 114, 128, 0.08);
-        color: #4b5563;
+        color: var(--color-ink-muted);
     }
 
     /* Action Links */
     .action-link {
-        color: #2563eb;
+        color: var(--color-status-scheduled);
         font-size: 0.8125rem;
         font-weight: 400;
         text-decoration: none;
@@ -291,7 +291,7 @@
     }
 
     .action-link:hover {
-        color: #1d4ed8;
+        color: var(--color-chart-blue-dark);
     }
 
     .action-link.secondary {
