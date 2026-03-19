@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v2.0
+milestone_name: milestone
+status: executing
+stopped_at: Completed 01-css-architecture-01-01-PLAN.md
+last_updated: "2026-03-19T04:21:09.769Z"
+last_activity: 2026-03-19 — Completed 01-01 (global typography block)
+progress:
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
+---
+
 # Project State
 
 ## Project Reference
@@ -10,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 1 of 4 (CSS Architecture)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-19 — Roadmap created for milestone v2.0 UI/UX Polish
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-03-19 — Completed 01-01 (global typography block)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -34,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-css-architecture P01 | 2 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -45,6 +62,7 @@ Recent decisions affecting current work:
 - [Pre-roadmap]: CSS custom properties over Tailwind for status colors — semantic colors stay in CSS
 - [Pre-roadmap]: brand-500 gold token added to tailwind.config.js but not yet used in templates — Phase 3 closes this gap
 - [Pre-roadmap]: base.html sets p-2 on #main-content causing 14+ templates to fight with !important — Phase 2 restructures this
+- [Phase 01-css-architecture]: .page-title set to 1.75rem and .stat-value to 1.25rem as unified targets; typography canonical source is @layer components in input.css
 
 ### Pending Todos
 
@@ -57,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19
-Stopped at: Roadmap created — all 14 v2.0 requirements mapped to 4 phases
+Last session: 2026-03-19T04:21:09.766Z
+Stopped at: Completed 01-css-architecture-01-01-PLAN.md
 Resume file: None
