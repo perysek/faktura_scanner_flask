@@ -44,7 +44,12 @@ Plans:
   2. Form pages (create/edit) display content within a consistent max-width (900px)
   3. List pages (clients, employees, services) display content within a consistent max-width (1400px)
   4. Calendar pages use full available width with no max-width constraint
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Change base.html p-2→p-0 and restore padding on analytics/dashboard.html
+- [ ] 02-02-PLAN.md — Strip !important padding overrides from all 13 templates, move padding to .refined-page
+- [ ] 02-03-PLAN.md — Normalize max-width scale across ~21 templates (900px forms, 1400px lists, full-width calendars)
 
 ### Phase 3: Color Cleanup
 **Goal**: Gold accent color is defined in one place and all templates reference the token, not a hex value
@@ -78,6 +83,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. CSS Architecture | 2/3 | Complete    | 2026-03-19 |
-| 2. Layout & Spacing | 0/TBD | Not started | - |
+| 2. Layout & Spacing | 0/3 | Not started | - |
 | 3. Color Cleanup | 0/TBD | Not started | - |
 | 4. Accessibility & UX Polish | 0/TBD | Not started | - |
