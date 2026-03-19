@@ -24,6 +24,7 @@
     .refined-page {
         font-family: var(--font-body);
         color: var(--color-ink);
+        padding: 1rem 1.5rem;
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -614,13 +615,7 @@
         color: var(--color-ink-muted);
     }
 
-    /* Override main content padding for full-width layout */
-    #main-content {
-        padding: 1rem 1.5rem !important;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden !important;
-    }
+    /* Override main content padding for full-width layout — removed after base.html p-0 */
 
     /* Responsive adjustments */
     @media (max-width: 1024px) {
