@@ -12,7 +12,7 @@ The v1.0 design system audit scored 17/24. This milestone closes the gap across 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: CSS Architecture** - Extract shared :root to input.css, unify type scale across 45 templates
+- [x] **Phase 1: CSS Architecture** - Extract shared :root to input.css, unify type scale across 45 templates (completed 2026-03-19)
 - [ ] **Phase 2: Layout & Spacing** - Remove !important padding overrides, standardize max-width scale
 - [ ] **Phase 3: Color Cleanup** - Eliminate remaining hardcoded hex values, adopt brand-* Tailwind tokens
 - [ ] **Phase 4: Accessibility & UX Polish** - Add aria attributes, retry actions, fix 404 CTA, fix copy
@@ -77,7 +77,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. CSS Architecture | 2/3 | In Progress|  |
+| 1. CSS Architecture | 2/3 | Complete    | 2026-03-19 |
 | 2. Layout & Spacing | 0/TBD | Not started | - |
 | 3. Color Cleanup | 0/TBD | Not started | - |
 | 4. Accessibility & UX Polish | 0/TBD | Not started | - |
