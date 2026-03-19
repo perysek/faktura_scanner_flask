@@ -25,10 +25,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: TYPO-01, TYPO-02, TYPO-03
 **Success Criteria** (what must be TRUE):
   1. All pages display `.page-title` at exactly 1.75rem — navigating from calendar to client list shows no headline size jump
-  2. All pages display `.stat-value` at exactly 1.5rem — no variation between dashboard, income, and list pages
+  2. All pages display `.stat-value` at exactly 1.25rem — no variation between dashboard, income, and list pages
   3. Any developer changing a font size in `input.css` sees the change propagate to all pages without touching individual templates
   4. No template file contains a `:root` block that duplicates properties already declared in `input.css`
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Add global typography block to @layer components in input.css and run build
+- [ ] 01-02-PLAN.md — Strip local .page-title and .page-subtitle redeclarations from all 38 templates
+- [ ] 01-03-PLAN.md — Strip local .stat-value and .stat-label redeclarations from 7 templates
 
 ### Phase 2: Layout & Spacing
 **Goal**: Page layout is controlled by each page, not fought against by each page
@@ -72,7 +77,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. CSS Architecture | 0/TBD | Not started | - |
+| 1. CSS Architecture | 0/3 | Not started | - |
 | 2. Layout & Spacing | 0/TBD | Not started | - |
 | 3. Color Cleanup | 0/TBD | Not started | - |
 | 4. Accessibility & UX Polish | 0/TBD | Not started | - |
