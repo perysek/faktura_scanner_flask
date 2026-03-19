@@ -436,6 +436,7 @@ let originalServices = [];
 let currentServices = [];
 let adjPrev = null;
 let adjNext = null;
+let navMode = localStorage.getItem('superadmin_nav_mode') || 'all';
 let currentStar = 0;
 let forceAllowSave = false;
 let totalPriceOverride = null; // manual total price override
@@ -528,6 +529,7 @@ async function loadVisit(id) {
 // ══════════════════════════════════════════════════════
 async function loadAdjacent() {
     try {
+        const data = await fetch(`/api/appointments/adjacent?id=${APPT_ID}&mode=${navMode}`).then(r => r.json());
         updateAdjacent(data);
     } catch(e) { console.error('Adjacent load failed', e); }
 }
