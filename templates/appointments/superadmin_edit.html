@@ -16,7 +16,7 @@
     }
     .pp-loading-overlay.active { display: flex; }
     .pp-spinner {
-        width: 36px; height: 36px; border: 3px solid #333;
+        width: 36px; height: 36px; border: 3px solid var(--color-ink-muted);
         border-top-color: var(--pp-blue); border-radius: 50%;
         animation: spin 0.7s linear infinite;
     }
@@ -55,7 +55,7 @@
     /* Thin scrollbars inside columns */
     .pp-col-left::-webkit-scrollbar, .pp-col-right::-webkit-scrollbar { width: 4px; }
     .pp-col-left::-webkit-scrollbar-track, .pp-col-right::-webkit-scrollbar-track { background: transparent; }
-    .pp-col-left::-webkit-scrollbar-thumb, .pp-col-right::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+    .pp-col-left::-webkit-scrollbar-thumb, .pp-col-right::-webkit-scrollbar-thumb { background: var(--color-star-empty); border-radius: 2px; }
 
     /* ── Cards ── */
     .pp-card { background: var(--pp-surface); border: 1px solid var(--pp-border); border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }
@@ -82,8 +82,8 @@
 
     /* ── Star widget ── */
     .star-widget { display: flex; gap: 0.2rem; }
-    .star-btn { background: none; border: none; cursor: pointer; padding: 0.1rem; color: #d1d5db; font-size: 1.4rem; line-height: 1; transition: color 0.1s, transform 0.1s; }
-    .star-btn:hover, .star-btn.active { color: #f59e0b; }
+    .star-btn { background: none; border: none; cursor: pointer; padding: 0.1rem; color: var(--color-star-empty); font-size: 1.4rem; line-height: 1; transition: color 0.1s, transform 0.1s; }
+    .star-btn:hover, .star-btn.active { color: var(--color-star-filled); }
     .star-btn:hover { transform: scale(1.15); }
 
     /* ── Service rows with editable price + duration ── */
@@ -108,13 +108,13 @@
     .svc-inline-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
 
     .btn-svc-remove { padding: 0.25rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; transition: all 0.1s; flex-shrink: 0; }
-    .btn-svc-remove:hover { background: #fef2f2; border-color: var(--pp-danger); color: var(--pp-danger); }
+    .btn-svc-remove:hover { background: var(--color-status-cancelled-bg); border-color: var(--pp-danger); color: var(--pp-danger); }
     .btn-svc-remove svg { width: 13px; height: 13px; }
 
     /* ── Service picker ── */
     .pp-svc-picker { max-height: 170px; overflow-y: auto; border: 1px solid var(--pp-border); border-radius: 2px; }
     .pp-svc-option:last-child { border-bottom: none; }
-    .btn-svc-add:hover { background: #1d4ed8; }
+    .btn-svc-add:hover { background: var(--color-chart-blue-dark); }
 
     /* ── Summary ── */
     .pp-summary { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.75rem; margin-top: 0.625rem; }
@@ -158,19 +158,19 @@
     /* Shortcut hints */
     /* Action buttons */
     .pp-btn-primary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1.25rem; background: var(--pp-blue); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 0.15s; }
-    .pp-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .pp-btn-primary:hover:not(:disabled) { background: var(--color-chart-blue-dark); }
     .pp-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
     .pp-btn-secondary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: white; color: var(--pp-ink-muted); border: 1px solid var(--pp-border); border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
     .pp-btn-secondary:hover { background: var(--pp-surface-warm); color: var(--pp-ink); }
     .pp-btn-danger { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: var(--pp-danger); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; cursor: pointer; transition: background 0.15s; }
-    .pp-btn-danger:hover { background: #b91c1c; }
+    .pp-btn-danger:hover { background: var(--color-status-cancelled-dark); }
 
     /* ── Conflict modal ── */
     .pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; }
     .pp-modal-overlay.open { display: flex; }
     .pp-modal { background: white; border-radius: 4px; width: 480px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; animation: ppModalIn 0.18s var(--ease) forwards; }
     @keyframes ppModalIn { from { opacity:0; transform:scale(0.96) translateY(6px); } to { opacity:1; transform:scale(1); } }
-    .pp-modal-header { padding: 0.875rem 1.1rem; border-bottom: 1px solid var(--pp-border); display: flex; align-items: center; gap: 0.5rem; background: #fef2f2; }
+    .pp-modal-header { padding: 0.875rem 1.1rem; border-bottom: 1px solid var(--pp-border); display: flex; align-items: center; gap: 0.5rem; background: var(--color-status-cancelled-bg); }
     .pp-modal-title { font-size: 0.9rem; font-weight: 600; color: var(--pp-danger); flex: 1; }
     .pp-modal-body { padding: 1.1rem; font-size: 0.8125rem; line-height: 1.6; color: var(--pp-ink-muted); }
     .pp-conflict-item { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.6rem 0.875rem; margin-bottom: 0.4rem; font-family: var(--pp-mono); font-size: 0.73rem; }
@@ -255,7 +255,7 @@
             <div class="pp-card">
                 <div class="pp-card-header">
                     <span class="pp-card-title">Ocena klienta</span>
-                    <span style="font-size:0.58rem;color:#aaa;font-family:var(--pp-mono);margin-left:auto">bypass status</span>
+                    <span style="font-size:0.58rem;color:var(--color-ink-subtle);font-family:var(--pp-mono);margin-left:auto">bypass status</span>
                 </div>
                 <div class="pp-card-body">
                     <div class="star-widget" id="star-widget">
@@ -309,7 +309,7 @@
                 <div class="pp-card-header"><span class="pp-card-title">Usługi i dodatki</span></div>
                 <div class="pp-card-body">
                     <ul class="pp-service-list" id="services-list">
-                        <li style="padding:1rem;text-align:center;color:#999;font-family:var(--pp-mono);font-size:0.8rem">Ładowanie...</li>
+                        <li style="padding:1rem;text-align:center;color:var(--color-ink-subtle);font-family:var(--pp-mono);font-size:0.8rem">Ładowanie...</li>
                     </ul>
 
                     <span class="pp-svc-add-label">Dodaj usługę / dodatek</span>
@@ -394,7 +394,7 @@
 <div class="pp-modal-overlay" id="conflict-modal" onclick="onModalOverlayClick(event)">
     <div class="pp-modal" onclick="event.stopPropagation()">
         <div class="pp-modal-header">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#dc2626"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--color-status-cancelled)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
             <span class="pp-modal-title">Konflikt harmonogramu</span>
         </div>
         <div class="pp-modal-body" id="conflict-modal-body"></div>
@@ -654,7 +654,7 @@ function renderStars(n) {
 function renderServices() {
     const list = document.getElementById('services-list');
     if (currentServices.length === 0) {
-        list.innerHTML = '<li style="padding:0.875rem;text-align:center;color:#999;font-family:var(--pp-mono);font-size:0.78rem">Brak usług</li>';
+        list.innerHTML = '<li style="padding:0.875rem;text-align:center;color:var(--color-ink-subtle);font-family:var(--pp-mono);font-size:0.78rem">Brak usług</li>';
         return;
     }
     list.innerHTML = currentServices.map((s, idx) => `
@@ -794,7 +794,7 @@ function showConflictModal(data) {
             ${data.conflict_appointment_id ? `<div><strong>ID wizyty:</strong> #${data.conflict_appointment_id}</div>` : ''}
             ${data.message ? `<div><strong>Szczegóły:</strong> ${esc(data.message)}</div>` : ''}
         </div>
-        <p style="margin:0.5rem 0 0;font-size:0.73rem;color:#888">Możesz zmienić dane lub zapisać mimo konfliktu (superuser).</p>
+        <p style="margin:0.5rem 0 0;font-size:0.73rem;color:var(--color-ink-subtle)">Możesz zmienić dane lub zapisać mimo konfliktu (superuser).</p>
     `;
     document.getElementById('conflict-modal').classList.add('open');
     document.getElementById('btn-save').disabled = true;
@@ -914,7 +914,7 @@ function showLoading(on) {
 //  TOAST
 // ══════════════════════════════════════════════════════
 function showToast(msg, type = 'info', duration = 2500) {
-    const colors = {success:'#16a34a', error:'#dc2626', warning:'#d97706', info:'#2563eb'};
+    const colors = {success:'var(--color-chart-green)', error:'var(--color-status-cancelled)', warning:'var(--color-status-in-progress)', info:'var(--color-status-scheduled)'};
     const existing = document.getElementById('pp-toast');
     if (existing) existing.remove();
 

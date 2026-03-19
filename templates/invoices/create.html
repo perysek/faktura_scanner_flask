@@ -203,7 +203,7 @@
     }
 
     .btn-refined-primary:hover {
-        background: #333;
+        background: var(--color-ink);
         transform: translateY(-1px);
     }
 
@@ -348,7 +348,7 @@
     }
 
     .btn-remove-file:hover {
-        color: #7a1f1f;
+        color: var(--color-error);
     }
 
     .btn-remove-file svg {
@@ -669,7 +669,7 @@ function setupFileUpload() {
 
         previewContainer.innerHTML = '';
         previewContainer.style.padding = '0.25rem';
-        previewContainer.style.background = '#f5f5f5';
+        previewContainer.style.background = cssVar('color-surface');
 
         if (file.type === 'application/pdf' || ext === 'pdf') {
             previewContainer.style.display = 'block';
@@ -858,29 +858,29 @@ function showSellerConflictModal({ nip, existingName, newName }) {
         `;
 
         modal.innerHTML = `
-            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+            <div style="padding: 24px; border-bottom: 1px solid var(--color-border);">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <svg style="width: 28px; height: 28px; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg style="width: 28px; height: 28px; color: var(--color-star-filled);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">Konflikt danych sprzedawcy</h3>
+                    <h3 style="font-size: 20px; font-weight: 600; color: var(--color-ink); margin: 0;">Konflikt danych sprzedawcy</h3>
                 </div>
-                <p style="color: #6b7280; margin: 0; font-size: 14px;">NIP ${nip} już istnieje w bazie danych z inną nazwą</p>
+                <p style="color: var(--color-ink-subtle); margin: 0; font-size: 14px;">NIP ${nip} już istnieje w bazie danych z inną nazwą</p>
             </div>
             <div style="padding: 24px;">
-                <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <div style="background: var(--color-surface); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                     <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px;">ISTNIEJĄCY SPRZEDAWCA</div>
-                        <div style="font-size: 15px; color: #111827; font-weight: 500;">${existingName}</div>
+                        <div style="font-size: 12px; color: var(--color-ink-subtle); font-weight: 500; margin-bottom: 4px;">ISTNIEJĄCY SPRZEDAWCA</div>
+                        <div style="font-size: 15px; color: var(--color-ink); font-weight: 500;">${existingName}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px;">WPROWADZONA NAZWA</div>
-                        <div style="font-size: 15px; color: #059669; font-weight: 500;">${newName}</div>
+                        <div style="font-size: 12px; color: var(--color-ink-subtle); font-weight: 500; margin-bottom: 4px;">WPROWADZONA NAZWA</div>
+                        <div style="font-size: 15px; color: var(--color-status-confirmed); font-weight: 500;">${newName}</div>
                     </div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <button id="btn-use-existing" class="btn-primary" style="justify-content: flex-start;">Użyj istniejącego</button>
-                    <button id="btn-update-seller" class="btn-success" style="justify-content: flex-start; background-color: #059669; color: white; padding: 12px 16px; border-radius: 8px;">Zaktualizuj sprzedawcę</button>
+                    <button id="btn-update-seller" class="btn-success" style="justify-content: flex-start; background-color: var(--color-status-confirmed); color: white; padding: 12px 16px; border-radius: 8px;">Zaktualizuj sprzedawcę</button>
                     <button id="btn-cancel" class="btn-secondary" style="justify-content: flex-start;">Anuluj</button>
                 </div>
             </div>
@@ -917,28 +917,28 @@ function showNewSellerModal({ nip, name }) {
         `;
 
         modal.innerHTML = `
-            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+            <div style="padding: 24px; border-bottom: 1px solid var(--color-border);">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <svg style="width: 28px; height: 28px; color: #3b82f6;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg style="width: 28px; height: 28px; color: var(--color-chart-blue);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                     <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">Nowy sprzedawca</h3>
+                     <h3 style="font-size: 20px; font-weight: 600; color: var(--color-ink); margin: 0;">Nowy sprzedawca</h3>
                 </div>
-                <p style="color: #6b7280; margin: 0; font-size: 14px;">Sprzedawca z tym NIP nie istnieje w bazie danych</p>
+                <p style="color: var(--color-ink-subtle); margin: 0; font-size: 14px;">Sprzedawca z tym NIP nie istnieje w bazie danych</p>
             </div>
              <div style="padding: 24px;">
-                <div style="background: #eff6ff; border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+                <div style="background: var(--color-info-bg); border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--color-info-border);">
                     <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">NIP</div>
-                        <div style="font-size: 15px; color: #1e3a8a; font-weight: 600;">${nip}</div>
+                        <div style="font-size: 12px; color: var(--color-info-text); font-weight: 500; margin-bottom: 4px;">NIP</div>
+                        <div style="font-size: 15px; color: var(--color-info-text-dark); font-weight: 600;">${nip}</div>
                     </div>
                      <div>
-                        <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">NAZWA</div>
-                        <div style="font-size: 15px; color: #1e3a8a; font-weight: 600;">${name}</div>
+                        <div style="font-size: 12px; color: var(--color-info-text); font-weight: 500; margin-bottom: 4px;">NAZWA</div>
+                        <div style="font-size: 15px; color: var(--color-info-text-dark); font-weight: 600;">${name}</div>
                     </div>
                 </div>
                  <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <button id="btn-create" class="btn-success" style="justify-content: flex-start; background-color: #059669; color: white; padding: 12px 16px; border-radius: 8px;">Tak, utwórz</button>
+                    <button id="btn-create" class="btn-success" style="justify-content: flex-start; background-color: var(--color-status-confirmed); color: white; padding: 12px 16px; border-radius: 8px;">Tak, utwórz</button>
                     <button id="btn-cancel" class="btn-secondary" style="justify-content: flex-start;">Nie, anuluj</button>
                 </div>
             </div>

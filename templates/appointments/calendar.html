@@ -17,7 +17,7 @@
     .controls-bar select:focus, .controls-bar input:focus { outline: none; border-color: var(--color-ink-muted); }
 
     .refined-btn-primary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.625rem 1rem; font-size: 0.8125rem; font-weight: 500; background: var(--color-ink); color: white; border-radius: 2px; border: none; cursor: pointer; text-decoration: none; transition: all 0.25s var(--ease-out-expo); }
-    .refined-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .refined-btn-primary:hover { background: var(--color-ink-muted); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
     .refined-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
     .refined-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -60,36 +60,36 @@
 
     /* Appointment Blocks */
     .appointments-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
-    .appointment-block { position: absolute; left: 8px; right: 8px; background: white; border-left: 4px solid #2563eb; border-radius: 2px; padding: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: auto; cursor: pointer; transition: all 0.2s var(--ease-out-expo); overflow: hidden; }
+    .appointment-block { position: absolute; left: 8px; right: 8px; background: white; border-left: 4px solid var(--color-status-scheduled); border-radius: 2px; padding: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: auto; cursor: pointer; transition: all 0.2s var(--ease-out-expo); overflow: hidden; }
     .appointment-block:hover { transform: translateX(2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
-    .appointment-block.scheduled { border-left-color: #2563eb; background: #eff6ff; }
-    .appointment-block.confirmed { border-left-color: #059669; background: #ecfdf5; }
-    .appointment-block.in_progress { border-left-color: #d97706; background: #fffbeb; }
-    .appointment-block.completed { border-left-color: var(--color-success); background: #f0fdf4; }
-    .appointment-block.cancelled { border-left-color: #dc2626; background: #fef2f2; opacity: 0.7; }
+    .appointment-block.scheduled { border-left-color: var(--color-status-scheduled); background: var(--color-status-scheduled-bg); }
+    .appointment-block.confirmed { border-left-color: var(--color-status-confirmed); background: var(--color-status-confirmed-bg); }
+    .appointment-block.in_progress { border-left-color: var(--color-status-in-progress); background: var(--color-status-in-progress-bg); }
+    .appointment-block.completed { border-left-color: var(--color-status-completed); background: var(--color-status-completed-bg); }
+    .appointment-block.cancelled { border-left-color: var(--color-status-cancelled); background: var(--color-status-cancelled-bg); opacity: 0.7; }
 
     .appointment-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.25rem; }
     .appointment-client { font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
     .appointment-status-badge { font-size: 0.5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.125rem 0.25rem; border-radius: 2px; white-space: nowrap; flex-shrink: 0; }
-    .appointment-status-badge.scheduled { background: rgba(59,130,246,0.15); color: #2563eb; }
-    .appointment-status-badge.confirmed { background: rgba(16,185,129,0.15); color: #059669; }
-    .appointment-status-badge.in_progress { background: rgba(245,158,11,0.15); color: #d97706; }
-    .appointment-status-badge.completed { background: rgba(45,106,79,0.15); color: var(--color-success); }
-    .appointment-status-badge.cancelled { background: rgba(220,38,38,0.15); color: #dc2626; }
+    .appointment-status-badge.scheduled { background: var(--color-status-scheduled-badge); color: var(--color-status-scheduled); }
+    .appointment-status-badge.confirmed { background: var(--color-status-confirmed-badge); color: var(--color-status-confirmed); }
+    .appointment-status-badge.in_progress { background: var(--color-status-in-progress-badge); color: var(--color-status-in-progress); }
+    .appointment-status-badge.completed { background: rgba(45,106,79,0.15); color: var(--color-status-completed); }
+    .appointment-status-badge.cancelled { background: var(--color-status-cancelled-badge); color: var(--color-status-cancelled); }
 
     .appointment-details { font-size: 0.625rem; color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .appointment-separator { margin: 0 0.375rem; color: var(--color-ink-subtle); }
-    .appointment-addons { font-size: 0.625rem; color: #d97706; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-weight: 500; }
+    .appointment-addons { font-size: 0.625rem; color: var(--color-status-in-progress); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-weight: 500; }
     .appointment-notes { font-size: 0.625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-style: italic; }
     .appointment-stylist { font-size: 0.5625rem; color: var(--color-ink-subtle); background: rgba(0,0,0,0.04); padding: 0.125rem 0.375rem; border-radius: 2px; white-space: nowrap; font-weight: 400; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 
     .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-    .status-dot.scheduled { background: #2563eb; }
-    .status-dot.confirmed { background: #059669; }
-    .status-dot.in_progress { background: #d97706; }
-    .status-dot.completed { background: var(--color-success); }
-    .status-dot.cancelled { background: #dc2626; }
+    .status-dot.scheduled { background: var(--color-status-scheduled); }
+    .status-dot.confirmed { background: var(--color-status-confirmed); }
+    .status-dot.in_progress { background: var(--color-status-in-progress); }
+    .status-dot.completed { background: var(--color-status-completed); }
+    .status-dot.cancelled { background: var(--color-status-cancelled); }
 
     /* Day Summary */
     .day-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem 1.5rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
@@ -473,7 +473,7 @@ function renderEmployeeHeaders() {
         if (stats.scheduled > 0) {
             statsEl.innerHTML += `
                 <span class="employee-stat" title="Zaplanowane">
-                    <span class="employee-stat-dot" style="background: #2563eb;"></span>
+                    <span class="employee-stat-dot" style="background: var(--color-status-scheduled);"></span>
                     ${stats.scheduled}
                 </span>
             `;
@@ -481,7 +481,7 @@ function renderEmployeeHeaders() {
         if (stats.confirmed > 0) {
             statsEl.innerHTML += `
                 <span class="employee-stat" title="Potwierdzone">
-                    <span class="employee-stat-dot" style="background: #059669;"></span>
+                    <span class="employee-stat-dot" style="background: var(--color-status-confirmed);"></span>
                     ${stats.confirmed}
                 </span>
             `;
@@ -489,7 +489,7 @@ function renderEmployeeHeaders() {
         if (stats.completed > 0) {
             statsEl.innerHTML += `
                 <span class="employee-stat" title="Zakończone">
-                    <span class="employee-stat-dot" style="background: var(--color-success);"></span>
+                    <span class="employee-stat-dot" style="background: var(--color-status-completed);"></span>
                     ${stats.completed}
                 </span>
             `;
@@ -497,7 +497,7 @@ function renderEmployeeHeaders() {
         if (stats.cancelledOrNoShow > 0) {
             statsEl.innerHTML += `
                 <span class="employee-stat" title="Anulowane/Nieobecność">
-                    <span class="employee-stat-dot" style="background: #dc2626;"></span>
+                    <span class="employee-stat-dot" style="background: var(--color-status-cancelled);"></span>
                     ${stats.cancelledOrNoShow}
                 </span>
             `;
@@ -615,7 +615,7 @@ function createAppointmentBlock(appointment) {
 
     if (appointment.satisfaction_score != null) {
         const score = appointment.satisfaction_score;
-        const ratingColor = score >= 4 ? '#2d6a4f' : score >= 3 ? '#d97706' : '#dc2626';
+        const ratingColor = score >= 4 ? cssVar('color-status-completed') : score >= 3 ? cssVar('color-status-in-progress') : cssVar('color-status-cancelled');
         content += `<div style="margin-top:0.125rem;"><span style="font-size:0.5625rem;font-weight:700;color:${ratingColor};" title="Ocena klienta: ${score}/5">★ ${score}</span></div>`;
     }
 

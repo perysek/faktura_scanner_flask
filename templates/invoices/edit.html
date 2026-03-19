@@ -209,7 +209,7 @@
     }
 
     .btn-refined-primary:hover {
-        background: #333;
+        background: var(--color-ink);
         transform: translateY(-1px);
     }
 
@@ -840,48 +840,48 @@ function showSellerConflictModal({ nip, existingName, newName }) {
         `;
 
         modal.innerHTML = `
-            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+            <div style="padding: 24px; border-bottom: 1px solid var(--color-border);">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <svg style="width: 28px; height: 28px; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg style="width: 28px; height: 28px; color: var(--color-star-filled);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">
+                    <h3 style="font-size: 20px; font-weight: 600; color: var(--color-ink); margin: 0;">
                         Konflikt danych sprzedawcy
                     </h3>
                 </div>
-                <p style="color: #6b7280; margin: 0; font-size: 14px;">
+                <p style="color: var(--color-ink-subtle); margin: 0; font-size: 14px;">
                     NIP ${nip} już istnieje w bazie danych z inną nazwą
                 </p>
             </div>
 
             <div style="padding: 24px;">
-                <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <div style="background: var(--color-surface); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                     <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px;">
+                        <div style="font-size: 12px; color: var(--color-ink-subtle); font-weight: 500; margin-bottom: 4px;">
                             ISTNIEJĄCY SPRZEDAWCA W BAZIE
                         </div>
-                        <div style="font-size: 15px; color: #111827; font-weight: 500;">
+                        <div style="font-size: 15px; color: var(--color-ink); font-weight: 500;">
                             ${existingName}
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px;">
+                        <div style="font-size: 12px; color: var(--color-ink-subtle); font-weight: 500; margin-bottom: 4px;">
                             WPROWADZONA NAZWA
                         </div>
-                        <div style="font-size: 15px; color: #059669; font-weight: 500;">
+                        <div style="font-size: 15px; color: var(--color-status-confirmed); font-weight: 500;">
                             ${newName}
                         </div>
                     </div>
                 </div>
 
-                <p style="color: #374151; margin-bottom: 20px; font-size: 14px;">
+                <p style="color: var(--color-ink-muted); margin-bottom: 20px; font-size: 14px;">
                     Wybierz, co chcesz zrobić:
                 </p>
 
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <button id="btn-use-existing" style="
                         padding: 12px 16px;
-                        background: #3b82f6;
+                        background: var(--color-chart-blue);
                         color: white;
                         border: none;
                         border-radius: 8px;
@@ -892,7 +892,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         align-items: center;
                         gap: 8px;
                         transition: background 0.2s;
-                    " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                    " onmouseover="this.style.background=cssVar('color-status-scheduled')" onmouseout="this.style.background=cssVar('color-chart-blue')">
                         <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -901,7 +901,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
 
                     <button id="btn-update-seller" style="
                         padding: 12px 16px;
-                        background: #059669;
+                        background: var(--color-status-confirmed);
                         color: white;
                         border: none;
                         border-radius: 8px;
@@ -912,7 +912,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         align-items: center;
                         gap: 8px;
                         transition: background 0.2s;
-                    " onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                    " onmouseover="this.style.background=cssVar('color-status-confirmed-dark')" onmouseout="this.style.background=cssVar('color-status-confirmed')">
                         <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
@@ -921,9 +921,9 @@ function showSellerConflictModal({ nip, existingName, newName }) {
 
                     <button id="btn-cancel" style="
                         padding: 12px 16px;
-                        background: #f3f4f6;
-                        color: #374151;
-                        border: 1px solid #d1d5db;
+                        background: var(--color-surface);
+                        color: var(--color-ink-muted);
+                        border: 1px solid var(--color-border);
                         border-radius: 8px;
                         cursor: pointer;
                         font-size: 14px;
@@ -932,7 +932,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
                         align-items: center;
                         gap: 8px;
                         transition: background 0.2s;
-                    " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                    " onmouseover="this.style.background=cssVar('color-surface-warm')" onmouseout="this.style.background=cssVar('color-surface')">
                         <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1047,48 +1047,48 @@ function showNewSellerModal({ nip, name }) {
         `;
 
         modal.innerHTML = `
-            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+            <div style="padding: 24px; border-bottom: 1px solid var(--color-border);">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <svg style="width: 28px; height: 28px; color: #3b82f6;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg style="width: 28px; height: 28px; color: var(--color-chart-blue);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    <h3 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">
+                    <h3 style="font-size: 20px; font-weight: 600; color: var(--color-ink); margin: 0;">
                         Nowy sprzedawca
                     </h3>
                 </div>
-                <p style="color: #6b7280; margin: 0; font-size: 14px;">
+                <p style="color: var(--color-ink-subtle); margin: 0; font-size: 14px;">
                     Sprzedawca z tym NIP nie istnieje w bazie danych
                 </p>
             </div>
 
             <div style="padding: 24px;">
-                <div style="background: #eff6ff; border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+                <div style="background: var(--color-info-bg); border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--color-info-border);">
                     <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">
+                        <div style="font-size: 12px; color: var(--color-info-text); font-weight: 500; margin-bottom: 4px;">
                             NIP
                         </div>
-                        <div style="font-size: 15px; color: #1e3a8a; font-weight: 600;">
+                        <div style="font-size: 15px; color: var(--color-info-text-dark); font-weight: 600;">
                             ${nip}
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">
+                        <div style="font-size: 12px; color: var(--color-info-text); font-weight: 500; margin-bottom: 4px;">
                             NAZWA SPRZEDAWCY
                         </div>
-                        <div style="font-size: 15px; color: #1e3a8a; font-weight: 600;">
+                        <div style="font-size: 15px; color: var(--color-info-text-dark); font-weight: 600;">
                             ${name}
                         </div>
                     </div>
                 </div>
 
-                <p style="color: #374151; margin-bottom: 20px; font-size: 14px;">
+                <p style="color: var(--color-ink-muted); margin-bottom: 20px; font-size: 14px;">
                     Czy chcesz utworzyć nowego sprzedawcę w bazie danych?
                 </p>
 
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <button id="btn-create" style="
                         padding: 12px 16px;
-                        background: #059669;
+                        background: var(--color-status-confirmed);
                         color: white;
                         border: none;
                         border-radius: 8px;
@@ -1099,7 +1099,7 @@ function showNewSellerModal({ nip, name }) {
                         align-items: center;
                         gap: 8px;
                         transition: background 0.2s;
-                    " onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                    " onmouseover="this.style.background=cssVar('color-status-confirmed-dark')" onmouseout="this.style.background=cssVar('color-status-confirmed')">
                         <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -1108,9 +1108,9 @@ function showNewSellerModal({ nip, name }) {
 
                     <button id="btn-cancel" style="
                         padding: 12px 16px;
-                        background: #f3f4f6;
-                        color: #374151;
-                        border: 1px solid #d1d5db;
+                        background: var(--color-surface);
+                        color: var(--color-ink-muted);
+                        border: 1px solid var(--color-border);
                         border-radius: 8px;
                         cursor: pointer;
                         font-size: 14px;
@@ -1119,7 +1119,7 @@ function showNewSellerModal({ nip, name }) {
                         align-items: center;
                         gap: 8px;
                         transition: background 0.2s;
-                    " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                    " onmouseover="this.style.background=cssVar('color-surface-warm')" onmouseout="this.style.background=cssVar('color-surface')">
                         <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
