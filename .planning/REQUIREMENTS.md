@@ -11,7 +11,7 @@ Requirements dla milestonu UI/UX Polish. Każdy ma źródło w UI audicie.
 ### Typography (Pillar 4 — 2/4)
 
 - [x] **TYPO-01**: Wspólny blok `:root` z deklaracjami CSS klas typograficznych (`.page-title`, `.page-subtitle`, `.stat-value`, `.stat-label`) przeniesiony do `static/css/input.css` — eliminuje 45 duplikatów
-- [ ] **TYPO-02**: Spójna skala `.page-title` — jeden rozmiar (1.75rem) na wszystkich stronach, w tym widokach kalendarza (teraz 1.375rem)
+- [x] **TYPO-02**: Spójna skala `.page-title` — jeden rozmiar (1.75rem) na wszystkich stronach, w tym widokach kalendarza (teraz 1.375rem)
 - [x] **TYPO-03**: Ujednolicona skala `.stat-value` — jeden rozmiar zamiast 1.25rem/1.5rem/1.75rem na różnych stronach
 
 ### Spacing (Pillar 5 — 3/4)
@@ -67,7 +67,7 @@ Odroczone — do następnego milestonu.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TYPO-01 | Phase 1 | Complete |
-| TYPO-02 | Phase 1 | Pending |
+| TYPO-02 | Phase 1 | Complete |
 | TYPO-03 | Phase 1 | Complete |
 | SPAC-01 | Phase 2 | Pending |
 | SPAC-02 | Phase 2 | Pending |
