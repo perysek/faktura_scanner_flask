@@ -23,6 +23,8 @@
         --ease: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    body { font-family: var(--pp-body); color: var(--pp-ink); }
+
 /* Override base.html main area — this page owns its own scroll */
     #main-content { overflow: hidden; padding: 0; }
 
@@ -80,9 +82,16 @@
     .pp-card-header { padding: 0.5rem 0.875rem; border-bottom: 1px solid var(--pp-border); background: var(--pp-surface-warm); display: flex; align-items: center; gap: 0.5rem; }
     .pp-card-body { padding: 0.875rem; }
 
+    /* ── Header typography ── */
+    .pp-title { font-family: var(--pp-mono); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+    .pp-card-title { font-family: var(--pp-mono); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); }
+
     /* ── Form Elements ── */
     .pp-form-group { margin-bottom: 0.75rem; }
+    .pp-label { display: block; font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin-bottom: 0.25rem; }
     .pp-input, .pp-select, .pp-textarea {
+        width: 100%; padding: 0.45rem 0.6rem;
+        font-family: var(--pp-body); font-size: 0.8125rem;
         border: 1px solid var(--pp-border); border-radius: 2px;
         background: white; color: var(--pp-ink); box-sizing: border-box;
         transition: border-color 0.15s, box-shadow 0.15s;
@@ -103,8 +112,15 @@
     .star-btn { background: none; border: none; cursor: pointer; padding: 0.1rem; color: var(--color-star-empty); font-size: 1.4rem; line-height: 1; transition: color 0.1s, transform 0.1s; }
     .star-btn:hover, .star-btn.active { color: var(--color-star-filled); }
     .star-btn:hover { transform: scale(1.15); }
+    .star-meta { font-family: var(--pp-mono); font-size: 0.62rem; color: var(--pp-ink-subtle); margin-top: 0.2rem; }
 
     /* ── Service rows with editable price + duration ── */
+    .pp-svc-name { font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pp-svc-badge { font-size: 0.58rem; font-weight: 600; text-transform: uppercase; padding: 0.08rem 0.3rem; border-radius: 2px; margin-left: 0.3rem; }
+    .svc-field-lbl { font-family: var(--pp-mono); font-size: 0.58rem; color: var(--pp-ink-subtle); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+    .pp-svc-add-label { font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin: 0.75rem 0 0.3rem; display: block; }
+    .pp-svc-opt-name { font-size: 0.8rem; font-weight: 500; }
+    .pp-svc-opt-meta { font-family: var(--pp-mono); font-size: 0.68rem; color: var(--pp-ink-subtle); }
     .pp-service-list { list-style: none; padding: 0; margin: 0; }
     .pp-service-item {
         display: flex; align-items: center; gap: 0.5rem;
@@ -135,6 +151,8 @@
     .btn-svc-add:hover { background: var(--color-chart-blue-dark); }
 
     /* ── Summary ── */
+    .pp-sum-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--pp-mono); font-size: 0.78rem; padding: 0.15rem 0; color: var(--pp-ink-muted); }
+    .pp-sum-row.total { font-weight: 600; font-size: 0.9rem; color: var(--pp-ink); border-top: 1px solid var(--pp-border); margin-top: 0.35rem; padding-top: 0.35rem; }
     .pp-summary { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.75rem; margin-top: 0.625rem; }
     .sum-price-input {
         border: 1px solid transparent; border-radius: 2px; background: transparent;
@@ -182,6 +200,8 @@
     .pp-btn-secondary:hover { background: var(--pp-surface-warm); color: var(--pp-ink); }
     .pp-btn-danger { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: var(--pp-danger); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; cursor: pointer; transition: background 0.15s; }
     .pp-btn-danger:hover { background: var(--color-status-cancelled-dark); }
+    .pp-shortcut-hint { font-family: var(--pp-mono); font-size: 0.65rem; color: var(--pp-ink-subtle); display: flex; gap: 0.75rem; flex: 1; justify-content: center; }
+    .pp-kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var(--pp-mono); font-size: 0.6rem; color: var(--pp-ink-muted); }
 
     /* ── Conflict modal ── */
     .pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; }
