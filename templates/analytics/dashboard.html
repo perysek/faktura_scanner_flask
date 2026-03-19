@@ -1,7 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Analityka - {{ app_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+#main-content {
+    background: var(--color-surface-warm);
+}
+.analytics-page {
+    padding: 1rem 1.5rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="analytics-page">
 <!-- Page Header -->
 <div class="mb-6">
     <!-- Header with Title and Actions -->
@@ -396,6 +408,7 @@
     <div style="height: 320px;">
         <canvas id="satisfactionRatingChart"></canvas>
     </div>
+</div>
 </div>
 {% endblock %}
 
