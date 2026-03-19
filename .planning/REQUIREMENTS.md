@@ -16,7 +16,7 @@ Requirements dla milestonu UI/UX Polish. Każdy ma źródło w UI audicie.
 
 ### Spacing (Pillar 5 — 3/4)
 
-- [ ] **SPAC-01**: Usunięcie `!important` padding override z 14+ szablonów — `base.html` musi domyślnie ustawiać padding 0, strony definiują swój własny
+- [x] **SPAC-01**: Usunięcie `!important` padding override z 14+ szablonów — `base.html` musi domyślnie ustawiać padding 0, strony definiują swój własny
 - [ ] **SPAC-02**: Spójna skala `max-width` dla typów stron (formularze: 900px, listy: 1400px, kalendarze: full-width)
 
 ### Color (Pillar 3 — 3/4)
@@ -69,7 +69,7 @@ Odroczone — do następnego milestonu.
 | TYPO-01 | Phase 1 | Complete |
 | TYPO-02 | Phase 1 | Complete |
 | TYPO-03 | Phase 1 | Complete |
-| SPAC-01 | Phase 2 | Pending |
+| SPAC-01 | Phase 2 | Complete |
 | SPAC-02 | Phase 2 | Pending |
 | COL-01 | Phase 3 | Pending |
 | COL-02 | Phase 3 | Pending |
