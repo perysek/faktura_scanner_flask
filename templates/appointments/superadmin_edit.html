@@ -136,6 +136,7 @@
     /* Inline editable fields in service row */
     .svc-field-group { display: flex; flex-direction: column; align-items: center; min-width: 0; }
     .svc-inline-input {
+        width: 70px; padding: 0.3rem 0.4rem; font-size: 0.8rem; font-family: var(--pp-mono);
         border: 1px solid var(--pp-border); border-radius: 2px; background: white;
         text-align: right; box-sizing: border-box; transition: border-color 0.12s, box-shadow 0.12s;
     }
@@ -145,9 +146,14 @@
     .btn-svc-remove:hover { background: var(--color-status-cancelled-bg); border-color: var(--pp-danger); color: var(--pp-danger); }
     .btn-svc-remove svg { width: 13px; height: 13px; }
 
+    /* ── Inline editable width ── */
+    .svc-inline-input.dur { width: 54px; }
+
     /* ── Service picker ── */
     .pp-svc-picker { max-height: 170px; overflow-y: auto; border: 1px solid var(--pp-border); border-radius: 2px; }
+    .pp-svc-option { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--pp-border); }
     .pp-svc-option:last-child { border-bottom: none; }
+    .btn-svc-add { padding: 0.25rem 0.55rem; font-size: 0.72rem; background: var(--pp-blue); color: white; border: none; border-radius: 2px; cursor: pointer; font-family: var(--pp-mono); font-weight: 500; white-space: nowrap; transition: background 0.15s; }
     .btn-svc-add:hover { background: var(--color-chart-blue-dark); }
 
     /* ── Summary ── */
@@ -776,6 +782,7 @@ function renderServicePicker() {
                 <div class="pp-svc-opt-name">${esc(s.service_name)}</div>
                 <div class="pp-svc-opt-meta">${dur} min · ${fmtPrice(price)}</div>
             </div>
+            <button class="btn-svc-add" onclick="addService(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', ${price}, ${dur})">+ Dodaj</button>
         </div>`;
     }).join('');
 }
