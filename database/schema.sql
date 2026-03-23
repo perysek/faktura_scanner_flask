@@ -144,7 +144,7 @@ ON CONFLICT (name) DO NOTHING;
 DO $$
 DECLARE
     r RECORD;
-    modules TEXT[] := ARRAY['invoices','appointments','clients','employees','services','settings','reports'];
+    modules TEXT[] := ARRAY['invoices','appointments','clients','employees','services','settings','reports','data_correction'];
     m TEXT;
 BEGIN
     FOR r IN SELECT id FROM roles LOOP

@@ -13,13 +13,14 @@
     {% set finanse_active = request.endpoint in ['main.dashboard', 'main.invoices_list', 'main.sellers_list', 'main.upload', 'main.analytics_dashboard'] %}
     {% set salon_active = request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment', 'main.clients_list'] %}
     {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list'] %}
-    {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'main.superadmin_edit_visit', 'main.superadmin_edit_table', 'roles.roles_list', 'auth.profile'] %}
+    {% set korekta_active = request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit', 'main.superadmin_edit_table'] %}
+    {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'roles.roles_list', 'auth.profile'] %}
 
     <!-- Navigation -->
     <nav class="sidebar-nav flex-1 px-4 py-2 overflow-y-auto">
 
         <!-- Finanse -->
-        {% if current_user.role in ['superuser', 'admin', 'accountant'] %}
+        {% if user_permissions.invoices %}
         <div class="sidebar-section mt-2" data-active="{{ 'true' if finanse_active else 'false' }}">
             <div
 		            class="sidebar-section-header px-2 mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 cursor-default select-none hover:text-slate-400 transition-colors duration-200 py-1">
@@ -74,7 +75,7 @@
         {% endif %}
 
         <!-- Salon -->
-        {% if current_user.role in ['superuser', 'admin', 'receptionist', 'stylist'] %}
+        {% if user_permissions.appointments or user_permissions.clients %}
         <div class="sidebar-section mt-4" data-active="{{ 'true' if salon_active else 'false' }}">
             <div
 		            class="sidebar-section-header px-2 mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 cursor-default select-none hover:text-slate-400 transition-colors duration-200 py-1">
@@ -84,6 +85,7 @@
                 </svg>
             </div>
             <div class="sidebar-section-items overflow-hidden transition-[max-height] duration-300 ease-in-out space-y-0.5">
+                {% if user_permissions.appointments %}
                 <a href="{{ url_for('main.appointments_calendar') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment'] %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
@@ -92,6 +94,8 @@
                     </svg>
                     Wizyty
                 </a>
+                {% endif %}
+                {% if user_permissions.clients %}
                 <a href="{{ url_for('main.clients_list') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint == 'main.clients_list' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
@@ -100,12 +104,13 @@
                     </svg>
                     Klienci
                 </a>
+                {% endif %}
             </div>
         </div>
         {% endif %}
 
         <!-- Zarządzanie -->
-        {% if current_user.role in ['superuser', 'admin'] %}
+        {% if user_permissions.employees or user_permissions.services %}
         <div class="sidebar-section mt-4" data-active="{{ 'true' if zarzadzanie_active else 'false' }}">
             <div
 		            class="sidebar-section-header px-2 mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 cursor-default select-none hover:text-slate-400 transition-colors duration-200 py-1">
@@ -115,6 +120,7 @@
                 </svg>
             </div>
             <div class="sidebar-section-items overflow-hidden transition-[max-height] duration-300 ease-in-out space-y-0.5">
+                {% if user_permissions.employees %}
                 <a href="{{ url_for('main.employees_list') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint == 'main.employees_list' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
@@ -123,6 +129,8 @@
                     </svg>
                     Pracownicy
                 </a>
+                {% endif %}
+                {% if user_permissions.services %}
                 <a href="{{ url_for('main.services_list') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint == 'main.services_list' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
@@ -139,6 +147,38 @@
                     </svg>
                     Rodzaje zatrudnienia
                 </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Korekta danych -->
+        {% if user_permissions.data_correction %}
+        <div class="sidebar-section mt-4" data-active="{{ 'true' if korekta_active else 'false' }}">
+            <div
+		            class="sidebar-section-header px-2 mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 cursor-default select-none hover:text-slate-400 transition-colors duration-200 py-1">
+                Korekta danych
+                <svg class="sidebar-chevron ml-auto w-3 h-3 transition-transform duration-200 {{ 'rotate-180' if korekta_active else '' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+            <div class="sidebar-section-items overflow-hidden transition-[max-height] duration-300 ease-in-out space-y-0.5">
+                <a href="{{ url_for('main.superadmin_edit_latest') }}"
+                   class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
+                   {% if request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit'] %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edycja wizyt
+                </a>
+                <a href="{{ url_for('main.superadmin_edit_table') }}"
+                   class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
+                   {% if request.endpoint == 'main.superadmin_edit_table' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 6h18M3 18h18M7 6v12M17 6v12" />
+                    </svg>
+                    Tabela wizyt
+                </a>
             </div>
         </div>
         {% endif %}
@@ -153,7 +193,7 @@
                 </svg>
             </div>
             <div class="sidebar-section-items overflow-hidden transition-[max-height] duration-300 ease-in-out space-y-0.5">
-                {% if current_user.role in ['superuser', 'admin', 'accountant'] %}
+                {% if user_permissions.reports %}
                 <a href="{{ url_for('main.history') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint == 'main.history' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
@@ -163,7 +203,7 @@
                     Historia zmian
                 </a>
                 {% endif %}
-                {% if current_user.role in ['superuser', 'admin'] %}
+                {% if user_permissions.settings %}
                 <a href="{{ url_for('main.email_settings') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint == 'main.email_settings' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
@@ -182,23 +222,7 @@
                     Użytkownicy
                 </a>
                 {% endif %}
-                {% if current_user.role == 'superuser' %}
-                <a href="{{ url_for('main.superadmin_edit_latest') }}"
-                   class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
-                   {% if request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit'] %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    Admin: Wizyty
-                </a>
-                <a href="{{ url_for('main.superadmin_edit_table') }}"
-                   class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
-                   {% if request.endpoint == 'main.superadmin_edit_table' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 6h18M3 18h18M7 6v12M17 6v12" />
-                    </svg>
-                    Admin: Tabela
-                </a>
+                {% if user_permissions.settings %}
                 <a href="{{ url_for('roles.roles_list') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                    {% if request.endpoint == 'roles.roles_list' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">

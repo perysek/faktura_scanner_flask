@@ -318,7 +318,7 @@ def edit_appointment(appointment_id):
 
 @main_bp.route('/superadmin/visits/latest')
 @login_required
-@role_required('superuser')
+@module_permission_required('data_correction')
 def superadmin_edit_latest():
     """Redirect to the most recently created appointment in the power editor"""
     conn = get_db_connection()
@@ -332,17 +332,17 @@ def superadmin_edit_latest():
 
 @main_bp.route('/superadmin/visits/<int:appointment_id>')
 @login_required
-@role_required('superuser')
+@module_permission_required('data_correction')
 def superadmin_edit_visit(appointment_id):
-    """Superuser-only power editor for any appointment"""
+    """Power editor for any appointment (requires data_correction module)"""
     return render_template('appointments/superadmin_edit.html', appointment_id=appointment_id)
 
 
 @main_bp.route('/superadmin/visits/table')
 @login_required
-@role_required('superuser')
+@module_permission_required('data_correction')
 def superadmin_edit_table():
-    """Superuser-only editable table view for bulk appointment editing"""
+    """Editable table view for bulk appointment editing (requires data_correction module)"""
     return render_template('appointments/superadmin_edit_table.html')
 
 
