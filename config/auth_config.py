@@ -52,9 +52,10 @@ def role_required(*roles):
     return decorator
 
 
-def module_permission_required(module_name):
+def module_permission_required(*module_names):
     """
     Decorator sprawdzający uprawnienia do modułu — dynamicznie z DB.
+    Accepts one or more module names (OR logic — access to ANY grants entry).
     Fallback do MODULE_PERMISSIONS jeśli tabela roles jeszcze nie istnieje.
     """
     def decorator(f):
@@ -64,17 +65,22 @@ def module_permission_required(module_name):
                 flash('Musisz być zalogowany', 'error')
                 return redirect(url_for('auth.login'))
 
+            has_access = False
             try:
                 from repositories.roles.role_repository import RoleRepository
                 role_repo = RoleRepository()
-                has_access = role_repo.role_has_module_access(current_user.role, module_name)
+                for mod in module_names:
+                    if role_repo.role_has_module_access(current_user.role, mod):
+                        has_access = True
+                        break
             except Exception:
-                # Fallback to static config (e.g. during initial DB setup)
-                allowed_roles = MODULE_PERMISSIONS.get(module_name, [])
-                has_access = current_user.role in allowed_roles
+                for mod in module_names:
+                    if current_user.role in MODULE_PERMISSIONS.get(mod, []):
+                        has_access = True
+                        break
 
             if not has_access:
-                flash(f'Brak dostępu do modułu: {module_name}', 'error')
+                flash(f'Brak dostępu do modułu: {module_names[0]}', 'error')
                 return redirect(url_for('main.dashboard'))
 
             return f(*args, **kwargs)
