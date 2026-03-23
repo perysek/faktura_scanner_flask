@@ -256,6 +256,7 @@ function nextWeek() {
 }
 
 async function loadAppointments() {
+    saveFilterState('appointments', ['filter-start', 'filter-end', 'filter-status']);
     const startDate = document.getElementById('filter-start').value;
     const endDate = document.getElementById('filter-end').value;
     const status = document.getElementById('filter-status').value;
@@ -330,8 +331,10 @@ function updateViewLinks() {
 }
 
 // Przy starcie pola dat są puste — ładujemy ostatnie 100 wizyt (mode=latest)
+// Jeśli zapisano stan filtrów, przywróć go i załaduj z tymi parametrami
 document.addEventListener('DOMContentLoaded', () => {
     updateViewLinks();
+    restoreFilterState('appointments', ['filter-start', 'filter-end', 'filter-status']);
     loadAppointments();
 });
 </script>

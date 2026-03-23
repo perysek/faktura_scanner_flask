@@ -426,6 +426,7 @@ async function loadStatistics() {
 }
 
 async function loadServices() {
+    saveFilterState('services', ['search-input', 'filter-type']);
     const searchQuery = document.getElementById('search-input').value.trim();
     const typeFilter = document.getElementById('filter-type').value;
     const tbody = document.getElementById('services-tbody');
@@ -516,6 +517,7 @@ document.getElementById('search-input').addEventListener('keypress', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadStatistics();
+    restoreFilterState('services', ['search-input', 'filter-type']);
     loadServices();
 });
 </script>

@@ -198,6 +198,7 @@
     }
 
     document.getElementById('search-input').addEventListener('input', function() {
+        saveFilterState('users', ['search-input']);
         const q = this.value.toLowerCase();
         renderUsers(allUsers.filter(u =>
             u.full_name.toLowerCase().includes(q) ||
@@ -206,7 +207,12 @@
         ));
     });
 
-    loadUsers();
+    (async () => {
+        await loadUsers();
+        if (restoreFilterState('users', ['search-input'])) {
+            document.getElementById('search-input').dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    })();
 
     const _savedMsg = sessionStorage.getItem('listNotification');
     if (_savedMsg) {

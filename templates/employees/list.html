@@ -546,6 +546,7 @@ async function loadStatistics() {
 
 // Load employees list
 async function loadEmployees() {
+    saveFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
     const searchQuery = document.getElementById('search-input').value.trim();
     const positionFilter = document.getElementById('filter-position').value;
     const statusFilter = document.getElementById('filter-status').value;
@@ -641,9 +642,10 @@ document.getElementById('search-input').addEventListener('keypress', (e) => {
 });
 
 // Load data on page load
-document.addEventListener('DOMContentLoaded', () => {
-    loadPositions();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadPositions();
     loadStatistics();
+    restoreFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
     loadEmployees();
 });
 </script>

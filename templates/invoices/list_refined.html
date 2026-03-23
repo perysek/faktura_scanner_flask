@@ -855,10 +855,31 @@ let currentFilter = 'all';
 let currentSort = { field: 'invoice_date', direction: 'desc' };
 let searchQuery = '';
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-    loadInvoices();
+// Initialize on load — restore saved filter state if available
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadInvoices();
     setupEventListeners();
+
+    const raw = sessionStorage.getItem('filterState:invoices');
+    if (raw) {
+        try {
+            const state = JSON.parse(raw);
+            if (Date.now() - state._ts < 30 * 60 * 1000) {
+                const searchEl = document.getElementById('search-input');
+                if (searchEl && state['search-input']) {
+                    searchEl.value = state['search-input'];
+                    searchQuery = state['search-input'].toLowerCase().trim();
+                }
+                if (state._currentFilter && state._currentFilter !== 'all') {
+                    currentFilter = state._currentFilter;
+                    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+                    const target = document.querySelector(`.filter-pill[data-filter="${state._currentFilter}"]`);
+                    if (target) target.classList.add('active');
+                }
+                if (searchQuery || currentFilter !== 'all') applyFiltersAndRender();
+            }
+        } catch(e) {}
+    }
 });
 
 /**
@@ -1019,6 +1040,13 @@ function applyFiltersAndRender() {
         if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
         return 0;
     });
+
+    // Save filter state so "Wróć" navigation restores these filters
+    sessionStorage.setItem('filterState:invoices', JSON.stringify({
+        'search-input': document.getElementById('search-input')?.value || '',
+        _currentFilter: currentFilter,
+        _ts: Date.now()
+    }));
 
     renderTable();
 }
