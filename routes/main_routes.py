@@ -327,8 +327,8 @@ def superadmin_edit_latest():
         row = cur.fetchone()
     if not row:
         return redirect(url_for('main.appointments_list'))
-    return redirect(url_for('main.superadmin_edit_visit', appointment_id=row['id']))
-
+    return redirect(url_for('main.superadmin_edit_visit', appointment_id=row[
+        'id']))
 
 @main_bp.route('/superadmin/visits/<int:appointment_id>')
 @login_required

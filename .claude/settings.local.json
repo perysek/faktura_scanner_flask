@@ -95,7 +95,10 @@
       "Bash(git merge:*)",
       "Bash(netstat -ano | grep 2022)",
       "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs: map existing codebase\" --files .planning/codebase/*.md 2>&1)",
-      "Bash(cd C:/Projects/faktura_scanner_flask && .venv/Scripts/pip list 2>&1 | grep -i -E \"flask|psycopg|bcrypt|login\")"
+      "Bash(cd C:/Projects/faktura_scanner_flask && .venv/Scripts/pip list 2>&1 | grep -i -E \"flask|psycopg|bcrypt|login\")",
+      "Skill(gsd:new-milestone)",
+      "Skill(gsd:plan-phase)",
+      "Skill(gsd:execute-phase)"
     ],
     "deny": [],
     "ask": []
