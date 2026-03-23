@@ -13,7 +13,7 @@
     {% set finanse_active = request.endpoint in ['main.dashboard', 'main.invoices_list', 'main.sellers_list', 'main.upload', 'main.analytics_dashboard'] %}
     {% set salon_active = request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment', 'main.clients_list'] %}
     {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list'] %}
-    {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'main.superadmin_edit_visit', 'roles.roles_list', 'auth.profile'] %}
+    {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'main.superadmin_edit_visit', 'main.superadmin_edit_table', 'roles.roles_list', 'auth.profile'] %}
 
     <!-- Navigation -->
     <nav class="sidebar-nav flex-1 px-4 py-2 overflow-y-auto">
@@ -190,6 +190,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     Admin: Wizyty
+                </a>
+                <a href="{{ url_for('main.superadmin_edit_table') }}"
+                   class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
+                   {% if request.endpoint == 'main.superadmin_edit_table' %}bg-gradient-to-r from-primary-600/20 to-primary-600/10 text-primary-400 border border-primary-500/10{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 6h18M3 18h18M7 6v12M17 6v12" />
+                    </svg>
+                    Admin: Tabela
                 </a>
                 <a href="{{ url_for('roles.roles_list') }}"
                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group

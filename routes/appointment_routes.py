@@ -52,10 +52,17 @@ def _parse_date(date_str):
 
 
 def _parse_time(time_str):
-    """Parse time string (HH:MM) to time object"""
+    """Parse time string (HH:MM or HH:MM:SS) to time object"""
     if not time_str:
         return None
-    return datetime.strptime(time_str, '%H:%M').time()
+    time_str = str(time_str).strip()
+    # Try HH:MM:SS first, then HH:MM
+    for fmt in ('%H:%M:%S', '%H:%M'):
+        try:
+            return datetime.strptime(time_str, fmt).time()
+        except ValueError:
+            continue
+    raise ValueError(f"Nieprawidłowy format czasu: {time_str}")
 
 
 @appointment_bp.route('/appointments', methods=['GET'])
@@ -64,21 +71,64 @@ def _parse_time(time_str):
 def get_appointments():
     """Pobierz wizyty z opcjonalnym filtrowaniem po dacie/pracowniku/statusie"""
     try:
-        start_date = _parse_date(request.args.get('start_date'))
-        end_date = _parse_date(request.args.get('end_date'))
+        mode = request.args.get('mode')
         employee_id = request.args.get('employee_id', type=int)
         status = request.args.get('status')
-
-        if not start_date or not end_date:
-            # Domyślnie bieżący tydzień
-            today = date.today()
-            start_date = today
-            end_date = today
-
         repo = AppointmentRepository()
-        rows = repo.get_by_date_range(start_date, end_date, employee_id, status)
+
+        if mode == 'latest':
+            rows = repo.get_latest(limit=100, employee_id=employee_id, status=status)
+        else:
+            start_date = _parse_date(request.args.get('start_date'))
+            end_date = _parse_date(request.args.get('end_date'))
+
+            if not start_date or not end_date:
+                # Domyślnie bieżący tydzień
+                today = date.today()
+                start_date = today
+                end_date = today
+
+            rows = repo.get_by_date_range(start_date, end_date, employee_id, status)
 
         appointments = [dict(row) for row in rows]
+        return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@appointment_bp.route('/appointments/table-data', methods=['GET'])
+@login_required
+@role_required('superuser')
+def get_table_data():
+    """Pobierz wizyty z usługami do edytowalnej tabeli (superuser only)"""
+    try:
+        status = request.args.get('status')
+        limit = min(request.args.get('limit', 100, type=int), 200)
+        offset = request.args.get('offset', 0, type=int)
+
+        repo = AppointmentRepository()
+        rows = repo.get_latest(limit=limit, offset=offset, status=status)
+        appointments = [dict(row) for row in rows]
+
+        if appointments:
+            appt_ids = [a['id'] for a in appointments]
+            svc_repo = AppointmentServiceRepository()
+            services_map = svc_repo.get_all_for_appointments_batch(appt_ids)
+
+            for appt in appointments:
+                svcs = services_map.get(appt['id'], [])
+                for s in svcs:
+                    for key in s:
+                        if isinstance(s[key], Decimal):
+                            s[key] = float(s[key])
+                appt['services'] = svcs
+                for key in appt:
+                    if isinstance(appt[key], Decimal):
+                        appt[key] = float(appt[key])
+        else:
+            for appt in appointments:
+                appt['services'] = []
+
         return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -212,15 +262,26 @@ def check_appointment_conflict():
                 employee_name = 'inny pracownik'
             message = f"Konflikt klienta - ma już wizytę o {conflict_time} z {employee_name}"
 
+        def _serialize_conflict(row):
+            d = dict(row)
+            for k, v in d.items():
+                if hasattr(v, 'strftime'):
+                    d[k] = v.strftime('%H:%M:%S') if hasattr(v, 'hour') else v.isoformat()
+                elif isinstance(v, Decimal):
+                    d[k] = float(v)
+            return d
+
         return jsonify({
             'success': True,
             'has_conflict': has_conflict,
             'conflict_type': conflict_type,
             'message': message,
-            'employee_conflicts': [dict(c) for c in employee_conflicts],
-            'client_conflicts': [dict(c) for c in client_conflicts]
+            'employee_conflicts': [_serialize_conflict(c) for c in employee_conflicts],
+            'client_conflicts': [_serialize_conflict(c) for c in client_conflicts]
         })
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

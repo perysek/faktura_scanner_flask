@@ -471,6 +471,7 @@ async function loadStatistics() {
 
 // Load clients list
 async function loadClients() {
+    saveFilterState('clients', ['search-input']);
     const searchQuery = document.getElementById('search-input').value.trim();
     const tbody = document.getElementById('clients-tbody');
 
@@ -560,6 +561,7 @@ document.getElementById('search-input').addEventListener('keypress', (e) => {
 // Load data on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadStatistics();
+    restoreFilterState('clients', ['search-input']);
     loadClients();
 });
 </script>

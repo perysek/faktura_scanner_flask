@@ -262,8 +262,12 @@ async function loadAppointments() {
     const tbody = document.getElementById('appointments-tbody');
 
     const params = new URLSearchParams();
-    if (startDate) params.set('start_date', startDate);
-    if (endDate) params.set('end_date', endDate);
+    if (startDate && endDate) {
+        params.set('start_date', startDate);
+        params.set('end_date', endDate);
+    } else {
+        params.set('mode', 'latest');
+    }
     if (status) params.set('status', status);
 
     try {
@@ -325,12 +329,8 @@ function updateViewLinks() {
     }
 }
 
-// Set default dates to today
+// Przy starcie pola dat są puste — ładujemy ostatnie 100 wizyt (mode=latest)
 document.addEventListener('DOMContentLoaded', () => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekLater = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-    document.getElementById('filter-start').value = today;
-    document.getElementById('filter-end').value = weekLater;
     updateViewLinks();
     loadAppointments();
 });

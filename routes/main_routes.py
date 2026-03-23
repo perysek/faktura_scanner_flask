@@ -338,6 +338,14 @@ def superadmin_edit_visit(appointment_id):
     return render_template('appointments/superadmin_edit.html', appointment_id=appointment_id)
 
 
+@main_bp.route('/superadmin/visits/table')
+@login_required
+@role_required('superuser')
+def superadmin_edit_table():
+    """Superuser-only editable table view for bulk appointment editing"""
+    return render_template('appointments/superadmin_edit_table.html')
+
+
 # ============================================================================
 # INCOME ROUTES
 # ============================================================================

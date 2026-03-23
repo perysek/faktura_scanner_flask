@@ -133,6 +133,48 @@ class AppointmentRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
+    def get_latest(self, limit: int = 100, offset: int = 0,
+                   employee_id: Optional[int] = None,
+                   status: Optional[str] = None) -> List[Any]:
+        """Pobierz ostatnie wizyty posortowane malejąco po dacie i godzinie"""
+        params = []
+        filters = []
+
+        if employee_id:
+            filters.append("a.employee_id = %s")
+            params.append(employee_id)
+        if status:
+            filters.append("a.status = %s")
+            params.append(status)
+
+        where_clause = ("WHERE " + " AND ".join(filters)) if filters else ""
+        params.extend([limit, offset])
+        query = f"""
+            SELECT
+                a.*,
+                c.first_name || ' ' || c.last_name as client_name,
+                e.first_name || ' ' || e.last_name as employee_name,
+                STRING_AGG(
+                    CASE WHEN aps.is_addon = FALSE THEN s.name ELSE NULL END, ', '
+                ) as service_name,
+                STRING_AGG(
+                    CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
+                ) as addon_services
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            JOIN employees e ON e.id = a.employee_id
+            LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
+            LEFT JOIN services s ON s.id = aps.service_id
+            {where_clause}
+            GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
+            ORDER BY a.appointment_date DESC, a.start_time DESC
+            LIMIT %s OFFSET %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(params))
+            return cursor.fetchall()
+
     def get_daily_schedule(self, employee_id: int, schedule_date: date) -> List[Any]:
         """Pobierz harmonogram dnia pracownika z nazwami usług"""
         query = """
