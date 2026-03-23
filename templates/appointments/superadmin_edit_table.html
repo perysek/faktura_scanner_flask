@@ -187,6 +187,7 @@
     }
     .te-star:hover { transform: scale(1.2); }
     .te-star.active { color: var(--color-star-filled, #f59e0b); }
+    .te-star.pending { color: rgba(37,99,235,0.45); }
 
     /* ── Action buttons in rows ── */
     .te-act-btn {
@@ -464,7 +465,7 @@ let columnFilters = {};
 let loadOffset = 0;
 let loadingMore = false;
 let allLoaded = false;
-let preSaveSnapshots = {}; // keyed by id — snapshot before last save, for undo
+// originalRows[id] stores last-saved state; undo restores from it
 
 // Modal state
 let svcModalRowIdx = null;
@@ -732,7 +733,7 @@ function renderTable() {
                     <button class="te-act-btn" onclick="openNotesModal(${rowIdx})" title="Edytuj notatki">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany" ${preSaveSnapshots[row.id] ? '' : 'disabled'}>
+                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany" ${dirty ? '' : 'disabled'}>
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4"/></svg>
                     </button>
                     <button class="te-act-btn save-btn" onclick="saveRow(${rowIdx})" title="Zapisz zmiany" ${dirty ? '' : 'disabled'}>
@@ -854,9 +855,15 @@ document.getElementById('table-wrap')?.addEventListener('scroll', () => {
 //  STAR RATING
 // ══════════════════════════════════════════════════════
 function renderStars(rowIdx, score) {
-    let html = '<div class="te-stars">';
+    const row = allRows[rowIdx];
+    const orig = originalRows[row.id];
+    const origScore = orig ? (orig.satisfaction_score || 0) : 0;
+    const isDirty = score !== origScore;
+    const starClass = isDirty ? 'pending' : 'active';
+
+    let html = `<div class="te-stars" data-row-stars="${rowIdx}">`;
     for (let i = 1; i <= 5; i++) {
-        html += `<button class="te-star ${i <= score ? 'active' : ''}" onclick="setRowStar(${rowIdx},${i})" title="${i}">&#9733;</button>`;
+        html += `<button class="te-star ${i <= score ? starClass : ''}" onclick="setRowStar(${rowIdx},${i})" title="${i}">&#9733;</button>`;
     }
     html += '</div>';
     return html;
@@ -866,6 +873,22 @@ function setRowStar(rowIdx, score) {
     const row = allRows[rowIdx];
     // Toggle: clicking same star clears rating
     row.satisfaction_score = (row.satisfaction_score === score) ? 0 : score;
+
+    // Update stars in DOM directly (avoid full re-render)
+    const orig = originalRows[row.id];
+    const origScore = orig ? (orig.satisfaction_score || 0) : 0;
+    const newScore = row.satisfaction_score || 0;
+    const isDirty = newScore !== origScore;
+    const starClass = isDirty ? 'pending' : 'active';
+
+    const container = document.querySelector(`[data-row-stars="${rowIdx}"]`);
+    if (container) {
+        container.querySelectorAll('.te-star').forEach((btn, idx) => {
+            btn.classList.remove('active', 'pending');
+            if (idx < newScore) btn.classList.add(starClass);
+        });
+    }
+
     markRowDirty(rowIdx);
 }
 
@@ -886,7 +909,7 @@ function markRowDirty(rowIdx) {
         const saveBtn = tr.querySelector('.save-btn');
         if (saveBtn) saveBtn.disabled = !dirty;
         const undoBtn = tr.querySelector('.undo-btn');
-        if (undoBtn) undoBtn.disabled = !preSaveSnapshots[row.id];
+        if (undoBtn) undoBtn.disabled = !dirty;
     }
 }
 
@@ -1072,9 +1095,6 @@ async function saveRow(rowIdx, force = false) {
         }))
     };
 
-    // Snapshot before save (for undo)
-    preSaveSnapshots[row.id] = deepClone(originalRows[row.id]);
-
     // Mark row as saving
     const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
     if (tr) tr.classList.add('saving');
@@ -1092,11 +1112,9 @@ async function saveRow(rowIdx, force = false) {
             showToast(`Wizyta #${row.id} zapisana`, 'success');
             renderTable();
         } else {
-            delete preSaveSnapshots[row.id];
             showToast(data.error || 'Blad zapisu', 'error', 3500);
         }
     } catch(e) {
-        delete preSaveSnapshots[row.id];
         showToast('Blad polaczenia', 'error');
     } finally {
         if (tr) tr.classList.remove('saving');
@@ -1108,16 +1126,53 @@ async function saveRow(rowIdx, force = false) {
 // ══════════════════════════════════════════════════════
 function undoRow(rowIdx) {
     const row = allRows[rowIdx];
-    const snapshot = preSaveSnapshots[row.id];
-    if (!snapshot) return;
+    const orig = originalRows[row.id];
+    if (!orig) return;
 
-    // Restore row data from pre-save snapshot
-    Object.assign(row, deepClone(snapshot));
-    originalRows[row.id] = deepClone(snapshot);
-    delete preSaveSnapshots[row.id];
+    // Restore row data from last saved state (no server request needed)
+    Object.assign(row, deepClone(orig));
 
-    // Re-save to server with original data
-    saveRow(rowIdx);
+    // Update the table row UI
+    const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
+    if (tr) {
+        // Refresh cell values from restored data
+        const dateInput = tr.querySelector('input[type="date"]');
+        if (dateInput) dateInput.value = row.appointment_date || '';
+        const timeInput = tr.querySelector('input[type="time"]');
+        if (timeInput) timeInput.value = (row.start_time || '').substring(0, 5);
+
+        // Refresh status select
+        const statusSel = tr.querySelector('.te-status-sel');
+        if (statusSel) statusSel.value = row.status || '';
+
+        // Refresh amount and discount
+        const amountInput = tr.querySelector('input[data-field="total_price"]');
+        if (amountInput) amountInput.value = row.total_price || 0;
+        const discountInput = tr.querySelector('input[data-field="discount_amount"]');
+        if (discountInput) discountInput.value = row.discount_amount || 0;
+
+        // Refresh searchable dropdown display text
+        const clientDisplay = tr.querySelector('.sd-display[data-field="client_id"]');
+        if (clientDisplay) clientDisplay.textContent = row.client_name || '— brak —';
+        const empDisplay = tr.querySelector('.sd-display[data-field="employee_id"]');
+        if (empDisplay) empDisplay.textContent = row.employee_name || '— brak —';
+
+        // Refresh services text
+        const svcCell = tr.querySelector('.te-svc-text');
+        if (svcCell) svcCell.textContent = (row.services || []).map(s => s.service_name).join(', ') || '—';
+
+        // Refresh stars
+        const starsContainer = tr.querySelector(`[data-row-stars="${rowIdx}"]`);
+        if (starsContainer) {
+            const score = row.satisfaction_score || 0;
+            starsContainer.querySelectorAll('.te-star').forEach((btn, idx) => {
+                btn.classList.remove('active', 'pending');
+                if (idx < score) btn.classList.add('active');
+            });
+        }
+    }
+
+    markRowDirty(rowIdx);
 }
 
 // ══════════════════════════════════════════════════════
