@@ -320,9 +320,10 @@
         <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
             <span class="te-shortcut-hint">
                 <span class="te-kbd">Tab</span> nast. pole
-                <span class="te-kbd">Enter</span> zapisz wiersz
+                <span class="te-kbd">Enter</span> nast. wiersz
+                <span class="te-kbd">Shift+Enter</span> poprz. wiersz
                 <span class="te-kbd">Esc</span> cofnij
-                <span class="te-kbd">&uarr;&darr;</span> wiersze
+                <span class="te-kbd">&uarr;&darr;</span> zmiana wartości
             </span>
         </div>
     </div>
@@ -1366,21 +1367,17 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Enter — save row if dirty, then move to next row
-    if (e.key === 'Enter' && !e.shiftKey) {
-        if (active.tagName === 'TEXTAREA') return; // Allow newlines in textarea
+    // Enter / Shift+Enter — move to same column in next/prev row
+    if (e.key === 'Enter') {
+        if (active.tagName === 'TEXTAREA') return;
         e.preventDefault();
-        if (isRowDirty(allRows[rowIdx])) {
-            saveRow(rowIdx);
-        }
-        // Move to same column in next row
         const navEls = getNavigableElements(tr);
         const colIdx = navEls.indexOf(active);
-        const nextTr = tr.nextElementSibling;
-        if (nextTr && nextTr.dataset.row !== undefined) {
-            const nextEls = getNavigableElements(nextTr);
-            if (nextEls[colIdx]) nextEls[colIdx].focus();
-            else if (nextEls.length) nextEls[0].focus();
+        const targetTr = e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling;
+        if (targetTr && targetTr.dataset.row !== undefined) {
+            const targetEls = getNavigableElements(targetTr);
+            if (targetEls[colIdx]) targetEls[colIdx].focus();
+            else if (targetEls.length) targetEls[0].focus();
         }
         return;
     }
@@ -1402,21 +1399,79 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Arrow Up/Down — move to same column in adjacent row
+    // Arrow Up/Down — increment/decrement value in current cell
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        // Only intercept if not inside a select or dropdown
+        const nav = active.dataset?.nav;
+        const isUp = e.key === 'ArrowUp';
+
+        // Status select — let browser handle natively
         if (active.tagName === 'SELECT') return;
+
+        // Searchable dropdown (client/employee) — cycle items
+        if (active.classList.contains('te-dropdown-trigger')) {
+            e.preventDefault();
+            cycleDropdownItem(active, isUp ? -1 : 1, rowIdx);
+            return;
+        }
+
+        if (!nav) return;
         e.preventDefault();
 
-        const navEls = getNavigableElements(tr);
-        const colIdx = navEls.indexOf(active);
-        const targetTr = e.key === 'ArrowUp' ? tr.previousElementSibling : tr.nextElementSibling;
-        if (targetTr && targetTr.dataset.row !== undefined) {
-            const targetEls = getNavigableElements(targetTr);
-            if (targetEls[colIdx]) targetEls[colIdx].focus();
+        if (nav === 'date') {
+            const d = active.value ? new Date(active.value + 'T12:00:00') : new Date();
+            d.setDate(d.getDate() + (isUp ? 1 : -1));
+            const val = d.toISOString().slice(0, 10);
+            active.value = val;
+            onCellChange(rowIdx, 'appointment_date', val);
+        } else if (nav === 'time') {
+            const parts = (active.value || '08:00').split(':').map(Number);
+            let mins = parts[0] * 60 + parts[1] + (isUp ? 15 : -15);
+            if (mins < 0) mins = 0;
+            if (mins > 1439) mins = 1439;
+            const val = String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
+            active.value = val;
+            onCellChange(rowIdx, 'start_time', val);
+        } else if (nav === 'amount') {
+            const val = Math.max(0, (parseFloat(active.value) || 0) + (isUp ? 1 : -1));
+            active.value = fmtPrice(val);
+            onCellChange(rowIdx, 'total_price', val);
+        } else if (nav === 'discount') {
+            const val = Math.max(0, (parseFloat(active.value) || 0) + (isUp ? 1 : -1));
+            active.value = fmtPrice(val);
+            onCellChange(rowIdx, 'discount_amount', val);
         }
+        return;
     }
 });
+
+// Cycle dropdown selection (client/employee) via arrow keys
+function cycleDropdownItem(trigger, direction, rowIdx) {
+    const wrap = trigger.closest('.te-dropdown-wrap');
+    const type = wrap.dataset.type;
+    const row = allRows[rowIdx];
+    const currentId = type === 'client' ? row.client_id : row.employee_id;
+
+    const cache = type === 'client' ? clientsCache : employeesCache;
+    if (!cache || !cache.length) return;
+
+    const currentIdx = cache.findIndex(c => c.id === currentId);
+    let newIdx = currentIdx + direction;
+    if (newIdx < 0) newIdx = cache.length - 1;
+    if (newIdx >= cache.length) newIdx = 0;
+
+    const item = cache[newIdx];
+    const label = `${item.first_name} ${item.last_name}`;
+
+    if (type === 'client') {
+        row.client_id = item.id;
+        row.client_name = label;
+    } else {
+        row.employee_id = item.id;
+        row.employee_name = label;
+    }
+    trigger.textContent = label;
+    markRowDirty(rowIdx);
+}
 
 // ══════════════════════════════════════════════════════
 //  INFINITE SCROLL
