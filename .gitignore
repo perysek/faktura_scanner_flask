@@ -44,6 +44,13 @@ config/email_config.json
 # Claude Code
 .claude/.dirty-files
 
+# SSH Keys (SENSITIVE)
+ssh_*
+*.pub
+id_rsa*
+id_ed25519*
+*.pem
+
 # Temporary files
 *.tmp
 temp/
