@@ -461,6 +461,7 @@ const STATUS_LABELS = {
 };
 let allRows = [];          // loaded appointment data with services
 let originalRows = {};     // deep copy keyed by id — for dirty detection
+let savedSnapshots = {};   // deep copy keyed by id — initial server state for undo after save
 let clientsCache = null;
 let employeesCache = null;
 // All services are loaded once from /api/services (not per-employee)
@@ -548,7 +549,7 @@ async function loadAllServices() {
 }
 
 async function loadTableData(reset = false) {
-    if (reset) { loadOffset = 0; allRows = []; originalRows = {}; allLoaded = false; }
+    if (reset) { loadOffset = 0; allRows = []; originalRows = {}; savedSnapshots = {}; allLoaded = false; }
     if (allLoaded || loadingMore) return;
     loadingMore = true;
 
@@ -567,6 +568,7 @@ async function loadTableData(reset = false) {
             if (!originalRows[appt.id]) {
                 allRows.push(appt);
                 originalRows[appt.id] = deepClone(appt);
+                savedSnapshots[appt.id] = deepClone(appt);
             }
         }
         renderTable();
@@ -686,12 +688,21 @@ function getFilteredRows() {
 function isRowDirty(row) {
     const orig = originalRows[row.id];
     if (!orig) return false;
+    return hasRowChanged(row, orig);
+}
+
+function isRowUndoable(row) {
+    const snap = savedSnapshots[row.id];
+    if (!snap) return false;
+    return hasRowChanged(row, snap);
+}
+
+function hasRowChanged(row, ref) {
     const fields = ['client_id','employee_id','appointment_date','start_time','status','notes','satisfaction_score','discount_amount','total_price'];
     for (const f of fields) {
-        if (String(row[f] || '') !== String(orig[f] || '')) return true;
+        if (String(row[f] || '') !== String(ref[f] || '')) return true;
     }
-    // Services comparison
-    if (JSON.stringify(row.services) !== JSON.stringify(orig.services)) return true;
+    if (JSON.stringify(row.services) !== JSON.stringify(ref.services)) return true;
     return false;
 }
 
@@ -711,6 +722,7 @@ function renderTable() {
     tbody.innerHTML = sorted.map((row, displayIdx) => {
         const rowIdx = allRows.indexOf(row);
         const dirty = isRowDirty(row);
+        const undoable = isRowUndoable(row);
         const svcText = (row.services || []).map(s => s.service_name).join(', ') || 'Brak';
         const notesText = row.notes || '';
         const timeVal = fmtTime(row.start_time);
@@ -739,7 +751,7 @@ function renderTable() {
                     <button class="te-act-btn" onclick="openNotesModal(${rowIdx})" title="Edytuj notatki">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany" ${dirty ? '' : 'disabled'}>
+                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany" ${undoable ? '' : 'disabled'}>
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4"/></svg>
                     </button>
                     <button class="te-act-btn save-btn" onclick="saveRow(${rowIdx})" title="Zapisz zmiany" ${dirty ? '' : 'disabled'}>
@@ -908,13 +920,14 @@ function onCellChange(rowIdx, field, value) {
 function markRowDirty(rowIdx) {
     const row = allRows[rowIdx];
     const dirty = isRowDirty(row);
+    const undoable = isRowUndoable(row);
     const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
     if (tr) {
         tr.classList.toggle('dirty', dirty);
         const saveBtn = tr.querySelector('.save-btn');
         if (saveBtn) saveBtn.disabled = !dirty;
         const undoBtn = tr.querySelector('.undo-btn');
-        if (undoBtn) undoBtn.disabled = !dirty;
+        if (undoBtn) undoBtn.disabled = !undoable;
     }
     updateSaveAllState();
 }
@@ -1165,15 +1178,17 @@ async function saveRow(rowIdx, force = false) {
 }
 
 // ══════════════════════════════════════════════════════
-//  UNDO ROW (revert to state before last save)
+//  UNDO ROW (revert to initial server state)
 // ══════════════════════════════════════════════════════
 function undoRow(rowIdx) {
     const row = allRows[rowIdx];
-    const orig = originalRows[row.id];
-    if (!orig) return;
+    const snap = savedSnapshots[row.id];
+    if (!snap) return;
 
-    // Restore row data from last saved state (no server request needed)
-    Object.assign(row, deepClone(orig));
+    // Restore row data from initial server state
+    Object.assign(row, deepClone(snap));
+    // Sync originalRows so dirty detection resets correctly
+    originalRows[row.id] = deepClone(snap);
 
     // Update the table row UI
     const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
