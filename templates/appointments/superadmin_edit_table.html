@@ -463,7 +463,7 @@ let allRows = [];          // loaded appointment data with services
 let originalRows = {};     // deep copy keyed by id — for dirty detection
 let clientsCache = null;
 let employeesCache = null;
-let availableServicesCache = {}; // keyed by employee_id
+// All services are loaded once from /api/services (not per-employee)
 let sortCol = 'appointment_date';
 let sortDir = 'desc';
 let columnFilters = {};
@@ -539,12 +539,12 @@ async function loadEmployees() {
     return employeesCache || [];
 }
 
-async function loadEmployeeServices(employeeId) {
-    if (availableServicesCache[employeeId]) return availableServicesCache[employeeId];
-    const data = await fetch(`/api/employees/${employeeId}/services`).then(r => r.json());
-    const svcs = data.success ? data.services : [];
-    availableServicesCache[employeeId] = svcs;
-    return svcs;
+let allServicesCache = null;
+async function loadAllServices() {
+    if (allServicesCache) return allServicesCache;
+    const data = await fetch('/api/services?active_only=true').then(r => r.json());
+    allServicesCache = data.success ? data.services : [];
+    return allServicesCache;
 }
 
 async function loadTableData(reset = false) {
@@ -837,8 +837,7 @@ function selectDropdownItem(optEl) {
     } else if (type === 'employee') {
         row.employee_id = id;
         row.employee_name = label.split(' (')[0];
-        // Clear services cache for this employee so it reloads
-        delete availableServicesCache[id];
+        // Services are loaded globally, no per-employee cache to clear
     }
 
     trigger.textContent = label;
@@ -971,12 +970,8 @@ async function openServicesModal(rowIdx) {
 
     document.getElementById('svc-modal-id').textContent = '#' + row.id;
 
-    // Load available services for this employee
-    if (row.employee_id) {
-        svcModalAvailable = await loadEmployeeServices(row.employee_id);
-    } else {
-        svcModalAvailable = [];
-    }
+    // Load all available services
+    svcModalAvailable = await loadAllServices();
 
     renderServicesModalList();
     renderServicesModalPicker();
@@ -1016,19 +1011,19 @@ function renderServicesModalList() {
 function renderServicesModalPicker() {
     const picker = document.getElementById('svc-modal-picker');
     const usedIds = new Set(svcModalServices.map(s => s.service_id));
-    const available = svcModalAvailable.filter(s => !usedIds.has(s.service_id));
+    const available = svcModalAvailable.filter(s => !usedIds.has(s.id));
 
     if (!available.length) { picker.style.display = 'none'; return; }
     picker.style.display = 'block';
     picker.innerHTML = available.map(s => {
-        const price = s.effective_price || s.price_offered || 0;
-        const dur = s.effective_duration || s.duration_minutes || 0;
+        const price = parseFloat(s.price) || 0;
+        const dur = parseInt(s.duration_minutes) || 0;
         return `<div class="te-msvc-pick-item">
             <div>
-                <div style="font-weight:500">${esc(s.service_name)}</div>
+                <div style="font-weight:500">${esc(s.name)}</div>
                 <div class="te-msvc-pick-meta">${dur} min &middot; ${fmtPrice(price)} zl</div>
             </div>
-            <button class="te-msvc-pick-btn" onclick="addModalSvc(${s.service_id},'${esc(s.service_name).replace(/'/g,"\\'")}',${price},${dur})">+ Dodaj</button>
+            <button class="te-msvc-pick-btn" onclick="addModalSvc(${s.id},'${esc(s.name).replace(/'/g,"\\'")}',${price},${dur})">+ Dodaj</button>
         </div>`;
     }).join('');
 }
@@ -1058,7 +1053,7 @@ function onModalSvcDur(idx, input) {
 function addModalSvc(serviceId, serviceName, price, duration) {
     svcModalServices.push({
         service_id: serviceId, service_name: serviceName,
-        price_charged: price, duration_minutes: duration, is_addon: true
+        price_charged: price, duration_minutes: duration, is_addon: false
     });
     renderServicesModalList();
     renderServicesModalPicker();

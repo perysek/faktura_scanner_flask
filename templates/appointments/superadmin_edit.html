@@ -620,16 +620,13 @@ function populateEmployeeSelect(employees) {
     });
 }
 
-async function loadEmployeeServices(employeeId) {
-    const eid = employeeId || document.getElementById('employee-select').value;
-    if (!eid) return;
-    const data = await fetch(`/api/employees/${eid}/services`).then(r => r.json());
+async function loadAllServices() {
+    const data = await fetch('/api/services?active_only=true').then(r => r.json());
     availableServices = data.success ? data.services : [];
     renderServicePicker();
 }
 
 function onEmployeeChange() {
-    loadEmployeeServices();
     triggerConflictCheck();
 }
 
@@ -672,7 +669,7 @@ async function populateForm(apptData) {
     updateSummary();
     onStatusChange();
 
-    await loadEmployeeServices(originalData.employee_id);
+    await loadAllServices();
 }
 
 // ══════════════════════════════════════════════════════
@@ -766,23 +763,24 @@ function onTotalPriceBlur(input) {
 function renderServicePicker() {
     const picker = document.getElementById('service-picker');
     const usedIds = new Set(currentServices.map(s => s.service_id));
-    const available = availableServices.filter(s => !usedIds.has(s.service_id));
+    const available = availableServices.filter(s => !usedIds.has(s.id));
 
     if (!available.length) {
+        picker.style.display = 'none';
         return;
     }
 
     picker.style.display = 'block';
     picker.innerHTML = available.map(s => {
-        const price = s.effective_price || s.price_offered || 0;
-        const dur = s.effective_duration || s.duration_minutes || 0;
+        const price = parseFloat(s.price) || 0;
+        const dur = parseInt(s.duration_minutes) || 0;
         return `
         <div class="pp-svc-option">
             <div>
-                <div class="pp-svc-opt-name">${esc(s.service_name)}</div>
+                <div class="pp-svc-opt-name">${esc(s.name)}</div>
                 <div class="pp-svc-opt-meta">${dur} min · ${fmtPrice(price)}</div>
             </div>
-            <button class="btn-svc-add" onclick="addService(${s.service_id}, '${esc(s.service_name).replace(/'/g,"\\'")}', ${price}, ${dur})">+ Dodaj</button>
+            <button class="btn-svc-add" onclick="addService(${s.id}, '${esc(s.name).replace(/'/g,"\\'")}', ${price}, ${dur})">+ Dodaj</button>
         </div>`;
     }).join('');
 }
@@ -794,7 +792,7 @@ function addService(serviceId, serviceName, price, duration) {
         service_name: serviceName,
         price_charged: price,
         duration_minutes: duration,
-        is_addon: true
+        is_addon: false
     });
     totalPriceOverride = null;
     renderServices();

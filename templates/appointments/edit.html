@@ -376,7 +376,7 @@ function addService(serviceId, serviceName, price, duration) {
         service_name: serviceName,
         price_charged: price,
         duration_minutes: duration,
-        is_addon: true // New services are always addons in edit mode
+        is_addon: false
     });
 
     renderServices();
