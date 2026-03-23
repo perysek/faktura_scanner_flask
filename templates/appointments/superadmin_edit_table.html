@@ -324,6 +324,7 @@
                 <span class="te-kbd">Shift+Enter</span> poprz. wiersz
                 <span class="te-kbd">Esc</span> cofnij
                 <span class="te-kbd">&uarr;&darr;</span> zmiana wartości
+                <span class="te-kbd">Ctrl+U</span> edycja usług
             </span>
         </div>
     </div>
@@ -746,7 +747,7 @@ function renderTable() {
             <td><div class="te-notes-cell" title="${esc(notesText)}">${esc(notesText) || '<span style=color:var(--pp-ink-subtle)>-</span>'}</div></td>
             <td>
                 <div class="te-actions-group">
-                    <button class="te-act-btn" onclick="openServicesModal(${rowIdx})" title="Edytuj uslugi">
+                    <button class="te-act-btn svc-edit-btn" onclick="openServicesModal(${rowIdx})" title="Edytuj uslugi (Ctrl+U)" data-nav="services">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     </button>
                     <button class="te-act-btn" onclick="openNotesModal(${rowIdx})" title="Edytuj notatki">
@@ -1311,7 +1312,7 @@ function forceSaveRow() {
 //  KEYBOARD NAVIGATION
 // ══════════════════════════════════════════════════════
 function getNavigableElements(tr) {
-    return Array.from(tr.querySelectorAll('input.te-cell-input, select.te-cell-input, .te-dropdown-trigger'));
+    return Array.from(tr.querySelectorAll('input.te-cell-input, select.te-cell-input, .te-dropdown-trigger, .svc-edit-btn'));
 }
 
 function getRowAndColIdx(el) {
@@ -1329,6 +1330,16 @@ document.addEventListener('keydown', (e) => {
 
     // Ignore if modal is open
     if (document.querySelector('.te-modal-overlay.open')) return;
+
+    // Ctrl+U — open services modal for focused row
+    if (e.ctrlKey && e.key === 'u') {
+        e.preventDefault();
+        const focusedTr = active.closest('tr[data-row]');
+        if (focusedTr) {
+            openServicesModal(parseInt(focusedTr.dataset.row));
+        }
+        return;
+    }
 
     const tr = active.closest('tr[data-row]');
     if (!tr) return;
