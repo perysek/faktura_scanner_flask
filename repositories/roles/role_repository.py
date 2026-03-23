@@ -5,16 +5,17 @@ from typing import Any, Optional
 from config.database import get_db_connection
 
 # All known modules (must match auth_config.MODULE_PERMISSIONS keys)
-ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports']
+ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction']
 
 MODULE_DISPLAY_NAMES = {
-    'invoices':     'Faktury / Koszty',
-    'appointments': 'Wizyty',
-    'clients':      'Klienci',
-    'employees':    'Pracownicy',
-    'services':     'Usługi',
-    'settings':     'Ustawienia',
-    'reports':      'Historia / Raporty',
+    'invoices':         'Faktury / Koszty',
+    'appointments':     'Wizyty',
+    'clients':          'Klienci',
+    'employees':        'Pracownicy',
+    'services':         'Usługi',
+    'settings':         'Ustawienia',
+    'reports':          'Historia / Raporty',
+    'data_correction':  'Korekta danych',
 }
 
 

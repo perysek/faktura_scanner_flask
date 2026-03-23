@@ -24,6 +24,7 @@ MODULE_PERMISSIONS = {
     'services': ['superuser', 'admin'],
     'settings': ['superuser', 'admin'],
     'reports': ['superuser', 'admin', 'accountant'],
+    'data_correction': ['superuser'],
 }
 
 def role_required(*roles):

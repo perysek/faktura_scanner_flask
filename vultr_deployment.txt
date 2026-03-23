@@ -107,3 +107,27 @@ grep -r "DATABASE_URL\|faktura_user\|faktura_db" /opt/my-way-beauty-salon/.env 2
 # lub:
 cat /opt/my-way-beauty-salon/.env
 ```
+
+ Serwer jest na złym branchu. Wykonaj:
+
+  # Przełącz na właściwy branch i zsynchronizuj z GitHub
+  git fetch origin
+  git checkout invoices-app
+  git reset --hard origin/invoices-app
+
+  # Sprawdź że jesteś we właściwym miejscu
+  git log --oneline -3
+  # Powinno pokazać:
+  # 2801492 fix(superadmin-table): star rating...
+  # 985de35 feat(navigation): preserve filter state...
+  # 1fea3bf feat(superadmin): add editable table view...
+
+  Potem standardowe kroki aktualizacji:
+
+  source .venv/bin/activate
+  export $(grep -v '^#' .env | xargs)
+  pip install -r requirements.txt
+  npm run build:css
+  alembic upgrade head
+  sudo systemctl restart faktura-scanner
+  sudo systemctl status faktura-scanner
