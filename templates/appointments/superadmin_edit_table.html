@@ -1178,59 +1178,60 @@ async function saveRow(rowIdx, force = false) {
 }
 
 // ══════════════════════════════════════════════════════
-//  UNDO ROW (revert to initial server state)
+//  UNDO ROW (revert to initial server state + save to DB if needed)
 // ══════════════════════════════════════════════════════
-function undoRow(rowIdx) {
+async function undoRow(rowIdx) {
     const row = allRows[rowIdx];
     const snap = savedSnapshots[row.id];
     if (!snap) return;
 
+    // Check if DB was changed (row was saved after editing)
+    const wasSaved = hasRowChanged(originalRows[row.id], snap);
+
     // Restore row data from initial server state
     Object.assign(row, deepClone(snap));
-    // Sync originalRows so dirty detection resets correctly
     originalRows[row.id] = deepClone(snap);
 
-    // Update the table row UI
-    const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
-    if (tr) {
-        // Refresh cell values from restored data
-        const dateInput = tr.querySelector('input[type="date"]');
-        if (dateInput) dateInput.value = row.appointment_date || '';
-        const timeInput = tr.querySelector('input[type="time"]');
-        if (timeInput) timeInput.value = (row.start_time || '').substring(0, 5);
+    if (wasSaved) {
+        // Row was saved to DB with different data — save snapshot back to DB
+        const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
+        if (tr) tr.classList.add('saving');
+        try {
+            const payload = {
+                employee_id: parseInt(row.employee_id),
+                client_id: parseInt(row.client_id),
+                status: row.status,
+                appointment_date: row.appointment_date,
+                start_time: row.start_time,
+                notes: row.notes || null,
+                satisfaction_score: row.satisfaction_score || null,
+                force: true,
+                services: row.services.map(s => ({
+                    service_id: s.service_id,
+                    price_charged: parseFloat(s.price_charged),
+                    duration_minutes: parseInt(s.duration_minutes),
+                    is_addon: s.is_addon || false
+                }))
+            };
+            const data = await fetch(`/api/appointments/${row.id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            }).then(r => r.json());
 
-        // Refresh status select
-        const statusSel = tr.querySelector('.te-status-sel');
-        if (statusSel) statusSel.value = row.status || '';
-
-        // Refresh amount and discount
-        const amountInput = tr.querySelector('input[data-field="total_price"]');
-        if (amountInput) amountInput.value = row.total_price || 0;
-        const discountInput = tr.querySelector('input[data-field="discount_amount"]');
-        if (discountInput) discountInput.value = row.discount_amount || 0;
-
-        // Refresh searchable dropdown display text
-        const clientDisplay = tr.querySelector('.sd-display[data-field="client_id"]');
-        if (clientDisplay) clientDisplay.textContent = row.client_name || '— brak —';
-        const empDisplay = tr.querySelector('.sd-display[data-field="employee_id"]');
-        if (empDisplay) empDisplay.textContent = row.employee_name || '— brak —';
-
-        // Refresh services text
-        const svcCell = tr.querySelector('.te-svc-text');
-        if (svcCell) svcCell.textContent = (row.services || []).map(s => s.service_name).join(', ') || '—';
-
-        // Refresh stars
-        const starsContainer = tr.querySelector(`[data-row-stars="${rowIdx}"]`);
-        if (starsContainer) {
-            const score = row.satisfaction_score || 0;
-            starsContainer.querySelectorAll('.te-star').forEach((btn, idx) => {
-                btn.classList.remove('active', 'pending');
-                if (idx < score) btn.classList.add('active');
-            });
+            if (data.success) {
+                showToast(`Wizyta #${row.id} przywrócona`, 'success');
+            } else {
+                showToast(data.error || 'Błąd cofania', 'error', 3500);
+            }
+        } catch(e) {
+            showToast('Błąd połączenia', 'error');
+        } finally {
+            if (tr) tr.classList.remove('saving');
         }
     }
 
-    markRowDirty(rowIdx);
+    renderTable();
 }
 
 // ══════════════════════════════════════════════════════
