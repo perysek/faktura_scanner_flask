@@ -173,7 +173,7 @@ def create_appointment():
 
 @appointment_bp.route('/appointments/<int:appointment_id>', methods=['GET'])
 @login_required
-@module_permission_required('appointments')
+@module_permission_required('appointments', 'data_correction')
 def get_appointment(appointment_id):
     """Pobierz szczegóły wizyty"""
     try:
@@ -196,7 +196,7 @@ def get_appointment(appointment_id):
 
 @appointment_bp.route('/appointments/check-conflict', methods=['GET'])
 @login_required
-@module_permission_required('appointments')
+@module_permission_required('appointments', 'data_correction')
 def check_appointment_conflict():
     """
     Sprawdź czy wizyta koliduje z innymi wizytami.
@@ -287,7 +287,7 @@ def check_appointment_conflict():
 
 @appointment_bp.route('/appointments/<int:appointment_id>', methods=['PUT'])
 @login_required
-@module_permission_required('appointments')
+@module_permission_required('appointments', 'data_correction')
 def update_appointment(appointment_id):
     """Zaktualizuj wizytę (pełna edycja z usługami)"""
     try:

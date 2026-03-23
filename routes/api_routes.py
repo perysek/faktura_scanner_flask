@@ -2200,7 +2200,7 @@ def check_seller_duplicate():
 
 @api_bp.route('/clients', methods=['GET'])
 @login_required
-@module_permission_required('clients')
+@module_permission_required('clients', 'data_correction')
 def get_clients():
     """Get all clients with optional search"""
     try:
@@ -2515,7 +2515,7 @@ def get_upcoming_birthdays():
 
 @api_bp.route('/services', methods=['GET'])
 @login_required
-@module_permission_required('services')
+@module_permission_required('services', 'data_correction')
 def get_services():
     """Get all services with optional filtering"""
     search_query = request.args.get('search', '').strip()
@@ -2749,7 +2749,7 @@ def get_service_categories():
 
 @api_bp.route('/employees', methods=['GET'])
 @login_required
-@module_permission_required('employees')
+@module_permission_required('employees', 'data_correction')
 def get_employees():
     """Get all employees with optional filtering"""
     search_query = request.args.get('search', '').strip()
