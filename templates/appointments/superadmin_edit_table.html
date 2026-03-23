@@ -55,7 +55,8 @@
     .te-btn:hover { background: var(--pp-surface-warm); border-color: var(--pp-ink-subtle); color: var(--pp-ink); }
     .te-btn svg { width: 14px; height: 14px; }
     .te-btn-primary { background: var(--pp-blue); color: white; border-color: var(--pp-blue); }
-    .te-btn-primary:hover { background: #1d4ed8; }
+    .te-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .te-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
     .te-toolbar-info { font-family: var(--pp-mono); font-size: 0.72rem; color: var(--pp-ink-subtle); margin-left: auto; }
     .te-shortcut-hint { font-family: var(--pp-mono); font-size: 0.6rem; color: var(--pp-ink-subtle); }
     .te-kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var(--pp-mono); font-size: 0.58rem; color: var(--pp-ink-muted); }
@@ -341,6 +342,10 @@
             <option value="cancelled">Anulowana</option>
             <option value="no_show">Nieobecnosc</option>
         </select>
+        <button class="te-btn te-btn-primary" id="btn-save-all" onclick="saveAllDirtyRows()" disabled>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            Zapisz wszystkie
+        </button>
         <span class="te-toolbar-info" id="table-info">Ladowanie...</span>
     </div>
 
@@ -577,6 +582,7 @@ async function loadTableData(reset = false) {
 function updateInfo() {
     const visible = getFilteredRows().length;
     document.getElementById('table-info').textContent = `${visible} / ${allRows.length} wizyt`;
+    updateSaveAllState();
 }
 
 // ══════════════════════════════════════════════════════
@@ -911,6 +917,48 @@ function markRowDirty(rowIdx) {
         const undoBtn = tr.querySelector('.undo-btn');
         if (undoBtn) undoBtn.disabled = !dirty;
     }
+    updateSaveAllState();
+}
+
+function updateSaveAllState() {
+    const btn = document.getElementById('btn-save-all');
+    if (!btn) return;
+    const hasDirty = allRows.some(r => isRowDirty(r));
+    btn.disabled = !hasDirty;
+}
+
+async function saveAllDirtyRows() {
+    const dirtyIndices = [];
+    for (let i = 0; i < allRows.length; i++) {
+        if (isRowDirty(allRows[i])) dirtyIndices.push(i);
+    }
+    if (dirtyIndices.length === 0) return;
+
+    const btn = document.getElementById('btn-save-all');
+    const origHTML = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Zapisywanie...'; }
+
+    let saved = 0, failed = 0;
+    for (const idx of dirtyIndices) {
+        try {
+            // Use _doSaveRow with force=true to skip conflict modal in bulk mode
+            await _doSaveRow(idx, true);
+            if (!isRowDirty(allRows[idx])) saved++;
+            else failed++;
+        } catch(e) {
+            failed++;
+        }
+        if (btn) btn.textContent = `Zapisywanie ${saved + failed}/${dirtyIndices.length}...`;
+    }
+
+    if (btn) btn.innerHTML = origHTML;
+
+    if (failed > 0) {
+        showToast(`Zapisano ${saved}/${saved + failed} — ${failed} bledow`, 'error', 3500);
+    } else {
+        showToast(`Zapisano ${saved} wizyt`, 'success');
+    }
+    updateSaveAllState();
 }
 
 // ══════════════════════════════════════════════════════
