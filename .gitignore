@@ -51,6 +51,9 @@ id_rsa*
 id_ed25519*
 *.pem
 
+# Deployment notes
+vultr_deployment.txt
+
 # Temporary files
 *.tmp
 temp/
