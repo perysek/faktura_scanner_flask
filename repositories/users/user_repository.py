@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Optional
 import bcrypt
 
+from config.database import get_db_connection
 from database.models import User
 from repositories.base_repository import BaseRepository
 from repositories.db_utils import parse_dt
@@ -17,6 +18,14 @@ class UserRepository(BaseRepository):
 
     def __init__(self):
         super().__init__("users")
+
+    def _validate_role(self, role: str) -> None:
+        """Sprawdź czy rola istnieje w tabeli roles. Rzuca ValueError jeśli nie."""
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM roles WHERE name = %s", (role,))
+            if not cursor.fetchone():
+                raise ValueError(f"Rola '{role}' nie istnieje w systemie")
 
     def create_user(self, email: str, password: str, full_name: str, role: str = 'receptionist') -> int:
         """
@@ -31,6 +40,7 @@ class UserRepository(BaseRepository):
         Returns:
             ID nowego użytkownika
         """
+        self._validate_role(role)
         # Hash password using bcrypt
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -178,6 +188,7 @@ class UserRepository(BaseRepository):
         Zaktualizuj dane użytkownika (email, imię, rola, aktywność).
         Nie aktualizuje hasła — użyj update_password() osobno.
         """
+        self._validate_role(role)
         query = """
             UPDATE users
             SET email = %s, full_name = %s, role = %s, is_active = %s, updated_at = %s

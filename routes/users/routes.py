@@ -159,6 +159,8 @@ def api_create():
             pass
 
         return jsonify({'success': True, 'user_id': user_id}), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -232,6 +234,8 @@ def api_update(user_id):
             pass
 
         return jsonify({'success': True})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
