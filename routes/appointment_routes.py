@@ -98,9 +98,9 @@ def get_appointments():
 
 @appointment_bp.route('/appointments/table-data', methods=['GET'])
 @login_required
-@role_required('superuser')
+@module_permission_required('data_correction')
 def get_table_data():
-    """Pobierz wizyty z usługami do edytowalnej tabeli (superuser only)"""
+    """Pobierz wizyty z usługami do edytowalnej tabeli"""
     try:
         status = request.args.get('status')
         limit = min(request.args.get('limit', 100, type=int), 200)
@@ -809,9 +809,9 @@ def set_satisfaction_score(appointment_id: int):
 
 @appointment_bp.route('/appointments/adjacent', methods=['GET'])
 @login_required
-@role_required('superuser')
+@module_permission_required('data_correction')
 def get_adjacent_appointments():
-    """Zwróć ID poprzedniej i następnej wizyty (superuser only)."""
+    """Zwróć ID poprzedniej i następnej wizyty."""
     appointment_id = request.args.get('id', type=int)
     mode = request.args.get('mode', 'all')  # 'all' | 'day'
     if not appointment_id:
