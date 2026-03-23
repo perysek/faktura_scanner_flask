@@ -95,6 +95,32 @@ class AppointmentServiceRepository:
             cursor.execute(query, (appointment_id,))
             return cursor.fetchall()
 
+    def get_all_for_appointments_batch(self, appointment_ids: List[int]) -> dict:
+        """Pobierz usługi dla wielu wizyt jednym zapytaniem. Zwraca dict {appointment_id: [services]}"""
+        if not appointment_ids:
+            return {}
+        placeholders = ','.join(['%s'] * len(appointment_ids))
+        query = f"""
+            SELECT
+                aps.*,
+                s.name as service_name,
+                s.category as service_category,
+                s.service_type
+            FROM appointment_services aps
+            JOIN services s ON s.id = aps.service_id
+            WHERE aps.appointment_id IN ({placeholders})
+            ORDER BY aps.appointment_id, aps.is_addon, aps.id
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(appointment_ids))
+            rows = cursor.fetchall()
+
+        result = {aid: [] for aid in appointment_ids}
+        for row in rows:
+            result[row['appointment_id']].append(dict(row))
+        return result
+
     def get_main_services(self, appointment_id: int) -> List[Any]:
         """Pobierz tylko usługi główne dla wizyty"""
         query = """

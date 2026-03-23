@@ -787,9 +787,29 @@ function renderServicePicker() {
     }).join('');
 }
 
+function addService(serviceId, serviceName, price, duration) {
+    currentServices.push({
+        appointment_service_id: null,
+        service_id: serviceId,
+        service_name: serviceName,
+        price_charged: price,
+        duration_minutes: duration,
+        is_addon: true
+    });
+    totalPriceOverride = null;
+    renderServices();
+    renderServicePicker();
+    updateSummary();
+    triggerConflictCheck();
+}
+
 function removeService(index) {
     currentServices.splice(index, 1);
     totalPriceOverride = null;
+    renderServices();
+    renderServicePicker();
+    updateSummary();
+    triggerConflictCheck();
 }
 
 // ══════════════════════════════════════════════════════

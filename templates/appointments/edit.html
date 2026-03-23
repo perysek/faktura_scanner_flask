@@ -282,7 +282,7 @@ async function loadClients() {
 
 // Load employees and their services
 async function loadEmployees() {
-    const resp = await fetch('/api/employees');
+    const resp = await fetch('/api/employees?active_only=false');
     const data = await resp.json();
     if (data.success) {
         employees = data.employees;
@@ -291,7 +291,7 @@ async function loadEmployees() {
         employees.forEach(e => {
             const opt = document.createElement('option');
             opt.value = e.id;
-            opt.textContent = `${e.first_name} ${e.last_name}` + (e.position ? ` (${e.position})` : '');
+            opt.textContent = `${e.first_name} ${e.last_name}` + (e.position ? ` (${e.position})` : '') + (!e.is_active ? ' [nieaktywny]' : '');
             sel.appendChild(opt);
         });
     }

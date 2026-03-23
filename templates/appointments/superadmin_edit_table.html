@@ -1,0 +1,1333 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Tabela Wizyt — {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Power Panel Theme (reused from superadmin_edit) ── */
+    :root {
+        --pp-bg: #0f0f0f;
+        --pp-surface: #ffffff;
+        --pp-surface-warm: #f8f8f8;
+        --pp-border: #e2e2e2;
+        --pp-ink: #111111;
+        --pp-ink-muted: #555555;
+        --pp-ink-subtle: #999999;
+        --pp-blue: #2563eb;
+        --pp-danger: #dc2626;
+        --pp-success: #16a34a;
+        --pp-warning: #d97706;
+        --pp-mono: 'IBM Plex Mono', monospace;
+        --pp-body: 'DM Sans', system-ui, sans-serif;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body { font-family: var(--pp-body); color: var(--pp-ink); }
+    #main-content { overflow: hidden; padding: 0; }
+
+    /* ── Page layout: header + toolbar + table fills viewport ── */
+    .te-page {
+        display: flex; flex-direction: column;
+        height: 100%; background: #efefef; overflow: hidden;
+    }
+    .te-header {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.5rem 1.25rem; flex-shrink: 0;
+        border-bottom: 1px solid var(--pp-border); background: #f5f5f5;
+    }
+    .te-title { font-family: var(--pp-mono); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+    .superuser-badge { font-family: var(--pp-mono); font-size: 0.62rem; font-weight: 600; background: rgba(220,38,38,0.1); color: var(--pp-danger); border: 1px solid rgba(220,38,38,0.3); padding: 0.12rem 0.45rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* ── Toolbar ── */
+    .te-toolbar {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.4rem 1.25rem; flex-shrink: 0;
+        background: white; border-bottom: 1px solid var(--pp-border);
+    }
+    .te-btn {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.4rem 0.75rem; font-size: 0.75rem; font-weight: 500;
+        background: white; color: var(--pp-ink-muted);
+        border: 1px solid var(--pp-border); border-radius: 2px;
+        cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        font-family: var(--pp-body);
+    }
+    .te-btn:hover { background: var(--pp-surface-warm); border-color: var(--pp-ink-subtle); color: var(--pp-ink); }
+    .te-btn svg { width: 14px; height: 14px; }
+    .te-btn-primary { background: var(--pp-blue); color: white; border-color: var(--pp-blue); }
+    .te-btn-primary:hover { background: #1d4ed8; }
+    .te-toolbar-info { font-family: var(--pp-mono); font-size: 0.72rem; color: var(--pp-ink-subtle); margin-left: auto; }
+    .te-shortcut-hint { font-family: var(--pp-mono); font-size: 0.6rem; color: var(--pp-ink-subtle); }
+    .te-kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var(--pp-mono); font-size: 0.58rem; color: var(--pp-ink-muted); }
+
+    /* ── Table wrapper ── */
+    .te-table-wrap {
+        flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+        background: white;
+    }
+    .te-table-wrap::-webkit-scrollbar { width: 6px; }
+    .te-table-wrap::-webkit-scrollbar-track { background: transparent; }
+    .te-table-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+    /* ── Table ── */
+    .te-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+    /* Column widths */
+    .te-table colgroup .col-id      { width: 4%; }
+    .te-table colgroup .col-date    { width: 8.5%; }
+    .te-table colgroup .col-time    { width: 6.5%; }
+    .te-table colgroup .col-client  { width: 14%; }
+    .te-table colgroup .col-employee{ width: 12%; }
+    .te-table colgroup .col-status  { width: 9%; }
+    .te-table colgroup .col-services{ width: 13%; }
+    .te-table colgroup .col-amount  { width: 7%; }
+    .te-table colgroup .col-discount{ width: 5.5%; }
+    .te-table colgroup .col-rating  { width: 7.5%; }
+    .te-table colgroup .col-notes   { width: 6%; }
+    .te-table colgroup .col-actions { width: 7.5%; }
+
+    /* ── Sticky header ── */
+    .te-table thead { position: sticky; top: 0; z-index: 10; }
+    .te-table thead tr.te-hdr-labels th {
+        padding: 0.5rem 0.4rem 0.25rem;
+        font-family: var(--pp-mono); font-size: 0.6rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--pp-ink-subtle); background: var(--pp-surface-warm);
+        border-bottom: 1px solid var(--pp-border); text-align: left;
+        white-space: nowrap; cursor: pointer; user-select: none;
+    }
+    .te-hdr-labels th:hover { color: var(--pp-ink); }
+    .te-sort-icon { font-size: 0.6rem; margin-left: 0.15rem; opacity: 0.4; }
+    .te-sort-icon.active { opacity: 1; color: var(--pp-blue); }
+
+    .te-table thead tr.te-hdr-filters th {
+        padding: 0.2rem 0.3rem 0.4rem;
+        background: var(--pp-surface-warm);
+        border-bottom: 2px solid var(--pp-border);
+    }
+    .te-filter-input {
+        width: 100%; padding: 0.25rem 0.4rem; font-size: 0.7rem;
+        border: 1px solid var(--pp-border); border-radius: 2px;
+        background: white; color: var(--pp-ink); box-sizing: border-box;
+        font-family: var(--pp-body);
+    }
+    .te-filter-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    .te-filter-wrap { position: relative; }
+    .te-filter-clear {
+        position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; cursor: pointer; font-size: 0.7rem;
+        color: var(--pp-ink-subtle); padding: 0 2px; line-height: 1; display: none;
+    }
+    .te-filter-wrap.has-value .te-filter-clear { display: block; }
+
+    /* ── Body rows ── */
+    .te-table tbody tr { transition: background 0.1s; }
+    .te-table tbody tr:hover { background: rgba(37,99,235,0.02); }
+    .te-table tbody tr.dirty { background: rgba(37,99,235,0.04); }
+    .te-table tbody tr.saving { opacity: 0.6; pointer-events: none; }
+    .te-table td {
+        padding: 0.3rem 0.4rem; font-size: 0.78rem; color: var(--pp-ink);
+        border-bottom: 1px solid #f0f0f0; vertical-align: middle;
+        word-break: break-word; position: relative;
+    }
+
+    /* ── Cell inputs ── */
+    .te-cell-input {
+        width: 100%; padding: 0.25rem 0.35rem; font-size: 0.78rem;
+        border: 1px solid transparent; border-radius: 2px;
+        background: transparent; color: var(--pp-ink); box-sizing: border-box;
+        font-family: var(--pp-body);
+        transition: border-color 0.12s, background 0.12s;
+    }
+    .te-cell-input:hover { border-color: var(--pp-border); background: white; }
+    .te-cell-input:focus { outline: none; border-color: var(--pp-blue); background: white; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+    .te-cell-input[type="number"] { text-align: right; font-family: var(--pp-mono); }
+    .te-cell-input[type="date"], .te-cell-input[type="time"] { font-family: var(--pp-mono); font-size: 0.72rem; }
+    select.te-cell-input { padding-right: 1.2rem; cursor: pointer; }
+
+    /* ── Searchable dropdown ── */
+    .te-dropdown-wrap { position: relative; overflow: visible; }
+    .te-dropdown-panel {
+        display: none; position: fixed;
+        z-index: 100; background: white; border: 1px solid var(--pp-border);
+        border-radius: 2px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        min-width: 240px; max-width: 340px;
+    }
+    .te-dropdown-panel.open { display: block; }
+    .te-dropdown-search {
+        width: 100%; padding: 0.4rem; font-size: 0.75rem;
+        border: none; border-bottom: 1px solid var(--pp-border);
+        box-sizing: border-box; font-family: var(--pp-body);
+    }
+    .te-dropdown-search:focus { outline: none; }
+    .te-dropdown-list { max-height: 160px; overflow-y: auto; }
+    .te-dropdown-opt {
+        padding: 0.35rem 0.5rem; font-size: 0.75rem; cursor: pointer;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .te-dropdown-opt:hover, .te-dropdown-opt.highlighted { background: rgba(37,99,235,0.06); }
+    .te-dropdown-opt.selected { background: rgba(37,99,235,0.1); font-weight: 500; }
+    .te-dropdown-trigger {
+        width: 100%; padding: 0.25rem 0.35rem; font-size: 0.75rem;
+        border: 1px solid transparent; border-radius: 2px;
+        background: transparent; color: var(--pp-ink); box-sizing: border-box;
+        cursor: pointer; text-align: left; font-family: var(--pp-body);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        transition: border-color 0.12s, background 0.12s;
+    }
+    .te-dropdown-trigger:hover { border-color: var(--pp-border); background: white; }
+    .te-dropdown-trigger:focus { outline: none; border-color: var(--pp-blue); background: white; }
+
+    /* ── Star rating in table ── */
+    .te-stars { display: flex; gap: 1px; }
+    .te-star {
+        background: none; border: none; cursor: pointer; padding: 0;
+        font-size: 0.9rem; line-height: 1; color: var(--color-star-empty, #d1d5db);
+        transition: color 0.08s, transform 0.08s;
+    }
+    .te-star:hover { transform: scale(1.2); }
+    .te-star.active { color: var(--color-star-filled, #f59e0b); }
+
+    /* ── Action buttons in rows ── */
+    .te-act-btn {
+        padding: 0.2rem; background: none; border: 1px solid transparent;
+        border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle);
+        line-height: 1; transition: all 0.1s;
+    }
+    .te-act-btn:hover { background: var(--pp-surface-warm); border-color: var(--pp-border); color: var(--pp-ink); }
+    .te-act-btn.save-btn { color: var(--pp-blue); }
+    .te-act-btn.save-btn:hover { background: rgba(37,99,235,0.08); border-color: var(--pp-blue); }
+    .te-act-btn:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+    .te-act-btn svg { width: 15px; height: 15px; }
+    .te-act-btn.undo-btn { color: var(--pp-warning); }
+    .te-act-btn.undo-btn:hover:not(:disabled) { background: rgba(217,119,6,0.08); border-color: var(--pp-warning); }
+    .te-actions-group { display: flex; gap: 2px; align-items: center; justify-content: center; }
+
+    /* ── Services cell ── */
+    .te-svc-summary {
+        font-size: 0.7rem; line-height: 1.3;
+        max-height: 2.6em; overflow: hidden;
+        color: var(--pp-ink-muted);
+    }
+
+    /* ── Notes cell ── */
+    .te-notes-cell {
+        font-size: 0.7rem; color: var(--pp-ink-muted);
+        max-height: 2.6em; overflow: hidden;
+        cursor: pointer; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .te-notes-cell:hover { color: var(--pp-ink); }
+
+    /* ── ID cell ── */
+    .te-id-link {
+        font-family: var(--pp-mono); font-size: 0.7rem; color: var(--pp-blue);
+        text-decoration: none; font-weight: 500;
+    }
+    .te-id-link:hover { text-decoration: underline; }
+
+    /* ── Services Modal ── */
+    .te-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .te-modal-overlay.open { display: flex; }
+    .te-modal { background: white; border-radius: 4px; width: 560px; max-width: 94vw; max-height: 85vh; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; animation: teModalIn 0.18s var(--ease) forwards; }
+    @keyframes teModalIn { from { opacity:0; transform:scale(0.96) translateY(6px); } to { opacity:1; transform:scale(1); } }
+    .te-modal-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--pp-border); display: flex; align-items: center; gap: 0.5rem; background: var(--pp-surface-warm); flex-shrink: 0; }
+    .te-modal-title { font-family: var(--pp-mono); font-size: 0.82rem; font-weight: 600; flex: 1; }
+    .te-modal-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--pp-ink-subtle); padding: 0.2rem; line-height: 1; }
+    .te-modal-close:hover { color: var(--pp-ink); }
+    .te-modal-body { padding: 0.875rem 1rem; overflow-y: auto; flex: 1; min-height: 0; }
+    .te-modal-footer { padding: 0.6rem 1rem; border-top: 1px solid var(--pp-border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+
+    /* Services list inside modal */
+    .te-msvc-list { list-style: none; padding: 0; margin: 0; }
+    .te-msvc-item {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.45rem 0.5rem; border: 1px solid var(--pp-border); border-radius: 2px;
+        margin-bottom: 0.3rem; background: white;
+    }
+    .te-msvc-item.addon { background: rgba(245,158,11,0.03); border-color: rgba(245,158,11,0.2); }
+    .te-msvc-name { flex: 1; font-size: 0.78rem; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .te-msvc-badge { font-size: 0.56rem; font-weight: 600; text-transform: uppercase; padding: 0.06rem 0.25rem; border-radius: 2px; }
+    .te-msvc-badge.main { background: rgba(37,99,235,0.1); color: var(--pp-blue); }
+    .te-msvc-badge.addon { background: rgba(245,158,11,0.1); color: var(--pp-warning); }
+    .te-msvc-field { display: flex; flex-direction: column; align-items: center; }
+    .te-msvc-field-lbl { font-family: var(--pp-mono); font-size: 0.55rem; color: var(--pp-ink-subtle); text-transform: uppercase; }
+    .te-msvc-input {
+        width: 70px; padding: 0.25rem 0.35rem; font-size: 0.78rem; font-family: var(--pp-mono);
+        border: 1px solid var(--pp-border); border-radius: 2px; text-align: right; box-sizing: border-box;
+    }
+    .te-msvc-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    .te-msvc-input.dur { width: 54px; }
+    .te-msvc-remove {
+        padding: 0.2rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px;
+        cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; flex-shrink: 0;
+    }
+    .te-msvc-remove:hover { background: rgba(220,38,38,0.05); border-color: var(--pp-danger); color: var(--pp-danger); }
+    .te-msvc-remove svg { width: 13px; height: 13px; }
+
+    /* Add service picker in modal */
+    .te-msvc-add-label { font-family: var(--pp-mono); font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pp-ink-subtle); margin: 0.75rem 0 0.3rem; display: block; }
+    .te-msvc-picker { max-height: 150px; overflow-y: auto; border: 1px solid var(--pp-border); border-radius: 2px; }
+    .te-msvc-pick-item { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--pp-border); font-size: 0.75rem; }
+    .te-msvc-pick-item:last-child { border-bottom: none; }
+    .te-msvc-pick-meta { font-family: var(--pp-mono); font-size: 0.66rem; color: var(--pp-ink-subtle); }
+    .te-msvc-pick-btn { padding: 0.2rem 0.5rem; font-size: 0.7rem; background: var(--pp-blue); color: white; border: none; border-radius: 2px; cursor: pointer; font-family: var(--pp-mono); }
+    .te-msvc-pick-btn:hover { background: #1d4ed8; }
+
+    /* Modal summary */
+    .te-msvc-summary { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.5rem 0.75rem; margin-top: 0.5rem; }
+    .te-msvc-sum-row { display: flex; justify-content: space-between; font-family: var(--pp-mono); font-size: 0.75rem; color: var(--pp-ink-muted); padding: 0.1rem 0; }
+    .te-msvc-sum-row.total { font-weight: 600; color: var(--pp-ink); border-top: 1px solid var(--pp-border); margin-top: 0.25rem; padding-top: 0.25rem; }
+
+    /* ── Conflict Modal ── */
+    .te-conflict-item { background: var(--pp-surface-warm); border: 1px solid var(--pp-border); border-radius: 2px; padding: 0.5rem 0.75rem; margin-bottom: 0.3rem; font-family: var(--pp-mono); font-size: 0.72rem; }
+    .te-conflict-item strong { color: var(--pp-danger); }
+    .te-btn-danger { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.75rem; font-size: 0.75rem; background: var(--pp-danger); color: white; border: none; border-radius: 2px; cursor: pointer; }
+    .te-btn-danger:hover { background: #b91c1c; }
+
+    /* ── Notes Edit Modal ── */
+    .te-notes-textarea {
+        width: 100%; min-height: 100px; padding: 0.5rem; font-size: 0.8rem;
+        border: 1px solid var(--pp-border); border-radius: 2px; resize: vertical;
+        font-family: var(--pp-body); box-sizing: border-box;
+    }
+    .te-notes-textarea:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+
+    /* ── Loading / Empty states ── */
+    .te-loading { padding: 3rem; text-align: center; color: var(--pp-ink-subtle); font-family: var(--pp-mono); font-size: 0.8rem; }
+    .te-spinner { width: 24px; height: 24px; border: 2px solid var(--pp-border); border-top-color: var(--pp-blue); border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto 0.75rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .te-load-more { padding: 0.75rem; text-align: center; }
+
+    /* ── Status badge ── */
+    .te-status-badge { display: inline-block; padding: 0.15rem 0.4rem; font-size: 0.62rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 1px; }
+    .te-status-badge.scheduled { background: rgba(59,130,246,0.08); color: #2563eb; }
+    .te-status-badge.confirmed { background: rgba(16,185,129,0.08); color: #059669; }
+    .te-status-badge.in_progress { background: rgba(245,158,11,0.08); color: #d97706; }
+    .te-status-badge.completed { background: rgba(45,106,79,0.08); color: #2d6a4f; }
+    .te-status-badge.cancelled { background: rgba(239,68,68,0.08); color: #dc2626; }
+    .te-status-badge.no_show { background: rgba(107,114,128,0.08); color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="te-page">
+    <!-- Header -->
+    <div class="te-header">
+        <span class="te-title">Edytor tabeli wizyt</span>
+        <span class="superuser-badge">Superuser</span>
+        <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+            <span class="te-shortcut-hint">
+                <span class="te-kbd">Tab</span> nast. pole
+                <span class="te-kbd">Enter</span> zapisz wiersz
+                <span class="te-kbd">Esc</span> cofnij
+                <span class="te-kbd">&uarr;&darr;</span> wiersze
+            </span>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="te-toolbar">
+        <button class="te-btn" id="btn-reset-filters" onclick="resetAllFilters()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Resetuj filtry
+        </button>
+        <select class="te-cell-input" id="global-status-filter" onchange="loadTableData(true)" style="width:auto;border-color:var(--pp-border);background:white;font-size:0.75rem;">
+            <option value="">Wszystkie statusy</option>
+            <option value="scheduled">Zaplanowana</option>
+            <option value="confirmed">Potwierdzona</option>
+            <option value="in_progress">W trakcie</option>
+            <option value="completed">Zakonczona</option>
+            <option value="cancelled">Anulowana</option>
+            <option value="no_show">Nieobecnosc</option>
+        </select>
+        <span class="te-toolbar-info" id="table-info">Ladowanie...</span>
+    </div>
+
+    <!-- Table -->
+    <div class="te-table-wrap" id="table-wrap">
+        <table class="te-table" id="main-table">
+            <colgroup>
+                <col class="col-id"><col class="col-date"><col class="col-time">
+                <col class="col-client"><col class="col-employee"><col class="col-status">
+                <col class="col-services"><col class="col-amount"><col class="col-discount">
+                <col class="col-rating"><col class="col-notes"><col class="col-actions">
+            </colgroup>
+            <thead>
+                <tr class="te-hdr-labels">
+                    <th data-col="id" onclick="toggleSort('id')">ID <span class="te-sort-icon" id="sort-id">&varr;</span></th>
+                    <th data-col="appointment_date" onclick="toggleSort('appointment_date')">Data <span class="te-sort-icon active" id="sort-appointment_date">&darr;</span></th>
+                    <th data-col="start_time" onclick="toggleSort('start_time')">Godz <span class="te-sort-icon" id="sort-start_time">&varr;</span></th>
+                    <th data-col="client_name" onclick="toggleSort('client_name')">Klient <span class="te-sort-icon" id="sort-client_name">&varr;</span></th>
+                    <th data-col="employee_name" onclick="toggleSort('employee_name')">Pracownik <span class="te-sort-icon" id="sort-employee_name">&varr;</span></th>
+                    <th data-col="status" onclick="toggleSort('status')">Status <span class="te-sort-icon" id="sort-status">&varr;</span></th>
+                    <th>Uslugi</th>
+                    <th data-col="total_price" onclick="toggleSort('total_price')">Kwota <span class="te-sort-icon" id="sort-total_price">&varr;</span></th>
+                    <th data-col="discount_amount" onclick="toggleSort('discount_amount')">Rabat <span class="te-sort-icon" id="sort-discount_amount">&varr;</span></th>
+                    <th data-col="satisfaction_score" onclick="toggleSort('satisfaction_score')">Ocena <span class="te-sort-icon" id="sort-satisfaction_score">&varr;</span></th>
+                    <th>Notatki</th>
+                    <th>Akcje</th>
+                </tr>
+                <tr class="te-hdr-filters">
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="id" placeholder="#" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="appointment_date" placeholder="data" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="start_time" placeholder="godz" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="client_name" placeholder="klient" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="employee_name" placeholder="pracownik" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="status" placeholder="status" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="service_name" placeholder="usluga" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th></th><th></th><th></th>
+                    <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="notes" placeholder="notatki" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <tr><td colspan="12" class="te-loading"><div class="te-spinner"></div>Ladowanie wizyt...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Services Modal -->
+<div class="te-modal-overlay" id="services-modal" onclick="if(event.target===this)closeServicesModal()">
+    <div class="te-modal" onclick="event.stopPropagation()">
+        <div class="te-modal-header">
+            <span class="te-modal-title">Uslugi wizyty <span id="svc-modal-id"></span></span>
+            <button class="te-modal-close" onclick="closeServicesModal()">&times;</button>
+        </div>
+        <div class="te-modal-body">
+            <ul class="te-msvc-list" id="svc-modal-list"></ul>
+            <span class="te-msvc-add-label">Dodaj usluge / dodatek</span>
+            <div class="te-msvc-picker" id="svc-modal-picker" style="display:none"></div>
+            <div class="te-msvc-summary">
+                <div class="te-msvc-sum-row"><span>Czas trwania:</span><span id="svc-modal-dur">0 min</span></div>
+                <div class="te-msvc-sum-row total"><span>Razem:</span><span id="svc-modal-total">0.00 zl</span></div>
+            </div>
+        </div>
+        <div class="te-modal-footer">
+            <button class="te-btn" onclick="closeServicesModal()">Zamknij</button>
+            <button class="te-btn te-btn-primary" onclick="applyServicesModal()">Zastosuj</button>
+        </div>
+    </div>
+</div>
+
+<!-- Conflict Modal -->
+<div class="te-modal-overlay" id="conflict-modal" onclick="if(event.target===this)closeConflictModal()">
+    <div class="te-modal" style="width:480px" onclick="event.stopPropagation()">
+        <div class="te-modal-header" style="background:rgba(220,38,38,0.05);">
+            <span class="te-modal-title" style="color:var(--pp-danger)">Konflikt harmonogramu</span>
+            <button class="te-modal-close" onclick="closeConflictModal()">&times;</button>
+        </div>
+        <div class="te-modal-body" id="conflict-modal-body"></div>
+        <div class="te-modal-footer">
+            <button class="te-btn" onclick="closeConflictModal()">Zmien dane</button>
+            <button class="te-btn-danger" onclick="forceSaveRow()">Zapisz mimo to</button>
+        </div>
+    </div>
+</div>
+
+<!-- Notes Edit Modal -->
+<div class="te-modal-overlay" id="notes-modal" onclick="if(event.target===this)closeNotesModal()">
+    <div class="te-modal" style="width:440px" onclick="event.stopPropagation()">
+        <div class="te-modal-header">
+            <span class="te-modal-title">Notatki <span id="notes-modal-id"></span></span>
+            <button class="te-modal-close" onclick="closeNotesModal()">&times;</button>
+        </div>
+        <div class="te-modal-body">
+            <textarea class="te-notes-textarea" id="notes-modal-text"></textarea>
+        </div>
+        <div class="te-modal-footer">
+            <button class="te-btn" onclick="closeNotesModal()">Anuluj</button>
+            <button class="te-btn te-btn-primary" onclick="applyNotesModal()">Zastosuj</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+const STATUS_LABELS = {
+    'scheduled':'Zaplanowana','confirmed':'Potwierdzona','in_progress':'W trakcie',
+    'completed':'Zakonczona','cancelled':'Anulowana','no_show':'Nieobecnosc'
+};
+let allRows = [];          // loaded appointment data with services
+let originalRows = {};     // deep copy keyed by id — for dirty detection
+let clientsCache = null;
+let employeesCache = null;
+let availableServicesCache = {}; // keyed by employee_id
+let sortCol = 'appointment_date';
+let sortDir = 'desc';
+let columnFilters = {};
+let loadOffset = 0;
+let loadingMore = false;
+let allLoaded = false;
+let preSaveSnapshots = {}; // keyed by id — snapshot before last save, for undo
+
+// Modal state
+let svcModalRowIdx = null;
+let svcModalServices = [];
+let svcModalAvailable = [];
+let notesModalRowIdx = null;
+let conflictSaveRowIdx = null;
+
+// ══════════════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════════════
+function esc(t) {
+    if (t == null) return '';
+    return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function fmtPrice(a) { return a != null ? parseFloat(a).toFixed(2) : '0.00'; }
+function fmtDate(s) {
+    if (!s) return '';
+    const [y, m, d] = String(s).split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('pl-PL', {day:'2-digit', month:'short'});
+}
+function fmtTime(t) { return t ? String(t).substring(0,5) : ''; }
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// Session storage cache (shared with superadmin_edit)
+const CACHE_TTL = 5 * 60 * 1000;
+function cacheSet(key, data) { try { sessionStorage.setItem(key, JSON.stringify({d:data,t:Date.now()})); } catch(e) {} }
+function cacheGet(key) {
+    try { const raw = sessionStorage.getItem(key); if (!raw) return null; const item = JSON.parse(raw); if (Date.now()-item.t > CACHE_TTL) { sessionStorage.removeItem(key); return null; } return item.d; } catch(e) { return null; }
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+function showToast(msg, type='info', duration=2500) {
+    const colors = {success:'var(--pp-success)', error:'var(--pp-danger)', warning:'var(--pp-warning)', info:'var(--pp-blue)'};
+    const old = document.getElementById('te-toast');
+    if (old) old.remove();
+    const t = document.createElement('div');
+    t.id = 'te-toast';
+    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:white;border:1px solid ${colors[type]};border-left:4px solid ${colors[type]};border-radius:3px;padding:0.6rem 1rem;font-family:var(--pp-mono);font-size:0.75rem;color:#111;box-shadow:0 4px 20px rgba(0,0,0,0.15);opacity:0;transition:opacity 0.15s;max-width:350px;`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.style.opacity = '1');
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 200); }, duration);
+}
+
+// ══════════════════════════════════════════════════════
+//  DATA LOADING
+// ══════════════════════════════════════════════════════
+async function loadClients() {
+    if (clientsCache) return clientsCache;
+    const cached = cacheGet('pp_clients');
+    if (cached) { clientsCache = cached; return cached; }
+    const data = await fetch('/api/clients').then(r => r.json());
+    if (data.success) { clientsCache = data.clients; cacheSet('pp_clients', data.clients); }
+    return clientsCache || [];
+}
+
+async function loadEmployees() {
+    if (employeesCache) return employeesCache;
+    const cached = cacheGet('pp_employees_all');
+    if (cached) { employeesCache = cached; return cached; }
+    const data = await fetch('/api/employees?active_only=false').then(r => r.json());
+    if (data.success) { employeesCache = data.employees; cacheSet('pp_employees_all', data.employees); }
+    return employeesCache || [];
+}
+
+async function loadEmployeeServices(employeeId) {
+    if (availableServicesCache[employeeId]) return availableServicesCache[employeeId];
+    const data = await fetch(`/api/employees/${employeeId}/services`).then(r => r.json());
+    const svcs = data.success ? data.services : [];
+    availableServicesCache[employeeId] = svcs;
+    return svcs;
+}
+
+async function loadTableData(reset = false) {
+    if (reset) { loadOffset = 0; allRows = []; originalRows = {}; allLoaded = false; }
+    if (allLoaded || loadingMore) return;
+    loadingMore = true;
+
+    const status = document.getElementById('global-status-filter').value;
+    const params = new URLSearchParams({ limit: '100', offset: String(loadOffset) });
+    if (status) params.set('status', status);
+
+    try {
+        const data = await fetch(`/api/appointments/table-data?${params}`).then(r => r.json());
+        if (!data.success) { showToast(data.error || 'Blad ladowania', 'error'); return; }
+
+        if (data.appointments.length < 100) allLoaded = true;
+        loadOffset += data.appointments.length;
+
+        for (const appt of data.appointments) {
+            if (!originalRows[appt.id]) {
+                allRows.push(appt);
+                originalRows[appt.id] = deepClone(appt);
+            }
+        }
+        renderTable();
+        updateInfo();
+    } catch(e) {
+        console.error('Load error', e);
+        showToast('Blad polaczenia z serwerem', 'error');
+    } finally {
+        loadingMore = false;
+    }
+}
+
+function updateInfo() {
+    const visible = getFilteredRows().length;
+    document.getElementById('table-info').textContent = `${visible} / ${allRows.length} wizyt`;
+}
+
+// ══════════════════════════════════════════════════════
+//  SORTING
+// ══════════════════════════════════════════════════════
+function toggleSort(col) {
+    if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortCol = col;
+        sortDir = 'desc';
+    }
+    // Update sort icons
+    document.querySelectorAll('.te-sort-icon').forEach(el => {
+        el.classList.remove('active');
+        el.textContent = '\u21C5';
+    });
+    const icon = document.getElementById('sort-' + col);
+    if (icon) {
+        icon.classList.add('active');
+        icon.textContent = sortDir === 'asc' ? '\u2191' : '\u2193';
+    }
+    renderTable();
+}
+
+function sortRows(rows) {
+    if (!sortCol) return rows;
+    return [...rows].sort((a, b) => {
+        let va = a[sortCol], vb = b[sortCol];
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        if (typeof va === 'number' && typeof vb === 'number') {
+            return sortDir === 'asc' ? va - vb : vb - va;
+        }
+        va = String(va).toLowerCase();
+        vb = String(vb).toLowerCase();
+        const cmp = va.localeCompare(vb, 'pl');
+        return sortDir === 'asc' ? cmp : -cmp;
+    });
+}
+
+// ══════════════════════════════════════════════════════
+//  FILTERING
+// ══════════════════════════════════════════════════════
+function onFilterInput(input) {
+    const col = input.dataset.filter;
+    const val = input.value.trim().toLowerCase();
+    const wrap = input.parentElement;
+    if (val) {
+        columnFilters[col] = val;
+        wrap.classList.add('has-value');
+    } else {
+        delete columnFilters[col];
+        wrap.classList.remove('has-value');
+    }
+    renderTable();
+    updateInfo();
+}
+
+function clearFilter(btn) {
+    const input = btn.parentElement.querySelector('.te-filter-input');
+    input.value = '';
+    onFilterInput(input);
+}
+
+function resetAllFilters() {
+    columnFilters = {};
+    document.querySelectorAll('.te-filter-input').forEach(inp => {
+        inp.value = '';
+        inp.parentElement.classList.remove('has-value');
+    });
+    renderTable();
+    updateInfo();
+}
+
+function getFilteredRows() {
+    let rows = allRows;
+    const keys = Object.keys(columnFilters);
+    if (keys.length === 0) return rows;
+    return rows.filter(r => {
+        return keys.every(col => {
+            const filter = columnFilters[col];
+            let val;
+            if (col === 'service_name') {
+                val = (r.services || []).map(s => s.service_name || '').join(' ').toLowerCase();
+            } else {
+                val = String(r[col] || '').toLowerCase();
+            }
+            // Map status labels for filtering
+            if (col === 'status' && STATUS_LABELS[r.status]) {
+                val += ' ' + STATUS_LABELS[r.status].toLowerCase();
+            }
+            return val.includes(filter);
+        });
+    });
+}
+
+// ══════════════════════════════════════════════════════
+//  DIRTY CHECK
+// ══════════════════════════════════════════════════════
+function isRowDirty(row) {
+    const orig = originalRows[row.id];
+    if (!orig) return false;
+    const fields = ['client_id','employee_id','appointment_date','start_time','status','notes','satisfaction_score','discount_amount','total_price'];
+    for (const f of fields) {
+        if (String(row[f] || '') !== String(orig[f] || '')) return true;
+    }
+    // Services comparison
+    if (JSON.stringify(row.services) !== JSON.stringify(orig.services)) return true;
+    return false;
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER TABLE
+// ══════════════════════════════════════════════════════
+function renderTable() {
+    const filtered = getFilteredRows();
+    const sorted = sortRows(filtered);
+    const tbody = document.getElementById('table-body');
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="te-loading">Brak wizyt do wyswietlenia</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = sorted.map((row, displayIdx) => {
+        const rowIdx = allRows.indexOf(row);
+        const dirty = isRowDirty(row);
+        const svcText = (row.services || []).map(s => s.service_name).join(', ') || 'Brak';
+        const notesText = row.notes || '';
+        const timeVal = fmtTime(row.start_time);
+
+        return `<tr data-row="${rowIdx}" class="${dirty ? 'dirty' : ''}">
+            <td><a class="te-id-link" href="/superadmin/visits/${row.id}" title="Otworz edytor">#${row.id}</a></td>
+            <td><input type="date" class="te-cell-input" value="${row.appointment_date || ''}" onchange="onCellChange(${rowIdx},'appointment_date',this.value)" data-nav="date"></td>
+            <td><input type="time" class="te-cell-input" value="${timeVal}" step="900" onchange="onCellChange(${rowIdx},'start_time',this.value)" data-nav="time"></td>
+            <td>${renderSearchableDropdown(rowIdx, 'client', row.client_id, row.client_name)}</td>
+            <td>${renderSearchableDropdown(rowIdx, 'employee', row.employee_id, row.employee_name)}</td>
+            <td>
+                <select class="te-cell-input" onchange="onCellChange(${rowIdx},'status',this.value)" data-nav="status">
+                    ${Object.entries(STATUS_LABELS).map(([k,v]) => `<option value="${k}" ${row.status===k?'selected':''}>${v}</option>`).join('')}
+                </select>
+            </td>
+            <td><div class="te-svc-summary" title="${esc(svcText)}">${esc(svcText)}</div></td>
+            <td><input type="number" class="te-cell-input" value="${fmtPrice(row.total_price)}" min="0" step="0.01" onblur="onCellChange(${rowIdx},'total_price',parseFloat(this.value)||0)" data-nav="amount"></td>
+            <td><input type="number" class="te-cell-input" value="${fmtPrice(row.discount_amount)}" min="0" step="0.01" onblur="onCellChange(${rowIdx},'discount_amount',parseFloat(this.value)||0)" data-nav="discount"></td>
+            <td>${renderStars(rowIdx, row.satisfaction_score || 0)}</td>
+            <td><div class="te-notes-cell" title="${esc(notesText)}">${esc(notesText) || '<span style=color:var(--pp-ink-subtle)>-</span>'}</div></td>
+            <td>
+                <div class="te-actions-group">
+                    <button class="te-act-btn" onclick="openServicesModal(${rowIdx})" title="Edytuj uslugi">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    </button>
+                    <button class="te-act-btn" onclick="openNotesModal(${rowIdx})" title="Edytuj notatki">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany" ${preSaveSnapshots[row.id] ? '' : 'disabled'}>
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4"/></svg>
+                    </button>
+                    <button class="te-act-btn save-btn" onclick="saveRow(${rowIdx})" title="Zapisz zmiany" ${dirty ? '' : 'disabled'}>
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  SEARCHABLE DROPDOWN
+// ══════════════════════════════════════════════════════
+function renderSearchableDropdown(rowIdx, type, selectedId, displayName) {
+    return `<div class="te-dropdown-wrap" data-row="${rowIdx}" data-type="${type}">
+        <button type="button" class="te-dropdown-trigger" onclick="openDropdown(this)" data-nav="${type}">
+            ${esc(displayName) || 'Wybierz...'}
+        </button>
+        <div class="te-dropdown-panel">
+            <input type="text" class="te-dropdown-search" placeholder="Szukaj..." oninput="filterDropdown(this)">
+            <div class="te-dropdown-list"></div>
+        </div>
+    </div>`;
+}
+
+function openDropdown(trigger) {
+    // Close other open dropdowns
+    document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
+
+    const wrap = trigger.closest('.te-dropdown-wrap');
+    const panel = wrap.querySelector('.te-dropdown-panel');
+    const list = wrap.querySelector('.te-dropdown-list');
+    const search = wrap.querySelector('.te-dropdown-search');
+    const type = wrap.dataset.type;
+    const rowIdx = parseInt(wrap.dataset.row);
+    const row = allRows[rowIdx];
+
+    let items = [];
+    if (type === 'client') {
+        items = (clientsCache || []).map(c => ({
+            id: c.id,
+            label: `${c.first_name} ${c.last_name}` + (c.phone ? ` (${c.phone})` : ''),
+            selected: c.id === row.client_id
+        }));
+    } else if (type === 'employee') {
+        items = (employeesCache || []).map(e => ({
+            id: e.id,
+            label: `${e.first_name} ${e.last_name}` + (e.position ? ` (${e.position})` : '') + (!e.is_active ? ' [nieaktywny]' : ''),
+            selected: e.id === row.employee_id
+        }));
+    }
+
+    wrap._items = items;
+    renderDropdownItems(list, items, wrap);
+
+    // Position fixed panel below trigger
+    const rect = trigger.getBoundingClientRect();
+    panel.style.top = rect.bottom + 'px';
+    panel.style.left = rect.left + 'px';
+
+    panel.classList.add('open');
+    search.value = '';
+    search.focus();
+}
+
+function renderDropdownItems(listEl, items, wrap) {
+    listEl.innerHTML = items.map(item =>
+        `<div class="te-dropdown-opt ${item.selected ? 'selected' : ''}" data-id="${item.id}" onclick="selectDropdownItem(this)">${esc(item.label)}</div>`
+    ).join('');
+}
+
+function filterDropdown(searchInput) {
+    const panel = searchInput.closest('.te-dropdown-panel');
+    const list = panel.querySelector('.te-dropdown-list');
+    const wrap = searchInput.closest('.te-dropdown-wrap');
+    const items = wrap._items || [];
+    const q = searchInput.value.toLowerCase();
+    const filtered = q ? items.filter(i => i.label.toLowerCase().includes(q)) : items;
+    renderDropdownItems(list, filtered, wrap);
+}
+
+function selectDropdownItem(optEl) {
+    const id = parseInt(optEl.dataset.id);
+    const wrap = optEl.closest('.te-dropdown-wrap');
+    const type = wrap.dataset.type;
+    const rowIdx = parseInt(wrap.dataset.row);
+    const row = allRows[rowIdx];
+    const trigger = wrap.querySelector('.te-dropdown-trigger');
+    const label = optEl.textContent;
+
+    if (type === 'client') {
+        row.client_id = id;
+        row.client_name = label.split(' (')[0]; // strip phone
+    } else if (type === 'employee') {
+        row.employee_id = id;
+        row.employee_name = label.split(' (')[0];
+        // Clear services cache for this employee so it reloads
+        delete availableServicesCache[id];
+    }
+
+    trigger.textContent = label;
+    wrap.querySelector('.te-dropdown-panel').classList.remove('open');
+    markRowDirty(rowIdx);
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.te-dropdown-wrap')) {
+        document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
+    }
+});
+// Close dropdowns on scroll (fixed position doesn't follow scroll)
+document.getElementById('table-wrap')?.addEventListener('scroll', () => {
+    document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
+}, {passive: true});
+
+// ══════════════════════════════════════════════════════
+//  STAR RATING
+// ══════════════════════════════════════════════════════
+function renderStars(rowIdx, score) {
+    let html = '<div class="te-stars">';
+    for (let i = 1; i <= 5; i++) {
+        html += `<button class="te-star ${i <= score ? 'active' : ''}" onclick="setRowStar(${rowIdx},${i})" title="${i}">&#9733;</button>`;
+    }
+    html += '</div>';
+    return html;
+}
+
+function setRowStar(rowIdx, score) {
+    const row = allRows[rowIdx];
+    // Toggle: clicking same star clears rating
+    row.satisfaction_score = (row.satisfaction_score === score) ? 0 : score;
+    markRowDirty(rowIdx);
+}
+
+// ══════════════════════════════════════════════════════
+//  CELL CHANGE
+// ══════════════════════════════════════════════════════
+function onCellChange(rowIdx, field, value) {
+    allRows[rowIdx][field] = value;
+    markRowDirty(rowIdx);
+}
+
+function markRowDirty(rowIdx) {
+    const row = allRows[rowIdx];
+    const dirty = isRowDirty(row);
+    const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
+    if (tr) {
+        tr.classList.toggle('dirty', dirty);
+        const saveBtn = tr.querySelector('.save-btn');
+        if (saveBtn) saveBtn.disabled = !dirty;
+        const undoBtn = tr.querySelector('.undo-btn');
+        if (undoBtn) undoBtn.disabled = !preSaveSnapshots[row.id];
+    }
+}
+
+// ══════════════════════════════════════════════════════
+//  SERVICES MODAL
+// ══════════════════════════════════════════════════════
+async function openServicesModal(rowIdx) {
+    svcModalRowIdx = rowIdx;
+    const row = allRows[rowIdx];
+    svcModalServices = deepClone(row.services || []);
+
+    document.getElementById('svc-modal-id').textContent = '#' + row.id;
+
+    // Load available services for this employee
+    if (row.employee_id) {
+        svcModalAvailable = await loadEmployeeServices(row.employee_id);
+    } else {
+        svcModalAvailable = [];
+    }
+
+    renderServicesModalList();
+    renderServicesModalPicker();
+    updateServicesModalSummary();
+    document.getElementById('services-modal').classList.add('open');
+}
+
+function renderServicesModalList() {
+    const list = document.getElementById('svc-modal-list');
+    if (svcModalServices.length === 0) {
+        list.innerHTML = '<li style="padding:0.75rem;text-align:center;color:var(--pp-ink-subtle);font-family:var(--pp-mono);font-size:0.75rem">Brak uslug</li>';
+        return;
+    }
+    list.innerHTML = svcModalServices.map((s, idx) => `
+        <li class="te-msvc-item ${s.is_addon ? 'addon' : ''}">
+            <div class="te-msvc-name">
+                ${esc(s.service_name)}
+                <span class="te-msvc-badge ${s.is_addon ? 'addon' : 'main'}">${s.is_addon ? 'Dodatek' : 'Glowna'}</span>
+            </div>
+            <div class="te-msvc-field">
+                <span class="te-msvc-field-lbl">Cena zl</span>
+                <input type="number" class="te-msvc-input" value="${parseFloat(s.price_charged||0).toFixed(2)}" min="0" step="0.01"
+                       onblur="onModalSvcPrice(${idx},this)">
+            </div>
+            <div class="te-msvc-field">
+                <span class="te-msvc-field-lbl">Min</span>
+                <input type="number" class="te-msvc-input dur" value="${s.duration_minutes||0}" min="1" step="1"
+                       onblur="onModalSvcDur(${idx},this)">
+            </div>
+            <button class="te-msvc-remove" onclick="removeModalSvc(${idx})" title="Usun">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+        </li>
+    `).join('');
+}
+
+function renderServicesModalPicker() {
+    const picker = document.getElementById('svc-modal-picker');
+    const usedIds = new Set(svcModalServices.map(s => s.service_id));
+    const available = svcModalAvailable.filter(s => !usedIds.has(s.service_id));
+
+    if (!available.length) { picker.style.display = 'none'; return; }
+    picker.style.display = 'block';
+    picker.innerHTML = available.map(s => {
+        const price = s.effective_price || s.price_offered || 0;
+        const dur = s.effective_duration || s.duration_minutes || 0;
+        return `<div class="te-msvc-pick-item">
+            <div>
+                <div style="font-weight:500">${esc(s.service_name)}</div>
+                <div class="te-msvc-pick-meta">${dur} min &middot; ${fmtPrice(price)} zl</div>
+            </div>
+            <button class="te-msvc-pick-btn" onclick="addModalSvc(${s.service_id},'${esc(s.service_name).replace(/'/g,"\\'")}',${price},${dur})">+ Dodaj</button>
+        </div>`;
+    }).join('');
+}
+
+function updateServicesModalSummary() {
+    const dur = svcModalServices.reduce((s, x) => s + (parseInt(x.duration_minutes) || 0), 0);
+    const total = svcModalServices.reduce((s, x) => s + (parseFloat(x.price_charged) || 0), 0);
+    document.getElementById('svc-modal-dur').textContent = dur + ' min';
+    document.getElementById('svc-modal-total').textContent = total.toFixed(2) + ' zl';
+}
+
+function onModalSvcPrice(idx, input) {
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0) { input.value = parseFloat(svcModalServices[idx].price_charged||0).toFixed(2); return; }
+    svcModalServices[idx].price_charged = val;
+    input.value = val.toFixed(2);
+    updateServicesModalSummary();
+}
+
+function onModalSvcDur(idx, input) {
+    const val = parseInt(input.value);
+    if (isNaN(val) || val < 1) { input.value = svcModalServices[idx].duration_minutes; return; }
+    svcModalServices[idx].duration_minutes = val;
+    updateServicesModalSummary();
+}
+
+function addModalSvc(serviceId, serviceName, price, duration) {
+    svcModalServices.push({
+        service_id: serviceId, service_name: serviceName,
+        price_charged: price, duration_minutes: duration, is_addon: true
+    });
+    renderServicesModalList();
+    renderServicesModalPicker();
+    updateServicesModalSummary();
+}
+
+function removeModalSvc(idx) {
+    svcModalServices.splice(idx, 1);
+    renderServicesModalList();
+    renderServicesModalPicker();
+    updateServicesModalSummary();
+}
+
+function applyServicesModal() {
+    if (svcModalRowIdx === null) return;
+    const row = allRows[svcModalRowIdx];
+    row.services = deepClone(svcModalServices);
+    // Recalculate totals
+    row.total_price = svcModalServices.reduce((s, x) => s + (parseFloat(x.price_charged) || 0), 0);
+    row.total_duration = svcModalServices.reduce((s, x) => s + (parseInt(x.duration_minutes) || 0), 0);
+    markRowDirty(svcModalRowIdx);
+    closeServicesModal();
+    renderTable();
+}
+
+function closeServicesModal() {
+    document.getElementById('services-modal').classList.remove('open');
+    svcModalRowIdx = null;
+}
+
+// ══════════════════════════════════════════════════════
+//  NOTES MODAL
+// ══════════════════════════════════════════════════════
+function openNotesModal(rowIdx) {
+    notesModalRowIdx = rowIdx;
+    const row = allRows[rowIdx];
+    document.getElementById('notes-modal-id').textContent = '#' + row.id;
+    document.getElementById('notes-modal-text').value = row.notes || '';
+    document.getElementById('notes-modal').classList.add('open');
+    setTimeout(() => document.getElementById('notes-modal-text').focus(), 50);
+}
+
+function applyNotesModal() {
+    if (notesModalRowIdx === null) return;
+    allRows[notesModalRowIdx].notes = document.getElementById('notes-modal-text').value;
+    markRowDirty(notesModalRowIdx);
+    closeNotesModal();
+    renderTable();
+}
+
+function closeNotesModal() {
+    document.getElementById('notes-modal').classList.remove('open');
+    notesModalRowIdx = null;
+}
+
+// ══════════════════════════════════════════════════════
+//  SAVE ROW
+// ══════════════════════════════════════════════════════
+async function saveRow(rowIdx, force = false) {
+    const row = allRows[rowIdx];
+    if (!row.employee_id || !row.client_id || !row.appointment_date || !row.start_time) {
+        showToast('Wypelnij wszystkie wymagane pola', 'error'); return;
+    }
+    if (!row.services || row.services.length === 0) {
+        showToast('Dodaj przynajmniej jedna usluge', 'error'); return;
+    }
+
+    const payload = {
+        employee_id: parseInt(row.employee_id),
+        client_id: parseInt(row.client_id),
+        status: row.status,
+        appointment_date: row.appointment_date,
+        start_time: row.start_time,
+        notes: row.notes || null,
+        satisfaction_score: row.satisfaction_score || null,
+        force: force,
+        services: row.services.map(s => ({
+            service_id: s.service_id,
+            price_charged: parseFloat(s.price_charged),
+            duration_minutes: parseInt(s.duration_minutes),
+            is_addon: s.is_addon || false
+        }))
+    };
+
+    // Snapshot before save (for undo)
+    preSaveSnapshots[row.id] = deepClone(originalRows[row.id]);
+
+    // Mark row as saving
+    const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
+    if (tr) tr.classList.add('saving');
+
+    try {
+        const data = await fetch(`/api/appointments/${row.id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(r => r.json());
+
+        if (data.success) {
+            // Update original data
+            originalRows[row.id] = deepClone(row);
+            showToast(`Wizyta #${row.id} zapisana`, 'success');
+            renderTable();
+        } else {
+            delete preSaveSnapshots[row.id];
+            showToast(data.error || 'Blad zapisu', 'error', 3500);
+        }
+    } catch(e) {
+        delete preSaveSnapshots[row.id];
+        showToast('Blad polaczenia', 'error');
+    } finally {
+        if (tr) tr.classList.remove('saving');
+    }
+}
+
+// ══════════════════════════════════════════════════════
+//  UNDO ROW (revert to state before last save)
+// ══════════════════════════════════════════════════════
+function undoRow(rowIdx) {
+    const row = allRows[rowIdx];
+    const snapshot = preSaveSnapshots[row.id];
+    if (!snapshot) return;
+
+    // Restore row data from pre-save snapshot
+    Object.assign(row, deepClone(snapshot));
+    originalRows[row.id] = deepClone(snapshot);
+    delete preSaveSnapshots[row.id];
+
+    // Re-save to server with original data
+    saveRow(rowIdx);
+}
+
+// ══════════════════════════════════════════════════════
+//  CONFLICT CHECK + FORCE SAVE
+// ══════════════════════════════════════════════════════
+async function checkConflictBeforeSave(rowIdx) {
+    const row = allRows[rowIdx];
+    const totalDuration = (row.services || []).reduce((s, x) => s + (parseInt(x.duration_minutes) || 0), 0);
+
+    if (!row.employee_id || !row.appointment_date || !row.start_time || totalDuration === 0) {
+        return true; // no data to check — allow save
+    }
+
+    const params = new URLSearchParams({
+        employee_id: row.employee_id,
+        appointment_date: row.appointment_date,
+        start_time: row.start_time,
+        duration_minutes: totalDuration,
+        exclude_appointment_id: row.id
+    });
+
+    try {
+        const resp = await fetch(`/api/appointments/check-conflict?${params}`);
+        if (!resp.ok) {
+            console.warn('Conflict check returned', resp.status, '— skipping check');
+            return true; // server error — allow save anyway
+        }
+        const data = await resp.json();
+        if (data.has_conflict) {
+            conflictSaveRowIdx = rowIdx;
+            document.getElementById('conflict-modal-body').innerHTML = `
+                <p style="margin:0 0 0.75rem">Wykryto konflikt czasowy:</p>
+                <div class="te-conflict-item">
+                    <div><strong>Typ:</strong> ${esc(data.conflict_type || 'Pracownik')}</div>
+                    ${data.message ? `<div><strong>Szczegoly:</strong> ${esc(data.message)}</div>` : ''}
+                </div>
+                <p style="margin:0.5rem 0 0;font-size:0.72rem;color:var(--pp-ink-subtle)">Mozesz zmienic dane lub zapisac mimo konfliktu (superuser).</p>
+            `;
+            document.getElementById('conflict-modal').classList.add('open');
+            return false; // conflict found — block save
+        }
+    } catch(e) {
+        console.warn('Conflict check failed', e, '— skipping check');
+    }
+
+    return true; // no conflict
+}
+
+// Wrap saveRow to check conflicts first
+const _doSaveRow = saveRow;
+saveRow = async function(rowIdx, force) {
+    if (force) {
+        await _doSaveRow(rowIdx, true);
+        return;
+    }
+    const canSave = await checkConflictBeforeSave(rowIdx);
+    if (canSave) {
+        await _doSaveRow(rowIdx, false);
+    }
+};
+
+function closeConflictModal() {
+    document.getElementById('conflict-modal').classList.remove('open');
+    conflictSaveRowIdx = null;
+}
+
+function forceSaveRow() {
+    if (conflictSaveRowIdx !== null) {
+        const idx = conflictSaveRowIdx;
+        closeConflictModal();
+        _doSaveRow(idx, true);
+    }
+}
+
+// ══════════════════════════════════════════════════════
+//  KEYBOARD NAVIGATION
+// ══════════════════════════════════════════════════════
+function getNavigableElements(tr) {
+    return Array.from(tr.querySelectorAll('input.te-cell-input, select.te-cell-input, .te-dropdown-trigger'));
+}
+
+function getRowAndColIdx(el) {
+    const tr = el.closest('tr');
+    if (!tr) return [null, null];
+    const rowIdx = parseInt(tr.dataset.row);
+    const navEls = getNavigableElements(tr);
+    const colIdx = navEls.indexOf(el);
+    return [rowIdx, colIdx];
+}
+
+document.addEventListener('keydown', (e) => {
+    const active = document.activeElement;
+    if (!active) return;
+
+    // Ignore if modal is open
+    if (document.querySelector('.te-modal-overlay.open')) return;
+
+    const tr = active.closest('tr[data-row]');
+    if (!tr) return;
+
+    const rowIdx = parseInt(tr.dataset.row);
+
+    // Tab / Shift+Tab — move between cells
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const navEls = getNavigableElements(tr);
+        const colIdx = navEls.indexOf(active);
+
+        if (e.shiftKey) {
+            if (colIdx > 0) {
+                navEls[colIdx - 1].focus();
+            } else {
+                // Move to previous row, last cell
+                const prevTr = tr.previousElementSibling;
+                if (prevTr && prevTr.dataset.row !== undefined) {
+                    const prevEls = getNavigableElements(prevTr);
+                    if (prevEls.length) prevEls[prevEls.length - 1].focus();
+                }
+            }
+        } else {
+            if (colIdx < navEls.length - 1) {
+                navEls[colIdx + 1].focus();
+            } else {
+                // Move to next row, first cell
+                const nextTr = tr.nextElementSibling;
+                if (nextTr && nextTr.dataset.row !== undefined) {
+                    const nextEls = getNavigableElements(nextTr);
+                    if (nextEls.length) nextEls[0].focus();
+                }
+            }
+        }
+        return;
+    }
+
+    // Enter — save row if dirty, then move to next row
+    if (e.key === 'Enter' && !e.shiftKey) {
+        if (active.tagName === 'TEXTAREA') return; // Allow newlines in textarea
+        e.preventDefault();
+        if (isRowDirty(allRows[rowIdx])) {
+            saveRow(rowIdx);
+        }
+        // Move to same column in next row
+        const navEls = getNavigableElements(tr);
+        const colIdx = navEls.indexOf(active);
+        const nextTr = tr.nextElementSibling;
+        if (nextTr && nextTr.dataset.row !== undefined) {
+            const nextEls = getNavigableElements(nextTr);
+            if (nextEls[colIdx]) nextEls[colIdx].focus();
+            else if (nextEls.length) nextEls[0].focus();
+        }
+        return;
+    }
+
+    // Escape — revert current cell
+    if (e.key === 'Escape') {
+        const row = allRows[rowIdx];
+        const orig = originalRows[row.id];
+        if (!orig) return;
+
+        // Determine which field this input represents
+        const navAttr = active.dataset.nav;
+        if (navAttr === 'date') { active.value = orig.appointment_date || ''; row.appointment_date = orig.appointment_date; }
+        else if (navAttr === 'time') { active.value = fmtTime(orig.start_time); row.start_time = orig.start_time; }
+        else if (navAttr === 'status') { active.value = orig.status; row.status = orig.status; }
+        else if (navAttr === 'amount') { active.value = fmtPrice(orig.total_price); row.total_price = orig.total_price; }
+        else if (navAttr === 'discount') { active.value = fmtPrice(orig.discount_amount); row.discount_amount = orig.discount_amount; }
+        markRowDirty(rowIdx);
+        return;
+    }
+
+    // Arrow Up/Down — move to same column in adjacent row
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        // Only intercept if not inside a select or dropdown
+        if (active.tagName === 'SELECT') return;
+        e.preventDefault();
+
+        const navEls = getNavigableElements(tr);
+        const colIdx = navEls.indexOf(active);
+        const targetTr = e.key === 'ArrowUp' ? tr.previousElementSibling : tr.nextElementSibling;
+        if (targetTr && targetTr.dataset.row !== undefined) {
+            const targetEls = getNavigableElements(targetTr);
+            if (targetEls[colIdx]) targetEls[colIdx].focus();
+        }
+    }
+});
+
+// ══════════════════════════════════════════════════════
+//  INFINITE SCROLL
+// ══════════════════════════════════════════════════════
+function setupInfiniteScroll() {
+    const wrap = document.getElementById('table-wrap');
+    wrap.addEventListener('scroll', () => {
+        if (allLoaded || loadingMore) return;
+        const { scrollTop, scrollHeight, clientHeight } = wrap;
+        if (scrollHeight - scrollTop - clientHeight < 200) {
+            loadTableData(false);
+        }
+    });
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+    // Remove sidebar from tab order
+    document.querySelectorAll('aside a, aside button').forEach(el => el.tabIndex = -1);
+
+    // Load reference data + table data in parallel
+    await Promise.all([loadClients(), loadEmployees(), loadTableData(true)]);
+    setupInfiniteScroll();
+});
+</script>
+{% endblock %}

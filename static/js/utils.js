@@ -143,6 +143,57 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ── Filter State Persistence ──────────────────────────────────────────────────
+const FILTER_STATE_TTL = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Save filter field values to sessionStorage for the given page.
+ * Call at the start of every load function so state is saved before navigating away.
+ */
+function saveFilterState(pageKey, fieldIds) {
+    const state = { _ts: Date.now() };
+    for (const id of fieldIds) {
+        const el = document.getElementById(id);
+        if (el) state[id] = el.value;
+    }
+    sessionStorage.setItem('filterState:' + pageKey, JSON.stringify(state));
+}
+
+/**
+ * Restore filter field values from sessionStorage.
+ * Returns true if state was restored (caller should re-run data load).
+ * Does NOT remove state from storage — it must survive the full chain:
+ * list → detail → edit → save → detail → list.
+ */
+function restoreFilterState(pageKey, fieldIds) {
+    const raw = sessionStorage.getItem('filterState:' + pageKey);
+    if (!raw) return false;
+    try {
+        const state = JSON.parse(raw);
+        if (Date.now() - state._ts > FILTER_STATE_TTL) {
+            sessionStorage.removeItem('filterState:' + pageKey);
+            return false;
+        }
+        let restored = false;
+        for (const id of fieldIds) {
+            const el = document.getElementById(id);
+            if (el && state[id] !== undefined) {
+                el.value = state[id];
+                restored = true;
+            }
+        }
+        return restored;
+    } catch (e) { return false; }
+}
+
+/**
+ * Explicitly clear saved filter state for a page.
+ */
+function clearFilterState(pageKey) {
+    sessionStorage.removeItem('filterState:' + pageKey);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Paste text from clipboard to a specific field
  */
