@@ -435,6 +435,8 @@ class AppointmentBusinessService:
         notes: Optional[str],
         services: List[dict],
         force_save: bool = False,
+        discount_amount: float = 0,
+        satisfaction_score: Optional[int] = None,
     ) -> dict:
         """
         Aktualizuj wizytę wraz z usługami.
@@ -520,7 +522,9 @@ class AppointmentBusinessService:
             status=status,
             total_price=total_price,
             total_duration=total_duration,
-            notes=notes
+            discount_amount=Decimal(str(discount_amount)),
+            notes=notes,
+            satisfaction_score=satisfaction_score,
         )
 
         # 5. Zaktualizuj w bazie
@@ -552,13 +556,14 @@ class AppointmentBusinessService:
                 totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
                 commission_total = totals.get('total_commission', Decimal('0'))
 
+                disc = Decimal(str(discount_amount))
                 income = IncomeRecord(
                     appointment_id=appointment_id,
                     client_id=client_id,
                     employee_id=employee_id,
                     total_amount=total_price,
-                    discount_amount=Decimal('0'),
-                    net_amount=total_price,
+                    discount_amount=disc,
+                    net_amount=total_price - disc,
                     commission_total=commission_total,
                     payment_method=None,  # Można dodać do parametrów jeśli potrzebne
                     payment_date=date.today()

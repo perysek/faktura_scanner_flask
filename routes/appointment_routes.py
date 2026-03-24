@@ -350,12 +350,15 @@ def update_appointment(appointment_id):
             notes=data.get('notes'),
             services=data['services'],
             force_save=force,
+            discount_amount=data.get('discount_amount', 0),
+            satisfaction_score=data.get('satisfaction_score'),
         )
 
         entity_label = f"{data.get('appointment_date')} {data.get('start_time','')}"
         old_row = dict(row)
         for field in ['appointment_date', 'start_time', 'end_time',
-                      'employee_id', 'client_id', 'status', 'notes']:
+                      'employee_id', 'client_id', 'status', 'notes',
+                      'discount_amount', 'satisfaction_score']:
             if field not in data:   # field was not sent — not a change
                 continue
             old_val = _canonical(old_row.get(field))
