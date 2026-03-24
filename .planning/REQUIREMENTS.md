@@ -21,8 +21,8 @@ Requirements dla milestonu UI/UX Polish. Każdy ma źródło w UI audicie.
 
 ### Color (Pillar 3 — 3/4)
 
-- [ ] **COL-01**: Eliminacja pozostałych ~80 hardcoded hex wartości z szablonów (auth, form, error templates)
-- [ ] **COL-02**: `brand-*` Tailwind tokeny używane w szablonach zamiast `--color-accent` i `#c9a227` inline
+- [x] **COL-01**: Eliminacja pozostałych ~80 hardcoded hex wartości z szablonów (auth, form, error templates)
+- [x] **COL-02**: `brand-*` Tailwind tokeny używane w szablonach zamiast `--color-accent` i `#c9a227` inline
 
 ### Accessibility (Pillar 6 — 3/4)
 
@@ -71,8 +71,8 @@ Odroczone — do następnego milestonu.
 | TYPO-03 | Phase 1 | Complete |
 | SPAC-01 | Phase 2 | Complete |
 | SPAC-02 | Phase 2 | Pending |
-| COL-01 | Phase 3 | Pending |
-| COL-02 | Phase 3 | Pending |
+| COL-01 | Phase 3 | Complete |
+| COL-02 | Phase 3 | Complete |
 | A11Y-01 | Phase 4 | Pending |
 | A11Y-02 | Phase 4 | Pending |
 | A11Y-03 | Phase 4 | Pending |
