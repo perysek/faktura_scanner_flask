@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: CSS Architecture** - Extract shared :root to input.css, unify type scale across 45 templates (completed 2026-03-19)
 - [ ] **Phase 2: Layout & Spacing** - Remove !important padding overrides, standardize max-width scale
 - [x] **Phase 3: Color Cleanup** - Eliminate remaining hardcoded hex values, adopt brand-* Tailwind tokens (completed 2026-03-24)
-- [ ] **Phase 4: Accessibility & UX Polish** - Add aria attributes, retry actions, fix 404 CTA, fix copy
+- [x] **Phase 4: Accessibility & UX Polish** - Add aria attributes, retry actions, fix 404 CTA, fix copy (completed 2026-03-24)
 
 ## Phase Details
 
@@ -90,4 +90,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. CSS Architecture | 2/3 | Complete    | 2026-03-19 |
 | 2. Layout & Spacing | 0/3 | Not started | - |
 | 3. Color Cleanup | 1/1 | Complete   | 2026-03-24 |
-| 4. Accessibility & UX Polish | 1/3 | In Progress|  |
+| 4. Accessibility & UX Polish | 3/3 | Complete   | 2026-03-24 |
