@@ -1328,8 +1328,24 @@ document.addEventListener('keydown', (e) => {
     const active = document.activeElement;
     if (!active) return;
 
-    // Ignore if modal is open
-    if (document.querySelector('.te-modal-overlay.open')) return;
+    // Modal keyboard shortcuts
+    const openModal = document.querySelector('.te-modal-overlay.open');
+    if (openModal) {
+        const isSvcModal = openModal.id === 'services-modal';
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (isSvcModal) closeServicesModal();
+            else closeNotesModal();
+            return;
+        }
+        if (e.key === 'Enter' && !e.shiftKey && isSvcModal) {
+            // Enter applies services modal (but not notes modal — Enter = newline there)
+            e.preventDefault();
+            applyServicesModal();
+            return;
+        }
+        return;
+    }
 
     // Ctrl+U — open services modal for focused row
     if (e.ctrlKey && e.key === 'u') {
