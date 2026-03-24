@@ -535,6 +535,7 @@ async function loadClients() {
                 <tr>
                     <td colspan="6" class="empty-state">
                         <p class="empty-text" style="color: var(--color-error);">Błąd ładowania klientów: ${escapeHtml(data.error)}</p>
+                        <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top: 0.75rem;">Spróbuj ponownie</button>
                     </td>
                 </tr>
             `;
@@ -545,6 +546,7 @@ async function loadClients() {
             <tr>
                 <td colspan="6" class="empty-state">
                     <p class="empty-text" style="color: var(--color-error);">Błąd połączenia z serwerem</p>
+                    <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top: 0.75rem;">Spróbuj ponownie</button>
                 </td>
             </tr>
         `;
