@@ -870,6 +870,29 @@ document.getElementById('table-wrap')?.addEventListener('scroll', () => {
     document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
 }, {passive: true});
 
+// Type-ahead: any printable key on a dropdown trigger opens panel with that char
+document.addEventListener('keydown', (e) => {
+    const trigger = e.target;
+    if (!trigger.classList.contains('te-dropdown-trigger')) return;
+    // Ignore modifier combos (Ctrl+U, etc.), Tab, Enter, Escape, arrows
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (['Tab','Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
+    // Only printable characters (single char keys)
+    if (e.key.length !== 1) return;
+
+    e.preventDefault();
+    // Open dropdown if not already open
+    const wrap = trigger.closest('.te-dropdown-wrap');
+    const panel = wrap.querySelector('.te-dropdown-panel');
+    if (!panel.classList.contains('open')) {
+        openDropdown(trigger);
+    }
+    // Set the typed char in search and trigger filter
+    const search = wrap.querySelector('.te-dropdown-search');
+    search.value = e.key;
+    filterDropdown(search);
+});
+
 // ══════════════════════════════════════════════════════
 //  STAR RATING
 // ══════════════════════════════════════════════════════
