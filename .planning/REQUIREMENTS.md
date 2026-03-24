@@ -32,7 +32,7 @@ Requirements dla milestonu UI/UX Polish. Każdy ma źródło w UI audicie.
 
 ### Experience Design (Pillar 6 — 3/4)
 
-- [ ] **UX-01**: Retry action w stanach błędu async (calendar day view, client list, appointment list)
+- [x] **UX-01**: Retry action w stanach błędu async (calendar day view, client list, appointment list)
 - [x] **UX-02**: 404 CTA routing do `main.dashboard` zamiast `main.invoices_list`
 - [x] **UX-03**: Poprawka pozostałego brakującego znaku diakrytycznego (`sellers/edit.html` line 445: "Ladowanie..." → "Ładowanie...")
 
@@ -76,7 +76,7 @@ Odroczone — do następnego milestonu.
 | A11Y-01 | Phase 4 | Complete |
 | A11Y-02 | Phase 4 | Complete |
 | A11Y-03 | Phase 4 | Complete |
-| UX-01 | Phase 4 | Pending |
+| UX-01 | Phase 4 | Complete |
 | UX-02 | Phase 4 | Complete |
 | UX-03 | Phase 4 | Complete |
 | COPY-01 | Phase 4 | Complete |
