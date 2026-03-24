@@ -180,7 +180,8 @@
     .te-dropdown-trigger:focus { outline: none; border-color: var(--pp-blue); background: white; }
 
     /* ── Star rating in table ── */
-    .te-stars { display: flex; gap: 1px; }
+    .te-stars { display: flex; gap: 1px; border-radius: 4px; padding: 2px; }
+    .te-stars:focus { outline: 2px solid var(--pp-accent, #2563eb); outline-offset: 1px; }
     .te-star {
         background: none; border: none; cursor: pointer; padding: 0;
         font-size: 0.9rem; line-height: 1; color: var(--color-star-empty, #d1d5db);
@@ -321,10 +322,13 @@
             <span class="te-shortcut-hint">
                 <span class="te-kbd">Tab</span> nast. pole
                 <span class="te-kbd">Enter</span> nast. wiersz
-                <span class="te-kbd">Shift+Enter</span> poprz. wiersz
-                <span class="te-kbd">Esc</span> cofnij
-                <span class="te-kbd">&uarr;&darr;</span> zmiana wartości
-                <span class="te-kbd">Ctrl+U</span> edycja usług
+                <span class="te-kbd">Ctrl+&uarr;&darr;</span> nawigacja wierszy
+                <span class="te-kbd">Esc</span> zamknij/blur
+                <span class="te-kbd">Ctrl+S</span> zapisz
+                <span class="te-kbd">Ctrl+Z</span> cofnij
+                <span class="te-kbd">Ctrl+E</span> uslugi
+                <span class="te-kbd">Ctrl+N</span> notatki
+                <span class="te-kbd">Ctrl+Enter</span> zastosuj modal
             </span>
         </div>
     </div>
@@ -747,16 +751,16 @@ function renderTable() {
             <td><div class="te-notes-cell" title="${esc(notesText)}">${esc(notesText) || '<span style=color:var(--pp-ink-subtle)>-</span>'}</div></td>
             <td>
                 <div class="te-actions-group">
-                    <button class="te-act-btn svc-edit-btn" onclick="openServicesModal(${rowIdx})" title="Edytuj uslugi (Ctrl+U)" data-nav="services">
+                    <button class="te-act-btn svc-edit-btn" onclick="openServicesModal(${rowIdx})" title="Edytuj uslugi (Ctrl+E)" data-nav="services">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     </button>
-                    <button class="te-act-btn" onclick="openNotesModal(${rowIdx})" title="Edytuj notatki">
+                    <button class="te-act-btn" onclick="openNotesModal(${rowIdx})" title="Edytuj notatki (Ctrl+N)">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany" ${undoable ? '' : 'disabled'}>
+                    <button class="te-act-btn undo-btn" onclick="undoRow(${rowIdx})" title="Cofnij zmiany (Ctrl+Z)" ${undoable ? '' : 'disabled'}>
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4"/></svg>
                     </button>
-                    <button class="te-act-btn save-btn" onclick="saveRow(${rowIdx})" title="Zapisz zmiany" ${dirty ? '' : 'disabled'}>
+                    <button class="te-act-btn save-btn" onclick="saveRow(${rowIdx})" title="Zapisz zmiany (Ctrl+S)" ${dirty ? '' : 'disabled'}>
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </button>
                 </div>
@@ -870,27 +874,92 @@ document.getElementById('table-wrap')?.addEventListener('scroll', () => {
     document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
 }, {passive: true});
 
-// Type-ahead: any printable key on a dropdown trigger opens panel with that char
+// Dropdown keyboard: trigger keys + type-ahead + in-panel navigation
 document.addEventListener('keydown', (e) => {
-    const trigger = e.target;
-    if (!trigger.classList.contains('te-dropdown-trigger')) return;
-    // Ignore modifier combos (Ctrl+U, etc.), Tab, Enter, Escape, arrows
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
-    if (['Tab','Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
-    // Only printable characters (single char keys)
-    if (e.key.length !== 1) return;
+    const el = e.target;
 
-    e.preventDefault();
-    // Open dropdown if not already open
-    const wrap = trigger.closest('.te-dropdown-wrap');
-    const panel = wrap.querySelector('.te-dropdown-panel');
-    if (!panel.classList.contains('open')) {
-        openDropdown(trigger);
+    // --- Trigger focused, panel closed: open with ArrowDown / Space / Enter ---
+    if (el.classList.contains('te-dropdown-trigger')) {
+        const wrap = el.closest('.te-dropdown-wrap');
+        const panel = wrap.querySelector('.te-dropdown-panel');
+        const isOpen = panel.classList.contains('open');
+
+        if (!isOpen) {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;  // let Ctrl+E etc. pass through
+            if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                openDropdown(el);
+                return;
+            }
+            // Type-ahead: printable char opens panel + pre-fills search
+            if (['Tab','Escape','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key)) return;
+            if (e.key.length !== 1) return;
+            e.preventDefault();
+            openDropdown(el);
+            const search = wrap.querySelector('.te-dropdown-search');
+            search.value = e.key;
+            filterDropdown(search);
+            return;
+        }
+        return;  // panel is open — let search input handle keys
     }
-    // Set the typed char in search and trigger filter
-    const search = wrap.querySelector('.te-dropdown-search');
-    search.value = e.key;
-    filterDropdown(search);
+
+    // --- Inside open dropdown search input ---
+    if (el.classList.contains('te-dropdown-search')) {
+        const panel = el.closest('.te-dropdown-panel');
+        if (!panel || !panel.classList.contains('open')) return;
+        const list = panel.querySelector('.te-dropdown-list');
+        const opts = Array.from(list.querySelectorAll('.te-dropdown-opt'));
+        if (!opts.length) return;
+
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const highlighted = list.querySelector('.te-dropdown-opt.highlighted');
+            let idx = highlighted ? opts.indexOf(highlighted) : -1;
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = e.key === 'ArrowDown' ? idx + 1 : idx - 1;
+            if (idx < 0) idx = opts.length - 1;
+            if (idx >= opts.length) idx = 0;
+            opts[idx].classList.add('highlighted');
+            opts[idx].scrollIntoView({block: 'nearest'});
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const highlighted = list.querySelector('.te-dropdown-opt.highlighted');
+            if (highlighted) {
+                selectDropdownItem(highlighted);
+            } else if (opts.length === 1) {
+                selectDropdownItem(opts[0]);
+            }
+            // Refocus trigger after selection
+            const wrap = el.closest('.te-dropdown-wrap');
+            const trigger = wrap.querySelector('.te-dropdown-trigger');
+            if (trigger) trigger.focus();
+            return;
+        }
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            panel.classList.remove('open');
+            const wrap = el.closest('.te-dropdown-wrap');
+            const trigger = wrap.querySelector('.te-dropdown-trigger');
+            if (trigger) trigger.focus();
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            // Tab selects current highlighted (or first) option and moves on
+            const highlighted = list.querySelector('.te-dropdown-opt.highlighted');
+            if (highlighted) {
+                selectDropdownItem(highlighted);
+            }
+            panel.classList.remove('open');
+            // Don't preventDefault — let Tab continue to next cell
+            return;
+        }
+    }
 });
 
 // ══════════════════════════════════════════════════════
@@ -903,9 +972,9 @@ function renderStars(rowIdx, score) {
     const isDirty = score !== origScore;
     const starClass = isDirty ? 'pending' : 'active';
 
-    let html = `<div class="te-stars" data-row-stars="${rowIdx}">`;
+    let html = `<div class="te-stars" tabindex="0" data-nav="rating" data-row-stars="${rowIdx}" data-row-idx="${rowIdx}" title="Ocena: ${score}/5 (klawisze 0-5)">`;
     for (let i = 1; i <= 5; i++) {
-        html += `<button class="te-star ${i <= score ? starClass : ''}" onclick="setRowStar(${rowIdx},${i})" title="${i}">&#9733;</button>`;
+        html += `<button class="te-star ${i <= score ? starClass : ''}" onclick="setRowStar(${rowIdx},${i})" tabindex="-1" title="${i}">&#9733;</button>`;
     }
     html += '</div>';
     return html;
@@ -1335,7 +1404,7 @@ function forceSaveRow() {
 //  KEYBOARD NAVIGATION
 // ══════════════════════════════════════════════════════
 function getNavigableElements(tr) {
-    return Array.from(tr.querySelectorAll('input.te-cell-input, select.te-cell-input, .te-dropdown-trigger, .svc-edit-btn'));
+    return Array.from(tr.querySelectorAll('input.te-cell-input, select.te-cell-input, .te-dropdown-trigger, .svc-edit-btn, [data-nav="rating"]'));
 }
 
 function getRowAndColIdx(el) {
@@ -1354,28 +1423,71 @@ document.addEventListener('keydown', (e) => {
     // Modal keyboard shortcuts
     const openModal = document.querySelector('.te-modal-overlay.open');
     if (openModal) {
-        const isSvcModal = openModal.id === 'services-modal';
+        const modalId = openModal.id;
         if (e.key === 'Escape') {
             e.preventDefault();
-            if (isSvcModal) closeServicesModal();
-            else closeNotesModal();
+            if (modalId === 'services-modal') closeServicesModal();
+            else if (modalId === 'notes-modal') closeNotesModal();
+            else if (modalId === 'conflict-modal') closeConflictModal();
             return;
         }
-        if (e.key === 'Enter' && !e.shiftKey && isSvcModal) {
-            // Enter applies services modal (but not notes modal — Enter = newline there)
+        // Ctrl+Enter — apply changes in any modal
+        if (e.key === 'Enter' && e.ctrlKey) {
             e.preventDefault();
-            applyServicesModal();
+            if (modalId === 'services-modal') applyServicesModal();
+            else if (modalId === 'notes-modal') applyNotesModal();
+            else if (modalId === 'conflict-modal') forceSaveRow();
             return;
         }
         return;
     }
 
-    // Ctrl+U — open services modal for focused row
-    if (e.ctrlKey && e.key === 'u') {
+    // Ctrl+S — save focused row (or all dirty rows)
+    if (e.ctrlKey && !e.shiftKey && e.key === 's') {
+        e.preventDefault();
+        const focusedTr = active.closest('tr[data-row]');
+        if (focusedTr) {
+            saveRow(parseInt(focusedTr.dataset.row));
+        } else {
+            saveAllDirtyRows();
+        }
+        return;
+    }
+
+    // Ctrl+Shift+S — save all dirty rows
+    if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        saveAllDirtyRows();
+        return;
+    }
+
+    // Ctrl+Z — undo focused row (skip in text inputs to preserve native undo)
+    if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+        if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT') return;
+        e.preventDefault();
+        const focusedTr = active.closest('tr[data-row]');
+        if (focusedTr) {
+            undoRow(parseInt(focusedTr.dataset.row));
+        }
+        return;
+    }
+
+    // Ctrl+E — open services modal for focused row
+    if (e.ctrlKey && !e.shiftKey && e.key === 'e') {
         e.preventDefault();
         const focusedTr = active.closest('tr[data-row]');
         if (focusedTr) {
             openServicesModal(parseInt(focusedTr.dataset.row));
+        }
+        return;
+    }
+
+    // Ctrl+N — open notes modal for focused row
+    if (e.ctrlKey && !e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        const focusedTr = active.closest('tr[data-row]');
+        if (focusedTr) {
+            openNotesModal(parseInt(focusedTr.dataset.row));
         }
         return;
     }
@@ -1418,7 +1530,8 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Enter / Shift+Enter — move to same column in next/prev row
-    if (e.key === 'Enter') {
+    // (skip for buttons — Enter/Space activates them natively)
+    if (e.key === 'Enter' && active.tagName !== 'BUTTON') {
         if (active.tagName === 'TEXTAREA') return;
         e.preventDefault();
         const navEls = getNavigableElements(tr);
@@ -1432,96 +1545,47 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Escape — revert current cell
-    if (e.key === 'Escape') {
-        const row = allRows[rowIdx];
-        const orig = originalRows[row.id];
-        if (!orig) return;
-
-        // Determine which field this input represents
-        const navAttr = active.dataset.nav;
-        if (navAttr === 'date') { active.value = orig.appointment_date || ''; row.appointment_date = orig.appointment_date; }
-        else if (navAttr === 'time') { active.value = fmtTime(orig.start_time); row.start_time = orig.start_time; }
-        else if (navAttr === 'status') { active.value = orig.status; row.status = orig.status; }
-        else if (navAttr === 'amount') { active.value = fmtPrice(orig.total_price); row.total_price = orig.total_price; }
-        else if (navAttr === 'discount') { active.value = fmtPrice(orig.discount_amount); row.discount_amount = orig.discount_amount; }
-        markRowDirty(rowIdx);
+    // Ctrl+Arrow Up/Down — move to same column in prev/next row
+    if (e.ctrlKey && !e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const navEls = getNavigableElements(tr);
+        const colIdx = navEls.indexOf(active);
+        const targetTr = e.key === 'ArrowUp' ? tr.previousElementSibling : tr.nextElementSibling;
+        if (targetTr && targetTr.dataset.row !== undefined) {
+            const targetEls = getNavigableElements(targetTr);
+            if (targetEls[colIdx]) targetEls[colIdx].focus();
+            else if (targetEls.length) targetEls[0].focus();
+        }
         return;
     }
 
-    // Arrow Up/Down — increment/decrement value in current cell
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        const nav = active.dataset?.nav;
-        const isUp = e.key === 'ArrowUp';
-
-        // Status select — let browser handle natively
-        if (active.tagName === 'SELECT') return;
-
-        // Searchable dropdown (client/employee) — cycle items
-        if (active.classList.contains('te-dropdown-trigger')) {
-            e.preventDefault();
-            cycleDropdownItem(active, isUp ? -1 : 1, rowIdx);
+    // Escape — close dropdown or blur cell (dismiss stack)
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        // If a dropdown panel is open, close it and refocus trigger
+        const openPanel = document.querySelector('.te-dropdown-panel.open');
+        if (openPanel) {
+            openPanel.classList.remove('open');
+            const trigger = openPanel.closest('.te-dropdown-wrap')?.querySelector('.te-dropdown-trigger');
+            if (trigger) trigger.focus();
             return;
         }
-
-        if (!nav) return;
-        e.preventDefault();
-
-        if (nav === 'date') {
-            const d = active.value ? new Date(active.value + 'T12:00:00') : new Date();
-            d.setDate(d.getDate() + (isUp ? 1 : -1));
-            const val = d.toISOString().slice(0, 10);
-            active.value = val;
-            onCellChange(rowIdx, 'appointment_date', val);
-        } else if (nav === 'time') {
-            const parts = (active.value || '08:00').split(':').map(Number);
-            let mins = parts[0] * 60 + parts[1] + (isUp ? 15 : -15);
-            if (mins < 0) mins = 0;
-            if (mins > 1439) mins = 1439;
-            const val = String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
-            active.value = val;
-            onCellChange(rowIdx, 'start_time', val);
-        } else if (nav === 'amount') {
-            const val = Math.max(0, (parseFloat(active.value) || 0) + (isUp ? 1 : -1));
-            active.value = fmtPrice(val);
-            onCellChange(rowIdx, 'total_price', val);
-        } else if (nav === 'discount') {
-            const val = Math.max(0, (parseFloat(active.value) || 0) + (isUp ? 1 : -1));
-            active.value = fmtPrice(val);
-            onCellChange(rowIdx, 'discount_amount', val);
-        }
+        // Otherwise blur the active cell
+        active.blur();
         return;
     }
-});
 
-// Cycle dropdown selection (client/employee) via arrow keys
-function cycleDropdownItem(trigger, direction, rowIdx) {
-    const wrap = trigger.closest('.te-dropdown-wrap');
-    const type = wrap.dataset.type;
-    const row = allRows[rowIdx];
-    const currentId = type === 'client' ? row.client_id : row.employee_id;
-
-    const cache = type === 'client' ? clientsCache : employeesCache;
-    if (!cache || !cache.length) return;
-
-    const currentIdx = cache.findIndex(c => c.id === currentId);
-    let newIdx = currentIdx + direction;
-    if (newIdx < 0) newIdx = cache.length - 1;
-    if (newIdx >= cache.length) newIdx = 0;
-
-    const item = cache[newIdx];
-    const label = `${item.first_name} ${item.last_name}`;
-
-    if (type === 'client') {
-        row.client_id = item.id;
-        row.client_name = label;
-    } else {
-        row.employee_id = item.id;
-        row.employee_name = label;
+    // Star rating — keys 0-5 set rating when rating container is focused
+    if (active.dataset.nav === 'rating' && e.key >= '0' && e.key <= '5') {
+        e.preventDefault();
+        const rIdx = parseInt(active.dataset.rowIdx);
+        setRowStar(rIdx, parseInt(e.key));
+        return;
     }
-    trigger.textContent = label;
-    markRowDirty(rowIdx);
-}
+
+    // Arrow keys — native behavior for all inputs (date/time/number/select)
+    // No custom handling needed — browser provides increment/decrement natively
+});
 
 // ══════════════════════════════════════════════════════
 //  INFINITE SCROLL
