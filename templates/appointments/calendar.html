@@ -730,13 +730,19 @@ function updateCoverage(percent) {
         coverageValue.textContent = Math.round(percent) + '%';
         coverageFill.style.width = percent + '%';
 
-        // Change color based on coverage
+        // Change color based on coverage (read from CSS custom properties at runtime)
+        const root = document.documentElement;
+        const style = getComputedStyle(root);
+        const colorGreen = style.getPropertyValue('--color-status-completed').trim();
+        const colorOrange = style.getPropertyValue('--color-status-in-progress').trim();
+        const colorRed = style.getPropertyValue('--color-status-cancelled').trim();
+
         if (percent >= 80) {
-            coverageFill.style.background = '#2d6a4f'; // Green
+            coverageFill.style.background = colorGreen;
         } else if (percent >= 50) {
-            coverageFill.style.background = '#d97706'; // Orange
+            coverageFill.style.background = colorOrange;
         } else {
-            coverageFill.style.background = '#dc2626'; // Red
+            coverageFill.style.background = colorRed;
         }
     }
 }
