@@ -73,7 +73,12 @@ Plans:
   4. When the calendar day view or client list shows an error state, a retry button is visible and reloads the failed content
   5. Non-accountant users landing on the 404 page are taken to `main.dashboard` (not `main.invoices_list`) by the CTA button
   6. `sellers/edit.html` shows "Ładowanie..." (with diacritic) and `analytics/dashboard.html` shows "Powrót na górę" (not "Idź na początek")
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Fix diacritic, copy text, and error page CTA routing (UX-02, UX-03, COPY-01)
+- [ ] 04-02-PLAN.md — Add skip-nav link, sr-only CSS, aria-live regions, aria-label audit (A11Y-01, A11Y-02, A11Y-03)
+- [ ] 04-03-PLAN.md — Add retry buttons to calendar, client list, and appointment list error states (UX-01)
 
 ## Progress
 
@@ -85,4 +90,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. CSS Architecture | 2/3 | Complete    | 2026-03-19 |
 | 2. Layout & Spacing | 0/3 | Not started | - |
 | 3. Color Cleanup | 1/1 | Complete   | 2026-03-24 |
-| 4. Accessibility & UX Polish | 0/TBD | Not started | - |
+| 4. Accessibility & UX Polish | 0/3 | Not started | - |
