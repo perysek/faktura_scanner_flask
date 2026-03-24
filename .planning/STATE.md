@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md (copywriting fixes and error page CTA routing)
-last_updated: "2026-03-24T20:54:36.292Z"
+stopped_at: "Completed 04-02-PLAN.md (accessibility infrastructure: skip-nav, aria-live, aria-label)"
+last_updated: "2026-03-24T21:00:16.738Z"
 last_activity: 2026-03-19 — Completed 01-03 (strip local stat-value/stat-label redeclarations)
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 100
 ---
 
@@ -57,6 +57,7 @@ Progress: [██████████] 100% (Phase 1 plans complete)
 | Phase 02-layout-spacing P03 | 7 | 2 tasks | 21 files |
 | Phase 03-color-cleanup P01 | 25 | 2 tasks | 19 files |
 | Phase 04-accessibility-ux-polish P01 | 5 | 2 tasks | 4 files |
+| Phase 04-accessibility-ux-polish P02 | 15 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 03-color-cleanup]: #17A2B8 teal badge in sellers/list_refined kept with intentional comment — no matching CSS token
 - [Phase 03-color-cleanup]: #1f5a3a dark green in invoices/upload kept with no-token comment — semantically distinct from --color-success
 - [Phase 04-accessibility-ux-polish]: Error page CTA uses current_user.is_authenticated guard before role check to safely handle anonymous users (Flask-Login AnonymousUserMixin)
+- [Phase 04-accessibility-ux-polish]: sr-only-focusable class name used instead of focus:not-sr-only to avoid Tailwind backslash-escaped pseudo-class syntax
+- [Phase 04-accessibility-ux-polish]: Skip-nav focused state uses inline style override to avoid relying on Tailwind focus: variants that may be purged
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T20:54:36.287Z
-Stopped at: Completed 04-01-PLAN.md (copywriting fixes and error page CTA routing)
+Last session: 2026-03-24T21:00:16.733Z
+Stopped at: Completed 04-02-PLAN.md (accessibility infrastructure: skip-nav, aria-live, aria-label)
 Resume file: None

@@ -26,9 +26,9 @@ Requirements dla milestonu UI/UX Polish. Każdy ma źródło w UI audicie.
 
 ### Accessibility (Pillar 6 — 3/4)
 
-- [ ] **A11Y-01**: `aria-label` na wszystkich icon-only buttons (calendar navigation, modal close, flash dismiss)
-- [ ] **A11Y-02**: `aria-live` regions dla async content updates (appointment list, client list, stat cards)
-- [ ] **A11Y-03**: Skip-navigation link w `base.html`
+- [x] **A11Y-01**: `aria-label` na wszystkich icon-only buttons (calendar navigation, modal close, flash dismiss)
+- [x] **A11Y-02**: `aria-live` regions dla async content updates (appointment list, client list, stat cards)
+- [x] **A11Y-03**: Skip-navigation link w `base.html`
 
 ### Experience Design (Pillar 6 — 3/4)
 
@@ -73,9 +73,9 @@ Odroczone — do następnego milestonu.
 | SPAC-02 | Phase 2 | Pending |
 | COL-01 | Phase 3 | Complete |
 | COL-02 | Phase 3 | Complete |
-| A11Y-01 | Phase 4 | Pending |
-| A11Y-02 | Phase 4 | Pending |
-| A11Y-03 | Phase 4 | Pending |
+| A11Y-01 | Phase 4 | Complete |
+| A11Y-02 | Phase 4 | Complete |
+| A11Y-03 | Phase 4 | Complete |
 | UX-01 | Phase 4 | Pending |
 | UX-02 | Phase 4 | Complete |
 | UX-03 | Phase 4 | Complete |
