@@ -735,8 +735,8 @@ function renderTable() {
 
         return `<tr data-row="${rowIdx}" class="${dirty ? 'dirty' : ''}">
             <td><a class="te-id-link" href="/superadmin/visits/${row.id}" title="Otworz edytor">#${row.id}</a></td>
-            <td><input type="date" class="te-cell-input" value="${row.appointment_date || ''}" onchange="onCellChange(${rowIdx},'appointment_date',this.value)" data-nav="date"></td>
-            <td><input type="time" class="te-cell-input" value="${timeVal}" step="900" onchange="onCellChange(${rowIdx},'start_time',this.value)" data-nav="time"></td>
+            <td><input type="date" class="te-cell-input" value="${row.appointment_date || ''}" onchange="onCellChange(${rowIdx},'appointment_date',this.value)" oninput="onCellChange(${rowIdx},'appointment_date',this.value)" data-nav="date"></td>
+            <td><input type="time" class="te-cell-input" value="${timeVal}" step="900" onchange="onCellChange(${rowIdx},'start_time',this.value)" oninput="onCellChange(${rowIdx},'start_time',this.value)" data-nav="time"></td>
             <td>${renderSearchableDropdown(rowIdx, 'client', row.client_id, row.client_name)}</td>
             <td>${renderSearchableDropdown(rowIdx, 'employee', row.employee_id, row.employee_name)}</td>
             <td>
@@ -1236,6 +1236,7 @@ async function saveRow(rowIdx, force = false) {
         start_time: row.start_time,
         notes: row.notes || null,
         satisfaction_score: row.satisfaction_score || null,
+        discount_amount: parseFloat(row.discount_amount) || 0,
         force: force,
         services: row.services.map(s => ({
             service_id: s.service_id,
@@ -1299,6 +1300,7 @@ async function undoRow(rowIdx) {
                 start_time: row.start_time,
                 notes: row.notes || null,
                 satisfaction_score: row.satisfaction_score || null,
+                discount_amount: parseFloat(row.discount_amount) || 0,
                 force: true,
                 services: row.services.map(s => ({
                     service_id: s.service_id,

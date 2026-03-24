@@ -425,7 +425,8 @@ class AppointmentRepository:
             SET client_id = %s, employee_id = %s, appointment_date = %s,
                 start_time = %s, end_time = %s, status = %s,
                 total_price = %s, total_duration = %s, discount_amount = %s,
-                notes = %s, updated_at = CURRENT_TIMESTAMP
+                satisfaction_score = %s, notes = %s,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """
         with get_db_connection() as conn:
@@ -440,6 +441,7 @@ class AppointmentRepository:
                 str(appt.total_price),
                 appt.total_duration,
                 str(appt.discount_amount) if appt.discount_amount else '0',
+                appt.satisfaction_score,
                 appt.notes,
                 appointment_id
             ))
