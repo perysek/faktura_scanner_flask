@@ -1,9 +1,5 @@
 {% extends "base.html" %}
-
-{% block title %}Import dokumentów — FakturaScanner{% endblock %}
-{% block page_title %}{% endblock %}
-{% block page_subtitle %}{% endblock %}
-{% block breadcrumb %}{% endblock %}
+{% block title %}Import dokumentów — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -504,10 +500,7 @@
         color: var(--color-error);
     }
 
-    /* Utilities */
-    .hidden {
-        display: none !important;
-    }
+    /* Utilities — .hidden is handled by Tailwind, do NOT redefine here */
 
     .animate-fade-in {
         animation: fadeIn 0.4s var(--ease-out-expo);
