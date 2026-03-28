@@ -286,25 +286,31 @@ class PDFProcessor:
 			self.clahe_clip_limit = saved['clahe_clip_limit']
 			self.deskew_enabled = saved['deskew_enabled']
 
+	# P3-1: Maximum pages to convert (invoice data is on first 1-2 pages)
+	MAX_OCR_PAGES = 2
+
 	def pdf_to_images(self, pdf_path: str, userpw: str = None, ownerpw: str = None) -> List[Image.Image]:
 		"""
-		Konwertuj PDF na listę obrazów (PIL Image)
+		Konwertuj PDF na listę obrazów (PIL Image).
+		P3-1: Only converts first MAX_OCR_PAGES pages to avoid memory waste.
 		"""
 		logger.info(f"[PDF→Images] Starting conversion: {pdf_path}")
 		logger.debug(f"[PDF→Images] File exists: {os.path.exists(pdf_path)}")
 		logger.debug(f"[PDF→Images] File size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 'N/A'} bytes")
-		
+
 		try:
 			poppler_exists = os.path.exists(POPPLER_PATH)
 			poppler_path = POPPLER_PATH if poppler_exists else None
 			logger.debug(f"[PDF→Images] Poppler path exists: {poppler_exists}")
-			
-			logger.info(f"[PDF→Images] Converting with DPI={self.dpi}...")
+
+			logger.info(f"[PDF→Images] Converting with DPI={self.dpi} (max {self.MAX_OCR_PAGES} pages)...")
 			images = convert_from_path(
 				pdf_path,
 				dpi=self.dpi,
 				fmt='jpeg',
 				poppler_path=poppler_path,
+				first_page=1,
+				last_page=self.MAX_OCR_PAGES,
 				userpw=userpw,
 				ownerpw=ownerpw
 				)
@@ -570,22 +576,15 @@ class PDFProcessor:
 		"""
 		Główna metoda: PDF → tekst
 		Returns: (extracted_text, confidence_score)
-		Dla faktur wielostronicowych: przetwarza max 2 pierwsze strony
+		P3-1: Page limit now enforced at pdf_to_images level.
 		"""
 		images = self.pdf_to_images(pdf_path)
-
-		# Ogranicz do max 2 stron dla wielostronicowych PDF
-		# (główne dane faktury zawsze na pierwszych 1-2 stronach)
-		max_pages = 2
-		if len(images) > max_pages:
-			print(f"  PDF ma {len(images)} stron, przetwarzanie pierwszych {max_pages}...")
-			images = images[:max_pages]
 
 		all_text = []
 		confidences = []
 
 		for i, image in enumerate(images):
-			print(f"  Przetwarzanie strony {i + 1}/{len(images)}...")
+			logger.info(f"  Przetwarzanie strony {i + 1}/{len(images)}...")
 
 			# OCR with real confidence scores
 			text, confidence = self.extract_text_with_confidence(image)
