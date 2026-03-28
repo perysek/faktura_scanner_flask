@@ -523,7 +523,8 @@ class PDFProcessor:
 				processed_image,
 				lang=lang,
 				config='--psm 6',
-				output_type=pytesseract.Output.DICT
+				output_type=pytesseract.Output.DICT,
+				timeout=60  # P4-6: 60s timeout per page to prevent hanging
 			)
 			
 			logger.debug(f"[OCR] Tesseract returned {len(data['text'])} elements")
@@ -606,7 +607,7 @@ class PDFProcessor:
 		Ekstrakcja tekstu z pliku graficznego (JPG, PNG, TIFF, BMP)
 		Returns: (extracted_text, confidence_score)
 		"""
-		print(f"  Przetwarzanie obrazu: {Path(image_path).name}...")
+		logger.info(f"  Przetwarzanie obrazu: {Path(image_path).name}...")
 		
 		# Wczytaj obraz
 		image = self.load_image(image_path)

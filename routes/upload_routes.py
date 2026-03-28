@@ -197,7 +197,7 @@ def clear_all_staged_files():
         if temp_dir.exists():
             try:
                 temp_dir.rmdir()
-            except:
+            except OSError:
                 pass  # Directory might not be empty, ignore
 
         return jsonify({
@@ -620,3 +620,42 @@ def view_pdf(filename: str):
     except Exception as e:
         logger.error(f"Error viewing PDF {filename}: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Błąd wyświetlania pliku'}), 500
+
+
+# ── P4-3 & P4-4: Cleanup stale temp files and staging records ──
+
+def cleanup_stale_uploads(app, max_age_hours: int = 24):
+    """
+    Remove temp upload files and staging DB records older than max_age_hours.
+    Call from app startup or a scheduled task.
+    """
+    import time
+
+    with app.app_context():
+        temp_root = Path(app.config['UPLOAD_FOLDER']) / 'temp'
+        if not temp_root.exists():
+            return
+
+        cutoff = time.time() - (max_age_hours * 3600)
+        cleaned_dirs = 0
+
+        for session_dir in temp_root.iterdir():
+            if not session_dir.is_dir():
+                continue
+            # Check if directory is older than cutoff
+            try:
+                dir_mtime = session_dir.stat().st_mtime
+                if dir_mtime < cutoff:
+                    shutil.rmtree(session_dir, ignore_errors=True)
+                    cleaned_dirs += 1
+                    # Also clean staging records for this session
+                    session_id = session_dir.name
+                    try:
+                        app.staging_repo.delete_by_session(session_id)
+                    except Exception:
+                        pass
+            except OSError:
+                continue
+
+        if cleaned_dirs > 0:
+            logger.info(f"[Cleanup] Removed {cleaned_dirs} stale upload session(s)")

@@ -212,9 +212,9 @@ class OCRService:
 				invoice_date = datetime.strptime(
 					extracted_data['invoice_date'], '%Y-%m-%d'
 					).date()
-			except:
-				pass
-		
+			except (ValueError, TypeError) as e:
+				logger.warning(f"Failed to parse invoice_date '{extracted_data['invoice_date']}': {e}")
+
 		payment_due_date = None
 		payment_term = None
 		if extracted_data['payment_due_date']:
@@ -227,15 +227,14 @@ class OCRService:
 					payment_due_date = datetime.strptime(
 						extracted_data['payment_due_date'], '%Y-%m-%d'
 						).date()
-				except:
-					pass
+				except (ValueError, TypeError) as e:
+					logger.warning(f"Failed to parse payment_due_date '{extracted_data['payment_due_date']}': {e}")
 
 		# 3.5. Walidacja dat - sprawdź czy termin płatności jest późniejszy niż data faktury
 		if invoice_date and payment_due_date:
 			if payment_due_date <= invoice_date:
-				print(f"  ⚠️  OSTRZEŻENIE: Termin płatności ({payment_due_date}) "
-				      f"nie jest późniejszy niż data faktury ({invoice_date})!")
-				print(f"  ⚠️  Możliwy błąd w OCR - sprawdź daty ręcznie!")
+				logger.warning(f"Termin płatności ({payment_due_date}) "
+				              f"nie jest późniejszy niż data faktury ({invoice_date}) - możliwy błąd OCR")
 
 		# 4. Stwórz Invoice object
 		invoice = Invoice(

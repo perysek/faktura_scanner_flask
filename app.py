@@ -211,6 +211,10 @@ def create_app():
             'user_permissions': user_permissions,
         }
 
+    # P4-3/P4-4: Clean up stale upload temp files on startup
+    from routes.upload_routes import cleanup_stale_uploads
+    cleanup_stale_uploads(app)
+
     return app
 
 
