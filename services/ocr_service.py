@@ -14,6 +14,11 @@ class OCRExtractionError(Exception):
 	"""Raised when OCR extraction fails completely after all retry attempts."""
 	pass
 
+
+class PDFPasswordRequired(Exception):
+	"""Raised when a PDF is encrypted and no password (or wrong password) is available."""
+	pass
+
 from config.settings import (
 	OCR_RETRY_ENABLED, OCR_MAX_RETRIES, OCR_MISSING_FIELDS_THRESHOLD,
 	OCR_RETRY_PROFILE_ORDER
@@ -42,21 +47,25 @@ class OCRService:
 		self.missing_threshold = OCR_MISSING_FIELDS_THRESHOLD
 		self.retry_profiles = OCR_RETRY_PROFILE_ORDER
 
-	def process_pdf(self, file_path: str) -> Dict:
+	def process_pdf(self, file_path: str, password: str = None) -> Dict:
 		"""
 		Przetworz PDF lub obraz faktury i zwróć słownik z danymi.
 		Uses smart/hybrid processing and retry logic if enabled.
 
 		Args:
 			file_path: Ścieżka do PDF lub obrazu (JPG, PNG, TIFF, BMP)
+			password: Optional password for encrypted PDFs
 
 		Returns:
 			Dictionary z wyekstraktowanymi danymi
+
+		Raises:
+			PDFPasswordRequired: If PDF is encrypted and no/wrong password provided
 		"""
 		# Use retry-enabled processing if enabled, otherwise use smart processing
 		if self.retry_enabled:
 			# P3-3: process_with_retry returns pre-extracted data to avoid duplicate extraction
-			raw_text, confidence, profile_used, extracted_data = self.process_with_retry(file_path)
+			raw_text, confidence, profile_used, extracted_data = self.process_with_retry(file_path, password=password)
 			logger.info(f"[OCR] Final result using profile '{profile_used}'")
 		else:
 			# Use smart processing (hybrid: direct extraction or OCR based on PDF type)
@@ -92,7 +101,7 @@ class OCRService:
 
 		return result
 
-	def process_with_retry(self, file_path: str) -> Tuple[str, float, str, Dict]:
+	def process_with_retry(self, file_path: str, password: str = None) -> Tuple[str, float, str, Dict]:
 		"""
 		Process file with retry logic using different preprocessing profiles.
 		Retries OCR with different profiles when too many fields are missing.
@@ -100,13 +109,41 @@ class OCRService:
 
 		Args:
 			file_path: Path to PDF or image file
+			password: Optional password for encrypted PDFs
 
 		Returns:
 			Tuple[str, float, str, Dict]: (extracted_text, confidence, profile_name_used, extracted_data)
+
+		Raises:
+			PDFPasswordRequired: If PDF is encrypted and no/wrong password provided
 		"""
 		# First, try smart processing (direct extraction for text-based PDFs)
 		pdf_type = self.pdf_processor.detect_pdf_type(file_path) \
 			if not self.pdf_processor.is_image_file(file_path) else 'image'
+
+		# Handle encrypted PDFs
+		if pdf_type == PDFProcessor.PDF_TYPE_ENCRYPTED:
+			if not password:
+				logger.warning(f"[Retry] Encrypted PDF detected, no password available")
+				raise PDFPasswordRequired(
+					"Plik PDF jest zabezpieczony hasłem. "
+					"Dodaj hasło dla tego sprzedawcy w ustawieniach."
+				)
+			# Try to unlock and extract with password
+			logger.info("[Retry] Encrypted PDF detected, attempting unlock with password")
+			try:
+				raw_text, confidence = self.pdf_processor.extract_text_direct(file_path, password=password)
+				extracted_data = self.text_extractor.extract_invoice_data(raw_text)
+				return raw_text, confidence, 'password_unlock', extracted_data
+			except ValueError as e:
+				# Wrong password
+				raise PDFPasswordRequired(str(e))
+			except Exception:
+				# Unlocked but extraction failed — try OCR with password
+				logger.info("[Retry] Direct extraction failed after unlock, trying OCR")
+				raw_text, confidence = self.pdf_processor.extract_text_from_pdf_with_password(file_path, password)
+				extracted_data = self.text_extractor.extract_invoice_data(raw_text)
+				return raw_text, confidence, 'password_ocr', extracted_data
 
 		if pdf_type == PDFProcessor.PDF_TYPE_TEXT:
 			# Text-based PDF - use direct extraction, no retry needed

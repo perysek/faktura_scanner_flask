@@ -60,6 +60,11 @@ class SellerRepository(BaseRepository):
         query = "SELECT * FROM sellers WHERE seller_nip = %s"
         return self._fetch_one(query, (nip,))
     
+    def find_by_exact_name(self, name: str) -> Optional[Any]:
+        """Znajdź sprzedawcę po dokładnej nazwie (case-insensitive)"""
+        query = "SELECT * FROM sellers WHERE LOWER(seller_name) = LOWER(%s)"
+        return self._fetch_one(query, (name,))
+
     def find_by_name(self, name: str) -> List[Any]:
         """Wyszukaj sprzedawców po nazwie lub NIP (fuzzy matching)"""
         query = """

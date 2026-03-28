@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 
 from config.auth_config import module_permission_required
 from database.models import Invoice
+from services.ocr_service import PDFPasswordRequired
 from utils.validators import DateParser
 from repositories.audit_repository import AuditRepository
 
@@ -1012,8 +1013,17 @@ def upload_files():
 
                 # Process PDF
                 try:
-                    # Extract data using OCR
-                    extracted_data = current_app.ocr_service.process_pdf(str(file_path))
+                    # Extract data using OCR (with password fallback for encrypted PDFs)
+                    try:
+                        extracted_data = current_app.ocr_service.process_pdf(str(file_path))
+                    except PDFPasswordRequired:
+                        results.append({
+                            'filename': filename,
+                            'success': False,
+                            'error': 'Plik PDF jest zabezpieczony hasłem. Dodaj hasło w Sprzedawcy → Hasła PDF.',
+                            'error_type': 'password_required',
+                        })
+                        continue
 
                     # Parse dates from strings to date objects
                     invoice_date = parse_date_string(extracted_data.get('issue_date'))
@@ -1032,6 +1042,28 @@ def upload_files():
                         else:
                             # Try to parse as date
                             payment_due_date = parse_date_string(payment_due_date_str)
+
+                    # Enrich seller data from sellers table
+                    seller_nip = extracted_data.get('seller_nip')
+                    seller_name_ocr = (extracted_data.get('seller_name') or '').strip()
+                    if seller_nip:
+                        try:
+                            normalized_nip = current_app.seller_service.normalize_nip(seller_nip)
+                            existing_seller_row = current_app.seller_repo.find_by_nip(normalized_nip)
+                            if existing_seller_row:
+                                extracted_data['seller_name'] = existing_seller_row['seller_name']
+                                logger.info(f"[UPLOAD] Enriched seller_name from DB: {existing_seller_row['seller_name']} (NIP: {normalized_nip})")
+                        except Exception as e:
+                            logger.warning(f"[UPLOAD] Seller NIP lookup for enrichment failed: {e}")
+                    elif seller_name_ocr:
+                        # No NIP extracted — try to find seller by name and fill NIP
+                        try:
+                            existing_seller_row = current_app.seller_repo.find_by_exact_name(seller_name_ocr)
+                            if existing_seller_row and existing_seller_row.get('seller_nip'):
+                                extracted_data['seller_nip'] = existing_seller_row['seller_nip']
+                                logger.info(f"[UPLOAD] Enriched seller_nip from DB: {existing_seller_row['seller_nip']} (name: {seller_name_ocr})")
+                        except Exception as e:
+                            logger.warning(f"[UPLOAD] Seller name lookup for enrichment failed: {e}")
 
                     # Create invoice object (matching Invoice dataclass fields)
                     invoice = Invoice(

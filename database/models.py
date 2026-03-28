@@ -42,6 +42,18 @@ class Seller:
 
 
 @dataclass
+class SellerPdfPassword:
+    """Model hasła PDF sprzedawcy — do automatycznego odblokowywania zaszyfrowanych faktur"""
+    pdf_password: str
+    seller_id: Optional[int] = None
+    email_sender_pattern: Optional[str] = None  # e.g. "noreply@axpo.pl" or "%@enea.pl"
+    description: Optional[str] = None
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+@dataclass
 class AuditEntry:
     """Model wpisu historii zmian — obsługuje wszystkie encje aplikacji"""
     entity_type: str                   # invoice, appointment, client, service, employee, seller, import, login
