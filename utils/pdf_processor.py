@@ -93,6 +93,9 @@ class PDFProcessor:
 	# PDF Type Detection and Hybrid Processing
 	# =========================================================================
 
+	# PDF type constants for encrypted/password-protected files
+	PDF_TYPE_ENCRYPTED = 'encrypted'
+
 	def detect_pdf_type(self, pdf_path: str) -> str:
 		"""
 		Detect if PDF has extractable text or needs OCR.
@@ -101,6 +104,7 @@ class PDFProcessor:
 			'text' - Digitally generated PDF with extractable text (no OCR needed)
 			'image' - Scanned/image-based PDF (OCR required)
 			'mixed' - Contains both text and image pages
+			'encrypted' - Password-protected PDF that cannot be read
 		"""
 		if not PYMUPDF_AVAILABLE:
 			logger.warning("[PDF Type] PyMuPDF not available, defaulting to OCR")
@@ -108,13 +112,32 @@ class PDFProcessor:
 
 		try:
 			doc = fitz.open(pdf_path)
+
+			# Check for encrypted/password-protected PDF
+			if doc.is_encrypted:
+				logger.warning(f"[PDF Type] ENCRYPTED PDF detected: {pdf_path}")
+				doc.close()
+				return self.PDF_TYPE_ENCRYPTED
+
 			total_pages = len(doc)
+
+			# Handle empty/corrupt PDFs (0 pages)
+			if total_pages == 0:
+				logger.warning(f"[PDF Type] PDF has 0 pages (corrupt or encrypted): {pdf_path}")
+				doc.close()
+				return self.PDF_TYPE_ENCRYPTED
+
 			pages_with_text = 0
+			has_mupdf_errors = False
 			min_text_chars = 100  # Minimum characters to consider page as text-based
 
 			for page_num, page in enumerate(doc):
 				text = page.get_text().strip()
 				text_len = len(text)
+
+				# Detect MuPDF error messages in extracted text (sign of corrupt/encrypted streams)
+				if 'MuPDF error' in text or 'zlib error' in text or 'corrupt object' in text:
+					has_mupdf_errors = True
 
 				if text_len >= min_text_chars:
 					pages_with_text += 1
@@ -123,6 +146,11 @@ class PDFProcessor:
 					logger.debug(f"[PDF Type] Page {page_num + 1}: {text_len} chars (image/scan)")
 
 			doc.close()
+
+			# If only MuPDF errors were found and no real text, treat as encrypted
+			if has_mupdf_errors and pages_with_text == 0:
+				logger.warning(f"[PDF Type] ENCRYPTED PDF (MuPDF errors, no readable text): {pdf_path}")
+				return self.PDF_TYPE_ENCRYPTED
 
 			# Determine PDF type based on text coverage
 			if pages_with_text == total_pages:
@@ -139,13 +167,42 @@ class PDFProcessor:
 			logger.error(f"[PDF Type] Detection failed: {e}, defaulting to OCR")
 			return self.PDF_TYPE_IMAGE
 
-	def extract_text_direct(self, pdf_path: str) -> Tuple[str, float]:
+	def try_unlock_pdf(self, pdf_path: str, password: str) -> bool:
+		"""
+		Try to open an encrypted PDF with a password.
+
+		Returns:
+			True if password works, False otherwise
+		"""
+		if not PYMUPDF_AVAILABLE:
+			return False
+		try:
+			doc = fitz.open(pdf_path)
+			if not doc.is_encrypted:
+				doc.close()
+				return True
+			result = doc.authenticate(password)
+			doc.close()
+			return result != 0  # 0 = failed, non-zero = success
+		except Exception as e:
+			logger.warning(f"[PDF Unlock] Error testing password: {e}")
+			return False
+
+	def extract_text_direct(self, pdf_path: str, password: str = None) -> Tuple[str, float]:
 		"""
 		Direct text extraction from text-based PDF (no OCR).
 		Much faster and more accurate for digitally generated PDFs.
 
+		Args:
+			pdf_path: Path to PDF file
+			password: Optional password for encrypted PDFs
+
 		Returns:
-			Tuple[str, float]: (extracted_text, confidence=100.0)
+			Tuple[str, float]: (extracted_text, confidence)
+
+		Raises:
+			ValueError: If PDF is encrypted and no/wrong password provided
+			Exception: On other extraction errors
 		"""
 		if not PYMUPDF_AVAILABLE:
 			raise RuntimeError("PyMuPDF not available for direct text extraction")
@@ -154,6 +211,18 @@ class PDFProcessor:
 
 		try:
 			doc = fitz.open(pdf_path)
+
+			# Handle encrypted PDF
+			if doc.is_encrypted:
+				if not password:
+					doc.close()
+					raise ValueError("PDF jest zabezpieczony hasłem")
+				auth_result = doc.authenticate(password)
+				if auth_result == 0:
+					doc.close()
+					raise ValueError("Nieprawidłowe hasło do PDF")
+				logger.info(f"[Direct Extract] PDF unlocked with password")
+
 			text_parts = []
 			max_pages = 2  # Same limit as OCR processing
 
@@ -168,10 +237,24 @@ class PDFProcessor:
 			doc.close()
 
 			full_text = "\n\n--- STRONA ---\n\n".join(text_parts)
+
+			# Guard: reject empty or error-only extractions
+			clean_text = full_text.strip()
+			if not clean_text or len(clean_text) < 10:
+				logger.warning(f"[Direct Extract] Extraction produced empty/near-empty text ({len(clean_text)} chars)")
+				raise Exception("Ekstrakcja tekstu z PDF nie zwróciła żadnych danych")
+
+			# Guard: reject text that contains only MuPDF errors
+			if 'MuPDF error' in clean_text and len(clean_text.replace('MuPDF error', '').strip()) < 50:
+				logger.warning(f"[Direct Extract] Extraction produced only MuPDF errors")
+				raise Exception("PDF zawiera uszkodzone strumienie danych — plik może być zaszyfrowany")
+
 			logger.info(f"[Direct Extract] Extracted {len(full_text)} total chars, confidence=100%")
 
 			return full_text, 100.0
 
+		except ValueError:
+			raise  # Re-raise password errors
 		except Exception as e:
 			logger.error(f"[Direct Extract] Failed: {e}")
 			raise Exception(f"Błąd ekstrakcji tekstu z PDF: {str(e)}")
@@ -601,7 +684,29 @@ class PDFProcessor:
 			) if confidences else 0
 		
 		return full_text, avg_confidence
-	
+
+	def extract_text_from_pdf_with_password(self, pdf_path: str, password: str) -> Tuple[str, float]:
+		"""
+		OCR extraction from password-protected PDF.
+		Unlocks with password, converts pages to images, then runs OCR.
+		"""
+		logger.info(f"[PDF+Password] Starting OCR with password for: {pdf_path}")
+		images = self.pdf_to_images(pdf_path, userpw=password)
+
+		all_text = []
+		confidences = []
+
+		for i, image in enumerate(images):
+			logger.info(f"  Przetwarzanie strony {i + 1}/{len(images)}...")
+			text, confidence = self.extract_text_with_confidence(image)
+			all_text.append(text)
+			confidences.append(confidence)
+
+		full_text = "\n\n--- STRONA ---\n\n".join(all_text)
+		avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+
+		return full_text, avg_confidence
+
 	def extract_text_from_image_file(self, image_path: str) -> Tuple[str, float]:
 		"""
 		Ekstrakcja tekstu z pliku graficznego (JPG, PNG, TIFF, BMP)

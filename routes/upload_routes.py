@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 from config.auth_config import module_permission_required
 from config.database import DatabaseConnection
 from database.models import Invoice, UploadStaging
+from services.ocr_service import PDFPasswordRequired
 from utils.validators import DateParser
 
 upload_bp = Blueprint('upload', __name__)
@@ -303,9 +304,40 @@ def process_staged_files():
                     # Preprocessing & OCR
                     yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'OCR: Rozpoznawanie tekstu...', 'percent': 20})}\n\n"
                     logger.info(f"[PROCESS] Processing file: {staging.filename}")
-                    
-                    # Call OCR service
-                    extracted_data = ocr_service.process_pdf(str(file_path))
+
+                    # Call OCR service — with password auto-lookup for encrypted PDFs
+                    try:
+                        extracted_data = ocr_service.process_pdf(str(file_path))
+                    except PDFPasswordRequired:
+                        # Encrypted PDF — try to find password from email sender
+                        pdf_password = None
+                        if staging.email_sender:
+                            pdf_password = current_app.seller_password_repo.find_password_for_file(
+                                email_sender=staging.email_sender
+                            )
+                            if pdf_password:
+                                logger.info(f"[PROCESS] Found PDF password for email sender: {staging.email_sender}")
+
+                        if not pdf_password:
+                            # No password available — report error to user
+                            error_msg = (
+                                f"Plik PDF jest zabezpieczony hasłem. "
+                                f"Dodaj hasło w Sprzedawcy → Hasła PDF"
+                                f"{' (nadawca: ' + staging.email_sender + ')' if staging.email_sender else ''}."
+                            )
+                            error_res = {
+                                'filename': staging.filename,
+                                'success': False,
+                                'error': error_msg,
+                                'error_type': 'password_required',
+                                'email_sender': staging.email_sender,
+                            }
+                            yield f"data: {json.dumps({'type': 'file_complete', 'result': error_res})}\n\n"
+                            continue
+
+                        # Retry with password
+                        yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'Odblokowywanie PDF hasłem...', 'percent': 30})}\n\n"
+                        extracted_data = ocr_service.process_pdf(str(file_path), password=pdf_password)
                     
                     yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'Ekstrakcja danych...', 'percent': 60})}\n\n"
                     
@@ -324,9 +356,31 @@ def process_staged_files():
                         else:
                             payment_due_date = parse_date_string(payment_due_date_str)
                     
+                    # Enrich seller data from sellers table
+                    seller_nip = extracted_data.get('seller_nip')
+                    seller_name_ocr = (extracted_data.get('seller_name') or '').strip()
+                    if seller_nip:
+                        try:
+                            normalized_nip = current_app.seller_service.normalize_nip(seller_nip)
+                            existing_seller = current_app.seller_repo.find_by_nip(normalized_nip)
+                            if existing_seller:
+                                extracted_data['seller_name'] = existing_seller['seller_name']
+                                logger.info(f"[PROCESS] Enriched seller_name from DB: {existing_seller['seller_name']} (NIP: {normalized_nip})")
+                        except Exception as e:
+                            logger.warning(f"[PROCESS] Seller NIP lookup for enrichment failed: {e}")
+                    elif seller_name_ocr:
+                        # No NIP extracted — try to find seller by name and fill NIP
+                        try:
+                            existing_seller = current_app.seller_repo.find_by_exact_name(seller_name_ocr)
+                            if existing_seller and existing_seller.get('seller_nip'):
+                                extracted_data['seller_nip'] = existing_seller['seller_nip']
+                                logger.info(f"[PROCESS] Enriched seller_nip from DB: {existing_seller['seller_nip']} (name: {seller_name_ocr})")
+                        except Exception as e:
+                            logger.warning(f"[PROCESS] Seller name lookup for enrichment failed: {e}")
+
                     # Create invoice object
                     yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'Walidacja...', 'percent': 80})}\n\n"
-                    
+
                     invoice = Invoice(
                         seller_name=extracted_data.get('seller_name', ''),
                         invoice_number=extracted_data.get('invoice_number', ''),
@@ -480,7 +534,7 @@ def finalize_uploads():
                 is_duplicate=False
             )
 
-            # Seller lookup/creation (same logic as /api/upload endpoint)
+            # Seller lookup/creation
             seller_id = None
             if invoice.seller_nip:
                 try:
@@ -491,15 +545,37 @@ def finalize_uploads():
                     )
 
                     if conflict:
+                        # Use existing seller's name for the invoice
+                        existing_seller = conflict.get('existing_seller')
+                        if existing_seller:
+                            invoice.seller_name = existing_seller.seller_name
                         # Add conflict warning but continue saving
                         seller_warnings.append({
                             'filename': filename,
                             'message': conflict['message']
                         })
+                    elif not created:
+                        # Existing seller found (no conflict) — use DB name
+                        existing_row = current_app.seller_repo.find_by_nip(
+                            current_app.seller_service.normalize_nip(invoice.seller_nip)
+                        )
+                        if existing_row:
+                            invoice.seller_name = existing_row['seller_name']
                     elif created:
                         logger.info(f"[FINALIZE] Created new seller: {invoice.seller_name} (NIP: {invoice.seller_nip})")
                 except Exception as e:
                     logger.warning(f"[FINALIZE] Seller lookup failed for {filename}: {str(e)}")
+            elif invoice.seller_name and invoice.seller_name != '(brak danych)':
+                # No NIP but have name — try to find seller by name and fill NIP + link
+                try:
+                    existing_row = current_app.seller_repo.find_by_exact_name(invoice.seller_name)
+                    if existing_row:
+                        seller_id = existing_row['id']
+                        if existing_row.get('seller_nip'):
+                            invoice.seller_nip = existing_row['seller_nip']
+                        logger.info(f"[FINALIZE] Linked seller by name: {invoice.seller_name} → ID {seller_id}")
+                except Exception as e:
+                    logger.warning(f"[FINALIZE] Seller name lookup failed for {filename}: {str(e)}")
 
             # Save to database with seller_id
             invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)

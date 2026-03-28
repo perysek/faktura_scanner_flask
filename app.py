@@ -38,6 +38,7 @@ from repositories.invoice_repository import InvoiceRepository
 from repositories.audit_repository import AuditRepository
 from repositories.upload_staging_repository import UploadStagingRepository
 from repositories.seller_repository import SellerRepository
+from repositories.seller_password_repository import SellerPasswordRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_repository import ServiceRepository
 from repositories.employees.employee_repository import EmployeeRepository
@@ -123,6 +124,7 @@ def create_app():
     app.audit_repo = AuditRepository()
     app.staging_repo = UploadStagingRepository()
     app.seller_repo = SellerRepository()
+    app.seller_password_repo = SellerPasswordRepository()
     app.client_repo = ClientRepository()
     app.service_repo = ServiceRepository()
     app.employee_repo = EmployeeRepository()
