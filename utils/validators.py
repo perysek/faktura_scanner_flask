@@ -43,40 +43,64 @@ class NIPValidator:
 
 
 class IBANValidator:
-	"""Walidator IBAN (międzynarodowy numer konta)"""
-	
+	"""Walidator IBAN (międzynarodowy numer konta) — P2-6: supports EU IBANs"""
+
+	# IBAN length per country (ISO 13616)
+	IBAN_LENGTHS = {
+		'AL': 28, 'AD': 24, 'AT': 20, 'AZ': 28, 'BH': 22, 'BY': 28,
+		'BE': 16, 'BA': 20, 'BR': 29, 'BG': 22, 'CR': 22, 'HR': 21,
+		'CY': 28, 'CZ': 24, 'DK': 18, 'DO': 28, 'TL': 23, 'EE': 20,
+		'FO': 18, 'FI': 18, 'FR': 27, 'GE': 22, 'DE': 22, 'GI': 23,
+		'GR': 27, 'GL': 18, 'GT': 28, 'HU': 28, 'IS': 26, 'IQ': 23,
+		'IE': 22, 'IL': 23, 'IT': 27, 'JO': 30, 'KZ': 20, 'XK': 20,
+		'KW': 30, 'LV': 21, 'LB': 28, 'LI': 21, 'LT': 20, 'LU': 20,
+		'MT': 31, 'MR': 27, 'MU': 30, 'MC': 27, 'MD': 24, 'ME': 22,
+		'NL': 18, 'MK': 19, 'NO': 15, 'PK': 24, 'PS': 29, 'PL': 28,
+		'PT': 25, 'QA': 29, 'RO': 24, 'LC': 32, 'SM': 27, 'ST': 25,
+		'SA': 24, 'RS': 22, 'SC': 31, 'SK': 24, 'SI': 19, 'ES': 24,
+		'SE': 24, 'CH': 21, 'TN': 24, 'TR': 26, 'UA': 29, 'AE': 23,
+		'GB': 22, 'VA': 22, 'VG': 24,
+	}
+
 	@staticmethod
 	def clean_iban(iban: str) -> str:
 		"""Usuń białe znaki z IBAN"""
 		return re.sub(r'\s', '', iban.upper())
-	
-	@staticmethod
-	def validate(iban: str) -> bool:
+
+	@classmethod
+	def validate(cls, iban: str) -> bool:
 		"""
-		Waliduj IBAN używając algorytmu mod-97
+		Waliduj IBAN używając algorytmu mod-97.
+		Supports all EU/international IBAN formats (not just Polish).
 		"""
 		if not iban:
 			return False
-		
-		iban = IBANValidator.clean_iban(iban)
-		
-		# Polski IBAN: PL + 26 cyfr
-		if not re.match(r'^PL\d{26}$', iban):
+
+		iban = cls.clean_iban(iban)
+
+		# Must start with 2 letters + 2 check digits
+		if not re.match(r'^[A-Z]{2}\d{2}', iban):
 			return False
-		
+
+		# Validate length for known country
+		country = iban[:2]
+		expected_len = cls.IBAN_LENGTHS.get(country)
+		if expected_len and len(iban) != expected_len:
+			return False
+
+		# Validate all remaining chars are alphanumeric
+		if not re.match(r'^[A-Z0-9]+$', iban):
+			return False
+
 		# Algorytm mod-97
-		# Przenieś pierwsze 4 znaki na koniec
 		rearranged = iban[4:] + iban[:4]
-		
-		# Zamień litery na cyfry (A=10, B=11, ..., Z=35)
 		numeric = ''
 		for char in rearranged:
 			if char.isdigit():
 				numeric += char
 			else:
 				numeric += str(ord(char) - ord('A') + 10)
-		
-		# Sprawdź mod 97
+
 		return int(numeric) % 97 == 1
 
 

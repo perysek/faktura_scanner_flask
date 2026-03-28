@@ -2,6 +2,7 @@
 Repository dla faktur
 """
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, List, Optional
 
 from database.models import Invoice
@@ -387,7 +388,7 @@ class InvoiceRepository(BaseRepository):
 			invoice_number=row["invoice_number"],
 			invoice_date=parse_date(row["invoice_date"]),
 			bank_account=row["bank_account"],
-			amount=row["amount"],
+			amount=Decimal(str(row["amount"])) if row["amount"] is not None else Decimal(0),
 			currency=row["currency"],
 			payment_due_date=parse_date(row["payment_due_date"]),
 			payment_term=payment_term,

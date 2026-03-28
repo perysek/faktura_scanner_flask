@@ -3,6 +3,7 @@ API routes - JSON endpoints for AJAX calls
 """
 import tempfile
 from datetime import datetime, date
+from decimal import Decimal
 from pathlib import Path
 from typing import Optional
 
@@ -309,7 +310,7 @@ def create_invoice_manual():
             seller_name=data.get('seller_name'),
             seller_nip=data.get('seller_nip'),
             invoice_date=parse_date_string(data.get('invoice_date')),
-            amount=float(data.get('amount', 0)),
+            amount=Decimal(str(data.get('amount', 0))),
             currency=data.get('currency', 'PLN'),
             status=data.get('status', 'Nieopłacona'),
             payment_due_date=parse_date_string(data.get('payment_due_date')) if data.get('payment_due_date') else None,
@@ -1037,7 +1038,7 @@ def upload_files():
                         seller_name=extracted_data.get('seller_name', ''),
                         invoice_number=extracted_data.get('invoice_number', ''),
                         invoice_date=invoice_date,
-                        amount=extracted_data.get('total_amount', 0.0),
+                        amount=Decimal(str(extracted_data.get('total_amount') or 0)),
                         currency=extracted_data.get('currency', 'PLN'),
                         seller_nip=extracted_data.get('seller_nip'),
                         bank_account=extracted_data.get('bank_account'),

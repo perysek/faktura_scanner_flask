@@ -9,6 +9,7 @@ import shutil
 import traceback
 import uuid
 from datetime import datetime, date
+from decimal import Decimal
 from pathlib import Path
 from typing import Optional
 
@@ -330,7 +331,7 @@ def process_staged_files():
                         seller_name=extracted_data.get('seller_name', ''),
                         invoice_number=extracted_data.get('invoice_number', ''),
                         invoice_date=invoice_date,
-                        amount=extracted_data.get('total_amount', 0.0),
+                        amount=Decimal(str(extracted_data.get('total_amount') or 0)),
                         currency=extracted_data.get('currency', 'PLN'),
                         seller_nip=extracted_data.get('seller_nip'),
                         bank_account=extracted_data.get('bank_account'),
@@ -467,7 +468,7 @@ def finalize_uploads():
                 seller_name=seller_name,
                 invoice_number=invoice_number,
                 invoice_date=invoice_date,
-                amount=extracted_data.get('total_amount', 0.0),
+                amount=Decimal(str(extracted_data.get('total_amount') or 0)),
                 currency=extracted_data.get('currency', 'PLN'),
                 seller_nip=extracted_data.get('seller_nip'),
                 bank_account=extracted_data.get('bank_account'),

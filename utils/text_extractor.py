@@ -103,13 +103,18 @@ class TextExtractor:
 
 		data = {
 			'seller_name': self._extract_seller_name(text),
-			'invoice_number': self._extract_field(text, 'invoice_number'),
+			'invoice_number': self._extract_invoice_number(text),
 			'seller_nip': self._extract_field(text, 'nip'),
 			'bank_account': bank_account,
 			'amount': self._extract_amount(text),
+			'net_amount': self._extract_net_amount(text),
+			'vat_amount': self._extract_vat_amount(text),
 			'currency': self._extract_currency(text, bank_account),
 			'invoice_date': self._extract_invoice_date(text),
+			'sale_date': self._extract_sale_date(text),
 			'payment_due_date': self._extract_payment_due_date(text),
+			'payment_method': self._extract_payment_method(text),
+			'seller_address': self._extract_seller_address(text),
 			}
 
 		return data
@@ -453,35 +458,145 @@ class TextExtractor:
 			except ValueError:
 				pass
 
-		# PRIORYTET 3: Szukaj wszystkich kwot w tekście i weź największą
-		# PDF jest już ograniczony do max 2 stron w pdf_processor.py
+		# PRIORYTET 3: Keyword-proximity search near total/sum words
+		# P2-3: Do NOT blindly take the largest amount — look for contextual clues
+		total_keywords = [
+			'Razem', 'Suma', 'Total', 'Ogółem', 'OGÓŁEM', 'SUMA',
+			'Łącznie', 'Zapłata', 'Wartość brutto'
+		]
+		lines = text.split('\n')
+		for i, line in enumerate(lines):
+			if any(kw.lower() in line.lower() for kw in total_keywords):
+				# Search this line and the next for an amount
+				search_ctx = '\n'.join(lines[i:min(i + 2, len(lines))])
+				amount_match = re.search(
+					r'(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)?',
+					search_ctx
+				)
+				if amount_match:
+					val = self._parse_amount_str(amount_match.group(1))
+					if val and val > 1.0:
+						return val
 
-		# Wzorzec dla kwot: liczba z 2 miejscami po przecinku + zł lub PLN
-		all_amounts_pattern = r'(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)'
-		matches = re.findall(all_amounts_pattern, text, re.IGNORECASE)
-
-		if matches:
-			amounts = []
-			for match in matches:
-				try:
-					# Konwersja na float
-					amount_str = match.replace(' ', '').replace('\u00a0', '')
-					amount_str = amount_str.replace(',', '.')
-					amount = float(amount_str)
-					# Filtruj bardzo małe kwoty (prawdopodobnie stawki VAT, np. 23%)
-					if amount > 1.0:  # Ignoruj kwoty poniżej 1 zł
-						amounts.append(amount)
-				except ValueError:
-					continue
-
-			if amounts:
-				# Zwróć największą kwotę (brutto)
-				max_amount = max(amounts)
-				print(f"  [PLN] Znaleziono najwieksza kwote: {max_amount:.2f} zl")
-				return max_amount
+		# Last resort: amounts with explicit currency symbol nearby
+		currency_amounts = re.findall(
+			r'(\d+[\s\u00a0]?\d*[,\.]\d{2})[\s]*(?:zł|PLN)',
+			text, re.IGNORECASE
+		)
+		if currency_amounts:
+			parsed = [self._parse_amount_str(a) for a in currency_amounts]
+			valid = [a for a in parsed if a and a > 1.0]
+			if valid:
+				return max(valid)
 
 		return None
 	
+	# ── P2-4: Invoice number with false-positive filtering ──
+	def _extract_invoice_number(self, text: str) -> Optional[str]:
+		"""Extract invoice number with negative filtering for NIP/IBAN/account refs."""
+		candidate = self._extract_field(text, 'invoice_number')
+		if not candidate:
+			return None
+
+		# Reject if it looks like a NIP (10 digits with optional dashes)
+		clean = candidate.replace('-', '').replace('/', '').replace(' ', '')
+		if re.match(r'^\d{10}$', clean):
+			return None
+
+		# Reject if it starts with known non-invoice prefixes
+		upper = candidate.upper()
+		for prefix in ['NIP', 'IBAN', 'KONTO', 'TEL', 'FAX', 'KRS']:
+			if upper.startswith(prefix):
+				return None
+
+		return candidate
+
+	# ── P2-1: Net amount extraction ──
+	def _extract_net_amount(self, text: str) -> Optional[float]:
+		"""Extract net amount (netto) from invoice text."""
+		patterns = [
+			r'(?:Wartość\s+netto|Netto|Razem\s+netto|Net\s+amount)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})',
+			r'(?:NETTO)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})',
+		]
+		for pattern in patterns:
+			match = re.search(pattern, text, re.IGNORECASE)
+			if match:
+				return self._parse_amount_str(match.group(1))
+		return None
+
+	# ── P2-1: VAT amount extraction ──
+	def _extract_vat_amount(self, text: str) -> Optional[float]:
+		"""Extract VAT amount from invoice text."""
+		patterns = [
+			r'(?:Kwota\s+VAT|Wartość\s+VAT|VAT|Podatek\s+VAT|Razem\s+VAT)[\s:.]*([\d\s\u00a0]+[,\.]\d{2})',
+		]
+		for pattern in patterns:
+			match = re.search(pattern, text, re.IGNORECASE)
+			if match:
+				return self._parse_amount_str(match.group(1))
+		return None
+
+	# ── P2-1: Sale date extraction ──
+	def _extract_sale_date(self, text: str) -> Optional[str]:
+		"""Extract sale date (data sprzedaży) — distinct from invoice issue date."""
+		keywords = ['Data sprzedaży', 'Data sprzedazy', 'Data transakcji', 'Sale date']
+		lines = text.split('\n')
+		for i, line in enumerate(lines):
+			if any(kw.lower() in line.lower() for kw in keywords):
+				search_text = line + '\n' + (lines[i + 1] if i + 1 < len(lines) else '')
+				date_str = self._extract_date_from_text(search_text)
+				if date_str:
+					return date_str
+		return None
+
+	# ── P2-1: Payment method extraction ──
+	def _extract_payment_method(self, text: str) -> Optional[str]:
+		"""Extract payment method (forma płatności)."""
+		patterns = [
+			r'(?:Forma\s+płatności|Forma\s+platnosci|Metoda\s+płatności|Sposób\s+płatności|Payment\s+method)[\s:.]*([\w\s/]+?)(?:\n|$)',
+		]
+		for pattern in patterns:
+			match = re.search(pattern, text, re.IGNORECASE)
+			if match:
+				value = match.group(1).strip()
+				# Trim to first meaningful phrase
+				value = re.split(r'\s{2,}|\n', value)[0].strip()
+				if value and len(value) > 1:
+					return value
+		# Check for za pobraniem
+		if re.search(r'\b(za\s+pobraniem|pobranie)\b', text, re.IGNORECASE):
+			return 'POBRANIE'
+		return None
+
+	# ── P2-1: Seller address extraction ──
+	def _extract_seller_address(self, text: str) -> Optional[str]:
+		"""Extract seller address (lines after seller name with postal code pattern)."""
+		lines = text.split('\n')
+		seller_keywords = ['Sprzedawca', 'Wystawca', 'Seller']
+		buyer_keywords = ['Nabywca', 'Buyer', 'Płatnik']
+
+		for i, line in enumerate(lines):
+			if any(kw.lower() in line.lower() for kw in seller_keywords):
+				# Search next few lines for address pattern (postal code)
+				for j in range(i + 1, min(i + 6, len(lines))):
+					candidate = lines[j].strip()
+					if any(kw.lower() in candidate.lower() for kw in buyer_keywords):
+						break
+					# Polish postal code: XX-XXX
+					if re.search(r'\d{2}-\d{3}', candidate):
+						return candidate
+		return None
+
+	@staticmethod
+	def _parse_amount_str(amount_str: str) -> Optional[float]:
+		"""Parse Polish amount string to float."""
+		amount_str = amount_str.replace(' ', '').replace('\u00a0', '').replace(',', '.')
+		try:
+			val = float(amount_str)
+			return val if val > 0 else None
+		except ValueError:
+			return None
+
 	def _extract_currency(self, text: str, bank_account: Optional[str] = None) -> str:
 		"""
 		Ekstraktuj walutę z tekstu i numeru konta
@@ -612,23 +727,49 @@ class TextExtractor:
 	}
 
 	def _normalize_date(self, date_str: str) -> Optional[str]:
-		"""Konwertuj różne formaty dat na ISO (YYYY-MM-DD)"""
-		# Standard formats
-		formats = [
-			'%Y-%m-%d',
-			'%Y.%m.%d',  # YYYY.MM.DD format
-			'%d.%m.%Y',
-			'%d/%m/%Y',
-			'%d-%m-%Y',
-			]
-		
-		for fmt in formats:
+		"""
+		Konwertuj różne formaty dat na ISO (YYYY-MM-DD).
+		P2-2: Context-aware disambiguation for dot-separated dates.
+		Polish invoices overwhelmingly use DD.MM.YYYY for dot format.
+		"""
+		# ISO format (unambiguous)
+		try:
+			dt = datetime.strptime(date_str, '%Y-%m-%d')
+			if self._is_valid_invoice_date(dt):
+				return dt.strftime('%Y-%m-%d')
+		except ValueError:
+			pass
+
+		# Dot-separated: disambiguate YYYY.MM.DD vs DD.MM.YYYY
+		dot_match = re.match(r'^(\d{2,4})\.(\d{2})\.(\d{2,4})$', date_str)
+		if dot_match:
+			a, b, c = dot_match.group(1), dot_match.group(2), dot_match.group(3)
+			# If first part is 4 digits and > 1900: YYYY.MM.DD
+			if len(a) == 4 and int(a) >= 1900:
+				try:
+					dt = datetime.strptime(date_str, '%Y.%m.%d')
+					if self._is_valid_invoice_date(dt):
+						return dt.strftime('%Y-%m-%d')
+				except ValueError:
+					pass
+			# If last part is 4 digits: DD.MM.YYYY (dominant Polish format)
+			if len(c) == 4:
+				try:
+					dt = datetime.strptime(date_str, '%d.%m.%Y')
+					if self._is_valid_invoice_date(dt):
+						return dt.strftime('%Y-%m-%d')
+				except ValueError:
+					pass
+
+		# Slash and dash European formats
+		for fmt in ['%d/%m/%Y', '%d-%m-%Y']:
 			try:
 				dt = datetime.strptime(date_str, fmt)
-				return dt.strftime('%Y-%m-%d')
+				if self._is_valid_invoice_date(dt):
+					return dt.strftime('%Y-%m-%d')
 			except ValueError:
 				continue
-		
+
 		# Try Polish text month format (e.g., "15 stycznia 2024")
 		try:
 			parts = date_str.lower().split()
@@ -636,9 +777,14 @@ class TextExtractor:
 				day = int(parts[0])
 				month = self.POLISH_MONTHS.get(parts[1])
 				year = int(parts[2])
-				if month and 1 <= day <= 31 and 1900 <= year <= 2100:
+				if month and 1 <= day <= 31 and 2000 <= year <= 2099:
 					return f"{year:04d}-{month:02d}-{day:02d}"
 		except (ValueError, AttributeError):
 			pass
-		
+
 		return None
+
+	@staticmethod
+	def _is_valid_invoice_date(dt: datetime) -> bool:
+		"""P2-2: Validate parsed date is in reasonable invoice range (2000-2099)."""
+		return 2000 <= dt.year <= 2099

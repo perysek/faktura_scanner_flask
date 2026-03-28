@@ -14,7 +14,7 @@ class Invoice:
     seller_name: str
     invoice_number: str
     invoice_date: date
-    amount: float
+    amount: Decimal
     currency: str = "PLN"
     seller_nip: Optional[str] = None
     bank_account: Optional[str] = None
