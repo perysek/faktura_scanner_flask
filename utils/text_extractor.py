@@ -1,9 +1,12 @@
 """
 Ekstrakcja danych z tekstu faktury (regex patterns dla polskich faktur)
 """
+import logging
 import re
 from datetime import datetime
 from typing import Optional, Dict
+
+logger = logging.getLogger(__name__)
 
 
 class TextExtractor:
@@ -150,9 +153,9 @@ class TextExtractor:
 
 		# Log missing fields for debugging
 		if missing_details:
-			print(f"  [Fields] Missing: {', '.join(missing_details)} = score {missing_score}")
+			logger.debug(f"[Fields] Missing: {', '.join(missing_details)} = score {missing_score}")
 		else:
-			print(f"  [Fields] All critical/important fields extracted")
+			logger.debug("[Fields] All critical/important fields extracted")
 
 		# Round up to get integer count
 		import math
@@ -233,7 +236,7 @@ class TextExtractor:
 		# Handle OCR errors: 25-28 digits (missing or extra digit)
 		# Still prepend PL but keep the raw digits - validation can catch issues
 		if re.match(r'^\d{25,28}$', clean_account):
-			print(f"  [IBAN] Non-standard digit count: {len(clean_account)}, keeping as-is")
+			logger.debug(f"[IBAN] Non-standard digit count: {len(clean_account)}, keeping as-is")
 			return f'PL{clean_account}'
 
 		# Return original if we can't determine the format
@@ -438,7 +441,7 @@ class TextExtractor:
 					try:
 						amount = float(amount_str)
 						if amount > 1.0:  # Ignoruj bardzo małe kwoty
-							print(f"  [PLN] Znaleziono 'Kwota do zaplaty': {amount:.2f} zl")
+							logger.debug(f"[PLN] Znaleziono 'Kwota do zaplaty': {amount:.2f} zl")
 							return amount
 					except ValueError:
 						pass
@@ -453,7 +456,7 @@ class TextExtractor:
 			try:
 				amount = float(amount_str)
 				if amount > 1.0:
-					print(f"  [PLN] Znaleziono kwote z wzorca: {amount:.2f} zl")
+					logger.debug(f"[PLN] Znaleziono kwote z wzorca: {amount:.2f} zl")
 					return amount
 			except ValueError:
 				pass
@@ -672,7 +675,7 @@ class TextExtractor:
 					lines[i + 1] if i + 1 < len(lines) else '')
 				date_str = self._extract_date_from_text(search_text)
 				if date_str:
-					print(f"  [DATE] Znaleziono date faktury: {date_str}")
+					logger.debug(f"[DATE] Znaleziono date faktury: {date_str}")
 					return date_str
 
 		# Fallback: pierwsza znaleziona data (ale NIE z linii zawierającej "sprzedaż")
@@ -681,7 +684,7 @@ class TextExtractor:
 				continue
 			date_str = self._extract_date_from_text(line)
 			if date_str:
-				print(f"  [DATE] Znaleziono date faktury (fallback): {date_str}")
+				logger.debug(f"[DATE] Znaleziono date faktury (fallback): {date_str}")
 				return date_str
 
 		return None
