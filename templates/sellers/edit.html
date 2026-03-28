@@ -392,6 +392,70 @@
         </form>
     </div>
 
+    <!-- PDF Password Section -->
+    <div class="form-card" id="pdf-password-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; color: var(--color-ink-muted);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <h3 style="margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--color-ink);">Haslo PDF</h3>
+            </div>
+            <div id="pwd-actions"></div>
+        </div>
+
+        <div id="pwd-no-password" style="display: none;">
+            <p style="font-size: 0.8125rem; color: var(--color-ink-subtle); margin-bottom: 0.75rem;">
+                Brak skonfigurowanego hasla. Jesli faktury tego sprzedawcy sa zabezpieczone haslem PDF, dodaj je tutaj.
+            </p>
+            <button type="button" class="btn-refined btn-refined-secondary" onclick="showPasswordForm()">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+                </svg>
+                Dodaj haslo PDF
+            </button>
+        </div>
+
+        <div id="pwd-has-password" style="display: none;">
+            <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 0.75rem;">
+                <div class="stat-item">
+                    <span class="stat-value" id="pwd-display" style="font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.875rem;"></span>
+                    <span class="stat-label">Haslo</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="pwd-email-display" style="font-size: 0.875rem;"></span>
+                    <span class="stat-label">Wzorzec e-mail</span>
+                </div>
+            </div>
+            <p id="pwd-description-display" style="font-size: 0.75rem; color: var(--color-ink-subtle); margin-bottom: 0;"></p>
+        </div>
+
+        <div id="pwd-form" style="display: none;">
+            <input type="hidden" id="pwd-entry-id" value="">
+            <div class="form-field">
+                <label for="pwd-password" class="form-label">Haslo PDF <span class="form-required">*</span></label>
+                <input type="text" id="pwd-password" class="form-input" placeholder="Haslo do odblokowania PDF" autocomplete="off">
+            </div>
+            <div class="form-field">
+                <label for="pwd-email-pattern" class="form-label">
+                    Wzorzec e-mail nadawcy <span style="color: var(--color-ink-subtle); font-weight: 300;">(opcjonalny)</span>
+                </label>
+                <input type="text" id="pwd-email-pattern" class="form-input" placeholder="np. noreply@firma.pl lub %@firma.pl">
+                <div class="form-hint">Uzywane do automatycznego dopasowania hasla przy imporcie z e-mail</div>
+            </div>
+            <div class="form-field">
+                <label for="pwd-description" class="form-label">
+                    Opis <span style="color: var(--color-ink-subtle); font-weight: 300;">(opcjonalny)</span>
+                </label>
+                <input type="text" id="pwd-description" class="form-input" placeholder="np. NIP sprzedawcy, nr klienta">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                <button type="button" class="btn-refined btn-refined-primary" onclick="savePassword()">Zapisz haslo</button>
+                <button type="button" class="btn-refined btn-refined-secondary" onclick="cancelPasswordForm()">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
     <div class="table-card">
         <div class="table-header">
             <h3 class="table-title">Powiazane faktury</h3>

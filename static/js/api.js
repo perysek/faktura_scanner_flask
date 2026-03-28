@@ -175,6 +175,15 @@ const API = {
         bulkUpdate: (id) => API.post(`/sellers/${id}/bulk-update`)
     },
 
+    // Seller PDF passwords
+    sellerPasswords: {
+        getAll: () => API.get('/seller-passwords'),
+        getForSeller: (sellerId) => API.get(`/seller-passwords/for-seller/${sellerId}`),
+        create: (data) => API.post('/seller-passwords', data),
+        update: (id, data) => API.put(`/seller-passwords/${id}`, data),
+        delete: (id) => API.delete(`/seller-passwords/${id}`),
+    },
+
     // Invoice-seller sync
     invoiceSellerSync: {
         check: () => API.get('/invoices/seller-sync-check'),
