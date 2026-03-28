@@ -253,6 +253,7 @@ class PDFProcessor:
 		"""
 		Process file with a specific preprocessing profile.
 		Used by retry logic to attempt OCR with different settings.
+		Thread-safe: saves/restores original settings after processing.
 
 		Args:
 			file_path: Path to PDF or image file
@@ -262,12 +263,28 @@ class PDFProcessor:
 			Tuple[str, float]: (extracted_text, confidence_score)
 		"""
 		logger.info(f"[Profile OCR] Processing with profile '{profile_name}'")
-		self.apply_profile(profile_name)
 
-		if self.is_image_file(file_path):
-			return self.extract_text_from_image_file(file_path)
-		else:
-			return self.extract_text_from_pdf(file_path)
+		# P1-6: Save original settings to restore after processing (thread safety)
+		saved = {
+			'dpi': self.dpi,
+			'denoise_strength': self.denoise_strength,
+			'binarization_mode': self.binarization_mode,
+			'clahe_clip_limit': self.clahe_clip_limit,
+			'deskew_enabled': self.deskew_enabled,
+		}
+		try:
+			self.apply_profile(profile_name)
+			if self.is_image_file(file_path):
+				return self.extract_text_from_image_file(file_path)
+			else:
+				return self.extract_text_from_pdf(file_path)
+		finally:
+			# Restore original settings
+			self.dpi = saved['dpi']
+			self.denoise_strength = saved['denoise_strength']
+			self.binarization_mode = saved['binarization_mode']
+			self.clahe_clip_limit = saved['clahe_clip_limit']
+			self.deskew_enabled = saved['deskew_enabled']
 
 	def pdf_to_images(self, pdf_path: str, userpw: str = None, ownerpw: str = None) -> List[Image.Image]:
 		"""

@@ -1,0 +1,47 @@
+{#
+    Sidebar Navigation Macros
+    Usage:
+        {% from 'macros/sidebar_macros.html' import sidebar_link, sidebar_section_start, sidebar_section_end %}
+#}
+
+
+{# ── Single navigation link ── #}
+{% macro sidebar_link(url, label, icon_path, is_active=false) %}
+<a href="{{ url }}"
+   class="sidebar-link flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-all duration-200 group
+   {{ 'sidebar-link--active rounded-lg' if is_active else 'sidebar-link--default rounded-xl' }}"
+   {% if is_active %}aria-current="page"{% endif %}>
+    <svg class="w-5 h-5 shrink-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}" />
+    </svg>
+    {{ label }}
+</a>
+{% endmacro %}
+
+
+{# ── Section opener (accordion header) ── #}
+{% macro sidebar_section_start(id, title, is_active=false) %}
+<div class="sidebar-section mt-4 first:mt-2" data-active="{{ 'true' if is_active else 'false' }}">
+    <button type="button"
+            class="sidebar-section-header w-full px-2 mb-1 text-sm font-semibold uppercase tracking-wider flex items-center gap-1 select-none transition-colors duration-200 py-1"
+            style="color: var(--sidebar-heading);"
+            aria-expanded="{{ 'true' if is_active else 'false' }}"
+            aria-controls="sidebar-{{ id }}-items">
+        {{ title }}
+        <svg class="sidebar-chevron ml-auto w-3 h-3 transition-transform duration-200 {{ 'rotate-180' if is_active else '' }}"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+    <div class="sidebar-section-items overflow-hidden transition-[max-height] duration-300 ease-in-out space-y-0.5"
+         id="sidebar-{{ id }}-items"
+         role="region"
+         aria-label="{{ title }}">
+{% endmacro %}
+
+
+{# ── Section closer ── #}
+{% macro sidebar_section_end() %}
+    </div>
+</div>
+{% endmacro %}

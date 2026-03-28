@@ -3,7 +3,9 @@ Upload Staging API Routes - New multi-step upload workflow
 """
 import json
 import logging
+import mimetypes
 import os
+import shutil
 import traceback
 import uuid
 from datetime import datetime, date
@@ -12,15 +14,28 @@ from typing import Optional
 
 from flask import Blueprint, jsonify, request, current_app, send_file, session, \
 	Response, stream_with_context
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 
+from config.auth_config import module_permission_required
 from config.database import DatabaseConnection
 from database.models import Invoice, UploadStaging
 from utils.validators import DateParser
 
 upload_bp = Blueprint('upload', __name__)
+
+# ── P1-1: Authentication guard for all upload routes ──
+@upload_bp.before_request
+@login_required
+@module_permission_required('invoices')
+def _require_auth():
+	"""All upload endpoints require authenticated user with invoices permission."""
+	pass
+
+# ── P1-4: Per-file size limit (10 MB) ──
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB per individual file
 
 
 # Supported file extensions for upload
@@ -71,12 +86,23 @@ def stage_files():
         
         for file in files:
             if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
+                # P1-7: UUID prefix to prevent collisions and empty names
+                safe_name = secure_filename(file.filename)
+                if not safe_name:
+                    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
+                    safe_name = f'upload.{ext}'
+                filename = f"{uuid.uuid4().hex[:8]}_{safe_name}"
                 file_path = temp_dir / filename
                 file.save(str(file_path))
-                
-                # Get file size
+
+                # P1-4: Per-file size check after save
                 file_size = file_path.stat().st_size
+                if file_size > MAX_FILE_SIZE:
+                    file_path.unlink(missing_ok=True)
+                    return jsonify({
+                        'success': False,
+                        'error': f'Plik {file.filename} przekracza limit {MAX_FILE_SIZE // (1024*1024)} MB'
+                    }), 400
                 
                 # Create staging entry
                 staging = UploadStaging(
@@ -107,7 +133,8 @@ def stage_files():
         })
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error staging files: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Błąd podczas przesyłania plików'}), 500
 
 
 @upload_bp.route('/staged', methods=['GET'])
@@ -137,7 +164,8 @@ def get_staged_files():
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error fetching staged files: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Błąd pobierania listy plików'}), 500
 
 
 # IMPORTANT: This route must be defined BEFORE /staged/<filename> to avoid
@@ -177,8 +205,8 @@ def clear_all_staged_files():
         })
 
     except Exception as e:
-        logger.error(f"Error clearing staged files: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error clearing staged files: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Błąd usuwania plików'}), 500
 
 
 @upload_bp.route('/staged/<filename>', methods=['DELETE'])
@@ -212,8 +240,8 @@ def remove_staged_file(filename: str):
         })
 
     except Exception as e:
-        logger.error(f"Error removing staged file {filename}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error removing staged file {filename}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Błąd usuwania pliku'}), 500
 
 
 @upload_bp.route('/process', methods=['POST'])
@@ -348,16 +376,16 @@ def process_staged_files():
                     error_res = {
                         'filename': staging.filename,
                         'success': False,
-                        'error': str(e)
+                        'error': 'Błąd przetwarzania pliku'
                     }
                     yield f"data: {json.dumps({'type': 'file_complete', 'result': error_res})}\n\n"
-            
+
             # All done
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
-            
+
         except Exception as e:
-            logger.error(f"Global processing error: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            logger.error(f"Global processing error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Wystąpił błąd podczas przetwarzania'})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
@@ -411,7 +439,7 @@ def finalize_uploads():
         file_moved = False
         try:
             # Move file from temp to permanent storage
-            os.rename(temp_file_path, str(permanent_path))
+            shutil.move(temp_file_path, str(permanent_path))
             file_moved = True
             
             # Create Invoice object
@@ -521,9 +549,9 @@ def finalize_uploads():
             logger.error(f"[FINALIZE] Failed to save {filename}: {error_msg}")
 
             # Rollback file move if it happened
-            if file_moved and os.path.exists(permanent_path):
+            if file_moved and os.path.exists(str(permanent_path)):
                 try:
-                    os.rename(str(permanent_path), temp_file_path)
+                    shutil.move(str(permanent_path), temp_file_path)
                 except Exception as rollback_err:
                     logger.error(f"[FINALIZE] Rollback failed: {rollback_err}")
             
@@ -537,7 +565,6 @@ def finalize_uploads():
         # Clean up empty temp directory
         temp_dir = Path(current_app.config['UPLOAD_FOLDER']) / 'temp' / session_id
         if temp_dir.exists():
-            import shutil
             shutil.rmtree(temp_dir, ignore_errors=True)
         # Clear session
         session.pop('upload_session_id', None)
@@ -574,16 +601,21 @@ def view_pdf(filename: str):
         # Get file from staging
         rows = current_app.staging_repo.get_by_session(session_id)
         
+        upload_root = Path(current_app.config['UPLOAD_FOLDER']).resolve()
         for row in rows:
             if row['filename'] == filename:
-                file_path = Path(row['file_path'])
+                file_path = Path(row['file_path']).resolve()
+                # P1-2: Validate path is within upload directory
+                if not file_path.is_relative_to(upload_root):
+                    logger.warning(f"Path traversal attempt: {file_path}")
+                    return jsonify({'success': False, 'error': 'Niedozwolona ścieżka'}), 403
                 if file_path.exists():
-                    return send_file(
-                        str(file_path),
-                        mimetype='application/pdf'
-                    )
+                    # P4-7: Serve with correct MIME type based on extension
+                    mime_type = mimetypes.guess_type(str(file_path))[0] or 'application/pdf'
+                    return send_file(str(file_path), mimetype=mime_type)
         
         return jsonify({'success': False, 'error': 'PDF not found'}), 404
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error viewing PDF {filename}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Błąd wyświetlania pliku'}), 500

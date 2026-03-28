@@ -79,6 +79,18 @@
       /* Easing */
       --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
       --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+      /* Sidebar */
+      --sidebar-bg: #0f172a;
+      --sidebar-bg-deep: #162032;
+      --sidebar-text: #94a3b8;
+      --sidebar-text-hover: #ffffff;
+      --sidebar-text-active: #60a5fa;
+      --sidebar-heading: #64748b;
+      --sidebar-border: rgba(51, 65, 85, 0.5);
+      --sidebar-hover-bg: #1e293b;
+      --sidebar-active-bg: rgba(37, 99, 235, 0.2);
+      --sidebar-active-border: #60a5fa;
   }
 
   html {
@@ -744,5 +756,118 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--color-ink-subtle);
+  }
+
+  /* ============================================
+     SIDEBAR NAVIGATION
+     Token-driven sidebar using --sidebar-* vars
+     ============================================ */
+
+  /* ── Sidebar link: default (inactive) ── */
+  .sidebar-link--default {
+      color: var(--sidebar-text);
+  }
+  .sidebar-link--default:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+  }
+
+  /* ── Sidebar link: active — pill indicator + luminance glow ── */
+  .sidebar-link--active {
+      position: relative;
+      background: rgba(96, 165, 250, 0.08);
+      color: #ffffff;
+      /* Fallback entrance animation for browsers without View Transitions */
+      animation: sidebar-link-enter 0.35s var(--ease-out-expo) both;
+  }
+
+  /* Pill indicator — left edge accent bar */
+  .sidebar-link--active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--sidebar-active-border);
+      box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
+      animation: pill-enter 0.4s var(--ease-out-expo) both;
+  }
+
+  /* Icon glow on active link */
+  .sidebar-link--active svg {
+      filter: drop-shadow(0 0 3px rgba(96, 165, 250, 0.5));
+      color: var(--sidebar-active-border);
+  }
+
+  @keyframes sidebar-link-enter {
+      from {
+          opacity: 0;
+          background: transparent;
+      }
+      to {
+          opacity: 1;
+          background: rgba(96, 165, 250, 0.08);
+      }
+  }
+
+  @keyframes pill-enter {
+      from {
+          opacity: 0;
+          transform: scaleY(0);
+      }
+      to {
+          opacity: 1;
+          transform: scaleY(1);
+      }
+  }
+
+  /* ── View Transitions API (progressive enhancement) ── */
+
+  /* Enable cross-document view transitions for MPA navigation */
+  @view-transition {
+      navigation: auto;
+  }
+
+  /* Give each sidebar link a shared transition name so the browser
+     morphs the active highlight between old and new page states.
+     All links share one name — the browser cross-fades them as a group. */
+  .sidebar-link--active {
+      view-transition-name: sidebar-active-link;
+  }
+
+  /* When View Transitions are active, cross-fade the active highlight */
+  ::view-transition-new(sidebar-active-link) {
+      animation: sidebar-vt-in 0.3s var(--ease-out-expo) both;
+  }
+  ::view-transition-old(sidebar-active-link) {
+      animation: sidebar-vt-out 0.2s ease-in both;
+  }
+
+  @keyframes sidebar-vt-in {
+      from {
+          opacity: 0;
+      }
+      to {
+          opacity: 1;
+      }
+  }
+
+  @keyframes sidebar-vt-out {
+      from {
+          opacity: 1;
+      }
+      to {
+          opacity: 0;
+      }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+      .sidebar-link--active,
+      .sidebar-link--active::before {
+          animation: none;
+      }
   }
 }
