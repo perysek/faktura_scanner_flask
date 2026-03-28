@@ -6,6 +6,7 @@ Supports:
 """
 import logging
 from datetime import datetime
+from decimal import Decimal
 from typing import Dict, Tuple
 
 
@@ -238,7 +239,7 @@ class OCRService:
 			seller_nip=extracted_data['seller_nip'],
 			invoice_date=invoice_date or datetime.now().date(),
 			bank_account=extracted_data['bank_account'],
-			amount=extracted_data['amount'] or 0.0,
+			amount=Decimal(str(extracted_data['amount'] or 0)),
 			currency=extracted_data['currency'],
 			payment_due_date=payment_due_date,
 			payment_term=payment_term,
