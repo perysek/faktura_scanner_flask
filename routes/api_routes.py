@@ -2228,6 +2228,127 @@ def check_seller_duplicate():
 
 
 # ============================================================================
+# SELLER PDF PASSWORDS ENDPOINTS
+# ============================================================================
+
+@api_bp.route('/seller-passwords', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
+def get_seller_passwords():
+    """Get all seller PDF passwords"""
+    try:
+        rows = current_app.seller_password_repo.get_all()
+        passwords = []
+        for row in rows:
+            passwords.append({
+                'id': row['id'],
+                'seller_id': row['seller_id'],
+                'seller_name': row.get('seller_name'),
+                'seller_nip': row.get('seller_nip'),
+                'email_sender_pattern': row['email_sender_pattern'],
+                'pdf_password': row['pdf_password'],
+                'description': row.get('description'),
+                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+                'updated_at': row['updated_at'].isoformat() if row['updated_at'] else None,
+            })
+        return jsonify({'success': True, 'passwords': passwords})
+    except Exception as e:
+        logger.error(f"Error loading seller passwords: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/seller-passwords', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
+def create_seller_password():
+    """Create a new seller PDF password entry"""
+    try:
+        data = request.get_json()
+        pdf_password = (data.get('pdf_password') or '').strip()
+        if not pdf_password:
+            return jsonify({'success': False, 'error': 'Haslo PDF jest wymagane'}), 400
+
+        from database.models import SellerPdfPassword
+        entry = SellerPdfPassword(
+            seller_id=data.get('seller_id') or None,
+            email_sender_pattern=(data.get('email_sender_pattern') or '').strip() or None,
+            pdf_password=pdf_password,
+            description=(data.get('description') or '').strip() or None,
+        )
+        entry_id = current_app.seller_password_repo.create(entry)
+        return jsonify({'success': True, 'id': entry_id})
+    except Exception as e:
+        logger.error(f"Error creating seller password: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/seller-passwords/<int:password_id>', methods=['PUT'])
+@login_required
+@module_permission_required('invoices')
+def update_seller_password(password_id):
+    """Update a seller PDF password entry"""
+    try:
+        data = request.get_json()
+        pdf_password = (data.get('pdf_password') or '').strip()
+        if not pdf_password:
+            return jsonify({'success': False, 'error': 'Haslo PDF jest wymagane'}), 400
+
+        from database.models import SellerPdfPassword
+        entry = SellerPdfPassword(
+            seller_id=data.get('seller_id') or None,
+            email_sender_pattern=(data.get('email_sender_pattern') or '').strip() or None,
+            pdf_password=pdf_password,
+            description=(data.get('description') or '').strip() or None,
+        )
+        success = current_app.seller_password_repo.update(password_id, entry)
+        if not success:
+            return jsonify({'success': False, 'error': 'Nie znaleziono wpisu'}), 404
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error updating seller password: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/seller-passwords/<int:password_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('invoices')
+def delete_seller_password(password_id):
+    """Delete a seller PDF password entry"""
+    try:
+        success = current_app.seller_password_repo.delete(password_id)
+        if not success:
+            return jsonify({'success': False, 'error': 'Nie znaleziono wpisu'}), 404
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting seller password: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/seller-passwords/for-seller/<int:seller_id>', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
+def get_password_for_seller(seller_id):
+    """Get PDF password for a specific seller"""
+    try:
+        row = current_app.seller_password_repo.find_by_seller_id(seller_id)
+        if row:
+            return jsonify({
+                'success': True,
+                'password': {
+                    'id': row['id'],
+                    'seller_id': row['seller_id'],
+                    'email_sender_pattern': row['email_sender_pattern'],
+                    'pdf_password': row['pdf_password'],
+                    'description': row.get('description'),
+                }
+            })
+        return jsonify({'success': True, 'password': None})
+    except Exception as e:
+        logger.error(f"Error loading password for seller: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # CLIENT MANAGEMENT ENDPOINTS
 # ============================================================================
 

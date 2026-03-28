@@ -6,12 +6,14 @@ let sellerId = null;
 let sellerData = null;
 let invoicesData = [];
 let originalName = '';
+let passwordData = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     sellerId = document.getElementById('seller_id').value;
     originalName = document.getElementById('seller_name').value;
     loadSellerData();
+    loadPasswordData();
 });
 
 /**
@@ -249,4 +251,146 @@ async function propagateChanges() {
         console.error('Error propagating changes:', error);
         Notifications.error('Blad aktualizacji faktur: ' + error.message);
     }
+}
+
+// ============================================================================
+// PDF Password Management
+// ============================================================================
+
+async function loadPasswordData() {
+    try {
+        const data = await API.sellerPasswords.getForSeller(sellerId);
+        if (data.success) {
+            passwordData = data.password;
+            renderPasswordSection();
+        }
+    } catch (error) {
+        console.error('Error loading password data:', error);
+    }
+}
+
+function renderPasswordSection() {
+    const noPassword = document.getElementById('pwd-no-password');
+    const hasPassword = document.getElementById('pwd-has-password');
+    const pwdForm = document.getElementById('pwd-form');
+    const pwdActions = document.getElementById('pwd-actions');
+
+    pwdForm.style.display = 'none';
+
+    if (passwordData) {
+        noPassword.style.display = 'none';
+        hasPassword.style.display = 'block';
+        document.getElementById('pwd-display').textContent = passwordData.pdf_password;
+        document.getElementById('pwd-email-display').textContent = passwordData.email_sender_pattern || '—';
+
+        const descEl = document.getElementById('pwd-description-display');
+        if (passwordData.description) {
+            descEl.textContent = passwordData.description;
+            descEl.style.display = 'block';
+        } else {
+            descEl.style.display = 'none';
+        }
+
+        pwdActions.innerHTML = `
+            <div style="display: flex; gap: 0.25rem;">
+                <button type="button" class="action-btn" onclick="showPasswordForm(true)" title="Edytuj haslo">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                </button>
+                <button type="button" class="action-btn delete" onclick="deletePassword()" title="Usun haslo">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
+        `;
+    } else {
+        noPassword.style.display = 'block';
+        hasPassword.style.display = 'none';
+        pwdActions.innerHTML = '';
+    }
+}
+
+function showPasswordForm(isEdit = false) {
+    document.getElementById('pwd-no-password').style.display = 'none';
+    document.getElementById('pwd-has-password').style.display = 'none';
+    document.getElementById('pwd-form').style.display = 'block';
+    document.getElementById('pwd-actions').innerHTML = '';
+
+    if (isEdit && passwordData) {
+        document.getElementById('pwd-entry-id').value = passwordData.id;
+        document.getElementById('pwd-password').value = passwordData.pdf_password;
+        document.getElementById('pwd-email-pattern').value = passwordData.email_sender_pattern || '';
+        document.getElementById('pwd-description').value = passwordData.description || '';
+    } else {
+        document.getElementById('pwd-entry-id').value = '';
+        document.getElementById('pwd-password').value = '';
+        document.getElementById('pwd-email-pattern').value = '';
+        document.getElementById('pwd-description').value = '';
+    }
+
+    document.getElementById('pwd-password').focus();
+}
+
+function cancelPasswordForm() {
+    document.getElementById('pwd-form').style.display = 'none';
+    renderPasswordSection();
+}
+
+async function savePassword() {
+    const password = document.getElementById('pwd-password').value.trim();
+    if (!password) {
+        Notifications.error('Haslo PDF jest wymagane');
+        return;
+    }
+
+    const entryId = document.getElementById('pwd-entry-id').value;
+    const data = {
+        seller_id: parseInt(sellerId),
+        pdf_password: password,
+        email_sender_pattern: document.getElementById('pwd-email-pattern').value.trim() || null,
+        description: document.getElementById('pwd-description').value.trim() || null,
+    };
+
+    try {
+        let result;
+        if (entryId) {
+            result = await API.sellerPasswords.update(parseInt(entryId), data);
+        } else {
+            result = await API.sellerPasswords.create(data);
+        }
+
+        if (result.success) {
+            Notifications.success(entryId ? 'Haslo zaktualizowane' : 'Haslo dodane');
+            await loadPasswordData();
+        } else {
+            Notifications.error(result.error || 'Blad zapisu');
+        }
+    } catch (error) {
+        console.error('Error saving password:', error);
+        Notifications.error('Blad zapisu: ' + error.message);
+    }
+}
+
+async function deletePassword() {
+    if (!passwordData) return;
+
+    Modals.confirm({
+        title: 'Usun haslo PDF',
+        message: 'Czy na pewno chcesz usunac haslo PDF dla tego sprzedawcy? Zaszyfrowane faktury nie beda automatycznie odblokowywane.',
+        confirmText: 'Usun',
+        onConfirm: async () => {
+            try {
+                const result = await API.sellerPasswords.delete(passwordData.id);
+                if (result.success) {
+                    passwordData = null;
+                    renderPasswordSection();
+                    Notifications.success('Haslo usuniete');
+                }
+            } catch (error) {
+                Notifications.error('Blad usuwania: ' + error.message);
+            }
+        }
+    });
 }
