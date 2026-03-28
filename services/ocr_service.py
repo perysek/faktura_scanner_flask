@@ -55,17 +55,20 @@ class OCRService:
 		"""
 		# Use retry-enabled processing if enabled, otherwise use smart processing
 		if self.retry_enabled:
-			raw_text, confidence, profile_used = self.process_with_retry(file_path)
+			# P3-3: process_with_retry returns pre-extracted data to avoid duplicate extraction
+			raw_text, confidence, profile_used, extracted_data = self.process_with_retry(file_path)
 			logger.info(f"[OCR] Final result using profile '{profile_used}'")
 		else:
 			# Use smart processing (hybrid: direct extraction or OCR based on PDF type)
 			raw_text, confidence = self.pdf_processor.process_file_smart(file_path)
 			profile_used = 'smart'
+			extracted_data = None
 
 		logger.debug(f"[OCR RAW TEXT] First 2000 chars:\n{raw_text[:2000]}")
 
-		# 2. Tekst → structured data
-		extracted_data = self.text_extractor.extract_invoice_data(raw_text)
+		# 2. Tekst → structured data (skip if already extracted during retry)
+		if extracted_data is None:
+			extracted_data = self.text_extractor.extract_invoice_data(raw_text)
 
 		# 3. Konwersja dat string → date (zwracamy jako stringi dla API)
 		result = {
@@ -89,16 +92,17 @@ class OCRService:
 
 		return result
 
-	def process_with_retry(self, file_path: str) -> Tuple[str, float, str]:
+	def process_with_retry(self, file_path: str) -> Tuple[str, float, str, Dict]:
 		"""
 		Process file with retry logic using different preprocessing profiles.
 		Retries OCR with different profiles when too many fields are missing.
+		P3-3: Returns extracted_data to avoid duplicate extraction in process_pdf.
 
 		Args:
 			file_path: Path to PDF or image file
 
 		Returns:
-			Tuple[str, float, str]: (extracted_text, confidence, profile_name_used)
+			Tuple[str, float, str, Dict]: (extracted_text, confidence, profile_name_used, extracted_data)
 		"""
 		# First, try smart processing (direct extraction for text-based PDFs)
 		pdf_type = self.pdf_processor.detect_pdf_type(file_path) \
@@ -108,7 +112,8 @@ class OCRService:
 			# Text-based PDF - use direct extraction, no retry needed
 			logger.info("[Retry] Text-based PDF detected, using direct extraction")
 			raw_text, confidence = self.pdf_processor.extract_text_direct(file_path)
-			return raw_text, confidence, 'direct_extraction'
+			extracted_data = self.text_extractor.extract_invoice_data(raw_text)
+			return raw_text, confidence, 'direct_extraction', extracted_data
 
 		# For image-based/mixed PDFs, use OCR with retry logic
 		best_result = None
@@ -139,13 +144,13 @@ class OCRService:
 				# Track best result
 				if missing_count < best_missing_count:
 					best_missing_count = missing_count
-					best_result = (raw_text, confidence, profile)
+					best_result = (raw_text, confidence, profile, extracted_data)
 
 				# Success: all critical fields found or below threshold
 				if missing_count <= self.missing_threshold:
 					logger.info(f"[Retry] Success with profile '{profile}' "
 					           f"(missing={missing_count} <= threshold={self.missing_threshold})")
-					return raw_text, confidence, profile
+					return raw_text, confidence, profile, extracted_data
 
 			except Exception as e:
 				logger.warning(f"[Retry] Profile '{profile}' failed: {e}")
@@ -185,7 +190,7 @@ class OCRService:
 		if self.retry_enabled:
 			if progress_callback:
 				progress_callback(15, "Wykrywanie typu dokumentu...")
-			raw_text, confidence, profile_used = self.process_with_retry(file_path)
+			raw_text, confidence, profile_used, _ = self.process_with_retry(file_path)
 			logger.info(f"[Invoice PDF] Processed with profile '{profile_used}'")
 		else:
 			# Use smart processing (hybrid: direct extraction or OCR based on PDF type)
