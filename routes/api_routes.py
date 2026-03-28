@@ -957,7 +957,7 @@ def get_monthly_totals():
                 if invoice_datetime >= twelve_months_ago:
                     # Create month key (YYYY-MM format)
                     month_key = invoice_datetime.strftime('%Y-%m')
-                    monthly_totals[month_key] += (invoice.amount or 0)
+                    monthly_totals[month_key] += float(invoice.amount or 0)
 
         # Generate list of last 12 months in order
         months = []
