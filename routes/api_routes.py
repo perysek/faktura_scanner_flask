@@ -1017,13 +1017,27 @@ def upload_files():
                     try:
                         extracted_data = current_app.ocr_service.process_pdf(str(file_path))
                     except PDFPasswordRequired:
-                        results.append({
-                            'filename': filename,
-                            'success': False,
-                            'error': 'Plik PDF jest zabezpieczony hasłem. Dodaj hasło w Sprzedawcy → Hasła PDF.',
-                            'error_type': 'password_required',
-                        })
-                        continue
+                        # Try all stored passwords against the encrypted PDF
+                        pdf_password = None
+                        all_pw_rows = current_app.seller_password_repo.get_all()
+                        for pw_row in all_pw_rows:
+                            candidate = pw_row['pdf_password']
+                            if candidate and current_app.ocr_service.pdf_processor.try_unlock_pdf(str(file_path), candidate):
+                                pdf_password = candidate
+                                logger.info(f"[UPLOAD] Found matching PDF password by trial (seller: {pw_row.get('seller_name', 'N/A')})")
+                                break
+
+                        if not pdf_password:
+                            results.append({
+                                'filename': filename,
+                                'success': False,
+                                'error': 'Plik PDF jest zabezpieczony hasłem. Dodaj hasło w Sprzedawcy → Hasła PDF.',
+                                'error_type': 'password_required',
+                            })
+                            continue
+
+                        # Retry with found password
+                        extracted_data = current_app.ocr_service.process_pdf(str(file_path), password=pdf_password)
 
                     # Parse dates from strings to date objects
                     invoice_date = parse_date_string(extracted_data.get('issue_date'))
