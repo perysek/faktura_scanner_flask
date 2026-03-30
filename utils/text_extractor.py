@@ -24,7 +24,8 @@ class TextExtractor:
 			# Electronic invoice formats with long numbers
 			r'([A-Z]{2,4}[\-/]\d{4}[\-/]\d{2}[\-/]\d{4,})',
 			# Pattern with prefix included (F/, FV/, FA/, etc.) and optional suffix letters
-			r'((?:FV|FA|F|FAKTURA)[\s\-/]*\d+[\-/]\d+(?:[\-/]\d+)?(?:[\-/][A-Z]+)?)',
+			# \b prevents matching bare 'F' inside compound strings like KSeF numbers
+			r'\b((?:FV|FA|F|FAKTURA)[\s\-/]*\d+[\-/]\d+(?:[\-/]\d+)?(?:[\-/][A-Z]+)?)',
 			# Pattern after Polish keywords (Faktura VAT, Faktura nr, Nr faktury, etc.)
 			r'(?:Faktura\s+VAT|Faktura\s+nr|Nr\s+faktury|Numer\s+faktury|Faktura\s+numer|Nr|Numer|Number)[\s:\.]*([A-Z0-9\-/]+)',
 			# Generic pattern for invoice numbers with letters
