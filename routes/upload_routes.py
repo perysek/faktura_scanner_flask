@@ -309,14 +309,26 @@ def process_staged_files():
                     try:
                         extracted_data = ocr_service.process_pdf(str(file_path))
                     except PDFPasswordRequired:
-                        # Encrypted PDF — try to find password from email sender
+                        # Encrypted PDF — try to find password
                         pdf_password = None
+
+                        # 1. Try email sender pattern match
                         if staging.email_sender:
                             pdf_password = current_app.seller_password_repo.find_password_for_file(
                                 email_sender=staging.email_sender
                             )
                             if pdf_password:
                                 logger.info(f"[PROCESS] Found PDF password for email sender: {staging.email_sender}")
+
+                        # 2. Try all stored passwords (for manual uploads without email metadata)
+                        if not pdf_password:
+                            all_pw_rows = current_app.seller_password_repo.get_all()
+                            for pw_row in all_pw_rows:
+                                candidate = pw_row['pdf_password']
+                                if candidate and ocr_service.pdf_processor.try_unlock_pdf(str(file_path), candidate):
+                                    pdf_password = candidate
+                                    logger.info(f"[PROCESS] Found matching PDF password by trial (seller: {pw_row.get('seller_name', 'N/A')})")
+                                    break
 
                         if not pdf_password:
                             # No password available — report error to user
