@@ -1,93 +1,93 @@
-# Roadmap: MyWay Nails & Beauty — v2.0 UI/UX Polish
+# Roadmap: MyWay Nails & Beauty — v3.0 Functional-Improvements
 
 ## Overview
 
-The v1.0 design system audit scored 17/24. This milestone closes the gap across four pillars: Typography (2/4), Spacing (3/4), Color (3/4), and Experience Design/Accessibility (3/4). Every change is additive or visually neutral — no feature regressions, no new dependencies. The four phases execute in dependency order: CSS architecture first (shared foundation), then layout/spacing (touches same files), then color (independent cleanup), then accessibility and UX polish (purely additive).
+v2.0 delivered a complete UI/UX overhaul. v3.0 addresses what's underneath: known bugs causing silent data loss, broad exception handling masking real errors, missing database indexes causing slow queries, and connection management gaps that grow worse under load. Five phases execute in dependency order: data integrity first (unblocks audit logging), then robustness foundations (exception hierarchy enables specific error handling), then security hardening (independent quick fixes), then database performance (indexes enable query optimization), then connection and transaction management (capstone — touches everything above).
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- v2.0 completed at Phase 4
+- v3.0 starts at Phase 5
+- Integer phases (5, 6, 7...): Planned milestone work
+- Decimal phases (5.1, 5.2): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: CSS Architecture** - Extract shared :root to input.css, unify type scale across 45 templates (completed 2026-03-19)
-- [ ] **Phase 2: Layout & Spacing** - Remove !important padding overrides, standardize max-width scale
-- [x] **Phase 3: Color Cleanup** - Eliminate remaining hardcoded hex values, adopt brand-* Tailwind tokens (completed 2026-03-24)
-- [x] **Phase 4: Accessibility & UX Polish** - Add aria attributes, retry actions, fix 404 CTA, fix copy (completed 2026-03-24)
+- [ ] **Phase 5: Data Integrity** - Soft delete for invoices + key entities, audit logging of DELETE operations restored
+- [ ] **Phase 6: Code Robustness** - Custom exception hierarchy, appointment status enum, SQL safety helpers, EmailService bare except fixed
+- [ ] **Phase 7: Security Hardening** - Secret key validation at startup, environment-based logging configuration
+- [ ] **Phase 8: Database Performance** - Indexes on filtered columns, analytics query optimization, employee schedule batching
+- [ ] **Phase 9: Connection & Transactions** - Connection pooling, psycopg2 lifecycle management, multi-step transactional integrity, dependency audit
 
 ## Phase Details
 
-### Phase 1: CSS Architecture
-**Goal**: Navigating between any two pages feels visually consistent because all typography definitions live in one place
-**Depends on**: Nothing (first phase)
-**Requirements**: TYPO-01, TYPO-02, TYPO-03
+### Phase 5: Data Integrity
+**Goal**: Deleting a record never destroys its history — all deletions are traceable and recoverable
+**Depends on**: Nothing (first phase of v3.0)
+**Requirements**: IMPR-01, FIX-01, FIX-02
 **Success Criteria** (what must be TRUE):
-  1. All pages display `.page-title` at exactly 1.75rem — navigating from calendar to client list shows no headline size jump
-  2. All pages display `.stat-value` at exactly 1.25rem — no variation between dashboard, income, and list pages
-  3. Any developer changing a font size in `input.css` sees the change propagate to all pages without touching individual templates
-  4. No template file contains a `:root` block that duplicates properties already declared in `input.css`
-**Plans**: 3 plans
-
-Plans:
-- [ ] 01-01-PLAN.md — Add global typography block to @layer components in input.css and run build
-- [ ] 01-02-PLAN.md — Strip local .page-title and .page-subtitle redeclarations from all 38 templates
-- [ ] 01-03-PLAN.md — Strip local .stat-value and .stat-label redeclarations from 7 templates
-
-### Phase 2: Layout & Spacing
-**Goal**: Page layout is controlled by each page, not fought against by each page
-**Depends on**: Phase 1
-**Requirements**: SPAC-01, SPAC-02
-**Success Criteria** (what must be TRUE):
-  1. Opening any page in the app shows no `!important` in its computed styles for `#main-content` padding
-  2. Form pages (create/edit) display content within a consistent max-width (900px)
-  3. List pages (clients, employees, services) display content within a consistent max-width (1400px)
-  4. Calendar pages use full available width with no max-width constraint
-**Plans**: 3 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — Change base.html p-2→p-0 and restore padding on analytics/dashboard.html
-- [ ] 02-02-PLAN.md — Strip !important padding overrides from all 13 templates, move padding to .refined-page
-- [ ] 02-03-PLAN.md — Normalize max-width scale across ~21 templates (900px forms, 1400px lists, full-width calendars)
-
-### Phase 3: Color Cleanup
-**Goal**: Gold accent color is defined in one place and all templates reference the token, not a hex value
-**Depends on**: Phase 1
-**Requirements**: COL-01, COL-02
-**Success Criteria** (what must be TRUE):
-  1. Searching templates for `#c9a227` and `#d97706` returns zero results
-  2. Auth templates (login, profile, forgot_password, reset_password) reference CSS custom properties or Tailwind tokens instead of hardcoded hex
-  3. Error templates (404, 500) and form templates contain no hardcoded hex color values
-  4. Calendar appointment blocks use `brand-*` Tailwind utilities instead of inline `#c9a227` strings in JavaScript
+  1. Deleting an invoice via the UI marks it `is_deleted = TRUE` and `deleted_at = now()` — it disappears from the invoice list but remains in the database
+  2. After an invoice is soft-deleted, the audit log contains a DELETE entry for that invoice — the audit trail is complete
+  3. All invoice list queries return only records where `is_deleted = FALSE` — soft-deleted records never reappear in normal views
+  4. The FK constraint conflict between `ON DELETE CASCADE` and post-delete audit logging is gone — no constraint violation when auditing a deletion
 **Plans**: TBD
 
-### Phase 4: Accessibility & UX Polish
-**Goal**: Every interactive element is reachable by keyboard and screen reader, and every error state offers recovery
-**Depends on**: Nothing (independent of Phases 1-3, can be sequenced after Phase 3)
-**Requirements**: A11Y-01, A11Y-02, A11Y-03, UX-01, UX-02, UX-03, COPY-01
+### Phase 6: Code Robustness
+**Goal**: Errors are specific, named, and catchable — no bug is silently swallowed
+**Depends on**: Phase 5
+**Requirements**: IMPR-03, IMPR-04, IMPR-05, IMPR-06, FIX-03
 **Success Criteria** (what must be TRUE):
-  1. Every icon-only button (calendar navigation, modal close, flash dismiss) has an `aria-label` matching its visible tooltip text
-  2. A screen reader user navigating calendar day view or client list hears content update announcements via `aria-live` regions
-  3. A keyboard-only user can skip to main content without tabbing through the sidebar using a skip-navigation link
-  4. When the calendar day view or client list shows an error state, a retry button is visible and reloads the failed content
-  5. Non-accountant users landing on the 404 page are taken to `main.dashboard` (not `main.invoices_list`) by the CTA button
-  6. `sellers/edit.html` shows "Ładowanie..." (with diacritic) and `analytics/dashboard.html` shows "Powrót na górę" (not "Idź na początek")
-**Plans**: 3 plans
+  1. An appointment scheduling conflict raises `AppointmentConflictError` — routes can catch this specific type and return a meaningful user message
+  2. An infrastructure failure (database unreachable) raises `DatabaseConnectionError` — distinct from business logic errors, logged with full context
+  3. All appointment status values (`completed`, `cancelled`, `no_show`) come from a Python enum — searching the codebase for hardcoded status strings returns zero matches outside the enum definition
+  4. Critical repository queries (clients, employees, users, income_records) use explicit column lists — `SELECT *` is absent from these files
+  5. EmailService `disconnect()` catches specific IMAP exceptions instead of bare `except: pass` — failures are logged, not silently swallowed
+**Plans**: TBD
 
-Plans:
-- [ ] 04-01-PLAN.md — Fix diacritic, copy text, and error page CTA routing (UX-02, UX-03, COPY-01)
-- [ ] 04-02-PLAN.md — Add skip-nav link, sr-only CSS, aria-live regions, aria-label audit (A11Y-01, A11Y-02, A11Y-03)
-- [ ] 04-03-PLAN.md — Add retry buttons to calendar, client list, and appointment list error states (UX-01)
+### Phase 7: Security Hardening
+**Goal**: The application refuses to start with insecure defaults — no silent production misconfigurations
+**Depends on**: Nothing (independent of Phases 5-6, sequenced after Phase 6)
+**Requirements**: FIX-04, FIX-05
+**Success Criteria** (what must be TRUE):
+  1. Starting the app without `SECRET_KEY` set raises a clear startup error — Flask never boots with a predictable session key
+  2. Running the app in production produces INFO-level logs — no DEBUG-level OCR/PDF log entries appear unless `DEBUG=true` is explicitly set in environment
+  3. Running with `DEBUG=true` env var produces verbose DEBUG logs — the debug mode is intentional and controllable
+**Plans**: TBD
+
+### Phase 8: Database Performance
+**Goal**: Common queries return results in milliseconds, not seconds — the scheduler and analytics load without noticeable delay
+**Depends on**: Phase 5 (indexes reference soft-delete columns in composite WHERE clauses)
+**Requirements**: SCAL-01, SCAL-02, SCAL-03
+**Success Criteria** (what must be TRUE):
+  1. `EXPLAIN ANALYZE` on appointment queries filtered by `appointment_date`, `employee_id`, or `status` shows index scans, not sequential scans
+  2. The employee schedule view loads using a single JOIN query — no N+1 pattern where one query fires per employee
+  3. Analytics queries include mandatory date range filters — unbounded full-table aggregations are not possible through normal usage
+  4. Composite indexes cover the multi-column WHERE + ORDER BY patterns used in appointment listing and analytics
+**Plans**: TBD
+
+### Phase 9: Connection & Transactions
+**Goal**: Database connections are never leaked, multi-step operations are atomic, and all packages are current
+**Depends on**: Phase 8
+**Requirements**: SCAL-04, MIGR-01, MIGR-02, IMPR-02
+**Success Criteria** (what must be TRUE):
+  1. Creating an appointment that fails mid-operation (e.g. income record insert fails) rolls back all partial changes — no orphaned schedule entries or incomplete records remain
+  2. Each web request acquires a database connection at start and releases it at end — no connection held open across idle time or after request completion
+  3. Running `pip check` reports zero dependency conflicts — all packages are compatible with each other
+  4. Outdated packages flagged as critical security or compatibility risks are upgraded and tested
+  5. Connection pool size, timeout, and health check parameters are configurable via environment variables — not hardcoded
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in dependency order: 5 → 6 → 7 → 8 → 9
+Phase 7 is independent but sequenced after Phase 6 for focus.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. CSS Architecture | 2/3 | Complete    | 2026-03-19 |
-| 2. Layout & Spacing | 0/3 | Not started | - |
-| 3. Color Cleanup | 1/1 | Complete   | 2026-03-24 |
-| 4. Accessibility & UX Polish | 3/3 | Complete   | 2026-03-24 |
+| 5. Data Integrity | 0/? | Not started | - |
+| 6. Code Robustness | 0/? | Not started | - |
+| 7. Security Hardening | 0/? | Not started | - |
+| 8. Database Performance | 0/? | Not started | - |
+| 9. Connection & Transactions | 0/? | Not started | - |

@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Functional-Improvements
-status: defining_requirements
+status: roadmap_ready
 stopped_at: null
 last_updated: "2026-03-31"
-last_activity: 2026-03-31 — Milestone v3.0 started
+last_activity: 2026-03-31 — Roadmap created, 5 phases defined (5-9), 17/17 requirements mapped
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Recepcjonistka i stylistka muszą sprawnie zarządzać rezerwacjami i klientami
-**Current focus:** Defining requirements for v3.0 Functional-Improvements
+**Current focus:** v3.0 Functional-Improvements — ready to plan Phase 5
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 5 (Data Integrity) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-31 — Milestone v3.0 started
+Status: Roadmap ready, awaiting phase planning
+Last activity: 2026-03-31 — Roadmap created
+
+```
+Progress: [                    ] 0% (0/5 phases)
+```
 
 ## Performance Metrics
 
@@ -50,10 +54,14 @@ Recent decisions affecting current work:
 - [v2.0]: base.html #main-content changed from p-2 to p-0 — root cause fix for !important fights
 - [v2.0]: 3-value max-width scale: 900px (forms), 1400px (lists), none (calendars/dashboards)
 - [v2.0]: SPAC-02 deferred — max-width normalization not applied to all templates
+- [v3.0 roadmap]: IMPR-01 (soft delete) placed in Phase 5 before FIX-01/FIX-02 (audit logging) — soft delete eliminates the FK constraint conflict that blocked audit logging
+- [v3.0 roadmap]: IMPR-03 (exception hierarchy) placed in Phase 6 before FIX-03 (EmailService) — base exception types must exist before specific catch sites are added
+- [v3.0 roadmap]: IMPR-02 (transactional integrity) placed in Phase 9 with connection work — transactions depend on reliable connection lifecycle management
+- [v3.0 roadmap]: Phase 7 (security hardening) is independent but sequenced after Phase 6 for developer focus
 
 ### Pending Todos
 
-None yet.
+- Plan Phase 5: Data Integrity (IMPR-01, FIX-01, FIX-02)
 
 ### Blockers/Concerns
 
@@ -62,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-31
-Stopped at: Milestone v3.0 initialization
-Resume file: None
+Stopped at: Roadmap creation complete
+Resume file: .planning/ROADMAP.md

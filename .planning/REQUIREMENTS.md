@@ -73,29 +73,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | — | Pending |
-| FIX-02 | — | Pending |
-| FIX-03 | — | Pending |
-| FIX-04 | — | Pending |
-| FIX-05 | — | Pending |
-| IMPR-01 | — | Pending |
-| IMPR-02 | — | Pending |
-| IMPR-03 | — | Pending |
-| IMPR-04 | — | Pending |
-| IMPR-05 | — | Pending |
-| IMPR-06 | — | Pending |
-| SCAL-01 | — | Pending |
-| SCAL-02 | — | Pending |
-| SCAL-03 | — | Pending |
-| SCAL-04 | — | Pending |
-| MIGR-01 | — | Pending |
-| MIGR-02 | — | Pending |
+| FIX-01 | Phase 5 | Pending |
+| FIX-02 | Phase 5 | Pending |
+| FIX-03 | Phase 6 | Pending |
+| FIX-04 | Phase 7 | Pending |
+| FIX-05 | Phase 7 | Pending |
+| IMPR-01 | Phase 5 | Pending |
+| IMPR-02 | Phase 9 | Pending |
+| IMPR-03 | Phase 6 | Pending |
+| IMPR-04 | Phase 6 | Pending |
+| IMPR-05 | Phase 6 | Pending |
+| IMPR-06 | Phase 6 | Pending |
+| SCAL-01 | Phase 8 | Pending |
+| SCAL-02 | Phase 8 | Pending |
+| SCAL-03 | Phase 8 | Pending |
+| SCAL-04 | Phase 9 | Pending |
+| MIGR-01 | Phase 9 | Pending |
+| MIGR-02 | Phase 9 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 after roadmap creation — all 17 requirements mapped*
