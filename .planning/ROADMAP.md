@@ -31,7 +31,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. After an invoice is soft-deleted, the audit log contains a DELETE entry for that invoice — the audit trail is complete
   3. All invoice list queries return only records where `is_deleted = FALSE` — soft-deleted records never reappear in normal views
   4. The FK constraint conflict between `ON DELETE CASCADE` and post-delete audit logging is gone — no constraint violation when auditing a deletion
-**Plans**: TBD
+  5. Soft-delete extends to clients, appointments, and services — all four entity types support is_deleted filtering
+  6. After deleting a record, an undo toast with "Cofnij" link allows immediate restore
+  7. Targeting an already-deleted record returns "already deleted" message, not generic 404
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Soft-delete filters for all repositories (invoices, clients, appointments, services) + tests
+- [ ] 05-02-PLAN.md — Alembic migrations, restore endpoints, undo toast, already-deleted detection, FIX-01/FIX-02 verification
 
 ### Phase 6: Code Robustness
 **Goal**: Errors are specific, named, and catchable — no bug is silently swallowed
@@ -86,7 +93,7 @@ Phase 7 is independent but sequenced after Phase 6 for focus.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 5. Data Integrity | 0/? | Not started | - |
+| 5. Data Integrity | 0/2 | Planned | - |
 | 6. Code Robustness | 0/? | Not started | - |
 | 7. Security Hardening | 0/? | Not started | - |
 | 8. Database Performance | 0/? | Not started | - |
