@@ -99,7 +99,8 @@ class ClientRepository(BaseRepository):
         """Wyszukaj klientów po imieniu, nazwisku, telefonie lub emailu"""
         query = """
             SELECT * FROM clients
-            WHERE first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
+            WHERE is_deleted = FALSE
+              AND (first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s)
             ORDER BY
                 CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
                 LOWER(last_name),
@@ -112,7 +113,8 @@ class ClientRepository(BaseRepository):
         """Wyszukaj klientów po imieniu lub nazwisku"""
         query = """
             SELECT * FROM clients
-            WHERE first_name ILIKE %s OR last_name ILIKE %s
+            WHERE is_deleted = FALSE
+              AND (first_name ILIKE %s OR last_name ILIKE %s)
             ORDER BY last_name, first_name
         """
         search_pattern = f'%{name}%'
@@ -122,7 +124,7 @@ class ClientRepository(BaseRepository):
         """Wyszukaj klientów po numerze telefonu"""
         query = """
             SELECT * FROM clients
-            WHERE phone ILIKE %s
+            WHERE is_deleted = FALSE AND phone ILIKE %s
             ORDER BY last_name, first_name
         """
         search_pattern = f'%{phone}%'
@@ -130,14 +132,14 @@ class ClientRepository(BaseRepository):
 
     def find_by_email(self, email: str) -> Optional[Any]:
         """Znajdź klienta po dokładnym adresie email"""
-        query = "SELECT * FROM clients WHERE email = %s"
+        query = "SELECT * FROM clients WHERE email = %s AND is_deleted = FALSE"
         return self._fetch_one(query, (email,))
 
     def get_active_clients(self) -> List[Any]:
         """Pobierz tylko aktywnych klientów"""
         query = """
             SELECT * FROM clients
-            WHERE is_active = TRUE
+            WHERE is_deleted = FALSE AND is_active = TRUE
             ORDER BY
                 CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
                 LOWER(last_name),
@@ -149,6 +151,7 @@ class ClientRepository(BaseRepository):
         """Pobierz ostatnio dodanych klientów"""
         query = """
             SELECT * FROM clients
+            WHERE is_deleted = FALSE
             ORDER BY created_at DESC
             LIMIT %s
         """
@@ -165,7 +168,7 @@ class ClientRepository(BaseRepository):
         # więc musimy pobrać wszystkich klientów z datami urodzenia i filtrować w Pythonie
         query = """
             SELECT * FROM clients
-            WHERE date_of_birth IS NOT NULL AND is_active = TRUE
+            WHERE is_deleted = FALSE AND date_of_birth IS NOT NULL AND is_active = TRUE
             ORDER BY date_of_birth
         """
         all_clients = self._fetch_all(query)
@@ -193,7 +196,7 @@ class ClientRepository(BaseRepository):
 
         query = """
             SELECT * FROM clients
-            WHERE is_active = TRUE
+            WHERE is_deleted = FALSE AND is_active = TRUE
             AND (last_visit_date IS NULL OR last_visit_date < %s)
             ORDER BY last_visit_date DESC NULLS LAST
         """
@@ -246,6 +249,7 @@ class ClientRepository(BaseRepository):
                 SUM(CASE WHEN last_visit_date >= CURRENT_DATE - INTERVAL '30 days' THEN 1 ELSE 0 END) as recent_visitors,
                 SUM(CASE WHEN date_of_birth IS NOT NULL THEN 1 ELSE 0 END) as clients_with_birthdate
             FROM clients
+            WHERE is_deleted = FALSE
         """
         row = self._fetch_one(stats_query)
 

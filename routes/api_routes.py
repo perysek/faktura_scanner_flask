@@ -128,6 +128,7 @@ def invoice_seller_sync_check():
             SELECT id, invoice_number, seller_name, seller_nip, seller_id,
                    amount, currency, invoice_date
             FROM invoices
+            WHERE is_deleted = FALSE
             ORDER BY invoice_date DESC
         """)
 
