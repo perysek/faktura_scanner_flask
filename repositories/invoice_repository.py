@@ -132,7 +132,7 @@ class InvoiceRepository(BaseRepository):
 	def find_by_invoice_number(self, invoice_number: str) -> Optional[
 		Any]:
 		"""Znajdź fakturę po numerze"""
-		query = "SELECT * FROM invoices WHERE invoice_number = %s"
+		query = "SELECT * FROM invoices WHERE invoice_number = %s AND is_deleted = FALSE"
 		return self._fetch_one(query, (invoice_number,))
 
 	def find_by_invoice_number_and_seller(
@@ -161,14 +161,14 @@ class InvoiceRepository(BaseRepository):
 			# Najbardziej precyzyjne wyszukiwanie: numer + NIP
 			query = """
 				SELECT * FROM invoices
-				WHERE invoice_number = %s AND seller_nip = %s
+				WHERE invoice_number = %s AND seller_nip = %s AND is_deleted = FALSE
 			"""
 			return self._fetch_one(query, (invoice_number, seller_nip))
 		elif seller_name:
 			# Fallback: numer + nazwa (mniej precyzyjne, bo nazwy mogą się różnić)
 			query = """
 				SELECT * FROM invoices
-				WHERE invoice_number = %s AND seller_name = %s
+				WHERE invoice_number = %s AND seller_name = %s AND is_deleted = FALSE
 			"""
 			return self._fetch_one(query, (invoice_number, seller_name))
 		else:
@@ -179,9 +179,10 @@ class InvoiceRepository(BaseRepository):
 		"""Wyszukaj faktury (seller, numer, NIP)"""
 		query = """
             SELECT * FROM invoices
-            WHERE seller_name ILIKE %s
+            WHERE is_deleted = FALSE
+              AND (seller_name ILIKE %s
                OR invoice_number ILIKE %s
-               OR seller_nip ILIKE %s
+               OR seller_nip ILIKE %s)
             ORDER BY invoice_date DESC
         """
 		term = f"%{search_term}%"
@@ -192,7 +193,7 @@ class InvoiceRepository(BaseRepository):
 		"""Pobierz faktury z zakresu dat"""
 		query = """
             SELECT * FROM invoices
-            WHERE invoice_date BETWEEN %s AND %s
+            WHERE is_deleted = FALSE AND invoice_date BETWEEN %s AND %s
             ORDER BY invoice_date DESC
         """
 		return self._fetch_all(
@@ -207,12 +208,14 @@ class InvoiceRepository(BaseRepository):
 		query = """
             SELECT i.* FROM invoices i
             CROSS JOIN (SELECT id, seller_nip FROM sellers WHERE id = %s) s
-            WHERE i.seller_id = s.id
+            WHERE i.is_deleted = FALSE
+              AND (
+                i.seller_id = s.id
                OR (
                    i.seller_id IS NULL
                    AND s.seller_nip IS NOT NULL
                    AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
-               )
+               ))
             ORDER BY i.invoice_date DESC
         """
 		return self._fetch_all(query, (seller_id,))
@@ -251,6 +254,7 @@ class InvoiceRepository(BaseRepository):
 		"""Pobierz ostatnio dodane faktury"""
 		query = """
             SELECT * FROM invoices
+            WHERE is_deleted = FALSE
             ORDER BY created_at DESC
             LIMIT %s
         """
@@ -260,7 +264,8 @@ class InvoiceRepository(BaseRepository):
 		"""Pobierz faktury z najbliższymi terminami płatności (nieopłacone, tylko przyszłe)"""
 		query = """
             SELECT * FROM invoices
-            WHERE status = 'Nieopłacona'
+            WHERE is_deleted = FALSE
+              AND status = 'Nieopłacona'
               AND payment_due_date IS NOT NULL
               AND payment_due_date >= CURRENT_DATE
             ORDER BY payment_due_date ASC
@@ -272,7 +277,8 @@ class InvoiceRepository(BaseRepository):
 		"""Pobierz przeterminowane faktury (nieopłacone, termin < dzisiaj)"""
 		query = """
             SELECT * FROM invoices
-            WHERE status = 'Nieopłacona'
+            WHERE is_deleted = FALSE
+              AND status = 'Nieopłacona'
               AND payment_due_date IS NOT NULL
               AND payment_due_date < CURRENT_DATE
             ORDER BY payment_due_date ASC
@@ -289,6 +295,7 @@ class InvoiceRepository(BaseRepository):
                 COUNT(CASE WHEN status = 'Opłacona' THEN 1 END) as paid_count,
                 COUNT(CASE WHEN status = 'Nieopłacona' THEN 1 END) as unpaid_count
             FROM invoices
+            WHERE is_deleted = FALSE
         """
 		basic_stats = self._fetch_one(query_basic)
 
@@ -312,6 +319,7 @@ class InvoiceRepository(BaseRepository):
                         ELSE 'unpaid'
                     END as payment_status
                 FROM invoices
+                WHERE is_deleted = FALSE
             ) sub
             GROUP BY currency, status, payment_status
         """
