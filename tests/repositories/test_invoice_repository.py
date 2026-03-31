@@ -6,7 +6,7 @@ Verifies that ALL custom query methods exclude soft-deleted records
 """
 import pytest
 from datetime import date
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 
 # ---------------------------------------------------------------------------
@@ -216,3 +216,93 @@ class TestClientSoftDelete:
         repo.get_statistics()
         sql = mock_db.cursor.execute.call_args[0][0]
         assert 'is_deleted = FALSE' in sql, f"get_statistics() missing is_deleted filter: {sql}"
+
+
+# ---------------------------------------------------------------------------
+# TestPartialUniqueConstraint (Plan 02)
+# ---------------------------------------------------------------------------
+
+class TestPartialUniqueConstraint:
+    """Verify soft-deleted invoices don't block duplicate detection."""
+
+    def test_find_by_invoice_number_returns_none_for_deleted(self, mock_db):
+        """After soft-delete, find_by_invoice_number returns None (query filters is_deleted=FALSE)."""
+        mock_db.cursor.fetchone.return_value = None
+        from repositories.invoice_repository import InvoiceRepository
+        repo = InvoiceRepository()
+        result = repo.find_by_invoice_number("FV/2026/001")
+        assert result is None
+        sql = mock_db.cursor.execute.call_args[0][0]
+        assert 'is_deleted = FALSE' in sql
+
+    def test_find_by_invoice_number_and_seller_nip_returns_none_for_deleted(self, mock_db):
+        mock_db.cursor.fetchone.return_value = None
+        from repositories.invoice_repository import InvoiceRepository
+        repo = InvoiceRepository()
+        result = repo.find_by_invoice_number_and_seller("FV/2026/001", seller_nip="1234567890")
+        assert result is None
+        sql = mock_db.cursor.execute.call_args[0][0]
+        assert 'is_deleted = FALSE' in sql
+
+
+# ---------------------------------------------------------------------------
+# TestAuditDeleteVerification — FIX-01 (Plan 02)
+# ---------------------------------------------------------------------------
+
+class TestAuditDeleteVerification:
+    """FIX-01: Verify DELETE audit logging call pattern."""
+
+    def test_audit_log_event_uses_correct_action(self):
+        from repositories.audit_repository import AuditRepository
+        audit = AuditRepository()
+        with patch.object(audit, '_execute') as mock_exec:
+            audit.log_event(
+                entity_type='invoice', action='DELETE', entity_id=42,
+                entity_label='FV/2026/001', field_name='status',
+                old_value='active', new_value='deleted',
+            )
+            mock_exec.assert_called_once()
+            sql = mock_exec.call_args[0][0]
+            params = mock_exec.call_args[0][1]
+            assert 'INSERT' in sql.upper() and 'audit' in sql.lower()
+            assert 'DELETE' in params, f"action='DELETE' not in params: {params}"
+
+    def test_audit_log_event_includes_entity_label(self):
+        from repositories.audit_repository import AuditRepository
+        audit = AuditRepository()
+        with patch.object(audit, '_execute') as mock_exec:
+            audit.log_event(
+                entity_type='invoice', action='DELETE', entity_id=42,
+                entity_label='FV/2026/001',
+            )
+            mock_exec.assert_called_once()
+            params = mock_exec.call_args[0][1]
+            assert 'FV/2026/001' in params
+
+
+# ---------------------------------------------------------------------------
+# TestFKConstraintResolution — FIX-02 (Plan 02)
+# ---------------------------------------------------------------------------
+
+class TestFKConstraintResolution:
+    """FIX-02: Verify soft delete does not trigger CASCADE or FK violations."""
+
+    def test_soft_delete_uses_update_not_delete(self, mock_db):
+        mock_db.cursor.rowcount = 1
+        from repositories.invoice_repository import InvoiceRepository
+        repo = InvoiceRepository()
+        repo.delete(42)
+        sql = mock_db.cursor.execute.call_args[0][0]
+        assert 'UPDATE' in sql.upper()
+        assert 'DELETE FROM' not in sql.upper()
+        assert 'is_deleted = TRUE' in sql
+        assert 'deleted_at = CURRENT_TIMESTAMP' in sql
+
+    def test_soft_delete_does_not_cascade(self, mock_db):
+        mock_db.cursor.rowcount = 1
+        from repositories.invoice_repository import InvoiceRepository
+        repo = InvoiceRepository()
+        repo.delete(99)
+        assert mock_db.cursor.execute.call_count == 1
+        sql = mock_db.cursor.execute.call_args[0][0]
+        assert 'duplicate_detection' not in sql.lower()
