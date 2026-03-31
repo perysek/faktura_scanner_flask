@@ -56,7 +56,7 @@ class ServiceRepository:
 
     def get_by_id(self, service_id: int) -> Optional[Any]:
         """Pobierz usługę po ID"""
-        query = "SELECT * FROM services WHERE id = %s"
+        query = "SELECT * FROM services WHERE id = %s AND is_deleted = FALSE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (service_id,))
@@ -65,9 +65,9 @@ class ServiceRepository:
     def get_all(self, active_only: bool = True) -> List[Any]:
         """Pobierz wszystkie usługi"""
         if active_only:
-            query = "SELECT * FROM services WHERE is_active = TRUE ORDER BY category, name"
+            query = "SELECT * FROM services WHERE is_active = TRUE AND is_deleted = FALSE ORDER BY category, name"
         else:
-            query = "SELECT * FROM services ORDER BY category, name"
+            query = "SELECT * FROM services WHERE is_deleted = FALSE ORDER BY category, name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -77,9 +77,9 @@ class ServiceRepository:
     def get_by_category(self, category: str, active_only: bool = True) -> List[Any]:
         """Pobierz usługi według kategorii"""
         if active_only:
-            query = "SELECT * FROM services WHERE category = %s AND is_active = TRUE ORDER BY name"
+            query = "SELECT * FROM services WHERE category = %s AND is_active = TRUE AND is_deleted = FALSE ORDER BY name"
         else:
-            query = "SELECT * FROM services WHERE category = %s ORDER BY name"
+            query = "SELECT * FROM services WHERE category = %s AND is_deleted = FALSE ORDER BY name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -93,13 +93,14 @@ class ServiceRepository:
             sql = """
                 SELECT * FROM services
                 WHERE (name ILIKE %s OR category ILIKE %s OR description ILIKE %s)
-                AND is_active = TRUE
+                AND is_active = TRUE AND is_deleted = FALSE
                 ORDER BY category, name
             """
         else:
             sql = """
                 SELECT * FROM services
-                WHERE name ILIKE %s OR category ILIKE %s OR description ILIKE %s
+                WHERE (name ILIKE %s OR category ILIKE %s OR description ILIKE %s)
+                AND is_deleted = FALSE
                 ORDER BY category, name
             """
 
@@ -140,8 +141,22 @@ class ServiceRepository:
             return cursor.rowcount > 0
 
     def delete(self, service_id: int) -> bool:
-        """Usuń usługę (soft delete - ustawia is_active na False)"""
-        return self.deactivate(service_id)
+        """Soft-delete uslugi (oznacz jako usunietą)"""
+        query = "UPDATE services SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = %s AND is_deleted = FALSE"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (service_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def restore(self, service_id: int) -> bool:
+        """Przywroc soft-deleted usluge"""
+        query = "UPDATE services SET is_deleted = FALSE, deleted_at = NULL WHERE id = %s AND is_deleted = TRUE"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (service_id,))
+            conn.commit()
+            return cursor.rowcount > 0
 
     def deactivate(self, service_id: int) -> bool:
         """Dezaktywuj usługę"""
@@ -163,7 +178,7 @@ class ServiceRepository:
 
     def get_categories(self) -> List[str]:
         """Pobierz listę wszystkich kategorii"""
-        query = "SELECT DISTINCT category FROM services ORDER BY category"
+        query = "SELECT DISTINCT category FROM services WHERE is_deleted = FALSE ORDER BY category"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
@@ -171,7 +186,7 @@ class ServiceRepository:
 
     def get_price_range(self) -> tuple:
         """Pobierz zakres cen (min, max)"""
-        query = "SELECT MIN(price) as min_price, MAX(price) as max_price FROM services WHERE is_active = TRUE"
+        query = "SELECT MIN(price) as min_price, MAX(price) as max_price FROM services WHERE is_active = TRUE AND is_deleted = FALSE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
@@ -189,6 +204,7 @@ class ServiceRepository:
                 AVG(CASE WHEN is_active = TRUE THEN price END) as avg_price,
                 AVG(CASE WHEN is_active = TRUE THEN duration_minutes END) as avg_duration
             FROM services
+            WHERE is_deleted = FALSE
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -208,7 +224,7 @@ class ServiceRepository:
         """Pobierz usługi w danym zakresie cen"""
         query = """
             SELECT * FROM services
-            WHERE is_active = TRUE AND price BETWEEN %s AND %s
+            WHERE is_active = TRUE AND is_deleted = FALSE AND price BETWEEN %s AND %s
             ORDER BY price, name
         """
         with get_db_connection() as conn:
@@ -220,7 +236,7 @@ class ServiceRepository:
         """Pobierz usługi w danym zakresie czasu trwania"""
         query = """
             SELECT * FROM services
-            WHERE is_active = TRUE AND duration_minutes BETWEEN %s AND %s
+            WHERE is_active = TRUE AND is_deleted = FALSE AND duration_minutes BETWEEN %s AND %s
             ORDER BY duration_minutes, name
         """
         with get_db_connection() as conn:
@@ -233,7 +249,7 @@ class ServiceRepository:
         active_filter = "AND is_active = TRUE" if active_only else ""
         query = f"""
             SELECT * FROM services
-            WHERE service_type = 'main' {active_filter}
+            WHERE service_type = 'main' AND is_deleted = FALSE {active_filter}
             ORDER BY category, name
         """
         with get_db_connection() as conn:
@@ -246,7 +262,7 @@ class ServiceRepository:
         active_filter = "AND is_active = TRUE" if active_only else ""
         query = f"""
             SELECT * FROM services
-            WHERE service_type = 'addon' {active_filter}
+            WHERE service_type = 'addon' AND is_deleted = FALSE {active_filter}
             ORDER BY category, name
         """
         with get_db_connection() as conn:
@@ -259,7 +275,7 @@ class ServiceRepository:
         active_filter = "AND is_active = TRUE" if active_only else ""
         query = f"""
             SELECT * FROM services
-            WHERE service_type = %s {active_filter}
+            WHERE service_type = %s AND is_deleted = FALSE {active_filter}
             ORDER BY category, name
         """
         with get_db_connection() as conn:

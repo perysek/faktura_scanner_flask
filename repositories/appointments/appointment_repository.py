@@ -68,7 +68,7 @@ class AppointmentRepository:
 
     def get_by_id(self, appointment_id: int) -> Optional[Any]:
         """Pobierz wizytę po ID"""
-        query = "SELECT * FROM appointments WHERE id = %s"
+        query = "SELECT * FROM appointments WHERE id = %s AND is_deleted = FALSE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
@@ -86,7 +86,7 @@ class AppointmentRepository:
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
-            WHERE a.id = %s
+            WHERE a.id = %s AND a.is_deleted = FALSE
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -98,7 +98,7 @@ class AppointmentRepository:
                            status: Optional[str] = None) -> List[Any]:
         """Pobierz wizyty w zakresie dat"""
         params = [start_date.isoformat(), end_date.isoformat()]
-        filters = ["a.appointment_date BETWEEN %s AND %s"]
+        filters = ["a.is_deleted = FALSE", "a.appointment_date BETWEEN %s AND %s"]
 
         if employee_id:
             filters.append("a.employee_id = %s")
@@ -138,7 +138,7 @@ class AppointmentRepository:
                    status: Optional[str] = None) -> List[Any]:
         """Pobierz ostatnie wizyty posortowane malejąco po dacie i godzinie"""
         params = []
-        filters = []
+        filters = ["a.is_deleted = FALSE"]
 
         if employee_id:
             filters.append("a.employee_id = %s")
@@ -147,7 +147,7 @@ class AppointmentRepository:
             filters.append("a.status = %s")
             params.append(status)
 
-        where_clause = ("WHERE " + " AND ".join(filters)) if filters else ""
+        where_clause = "WHERE " + " AND ".join(filters)
         params.extend([limit, offset])
         query = f"""
             SELECT
@@ -191,6 +191,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.status NOT IN ('cancelled', 'no_show')
+            AND a.is_deleted = FALSE
             GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.start_time
         """
@@ -228,6 +229,7 @@ class AppointmentRepository:
                     JOIN appointments a ON a.employee_id = e.id
                     WHERE a.appointment_date = %s
                     AND a.status NOT IN ('cancelled', 'no_show')
+                    AND a.is_deleted = FALSE
                     AND e.is_active = TRUE
                     ORDER BY full_name
                 """
@@ -267,6 +269,7 @@ class AppointmentRepository:
                 LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
                 LEFT JOIN services s ON s.id = aps.service_id
                 WHERE a.employee_id = %s AND a.appointment_date = %s
+                AND a.is_deleted = FALSE
                 GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
                 ORDER BY a.start_time
             """
@@ -300,6 +303,7 @@ class AppointmentRepository:
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.start_time < %s AND a.end_time > %s
             AND a.status NOT IN ('cancelled', 'no_show')
+            AND a.is_deleted = FALSE
             {exclude_filter}
         """
         # Note: params order for conflict detection:
@@ -352,6 +356,7 @@ class AppointmentRepository:
             WHERE a.client_id = %s AND a.appointment_date = %s
             AND a.start_time < %s AND a.end_time > %s
             AND a.status NOT IN ('cancelled', 'no_show')
+            AND a.is_deleted = FALSE
             {exclude_filter}
         """
         # Logika konfliktu: existing.start_time < proposed.end_time AND existing.end_time > proposed.start_time
@@ -449,8 +454,17 @@ class AppointmentRepository:
             return cursor.rowcount > 0
 
     def delete(self, appointment_id: int) -> bool:
-        """Usuń wizytę"""
-        query = "DELETE FROM appointments WHERE id = %s"
+        """Soft-delete wizyte (oznacz jako usunietą)"""
+        query = "UPDATE appointments SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = %s AND is_deleted = FALSE"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def restore(self, appointment_id: int) -> bool:
+        """Przywroc soft-deleted wizyte"""
+        query = "UPDATE appointments SET is_deleted = FALSE, deleted_at = NULL WHERE id = %s AND is_deleted = TRUE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
@@ -465,7 +479,7 @@ class AppointmentRepository:
                 e.first_name || ' ' || e.last_name as employee_name
             FROM appointments a
             JOIN employees e ON e.id = a.employee_id
-            WHERE a.client_id = %s
+            WHERE a.client_id = %s AND a.is_deleted = FALSE
             ORDER BY a.appointment_date DESC, a.start_time DESC
             LIMIT %s
         """
@@ -485,6 +499,7 @@ class AppointmentRepository:
         query = f"""
             SELECT COUNT(*) as cnt FROM appointments
             WHERE appointment_date = %s AND status NOT IN ('cancelled', 'no_show')
+            AND is_deleted = FALSE
             {employee_filter}
         """
         with get_db_connection() as conn:
@@ -533,6 +548,7 @@ class AppointmentRepository:
                 a.employee_id = %s
                 AND a.appointment_date = %s
                 AND a.status NOT IN ('cancelled', 'no_show')
+                AND a.is_deleted = FALSE
                 AND a.start_time < %s
                 AND a.end_time > %s
                 {exclude_filter}
@@ -564,7 +580,7 @@ class AppointmentRepository:
             cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT appointment_date, start_time FROM appointments WHERE id = %s",
+                "SELECT appointment_date, start_time FROM appointments WHERE id = %s AND is_deleted = FALSE",
                 (appointment_id,)
             )
             current = cursor.fetchone()
@@ -581,6 +597,7 @@ class AppointmentRepository:
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE a.appointment_date = %s AND a.start_time < %s AND a.id != %s
+                    AND a.is_deleted = FALSE
                     ORDER BY a.start_time DESC LIMIT 1
                 """, (cur_date, cur_time, appointment_id))
                 prev_row = cursor.fetchone()
@@ -591,6 +608,7 @@ class AppointmentRepository:
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE a.appointment_date = %s AND a.start_time > %s AND a.id != %s
+                    AND a.is_deleted = FALSE
                     ORDER BY a.start_time ASC LIMIT 1
                 """, (cur_date, cur_time, appointment_id))
                 next_row = cursor.fetchone()
@@ -601,6 +619,7 @@ class AppointmentRepository:
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE (a.appointment_date, a.start_time) < (%s, %s) AND a.id != %s
+                    AND a.is_deleted = FALSE
                     ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 1
                 """, (cur_date, cur_time, appointment_id))
                 prev_row = cursor.fetchone()
@@ -611,6 +630,7 @@ class AppointmentRepository:
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE (a.appointment_date, a.start_time) > (%s, %s) AND a.id != %s
+                    AND a.is_deleted = FALSE
                     ORDER BY a.appointment_date ASC, a.start_time ASC LIMIT 1
                 """, (cur_date, cur_time, appointment_id))
                 next_row = cursor.fetchone()
@@ -650,6 +670,7 @@ class AppointmentRepository:
             WHERE
                 (a.appointment_date + a.end_time) < NOW()
                 AND a.status NOT IN ('completed', 'cancelled', 'no_show')
+                AND a.is_deleted = FALSE
             GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
                      a.start_time, a.end_time, a.total_price, a.notes,
                      c.first_name, c.last_name, e.first_name, e.last_name
