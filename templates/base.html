@@ -33,9 +33,20 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
             <!-- Header -->
-            <header>
+            <header class="flex items-center gap-4 px-4 py-2 lg:py-0">
+                <!-- Mobile sidebar toggle -->
+                <button id="sidebar-toggle"
+                        type="button"
+                        class="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+                        aria-label="Otworz menu"
+                        aria-expanded="false"
+                        aria-controls="sidebar">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
                 <!-- Right Header Actions (e.g. User Profile or Global Actions) -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-4 ml-auto">
                     {% block page_actions %}{% endblock %}
                 </div>
             </header>

@@ -1,0 +1,921 @@
+❯ został pominięty całkowicie szablon                                           
+'C:\Projects\faktura_scanner_flask\templates\appointments\superadmin_edit.html' 
+ - style widoku mają tylko właściwe kolory, wszystkie inne CSS props nie są     
+widoczne. Popraw najpierw to, a potem ocenię całość                             
+
+● Czytam plik żeby zobaczyć co się stało.
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● Widzę problem — zmienne --pp-* są używane intensywnie, ale gdzie są
+  zdefiniowane? Sprawdzam czy były w pliku przed zmianami:
+
+● Bash(git log --oneline templates/appointments/superadmin_edit.html | head -5)
+  ⎿  f87862b feat(02-layout-spacing-02): strip padding !important from Grou
+     p C/D templates
+     e7ed98c refactor(ui): replace hardcoded hex with CSS custom properties
+     … +5 lines (ctrl+o to expand)
+
+● Bash(git show f87862b -- templates/appointments/superadmin_edit.html | head
+      -50)
+  ⎿  commit f87862b086f535e6986a2f6fb56c6359c272794a
+     Author: piotrperesiak <piotr.peresiak@gmail.com>
+     Date:   Thu Mar 19 16:33:00 2026 +0100
+     … +18 lines (ctrl+o to expand)
+
+● Plan 02-02 zmienił tylko jedną linię w tym pliku — usunął !important. Problem
+  musi być w braku definicji zmiennych --pp-*. Sprawdzam co było PRZED commit
+  02-02:
+
+● Bash(git show e7ed98c -- templates/appointments/superadmin_edit.html | grep
+      -A5 -B5 "pp-blue\|pp-border\|pp-surface\|:root" | head -60)
+  ⎿       }
+          .pp-loading-overlay.active { display: flex; }
+          .pp-spinner {
+     … +62 lines (ctrl+o to expand)
+
+● Bash(git show HEAD:templates/appointments/superadmin_edit.html | grep -n
+      ":root\|--pp-blue.*:\|--pp-border.*:\|--pp-surface.*:\|--pp-ink.*:\|--pp-d
+      anger.*:\|--pp-mon…)
+  ⎿  20:        border-top-color: var(--pp-blue); border-radius: 50%;
+     39:    .pp-id-badge { font-family: var(--pp-mono); font-size: 0.72rem;
+      font-weight: 500; background: #111; color: var(--pp-blue); padding: 0
+     … +57 lines (ctrl+o to expand)
+
+● Problem zidentyfikowany — zmienne --pp-* są używane ale nigdzie nie 
+  zdefiniowane w pliku! Sprawdzam kiedy zniknęły:
+● Bash(git log --all --oneline -- templates/appointments/superadmin_edit.html)
+  ⎿  f87862b feat(02-layout-spacing-02): strip padding !important from Grou
+     p C/D templates
+     e7ed98c refactor(ui): replace hardcoded hex with CSS custom properties
+     … +17 lines (ctrl+o to expand)
+
+● Bash(git show 2fe9130 -- templates/appointments/superadmin_edit.html | grep
+      "^-.*--pp-blue.*:\|^-.*:root\|^-.*--pp-body\|^-.*--pp-border.*:\|^-.*--pp-
+      surface.*:\|^-.…)
+  ⎿  -    :root {
+     -        --pp-surface: #ffffff;
+     -        --pp-surface-warm: #f8f8f8;
+     … +6 lines (ctrl+o to expand)
+
+● Znalazłem przyczynę — commit 2fe9130 ("centralize CSS custom properties in
+  input.css") usunął :root z definicjami --pp-* z tego szablonu jako część
+  wcześniejszego refaktoru. Problem: --pp-* to zmienne specyficzne dla Power 
+  Panel i nie zostały dodane do input.css — więc po usunięciu lokalnego :root
+  nie ma ich nigdzie.
+
+  ★ Insight ─────────────────────────────────────
+  To klasyczny błąd "nadmiernej centralizacji" CSS — refaktor usunął lokalny
+  :root traktując go jak duplikat, ale --pp-* to zmienne Power Panel specyficzne
+   tylko dla tego szablonu. Nie były duplikatem globalnych zmiennych — miały być
+   w pliku. To właśnie dlatego CONTEXT.md Fazy 1 mówił "sellers/edit superadmin
+  — deliberate divergence".
+  ─────────────────────────────────────────────────
+
+  Przywracam :root z definicjami --pp-* do szablonu. Sprawdzam pełną listę
+  usuniętych zmiennych:
+
+● Bash(git show 2fe9130 -- templates/appointments/superadmin_edit.html | grep
+      "^-" | grep -E
+      "^\-\s+--pp-|^\-\s+:root|^\-.*--pp-mono|^\-.*--ease|^\-.*--pp-warning" |
+      h…)
+  ⎿  -    :root {
+     -        --pp-bg: #0f0f0f;
+     -        --pp-surface: #ffffff;
+     … +10 lines (ctrl+o to expand)
+
+● Bash(git show 2fe9130 -- templates/appointments/superadmin_edit.html | grep
+      "^-.*--pp-mono\|^-.*--pp-body" | head -5)
+  ⎿  (No output)
+
+● Bash(git show 06cb4b0 -- templates/appointments/superadmin_edit.html | grep
+      ":root\|--pp-mono\|--pp-body\|--ease" | head -10)
+  ⎿  (No output)
+
+● Bash(git show 7d39d2a -- templates/appointments/superadmin_edit.html | grep
+      ":root" -A 20 | head -30)
+  ⎿  (No output)
+
+● Bash(git show 8ccf337 -- templates/appointments/superadmin_edit.html | grep
+      ":root" -A 25 | head -30)
+  ⎿      Move duplicated :root CSS variables and body overrides from 46 tem
+     plates
+         into a single @layer base block in input.css. Eliminates ~757 line
+     … +23 lines (ctrl+o to expand)
+
+● Mam pełną listę usuniętych zmiennych. Sprawdzam też --pp-mono i --pp-body — są
+   używane ale nie widzę ich w tym commicie:
+
+● Bash(git log --all --oneline -20 --
+      templates/appointments/superadmin_edit.html | xargs -I{} bash -c "git show
+       {} -- templates/appointments/superadmin_edit.html 2>/d…)
+  ⎿  +        --pp-mono: 'IBM Plex Mono', monospace;
+     +        --pp-body: 'DM Sans', system-ui, sans-serif;
+     +    body { background: var(--pp-bg) !important; font-family: var(--pp
+     … +6 lines (ctrl+o to expand)
+
+● Mam wszystko. Teraz przywracam pełny :root do szablonu — wszystkie zmienne
+  --pp-* plus --ease:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 18 lines
+       5  {% block extra_css %}
+       6  <style>
+       7      /* ── Power Panel Theme ── */
+       8 +    /* NOTE: --pp-* variables are intentional local theme — Pow
+         +er Panel is a deliberate visual divergence */
+       9 +    :root {
+      10 +        --pp-bg: #0f0f0f;
+      11 +        --pp-surface: #ffffff;
+      12 +        --pp-surface-warm: #f8f8f8;
+      13 +        --pp-border: #e2e2e2;
+      14 +        --pp-ink: #111111;
+      15 +        --pp-ink-muted: #555555;
+      16 +        --pp-ink-subtle: #999999;
+      17 +        --pp-blue: #2563eb;
+      18 +        --pp-danger: #dc2626;
+      19 +        --pp-success: #16a34a;
+      20 +        --pp-warning: #d97706;
+      21 +        --pp-mono: 'IBM Plex Mono', monospace;
+      22 +        --pp-body: 'DM Sans', system-ui, sans-serif;
+      23 +        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      24 +    }
+      25 +
+      26  /* Override base.html main area — this page owns its own scroll
+           */
+      27      #main-content { overflow: hidden; padding: 0; }
+      28 
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Zmienne przywrócone. Committuję:
+
+● Bash(git add templates/appointments/superadmin_edit.html && git commit -m
+      "fix(superadmin-edit): restore --pp-* local theme variables removed by
+      8ccf337…)
+  ⎿  Time tracking: Took 31 minutes (appended)
+     [invoices-app b197112] fix(superadmin-edit): restore --pp-* local them
+     e variables removed by 8ccf337
+      1 file changed, 18 insertions(+)
+
+● ★ Insight ─────────────────────────────────────
+  Dodałem komentarz /* NOTE: --pp-* variables are intentional local theme */
+  przy bloku :root — to zabezpieczenie przed ponownym usunięciem w przyszłych
+  refaktorach. Podobną regułę warto zapamiętać: kiedy CSS custom properties mają
+   prefiks specyficzny dla jednego widoku (--pp-), oznaczają lokalny design
+  token, nie globalny.
+  ─────────────────────────────────────────────────
+
+  Naprawione. superadmin_edit.html ma teraz wszystkie --pp-* zmienne z powrotem.
+
+  Teraz możesz sprawdzić 6 stron z checkpointu 02-03. Gdy potwierdzisz —
+  kończymy Fazę 2 i ruszamy dalej.
+
+✻ Churned for 2m 30s
+
+❯ error in browser:    //                                                       
+══════════════════════════════════════════════════════                          
+            //  ADJACENT                                                        
+            // ══════════════════════════════════════════════════════           
+            async function loadAdjacent() {                                     
+                try {                                                           
+                    updateAdjacent(data);                                       
+                } catch (e) {                                                   
+                    console.error('Adjacent load failed', e);                   
+                }                                                               
+            }                                                                   
+                                                                                
+            function updateAdjacent(data) {                                     
+                if (!data || !data.success)                                     
+  ⎿  API Error: 400 
+     {"type":"error","error":{"type":"invalid_request_error","message":"The 
+     request body is not valid JSON: invalid high surrogate in string: line 1 
+     column 288464 (char 288463)"},"request_id":"req_011CZCzaAyBACvjg6TMMDKLe"}
+
+❯ /status                                                                       
+  ⎿  Status dialog dismissed
+
+❯ browser console errors: 6170:1096 Adjacent load failed ReferenceError: data   
+is not defined                                                                  
+    at loadAdjacent (6170:1095:24)                                              
+    at saveChanges (6170:1476:13)                                               
+loadAdjacent @ 6170:1096                                                        
+                                                                                
+  ⎿  API Error: 400 
+     {"type":"error","error":{"type":"invalid_request_error","message":"The 
+     request body is not valid JSON: invalid high surrogate in string: line 1 
+     column 288464 (char 288463)"},"request_id":"req_011CZCziadwFNmVrs2NCMDym"}
+
+❯ /exit                                                                         
+  ⎿  Bye!
+
+❯ 6170:1096 Adjacent load failed ReferenceError: data is not defined            
+    at loadAdjacent (6170:1095:24)                                              
+    at saveChanges (6170:1476:13)                                               
+loadAdjacent @ 6170:1096                                                        
+                                                                                
+
+● Czytam plik żeby znaleźć funkcje loadAdjacent i saveChanges.
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Problem jasny. loadAdjacent() wywołuje updateAdjacent(data) ale zmienna data
+  nie istnieje w jej scope — powinna najpierw wykonać fetch API żeby ją uzyskać.
+
+  Read 1 file (ctrl+o to expand)
+
+● Teraz sprawdzam git history — jak loadAdjacent wyglądała pierwotnie:
+
+● Bash(git log --oneline -- templates/appointments/superadmin_edit.html | head
+      -8)
+  ⎿  b197112 fix(superadmin-edit): restore --pp-* local theme variables rem
+     oved by 8ccf337
+     f87862b feat(02-layout-spacing-02): strip padding !important from Grou
+     … +9 lines (ctrl+o to expand)
+
+● Bash(git show 2fe9130 -- templates/appointments/superadmin_edit.html | grep -A
+       15 "loadAdjacent\|ADJACENT" | head -30)
+  ⎿  (No output)
+
+● Bash(git show 06cb4b0 -- templates/appointments/superadmin_edit.html | grep -A
+       15 "loadAdjacent\|ADJACENT" | head -30)
+  ⎿  @@ -534,7 +531,7 @@ async function loadAdjacent() {
+      }
+     … +13 lines (ctrl+o to expand)
+
+● Bash(git show 9939f03~1 -- templates/appointments/superadmin_edit.html
+      2>/dev/null | grep -B2 -A 15 "ADJACENT\|loadAdjacent" | head -40)
+  ⎿  (No output)
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep -A
+       20 "loadAdjacent\|ADJACENT" | head -40)
+  ⎿  +    loadAdjacent();
+     +}
+     +function applyStoredMode() {
+     … +25 lines (ctrl+o to expand)
+
+● Znalazłem. Oryginalna loadAdjacent() miała const data = await fetch(...) —
+  gdzieś w toku refaktorów ta linia fetch'a została usunięta, zostawiając tylko
+  updateAdjacent(data) bez wcześniejszego pobrania danych.
+
+  ★ Insight ─────────────────────────────────────
+  To jest błąd "partial refactor" — ktoś usunął const data = await fetch(...)
+  ale zostawił updateAdjacent(data) odwołujące się do nieistniejącej zmiennej. W
+   JavaScript zmienna data z saveChanges() nie jest widoczna w loadAdjacent() —
+  każda funkcja ma własny lexical scope.
+  ─────────────────────────────────────────────────
+
+  Searched for 3 patterns (ctrl+o to expand)
+
+● navMode też zniknęło. Sprawdzam jak jest zdefiniowane w starszym commicie:
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep
+      "+.*navMode\|+.*let nav\|+.*var nav" | head -5)
+  ⎿  +let navMode = localStorage.getItem('superadmin_nav_mode') || 'all';
+     +    navMode = mode;
+     +    document.getElementById('mode-all').classList.toggle('active', na
+     … +5 lines (ctrl+o to expand)
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● Pełny obraz: navMode, endpoint /api/appointments/adjacent i linia const data =
+   await fetch(...) zostały usunięte, ale updateAdjacent(data) pozostało.
+  Sprawdzam czy endpoint istnieje w backendzie:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Backend endpoint istnieje. Przywracam brakującą linię fetch + zmienną navMode
+  w loadAdjacent:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line
+      436  let currentServices = [];
+      437  let adjPrev = null;
+      438  let adjNext = null;
+      439 +let navMode = localStorage.getItem('superadmin_nav_mode') || '
+          +all';
+      440  let currentStar = 0;
+      441  let forceAllowSave = false;
+      442  let totalPriceOverride = null; // manual total price override
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line
+      529  // ══════════════════════════════════════════════════════
+      530  async function loadAdjacent() {
+      531      try {
+      532 +        const data = await fetch(`/api/appointments/adjacent?i
+          +d=${APPT_ID}&mode=${navMode}`).then(r => r.json());
+      533          updateAdjacent(data);
+      534      } catch(e) { console.error('Adjacent load failed', e); }
+      535  }
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(git add templates/appointments/superadmin_edit.html && git commit -m
+      "fix(superadmin-edit): restore missing fetch in loadAdjacent + navMode
+      variable…)
+  ⎿  Time tracking: Took 6 minutes (appended)
+     [invoices-app f311683] fix(superadmin-edit): restore missing fetch in
+     loadAdjacent + navMode variable
+      1 file changed, 2 insertions(+)
+
+● Naprawione. Dwa problemy w jednym commicie:
+
+  1. navMode — zmienna stanu przechowująca tryb nawigacji ('all' lub 'day'),
+  pobierana z localStorage
+  2. loadAdjacent() — brakująca linia const data = await fetch(...) powodowała
+  ReferenceError bo data nie istniała w scope tej funkcji
+
+  ★ Insight ─────────────────────────────────────
+  Oba błędy (--pp-* zmienne i brakujący fetch) to skutek tego samego refaktoru
+  8ccf337 / 2fe9130 który agresywnie "centralizował" CSS i JavaScript — usuwał
+  bloki bez sprawdzenia czy nie zawierają unikalnej, lokalnie wymaganej logiki.
+  To dobry przykład dlaczego refaktory o szerokim zasięgu ("rusz 46 plików na
+  raz") wymagają dokładniejszej weryfikacji.
+  ─────────────────────────────────────────────────
+
+  Możesz teraz przeładować stronę superadmin i sprawdzić czy błąd w konsoli
+  zniknął. Po potwierdzeniu wrócimy do checkpointu 02-03 (weryfikacja wizualna
+  max-width 6 stron).
+
+✻ Worked for 3m 4s
+
+❯ błąd konsoli zniknął, ale cały czas ale wizualnie widok jest płaski, brakuję  
+border-radius, shadows, padding, hover animations and so on. Fix it.            
+
+● To ten sam root cause co poprzednio — wcześniejszy refaktor usunął nie tylko
+  :root z --pp-* zmiennymi, ale też blok body { } z font-family. Sprawdzam co
+  jeszcze brakuje.
+
+● Bash(git show 8ccf337 -- templates/appointments/superadmin_edit.html | grep
+      "^-" | grep -v "^---" | head -60)
+  ⎿  -    :root {
+     -        --pp-bg: #0f0f0f;
+     -        --pp-surface: #ffffff;
+     … +15 lines (ctrl+o to expand)
+
+● :root już przywróciłem. Ale błąd wizualny (brak border-radius, shadow,
+  padding) sugeruje, że brakuje więcej CSS — być może z innego commitu.
+  Sprawdzam co jeszcze zostało usunięte z oryginalnego pliku porównując aktualny
+   stan z wersją przed wszystkimi refaktorami:
+
+● Bash(git show 9939f03 -- templates/appointments/superadmin_edit.html
+      2>/dev/null | head -3)  ⎿  commit 9939f033a9c1c97d212d14100212b0ca4ee6f267
+     Author: perysek <Piotr.peresiak@gmail.com>
+     Date:   Tue Mar 17 04:47:55 2026 +0100
+
+● Bash(# Get the pre-refactor version (before 8ccf337)
+      git show 8ccf337~1:templates/appointments/superadmin_edit.html >
+      /tmp/superadmin_original.html 2>/dev/null…)
+  ⎿  === LINES ONLY IN ORIGINAL (removed in current) ===
+     < {% extends "base.html" %}
+     < {% block title %}Admin Wizyty #{{ appointment_id }} — Power Editor{%
+     … +32 lines (ctrl+o to expand)
+
+● To nie są różnice CSS — to po prostu fakt że diff porównuje dwa różne pliki.
+  Muszę sprawdzić inaczej — ile linii CSS jest w oryginale vs obecnym pliku:
+
+● Bash(# Count lines between <style> and </style> in original
+      awk '/<style>/,/<\/style>/' /tmp/superadmin_original.html | wc -l…)
+  ⎿  195
+     ---
+     197
+
+● CSS ma prawie tę samą liczbę linii — różnica to tylko przywrócony przeze mnie
+  :root blok. Problem musi być gdzie indziej. Sprawdzam w przeglądarce jakie
+  klasy są na elementach:
+
+● Potrzebuję zobaczyć aktualny widok w przeglądarce.
+
+● Sprawdzam aktywne zakładki.
+
+● kapture - list_tabs (MCP)
+  ⎿  {
+       "tabs": [],
+       "hint": "There currently are no tabs connected. Use the new_tab tool
+     … +2 lines (ctrl+o to expand)
+
+● Brak podłączonych zakładek — dziękuję przeglądarkę. Zdiagnozuję problem bez
+  screenshota, przez analizę CSS.
+
+  Skoro CSS blok ma właściwą liczbę linii, problem może być w tym że body { 
+  font-family: var(--pp-body) } z oryginalnego pliku też zniknął, albo że commit
+   e7ed98c ("replace hardcoded hex with CSS custom properties") uszkodził jakiś
+  rule.
+
+● Bash(git show e7ed98c -- templates/appointments/superadmin_edit.html | grep
+      "^-\|^+" | grep -v "^---\|^+++" | head -60)
+  ⎿  -        width: 36px; height: 36px; border: 3px solid #333;
+     +        width: 36px; height: 36px; border: 3px solid var(--color-ink-
+     muted);
+     … +55 lines (ctrl+o to expand)
+
+● e7ed98c wygląda OK — tylko kolory. Sprawdzam commit 79820d1 (aria-label) który
+   też dotykał tego pliku:
+
+● Bash(git show 79820d1 -- templates/appointments/superadmin_edit.html | grep
+      "^-\|^+" | grep -v "^---\|^+++" | head -30)
+  ⎿  -                        <button class="star-btn" data-star="1" onclic
+     k="setStar(1)" title="1 — Bardzo źle">★</button>
+     -                        <button class="star-btn" data-star="2" onclic
+     … +26 lines (ctrl+o to expand)
+
+● OK — ten commit jest czysty. Skupiam się na tym co faktycznie widzisz: "płaski
+   widok, brak border-radius, shadows, padding, hover". Skoro CSS jest
+  niezmieniony — to brzmi jak problem z body { } override który był w
+  oryginalnym pliku i usuwał domyślny font. Ale ważniejsze: sprawdzam czy
+  zmienne --color-* z input.css są dostępne na tej stronie:
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● Wszystkie --color-* są OK. Patrzę głębiej — problem "płaski wygląd" wskazuje
+  na brak box-shadow i border-radius. Sprawdzam bezpośrednio w CSS szablonu czy
+  te właściwości istnieją:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● CSS jest w pliku. Box-shadow, border-radius, transitions — wszystko jest.
+  Problem musi być w tym że Tailwind CSS output.css nadpisuje style szablonu —
+  bo refaktor Fazy 1 dodał .pp-card, .pp-card-header etc. do globalnego @layer 
+  components? Sprawdzam:
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● PP klasy nie są w output.css — więc Tailwind nie nadpisuje. Sprawdzam teraz
+  strukturę HTML szablonu — czy .pp-page, .pp-card, .pp-col-* są faktycznie
+  używane w HTML:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● HTML i CSS są — ale gdzie jest .pp-col-left w CSS?
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● CSS klasy są zdefiniowane. Sprawdzam teraz linie CSS .pp-col-left i .pp-grid
+  żeby zobaczyć czy layout jest kompletny:
+
+  Read 1 file (ctrl+o to expand)
+
+● CSS wygląda kompletnie. Sprawdzam jak wygląda <head> szablonu — czy output.css
+   jest ładowane:
+
+  Read 1 file (ctrl+o to expand)
+
+● Zauważam kluczowy problem! base.html ma <header> z pustą zawartością — brak
+  sidebara jest nieprawdopodobny. Ale ważniejsze: szukam czy {% block extra_css 
+  %} jest umieszczone po output.css — tak jest, więc <style> szablonu powinien
+  mieć wyższy priorytet niż Tailwind.
+
+  ★ Insight ─────────────────────────────────────
+  CSS kaskada: output.css (ładowany w <head>) vs <style> w {% block extra_css %}
+   (też w <head>, ale po output.css) — style szablonu mają priorytet przez
+  kolejność w dokumencie. Jedyny sposób żeby Tailwind wygrał byłby !important
+  albo wyższa specyficzność selektora.
+  ─────────────────────────────────────────────────
+
+  Sprawdzam teraz czy npm run build:css był uruchomiony — output.css mógł być
+  nieaktualny i nie zawierać nowego :root z input.css:
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● input.css nie ma --pp-* — to dobrze, są tylko w szablonie. Ale output.css to
+  plik kompilowany — nie jest na bieżąco. Uruchamiam build:
+
+● Bash(cd "C:/Projects/faktura_scanner_flask" && npm run build:css 2>&1 | tail
+      -5)
+  ⎿    Why you should do it regularly: https://github.com/browserslist/upda
+     te-db#readme
+     … +3 lines (ctrl+o to expand)
+● Build OK. Ale teraz myślę głębiej — skoro CSS i zmienne są w porządku, problem
+   "płaski widok" musi być inny. Sprawdzam jak Flask serwuje output.css — może
+  przeglądarka ma zbuforowaną starą wersję, albo jest jakiś błąd CSS parsowania
+  przez niezdefiniowane zmienne --pp-* ZANIM je przywróciłem:
+
+  Read 1 file (ctrl+o to expand)
+
+● Sprawdzam oryginalny plik (przed wszelkimi refaktorami) — czy był tam body {}
+  override który teraz brakuje:
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep
+      "^+.*body\s*{" | head -5)
+  ⎿  +    body { background: var(--pp-bg) !important; font-family: var(--pp
+     -body); color: var(--pp-ink); }
+     +    .pp-card-body { padding: 0.875rem; }
+     … +2 lines (ctrl+o to expand)
+
+● Bash(git show 8ccf337 -- templates/appointments/superadmin_edit.html | grep
+      "^-.*body\s*{" | head -5)
+  ⎿  (No output)
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● body { background: var(--pp-bg) !important; font-family: var(--pp-body); }
+  zniknęło. Sprawdzam kiedy dokładnie:
+
+● Bash(git log --all --oneline -- templates/appointments/superadmin_edit.html |
+      while read hash msg; do
+        result=$(git show $hash -- templates/appointments/superadmin_…)
+  ⎿  7d39d2a feat(appointments): add superadmin visit power editor: -    bo
+     dy { background: var(--pp-bg) !important; font-family: var(--pp-body)
+     !important; color: var(--pp-ink); }
+     … +9 lines (ctrl+o to expand)
+
+● body rule zniknęła w merge — jest w 4be2e4e ale nie ma jej po 8ccf337.
+  Sprawdzam czy 8ccf337 ją usunął jako "duplikat":
+
+● Bash(git show 8ccf337 -- templates/appointments/superadmin_edit.html | grep
+      "body.*pp-body\|body.*background.*pp-bg" | head -5)
+  ⎿  (No output)
+
+● Bash(git show 2fe9130 -- templates/appointments/superadmin_edit.html | grep
+      "body" | head -5)
+  ⎿      Move duplicated :root CSS variables and body overrides from 46 tem
+     plates
+
+● "body overrides" — commit 2fe9130 celowo usunął body {} overrides z szablonów
+  jako "duplikaty". Problem polega na tym że body { font-family: var(--pp-body) 
+  } w superadmin to NIE był duplikat globalnego — Power Panel miał własną
+  czcionkę DM Sans.
+
+  Ale zanim przywrócę body — rozumiem teraz głębszy problem. "Płaski wygląd" to
+  nie tylko czcionka. Porównuję pełny CSS oryginalny vs obecny żeby znaleźć
+  wszystkie brakujące reguły:
+
+● Bash(git show 8ccf337~1:templates/appointments/superadmin_edit.html | awk '/{%
+       block extra_css %}/,/{% endblock %}/' > /tmp/pp_css_original.txt
+      grep -A1000 "{% block…)
+  ⎿  <     /* Override base.html main area — this page owns its own scroll
+     */
+     <     #main-content { overflow: hidden !important; padding: 0 !importa
+     … +13 lines (ctrl+o to expand)
+
+● To tylko zamiany hex→var() — nie brakuje żadnych reguł CSS strukturalnych.
+  Problem musi być w JS albo w HTML. Sprawdzam czy body override i pp-page są
+  inicjowane w JS:
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Zauważam że loadAdjacent() nie jest wywołane w DOMContentLoaded! W oryginale
+  było — sprawdzam:
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep
+      -A30 "DOMContentLoaded" | head -30)
+  ⎿  +document.addEventListener('DOMContentLoaded', async () => {
+     +    applyStoredMode();
+     +
+     … +21 lines (ctrl+o to expand)
+
+● OK — oryginał ładował adjData bezpośrednio w DOMContentLoaded, nie przez
+  loadAdjacent(). To drobna różnica ale nie wpływa na wygląd wizualny.
+
+  Wracam do rdzenia problemu. Muszę podejść inaczej — skoro CSS jest w pliku i
+  zmienne są zdefiniowane, ale widok jest "płaski", to przeglądarka ma problem z
+   parsowaniem CSS. Sprawdzam czy jest jakiś błąd składni CSS w szablonie:
+
+● Bash(# Extract CSS from template and count opening vs closing braces
+      css_block=$(awk '/{% block extra_css %}/{found=1} found{print} /{%
+      endblock %}/{if(found) exit}'…)
+  ⎿  Opening braces: 85
+     Closing braces: 85
+     Difference: 0
+
+● Nawiasy klamrowe zbalansowane. Problem musi być gdzieś indziej — może w body 
+  {} override który steruje font-family i sprawia że cały tekst wygląda inaczej,
+   albo w jakimś JS który nie inicjalizuje widoku. Sprawdzam dokładnie co widać
+  w HTML — czy pp-page ma height: 100%:
+
+  Read 1 file (ctrl+o to expand)
+
+● .pp-page { height: 100% } — to wymaga że #main-content ma również height.
+  Sprawdzam chain:
+
+  - html.h-full → body.h-full → .flex.h-full →
+  main#main-content.flex-1.overflow-auto
+
+  main ma flex-1 ale nie h-full. Jednak to jest oryginalny design — jeśli
+  działało wcześniej to nie to jest przyczyną teraz.
+
+  Proszę Cię o pomoc diagnostyczną — otwórz DevTools w przeglądarce na stronie
+  superadmin_edit i powiedz mi:
+
+  1. Czy w zakładce Elements → Styles na elemencie .pp-card widzisz
+  border-radius: 3px — i czy jest przekreślony (overridden)?
+  2. Czy na #main-content widzisz padding: 0 i overflow: hidden?
+  3. Czy w zakładce Console są jakieś błędy CSS/parse errors?
+
+  Ewentualnie zrób screenshot DevTools (F12 → Elements) z zaznaczonym .pp-card.
+
+✻ Sautéed for 6m 36s
+
+❯ <textarea id="appt-notes" class="pp-textarea" rows="4"                        
+placeholder="Opcjonalne uwagi do wizyty..."></textarea>                         
+                                                                                
+textarea for appointments notes: I copied whole css definition from devtolls    
+'styles':                                                                       
+                                                                                
+   font-family: inherit;                                                        
+    font-feature-settings: inherit;                                             
+    font-variation-settings: inherit;                                           
+    font-size: 100%;                                                            
+    font-weight: inherit;                                                       
+    line-height: inherit;                                                       
+    letter-spacing: inherit;                                                    
+    color: inherit;                                                             
+    margin: 0;                                                                  
+    padding: 0;                                                                 
+                                                                                
+    resize: vertical;                                                           
+    min-height: 65px;                                                           
+                                                                                
+    border: 1px solid var(--pp-border);                                         
+    border-radius: 2px;                                                         
+    background: white;                                                          
+    color: var(--pp-ink);                                                       
+    box-sizing: border-box;                                                     
+    transition: border-color 0.15s, box-shadow 0.15s;                           
+
+● Idealny diagnostic! Widzę problem. Styl z DevTools pokazuje:
+
+  padding: 0;      /* ← to pochodzi z Tailwind reset, nie z .pp-textarea */
+
+  A nasze .pp-textarea definiuje tylko border, border-radius itd. — nie ma 
+  padding. Tailwind Preflight (CSS reset) zeruje padding na textarea, a my go
+  nie przywracamy.
+
+  ★ Insight ─────────────────────────────────────
+  Tailwind Preflight to @layer base reset który na textarea, input, select
+  ustawia m.in. padding: 0, font-size: 100%, font-family: inherit. Te wartości
+  mają niższy priorytet niż @layer components ale wyższy niż domyślne style
+  przeglądarki. Stąd "płaski" wygląd — nasze .pp-textarea nie przywraca padding,
+   więc tekst jest flush do krawędzi.
+  ─────────────────────────────────────────────────
+
+  Szerszy problem: .pp-input, .pp-select, .pp-textarea wszystkie mają ten sam
+  brak padding. Sprawdzam:
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Teraz sprawdzam oryginalny plik — czy miał padding i width:
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep
+      -A10 "pp-input, .pp-select, .pp-textarea" | head -12)
+  ⎿  +    .pp-input, .pp-select, .pp-textarea {
+     +        width: 100%; padding: 0.45rem 0.6rem;
+     +        font-family: var(--pp-body); font-size: 0.8125rem;
+     … +9 lines (ctrl+o to expand)
+
+● Oryginał miał width: 100%; padding: 0.45rem 0.6rem; font-family: 
+  var(--pp-body); font-size: 0.8125rem; — te 4 właściwości zniknęły w którymś
+  refaktorze. Teraz sprawdzam co jeszcze zniknęło z sekcji CSS porównując
+  oryginał z aktualnym stanem pełniej:
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep
+      "^+" | grep -v "^+++" | sed 's/^+//' > /tmp/pp_orig_css.txt
+      grep -n "" templates/appointm…)  ⎿  +    body { background: var(--pp-bg) !important; font-family: var(--pp
+     -body); color: var(--pp-ink); }
+     +    #main-content { overflow: hidden !important; padding: 0 !importan
+     … +46 lines (ctrl+o to expand)
+
+● Widzę je teraz. Brakuje kilku kluczowych klas które zniknęły w refaktorach:
+
+  - .pp-label — etykiety formularzy
+  - .pp-card-title — tytuły kart
+  - .pp-title — główny tytuł
+  - .star-meta — metadane gwiazdek
+  - body { font-family: var(--pp-body) } — font override
+  - width: 100%; padding: 0.45rem 0.6rem; font-family/font-size na
+  .pp-input/.pp-select/.pp-textarea
+
+  Sprawdzam aktualny plik żeby wiedzieć co jest, a czego nie ma:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● HTML używa .pp-label, .pp-card-title, .pp-title, .star-meta — ale te klasy nie
+   mają definicji CSS w szablonie. Teraz przywracam wszystkie brakujące reguły
+  jedną edycją:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 7 lines
+      80      .pp-card-header { padding: 0.5rem 0.875rem; border-bottom:
+          1px solid var(--pp-border); background: var(--pp-surface-warm);
+           display: flex; align-items: center; gap: 0.5rem; }
+      81      .pp-card-body { padding: 0.875rem; }
+      82 
+      83 +    /* ── Header typography ── */
+      84 +    .pp-title { font-family: var(--pp-mono); font-size: 1rem; f
+         +ont-weight: 600; letter-spacing: -0.01em; }
+      85 +    .pp-card-title { font-family: var(--pp-mono); font-size: 0.
+         +68rem; font-weight: 600; text-transform: uppercase; letter-spac
+         +ing: 0.08em; color: var(--pp-ink-subtle); }
+      86 +
+      87      /* ── Form Elements ── */
+      88      .pp-form-group { margin-bottom: 0.75rem; }
+      89 +    .pp-label { display: block; font-family: var(--pp-mono); fo
+         +nt-size: 0.62rem; font-weight: 600; text-transform: uppercase;
+         +letter-spacing: 0.08em; color: var(--pp-ink-subtle); margin-bot
+         +tom: 0.25rem; }
+      90      .pp-input, .pp-select, .pp-textarea {
+      91 +        width: 100%; padding: 0.45rem 0.6rem;
+      92 +        font-family: var(--pp-body); font-size: 0.8125rem;
+      93          border: 1px solid var(--pp-border); border-radius: 2px;
+      94          background: white; color: var(--pp-ink); box-sizing: bo
+          rder-box;
+      95          transition: border-color 0.15s, box-shadow 0.15s;
+
+● Teraz przywracam body override i .star-meta:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 1 line
+      110      .star-btn { background: none; border: none; cursor: pointe
+           r; padding: 0.1rem; color: var(--color-star-empty); font-size:
+            1.4rem; line-height: 1; transition: color 0.1s, transform 0.1
+           s; }
+      111      .star-btn:hover, .star-btn.active { color: var(--color-sta
+           r-filled); }
+      112      .star-btn:hover { transform: scale(1.15); }
+      113 +    .star-meta { font-family: var(--pp-mono); font-size: 0.62r
+          +em; color: var(--pp-ink-subtle); margin-top: 0.2rem; }
+      114 
+      115      /* ── Service rows with editable price + duration ── */
+      116      .pp-service-list { list-style: none; padding: 0; margin: 0
+           ; }
+
+● Teraz body font override — dodaję do bloku :root:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines
+      23          --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      24      }
+      25 
+      26 +    body { font-family: var(--pp-body); color: var(--pp-ink); }
+      27 +
+      28  /* Override base.html main area — this page owns its own scroll
+           */
+      29      #main-content { overflow: hidden; padding: 0; }
+      30 
+
+● Teraz sprawdzam czy są jeszcze inne klasy używane w HTML ale bez definicji
+  CSS:
+
+● Bash(# Extract all class names used in HTML
+      grep -o 'class="[^"]*"' templates/appointments/superadmin_edit.html | grep
+       -oP '(?<=class=")[^"]+' | tr ' ' '\n' | grep "…)
+  ⎿  === Classes used in HTML but NO CSS definition ===
+     pp-kbd
+     pp-shortcut-hint
+     … +7 lines (ctrl+o to expand)
+
+● Jest ich więcej. Pobieramy ich definicje z oryginalnego pliku:
+
+● Bash(git show 4be2e4e -- templates/appointments/superadmin_edit.html | grep
+      "^+" | grep -E "pp-kbd|pp-shortcut-hint|pp-sum-row|pp-svc-add-label|pp-svc
+      -badge|pp-svc-n…)
+  ⎿      .pp-svc-name { font-size: 0.8rem; font-weight: 500; white-space: n
+     owrap; overflow: hidden; text-overflow: ellipsis; }
+         .pp-svc-badge { font-size: 0.58rem; font-weight: 600; text-transfo
+     … +29 lines (ctrl+o to expand)
+
+● Mam wszystkie brakujące definicje. Teraz widzę gdzie je dodać — wstawiam je w
+  odpowiednie miejsca w CSS:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Widzę że .pp-svc-badge.main/.addon są zdefiniowane (linie 127-128) ale brakuje
+   bazowego .pp-svc-badge {}, .pp-svc-name, .svc-field-lbl, .pp-svc-add-label,
+  .pp-svc-opt-name, .pp-svc-opt-meta, .pp-sum-row, .pp-shortcut-hint, .pp-kbd.
+  Dodaję wszystkie naraz:
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 6 lines
+      115      .star-meta { font-family: var(--pp-mono); font-size: 0.62r
+           em; color: var(--pp-ink-subtle); margin-top: 0.2rem; }
+      116 
+      117      /* ── Service rows with editable price + duration ── */
+      118 +    .pp-svc-name { font-size: 0.8rem; font-weight: 500; white-
+          +space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      119 +    .pp-svc-badge { font-size: 0.58rem; font-weight: 600; text
+          +-transform: uppercase; padding: 0.08rem 0.3rem; border-radius:
+          + 2px; margin-left: 0.3rem; }
+      120 +    .svc-field-lbl { font-family: var(--pp-mono); font-size: 0
+          +.58rem; color: var(--pp-ink-subtle); text-transform: uppercase
+          +; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+      121 +    .pp-svc-add-label { font-family: var(--pp-mono); font-size
+          +: 0.62rem; font-weight: 600; text-transform: uppercase; letter
+          +-spacing: 0.08em; color: var(--pp-ink-subtle); margin: 0.75rem
+          + 0 0.3rem; display: block; }
+      122 +    .pp-svc-opt-name { font-size: 0.8rem; font-weight: 500; }
+      123 +    .pp-svc-opt-meta { font-family: var(--pp-mono); font-size:
+          + 0.68rem; color: var(--pp-ink-subtle); }
+      124      .pp-service-list { list-style: none; padding: 0; margin: 0
+           ; }
+      125      .pp-service-item {
+      126          display: flex; align-items: center; gap: 0.5rem;
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines
+      151      .btn-svc-add:hover { background: var(--color-chart-blue-da
+           rk); }
+      152 
+      153      /* ── Summary ── */
+      154 +    .pp-sum-row { display: flex; justify-content: space-betwee
+          +n; align-items: center; font-family: var(--pp-mono); font-size
+          +: 0.78rem; padding: 0.15rem 0; color: var(--pp-ink-muted); }
+      155 +    .pp-sum-row.total { font-weight: 600; font-size: 0.9rem; c
+          +olor: var(--pp-ink); border-top: 1px solid var(--pp-border); m
+          +argin-top: 0.35rem; padding-top: 0.35rem; }
+      156      .pp-summary { background: var(--pp-surface-warm); border:
+           1px solid var(--pp-border); border-radius: 2px; padding: 0.75r
+           em; margin-top: 0.625rem; }
+      157      .sum-price-input {
+      158          border: 1px solid transparent; border-radius: 2px; bac
+           kground: transparent;
+
+● Teraz .pp-shortcut-hint i .pp-kbd — szukam gdzie je dodać (sekcja action bar):
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(templates\appointments\superadmin_edit.html)
+  ⎿  Added 2 lines
+      200      .pp-btn-secondary:hover { background: var(--pp-surface-war
+           m); color: var(--pp-ink); }
+      201      .pp-btn-danger { display: inline-flex; align-items: center
+           ; gap: 0.35rem; padding: 0.55rem 1rem; background: var(--pp-da
+           nger); color: white; border: none; border-radius: 3px; font-fa
+           mily: var(--pp-body); font-size: 0.875rem; cursor: pointer; tr
+           ansition: background 0.15s; }
+      202      .pp-btn-danger:hover { background: var(--color-status-canc
+           elled-dark); }
+      203 +    .pp-shortcut-hint { font-family: var(--pp-mono); font-size
+          +: 0.65rem; color: var(--pp-ink-subtle); display: flex; gap: 0.
+          +75rem; flex: 1; justify-content: center; }
+      204 +    .pp-kbd { background: #f3f4f6; border: 1px solid #d1d5db;
+          +border-radius: 3px; padding: 0.06rem 0.28rem; font-family: var
+          +(--pp-mono); font-size: 0.6rem; color: var(--pp-ink-muted); }
+      205 
+      206      /* ── Conflict modal ── */
+      207      .pp-modal-overlay { display: none; position: fixed; inset:
+            0; background: rgba(0,0,0,0.55); z-index: 1000; align-items:
+           center; justify-content: center; }
+
+● Weryfikuję czy teraz wszystkie HTML klasy mają definicje CSS:
+
+● Bash(grep -o 'class="[^"]*"' templates/appointments/superadmin_edit.html |
+      grep -oP '(?<=class=")[^"]+' | tr ' ' '\n' | grep
+      "^pp-\|^bar-\|^svc-\|^btn-svc\|^sum-\|^s…)
+  ⎿  === Still missing ===
+
+● Zero brakujących klas. Committuję:
+
+● Bash(git add templates/appointments/superadmin_edit.html && git commit -m
+      "fix(superadmin-edit): restore all missing CSS class definitions…)
+  ⎿  Time tracking: Took 2 hours 43 minutes (appended)
+     [invoices-app d277324] fix(superadmin-edit): restore all missing CSS c
+     lass definitions
+      1 file changed, 20 insertions(+)
+
+● ★ Insight ─────────────────────────────────────
+  To był problem "cascading refactor damage" — refaktor 8ccf337 usunął :root z
+  --pp-* zmiennymi, a osobny refaktor usunął body {} i całe grupy klas CSS jako
+  "duplikaty globalne". W rzeczywistości te klasy nigdzie indziej nie istniały —
+   były unikalne dla Power Panel. Diagnostic z DevTools (skopiowanie computed
+  styles) był kluczowy — pokazał padding: 0 zamiast padding: 0.45rem 0.6rem.
+  ─────────────────────────────────────────────────
+
+  Wszystkie przywrócone zmiany:
+
+  ┌───────────────────────────────┬─────────────────────────────────────┐
+  │          Co brakuje           │           Skutek wizualny           │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ pp-input/textarea bez padding │ Tekst flush do krawędzi pola        │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ pp-label brak definicji       │ Etykiety bez stylu mono/uppercase   │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ pp-card-title brak            │ Tytuły kart bez mono font           │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ pp-svc-name/badge brak        │ Usługi bez stylu                    │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ pp-sum-row brak               │ Podsumowanie ceny bez layoutu       │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ pp-kbd/.pp-shortcut-hint brak │ Skróty klawiaturowe niewidoczne     │
+  ├───────────────────────────────┼─────────────────────────────────────┤
+  │ body font-family brak         │ Cała strona w Inter zamiast DM Sans │
+  └───────────────────────────────┴─────────────────────────────────────┘
+
+  Przeładuj stronę — widok powinien być teraz pełny.
+
+✻ Baked for 5m 34s
+
+❯ jeszcze brakuje stylów dla: "<!-- Services with editable price + duration --> 
+ <div class="pp-card"> <div class="pp-card-header"><span                        
+class="pp-card-title">Usługi i dodatki</span></div> <div class="pp-card-body">  
+<ul class="pp-service-list" id="services-list"> <li                             
+style="padding:1rem;text-align:center;color:var(--color-ink-subtle);font-family 
+:var(--pp-mono);font-size:0.8rem">Ładowanie...</li> </ul> <span                 
+class="pp-svc-add-label">Dodaj usługę / dodatek</span> <div                     
+class="pp-svc-picker" id="service-picker" style="display:none"></div>" oraz     
+pola edycji ceny i czasu trwania dla usługi istniejącej dla wizyty                                   
