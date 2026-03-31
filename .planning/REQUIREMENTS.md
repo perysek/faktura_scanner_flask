@@ -1,91 +1,101 @@
-# Requirements: MyWay Nails & Beauty — UI/UX Polish Milestone
+# Requirements: MyWay Nails & Beauty — Functional-Improvements
 
-**Defined:** 2026-03-19
+**Defined:** 2026-03-31
 **Core Value:** Recepcjonistka i stylistka muszą sprawnie zarządzać rezerwacjami i klientami
-**Source:** UI audit 17/24 (2026-03-18) — `.planning/UI-REVIEW.md`
-
-## v2.0 Requirements
-
-Requirements dla milestonu UI/UX Polish. Każdy ma źródło w UI audicie.
-
-### Typography (Pillar 4 — 2/4)
-
-- [x] **TYPO-01**: Wspólny blok `:root` z deklaracjami CSS klas typograficznych (`.page-title`, `.page-subtitle`, `.stat-value`, `.stat-label`) przeniesiony do `static/css/input.css` — eliminuje 45 duplikatów
-- [x] **TYPO-02**: Spójna skala `.page-title` — jeden rozmiar (1.75rem) na wszystkich stronach, w tym widokach kalendarza (teraz 1.375rem)
-- [x] **TYPO-03**: Ujednolicona skala `.stat-value` — jeden rozmiar zamiast 1.25rem/1.5rem/1.75rem na różnych stronach
-
-### Spacing (Pillar 5 — 3/4)
-
-- [x] **SPAC-01**: Usunięcie `!important` padding override z 14+ szablonów — `base.html` musi domyślnie ustawiać padding 0, strony definiują swój własny
-- [ ] **SPAC-02**: Spójna skala `max-width` dla typów stron (formularze: 900px, listy: 1400px, kalendarze: full-width)
-
-### Color (Pillar 3 — 3/4)
-
-- [x] **COL-01**: Eliminacja pozostałych ~80 hardcoded hex wartości z szablonów (auth, form, error templates)
-- [x] **COL-02**: `brand-*` Tailwind tokeny używane w szablonach zamiast `--color-accent` i `#c9a227` inline
-
-### Accessibility (Pillar 6 — 3/4)
-
-- [x] **A11Y-01**: `aria-label` na wszystkich icon-only buttons (calendar navigation, modal close, flash dismiss)
-- [x] **A11Y-02**: `aria-live` regions dla async content updates (appointment list, client list, stat cards)
-- [x] **A11Y-03**: Skip-navigation link w `base.html`
-
-### Experience Design (Pillar 6 — 3/4)
-
-- [x] **UX-01**: Retry action w stanach błędu async (calendar day view, client list, appointment list)
-- [x] **UX-02**: 404 CTA routing do `main.dashboard` zamiast `main.invoices_list`
-- [x] **UX-03**: Poprawka pozostałego brakującego znaku diakrytycznego (`sellers/edit.html` line 445: "Ladowanie..." → "Ładowanie...")
-
-### Copywriting (Pillar 1 — 3/4)
-
-- [x] **COPY-01**: "Idź na początek" → "Powrót na górę" w `analytics/dashboard.html`
+**Source:** Codebase concerns audit `.planning/codebase/CONCERNS.md` (2026-03-13)
 
 ## v3.0 Requirements
 
-Odroczone — do następnego milestonu.
+Requirements for the Functional-Improvements milestone. Each maps to a specific concern from the codebase audit.
 
-### Accessibility (zaawansowane)
+### Fixes (Bugs & Critical Tech Debt)
 
-- **A11Y-04**: Focus management w modal dialogs (trap focus w otwartym modalu)
-- **A11Y-05**: Screen reader test — pełne przejście przez kluczowe flows
+- [ ] **FIX-01**: Audit DELETE operations log correctly — currently commented out in api_routes.py, deletions are silently unaudited
+- [ ] **FIX-02**: Audit logging FK constraint resolved — soft deletes eliminate the cascade conflict between ON DELETE CASCADE and post-delete logging
+- [ ] **FIX-03**: EmailService bare `except: pass` in disconnect() replaced with specific IMAP exception handlers and logging
+- [ ] **FIX-04**: Debug logging configuration moved to environment-based settings — INFO level in production, DEBUG only when explicitly enabled
+- [ ] **FIX-05**: Flask SECRET_KEY hardcoded fallback removed — app raises error at startup if SECRET_KEY env var is not set
 
-### Color System
+### Improvements (Code Robustness)
 
-- **COL-03**: Zapis superadmin "Power Panel" do osobnego CSS — dokumentacja że to celowa rozbieżność
+- [ ] **IMPR-01**: Soft delete for invoices and key entities — `is_deleted` boolean + `deleted_at` timestamp columns, all queries filter `WHERE is_deleted = FALSE`
+- [ ] **IMPR-02**: Multi-step operations (appointment creation/update/delete) wrapped in database transactions with savepoints and rollback on failure
+- [ ] **IMPR-03**: Custom exception hierarchy created — business logic errors (e.g. AppointmentConflictError) vs infrastructure errors (e.g. DatabaseConnectionError), routes catch specific types
+- [ ] **IMPR-04**: Appointment status values defined as Python enum with PostgreSQL CHECK constraint — replaces hardcoded strings ('completed', 'cancelled', 'no_show') across all queries
+- [ ] **IMPR-05**: `SELECT *` in base_repository.py replaced with explicit column lists in critical repositories (clients, employees, users, income_records)
+- [ ] **IMPR-06**: Safe SQL IN clause helper function created for parameterized queries; email credential values masked in error messages and logs
+
+### Scaling (Performance & Database)
+
+- [ ] **SCAL-01**: Database indexes added on frequently filtered columns — appointments.appointment_date, appointments.employee_id, appointments.status, income_records.appointment_id, and composite indexes for multi-column WHERE + ORDER BY
+- [ ] **SCAL-02**: Analytics repository complex queries optimized — heavy aggregations refactored, STRING_AGG operations bounded, date range filtering enforced
+- [ ] **SCAL-03**: Employee schedule fetching refactored from separate per-employee queries to single JOIN query with date range filter
+- [ ] **SCAL-04**: Database connection pooling implemented — proper pool size management, connection timeout, health checks, cleanup on request end
+
+### Migration Paths (Dependencies & Architecture)
+
+- [ ] **MIGR-01**: Deprecated/outdated packages audited via `pip check` and `pip list --outdated` — critical updates applied with compatibility testing
+- [ ] **MIGR-02**: Psycopg2 connection management improved — connection lifecycle tied to request scope, timeout configuration, leak prevention via context managers
+
+## v4.0 Requirements
+
+Deferred to future milestone.
+
+### Test Coverage
+
+- **TEST-01**: OCR/PDF processing unit tests — regex patterns, PDF parsing, corrupted file handling
+- **TEST-02**: API route unit tests — request validation, permission checks, response serialization, error scenarios
+- **TEST-03**: Date/time handling tests — DateParser edge cases, leap years, DST transitions
+- **TEST-04**: Database migration up/down safety tests — idempotency, rollback integrity
+
+### UI Polish (Carry-over)
+
+- **SPAC-02**: Max-width normalization across templates (900px forms, 1400px lists, full-width calendars)
+
+### Advanced Security
+
+- **RLS-01**: PostgreSQL Row-Level Security policies per role (employees see own data, admins see all)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Dark mode | Duży nakład pracy, brak wymagania użytkownika |
-| Animacje przejść między stronami | Flask SSR — wymaga JS router |
-| Redesign layoutu | Design jest spójny, tylko sprzątanie |
-| Responsive/mobile layout | Web-first, desktop primary |
+| SQLAlchemy ORM migration | Too large for this milestone — psycopg2 improvements sufficient |
+| Async PDF/OCR processing (Celery) | Scaling limit exists but not blocking current usage |
+| Email queue system (Redis/Celery) | Email service is optional feature, low priority |
+| Full RLS implementation | Complex, requires separate milestone with security focus |
+| Dark mode | No user demand |
+| Mobile app | Web-first |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPO-01 | Phase 1 | Complete |
-| TYPO-02 | Phase 1 | Complete |
-| TYPO-03 | Phase 1 | Complete |
-| SPAC-01 | Phase 2 | Complete |
-| SPAC-02 | Phase 2 | Pending |
-| COL-01 | Phase 3 | Complete |
-| COL-02 | Phase 3 | Complete |
-| A11Y-01 | Phase 4 | Complete |
-| A11Y-02 | Phase 4 | Complete |
-| A11Y-03 | Phase 4 | Complete |
-| UX-01 | Phase 4 | Complete |
-| UX-02 | Phase 4 | Complete |
-| UX-03 | Phase 4 | Complete |
-| COPY-01 | Phase 4 | Complete |
+| FIX-01 | — | Pending |
+| FIX-02 | — | Pending |
+| FIX-03 | — | Pending |
+| FIX-04 | — | Pending |
+| FIX-05 | — | Pending |
+| IMPR-01 | — | Pending |
+| IMPR-02 | — | Pending |
+| IMPR-03 | — | Pending |
+| IMPR-04 | — | Pending |
+| IMPR-05 | — | Pending |
+| IMPR-06 | — | Pending |
+| SCAL-01 | — | Pending |
+| SCAL-02 | — | Pending |
+| SCAL-03 | — | Pending |
+| SCAL-04 | — | Pending |
+| MIGR-01 | — | Pending |
+| MIGR-02 | — | Pending |
 
 **Coverage:**
-- v2.0 requirements: 14 total
-- Mapped to phases: 14
-- Unmapped: 0 ✓
+- v3.0 requirements: 17 total
+- Mapped to phases: 0
+- Unmapped: 17
 
 ---
-*Requirements defined: 2026-03-19*
-*Source: UI audit `.planning/UI-REVIEW.md` (scored 17/24)*
+*Requirements defined: 2026-03-31*
+*Last updated: 2026-03-31 after initial definition*
