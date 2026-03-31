@@ -67,3 +67,13 @@ static/css/output.css
 # Git worktrees
 .worktrees/
 *.backup
+
+# Data exports (PII)
+*.xlsx
+rezerwacje_2026.xlsx
+
+# Scratch/temp text files
+nul
+200320260111.txt
+240320260201.txt
+250320262011.txt

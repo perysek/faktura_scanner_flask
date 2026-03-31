@@ -1,0 +1,17 @@
+{
+  "review_id": "sidebar_20260325",
+  "target": "templates/components/sidebar.html",
+  "context_files": ["templates/base.html", "static/css/input.css", "tailwind.config.js"],
+  "focus_areas": ["visual", "usability"],
+  "context": "Navigation between views/modules",
+  "platform": "desktop",
+  "status": "complete",
+  "started_at": "2026-03-25T12:00:00Z",
+  "issues_found": 12,
+  "severity_counts": {
+    "critical": 2,
+    "major": 4,
+    "minor": 3,
+    "suggestion": 3
+  }
+}

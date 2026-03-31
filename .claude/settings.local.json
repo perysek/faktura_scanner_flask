@@ -105,5 +105,5 @@
   },
   "disableAllHooks": false,
   "outputStyle": "Explanatory",
-  "prefersReducedMotion": false
+  "prefersReducedMotion": true
 }

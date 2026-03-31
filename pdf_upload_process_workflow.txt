@@ -1,4 +1,4 @@
-Adjust upload and processing PDF files with invoices into steps:
+ NAdjust upload and processing PDF files with invoices into steps:
 1 - upload PDF files (folder or e-mail) triggered by user (button clicked) - no PDF content processing yet.
 2 - upload controls boxes (from folder and from e-mail) are removed from the view and only uploaded PDF files list table is displayed with columns:
 ##PDF file name
