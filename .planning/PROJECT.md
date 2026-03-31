@@ -19,15 +19,25 @@ Recepcjonistka i stylistka muszą sprawnie zarządzać rezerwacjami i klientami 
 - ✓ Panel dochodów i analityki — v1.0
 - ✓ Autentykacja + RBAC (5 ról) — v1.0
 - ✓ Spójny design system (CSS custom properties) — v1.0
+- ✓ CSS architecture: unified typography in input.css — v2.0
+- ✓ Layout & spacing: !important elimination, base.html p-0 — v2.0
+- ✓ Color cleanup: hardcoded hex → CSS tokens/brand-* — v2.0
+- ✓ Accessibility: aria-labels, aria-live, skip-nav, retry buttons — v2.0
+
+## Current Milestone: v3.0 Functional-Improvements
+
+**Goal:** Fix known bugs, implement missing critical features, optimize performance, and harden the codebase based on concerns audit findings.
+
+**Target features:**
+- Bug fixes (audit logging, exception handling)
+- Missing critical features (soft deletes, transactional integrity)
+- Performance optimization (database indexes, query optimization)
+- Security hardening (secret key validation, explicit column selection)
+- Code robustness (custom exceptions, status enums, connection management)
 
 ### Active
 
-- [ ] Zunifikowany system typografii (jeden :root w input.css, nie w każdym szablonie)
-- [ ] Spójna skala max-width dla stron
-- [ ] Eliminacja !important padding overrides
-- [ ] Pełna dostępność (aria-label dla ikon, aria-live dla async content)
-- [ ] Retry actions w stanach błędu (calendar, client list)
-- [ ] Poprawka 404 CTA (routing do dashboard zamiast invoices_list)
+(Defined in REQUIREMENTS.md — v3.0 requirements)
 
 ### Out of Scope
 
@@ -37,14 +47,15 @@ Recepcjonistka i stylistka muszą sprawnie zarządzać rezerwacjami i klientami 
 
 ## Context
 
-Aktualny stan UI audit: **17/24** (up from 15/24). Najsłabszy pillar: Typography 2/4.
+v2.0 UI/UX Polish milestone completed (2026-03-24). UI audit improved from 17/24.
 
-Główne problemy techniczne:
-- 45/52 szablonów ma własny blok `:root` z deklaracjami CSS — refaktor wymaga centralnego `input.css`
-- ~80 pozostałych hardcoded hex kolorów (po refaktorze gałęzi hex-colors)
-- 14+ szablonów używa `!important` żeby nadpisać padding z `base.html`
-- Accessibility near-zero (tylko 4 atrybuty `aria-*` w całej aplikacji)
-- Brak retry w stanach błędu async
+Current concerns (see `.planning/codebase/CONCERNS.md`):
+- Audit logging FK constraint blocks DELETE tracking
+- Broad exception handling masks real errors across routes/services
+- Missing database indexes on frequently filtered columns
+- PDF/OCR processing untested and single-threaded
+- No soft delete — hard deletes lose data permanently
+- No transactional integrity for multi-step operations (appointments)
 
 Stack: Python 3.11, Flask 3.0, PostgreSQL, Tailwind CSS 3.4, Jinja2, Alembic, Docker.
 
@@ -63,4 +74,4 @@ Stack: Python 3.11, Flask 3.0, PostgreSQL, Tailwind CSS 3.4, Jinja2, Alembic, Do
 | `--color-ink-muted` = #525252 zamiast #333 | Spójność z design system | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after UI audit analysis, starting milestone v2.0*
+*Last updated: 2026-03-31 after v2.0 completion, starting milestone v3.0 Functional-Improvements*
