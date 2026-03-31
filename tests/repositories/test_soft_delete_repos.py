@@ -251,3 +251,36 @@ class TestServiceSoftDelete:
         repo.get_addon_services()
         sql = mock_svc_db.cursor.execute.call_args[0][0]
         assert 'is_deleted = FALSE' in sql, f"get_addon_services() missing is_deleted filter: {sql}"
+
+
+# ---------------------------------------------------------------------------
+# TestAppointmentRestore — Plan 02
+# ---------------------------------------------------------------------------
+
+class TestAppointmentRestore:
+    def test_restore_sets_is_deleted_false(self, mock_appt_db):
+        mock_appt_db.cursor.rowcount = 1
+        from repositories.appointments.appointment_repository import AppointmentRepository
+        repo = AppointmentRepository()
+        result = repo.restore(42)
+        assert result is True
+        sql = mock_appt_db.cursor.execute.call_args[0][0]
+        assert 'is_deleted = FALSE' in sql
+        assert 'deleted_at = NULL' in sql
+        assert 'AND is_deleted = TRUE' in sql
+
+
+# ---------------------------------------------------------------------------
+# TestServiceRestore — Plan 02
+# ---------------------------------------------------------------------------
+
+class TestServiceRestore:
+    def test_restore_sets_is_deleted_false(self, mock_svc_db):
+        mock_svc_db.cursor.rowcount = 1
+        from repositories.services.service_repository import ServiceRepository
+        repo = ServiceRepository()
+        result = repo.restore(42)
+        assert result is True
+        sql = mock_svc_db.cursor.execute.call_args[0][0]
+        assert 'is_deleted = FALSE' in sql
+        assert 'deleted_at = NULL' in sql

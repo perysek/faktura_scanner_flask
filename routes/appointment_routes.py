@@ -494,10 +494,45 @@ def delete_appointment(appointment_id):
     """Usuń wizytę"""
     try:
         repo = AppointmentRepository()
+        existing = repo.get_by_id(appointment_id)
+        if not existing:
+            # Check if already deleted
+            from config.database import get_db_connection
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, is_deleted FROM appointments WHERE id = %s", (appointment_id,))
+                check = cursor.fetchone()
+            if check and check.get('is_deleted'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Ta wizyta została już usunięta',
+                    'already_deleted': True
+                }), 410
+            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+
         success = repo.delete(appointment_id)
         if not success:
-            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
-        return jsonify({'success': True})
+            return jsonify({'success': False, 'error': 'Nie udało się usunąć wizyty'}), 500
+
+        return jsonify({
+            'success': True,
+            'restore_url': f'/appointments/{appointment_id}/restore'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/restore', methods=['POST'])
+@login_required
+@module_permission_required('appointments')
+def restore_appointment(appointment_id):
+    """Przywroc soft-deleted wizyte (undo delete)"""
+    try:
+        repo = AppointmentRepository()
+        success = repo.restore(appointment_id)
+        if not success:
+            return jsonify({'success': False, 'error': 'Wizyta nie jest usunięta lub nie istnieje'}), 404
+        return jsonify({'success': True, 'message': 'Wizyta została przywrócona'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

@@ -792,6 +792,16 @@ def delete_invoice(invoice_id: int):
     try:
         row = current_app.invoice_repo.get_by_id(invoice_id)
         if not row:
+            # Check if it exists but is already deleted
+            check = current_app.invoice_repo._fetch_one(
+                "SELECT id, is_deleted FROM invoices WHERE id = %s", (invoice_id,)
+            )
+            if check and check.get('is_deleted'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Ta faktura została już usunięta',
+                    'already_deleted': True
+                }), 410
             return jsonify({'success': False, 'error': 'Invoice not found'}), 404
 
         # Convert Row to Invoice object for audit log
@@ -805,7 +815,7 @@ def delete_invoice(invoice_id: int):
         # Decrement seller invoice count if seller was linked
         if seller_id:
             current_app.seller_repo.decrement_invoice_count(seller_id)
-        
+
         # Log deletion — FK constraint removed in schema.sql, so invoice_id=None is safe
         current_app.audit_repo.log_event(
             entity_type='invoice',
@@ -817,11 +827,35 @@ def delete_invoice(invoice_id: int):
             new_value='deleted',
         )
 
-
         return jsonify({
             'success': True,
-            'message': 'Invoice deleted successfully'
+            'message': 'Invoice deleted successfully',
+            'restore_url': f'/api/invoices/{invoice_id}/restore'
         })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/invoices/<int:invoice_id>/restore', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
+def restore_invoice(invoice_id: int):
+    """Restore a soft-deleted invoice (undo delete)"""
+    try:
+        success = current_app.invoice_repo.restore(invoice_id)
+        if not success:
+            return jsonify({'success': False, 'error': 'Faktura nie jest usunięta lub nie istnieje'}), 404
+
+        # Re-increment seller invoice count if seller was linked
+        row = current_app.invoice_repo.get_by_id(invoice_id)
+        if row and row.get('seller_id'):
+            current_app.seller_repo.increment_invoice_count(row['seller_id'])
+
+        _audit('invoice', 'RESTORE', entity_id=invoice_id,
+               entity_label=row.get('invoice_number') if row else None,
+               field_name='status', old_value='deleted', new_value='active')
+
+        return jsonify({'success': True, 'message': 'Faktura została przywrócona'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -2577,27 +2611,54 @@ def update_client(client_id):
 @login_required
 @module_permission_required('clients')
 def delete_client(client_id):
-    """Deactivate client (soft delete)"""
+    """Delete client (soft delete)"""
     try:
         row = current_app.client_repo.get_by_id(client_id)
         if not row:
+            # Check if it exists but is already deleted
+            check = current_app.client_repo._fetch_one(
+                "SELECT id, is_deleted FROM clients WHERE id = %s", (client_id,)
+            )
+            if check and check.get('is_deleted'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Ten klient został już usunięty',
+                    'already_deleted': True
+                }), 410
             return jsonify({'success': False, 'error': 'Client not found'}), 404
 
         client_name = f"{row.get('first_name','')} {row.get('last_name','')}".strip()
-        success = current_app.client_repo.deactivate(client_id)
+        success = current_app.client_repo.delete(client_id)
 
         if success:
             _audit('client', 'DELETE', entity_id=client_id, entity_label=client_name)
             return jsonify({
                 'success': True,
-                'message': 'Klient został dezaktywowany'
+                'message': 'Klient został usunięty',
+                'restore_url': f'/api/clients/{client_id}/restore'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Nie udało się dezaktywować klienta'
+                'error': 'Nie udało się usunąć klienta'
             }), 500
 
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/clients/<int:client_id>/restore', methods=['POST'])
+@login_required
+@module_permission_required('clients')
+def restore_client(client_id):
+    """Restore a soft-deleted client (undo delete)"""
+    try:
+        success = current_app.client_repo.restore(client_id)
+        if not success:
+            return jsonify({'success': False, 'error': 'Klient nie jest usunięty lub nie istnieje'}), 404
+
+        _audit('client', 'RESTORE', entity_id=client_id)
+        return jsonify({'success': True, 'message': 'Klient został przywrócony'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -2862,20 +2923,52 @@ def update_service(service_id):
 @login_required
 @module_permission_required('services')
 def delete_service(service_id):
-    """Delete (deactivate) service"""
+    """Delete service (soft delete)"""
     try:
         existing = current_app.service_repo.get_by_id(service_id)
-        service_name = existing['name'] if existing else str(service_id)
+        if not existing:
+            # Check if it exists but is already deleted
+            from config.database import get_db_connection
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, is_deleted FROM services WHERE id = %s", (service_id,))
+                check = cursor.fetchone()
+            if check and check.get('is_deleted'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Ta usługa została już usunięta',
+                    'already_deleted': True
+                }), 410
+            return jsonify({'success': False, 'error': 'Usługa nie znaleziona'}), 404
+
+        service_name = existing['name']
         success = current_app.service_repo.delete(service_id)
 
         if success:
             _audit('service', 'DELETE', entity_id=service_id, entity_label=service_name)
             return jsonify({
                 'success': True,
-                'message': 'Usługa została dezaktywowana'
+                'message': 'Usługa została usunięta',
+                'restore_url': f'/api/services/{service_id}/restore'
             })
         else:
-            return jsonify({'success': False, 'error': 'Nie udało się dezaktywować usługi'}), 500
+            return jsonify({'success': False, 'error': 'Nie udało się usunąć usługi'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/services/<int:service_id>/restore', methods=['POST'])
+@login_required
+@module_permission_required('services')
+def restore_service(service_id):
+    """Restore a soft-deleted service (undo delete)"""
+    try:
+        success = current_app.service_repo.restore(service_id)
+        if not success:
+            return jsonify({'success': False, 'error': 'Usługa nie jest usunięta lub nie istnieje'}), 404
+
+        _audit('service', 'RESTORE', entity_id=service_id)
+        return jsonify({'success': True, 'message': 'Usługa została przywrócona'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
