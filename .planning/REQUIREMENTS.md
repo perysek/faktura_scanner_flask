@@ -18,7 +18,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 
 ### Improvements (Code Robustness)
 
-- [ ] **IMPR-01**: Soft delete for invoices and key entities — `is_deleted` boolean + `deleted_at` timestamp columns, all queries filter `WHERE is_deleted = FALSE`
+- [x] **IMPR-01**: Soft delete for invoices and key entities — `is_deleted` boolean + `deleted_at` timestamp columns, all queries filter `WHERE is_deleted = FALSE`
 - [ ] **IMPR-02**: Multi-step operations (appointment creation/update/delete) wrapped in database transactions with savepoints and rollback on failure
 - [ ] **IMPR-03**: Custom exception hierarchy created — business logic errors (e.g. AppointmentConflictError) vs infrastructure errors (e.g. DatabaseConnectionError), routes catch specific types
 - [ ] **IMPR-04**: Appointment status values defined as Python enum with PostgreSQL CHECK constraint — replaces hardcoded strings ('completed', 'cancelled', 'no_show') across all queries
@@ -78,7 +78,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-03 | Phase 6 | Pending |
 | FIX-04 | Phase 7 | Pending |
 | FIX-05 | Phase 7 | Pending |
-| IMPR-01 | Phase 5 | Pending |
+| IMPR-01 | Phase 5 | Complete |
 | IMPR-02 | Phase 9 | Pending |
 | IMPR-03 | Phase 6 | Pending |
 | IMPR-04 | Phase 6 | Pending |

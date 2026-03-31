@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.0
-milestone_name: Functional-Improvements
-status: roadmap_ready
-stopped_at: null
-last_updated: "2026-03-31"
-last_activity: 2026-03-31 — Roadmap created, 5 phases defined (5-9), 17/17 requirements mapped
+milestone_name: milestone
+status: planning
+stopped_at: Completed 05-data-integrity-01-PLAN.md
+last_updated: "2026-03-31T16:30:28.000Z"
+last_activity: 2026-03-31 — Roadmap created
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [v3.0 roadmap]: IMPR-03 (exception hierarchy) placed in Phase 6 before FIX-03 (EmailService) — base exception types must exist before specific catch sites are added
 - [v3.0 roadmap]: IMPR-02 (transactional integrity) placed in Phase 9 with connection work — transactions depend on reliable connection lifecycle management
 - [v3.0 roadmap]: Phase 7 (security hardening) is independent but sequenced after Phase 6 for developer focus
+- [Phase 05-data-integrity]: AppointmentRepository and ServiceRepository kept as standalone classes; soft-delete implemented inline without BaseRepository refactor
+- [Phase 05-data-integrity]: ServiceRepository.delete() now does real soft-delete (is_deleted=TRUE) not deactivation (is_active=FALSE)
 
 ### Pending Todos
 
@@ -69,6 +71,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31
-Stopped at: Roadmap creation complete
-Resume file: .planning/ROADMAP.md
+Last session: 2026-03-31T16:30:27.997Z
+Stopped at: Completed 05-data-integrity-01-PLAN.md
+Resume file: None

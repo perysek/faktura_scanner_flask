@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Soft-delete extends to clients, appointments, and services — all four entity types support is_deleted filtering
   6. After deleting a record, an undo toast with "Cofnij" link allows immediate restore
   7. Targeting an already-deleted record returns "already deleted" message, not generic 404
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 05-01-PLAN.md — Soft-delete filters for all repositories (invoices, clients, appointments, services) + tests
@@ -93,7 +93,7 @@ Phase 7 is independent but sequenced after Phase 6 for focus.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 5. Data Integrity | 0/2 | Planned | - |
+| 5. Data Integrity | 1/2 | In Progress|  |
 | 6. Code Robustness | 0/? | Not started | - |
 | 7. Security Hardening | 0/? | Not started | - |
 | 8. Database Performance | 0/? | Not started | - |
