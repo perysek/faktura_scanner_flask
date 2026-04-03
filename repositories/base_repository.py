@@ -4,9 +4,11 @@ Bazowa klasa repository z CRUD operations
 from contextlib import contextmanager
 from typing import Any, List, Optional
 
+import psycopg2
 import psycopg2.extensions
 
 from config.database import DatabaseConnection
+from exceptions import DatabaseConnectionError
 
 
 class BaseRepository:
@@ -28,35 +30,55 @@ class BaseRepository:
 
 	def _execute(self, query: str, params: tuple = ()) -> Any:
 		"""Wykonaj query"""
-		conn = self._get_conn()
-		cursor = conn.cursor()
-		cursor.execute(query, params)
-		conn.commit()
-		return cursor
+		try:
+			conn = self._get_conn()
+			cursor = conn.cursor()
+			cursor.execute(query, params)
+			conn.commit()
+			return cursor
+		except psycopg2.OperationalError as e:
+			raise DatabaseConnectionError(f'Database unreachable: {type(e).__name__}') from e
+		except psycopg2.InterfaceError as e:
+			raise DatabaseConnectionError(f'Database connection lost: {type(e).__name__}') from e
 
 	def _execute_insert(self, query: str, params: tuple = ()) -> Optional[int]:
 		"""Execute INSERT and return the new row id via RETURNING id"""
-		query = query.rstrip().rstrip(';') + ' RETURNING id'
-		conn = self._get_conn()
-		cursor = conn.cursor()
-		cursor.execute(query, params)
-		row = cursor.fetchone()
-		conn.commit()
-		return row['id'] if row else None
+		try:
+			query = query.rstrip().rstrip(';') + ' RETURNING id'
+			conn = self._get_conn()
+			cursor = conn.cursor()
+			cursor.execute(query, params)
+			row = cursor.fetchone()
+			conn.commit()
+			return row['id'] if row else None
+		except psycopg2.OperationalError as e:
+			raise DatabaseConnectionError(f'Database unreachable: {type(e).__name__}') from e
+		except psycopg2.InterfaceError as e:
+			raise DatabaseConnectionError(f'Database connection lost: {type(e).__name__}') from e
 
 	def _fetch_one(self, query: str, params: tuple = ()) -> Optional[Any]:
 		"""Pobierz jeden rekord"""
-		conn = self._get_conn()
-		cursor = conn.cursor()
-		cursor.execute(query, params)
-		return cursor.fetchone()
+		try:
+			conn = self._get_conn()
+			cursor = conn.cursor()
+			cursor.execute(query, params)
+			return cursor.fetchone()
+		except psycopg2.OperationalError as e:
+			raise DatabaseConnectionError(f'Database unreachable: {type(e).__name__}') from e
+		except psycopg2.InterfaceError as e:
+			raise DatabaseConnectionError(f'Database connection lost: {type(e).__name__}') from e
 
 	def _fetch_all(self, query: str, params: tuple = ()) -> List[Any]:
 		"""Pobierz wszystkie rekordy"""
-		conn = self._get_conn()
-		cursor = conn.cursor()
-		cursor.execute(query, params)
-		return cursor.fetchall()
+		try:
+			conn = self._get_conn()
+			cursor = conn.cursor()
+			cursor.execute(query, params)
+			return cursor.fetchall()
+		except psycopg2.OperationalError as e:
+			raise DatabaseConnectionError(f'Database unreachable: {type(e).__name__}') from e
+		except psycopg2.InterfaceError as e:
+			raise DatabaseConnectionError(f'Database connection lost: {type(e).__name__}') from e
 
 	@contextmanager
 	def transaction(self):
