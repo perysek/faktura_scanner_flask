@@ -10,9 +10,12 @@ from decimal import Decimal
 from typing import Dict, Tuple
 
 
-class OCRExtractionError(Exception):
+from exceptions import AppError
+
+
+class OCRExtractionError(AppError):
 	"""Raised when OCR extraction fails completely after all retry attempts."""
-	pass
+	status_code = 422
 
 
 class PDFPasswordRequired(Exception):

@@ -39,3 +39,8 @@ class PermissionDeniedError(AppError):
 class ConflictError(AppError):
     """Resource conflict (e.g. duplicate, schedule overlap) — maps to HTTP 409."""
     status_code = 409
+
+
+class DatabaseConnectionError(AppError):
+    """Database unreachable or connection failed — maps to HTTP 503."""
+    status_code = 503

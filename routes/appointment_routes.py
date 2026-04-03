@@ -165,8 +165,6 @@ def create_appointment():
                entity_label=f"{appt_date} {data.get('start_time','')}",
                new_value=f"klient={data.get('client_id')} pracownik={data.get('employee_id')}")
         return jsonify({'success': True, **result}), 201
-    except AppointmentError as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -370,10 +368,6 @@ def update_appointment(appointment_id):
                        old_value=old_val or None,
                        new_value=new_val or None)
         return jsonify({'success': True, **result})
-    except AppointmentError as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -408,8 +402,6 @@ def update_appointment_status(appointment_id):
                    old_value=old_status,
                    new_value=new_val)
         return jsonify({'success': success})
-    except AppointmentError as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -436,8 +428,6 @@ def complete_appointment(appointment_id):
         _audit('appointment', 'COMPLETE', entity_id=appointment_id,
                field_name='status', new_value='completed')
         return jsonify({'success': True, **result})
-    except AppointmentError as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -481,8 +471,6 @@ def add_addon(appointment_id):
                 result[key] = float(result[key])
 
         return jsonify({'success': True, **result}), 201
-    except AppointmentError as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
