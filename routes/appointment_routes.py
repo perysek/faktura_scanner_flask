@@ -1,6 +1,7 @@
 """
 API routes for appointment management
 """
+import logging
 from datetime import datetime, date, time
 from decimal import Decimal
 
@@ -8,6 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
 from config.auth_config import module_permission_required, role_required
+from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
