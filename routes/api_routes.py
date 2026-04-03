@@ -1,6 +1,7 @@
 """
 API routes - JSON endpoints for AJAX calls
 """
+import logging
 import tempfile
 from datetime import datetime, date
 from decimal import Decimal
@@ -13,9 +14,12 @@ from werkzeug.utils import secure_filename
 
 from config.auth_config import module_permission_required
 from database.models import Invoice
+from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.ocr_service import PDFPasswordRequired
 from utils.validators import DateParser
 from repositories.audit_repository import AuditRepository
+
+logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__)
 
@@ -230,8 +234,11 @@ def invoice_seller_sync_check():
             'wrong_link': wrong_link,
             'total': len(unlinked) + len(wrong_link),
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in invoice_seller_sync_check')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/seller-sync-apply', methods=['POST'])
@@ -263,8 +270,11 @@ def invoice_seller_sync_apply():
             'message': f'Powiązano {count} faktur ze sprzedawcami',
             'updated_count': count,
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in invoice_seller_sync_apply')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices', methods=['GET'])
@@ -289,8 +299,11 @@ def get_invoices():
             'invoices': invoices_data,
             'count': len(invoices_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_invoices')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices', methods=['POST'])
@@ -424,9 +437,12 @@ def create_invoice_manual():
                             'message': f"⚠️ Sprzedawca z NIP {normalized_nip} nie istnieje. Czy chcesz utworzyć nowego sprzedawcę?"
                         }), 409
                         
+                except AppError:
+                    raise
                 except Exception as e:
-                    validation_warnings.append(f"Błąd walidacji sprzedawcy: {str(e)}")
-        
+                    logging.exception('Unexpected error in seller validation (create_invoice_manual)')
+                    validation_warnings.append('Błąd walidacji sprzedawcy')
+
         # Handle PDF file upload if present
         pdf_path = None
         if 'pdf_file' in request.files:
@@ -472,9 +488,12 @@ def create_invoice_manual():
             'invoice_id': invoice_id,
             'warnings': validation_warnings
         })
-        
+
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_invoice_manual')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/<int:invoice_id>', methods=['GET'])
@@ -485,7 +504,7 @@ def get_invoice(invoice_id: int):
     try:
         row = current_app.invoice_repo.get_by_id(invoice_id)
         if not row:
-            return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+            raise NotFoundError('Faktura nie istnieje')
 
         # Convert Row to Invoice object
         invoice = current_app.invoice_repo.row_to_invoice(row)
@@ -494,8 +513,11 @@ def get_invoice(invoice_id: int):
             'success': True,
             'invoice': vars(invoice)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_invoice')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/<int:invoice_id>', methods=['PUT'])
@@ -508,7 +530,7 @@ def update_invoice(invoice_id: int):
         row = current_app.invoice_repo.get_by_id(invoice_id)
 
         if not row:
-            return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+            raise NotFoundError('Faktura nie istnieje')
 
         # Convert Row to Invoice object
         invoice = current_app.invoice_repo.row_to_invoice(row)
@@ -640,9 +662,12 @@ def update_invoice(invoice_id: int):
                         'message': f"⚠️ Sprzedawca z NIP {normalized_nip} nie istnieje w bazie. Czy chcesz utworzyć nowego sprzedawcę '{normalized_name}'?"
                     }), 409  # 409 Conflict status code
                 
+            except AppError:
+                raise
             except Exception as e:
-                validation_warnings.append(f"Błąd walidacji sprzedawcy: {str(e)}")
-        
+                logging.exception('Unexpected error in seller validation (update_invoice)')
+                validation_warnings.append('Błąd walidacji sprzedawcy')
+
         # Save invoice
         if new_seller_id is not None:
             current_app.invoice_repo.update(invoice_id, invoice, seller_id=new_seller_id)
@@ -673,8 +698,11 @@ def update_invoice(invoice_id: int):
             response_data['seller_conflict'] = seller_conflict
 
         return jsonify(response_data)
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_invoice')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/<int:invoice_id>/confirm-seller', methods=['PUT'])
@@ -688,11 +716,11 @@ def confirm_seller_and_update(invoice_id: int):
         invoice_data = data.get('invoice_data')
         
         if not action or not invoice_data:
-            return jsonify ({'success': False, 'error': 'Missing action or invoice_data'}), 400
-        
+            raise ValidationError('Brak danych')
+
         row = current_app.invoice_repo.get_by_id(invoice_id)
         if not row:
-            return jsonify({'success': False, 'error': 'Invoice not found'}), 404
+            raise NotFoundError('Faktura nie istnieje')
         
         # Convert Row to Invoice object
         invoice = current_app.invoice_repo.row_to_invoice(row)
@@ -732,10 +760,10 @@ def confirm_seller_and_update(invoice_id: int):
             # Use existing seller (from conflict resolution)
             existing_seller_id = data.get('existing_seller_id')
             if not existing_seller_id:
-                return jsonify({'success': False, 'error': 'Missing existing_seller_id'}), 400
-            
+                raise ValidationError('Brak danych')
+
             seller_id = existing_seller_id
-            
+
             # Get existing seller name
             seller_row = current_app.seller_repo.get_by_id(seller_id)
             if seller_row:
@@ -744,12 +772,12 @@ def confirm_seller_and_update(invoice_id: int):
                 invoice.seller_name = seller.seller_name
                 invoice.seller_nip = seller.seller_nip
                 message = f"✓ Używam istniejącego sprzedawcy: {seller.seller_name}"
-        
+
         elif action == 'update_seller':
             # Update the seller's name in sellers table with new name
             existing_seller_id = data.get('existing_seller_id')
             if not existing_seller_id:
-                return jsonify({'success': False, 'error': 'Missing existing_seller_id'}), 400
+                raise ValidationError('Brak danych')
             
             seller_id = existing_seller_id
             
@@ -761,8 +789,8 @@ def confirm_seller_and_update(invoice_id: int):
             message = f"✓ Zaktualizowano sprzedawcę na: {normalized_name}"
             
         else:
-            return jsonify({'success': False, 'error': f'Invalid action: {action}'}), 400
-        
+            raise ValidationError('Nieprawidlowe dane')
+
         # Update invoice counts if seller changed
         # sqlite3.Row: check if column exists and get value
         old_seller_id = row['seller_id'] if 'seller_id' in row.keys() else None
@@ -779,9 +807,12 @@ def confirm_seller_and_update(invoice_id: int):
             'invoice': vars(invoice),
             'seller_id': seller_id
         })
-        
+
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in confirm_seller_and_update')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/<int:invoice_id>', methods=['DELETE'])
@@ -832,8 +863,11 @@ def delete_invoice(invoice_id: int):
             'message': 'Invoice deleted successfully',
             'restore_url': f'/api/invoices/{invoice_id}/restore'
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_invoice')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/<int:invoice_id>/restore', methods=['POST'])
@@ -856,8 +890,11 @@ def restore_invoice(invoice_id: int):
                field_name='status', old_value='deleted', new_value='active')
 
         return jsonify({'success': True, 'message': 'Faktura została przywrócona'})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in restore_invoice')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/invoices/statistics', methods=['GET'])
@@ -873,8 +910,11 @@ def get_statistics():
             'success': True,
             'statistics': stats
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_statistics')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/dashboard/recent-invoices', methods=['GET'])
@@ -892,8 +932,11 @@ def get_recent_invoices():
             'invoices': invoices_data,
             'count': len(invoices_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_recent_invoices')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/dashboard/upcoming-payments', methods=['GET'])
@@ -911,8 +954,11 @@ def get_upcoming_payments():
             'invoices': invoices_data,
             'count': len(invoices_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_upcoming_payments')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/dashboard/overdue-payments', methods=['GET'])
@@ -930,8 +976,11 @@ def get_overdue_payments():
             'invoices': invoices_data,
             'count': len(invoices_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_overdue_payments')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/dashboard/top-sellers', methods=['GET'])
@@ -962,8 +1011,11 @@ def get_top_sellers():
             'sellers': sellers_data,
             'count': len(sellers_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_top_sellers')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/dashboard/monthly-totals', methods=['GET'])
@@ -1017,8 +1069,11 @@ def get_monthly_totals():
             'data': data,      # [1234.56, 2345.67, ...]
             'months': months   # ['2025-01', '2025-02', ...] for reference
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_monthly_totals')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/upload', methods=['POST'])
@@ -1158,7 +1213,8 @@ def upload_files():
                                 # New seller created
                                 validation_warnings.append(f"✓ Nowy sprzedawca: {invoice.seller_name}")
                         except Exception as e:
-                            validation_warnings.append(f"Seller lookup failed: {str(e)}")
+                            logging.exception(f"Seller lookup failed for {filename}")
+                            validation_warnings.append('Blad wyszukiwania sprzedawcy')
 
                     results.append({
                         'filename': filename,
@@ -1188,13 +1244,14 @@ def upload_files():
                 except Exception as e:
                     # Log the full error with traceback
                     import traceback
+                    logging.exception(f"Error processing file {filename}")
                     print(f"ERROR processing {filename}: {str(e)}")
                     print(traceback.format_exc())
 
                     results.append({
                         'filename': filename,
                         'success': False,
-                        'error': str(e)
+                        'error': 'Blad przetwarzania pliku'
                     })
             else:
                 results.append({
@@ -1207,13 +1264,16 @@ def upload_files():
             'success': True,
             'results': results
         })
+    except AppError:
+        raise
     except Exception as e:
         import sys
         print(f"=== TOP LEVEL ERROR ===", flush=True)
         print(f"Error: {str(e)}", flush=True)
         print(tb.format_exc(), flush=True)
         sys.stdout.flush()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in upload_files')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/export/<format>', methods=['GET'])
@@ -1247,8 +1307,11 @@ def export_invoices(format: str):
             as_attachment=True,
             download_name=filename
         )
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in export_invoices')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/email/import', methods=['POST'])
@@ -1439,9 +1502,11 @@ def test_email_connection():
                 'success': False,
                 'error': 'Połączenie nieudane - sprawdź dane logowania'
             }), 400
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Email test connection error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in test_email_connection')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/email/folders', methods=['POST'])
@@ -1476,8 +1541,11 @@ def get_email_folders():
             'success': True,
             'folders': folders
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_email_folders')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/email/settings', methods=['GET', 'POST'])
@@ -1492,8 +1560,11 @@ def email_settings():
                 'success': True,
                 'settings': settings
             })
+        except AppError:
+            raise
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            logging.exception('Unexpected error in email_settings GET')
+            raise AppError('Wystapil blad serwera')
 
     else:  # POST
         try:
@@ -1503,8 +1574,11 @@ def email_settings():
                 'success': True,
                 'message': 'Settings saved successfully'
             })
+        except AppError:
+            raise
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            logging.exception('Unexpected error in email_settings POST')
+            raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/history', methods=['GET'])
@@ -1525,8 +1599,11 @@ def get_history():
             'entries': entries,
             'count': len(entries)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_history')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/history/details', methods=['POST'])
@@ -1560,8 +1637,11 @@ def get_history_details():
             'success': True,
             'details': details
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_history_details')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/pdf/<int:invoice_id>', methods=['GET'])
@@ -1601,8 +1681,11 @@ def view_pdf(invoice_id: int):
             str(pdf_path),
             mimetype=mimetype
         )
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in view_pdf')
+        raise AppError('Wystapil blad serwera')
 
 
 # ============================================================================
@@ -1664,8 +1747,11 @@ def get_sellers():
                 'total_unpaid': float(global_stats['total_unpaid'] or 0.0)
             }
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_sellers')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/<int:seller_id>', methods=['GET'])
@@ -1696,8 +1782,11 @@ def get_seller(seller_id: int):
             'invoices': invoices_data,
             'invoice_count': actual_count  # Also return as separate field for backward compatibility
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_seller')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/<int:seller_id>', methods=['PUT'])
@@ -1738,8 +1827,11 @@ def update_seller(seller_id: int):
             'seller': vars(seller),
             'changes': changes
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_seller')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/<int:seller_id>/bulk-update', methods=['POST'])
@@ -1780,8 +1872,11 @@ def bulk_update_seller_invoices(seller_id: int):
             'total_invoices': len(invoice_rows),
             'errors': errors if errors else None
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in bulk_update_seller_invoices')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/conflicts', methods=['GET'])
@@ -1828,8 +1923,11 @@ def get_seller_conflicts():
             'conflicts': conflicts,
             'count': len(conflicts)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_seller_conflicts')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers', methods=['POST'])
@@ -1928,8 +2026,11 @@ def create_seller():
             'seller': vars(new_seller)
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_seller')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/<int:seller_id>', methods=['DELETE'])
@@ -1977,8 +2078,11 @@ def delete_seller(seller_id: int):
             'invoice_count': invoice_count
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_seller')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/<int:seller_id>/invoices', methods=['GET'])
@@ -2013,8 +2117,11 @@ def get_seller_invoices(seller_id: int):
             'count': len(invoices)
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_seller_invoices')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/sync', methods=['POST'])
@@ -2096,8 +2203,11 @@ def sync_sellers():
             }
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in sync_sellers')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/sync/add-missing', methods=['POST'])
@@ -2146,8 +2256,11 @@ def add_missing_seller():
             'linked_invoices': linked_count
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in add_missing_seller')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/sync/fix-discrepancy', methods=['POST'])
@@ -2199,8 +2312,11 @@ def fix_discrepancy():
         else:
             return jsonify({'success': False, 'error': f'Nieznana akcja: {action}'}), 400
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in fix_discrepancy')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/sync/invoice-counts', methods=['POST'])
@@ -2223,8 +2339,11 @@ def sync_seller_invoice_counts():
             'updated_count': updated_count
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in sync_seller_invoice_counts')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/sellers/check-duplicate', methods=['POST'])
@@ -2272,8 +2391,11 @@ def check_seller_duplicate():
 
         return jsonify(result)
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in check_seller_duplicate')
+        raise AppError('Wystapil blad serwera')
 
 
 # ============================================================================
@@ -2301,9 +2423,11 @@ def get_seller_passwords():
                 'updated_at': row['updated_at'].isoformat() if row['updated_at'] else None,
             })
         return jsonify({'success': True, 'passwords': passwords})
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error loading seller passwords: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_seller_passwords')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/seller-passwords', methods=['POST'])
@@ -2315,7 +2439,7 @@ def create_seller_password():
         data = request.get_json()
         pdf_password = (data.get('pdf_password') or '').strip()
         if not pdf_password:
-            return jsonify({'success': False, 'error': 'Haslo PDF jest wymagane'}), 400
+            raise ValidationError('Haslo PDF jest wymagane')
 
         from database.models import SellerPdfPassword
         entry = SellerPdfPassword(
@@ -2326,9 +2450,11 @@ def create_seller_password():
         )
         entry_id = current_app.seller_password_repo.create(entry)
         return jsonify({'success': True, 'id': entry_id})
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error creating seller password: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_seller_password')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/seller-passwords/<int:password_id>', methods=['PUT'])
@@ -2340,7 +2466,7 @@ def update_seller_password(password_id):
         data = request.get_json()
         pdf_password = (data.get('pdf_password') or '').strip()
         if not pdf_password:
-            return jsonify({'success': False, 'error': 'Haslo PDF jest wymagane'}), 400
+            raise ValidationError('Haslo PDF jest wymagane')
 
         from database.models import SellerPdfPassword
         entry = SellerPdfPassword(
@@ -2351,11 +2477,13 @@ def update_seller_password(password_id):
         )
         success = current_app.seller_password_repo.update(password_id, entry)
         if not success:
-            return jsonify({'success': False, 'error': 'Nie znaleziono wpisu'}), 404
+            raise NotFoundError('Zasob nie istnieje')
         return jsonify({'success': True})
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error updating seller password: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_seller_password')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/seller-passwords/<int:password_id>', methods=['DELETE'])
@@ -2366,11 +2494,13 @@ def delete_seller_password(password_id):
     try:
         success = current_app.seller_password_repo.delete(password_id)
         if not success:
-            return jsonify({'success': False, 'error': 'Nie znaleziono wpisu'}), 404
+            raise NotFoundError('Zasob nie istnieje')
         return jsonify({'success': True})
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error deleting seller password: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_seller_password')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/seller-passwords/for-seller/<int:seller_id>', methods=['GET'])
@@ -2392,9 +2522,11 @@ def get_password_for_seller(seller_id):
                 }
             })
         return jsonify({'success': True, 'password': None})
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error loading password for seller: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_password_for_seller')
+        raise AppError('Wystapil blad serwera')
 
 
 # ============================================================================
@@ -2441,8 +2573,11 @@ def get_clients():
             'clients': clients_data,
             'count': len(clients_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_clients')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/<int:client_id>', methods=['GET'])
@@ -2478,8 +2613,11 @@ def get_client(client_id):
             'success': True,
             'client': client_dict
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_client')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients', methods=['POST'])
@@ -2533,8 +2671,11 @@ def create_client_endpoint():
             'message': 'Klient został utworzony',
             'client_id': client_id
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_client_endpoint')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/<int:client_id>', methods=['PUT'])
@@ -2603,8 +2744,11 @@ def update_client(client_id):
                 'error': 'Nie udało się zaktualizować klienta'
             }), 500
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_client')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/<int:client_id>', methods=['DELETE'])
@@ -2643,8 +2787,11 @@ def delete_client(client_id):
                 'error': 'Nie udało się usunąć klienta'
             }), 500
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_client')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/<int:client_id>/restore', methods=['POST'])
@@ -2659,8 +2806,11 @@ def restore_client(client_id):
 
         _audit('client', 'RESTORE', entity_id=client_id)
         return jsonify({'success': True, 'message': 'Klient został przywrócony'})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in restore_client')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/<int:client_id>/activate', methods=['POST'])
@@ -2686,8 +2836,11 @@ def activate_client(client_id):
                 'error': 'Nie udało się aktywować klienta'
             }), 500
 
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in activate_client')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/statistics', methods=['GET'])
@@ -2702,8 +2855,11 @@ def get_client_statistics():
             'success': True,
             'statistics': stats
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_client_statistics')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/clients/birthdays', methods=['GET'])
@@ -2735,8 +2891,11 @@ def get_upcoming_birthdays():
             'clients': clients_data,
             'count': len(clients_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_upcoming_birthdays')
+        raise AppError('Wystapil blad serwera')
 
 
 # ============================================================================
@@ -2790,8 +2949,11 @@ def get_services():
             'services': services_data,
             'count': len(services_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_services')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services/<int:service_id>', methods=['GET'])
@@ -2825,8 +2987,11 @@ def get_service(service_id):
             'success': True,
             'service': service_dict
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services', methods=['POST'])
@@ -2871,8 +3036,11 @@ def create_service_endpoint():
             'service_id': service_id,
             'message': 'Usługa została utworzona pomyślnie'
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_service_endpoint')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services/<int:service_id>', methods=['PUT'])
@@ -2915,8 +3083,11 @@ def update_service(service_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Nie udało się zaktualizować usługi'}), 500
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services/<int:service_id>', methods=['DELETE'])
@@ -2953,8 +3124,11 @@ def delete_service(service_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Nie udało się usunąć usługi'}), 500
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services/<int:service_id>/restore', methods=['POST'])
@@ -2969,8 +3143,11 @@ def restore_service(service_id):
 
         _audit('service', 'RESTORE', entity_id=service_id)
         return jsonify({'success': True, 'message': 'Usługa została przywrócona'})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in restore_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services/statistics', methods=['GET'])
@@ -2985,8 +3162,11 @@ def get_service_statistics():
             'success': True,
             'statistics': stats
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_service_statistics')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/services/categories', methods=['GET'])
@@ -3001,8 +3181,11 @@ def get_service_categories():
             'success': True,
             'categories': categories
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_service_categories')
+        raise AppError('Wystapil blad serwera')
 
 
 # ============================================================================
@@ -3082,8 +3265,11 @@ def get_employees():
             'employees': employees_data,
             'count': len(employees_data)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employees')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/employees/<int:employee_id>', methods=['GET'])
@@ -3128,8 +3314,11 @@ def get_employee(employee_id):
             'success': True,
             'employee': employee_dict
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employee')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/employees', methods=['POST'])
@@ -3188,8 +3377,11 @@ def create_employee_endpoint():
             'employee_id': employee_id,
             'message': 'Pracownik został utworzony pomyślnie'
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_employee_endpoint')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/employees/<int:employee_id>', methods=['PUT'])
@@ -3255,8 +3447,11 @@ def update_employee(employee_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Nie udało się zaktualizować pracownika'}), 500
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_employee')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/employees/<int:employee_id>', methods=['DELETE'])
@@ -3277,8 +3472,11 @@ def delete_employee(employee_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Nie udało się dezaktywować pracownika'}), 500
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_employee')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/employees/statistics', methods=['GET'])
@@ -3293,8 +3491,11 @@ def get_employee_statistics():
             'success': True,
             'statistics': stats
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employee_statistics')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/employees/positions', methods=['GET'])
@@ -3309,8 +3510,11 @@ def get_employee_positions():
             'success': True,
             'positions': positions
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employee_positions')
+        raise AppError('Wystapil blad serwera')
 
 
 # ---------------------------------------------------------------------------
@@ -3339,8 +3543,11 @@ def get_formy_zatrudnienia():
                 for f in formy
             ]
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_formy_zatrudnienia')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/formy-zatrudnienia', methods=['POST'])
@@ -3363,8 +3570,11 @@ def create_forma_zatrudnienia():
         )
         forma_id = current_app.forma_zatrudnienia_repo.create(forma)
         return jsonify({'success': True, 'id': forma_id, 'message': 'Forma zatrudnienia została utworzona'})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_forma_zatrudnienia')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['GET'])
@@ -3388,8 +3598,11 @@ def get_forma_zatrudnienia(forma_id):
                 'commision_included': f.commision_included,
             }
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_forma_zatrudnienia')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['PUT'])
@@ -3418,8 +3631,11 @@ def update_forma_zatrudnienia(forma_id):
         if success:
             return jsonify({'success': True, 'message': 'Forma zatrudnienia została zaktualizowana'})
         return jsonify({'success': False, 'error': 'Nie udało się zaktualizować'}), 500
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_forma_zatrudnienia')
+        raise AppError('Wystapil blad serwera')
 
 
 @api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['DELETE'])
@@ -3431,6 +3647,9 @@ def delete_forma_zatrudnienia(forma_id):
         current_app.forma_zatrudnienia_repo.delete(forma_id)
         return jsonify({'success': True, 'message': 'Forma zatrudnienia została usunięta'})
     except ValueError as e:
-        return jsonify({'success': False, 'error': str(e)}), 409
+        raise ConflictError(str(e))
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_forma_zatrudnienia')
+        raise AppError('Wystapil blad serwera')
