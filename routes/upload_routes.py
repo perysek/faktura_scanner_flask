@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 from config.auth_config import module_permission_required
 from config.database import DatabaseConnection
 from database.models import Invoice, UploadStaging
+from exceptions import AppError, ValidationError, NotFoundError
 from services.ocr_service import PDFPasswordRequired
 from utils.validators import DateParser
 
@@ -75,17 +76,17 @@ def stage_files():
     """Upload PDF files to staging area without processing"""
     try:
         session_id = get_session_id()
-        
+
         if 'files[]' not in request.files:
-            return jsonify({'success': False, 'error': 'No files provided'}), 400
-        
+            raise ValidationError('Brak plikow')
+
         files = request.files.getlist('files[]')
         staged_files = []
-        
+
         # Create temp directory for this session
         temp_dir = Path(current_app.config['UPLOAD_FOLDER']) / 'temp' / session_id
         temp_dir.mkdir(parents=True, exist_ok=True)
-        
+
         for file in files:
             if file and allowed_file(file.filename):
                 # P1-7: UUID prefix to prevent collisions and empty names
@@ -101,11 +102,10 @@ def stage_files():
                 file_size = file_path.stat().st_size
                 if file_size > MAX_FILE_SIZE:
                     file_path.unlink(missing_ok=True)
-                    return jsonify({
-                        'success': False,
-                        'error': f'Plik {file.filename} przekracza limit {MAX_FILE_SIZE // (1024*1024)} MB'
-                    }), 400
-                
+                    raise ValidationError(
+                        f'Plik {file.filename} przekracza limit {MAX_FILE_SIZE // (1024*1024)} MB'
+                    )
+
                 # Create staging entry
                 staging = UploadStaging(
                     session_id=session_id,
@@ -113,9 +113,9 @@ def stage_files():
                     file_path=str(file_path),
                     file_size=file_size
                 )
-                
+
                 staging_id = current_app.staging_repo.create(staging)
-                
+
                 staged_files.append({
                     'id': staging_id,
                     'filename': filename,
@@ -123,20 +123,21 @@ def stage_files():
                     'file_path': str(file_path)
                 })
             else:
-                return jsonify({
-                    'success': False,
-                    'error': f'Invalid file type: {file.filename if file else "unknown"}'
-                }), 400
-        
+                raise ValidationError(
+                    f'Niedozwolony typ pliku: {file.filename if file else "unknown"}'
+                )
+
         return jsonify({
             'success': True,
             'files': staged_files,
             'session_id': session_id
         })
-    
+
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error staging files: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Błąd podczas przesyłania plików'}), 500
+        logging.exception('Unexpected error in stage_files')
+        raise AppError('Blad podczas przesylania plikow')
 
 
 @upload_bp.route('/staged', methods=['GET'])
@@ -165,9 +166,11 @@ def get_staged_files():
             'files': files
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error fetching staged files: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Błąd pobierania listy plików'}), 500
+        logging.exception('Unexpected error in get_staged_files')
+        raise AppError('Blad pobierania listy plikow')
 
 
 # IMPORTANT: This route must be defined BEFORE /staged/<filename> to avoid
@@ -206,9 +209,11 @@ def clear_all_staged_files():
             'message': 'All files cleared'
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error clearing staged files: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Błąd usuwania plików'}), 500
+        logging.exception('Unexpected error in clear_all_staged_files')
+        raise AppError('Blad usuwania plikow')
 
 
 @upload_bp.route('/staged/<filename>', methods=['DELETE'])
@@ -230,7 +235,7 @@ def remove_staged_file(filename: str):
         deleted = current_app.staging_repo.delete_by_filename(session_id, filename)
 
         if not deleted:
-            return jsonify({'success': False, 'error': 'File not found'}), 404
+            raise NotFoundError('Plik nie istnieje')
 
         # Delete physical file
         if file_path and os.path.exists(file_path):
@@ -241,31 +246,33 @@ def remove_staged_file(filename: str):
             'message': f'File {filename} removed'
         })
 
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error removing staged file {filename}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Błąd usuwania pliku'}), 500
+        logging.exception('Unexpected error in remove_staged_file')
+        raise AppError('Blad usuwania pliku')
 
 
 @upload_bp.route('/process', methods=['POST'])
 def process_staged_files():
     """Process staged files with OCR extraction (Streaming)"""
     session_id = get_session_id()
-    
+
     # Get list of filenames to process from request
     data = request.get_json() or {}
     filenames_to_process = data.get('filenames', None)
-    
+
     # Capture app objects for use in generator
     staging_repo = current_app.staging_repo
     ocr_service = current_app.ocr_service
     validation_service = current_app.validation_service
     duplicate_detection = current_app.duplicate_detection
-    
+
     def generate():
         try:
             # Get staged files
             rows = staging_repo.get_by_session(session_id)
-            
+
             if not rows:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'No files to process'})}\n\n"
                 return
@@ -276,21 +283,21 @@ def process_staged_files():
                 if filenames_to_process and row['filename'] not in filenames_to_process:
                     continue
                 rows_to_process.append(row)
-            
+
             total_files = len(rows_to_process)
             if total_files == 0:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'No matching files to process'})}\n\n"
                 return
 
             yield f"data: {json.dumps({'type': 'start', 'total': total_files})}\n\n"
-            
+
             for idx, row in enumerate(rows_to_process, 1):
                 staging = staging_repo.row_to_upload_staging(row)
                 file_path = Path(staging.file_path)
-                
+
                 # Emit start file event
                 yield f"data: {json.dumps({'type': 'file_start', 'filename': staging.filename, 'current': idx, 'total': total_files})}\n\n"
-                
+
                 if not file_path.exists():
                     error_res = {
                         'filename': staging.filename,
@@ -299,7 +306,7 @@ def process_staged_files():
                     }
                     yield f"data: {json.dumps({'type': 'file_complete', 'result': error_res})}\n\n"
                     continue
-                
+
                 try:
                     # Preprocessing & OCR
                     yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'OCR: Rozpoznawanie tekstu...', 'percent': 20})}\n\n"
@@ -350,24 +357,24 @@ def process_staged_files():
                         # Retry with password
                         yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'Odblokowywanie PDF hasłem...', 'percent': 30})}\n\n"
                         extracted_data = ocr_service.process_pdf(str(file_path), password=pdf_password)
-                    
+
                     yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'Ekstrakcja danych...', 'percent': 60})}\n\n"
-                    
+
                     # Parse dates
                     invoice_date = parse_date_string(extracted_data.get('issue_date'))
                     if not invoice_date:
                         invoice_date = datetime.now().date()
-                    
+
                     payment_due_date_str = extracted_data.get('payment_due_date')
                     payment_due_date = None
                     payment_term = extracted_data.get('payment_method')
-                    
+
                     if payment_due_date_str:
                         if payment_due_date_str == 'POBRANIE':
                             payment_term = 'POBRANIE'
                         else:
                             payment_due_date = parse_date_string(payment_due_date_str)
-                    
+
                     # Enrich seller data from sellers table
                     seller_nip = extracted_data.get('seller_nip')
                     seller_name_ocr = (extracted_data.get('seller_name') or '').strip()
@@ -408,16 +415,16 @@ def process_staged_files():
                         ocr_confidence=extracted_data.get('ocr_confidence'),
                         is_duplicate=False
                     )
-                    
+
                     # Validate
                     validation_result = validation_service.validate_invoice(invoice)
                     validation_errors = validation_result.get('errors', [])
                     validation_warnings = validation_result.get('warnings', [])
-                    
+
                     # Check duplicates
                     yield f"data: {json.dumps({'type': 'progress', 'filename': staging.filename, 'message': 'Sprawdzanie duplikatów...', 'percent': 90})}\n\n"
                     is_duplicate, duplicate_info = duplicate_detection.check_duplicate(invoice)
-                    
+
                     # Success Result
                     result = {
                         'filename': staging.filename,
@@ -432,18 +439,18 @@ def process_staged_files():
                         'email_folder': staging.email_folder,
                         'email_date': staging.email_date
                     }
-                    
+
                     yield f"data: {json.dumps({'type': 'file_complete', 'result': result})}\n\n"
                     logger.info(f"[PROCESS] File processed successfully: {staging.filename}")
-                    
+
                 except Exception as e:
                     logger.error(f"[PROCESS] Error processing {staging.filename}: {str(e)}")
                     logger.error(f"[PROCESS] Traceback: {traceback.format_exc()}")
-                    
+
                     error_res = {
                         'filename': staging.filename,
                         'success': False,
-                        'error': 'Błąd przetwarzania pliku'
+                        'error': 'Blad przetwarzania pliku'
                     }
                     yield f"data: {json.dumps({'type': 'file_complete', 'result': error_res})}\n\n"
 
@@ -452,7 +459,7 @@ def process_staged_files():
 
         except Exception as e:
             logger.error(f"Global processing error: {e}", exc_info=True)
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Wystąpił błąd podczas przetwarzania'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Wystapil blad podczas przetwarzania'})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
@@ -460,225 +467,232 @@ def process_staged_files():
 @upload_bp.route('/finalize', methods=['POST'])
 def finalize_uploads():
     """Save selected processed invoices to database"""
-    session_id = get_session_id()
-    data = request.get_json()
+    try:
+        session_id = get_session_id()
+        data = request.get_json()
 
-    invoices_to_save = data.get('invoices', [])
+        invoices_to_save = data.get('invoices', []) if data else []
 
-    if not invoices_to_save:
-        return jsonify({'success': False, 'error': 'No invoices to save'}), 400
+        if not invoices_to_save:
+            raise ValidationError('Brak faktur do zapisania')
 
-    saved_invoices = []
-    failed_invoices = []
-    seller_warnings = []  # Track seller-related warnings
+        saved_invoices = []
+        failed_invoices = []
+        seller_warnings = []  # Track seller-related warnings
 
-    # Get staged files for file path resolution
-    rows = current_app.staging_repo.get_by_session(session_id)
-    staged_files_map = {}
-    for row in rows:
-        staged_files_map[row['filename']] = row['file_path']
-    
-    for invoice_data in invoices_to_save:
-        filename = invoice_data.get('filename')
-        temp_file_path = staged_files_map.get(filename)
-        
-        if not temp_file_path or not os.path.exists(temp_file_path):
-            failed_invoices.append({
-                'filename': filename,
-                'error': 'File not found in staging'
-            })
-            continue
-        
-        # Determine permanent path
-        permanent_dir = Path(current_app.config['UPLOAD_FOLDER'])
-        permanent_path = permanent_dir / filename
-        
-        # Handle duplicate filenames in destination
-        counter = 1
-        while permanent_path.exists():
-            name_parts = filename.rsplit('.', 1)
-            if len(name_parts) == 2:
-                permanent_path = permanent_dir / f"{name_parts[0]}_{counter}.{name_parts[1]}"
-            else:
-                permanent_path = permanent_dir / f"{filename}_{counter}"
-            counter += 1
-        
-        file_moved = False
-        try:
-            # Move file from temp to permanent storage
-            shutil.move(temp_file_path, str(permanent_path))
-            file_moved = True
-            
-            # Create Invoice object
-            extracted_data = invoice_data.get('extracted_data', {})
-            
-            invoice_date = parse_date_string(extracted_data.get('issue_date'))
-            if not invoice_date:
-                invoice_date = datetime.now().date()
-            
-            payment_due_date_str = extracted_data.get('payment_due_date')
-            payment_due_date = None
-            payment_term = extracted_data.get('payment_method')
-            
-            if payment_due_date_str:
-                if payment_due_date_str == 'POBRANIE':
-                    payment_term = 'POBRANIE'
+        # Get staged files for file path resolution
+        rows = current_app.staging_repo.get_by_session(session_id)
+        staged_files_map = {}
+        for row in rows:
+            staged_files_map[row['filename']] = row['file_path']
+
+        for invoice_data in invoices_to_save:
+            filename = invoice_data.get('filename')
+            temp_file_path = staged_files_map.get(filename)
+
+            if not temp_file_path or not os.path.exists(temp_file_path):
+                failed_invoices.append({
+                    'filename': filename,
+                    'error': 'File not found in staging'
+                })
+                continue
+
+            # Determine permanent path
+            permanent_dir = Path(current_app.config['UPLOAD_FOLDER'])
+            permanent_path = permanent_dir / filename
+
+            # Handle duplicate filenames in destination
+            counter = 1
+            while permanent_path.exists():
+                name_parts = filename.rsplit('.', 1)
+                if len(name_parts) == 2:
+                    permanent_path = permanent_dir / f"{name_parts[0]}_{counter}.{name_parts[1]}"
                 else:
-                    payment_due_date = parse_date_string(payment_due_date_str)
-            
-            # Set default values
-            seller_name = (extracted_data.get('seller_name') or '').strip() or '(brak danych)'
-            invoice_number = (extracted_data.get('invoice_number') or '').strip() or '(brak danych)'
-            
-            invoice = Invoice(
-                seller_name=seller_name,
-                invoice_number=invoice_number,
-                invoice_date=invoice_date,
-                amount=Decimal(str(extracted_data.get('total_amount') or 0)),
-                currency=extracted_data.get('currency', 'PLN'),
-                seller_nip=extracted_data.get('seller_nip'),
-                bank_account=extracted_data.get('bank_account'),
-                payment_due_date=payment_due_date,
-                payment_term=payment_term,
-                status='Nieopłacona',
-                pdf_path=str(permanent_path),
-                ocr_confidence=extracted_data.get('ocr_confidence'),
-                is_duplicate=False
-            )
+                    permanent_path = permanent_dir / f"{filename}_{counter}"
+                counter += 1
 
-            # Seller lookup/creation
-            seller_id = None
-            if invoice.seller_nip:
-                try:
-                    seller_id, created, conflict = current_app.seller_service.get_or_create_seller(
-                        nip=invoice.seller_nip,
-                        name=invoice.seller_name,
-                        address=None
-                    )
-
-                    if conflict:
-                        # Use existing seller's name for the invoice
-                        existing_seller = conflict.get('existing_seller')
-                        if existing_seller:
-                            invoice.seller_name = existing_seller.seller_name
-                        # Add conflict warning but continue saving
-                        seller_warnings.append({
-                            'filename': filename,
-                            'message': conflict['message']
-                        })
-                    elif not created:
-                        # Existing seller found (no conflict) — use DB name
-                        existing_row = current_app.seller_repo.find_by_nip(
-                            current_app.seller_service.normalize_nip(invoice.seller_nip)
-                        )
-                        if existing_row:
-                            invoice.seller_name = existing_row['seller_name']
-                    elif created:
-                        logger.info(f"[FINALIZE] Created new seller: {invoice.seller_name} (NIP: {invoice.seller_nip})")
-                except Exception as e:
-                    logger.warning(f"[FINALIZE] Seller lookup failed for {filename}: {str(e)}")
-            elif invoice.seller_name and invoice.seller_name != '(brak danych)':
-                # No NIP but have name — try to find seller by name and fill NIP + link
-                try:
-                    existing_row = current_app.seller_repo.find_by_exact_name(invoice.seller_name)
-                    if existing_row:
-                        seller_id = existing_row['id']
-                        if existing_row.get('seller_nip'):
-                            invoice.seller_nip = existing_row['seller_nip']
-                        logger.info(f"[FINALIZE] Linked seller by name: {invoice.seller_name} → ID {seller_id}")
-                except Exception as e:
-                    logger.warning(f"[FINALIZE] Seller name lookup failed for {filename}: {str(e)}")
-
-            # Save to database with seller_id
-            invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
-
-            # Log import event
+            file_moved = False
             try:
-                from repositories.audit_repository import AuditRepository
-                from flask_login import current_user
-                uid = current_user.id if current_user.is_authenticated else None
-                uname = current_user.full_name if current_user.is_authenticated else None
-                AuditRepository().log_event(
-                    entity_type='import', action='IMPORT',
-                    entity_id=invoice_id,
-                    entity_label=f"{invoice.invoice_number} — {invoice.seller_name}",
-                    new_value=filename,
-                    user_id=uid, user_name=uname,
-                    invoice_id=invoice_id,
+                # Move file from temp to permanent storage
+                shutil.move(temp_file_path, str(permanent_path))
+                file_moved = True
+
+                # Create Invoice object
+                extracted_data = invoice_data.get('extracted_data', {})
+
+                invoice_date = parse_date_string(extracted_data.get('issue_date'))
+                if not invoice_date:
+                    invoice_date = datetime.now().date()
+
+                payment_due_date_str = extracted_data.get('payment_due_date')
+                payment_due_date = None
+                payment_term = extracted_data.get('payment_method')
+
+                if payment_due_date_str:
+                    if payment_due_date_str == 'POBRANIE':
+                        payment_term = 'POBRANIE'
+                    else:
+                        payment_due_date = parse_date_string(payment_due_date_str)
+
+                # Set default values
+                seller_name = (extracted_data.get('seller_name') or '').strip() or '(brak danych)'
+                invoice_number = (extracted_data.get('invoice_number') or '').strip() or '(brak danych)'
+
+                invoice = Invoice(
+                    seller_name=seller_name,
+                    invoice_number=invoice_number,
+                    invoice_date=invoice_date,
+                    amount=Decimal(str(extracted_data.get('total_amount') or 0)),
+                    currency=extracted_data.get('currency', 'PLN'),
+                    seller_nip=extracted_data.get('seller_nip'),
+                    bank_account=extracted_data.get('bank_account'),
+                    payment_due_date=payment_due_date,
+                    payment_term=payment_term,
+                    status='Nieopłacona',
+                    pdf_path=str(permanent_path),
+                    ocr_confidence=extracted_data.get('ocr_confidence'),
+                    is_duplicate=False
                 )
-            except Exception:
-                pass
 
-            # Increment seller invoice count if seller was linked
-            if seller_id:
-                current_app.seller_repo.increment_invoice_count(seller_id)
-            
-            # Success
-            saved_invoices.append({
-                'invoice_id': invoice_id,
-                'filename': filename
-            })
-            
-            # Remove from staging DB (optional here, or cleanup all at end)
-            # It's better to remove individual successful ones to prevent retry issues
-            current_app.staging_repo.delete_by_filename(session_id, filename)
-            
-        except Exception as e:
-            # Rollback the aborted PostgreSQL transaction so the shared connection
-            # is usable again for the next invoice in the batch.
-            try:
-                DatabaseConnection.get_connection().rollback()
-            except Exception:
-                pass
+                # Seller lookup/creation
+                seller_id = None
+                if invoice.seller_nip:
+                    try:
+                        seller_id, created, conflict = current_app.seller_service.get_or_create_seller(
+                            nip=invoice.seller_nip,
+                            name=invoice.seller_name,
+                            address=None
+                        )
 
-            error_msg = str(e)
-            if "duplicate key value violates unique constraint" in error_msg:
-                error_msg = f"Duplikat numeru faktury: {invoice_number}"
+                        if conflict:
+                            # Use existing seller's name for the invoice
+                            existing_seller = conflict.get('existing_seller')
+                            if existing_seller:
+                                invoice.seller_name = existing_seller.seller_name
+                            # Add conflict warning but continue saving
+                            seller_warnings.append({
+                                'filename': filename,
+                                'message': conflict['message']
+                            })
+                        elif not created:
+                            # Existing seller found (no conflict) — use DB name
+                            existing_row = current_app.seller_repo.find_by_nip(
+                                current_app.seller_service.normalize_nip(invoice.seller_nip)
+                            )
+                            if existing_row:
+                                invoice.seller_name = existing_row['seller_name']
+                        elif created:
+                            logger.info(f"[FINALIZE] Created new seller: {invoice.seller_name} (NIP: {invoice.seller_nip})")
+                    except Exception as e:
+                        logger.warning(f"[FINALIZE] Seller lookup failed for {filename}: {str(e)}")
+                elif invoice.seller_name and invoice.seller_name != '(brak danych)':
+                    # No NIP but have name — try to find seller by name and fill NIP + link
+                    try:
+                        existing_row = current_app.seller_repo.find_by_exact_name(invoice.seller_name)
+                        if existing_row:
+                            seller_id = existing_row['id']
+                            if existing_row.get('seller_nip'):
+                                invoice.seller_nip = existing_row['seller_nip']
+                            logger.info(f"[FINALIZE] Linked seller by name: {invoice.seller_name} → ID {seller_id}")
+                    except Exception as e:
+                        logger.warning(f"[FINALIZE] Seller name lookup failed for {filename}: {str(e)}")
 
-            logger.error(f"[FINALIZE] Failed to save {filename}: {error_msg}")
+                # Save to database with seller_id
+                invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
 
-            # Rollback file move if it happened
-            if file_moved and os.path.exists(str(permanent_path)):
+                # Log import event
                 try:
-                    shutil.move(str(permanent_path), temp_file_path)
-                except Exception as rollback_err:
-                    logger.error(f"[FINALIZE] Rollback failed: {rollback_err}")
-            
-            failed_invoices.append({
-                'filename': filename,
-                'error': error_msg
-            })
+                    from repositories.audit_repository import AuditRepository
+                    from flask_login import current_user
+                    uid = current_user.id if current_user.is_authenticated else None
+                    uname = current_user.full_name if current_user.is_authenticated else None
+                    AuditRepository().log_event(
+                        entity_type='import', action='IMPORT',
+                        entity_id=invoice_id,
+                        entity_label=f"{invoice.invoice_number} — {invoice.seller_name}",
+                        new_value=filename,
+                        user_id=uid, user_name=uname,
+                        invoice_id=invoice_id,
+                    )
+                except Exception:
+                    pass
 
-    # If all saved successfully
-    if not failed_invoices:
-        # Clean up empty temp directory
-        temp_dir = Path(current_app.config['UPLOAD_FOLDER']) / 'temp' / session_id
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        # Clear session
-        session.pop('upload_session_id', None)
+                # Increment seller invoice count if seller was linked
+                if seller_id:
+                    current_app.seller_repo.increment_invoice_count(seller_id)
 
-        response_data = {
-            'success': True,
-            'saved_invoices': saved_invoices,
-            'count': len(saved_invoices)
-        }
-        # Include seller warnings if any (non-blocking)
-        if seller_warnings:
-            response_data['seller_warnings'] = seller_warnings
-        return jsonify(response_data)
-    else:
-        # Partial success
-        response_data = {
-            'success': False,
-            'saved_invoices': saved_invoices,
-            'failed_invoices': failed_invoices,
-            'error': f"Zapisano {len(saved_invoices)} faktur, wystąpiły błędy przy {len(failed_invoices)}."
-        }
-        # Include seller warnings if any
-        if seller_warnings:
-            response_data['seller_warnings'] = seller_warnings
-        return jsonify(response_data)
+                # Success
+                saved_invoices.append({
+                    'invoice_id': invoice_id,
+                    'filename': filename
+                })
+
+                # Remove from staging DB (optional here, or cleanup all at end)
+                # It's better to remove individual successful ones to prevent retry issues
+                current_app.staging_repo.delete_by_filename(session_id, filename)
+
+            except Exception as e:
+                # Rollback the aborted PostgreSQL transaction so the shared connection
+                # is usable again for the next invoice in the batch.
+                try:
+                    DatabaseConnection.get_connection().rollback()
+                except Exception:
+                    pass
+
+                error_msg = str(e)
+                if "duplicate key value violates unique constraint" in error_msg:
+                    error_msg = f"Duplikat numeru faktury: {invoice_number}"
+
+                logger.error(f"[FINALIZE] Failed to save {filename}: {error_msg}")
+
+                # Rollback file move if it happened
+                if file_moved and os.path.exists(str(permanent_path)):
+                    try:
+                        shutil.move(str(permanent_path), temp_file_path)
+                    except Exception as rollback_err:
+                        logger.error(f"[FINALIZE] Rollback failed: {rollback_err}")
+
+                failed_invoices.append({
+                    'filename': filename,
+                    'error': error_msg
+                })
+
+        # If all saved successfully
+        if not failed_invoices:
+            # Clean up empty temp directory
+            temp_dir = Path(current_app.config['UPLOAD_FOLDER']) / 'temp' / session_id
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            # Clear session
+            session.pop('upload_session_id', None)
+
+            response_data = {
+                'success': True,
+                'saved_invoices': saved_invoices,
+                'count': len(saved_invoices)
+            }
+            # Include seller warnings if any (non-blocking)
+            if seller_warnings:
+                response_data['seller_warnings'] = seller_warnings
+            return jsonify(response_data)
+        else:
+            # Partial success
+            response_data = {
+                'success': False,
+                'saved_invoices': saved_invoices,
+                'failed_invoices': failed_invoices,
+                'error': f"Zapisano {len(saved_invoices)} faktur, wystapily bledy przy {len(failed_invoices)}."
+            }
+            # Include seller warnings if any
+            if seller_warnings:
+                response_data['seller_warnings'] = seller_warnings
+            return jsonify(response_data)
+
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in finalize_uploads')
+        raise AppError('Blad podczas zapisywania faktur')
 
 
 @upload_bp.route('/view-pdf/<filename>', methods=['GET'])
@@ -686,10 +700,10 @@ def view_pdf(filename: str):
     """View a staged PDF file"""
     try:
         session_id = get_session_id()
-        
+
         # Get file from staging
         rows = current_app.staging_repo.get_by_session(session_id)
-        
+
         upload_root = Path(current_app.config['UPLOAD_FOLDER']).resolve()
         for row in rows:
             if row['filename'] == filename:
@@ -697,17 +711,19 @@ def view_pdf(filename: str):
                 # P1-2: Validate path is within upload directory
                 if not file_path.is_relative_to(upload_root):
                     logger.warning(f"Path traversal attempt: {file_path}")
-                    return jsonify({'success': False, 'error': 'Niedozwolona ścieżka'}), 403
+                    raise ValidationError('Niedozwolona sciezka')
                 if file_path.exists():
                     # P4-7: Serve with correct MIME type based on extension
                     mime_type = mimetypes.guess_type(str(file_path))[0] or 'application/pdf'
                     return send_file(str(file_path), mimetype=mime_type)
-        
-        return jsonify({'success': False, 'error': 'PDF not found'}), 404
-    
+
+        raise NotFoundError('PDF nie istnieje')
+
+    except AppError:
+        raise
     except Exception as e:
-        logger.error(f"Error viewing PDF {filename}: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Błąd wyświetlania pliku'}), 500
+        logging.exception('Unexpected error in view_pdf')
+        raise AppError('Blad wyswietlania pliku')
 
 
 # ── P4-3 & P4-4: Cleanup stale temp files and staging records ──
