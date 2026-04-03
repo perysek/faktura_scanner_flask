@@ -49,8 +49,8 @@ class EmailService:
 
 			return True
 
-		except Exception as e:
-			print(f"Connection test failed: {e}")
+		except (imaplib.IMAP4.error, imaplib.IMAP4.abort, OSError) as e:
+			logging.error("Connection test failed for %s: %s", settings.get('imap_server', '?'), type(e).__name__)
 			return False
 
 	def connect(self, email_address: str, password: str, imap_server: str, imap_port: int) -> bool:
@@ -68,11 +68,15 @@ class EmailService:
 			self.imap.login(email_address, password)
 
 			self.connected = True
-			print(f"✅ Połączono z {imap_server} jako {email_address}")
+			logging.info("Connected to %s as %s", imap_server, email_address)
 			return True
 
-		except Exception as e:
-			print(f"❌ Błąd połączenia: {e}")
+		except imaplib.IMAP4.error as e:
+			logging.error("IMAP login failed for %s: %s", imap_server, type(e).__name__)
+			self.connected = False
+			return False
+		except OSError as e:
+			logging.error("Cannot reach %s:%d: %s", imap_server, imap_port, type(e).__name__)
 			self.connected = False
 			return False
 
@@ -81,9 +85,9 @@ class EmailService:
 		if self.imap and self.connected:
 			try:
 				self.imap.logout()
-				print("✅ Rozłączono z serwerem email")
+				logging.info("Disconnected from email server")
 			except (imaplib.IMAP4.abort, imaplib.IMAP4.error, OSError) as e:
-				logging.warning(f"Email disconnect error: {e}")
+				logging.warning("Email disconnect error: %s", type(e).__name__)
 			finally:
 				self.connected = False
 
@@ -106,8 +110,8 @@ class EmailService:
 						if match:
 							folder_name = match.group(1).strip()
 							folders.append(folder_name)
-		except Exception as e:
-			print(f"❌ Błąd podczas listowania folderów: {e}")
+		except (imaplib.IMAP4.error, imaplib.IMAP4.abort, OSError) as e:
+			logging.error("Error listing folders: %s", type(e).__name__)
 		return folders
 
 	def _build_search_criteria(self, from_date: Optional[date], to_date: Optional[date]) -> List[str]:
@@ -134,20 +138,20 @@ class EmailService:
 	) -> List[Dict[str, Any]]:
 		"""
 		Fetch PDF attachments from emails across specified folders.
-		
+
 		Args:
 			from_date: Start date for email search
 			to_date: End date for email search
 			save_dir: Directory to save PDF attachments
 			progress_callback: Optional callback for progress updates
 			folders: Optional list of folder names to search. If None, searches all folders.
-		
+
 		Returns:
 			List of dicts with: filename, filepath, folder, email_subject, email_sender, email_date
 		"""
 		if not self.connected:
 			if progress_callback:
-				progress_callback("❌ Nie połączono z serwerem email", "", None)
+				progress_callback("Not connected to email server", "", None)
 			return []
 
 		all_pdf_files = []
@@ -157,21 +161,21 @@ class EmailService:
 				folders_to_search = self._list_folders()
 			else:
 				folders_to_search = folders
-			
+
 			if not folders_to_search:
 				if progress_callback:
-					progress_callback("❌ Nie znaleziono żadnych folderów email", "", None)
+					progress_callback("No email folders found", "", None)
 				return []
 
 			if progress_callback:
-				progress_callback(f"🔎 Znaleziono {len(folders_to_search)} folderów", "Rozpoczynanie wyszukiwania emaili...", 0.1)
+				progress_callback(f"Found {len(folders_to_search)} folders", "Starting email search...", 0.1)
 
 			search_criteria = self._build_search_criteria(from_date, to_date)
 
 			for i, folder_name in enumerate(folders_to_search):
 				try:
 					if progress_callback:
-						progress_callback(f"📂 Skanowanie folderu: {folder_name}", f"({i + 1}/{len(folders_to_search)})", 0.1 + 0.8 * (i / len(folders_to_search)))
+						progress_callback(f"Scanning folder: {folder_name}", f"({i + 1}/{len(folders_to_search)})", 0.1 + 0.8 * (i / len(folders_to_search)))
 
 					self.imap.select(f'"{folder_name}"')
 					status, messages = self.imap.search(None, *search_criteria)
@@ -184,40 +188,40 @@ class EmailService:
 						continue
 
 					if progress_callback:
-						progress_callback(f"📧 Znaleziono {len(email_ids)} emaili w {folder_name}", "Przetwarzanie załączników...", None)
+						progress_callback(f"Found {len(email_ids)} emails in {folder_name}", "Processing attachments...", None)
 
 					for idx, email_id in enumerate(email_ids, 1):
 						if progress_callback:
 							progress = 0.1 + 0.8 * ((i + (idx / len(email_ids))) / len(folders_to_search))
-							progress_callback(f"Przetwarzanie emaila {idx}/{len(email_ids)} w {folder_name}", "Wyszukiwanie załączników PDF...", progress)
+							progress_callback(f"Processing email {idx}/{len(email_ids)} in {folder_name}", "Searching for PDF attachments...", progress)
 
 						pdfs = self._process_email(email_id, save_dir, progress_callback, folder_name)
 						all_pdf_files.extend(pdfs)
 
-				except Exception as e:
+				except (imaplib.IMAP4.error, imaplib.IMAP4.abort, OSError) as e:
+					logging.warning("Failed to process folder %s: %s", folder_name, type(e).__name__)
 					if progress_callback:
-						progress_callback(f"❌ Błąd podczas skanowania folderu {folder_name}", str(e), None)
+						progress_callback(f"Error scanning folder {folder_name}", type(e).__name__, None)
 					continue
 
 			if progress_callback:
-				progress_callback(f"✅ Pobrani {len(all_pdf_files)} załączników PDF", "Import zakończony", 1.0)
+				progress_callback(f"Downloaded {len(all_pdf_files)} PDF attachments", "Import complete", 1.0)
 			return all_pdf_files
 
-		except Exception as e:
-			import traceback
-			traceback.print_exc()
+		except (imaplib.IMAP4.error, imaplib.IMAP4.abort, OSError) as e:
+			logging.error("Fatal error during fetch_pdf_attachments: %s", type(e).__name__)
 			if progress_callback:
-				progress_callback(f"❌ Błąd: {str(e)}", "", None)
+				progress_callback(f"Error: {type(e).__name__}", "", None)
 			return []
 
 	@staticmethod
 	def _contains_invoice_keywords(text: str) -> bool:
 		"""
 		Check if text contains invoice-related keywords.
-		
+
 		Args:
 			text: Text to search for keywords (email subject or body)
-			
+
 		Returns:
 			True if any invoice keyword is found (case-insensitive)
 		"""
@@ -234,10 +238,10 @@ class EmailService:
 	def _extract_email_body_text(message) -> str:
 		"""
 		Extract plain text content from email message.
-		
+
 		Args:
 			message: Email message object
-			
+
 		Returns:
 			Plain text content of email body
 		"""
@@ -250,18 +254,18 @@ class EmailService:
 							payload = part.get_payload(decode=True)
 							if payload:
 								body_text += payload.decode('utf-8', errors='ignore')
-						except:
-							pass
+						except (UnicodeDecodeError, LookupError) as e:
+							logging.debug("Failed to decode email part: %s", type(e).__name__)
 			else:
 				# Not multipart, try to get payload
 				try:
 					payload = message.get_payload(decode=True)
 					if payload:
 						body_text = payload.decode('utf-8', errors='ignore')
-				except:
-					pass
-		except:
-			pass
+				except (UnicodeDecodeError, LookupError) as e:
+					logging.debug("Failed to decode email body: %s", type(e).__name__)
+		except AttributeError as e:
+			logging.debug("Malformed email message: %s", type(e).__name__)
 		return body_text
 
 	def _process_email(self, email_id: bytes, save_dir: str = None, progress_callback: Optional[callable] = None, folder_name: str = None) -> List[Dict[str, Any]]:
@@ -284,7 +288,7 @@ class EmailService:
 			# Parse email
 			email_body = msg_data[0][1]
 			message = email.message_from_bytes(email_body)
-			
+
 			# Extract and decode email metadata
 			# Decode subject header (MIME encoded-word syntax)
 			subject_header = message.get('Subject', '')
@@ -298,7 +302,7 @@ class EmailService:
 						email_subject += part
 			else:
 				email_subject = ''
-			
+
 			# Decode sender header
 			sender_header = message.get('From', '')
 			if sender_header:
@@ -311,16 +315,16 @@ class EmailService:
 						email_sender += part
 			else:
 				email_sender = ''
-			
+
 			email_date = str(message.get('Date', ''))
 
 			# Extract email body text for keyword filtering
 			body_text = EmailService._extract_email_body_text(message)
-			
+
 			# Check if email contains invoice-related keywords in subject or body
 			if not (EmailService._contains_invoice_keywords(email_subject) or EmailService._contains_invoice_keywords(body_text)):
 				if progress_callback:
-					progress_callback(f"⏭️ Pominięto email (brak słów kluczowych): {email_subject[:50]}...", "Email nie zawiera słów związanych z fakturami", None)
+					progress_callback(f"Skipped email (no keywords): {email_subject[:50]}...", "Email does not contain invoice-related keywords", None)
 				return []
 
 			# Process attachments
@@ -346,7 +350,7 @@ class EmailService:
 						if filename.lower().endswith('.pdf'):
 							# Notify start of download
 							if progress_callback:
-								progress_callback(f"📄 Pobieranie: {filename}", "Zapisywanie załącznika...", None)
+								progress_callback(f"Downloading: {filename}", "Saving attachment...", None)
 
 							# Get payload data
 							payload_data = part.get_payload(decode=True)
@@ -368,17 +372,17 @@ class EmailService:
 									'email_sender': email_sender,
 									'email_date': email_date
 								})
-								print(f"  📄 Pobrano: {filename}")
+								logging.info("Downloaded attachment: %s", filename)
 								if progress_callback:
-									progress_callback(f"✅ Pobrano: {filename}", f"Rozmiar: {len(payload_data) / 1024:.1f} KB", None)
+									progress_callback(f"Downloaded: {filename}", f"Size: {len(payload_data) / 1024:.1f} KB", None)
 
 							# Clear payload reference to free memory
 							del payload_data
 
-		except Exception as e:
-			print(f"Błąd podczas przetwarzania emaila {email_id}: {e}")
+		except (imaplib.IMAP4.error, imaplib.IMAP4.abort, OSError, ValueError, KeyError) as e:
+			logging.warning("Failed to process email %s: %s", email_id, type(e).__name__)
 			if progress_callback:
-				progress_callback(f"❌ Błąd podczas przetwarzania wiadomości", str(e), None)
+				progress_callback("Error processing message", type(e).__name__, None)
 
 		finally:
 			# Clear message reference to ensure cleanup
@@ -452,7 +456,7 @@ class EmailService:
 
 			# Write file and ensure it's fully closed
 			if progress_callback:
-				progress_callback(f"💾 Zapisywanie: {filename}", f"Zapisywanie {len(data) / 1024:.1f} KB na dysk...", None)
+				progress_callback(f"Saving: {filename}", f"Writing {len(data) / 1024:.1f} KB to disk...", None)
 
 			with open(pdf_path, 'wb') as f:
 				f.write(data)
@@ -469,20 +473,20 @@ class EmailService:
 					with open(pdf_path, 'rb') as _:
 						pass
 					break
-				except Exception:
+				except OSError:
 					if attempt < max_retries - 1:
 						if progress_callback:
-							progress_callback(f"⚠️ Weryfikacja dostępu: {filename}", f"Próba {attempt + 1}/{max_retries}...", None)
+							progress_callback(f"Verifying access: {filename}", f"Attempt {attempt + 1}/{max_retries}...", None)
 						time.sleep(0.5)
 					else:
 						if progress_callback:
-							progress_callback(f"❌ Plik zablokowany: {filename}", "Nie można uzyskać dostępu", None)
+							progress_callback(f"File locked: {filename}", "Cannot access file", None)
 						raise
 
 			return str(pdf_path)
 
-		except Exception as e:
-			print(f"Błąd podczas zapisywania załącznika: {e}")
+		except (OSError, IOError) as e:
+			logging.error("Failed to save attachment %s: %s", filename, type(e).__name__)
 			if progress_callback:
-				progress_callback(f"❌ Błąd zapisu: {filename}", str(e), None)
+				progress_callback(f"Save error: {filename}", type(e).__name__, None)
 			return None

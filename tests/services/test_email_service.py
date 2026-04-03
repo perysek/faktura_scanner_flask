@@ -28,7 +28,7 @@ class TestEmailServiceConnect:
     @patch('services.email_service.imaplib.IMAP4_SSL')
     def test_connect_failure_sets_connected_false(self, mock_imap_class):
         """Błąd połączenia powinien ustawić connected=False."""
-        mock_imap_class.side_effect = Exception("Connection refused")
+        mock_imap_class.side_effect = OSError("Connection refused")
 
         result = self.service.connect('test@example.com', 'pass', 'bad-server', 993)
 
@@ -124,7 +124,7 @@ class TestEmailServiceTestConnection:
     @patch('services.email_service.imaplib.IMAP4_SSL')
     def test_connection_failure(self, mock_imap_class):
         """Błąd połączenia powinien zwrócić False."""
-        mock_imap_class.side_effect = Exception("Connection refused")
+        mock_imap_class.side_effect = OSError("Connection refused")
 
         settings = {
             'imap_server': 'bad-server',
