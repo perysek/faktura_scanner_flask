@@ -94,8 +94,11 @@ def get_appointments():
 
         appointments = [dict(row) for row in rows]
         return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_appointments')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/table-data', methods=['GET'])
@@ -132,8 +135,11 @@ def get_table_data():
                 appt['services'] = []
 
         return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_table_data')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments', methods=['POST'])
@@ -144,12 +150,12 @@ def create_appointment():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         required = ['client_id', 'employee_id', 'service_ids', 'appointment_date', 'start_time']
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({'success': False, 'error': f'Brakujące pola: {", ".join(missing)}'}), 400
+            raise ValidationError(f'Brakujace pola: {", ".join(missing)}')
 
         service = AppointmentBusinessService()
         result = service.create_appointment(
@@ -167,8 +173,11 @@ def create_appointment():
                entity_label=f"{appt_date} {data.get('start_time','')}",
                new_value=f"klient={data.get('client_id')} pracownik={data.get('employee_id')}")
         return jsonify({'success': True, **result}), 201
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_appointment')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>', methods=['GET'])
@@ -181,7 +190,7 @@ def get_appointment(appointment_id):
         details = service.get_appointment_details(appointment_id)
 
         if not details:
-            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+            raise NotFoundError('Wizyta nie istnieje')
 
         # Convert Decimal to float for JSON serialization
         totals = details['totals']
@@ -190,8 +199,11 @@ def get_appointment(appointment_id):
                 totals[key] = float(totals[key])
 
         return jsonify({'success': True, **details})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_appointment')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/check-conflict', methods=['GET'])
@@ -214,7 +226,7 @@ def check_appointment_conflict():
         exclude_appointment_id = request.args.get('exclude_appointment_id', type=int)
 
         if not all([employee_id, appointment_date, start_time, duration_minutes]):
-            return jsonify({'success': False, 'error': 'Brakujące parametry'}), 400
+            raise ValidationError('Brakujace parametry')
 
         # Calculate end time
         from datetime import datetime, timedelta
@@ -279,10 +291,11 @@ def check_appointment_conflict():
             'employee_conflicts': [_serialize_conflict(c) for c in employee_conflicts],
             'client_conflicts': [_serialize_conflict(c) for c in client_conflicts]
         })
+    except AppError:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in check_appointment_conflict')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>', methods=['PUT'])
@@ -293,21 +306,21 @@ def update_appointment(appointment_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         required = ['client_id', 'employee_id', 'appointment_date', 'start_time', 'status', 'services']
         missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({'success': False, 'error': f'Brakujące pola: {", ".join(missing)}'}), 400
+            raise ValidationError(f'Brakujace pola: {", ".join(missing)}')
 
         repo = AppointmentRepository()
         row = repo.get_by_id(appointment_id)
         if not row:
-            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+            raise NotFoundError('Wizyta nie istnieje')
 
         # Validate services
         if not data['services'] or len(data['services']) == 0:
-            return jsonify({'success': False, 'error': 'Brak usług'}), 400
+            raise ValidationError('Brak uslug')
 
         # Calculate total duration and end time
         total_duration = sum(int(s['duration_minutes']) for s in data['services'])
@@ -332,10 +345,7 @@ def update_appointment(appointment_id):
             if conflicts:
                 conflict_start = conflicts[0]['start_time']
                 conflict_end = conflicts[0]['end_time']
-                return jsonify({
-                    'success': False,
-                    'error': f"Konflikt z wizytą o godz. {conflict_start}-{conflict_end}"
-                }), 400
+                raise ConflictError(f"Konflikt z wizyta o godz. {conflict_start}-{conflict_end}")
 
         # Update appointment using business service
         service = AppointmentBusinessService()
@@ -370,10 +380,11 @@ def update_appointment(appointment_id):
                        old_value=old_val or None,
                        new_value=new_val or None)
         return jsonify({'success': True, **result})
+    except AppError:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_appointment')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>/status', methods=['PUT'])
@@ -385,7 +396,7 @@ def update_appointment_status(appointment_id):
         data = request.get_json()
         new_status = data.get('status')
         if not new_status:
-            return jsonify({'success': False, 'error': 'Brak statusu'}), 400
+            raise ValidationError('Brak statusu')
 
         # Fetch old status before the transition
         old_row = AppointmentRepository().get_by_id(appointment_id)
@@ -404,8 +415,11 @@ def update_appointment_status(appointment_id):
                    old_value=old_status,
                    new_value=new_val)
         return jsonify({'success': success})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_appointment_status')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>/complete', methods=['POST'])
@@ -430,8 +444,11 @@ def complete_appointment(appointment_id):
         _audit('appointment', 'COMPLETE', entity_id=appointment_id,
                field_name='status', new_value='completed')
         return jsonify({'success': True, **result})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in complete_appointment')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>/addons', methods=['GET'])
@@ -449,8 +466,11 @@ def get_available_addons(appointment_id):
                 addon['price'] = float(addon['price'])
 
         return jsonify({'success': True, 'addons': addons, 'count': len(addons)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_available_addons')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>/addons', methods=['POST'])
@@ -462,7 +482,7 @@ def add_addon(appointment_id):
         data = request.get_json()
         service_id = data.get('service_id')
         if not service_id:
-            return jsonify({'success': False, 'error': 'Brak service_id'}), 400
+            raise ValidationError('Brak service_id')
 
         service = AppointmentBusinessService()
         result = service.add_addon_to_appointment(appointment_id, int(service_id))
@@ -473,8 +493,11 @@ def add_addon(appointment_id):
                 result[key] = float(result[key])
 
         return jsonify({'success': True, **result}), 201
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in add_addon')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>', methods=['DELETE'])
@@ -493,23 +516,22 @@ def delete_appointment(appointment_id):
                 cursor.execute("SELECT id, is_deleted FROM appointments WHERE id = %s", (appointment_id,))
                 check = cursor.fetchone()
             if check and check.get('is_deleted'):
-                return jsonify({
-                    'success': False,
-                    'error': 'Ta wizyta została już usunięta',
-                    'already_deleted': True
-                }), 410
-            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+                raise ConflictError('Ta wizyta zostala juz usunieta')
+            raise NotFoundError('Wizyta nie istnieje')
 
         success = repo.delete(appointment_id)
         if not success:
-            return jsonify({'success': False, 'error': 'Nie udało się usunąć wizyty'}), 500
+            raise AppError('Nie udalo sie usunac wizyty')
 
         return jsonify({
             'success': True,
             'restore_url': f'/appointments/{appointment_id}/restore'
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_appointment')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>/restore', methods=['POST'])
@@ -521,10 +543,13 @@ def restore_appointment(appointment_id):
         repo = AppointmentRepository()
         success = repo.restore(appointment_id)
         if not success:
-            return jsonify({'success': False, 'error': 'Wizyta nie jest usunięta lub nie istnieje'}), 404
-        return jsonify({'success': True, 'message': 'Wizyta została przywrócona'})
+            raise NotFoundError('Wizyta nie jest usunieta lub nie istnieje')
+        return jsonify({'success': True, 'message': 'Wizyta zostala przywrocona'})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in restore_appointment')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/available-slots', methods=['GET'])
@@ -538,14 +563,17 @@ def get_available_slots():
         duration = request.args.get('duration', 60, type=int)
 
         if not employee_id or not slot_date:
-            return jsonify({'success': False, 'error': 'Wymagane: employee_id, date'}), 400
+            raise ValidationError('Wymagane: employee_id, date')
 
         service = AppointmentBusinessService()
         slots = service.get_available_slots(employee_id, slot_date, duration)
 
         return jsonify({'success': True, 'slots': slots})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_available_slots')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/employees', methods=['GET'])
@@ -571,8 +599,11 @@ def get_employees_for_appointments():
             })
 
         return jsonify(employees)
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employees_for_appointments')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/daily-schedule', methods=['GET'])
@@ -585,15 +616,18 @@ def get_daily_schedule():
         schedule_date = _parse_date(request.args.get('date'))
 
         if not employee_id or not schedule_date:
-            return jsonify({'success': False, 'error': 'Wymagane: employee_id, date'}), 400
+            raise ValidationError('Wymagane: employee_id, date')
 
         repo = AppointmentRepository()
         rows = repo.get_daily_schedule(employee_id, schedule_date)
 
         schedule = [dict(row) for row in rows]
         return jsonify({'success': True, 'schedule': schedule, 'count': len(schedule)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_daily_schedule')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/multi-employee-schedule', methods=['GET'])
@@ -622,7 +656,7 @@ def get_multi_employee_schedule():
     try:
         schedule_date = _parse_date(request.args.get('date'))
         if not schedule_date:
-            return jsonify({'success': False, 'error': 'Wymagane: date'}), 400
+            raise ValidationError('Wymagane: date')
 
         offset = request.args.get('offset', default=0, type=int)
         limit = request.args.get('limit', default=8, type=int)
@@ -665,8 +699,11 @@ def get_multi_employee_schedule():
             'has_prev': current_page > 0,
             'has_next': current_page < total_pages - 1
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_multi_employee_schedule')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/past-pending', methods=['GET'])
@@ -710,8 +747,11 @@ def get_past_pending_appointments():
             'appointments': appointments,
             'count': len(appointments)
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_past_pending_appointments')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/appointments/<int:appointment_id>/past-status', methods=['PUT'])
@@ -733,21 +773,18 @@ def update_past_appointment_status(appointment_id):
         new_status = data.get('status')
 
         if not new_status:
-            return jsonify({'success': False, 'error': 'Brak statusu'}), 400
+            raise ValidationError('Brak statusu')
 
         # Walidacja: czy status jest finalny
         ALLOWED_FINAL_STATUSES = ['completed', 'cancelled', 'no_show']
         if new_status not in ALLOWED_FINAL_STATUSES:
-            return jsonify({
-                'success': False,
-                'error': f'Dozwolone statusy: {", ".join(ALLOWED_FINAL_STATUSES)}'
-            }), 400
+            raise ValidationError(f'Dozwolone statusy: {", ".join(ALLOWED_FINAL_STATUSES)}')
 
         repo = AppointmentRepository()
         row = repo.get_by_id(appointment_id)
 
         if not row:
-            return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+            raise NotFoundError('Wizyta nie istnieje')
 
         # Walidacja: czy wizyta jest przeszła
         from datetime import datetime
@@ -756,17 +793,11 @@ def update_past_appointment_status(appointment_id):
         now = datetime.now()
 
         if appointment_datetime >= now:
-            return jsonify({
-                'success': False,
-                'error': 'Można aktualizować tylko wizyty które się już zakończyły'
-            }), 400
+            raise ValidationError('Mozna aktualizowac tylko wizyty ktore sie juz zakonczyly')
 
         # Walidacja: czy status już nie jest finalny
         if row['status'] in ALLOWED_FINAL_STATUSES:
-            return jsonify({
-                'success': False,
-                'error': f'Wizyta ma już finalny status: {row["status"]}'
-            }), 400
+            raise ValidationError(f'Wizyta ma juz finalny status: {row["status"]}')
 
         # Aktualizacja statusu bezpośrednio (omijamy transition_status)
         old_status = row['status']
@@ -783,12 +814,13 @@ def update_past_appointment_status(appointment_id):
                    new_value=new_val)
             return jsonify({'success': True, 'message': f'Status zaktualizowany na: {new_status}'})
         else:
-            return jsonify({'success': False, 'error': 'Nie udało się zaktualizować statusu'}), 500
+            raise AppError('Nie udalo sie zaktualizowac statusu')
 
+    except AppError:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_past_appointment_status')
+        raise AppError('Wystapil blad serwera')
 
 
 @appointment_bp.route('/clients/<int:client_id>/appointments', methods=['GET'])
@@ -814,8 +846,11 @@ def get_client_appointments(client_id):
                 a['end_time'] = str(a['end_time'])
             appointments.append(a)
         return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_client_appointments')
+        raise AppError('Wystapil blad serwera')
 
 
 
