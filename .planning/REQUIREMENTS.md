@@ -20,7 +20,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 
 - [x] **IMPR-01**: Soft delete for invoices and key entities — `is_deleted` boolean + `deleted_at` timestamp columns, all queries filter `WHERE is_deleted = FALSE`
 - [ ] **IMPR-02**: Multi-step operations (appointment creation/update/delete) wrapped in database transactions with savepoints and rollback on failure
-- [ ] **IMPR-03**: Custom exception hierarchy created — business logic errors (e.g. AppointmentConflictError) vs infrastructure errors (e.g. DatabaseConnectionError), routes catch specific types
+- [x] **IMPR-03**: Custom exception hierarchy created — business logic errors (e.g. AppointmentConflictError) vs infrastructure errors (e.g. DatabaseConnectionError), routes catch specific types
 - [ ] **IMPR-04**: Appointment status values defined as Python enum with PostgreSQL CHECK constraint — replaces hardcoded strings ('completed', 'cancelled', 'no_show') across all queries
 - [ ] **IMPR-05**: `SELECT *` in base_repository.py replaced with explicit column lists in critical repositories (clients, employees, users, income_records)
 - [x] **IMPR-06**: Safe SQL IN clause helper function created for parameterized queries; email credential values masked in error messages and logs
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-05 | Phase 7 | Pending |
 | IMPR-01 | Phase 5 | Complete |
 | IMPR-02 | Phase 9 | Pending |
-| IMPR-03 | Phase 6 | Pending |
+| IMPR-03 | Phase 6 | Complete |
 | IMPR-04 | Phase 6 | Pending |
 | IMPR-05 | Phase 6 | Pending |
 | IMPR-06 | Phase 6 | Complete |
