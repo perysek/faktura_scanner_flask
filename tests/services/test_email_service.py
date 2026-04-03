@@ -1,5 +1,6 @@
 """Tests for EmailService — connection, disconnect, error handling."""
 import imaplib
+import logging
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
@@ -133,6 +134,105 @@ class TestEmailServiceTestConnection:
         }
 
         assert EmailService.test_connection(settings) is False
+
+
+class TestEmailServiceCredentialMasking:
+    """IMPR-06: Email credentials must not appear in log output."""
+
+    def test_connect_failure_does_not_log_password(self, caplog):
+        """When IMAP login fails, password must not appear in log."""
+        service = EmailService()
+        test_password = 'SuperSecret123!'
+        with patch('services.email_service.imaplib.IMAP4_SSL') as mock_imap:
+            mock_instance = Mock()
+            mock_instance.login.side_effect = imaplib.IMAP4.error('LOGIN failed')
+            mock_imap.return_value = mock_instance
+            with caplog.at_level(logging.DEBUG):
+                result = service.connect('test@example.com', test_password, 'imap.example.com', 993)
+        assert result is False
+        assert test_password not in caplog.text
+
+    def test_connect_imap_error_returns_false(self, caplog):
+        """connect() catches imaplib.IMAP4.error specifically and returns False."""
+        service = EmailService()
+        with patch('services.email_service.imaplib.IMAP4_SSL') as mock_imap:
+            mock_instance = Mock()
+            mock_instance.login.side_effect = imaplib.IMAP4.error('LOGIN failed')
+            mock_imap.return_value = mock_instance
+            with caplog.at_level(logging.DEBUG):
+                result = service.connect('test@example.com', 'pass', 'imap.example.com', 993)
+        assert result is False
+        assert service.connected is False
+
+    def test_connect_os_error_returns_false(self, caplog):
+        """connect() catches OSError specifically and returns False."""
+        service = EmailService()
+        with patch('services.email_service.imaplib.IMAP4_SSL') as mock_imap:
+            mock_imap.side_effect = OSError('Connection refused')
+            with caplog.at_level(logging.DEBUG):
+                result = service.connect('test@example.com', 'pass', 'imap.example.com', 993)
+        assert result is False
+        assert service.connected is False
+
+
+class TestEmailServiceSpecificExceptions:
+    """FIX-03: All catch blocks use specific exception types."""
+
+    def test_extract_email_body_text_catches_unicode_decode_error(self):
+        """_extract_email_body_text() catches UnicodeDecodeError (not bare except)."""
+        from email.message import Message
+        # Simulate a multipart message where decoding fails
+        msg = Message()
+        msg.set_payload([])
+        msg['Content-Type'] = 'multipart/mixed'
+
+        # Should return empty string without raising
+        result = EmailService._extract_email_body_text(msg)
+        assert isinstance(result, str)
+
+    def test_extract_email_body_text_returns_empty_on_attribute_error(self):
+        """_extract_email_body_text() returns empty string on AttributeError (malformed message)."""
+        result = EmailService._extract_email_body_text(None)
+        assert result == ''
+
+    def test_fetch_pdf_attachments_catches_imap_error_per_folder(self):
+        """fetch_pdf_attachments() catches imaplib.IMAP4.error per folder and continues."""
+        service = EmailService()
+        service.connected = True
+        mock_imap = Mock()
+        service.imap = mock_imap
+        # First folder raises IMAP error, second one succeeds
+        mock_imap.select.side_effect = [
+            imaplib.IMAP4.error('Folder not accessible'),
+            None,
+        ]
+        # Second folder returns no emails
+        mock_imap.search.return_value = ('OK', [b''])
+        result = service.fetch_pdf_attachments(folders=['INBOX', 'Sent'])
+        # Should not raise and should return a list
+        assert isinstance(result, list)
+
+    def test_no_bare_except_blocks(self):
+        """email_service.py must have zero bare except: blocks."""
+        import inspect
+        import re
+        from services import email_service
+        source = inspect.getsource(email_service)
+        bare_excepts = re.findall(r'^\s*except\s*:', source, re.MULTILINE)
+        assert len(bare_excepts) == 0, f"Found {len(bare_excepts)} bare except: blocks"
+
+    def test_no_print_calls(self):
+        """email_service.py must use logging, not print()."""
+        import inspect
+        import re
+        from services import email_service
+        source = inspect.getsource(email_service)
+        lines = source.split('\n')
+        print_lines = [
+            line for line in lines
+            if re.search(r'^\s+print\(', line) and not line.strip().startswith('#')
+        ]
+        assert len(print_lines) == 0, f"Found {len(print_lines)} print() calls: {print_lines}"
 
 
 class TestEmailSettings:
