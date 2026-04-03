@@ -74,9 +74,9 @@ class ExportService:
 			col_letter = col[0].column_letter
 			for cell in col:
 				try:
-					if len(str(cell.value)) > max_length:
-						max_length = len(cell.value)
-				except:
+					if cell.value is not None and len(str(cell.value)) > max_length:
+						max_length = len(str(cell.value))
+				except TypeError:
 					pass
 			adjusted_width = min(max_length + 2, 50)
 			ws.column_dimensions[col_letter].width = adjusted_width
