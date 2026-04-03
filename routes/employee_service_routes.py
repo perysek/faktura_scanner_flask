@@ -1,6 +1,7 @@
 """
 API routes for employee-service assignments (per-employee pricing)
 """
+import logging
 from decimal import Decimal
 
 from flask import Blueprint, jsonify, request
@@ -8,6 +9,7 @@ from flask_login import login_required
 
 from config.auth_config import module_permission_required
 from database.models import EmployeeService
+from exceptions import AppError, ValidationError, NotFoundError
 from repositories.employees.employee_service_repository import EmployeeServiceRepository
 
 employee_service_bp = Blueprint('employee_services', __name__)
@@ -34,8 +36,11 @@ def get_employee_services(employee_id):
             services.append(svc)
 
         return jsonify({'success': True, 'services': services, 'count': len(services)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employee_services')
+        raise AppError('Wystapil blad serwera')
 
 
 @employee_service_bp.route('/employees/<int:employee_id>/services', methods=['POST'])
@@ -46,7 +51,7 @@ def assign_service(employee_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         # Bulk assign
         if 'service_ids' in data:
@@ -57,7 +62,7 @@ def assign_service(employee_id):
         # Single assign with optional pricing
         service_id = data.get('service_id')
         if not service_id:
-            return jsonify({'success': False, 'error': 'Brak service_id'}), 400
+            raise ValidationError('Brak service_id')
 
         es = EmployeeService(
             employee_id=employee_id,
@@ -70,8 +75,11 @@ def assign_service(employee_id):
         repo = EmployeeServiceRepository()
         es_id = repo.create(es)
         return jsonify({'success': True, 'id': es_id}), 201
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in assign_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @employee_service_bp.route('/employees/<int:employee_id>/services/<int:es_id>', methods=['PUT'])
@@ -82,14 +90,14 @@ def update_employee_service(employee_id, es_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         skill_rating = None
         if 'skill_rating' in data:
             sr = data['skill_rating']
             if sr is not None:
                 if not isinstance(sr, int) or not (1 <= sr <= 5):
-                    return jsonify({'success': False, 'error': 'skill_rating musi być liczbą 1–5'}), 400
+                    raise ValidationError('skill_rating musi byc liczba 1-5')
                 skill_rating = sr
 
         repo = EmployeeServiceRepository()
@@ -102,8 +110,11 @@ def update_employee_service(employee_id, es_id):
             is_active=data.get('is_active')
         )
         return jsonify({'success': success})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_employee_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @employee_service_bp.route('/employees/<int:employee_id>/services-with-ratings', methods=['GET'])
@@ -115,8 +126,11 @@ def get_services_with_ratings(employee_id):
         repo = EmployeeServiceRepository()
         services = repo.get_services_with_dual_ratings(employee_id)
         return jsonify({'success': True, 'services': services, 'count': len(services)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_services_with_ratings')
+        raise AppError('Wystapil blad serwera')
 
 
 @employee_service_bp.route('/employees/<int:employee_id>/services/<int:es_id>', methods=['DELETE'])
@@ -128,10 +142,13 @@ def remove_employee_service(employee_id, es_id):
         repo = EmployeeServiceRepository()
         success = repo.delete(es_id)
         if not success:
-            return jsonify({'success': False, 'error': 'Przypisanie nie istnieje'}), 404
+            raise NotFoundError('Przypisanie nie istnieje')
         return jsonify({'success': True})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in remove_employee_service')
+        raise AppError('Wystapil blad serwera')
 
 
 @employee_service_bp.route('/employees/<int:employee_id>/analytics', methods=['GET'])
@@ -144,8 +161,11 @@ def get_employee_analytics(employee_id):
         repo = AnalyticsRepository()
         data = repo.get_employee_analytics(employee_id)
         return jsonify({'success': True, **data})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employee_analytics')
+        raise AppError('Wystapil blad serwera')
 
 
 @employee_service_bp.route('/services/<int:service_id>/employees', methods=['GET'])
@@ -167,5 +187,8 @@ def get_service_employees(service_id):
             employees.append(emp)
 
         return jsonify({'success': True, 'employees': employees, 'count': len(employees)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_service_employees')
+        raise AppError('Wystapil blad serwera')

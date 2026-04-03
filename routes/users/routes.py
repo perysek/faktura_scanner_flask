@@ -2,10 +2,13 @@
 Zarządzanie użytkownikami — strony i API
 Dostępne tylko dla: superuser, admin
 """
+import logging
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 
 from config.auth_config import role_required
+from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from repositories.users.user_repository import UserRepository
 from repositories.roles.role_repository import RoleRepository
 
@@ -88,23 +91,29 @@ def edit_user(user_id):
 @role_required('superuser', 'admin')
 def api_list():
     """GET /system/users/api — lista wszystkich użytkowników"""
-    user_repo = _user_repo()
-    rows = user_repo.get_all_with_employee()
-    users_data = []
-    for row in rows:
-        users_data.append({
-            'id': row['id'],
-            'email': row['email'],
-            'full_name': row['full_name'],
-            'role': row['role'],
-            'is_active': bool(row['is_active']),
-            'last_login': row['last_login'].isoformat() if row['last_login'] else None,
-            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-            'employee_id': row['employee_id'],
-            'employee_name': f"{row['employee_first_name']} {row['employee_last_name']}"
-                             if row['employee_id'] else None,
-        })
-    return jsonify({'users': users_data, 'count': len(users_data)})
+    try:
+        user_repo = _user_repo()
+        rows = user_repo.get_all_with_employee()
+        users_data = []
+        for row in rows:
+            users_data.append({
+                'id': row['id'],
+                'email': row['email'],
+                'full_name': row['full_name'],
+                'role': row['role'],
+                'is_active': bool(row['is_active']),
+                'last_login': row['last_login'].isoformat() if row['last_login'] else None,
+                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+                'employee_id': row['employee_id'],
+                'employee_name': f"{row['employee_first_name']} {row['employee_last_name']}"
+                                 if row['employee_id'] else None,
+            })
+        return jsonify({'users': users_data, 'count': len(users_data)})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in api_list (users)')
+        raise AppError('Wystapil blad serwera')
 
 
 @users_bp.route('/api', methods=['POST'])
@@ -123,23 +132,24 @@ def api_create():
 
     # Validation
     if not email or not full_name or not password or not role:
-        return jsonify({'error': 'Email, imię, hasło i rola są wymagane'}), 400
+        raise ValidationError('Email, imie, haslo i rola sa wymagane')
 
     if not employee_id:
-        return jsonify({'error': 'Powiązanie z pracownikiem jest wymagane'}), 400
+        raise ValidationError('Powiazanie z pracownikiem jest wymagane')
 
     # Non-superusers cannot create superuser accounts
     if role == 'superuser' and current_user.role != 'superuser':
-        return jsonify({'error': 'Brak uprawnień do tworzenia konta właściciela'}), 403
+        from exceptions import PermissionDeniedError
+        raise PermissionDeniedError('Brak uprawnien do tworzenia konta wlasciciela')
 
     if len(password) < 8:
-        return jsonify({'error': 'Hasło musi mieć co najmniej 8 znaków'}), 400
+        raise ValidationError('Haslo musi miec co najmniej 8 znakow')
 
     user_repo = _user_repo()
 
     # Check email uniqueness
     if user_repo.get_by_email(email):
-        return jsonify({'error': f'Użytkownik z adresem {email} już istnieje'}), 409
+        raise ConflictError(f'Uzytkownik z adresem {email} juz istnieje')
 
     try:
         user_id = user_repo.create_user(email=email, password=password,
@@ -160,9 +170,12 @@ def api_create():
 
         return jsonify({'success': True, 'user_id': user_id}), 201
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        raise ValidationError(str(e))
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.exception('Unexpected error in api_create (users)')
+        raise AppError('Wystapil blad serwera')
 
 
 @users_bp.route('/api/<int:user_id>', methods=['PUT'])
@@ -173,13 +186,14 @@ def api_update(user_id):
     user_repo = _user_repo()
     row = user_repo.get_by_id(user_id)
     if not row:
-        return jsonify({'error': 'Użytkownik nie znaleziony'}), 404
+        raise NotFoundError('Uzytkownik nie znaleziony')
 
     existing_user = user_repo.row_to_user(row)
 
     # Admin cannot edit superuser
     if existing_user.role == 'superuser' and current_user.role != 'superuser':
-        return jsonify({'error': 'Brak uprawnień do edycji konta właściciela'}), 403
+        from exceptions import PermissionDeniedError
+        raise PermissionDeniedError('Brak uprawnien do edycji konta wlasciciela')
 
     data = request.get_json() or {}
     email = (data.get('email') or '').strip()
@@ -192,27 +206,33 @@ def api_update(user_id):
     # Password-only update (from the separate password change form)
     if new_password and not email and not full_name and not role:
         if len(new_password) < 8:
-            return jsonify({'error': 'Nowe hasło musi mieć co najmniej 8 znaków'}), 400
+            raise ValidationError('Nowe haslo musi miec co najmniej 8 znakow')
         try:
             user_repo.update_password(user_id, new_password)
             return jsonify({'success': True})
+        except ValueError as e:
+            raise ValidationError(str(e))
+        except AppError:
+            raise
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            logging.exception('Unexpected error in api_update password (users)')
+            raise AppError('Wystapil blad serwera')
 
     if not email or not full_name or not role:
-        return jsonify({'error': 'Email, imię i rola są wymagane'}), 400
+        raise ValidationError('Email, imie i rola sa wymagane')
 
     # Non-superusers cannot assign superuser role
     if role == 'superuser' and current_user.role != 'superuser':
-        return jsonify({'error': 'Brak uprawnień do nadania roli właściciela'}), 403
+        from exceptions import PermissionDeniedError
+        raise PermissionDeniedError('Brak uprawnien do nadania roli wlasciciela')
 
     # Check email uniqueness (excluding current user)
     existing_by_email = user_repo.get_by_email(email)
     if existing_by_email and existing_by_email.id != user_id:
-        return jsonify({'error': f'Email {email} jest już zajęty'}), 409
+        raise ConflictError(f'Email {email} jest juz zajety')
 
     if new_password and len(new_password) < 8:
-        return jsonify({'error': 'Nowe hasło musi mieć co najmniej 8 znaków'}), 400
+        raise ValidationError('Nowe haslo musi miec co najmniej 8 znakow')
 
     try:
         user_repo.update_user(user_id, email, full_name, role, is_active)
@@ -235,9 +255,12 @@ def api_update(user_id):
 
         return jsonify({'success': True})
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        raise ValidationError(str(e))
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.exception('Unexpected error in api_update (users)')
+        raise AppError('Wystapil blad serwera')
 
 
 @users_bp.route('/api/<int:user_id>/toggle-active', methods=['PUT'])
@@ -245,20 +268,27 @@ def api_update(user_id):
 @role_required('superuser', 'admin')
 def api_toggle_active(user_id):
     """PUT /system/users/api/<id>/toggle-active — przełącz aktywność konta"""
-    user_repo = _user_repo()
-    row = user_repo.get_by_id(user_id)
-    if not row:
-        return jsonify({'error': 'Użytkownik nie znaleziony'}), 404
+    try:
+        user_repo = _user_repo()
+        row = user_repo.get_by_id(user_id)
+        if not row:
+            raise NotFoundError('Uzytkownik nie znaleziony')
 
-    existing = user_repo.row_to_user(row)
-    if existing.role == 'superuser' and current_user.role != 'superuser':
-        return jsonify({'error': 'Brak uprawnień'}), 403
+        existing = user_repo.row_to_user(row)
+        if existing.role == 'superuser' and current_user.role != 'superuser':
+            from exceptions import PermissionDeniedError
+            raise PermissionDeniedError('Brak uprawnien')
 
-    if existing.is_active:
-        user_repo.deactivate(user_id)
-        new_state = False
-    else:
-        user_repo.activate(user_id)
-        new_state = True
+        if existing.is_active:
+            user_repo.deactivate(user_id)
+            new_state = False
+        else:
+            user_repo.activate(user_id)
+            new_state = True
 
-    return jsonify({'success': True, 'is_active': new_state})
+        return jsonify({'success': True, 'is_active': new_state})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in api_toggle_active (users)')
+        raise AppError('Wystapil blad serwera')

@@ -1,6 +1,7 @@
 """
 API routes for income records and financial reporting
 """
+import logging
 from datetime import date
 from decimal import Decimal
 
@@ -8,6 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
 from config.auth_config import module_permission_required
+from exceptions import AppError, ValidationError
 from repositories.appointments.income_repository import IncomeRepository
 
 income_bp = Blueprint('income', __name__)
@@ -47,8 +49,11 @@ def get_income_records():
 
         records = [_decimal_to_float(dict(row)) for row in rows]
         return jsonify({'success': True, 'records': records, 'count': len(records)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_income_records')
+        raise AppError('Wystapil blad serwera')
 
 
 @income_bp.route('/income/summary', methods=['GET'])
@@ -71,8 +76,11 @@ def get_income_summary():
             'year': year,
             'month': month
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_income_summary')
+        raise AppError('Wystapil blad serwera')
 
 
 @income_bp.route('/income/employee/<int:employee_id>', methods=['GET'])
@@ -89,5 +97,8 @@ def get_employee_income(employee_id):
 
         records = [_decimal_to_float(dict(row)) for row in rows]
         return jsonify({'success': True, 'records': records, 'count': len(records)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_employee_income')
+        raise AppError('Wystapil blad serwera')
