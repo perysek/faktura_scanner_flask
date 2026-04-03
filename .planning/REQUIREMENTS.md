@@ -12,7 +12,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 
 - [ ] **FIX-01**: Audit DELETE operations log correctly — currently commented out in api_routes.py, deletions are silently unaudited
 - [ ] **FIX-02**: Audit logging FK constraint resolved — soft deletes eliminate the cascade conflict between ON DELETE CASCADE and post-delete logging
-- [ ] **FIX-03**: EmailService bare `except: pass` in disconnect() replaced with specific IMAP exception handlers and logging
+- [x] **FIX-03**: EmailService bare `except: pass` in disconnect() replaced with specific IMAP exception handlers and logging
 - [ ] **FIX-04**: Debug logging configuration moved to environment-based settings — INFO level in production, DEBUG only when explicitly enabled
 - [ ] **FIX-05**: Flask SECRET_KEY hardcoded fallback removed — app raises error at startup if SECRET_KEY env var is not set
 
@@ -23,7 +23,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 - [ ] **IMPR-03**: Custom exception hierarchy created — business logic errors (e.g. AppointmentConflictError) vs infrastructure errors (e.g. DatabaseConnectionError), routes catch specific types
 - [ ] **IMPR-04**: Appointment status values defined as Python enum with PostgreSQL CHECK constraint — replaces hardcoded strings ('completed', 'cancelled', 'no_show') across all queries
 - [ ] **IMPR-05**: `SELECT *` in base_repository.py replaced with explicit column lists in critical repositories (clients, employees, users, income_records)
-- [ ] **IMPR-06**: Safe SQL IN clause helper function created for parameterized queries; email credential values masked in error messages and logs
+- [x] **IMPR-06**: Safe SQL IN clause helper function created for parameterized queries; email credential values masked in error messages and logs
 
 ### Scaling (Performance & Database)
 
@@ -75,7 +75,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | FIX-01 | Phase 5 | Pending |
 | FIX-02 | Phase 5 | Pending |
-| FIX-03 | Phase 6 | Pending |
+| FIX-03 | Phase 6 | Complete |
 | FIX-04 | Phase 7 | Pending |
 | FIX-05 | Phase 7 | Pending |
 | IMPR-01 | Phase 5 | Complete |
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IMPR-03 | Phase 6 | Pending |
 | IMPR-04 | Phase 6 | Pending |
 | IMPR-05 | Phase 6 | Pending |
-| IMPR-06 | Phase 6 | Pending |
+| IMPR-06 | Phase 6 | Complete |
 | SCAL-01 | Phase 8 | Pending |
 | SCAL-02 | Phase 8 | Pending |
 | SCAL-03 | Phase 8 | Pending |

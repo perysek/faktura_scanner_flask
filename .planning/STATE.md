@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 05-data-integrity-01-PLAN.md
-last_updated: "2026-04-03T15:24:20.971Z"
+stopped_at: Completed 06-code-robustness-04-PLAN.md
+last_updated: "2026-04-03T15:30:38.916Z"
 last_activity: 2026-03-31 — Roadmap created
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -60,6 +60,7 @@ Recent decisions affecting current work:
 - [v3.0 roadmap]: Phase 7 (security hardening) is independent but sequenced after Phase 6 for developer focus
 - [Phase 05-data-integrity]: AppointmentRepository and ServiceRepository kept as standalone classes; soft-delete implemented inline without BaseRepository refactor
 - [Phase 05-data-integrity]: ServiceRepository.delete() now does real soft-delete (is_deleted=TRUE) not deactivation (is_active=FALSE)
+- [Phase 06-code-robustness]: Log type(e).__name__ not str(e) in connect() — IMAP errors can echo credentials in message
 
 ### Pending Todos
 
@@ -71,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:30:27.997Z
-Stopped at: Completed 05-data-integrity-01-PLAN.md
+Last session: 2026-04-03T15:30:38.913Z
+Stopped at: Completed 06-code-robustness-04-PLAN.md
 Resume file: None
