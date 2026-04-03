@@ -6,7 +6,8 @@ Usage:
 
     if status in AppointmentStatus.FINAL:
         ...
-    query = f"WHERE status NOT IN ({AppointmentStatus.excluded_placeholders(AppointmentStatus.EXCLUDED_FROM_SCHEDULE)})"
+    clause, params = BaseRepository._in_clause(list(AppointmentStatus.EXCLUDED_FROM_SCHEDULE))
+    query = f"WHERE status NOT IN {clause}"
 """
 
 

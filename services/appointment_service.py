@@ -14,6 +14,7 @@ from repositories.appointments.income_repository import IncomeRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_addon_repository import ServiceAddonRepository
 from repositories.employees.employee_service_repository import EmployeeServiceRepository
+from exceptions import AppError
 from services.pricing_service import PricingService
 
 
@@ -25,9 +26,9 @@ STATUS_TRANSITIONS = {
 }
 
 
-class AppointmentError(Exception):
+class AppointmentError(AppError):
     """Błąd operacji na wizycie"""
-    pass
+    status_code = 400
 
 
 class AppointmentBusinessService:
