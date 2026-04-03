@@ -1,11 +1,14 @@
 """
 API routes for client preferences (preferred employee per service/category)
 """
+import logging
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
 from config.auth_config import module_permission_required
 from database.models import ClientPreference
+from exceptions import AppError, ValidationError, NotFoundError
 from repositories.clients.client_preference_repository import ClientPreferenceRepository
 
 client_preference_bp = Blueprint('client_preferences', __name__)
@@ -22,8 +25,11 @@ def get_preferences(client_id):
         preferences = [dict(row) for row in rows]
 
         return jsonify({'success': True, 'preferences': preferences, 'count': len(preferences)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_preferences')
+        raise AppError('Wystapil blad serwera')
 
 
 @client_preference_bp.route('/clients/<int:client_id>/preferences', methods=['POST'])
@@ -34,11 +40,11 @@ def create_preference(client_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         employee_id = data.get('preferred_employee_id')
         if not employee_id:
-            return jsonify({'success': False, 'error': 'Brak preferred_employee_id'}), 400
+            raise ValidationError('Brak preferred_employee_id')
 
         pref = ClientPreference(
             client_id=client_id,
@@ -51,8 +57,11 @@ def create_preference(client_id):
         repo = ClientPreferenceRepository()
         pref_id = repo.create(pref)
         return jsonify({'success': True, 'id': pref_id}), 201
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in create_preference')
+        raise AppError('Wystapil blad serwera')
 
 
 @client_preference_bp.route('/clients/<int:client_id>/preferences/<int:pref_id>', methods=['PUT'])
@@ -63,17 +72,20 @@ def update_preference(client_id, pref_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         employee_id = data.get('preferred_employee_id')
         if not employee_id:
-            return jsonify({'success': False, 'error': 'Brak preferred_employee_id'}), 400
+            raise ValidationError('Brak preferred_employee_id')
 
         repo = ClientPreferenceRepository()
         success = repo.update(pref_id, int(employee_id), data.get('notes'))
         return jsonify({'success': success})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in update_preference')
+        raise AppError('Wystapil blad serwera')
 
 
 @client_preference_bp.route('/clients/<int:client_id>/preferences/<int:pref_id>', methods=['DELETE'])
@@ -85,10 +97,13 @@ def delete_preference(client_id, pref_id):
         repo = ClientPreferenceRepository()
         success = repo.delete(pref_id)
         if not success:
-            return jsonify({'success': False, 'error': 'Preferencja nie istnieje'}), 404
+            raise NotFoundError('Preferencja nie istnieje')
         return jsonify({'success': True})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in delete_preference')
+        raise AppError('Wystapil blad serwera')
 
 
 @client_preference_bp.route('/clients/<int:client_id>/suggested-employee', methods=['GET'])
@@ -112,5 +127,8 @@ def get_suggested_employee(client_id):
             })
         else:
             return jsonify({'success': True, 'found': False})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_suggested_employee')
+        raise AppError('Wystapil blad serwera')

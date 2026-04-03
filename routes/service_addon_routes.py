@@ -1,10 +1,13 @@
 """
 API routes for service addon compatibility management
 """
+import logging
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
 from config.auth_config import module_permission_required
+from exceptions import AppError, ValidationError
 from repositories.services.service_addon_repository import ServiceAddonRepository
 from repositories.services.service_repository import ServiceRepository
 
@@ -30,8 +33,11 @@ def get_compatible_addons(service_id):
         addons = [dict(row) for row in rows]
 
         return jsonify({'success': True, 'addons': addons, 'count': len(addons)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_compatible_addons')
+        raise AppError('Wystapil blad serwera')
 
 
 @service_addon_bp.route('/services/<int:service_id>/compatible-mains', methods=['GET'])
@@ -45,8 +51,11 @@ def get_compatible_mains(service_id):
         mains = [dict(row) for row in rows]
 
         return jsonify({'success': True, 'main_services': mains, 'count': len(mains)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_compatible_mains')
+        raise AppError('Wystapil blad serwera')
 
 
 @service_addon_bp.route('/services/<int:service_id>/compatibility', methods=['PUT'])
@@ -61,7 +70,7 @@ def set_compatibility(service_id):
     try:
         data = request.get_json()
         if data is None:
-            return jsonify({'success': False, 'error': 'Brak danych'}), 400
+            raise ValidationError('Brak danych')
 
         main_service_ids = data.get('main_service_ids', [])
 
@@ -74,8 +83,11 @@ def set_compatibility(service_id):
             'compatible_with': len(main_service_ids),
             'universal': len(main_service_ids) == 0
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in set_compatibility')
+        raise AppError('Wystapil blad serwera')
 
 
 @service_addon_bp.route('/services/<int:service_id>/addon-rules', methods=['GET'])
@@ -94,8 +106,11 @@ def get_addon_rules(service_id):
             'universal': not has_rules,
             'rules': [dict(r) for r in rules]
         })
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_addon_rules')
+        raise AppError('Wystapil blad serwera')
 
 
 @service_addon_bp.route('/services/addons', methods=['GET'])
@@ -109,8 +124,11 @@ def get_all_addon_services():
         addons = [dict(row) for row in rows]
 
         return jsonify({'success': True, 'addons': addons, 'count': len(addons)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_all_addon_services')
+        raise AppError('Wystapil blad serwera')
 
 
 @service_addon_bp.route('/services/main', methods=['GET'])
@@ -124,5 +142,8 @@ def get_all_main_services():
         services = [dict(row) for row in rows]
 
         return jsonify({'success': True, 'services': services, 'count': len(services)})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception('Unexpected error in get_all_main_services')
+        raise AppError('Wystapil blad serwera')

@@ -2,10 +2,13 @@
 Zarządzanie rolami i uprawnieniami — strony i API
 Dostępne tylko dla: superuser
 """
+import logging
+
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 
 from config.auth_config import role_required
+from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from repositories.roles.role_repository import RoleRepository, ALL_MODULES, MODULE_DISPLAY_NAMES
 
 roles_bp = Blueprint('roles', __name__, url_prefix='/system/roles')
@@ -60,20 +63,26 @@ def edit_role(role_id):
 @role_required('superuser')
 def api_list():
     """GET /system/roles/api — lista ról"""
-    role_repo = _role_repo()
-    rows = role_repo.get_all()
-    roles_data = []
-    for row in rows:
-        perms = role_repo.get_permissions(row['id'])
-        roles_data.append({
-            'id': row['id'],
-            'name': row['name'],
-            'display_name': row['display_name'],
-            'is_protected': bool(row['is_protected']),
-            'access_count': row['access_count'],
-            'permissions': perms,
-        })
-    return jsonify({'roles': roles_data, 'count': len(roles_data)})
+    try:
+        role_repo = _role_repo()
+        rows = role_repo.get_all()
+        roles_data = []
+        for row in rows:
+            perms = role_repo.get_permissions(row['id'])
+            roles_data.append({
+                'id': row['id'],
+                'name': row['name'],
+                'display_name': row['display_name'],
+                'is_protected': bool(row['is_protected']),
+                'access_count': row['access_count'],
+                'permissions': perms,
+            })
+        return jsonify({'roles': roles_data, 'count': len(roles_data)})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in api_list (roles)')
+        raise AppError('Wystapil blad serwera')
 
 
 @roles_bp.route('/api', methods=['POST'])
@@ -87,18 +96,21 @@ def api_create():
     permissions = data.get('permissions') or {}
 
     if not name or not display_name:
-        return jsonify({'error': 'Nazwa i wyświetlana nazwa są wymagane'}), 400
+        raise ValidationError('Nazwa i wyswietlana nazwa sa wymagane')
 
     role_repo = _role_repo()
     if role_repo.get_by_name(name):
-        return jsonify({'error': f'Rola o nazwie "{name}" już istnieje'}), 409
+        raise ConflictError(f'Rola o nazwie "{name}" juz istnieje')
 
     try:
         role_id = role_repo.create(name, display_name)
         role_repo.set_permissions(role_id, permissions)
         return jsonify({'success': True, 'role_id': role_id}), 201
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.exception('Unexpected error in api_create (roles)')
+        raise AppError('Wystapil blad serwera')
 
 
 @roles_bp.route('/api/<int:role_id>', methods=['PUT'])
@@ -109,21 +121,24 @@ def api_update(role_id):
     role_repo = _role_repo()
     role = role_repo.get_by_id(role_id)
     if not role:
-        return jsonify({'error': 'Rola nie znaleziona'}), 404
+        raise NotFoundError('Rola nie znaleziona')
 
     data = request.get_json() or {}
     display_name = (data.get('display_name') or '').strip()
     permissions = data.get('permissions') or {}
 
     if not display_name:
-        return jsonify({'error': 'Wyświetlana nazwa jest wymagana'}), 400
+        raise ValidationError('Wyswietlana nazwa jest wymagana')
 
     try:
         role_repo.update(role_id, display_name)
         role_repo.set_permissions(role_id, permissions)
         return jsonify({'success': True})
+    except AppError:
+        raise
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.exception('Unexpected error in api_update (roles)')
+        raise AppError('Wystapil blad serwera')
 
 
 @roles_bp.route('/api/<int:role_id>', methods=['DELETE'])
@@ -131,15 +146,22 @@ def api_update(role_id):
 @role_required('superuser')
 def api_delete(role_id):
     """DELETE /system/roles/api/<id> — usuń niechronioną rolę"""
-    role_repo = _role_repo()
-    role = role_repo.get_by_id(role_id)
-    if not role:
-        return jsonify({'error': 'Rola nie znaleziona'}), 404
+    try:
+        role_repo = _role_repo()
+        role = role_repo.get_by_id(role_id)
+        if not role:
+            raise NotFoundError('Rola nie znaleziona')
 
-    if bool(role['is_protected']):
-        return jsonify({'error': 'Nie można usunąć chronionej roli systemowej'}), 403
+        if bool(role['is_protected']):
+            from exceptions import PermissionDeniedError
+            raise PermissionDeniedError('Nie mozna usunac chronionej roli systemowej')
 
-    deleted = role_repo.delete(role_id)
-    if deleted:
-        return jsonify({'success': True})
-    return jsonify({'error': 'Nie udało się usunąć roli'}), 500
+        deleted = role_repo.delete(role_id)
+        if deleted:
+            return jsonify({'success': True})
+        raise AppError('Nie udalo sie usunac roli')
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in api_delete (roles)')
+        raise AppError('Wystapil blad serwera')
