@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date, time
 from config.database import get_db_connection
+from config.appointment_statuses import AppointmentStatus
 from database.models import Appointment
 from repositories.db_utils import parse_dt, parse_date, parse_time
 
@@ -177,7 +178,7 @@ class AppointmentRepository:
 
     def get_daily_schedule(self, employee_id: int, schedule_date: date) -> List[Any]:
         """Pobierz harmonogram dnia pracownika z nazwami usług"""
-        query = """
+        query = f"""
             SELECT
                 a.*,
                 c.first_name || ' ' || c.last_name as client_name,
@@ -190,7 +191,7 @@ class AppointmentRepository:
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s AND a.appointment_date = %s
-            AND a.status NOT IN ('cancelled', 'no_show')
+            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
             AND a.is_deleted = FALSE
             GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.start_time
@@ -220,7 +221,7 @@ class AppointmentRepository:
 
             # Jeśli nie podano employee_ids, znajdź wszystkich pracowników z wizytami tego dnia
             if employee_ids is None:
-                query_employees = """
+                query_employees = f"""
                     SELECT DISTINCT
                         e.id,
                         e.first_name || ' ' || e.last_name as full_name,
@@ -228,7 +229,7 @@ class AppointmentRepository:
                     FROM employees e
                     JOIN appointments a ON a.employee_id = e.id
                     WHERE a.appointment_date = %s
-                    AND a.status NOT IN ('cancelled', 'no_show')
+                    AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
                     AND a.is_deleted = FALSE
                     AND e.is_active = TRUE
                     ORDER BY full_name
@@ -302,7 +303,7 @@ class AppointmentRepository:
             SELECT a.* FROM appointments a
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.start_time < %s AND a.end_time > %s
-            AND a.status NOT IN ('cancelled', 'no_show')
+            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
             AND a.is_deleted = FALSE
             {exclude_filter}
         """
@@ -355,7 +356,7 @@ class AppointmentRepository:
             LEFT JOIN employees e ON e.id = a.employee_id
             WHERE a.client_id = %s AND a.appointment_date = %s
             AND a.start_time < %s AND a.end_time > %s
-            AND a.status NOT IN ('cancelled', 'no_show')
+            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
             AND a.is_deleted = FALSE
             {exclude_filter}
         """
@@ -374,7 +375,7 @@ class AppointmentRepository:
     def update_status(self, appointment_id: int, new_status: str,
                        cancellation_reason: Optional[str] = None) -> bool:
         """Zaktualizuj status wizyty"""
-        if new_status == 'cancelled':
+        if new_status == AppointmentStatus.CANCELLED:
             query = """
                 UPDATE appointments
                 SET status = %s, cancellation_reason = %s, cancelled_at = CURRENT_TIMESTAMP,
@@ -398,10 +399,10 @@ class AppointmentRepository:
 
     def update_satisfaction_score(self, appointment_id: int, score: int) -> bool:
         """Ustaw ocenę satysfakcji (1–5) tylko dla zakończonych wizyt. Zwraca True jeśli zaktualizowano."""
-        query = """
+        query = f"""
             UPDATE appointments
             SET satisfaction_score = %s, updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s AND status = 'completed'
+            WHERE id = %s AND status = '{AppointmentStatus.COMPLETED}'
             RETURNING id
         """
         with get_db_connection() as conn:
@@ -498,7 +499,7 @@ class AppointmentRepository:
 
         query = f"""
             SELECT COUNT(*) as cnt FROM appointments
-            WHERE appointment_date = %s AND status NOT IN ('cancelled', 'no_show')
+            WHERE appointment_date = %s AND status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
             AND is_deleted = FALSE
             {employee_filter}
         """
@@ -547,7 +548,7 @@ class AppointmentRepository:
             WHERE
                 a.employee_id = %s
                 AND a.appointment_date = %s
-                AND a.status NOT IN ('cancelled', 'no_show')
+                AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
                 AND a.is_deleted = FALSE
                 AND a.start_time < %s
                 AND a.end_time > %s
@@ -648,7 +649,7 @@ class AppointmentRepository:
         Returns:
             Lista wizyt z danymi klienta, pracownika i usług
         """
-        query = """
+        query = f"""
             SELECT
                 a.id,
                 a.client_id,
@@ -669,7 +670,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE
                 (a.appointment_date + a.end_time) < NOW()
-                AND a.status NOT IN ('completed', 'cancelled', 'no_show')
+                AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
                 AND a.is_deleted = FALSE
             GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
                      a.start_time, a.end_time, a.total_price, a.notes,
