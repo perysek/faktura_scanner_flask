@@ -20,7 +20,7 @@ def login():
     """Strona logowania"""
     # Jeśli użytkownik już zalogowany, przekieruj do dashboard
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('auth.profile'))
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -55,7 +55,7 @@ def login():
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('auth.profile'))
         else:
             try:
                 AuditRepository().log_event(
