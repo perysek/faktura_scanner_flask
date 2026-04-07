@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logowanie - FakturaScanner</title>
+    <title>Logowanie - MyWay Beauty Salon</title>
 
     <!-- TailwindCSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
@@ -168,8 +168,8 @@
         <div class="refined-card" style="padding: 2.5rem;">
             <!-- Logo/Header -->
             <div class="text-center" style="margin-bottom: 2.5rem;">
-                <h1 class="refined-title">FakturaScanner</h1>
-                <p class="refined-subtitle">System zarządzania salonem urody</p>
+                <h1 class="refined-title">MyWay Beauty Salon</h1>
+                <p class="refined-subtitle">Management System</p>
             </div>
 
             <!-- Flash Messages -->
@@ -246,20 +246,13 @@
 
             <!-- Footer -->
             <div class="refined-footer">
-                <p>© {{ now().year }} FakturaScanner. Wszelkie prawa zastrzeżone.</p>
+                <p>© {{ now().year }} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.</p>
             </div>
         </div>
 
         <!-- Development Credentials Helper (remove in production) -->
         {% if config.DEBUG %}
         <div class="dev-helper">
-            <p class="dev-helper-title">🔧 Środowisko deweloperskie</p>
-            <p class="dev-helper-text">
-                Użyj jednego z testowych kont (zostaną utworzone przez skrypt seed):<br>
-                <code class="dev-helper-code">admin@salon.pl</code> (Admin)<br>
-                <code class="dev-helper-code">receptionist@salon.pl</code> (Receptionist)<br>
-                Hasło: <code class="dev-helper-code">Test123!</code>
-            </p>
         </div>
         {% endif %}
     </div>
