@@ -73,17 +73,16 @@
     /* ── Table ── */
     .te-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 
-    /* Column widths */
+    /* Column widths (11 columns — rabat removed, 5.5% redistributed) */
     .te-table colgroup .col-id      { width: 4%; }
-    .te-table colgroup .col-date    { width: 8.5%; }
-    .te-table colgroup .col-time    { width: 6.5%; }
+    .te-table colgroup .col-date    { width: 9%; }
+    .te-table colgroup .col-time    { width: 7%; }
     .te-table colgroup .col-client  { width: 14%; }
-    .te-table colgroup .col-employee{ width: 12%; }
-    .te-table colgroup .col-status  { width: 9%; }
-    .te-table colgroup .col-services{ width: 13%; }
-    .te-table colgroup .col-amount  { width: 7%; }
-    .te-table colgroup .col-discount{ width: 5.5%; }
-    .te-table colgroup .col-rating  { width: 7.5%; }
+    .te-table colgroup .col-employee{ width: 12.5%; }
+    .te-table colgroup .col-status  { width: 9.5%; }
+    .te-table colgroup .col-services{ width: 14%; }
+    .te-table colgroup .col-amount  { width: 8.5%; }
+    .te-table colgroup .col-rating  { width: 8%; }
     .te-table colgroup .col-notes   { width: 6%; }
     .te-table colgroup .col-actions { width: 7.5%; }
 
@@ -155,6 +154,10 @@
         min-width: 240px; max-width: 340px;
     }
     .te-dropdown-panel.open { display: block; }
+    /* Upward-opening dropdown: reverse child order so search stays near trigger */
+    .te-dropdown-panel.open.opens-up { display: flex; flex-direction: column-reverse; }
+    .te-dropdown-panel.opens-up .te-dropdown-search { border-bottom: none; border-top: 1px solid var(--pp-border); }
+    .te-dropdown-panel.opens-up .te-dropdown-list { border-bottom: 1px solid var(--pp-border); }
     .te-dropdown-search {
         width: 100%; padding: 0.4rem; font-size: 0.75rem;
         border: none; border-bottom: 1px solid var(--pp-border);
@@ -361,7 +364,7 @@
             <colgroup>
                 <col class="col-id"><col class="col-date"><col class="col-time">
                 <col class="col-client"><col class="col-employee"><col class="col-status">
-                <col class="col-services"><col class="col-amount"><col class="col-discount">
+                <col class="col-services"><col class="col-amount">
                 <col class="col-rating"><col class="col-notes"><col class="col-actions">
             </colgroup>
             <thead>
@@ -374,7 +377,6 @@
                     <th data-col="status" onclick="toggleSort('status')">Status <span class="te-sort-icon" id="sort-status">&varr;</span></th>
                     <th>Uslugi</th>
                     <th data-col="total_price" onclick="toggleSort('total_price')">Kwota <span class="te-sort-icon" id="sort-total_price">&varr;</span></th>
-                    <th data-col="discount_amount" onclick="toggleSort('discount_amount')">Rabat <span class="te-sort-icon" id="sort-discount_amount">&varr;</span></th>
                     <th data-col="satisfaction_score" onclick="toggleSort('satisfaction_score')">Ocena <span class="te-sort-icon" id="sort-satisfaction_score">&varr;</span></th>
                     <th>Notatki</th>
                     <th>Akcje</th>
@@ -387,13 +389,13 @@
                     <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="employee_name" placeholder="pracownik" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
                     <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="status" placeholder="status" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
                     <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="service_name" placeholder="usluga" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
-                    <th></th><th></th><th></th>
+                    <th></th><th></th>
                     <th><div class="te-filter-wrap"><input class="te-filter-input" data-filter="notes" placeholder="notatki" oninput="onFilterInput(this)"><button class="te-filter-clear" onclick="clearFilter(this)">&times;</button></div></th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="table-body">
-                <tr><td colspan="12" class="te-loading"><div class="te-spinner"></div>Ladowanie wizyt...</td></tr>
+                <tr><td colspan="11" class="te-loading"><div class="te-spinner"></div>Ladowanie wizyt...</td></tr>
             </tbody>
         </table>
     </div>
@@ -478,6 +480,9 @@ let loadOffset = 0;
 let loadingMore = false;
 let allLoaded = false;
 // originalRows[id] stores last-saved state; undo restores from it
+
+// Focus trap state — last element inside tr[data-row] that had focus
+let lastTableFocus = null;
 
 // Modal state
 let svcModalRowIdx = null;
@@ -721,7 +726,7 @@ function renderTable() {
     const tbody = document.getElementById('table-body');
 
     if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="te-loading">Brak wizyt do wyswietlenia</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="te-loading">Brak wizyt do wyswietlenia</td></tr>';
         return;
     }
 
@@ -746,7 +751,6 @@ function renderTable() {
             </td>
             <td><div class="te-svc-summary" title="${esc(svcText)}">${esc(svcText)}</div></td>
             <td><input type="number" class="te-cell-input" value="${fmtPrice(row.total_price)}" min="0" step="0.01" onblur="onCellChange(${rowIdx},'total_price',parseFloat(this.value)||0)" data-nav="amount"></td>
-            <td><input type="number" class="te-cell-input" value="${fmtPrice(row.discount_amount)}" min="0" step="0.01" onblur="onCellChange(${rowIdx},'discount_amount',parseFloat(this.value)||0)" data-nav="discount"></td>
             <td>${renderStars(rowIdx, row.satisfaction_score || 0)}</td>
             <td><div class="te-notes-cell" title="${esc(notesText)}">${esc(notesText) || '<span style=color:var(--pp-ink-subtle)>-</span>'}</div></td>
             <td>
@@ -814,9 +818,19 @@ function openDropdown(trigger) {
     wrap._items = items;
     renderDropdownItems(list, items, wrap);
 
-    // Position fixed panel below trigger
+    // Position fixed panel — open upward if insufficient space below
     const rect = trigger.getBoundingClientRect();
-    panel.style.top = rect.bottom + 'px';
+    const panelMaxH = 210; // search-input (~36px) + list max-height (160px) + border
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow < panelMaxH && rect.top > spaceBelow) {
+        panel.style.bottom = (window.innerHeight - rect.top) + 'px';
+        panel.style.top = 'auto';
+        panel.classList.add('opens-up');
+    } else {
+        panel.style.top = rect.bottom + 'px';
+        panel.style.bottom = 'auto';
+        panel.classList.remove('opens-up');
+    }
     panel.style.left = rect.left + 'px';
 
     panel.classList.add('open');
@@ -859,20 +873,41 @@ function selectDropdownItem(optEl) {
     }
 
     trigger.textContent = label;
-    wrap.querySelector('.te-dropdown-panel').classList.remove('open');
+    const closingPanel = wrap.querySelector('.te-dropdown-panel');
+    closingPanel.classList.remove('open', 'opens-up');
     markRowDirty(rowIdx);
 }
 
 // Close dropdowns on outside click
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.te-dropdown-wrap')) {
-        document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
+        document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open', 'opens-up'));
     }
 });
 // Close dropdowns on scroll (fixed position doesn't follow scroll)
 document.getElementById('table-wrap')?.addEventListener('scroll', () => {
-    document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.te-dropdown-panel.open').forEach(p => p.classList.remove('open', 'opens-up'));
 }, {passive: true});
+
+// ══════════════════════════════════════════════════════
+//  FOCUS TRAP — keep Tab navigation inside table cells
+// ══════════════════════════════════════════════════════
+// Track the last table cell element that had focus
+document.addEventListener('focusin', (e) => {
+    if (e.target.closest('tr[data-row]')) {
+        lastTableFocus = e.target;
+    }
+});
+
+// Prevent focus from being stolen when clicking on non-interactive areas
+// (empty viewport, row backgrounds, etc.) while a table cell is active.
+// Interactive targets (button, input, select, a, [tabindex="0"]) are allowed through.
+document.addEventListener('mousedown', (e) => {
+    if (!lastTableFocus) return;
+    if (document.querySelector('.te-modal-overlay.open')) return;
+    if (e.target.closest('button, input, select, textarea, a, [tabindex="0"], .te-dropdown-trigger')) return;
+    e.preventDefault();
+}, { capture: true });
 
 // Dropdown keyboard: trigger keys + type-ahead + in-panel navigation
 document.addEventListener('keydown', (e) => {
@@ -942,7 +977,7 @@ document.addEventListener('keydown', (e) => {
 
         if (e.key === 'Escape') {
             e.preventDefault();
-            panel.classList.remove('open');
+            panel.classList.remove('open', 'opens-up');
             const wrap = el.closest('.te-dropdown-wrap');
             const trigger = wrap.querySelector('.te-dropdown-trigger');
             if (trigger) trigger.focus();
@@ -955,7 +990,7 @@ document.addEventListener('keydown', (e) => {
             if (highlighted) {
                 selectDropdownItem(highlighted);
             }
-            panel.classList.remove('open');
+            panel.classList.remove('open', 'opens-up');
             // Don't preventDefault — let Tab continue to next cell
             return;
         }
@@ -1495,6 +1530,14 @@ document.addEventListener('keydown', (e) => {
     }
 
     const tr = active.closest('tr[data-row]');
+
+    // If Tab pressed outside a table row but we previously had table focus → redirect back
+    if (e.key === 'Tab' && !e.ctrlKey && !tr && lastTableFocus && document.body.contains(lastTableFocus)) {
+        e.preventDefault();
+        lastTableFocus.focus();
+        return;
+    }
+
     if (!tr) return;
 
     const rowIdx = parseInt(tr.dataset.row);
@@ -1567,13 +1610,14 @@ document.addEventListener('keydown', (e) => {
         // If a dropdown panel is open, close it and refocus trigger
         const openPanel = document.querySelector('.te-dropdown-panel.open');
         if (openPanel) {
-            openPanel.classList.remove('open');
+            openPanel.classList.remove('open', 'opens-up');
             const trigger = openPanel.closest('.te-dropdown-wrap')?.querySelector('.te-dropdown-trigger');
             if (trigger) trigger.focus();
             return;
         }
-        // Otherwise blur the active cell
+        // Otherwise blur the active cell (focus trap will re-engage on next Tab)
         active.blur();
+        lastTableFocus = null; // allow Tab to escape table after explicit Esc+blur
         return;
     }
 
