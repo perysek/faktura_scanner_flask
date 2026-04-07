@@ -13,6 +13,11 @@ class ClientRepository(BaseRepository):
     """Repository dla operacji na tabeli clients"""
 
     _soft_delete = True
+    _columns = (
+        'id, first_name, last_name, phone, email, date_of_birth, '
+        'notes, preferences, first_visit_date, last_visit_date, '
+        'is_active, is_deleted, deleted_at, created_at, updated_at'
+    )
 
     def __init__(self):
         super().__init__('clients')

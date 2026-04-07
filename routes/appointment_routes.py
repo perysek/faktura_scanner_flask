@@ -8,6 +8,7 @@ from decimal import Decimal
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
+from config.appointment_statuses import AppointmentStatus
 from config.auth_config import module_permission_required, role_required
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
@@ -776,9 +777,8 @@ def update_past_appointment_status(appointment_id):
             raise ValidationError('Brak statusu')
 
         # Walidacja: czy status jest finalny
-        ALLOWED_FINAL_STATUSES = ['completed', 'cancelled', 'no_show']
-        if new_status not in ALLOWED_FINAL_STATUSES:
-            raise ValidationError(f'Dozwolone statusy: {", ".join(ALLOWED_FINAL_STATUSES)}')
+        if new_status not in AppointmentStatus.FINAL:
+            raise ValidationError(f'Dozwolone statusy: {", ".join(sorted(AppointmentStatus.FINAL))}')
 
         repo = AppointmentRepository()
         row = repo.get_by_id(appointment_id)
@@ -796,12 +796,12 @@ def update_past_appointment_status(appointment_id):
             raise ValidationError('Mozna aktualizowac tylko wizyty ktore sie juz zakonczyly')
 
         # Walidacja: czy status już nie jest finalny
-        if row['status'] in ALLOWED_FINAL_STATUSES:
+        if row['status'] in AppointmentStatus.FINAL:
             raise ValidationError(f'Wizyta ma juz finalny status: {row["status"]}')
 
         # Aktualizacja statusu bezpośrednio (omijamy transition_status)
         old_status = row['status']
-        cancellation_reason = data.get('cancellation_reason') if new_status == 'cancelled' else None
+        cancellation_reason = data.get('cancellation_reason') if new_status == AppointmentStatus.CANCELLED else None
         success = repo.update_status(appointment_id, new_status, cancellation_reason)
 
         if success:

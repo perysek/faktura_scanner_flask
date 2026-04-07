@@ -12,6 +12,12 @@ from repositories.db_utils import parse_dt, parse_date
 class IncomeRepository:
     """Repository do zarządzania rekordami przychodu"""
 
+    _COLUMNS = (
+        'id, appointment_id, client_id, employee_id, '
+        'total_amount, discount_amount, net_amount, commission_total, '
+        'payment_method, payment_date, notes, created_at'
+    )
+
     def row_to_income_record(self, row: Any) -> Optional[IncomeRecord]:
         """Konwertuj Row na obiekt IncomeRecord"""
         if not row:
@@ -62,7 +68,7 @@ class IncomeRepository:
 
     def get_by_appointment(self, appointment_id: int) -> Optional[Any]:
         """Pobierz rekord przychodu dla wizyty"""
-        query = "SELECT * FROM income_records WHERE appointment_id = %s"
+        query = f"SELECT {self._COLUMNS} FROM income_records WHERE appointment_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
@@ -80,7 +86,9 @@ class IncomeRepository:
 
         query = f"""
             SELECT
-                ir.*,
+                ir.id, ir.appointment_id, ir.client_id, ir.employee_id,
+                ir.total_amount, ir.discount_amount, ir.net_amount, ir.commission_total,
+                ir.payment_method, ir.payment_date, ir.notes, ir.created_at,
                 c.first_name || ' ' || c.last_name as client_name,
                 e.first_name || ' ' || e.last_name as employee_name
             FROM income_records ir
@@ -104,7 +112,9 @@ class IncomeRepository:
 
         query = """
             SELECT
-                ir.*,
+                ir.id, ir.appointment_id, ir.client_id, ir.employee_id,
+                ir.total_amount, ir.discount_amount, ir.net_amount, ir.commission_total,
+                ir.payment_method, ir.payment_date, ir.notes, ir.created_at,
                 c.first_name || ' ' || c.last_name as client_name
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id

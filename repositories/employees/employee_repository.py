@@ -81,9 +81,17 @@ class EmployeeRepository:
             conn.commit()
             return result_id
 
+    _COLUMNS = (
+        'id, user_id, forma_zatrudnienia_id, first_name, last_name, phone, email, '
+        'position, employment_status, hire_date, termination_date, '
+        'base_salary, commission_rate, employer_cost_rate, '
+        'skills, specializations, work_schedule, max_appointments_per_day, '
+        'notes, photo_path, is_active, created_at, updated_at'
+    )
+
     def get_by_id(self, employee_id: int) -> Optional[Any]:
         """Pobierz pracownika po ID"""
-        query = "SELECT * FROM employees WHERE id = %s"
+        query = f"SELECT {self._COLUMNS} FROM employees WHERE id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id,))
@@ -91,7 +99,7 @@ class EmployeeRepository:
 
     def get_by_user_id(self, user_id: int) -> Optional[Any]:
         """Pobierz pracownika po user_id"""
-        query = "SELECT * FROM employees WHERE user_id = %s"
+        query = f"SELECT {self._COLUMNS} FROM employees WHERE user_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (user_id,))
@@ -100,9 +108,9 @@ class EmployeeRepository:
     def get_all(self, active_only: bool = True) -> List[Any]:
         """Pobierz wszystkich pracowników"""
         if active_only:
-            query = "SELECT * FROM employees WHERE is_active = TRUE ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE is_active = TRUE ORDER BY last_name, first_name"
         else:
-            query = "SELECT * FROM employees ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees ORDER BY last_name, first_name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -112,9 +120,9 @@ class EmployeeRepository:
     def get_by_position(self, position: str, active_only: bool = True) -> List[Any]:
         """Pobierz pracowników według pozycji"""
         if active_only:
-            query = "SELECT * FROM employees WHERE position = %s AND is_active = TRUE ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE position = %s AND is_active = TRUE ORDER BY last_name, first_name"
         else:
-            query = "SELECT * FROM employees WHERE position = %s ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE position = %s ORDER BY last_name, first_name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -123,7 +131,7 @@ class EmployeeRepository:
 
     def get_by_employment_status(self, status: str) -> List[Any]:
         """Pobierz pracowników według statusu zatrudnienia"""
-        query = "SELECT * FROM employees WHERE employment_status = %s ORDER BY last_name, first_name"
+        query = f"SELECT {self._COLUMNS} FROM employees WHERE employment_status = %s ORDER BY last_name, first_name"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (status,))
@@ -133,15 +141,15 @@ class EmployeeRepository:
         """Wyszukaj pracowników po imieniu, nazwisku, telefonie lub emailu"""
         search_pattern = f"%{query}%"
         if active_only:
-            sql = """
-                SELECT * FROM employees
+            sql = f"""
+                SELECT {self._COLUMNS} FROM employees
                 WHERE (first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s)
                 AND is_active = TRUE
                 ORDER BY last_name, first_name
             """
         else:
-            sql = """
-                SELECT * FROM employees
+            sql = f"""
+                SELECT {self._COLUMNS} FROM employees
                 WHERE first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
                 ORDER BY last_name, first_name
             """
@@ -267,8 +275,8 @@ class EmployeeRepository:
 
     def get_recent_hires(self, days: int = 90) -> List[Any]:
         """Pobierz pracowników zatrudnionych w ostatnich X dniach"""
-        query = """
-            SELECT * FROM employees
+        query = f"""
+            SELECT {self._COLUMNS} FROM employees
             WHERE hire_date >= CURRENT_DATE - INTERVAL '1 day' * %s
             ORDER BY hire_date DESC
         """
@@ -279,7 +287,7 @@ class EmployeeRepository:
 
     def find_by_email(self, email: str) -> Optional[Any]:
         """Znajdź pracownika po adresie email"""
-        query = "SELECT * FROM employees WHERE email = %s"
+        query = f"SELECT {self._COLUMNS} FROM employees WHERE email = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (email,))

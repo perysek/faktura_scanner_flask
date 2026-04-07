@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from typing import Tuple, Dict, List
 from dateutil.relativedelta import relativedelta
 from config.database import DatabaseConnection
+from config.appointment_statuses import AppointmentStatus
 
 
 class AnalyticsRepository:
@@ -63,7 +64,7 @@ class AnalyticsRepository:
                 'total_commissions': float
             }
         """
-        query = """
+        query = f"""
             SELECT
                 COUNT(DISTINCT a.id) as total_appointments,
                 COUNT(DISTINCT a.client_id) as unique_clients,
@@ -72,7 +73,7 @@ class AnalyticsRepository:
                 COALESCE(SUM(i.commission_total), 0) as total_commissions
             FROM appointments a
             LEFT JOIN income_records i ON i.appointment_id = a.id
-            WHERE a.status = 'completed'
+            WHERE a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
         """
 
@@ -112,7 +113,7 @@ class AnalyticsRepository:
                 'net_profit': float (revenue - cost)
             }
         """
-        query = """
+        query = f"""
             SELECT
                 e.id,
                 e.first_name || ' ' || e.last_name as employee_name,
@@ -138,7 +139,7 @@ class AnalyticsRepository:
                 COALESCE(sat.scored_count, 0) AS scored_count
             FROM employees e
             LEFT JOIN appointments a ON a.employee_id = e.id
-                AND a.status = 'completed'
+                AND a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
             LEFT JOIN income_records i ON i.appointment_id = a.id
             LEFT JOIN (
@@ -146,7 +147,7 @@ class AnalyticsRepository:
                        AVG(satisfaction_score) AS avg_satisfaction,
                        COUNT(satisfaction_score) AS scored_count
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND satisfaction_score IS NOT NULL
                   AND appointment_date BETWEEN %s AND %s
                 GROUP BY employee_id
@@ -176,7 +177,7 @@ class AnalyticsRepository:
                 'revenue_generated': float
             }
         """
-        query = """
+        query = f"""
             SELECT
                 s.name as service_name,
                 s.category,
@@ -185,7 +186,7 @@ class AnalyticsRepository:
             FROM services s
             LEFT JOIN appointment_services aps ON aps.service_id = s.id
             LEFT JOIN appointments a ON a.id = aps.appointment_id
-            WHERE a.status = 'completed'
+            WHERE a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
             GROUP BY s.id, s.name, s.category
             ORDER BY revenue_generated DESC
@@ -213,17 +214,17 @@ class AnalyticsRepository:
         # New vs. returning clients
         # Use MIN(appointment_date) per client from appointments table instead of
         # first_visit_date, which can be NULL for imported clients.
-        new_returning_query = """
+        new_returning_query = f"""
             WITH period_clients AS (
                 SELECT DISTINCT client_id
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date BETWEEN %s AND %s
             ),
             first_appointments AS (
                 SELECT client_id, MIN(appointment_date) AS first_ever
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                 GROUP BY client_id
             )
             SELECT
@@ -234,14 +235,14 @@ class AnalyticsRepository:
         """
 
         # Retention rate (90-day window)
-        retention_query = """
+        retention_query = f"""
             WITH client_visits AS (
                 SELECT
                     client_id,
                     appointment_date,
                     LAG(appointment_date) OVER (PARTITION BY client_id ORDER BY appointment_date) as prev_visit
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
             )
             SELECT
                 COUNT(CASE WHEN (appointment_date - prev_visit) <= 90 THEN 1 END) * 100.0 /
@@ -519,15 +520,15 @@ class AnalyticsRepository:
                 'no_show_rate': float         # %
             }
         """
-        status_query = """
+        status_query = f"""
             SELECT
-                COUNT(CASE WHEN status = 'completed' THEN 1 END)   AS completed,
-                COUNT(CASE WHEN status = 'cancelled' THEN 1 END)   AS cancelled,
-                COUNT(CASE WHEN status = 'no_show'   THEN 1 END)   AS no_shows,
-                COUNT(*)                                            AS total_scheduled
+                COUNT(CASE WHEN status = '{AppointmentStatus.COMPLETED}' THEN 1 END)   AS completed,
+                COUNT(CASE WHEN status = '{AppointmentStatus.CANCELLED}' THEN 1 END)   AS cancelled,
+                COUNT(CASE WHEN status = '{AppointmentStatus.NO_SHOW}'   THEN 1 END)   AS no_shows,
+                COUNT(*)                                                                AS total_scheduled
             FROM appointments
             WHERE appointment_date BETWEEN %s AND %s
-              AND status IN ('completed', 'cancelled', 'no_show')
+              AND status IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
         """
 
         capacity_query = """
@@ -590,7 +591,7 @@ class AnalyticsRepository:
                 'revenue': float
             }
         """
-        query = """
+        query = f"""
             SELECT
                 EXTRACT(DOW FROM a.appointment_date)::int  AS day_of_week,
                 EXTRACT(HOUR FROM a.start_time)::int       AS hour_of_day,
@@ -598,7 +599,7 @@ class AnalyticsRepository:
                 COALESCE(SUM(i.net_amount), 0)             AS revenue
             FROM appointments a
             LEFT JOIN income_records i ON i.appointment_id = a.id
-            WHERE a.status = 'completed'
+            WHERE a.status = '{AppointmentStatus.COMPLETED}'
               AND a.appointment_date BETWEEN %s AND %s
               AND a.start_time IS NOT NULL
             GROUP BY day_of_week, hour_of_day
@@ -628,7 +629,7 @@ class AnalyticsRepository:
                 'avg_discount_pct': float
             }
         """
-        query = """
+        query = f"""
             SELECT
                 s.name                                                          AS service_name,
                 s.category,
@@ -645,7 +646,7 @@ class AnalyticsRepository:
                 SELECT aps.*
                 FROM appointment_services aps
                 INNER JOIN appointments a ON a.id = aps.appointment_id
-                    AND a.status = 'completed'
+                    AND a.status = '{AppointmentStatus.COMPLETED}'
                     AND a.appointment_date BETWEEN %s AND %s
             ) aps ON aps.service_id = s.id
             WHERE s.is_active = TRUE
@@ -671,14 +672,14 @@ class AnalyticsRepository:
                 'appointments': int
             }
         """
-        query = """
+        query = f"""
             SELECT
                 a.appointment_date as date,
                 COUNT(a.id) as appointments,
                 COALESCE(SUM(i.net_amount), 0) as revenue
             FROM appointments a
             LEFT JOIN income_records i ON i.appointment_id = a.id
-            WHERE a.status = 'completed'
+            WHERE a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
             GROUP BY a.appointment_date
             ORDER BY a.appointment_date
@@ -696,7 +697,7 @@ class AnalyticsRepository:
         Pobierz miesięczne dane przychodów, kosztów i zysku dla ostatnich 12 miesięcy.
         Okno ruchome relative to CURRENT_DATE — niezależne od wybranego okresu.
         """
-        query = """
+        query = f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
@@ -710,7 +711,7 @@ class AnalyticsRepository:
                     COALESCE(SUM(i.net_amount), 0)                AS revenue
                 FROM appointments a
                 LEFT JOIN income_records i ON i.appointment_id = a.id
-                WHERE a.status = 'completed'
+                WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             ),
@@ -721,7 +722,7 @@ class AnalyticsRepository:
                     COALESCE(SUM(i.commission_total), 0)           AS monthly_commission
                 FROM appointments a
                 LEFT JOIN income_records i ON i.appointment_id = a.id
-                WHERE a.status = 'completed'
+                WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY a.employee_id, DATE_TRUNC('month', a.appointment_date)::date
             ),
@@ -776,7 +777,7 @@ class AnalyticsRepository:
         Top 10 klientów wg wyniku: liczba_wizyt × przychód — w zadanym okresie.
         Zwraca tylko klientów z wynikiem > 0.
         """
-        query = """
+        query = f"""
             SELECT
                 c.first_name || ' ' || c.last_name          AS client_name,
                 COUNT(DISTINCT a.id)                          AS visits,
@@ -784,7 +785,7 @@ class AnalyticsRepository:
                 COUNT(DISTINCT a.id) * COALESCE(SUM(i.net_amount), 0) AS score
             FROM clients c
             JOIN appointments a ON a.client_id = c.id
-                AND a.status = 'completed'
+                AND a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
             LEFT JOIN income_records i ON i.appointment_id = a.id
             GROUP BY c.id, c.first_name, c.last_name
@@ -804,7 +805,7 @@ class AnalyticsRepository:
         nie na first_visit_date, która może być NULL lub nieprawidłowa dla
         importowanych klientów.
         """
-        query = """
+        query = f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
@@ -817,7 +818,7 @@ class AnalyticsRepository:
                     client_id,
                     DATE_TRUNC('month', MIN(appointment_date))::date AS first_month
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                 GROUP BY client_id
             )
             SELECT
@@ -835,7 +836,7 @@ class AnalyticsRepository:
 
     def get_cancellation_rate_monthly(self) -> List[Dict]:
         """Wskaźnik odwołań i nieobecności wg miesiąca — ostatnie 12 miesięcy."""
-        query = """
+        query = f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
@@ -847,14 +848,14 @@ class AnalyticsRepository:
                 SELECT
                     DATE_TRUNC('month', appointment_date)::date AS month_start,
                     COUNT(*) AS total,
-                    COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_count,
-                    COUNT(*) FILTER (WHERE status = 'no_show')   AS noshow_count,
+                    COUNT(*) FILTER (WHERE status = '{AppointmentStatus.CANCELLED}') AS cancelled_count,
+                    COUNT(*) FILTER (WHERE status = '{AppointmentStatus.NO_SHOW}')   AS noshow_count,
                     ROUND(
-                        (COUNT(*) FILTER (WHERE status = 'cancelled') * 100.0
+                        (COUNT(*) FILTER (WHERE status = '{AppointmentStatus.CANCELLED}') * 100.0
                         / NULLIF(COUNT(*), 0))::numeric, 1
                     ) AS cancellation_pct,
                     ROUND(
-                        (COUNT(*) FILTER (WHERE status = 'no_show') * 100.0
+                        (COUNT(*) FILTER (WHERE status = '{AppointmentStatus.NO_SHOW}') * 100.0
                         / NULLIF(COUNT(*), 0))::numeric, 1
                     ) AS noshow_pct
                 FROM appointments
@@ -877,7 +878,7 @@ class AnalyticsRepository:
 
     def get_avg_ticket_monthly(self) -> List[Dict]:
         """Średni rachunek za wizytę wg miesiąca — ostatnie 12 miesięcy."""
-        query = """
+        query = f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
@@ -891,7 +892,7 @@ class AnalyticsRepository:
                     ROUND(AVG(i.net_amount)::numeric, 2)          AS avg_ticket
                 FROM appointments a
                 JOIN income_records i ON i.appointment_id = a.id
-                WHERE a.status = 'completed'
+                WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             )
@@ -912,7 +913,7 @@ class AnalyticsRepository:
         Przychód wg kategorii usług i miesiąca — ostatnie 12 miesięcy.
         Zwraca wiersze (month_start, category, revenue) — pivot wykonuje JS.
         """
-        query = """
+        query = f"""
             SELECT
                 DATE_TRUNC('month', a.appointment_date)::date AS month_start,
                 s.category,
@@ -920,7 +921,7 @@ class AnalyticsRepository:
             FROM appointments a
             JOIN appointment_services aps ON aps.appointment_id = a.id
             JOIN services s               ON s.id = aps.service_id
-            WHERE a.status = 'completed'
+            WHERE a.status = '{AppointmentStatus.COMPLETED}'
               AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
               AND a.appointment_date <  DATE_TRUNC('month', CURRENT_DATE)
             GROUP BY DATE_TRUNC('month', a.appointment_date)::date, s.category
@@ -936,7 +937,7 @@ class AnalyticsRepository:
         Udział kosztów faktur w przychodach wg miesiąca — ostatnie 12 miesięcy.
         Zwraca: revenue, invoice_costs, ratio_pct.
         """
-        query = """
+        query = f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
@@ -950,7 +951,7 @@ class AnalyticsRepository:
                     COALESCE(SUM(i.net_amount), 0)                AS revenue
                 FROM appointments a
                 LEFT JOIN income_records i ON i.appointment_id = a.id
-                WHERE a.status = 'completed'
+                WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             ),
@@ -987,7 +988,7 @@ class AnalyticsRepository:
         Formuła: appointments / (22 dni rob. × max_appointments_per_day) × 100.
         Zwraca wiersze (month_start, employee_name, utilisation_pct).
         """
-        query = """
+        query = f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
@@ -1001,7 +1002,7 @@ class AnalyticsRepository:
                     employee_id,
                     COUNT(DISTINCT id) AS appointments_count
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
             )
@@ -1032,13 +1033,13 @@ class AnalyticsRepository:
         Histogram częstotliwości wizyt klientów w ostatnich 12 miesiącach.
         Zwraca: [{visit_count, client_count}] — JS grupuje 10+ do jednego kubełka.
         """
-        query = """
+        query = f"""
             WITH client_visits AS (
                 SELECT
                     client_id,
                     COUNT(*) AS visit_count
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date >= CURRENT_DATE - INTERVAL '12 months'
                 GROUP BY client_id
             )
@@ -1072,14 +1073,14 @@ class AnalyticsRepository:
         """
 
         # --- overall salon average ---
-        overall_query = months_cte + """
+        overall_query = months_cte + f"""
             , overall AS (
                 SELECT
                     DATE_TRUNC('month', appointment_date)::date AS month_start,
                     ROUND(AVG(satisfaction_score)::numeric, 2)  AS avg_score,
                     COUNT(satisfaction_score)                    AS scored_count
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND satisfaction_score IS NOT NULL
                   AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', appointment_date)::date
@@ -1093,7 +1094,7 @@ class AnalyticsRepository:
         """
 
         # --- per-employee average ---
-        by_employee_query = months_cte + """
+        by_employee_query = months_cte + f"""
             , emp_monthly AS (
                 SELECT
                     DATE_TRUNC('month', appointment_date)::date AS month_start,
@@ -1101,7 +1102,7 @@ class AnalyticsRepository:
                     ROUND(AVG(satisfaction_score)::numeric, 2)  AS avg_score,
                     COUNT(satisfaction_score)                    AS scored_count
                 FROM appointments
-                WHERE status = 'completed'
+                WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND satisfaction_score IS NOT NULL
                   AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
                 GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
@@ -1136,14 +1137,14 @@ class AnalyticsRepository:
         cursor = conn.cursor()
 
         # Query 1: Overall appointment KPIs
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT
-                COUNT(*) FILTER (WHERE status NOT IN ('cancelled')) AS total_appointments,
-                COUNT(*) FILTER (WHERE status = 'completed') AS completed_appointments,
-                COUNT(*) FILTER (WHERE status = 'no_show') AS no_show_appointments,
-                COUNT(DISTINCT client_id) FILTER (WHERE status NOT IN ('cancelled')) AS total_clients,
-                COUNT(*) FILTER (WHERE status NOT IN ('cancelled') AND appointment_date >= CURRENT_DATE - INTERVAL '30 days') AS appointments_30d,
-                COUNT(*) FILTER (WHERE status = 'completed' AND appointment_date >= CURRENT_DATE - INTERVAL '30 days') AS completed_30d
+                COUNT(*) FILTER (WHERE status NOT IN ('{AppointmentStatus.CANCELLED}')) AS total_appointments,
+                COUNT(*) FILTER (WHERE status = '{AppointmentStatus.COMPLETED}') AS completed_appointments,
+                COUNT(*) FILTER (WHERE status = '{AppointmentStatus.NO_SHOW}') AS no_show_appointments,
+                COUNT(DISTINCT client_id) FILTER (WHERE status NOT IN ('{AppointmentStatus.CANCELLED}')) AS total_clients,
+                COUNT(*) FILTER (WHERE status NOT IN ('{AppointmentStatus.CANCELLED}') AND appointment_date >= CURRENT_DATE - INTERVAL '30 days') AS appointments_30d,
+                COUNT(*) FILTER (WHERE status = '{AppointmentStatus.COMPLETED}' AND appointment_date >= CURRENT_DATE - INTERVAL '30 days') AS completed_30d
             FROM appointments
             WHERE employee_id = %s
         """, (employee_id,))
@@ -1162,7 +1163,7 @@ class AnalyticsRepository:
         revenue = dict(cursor.fetchone())
 
         # Query 3: 6-month monthly trend (completed appointments)
-        cursor.execute("""
+        cursor.execute(f"""
             WITH months AS (
                 SELECT generate_series(
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months'),
@@ -1173,8 +1174,8 @@ class AnalyticsRepository:
             SELECT
                 TO_CHAR(m.month_start, 'YYYY-MM') AS month,
                 TO_CHAR(m.month_start, 'Mon') AS month_short,
-                COUNT(a.id) FILTER (WHERE a.status = 'completed') AS completed,
-                COUNT(a.id) FILTER (WHERE a.status NOT IN ('cancelled')) AS total
+                COUNT(a.id) FILTER (WHERE a.status = '{AppointmentStatus.COMPLETED}') AS completed,
+                COUNT(a.id) FILTER (WHERE a.status NOT IN ('{AppointmentStatus.CANCELLED}')) AS total
             FROM months m
             LEFT JOIN appointments a ON a.employee_id = %s
                 AND DATE_TRUNC('month', a.appointment_date) = m.month_start
@@ -1184,7 +1185,7 @@ class AnalyticsRepository:
         trend = [dict(r) for r in cursor.fetchall()]
 
         # Query 4: Top 5 services (completed appointments)
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT
                 s.name AS service_name,
                 s.category,
@@ -1193,7 +1194,7 @@ class AnalyticsRepository:
             FROM appointment_services aps
             JOIN services s ON s.id = aps.service_id
             JOIN appointments a ON a.id = aps.appointment_id
-            WHERE a.employee_id = %s AND a.status = 'completed'
+            WHERE a.employee_id = %s AND a.status = '{AppointmentStatus.COMPLETED}'
             GROUP BY s.id, s.name, s.category
             ORDER BY count DESC
             LIMIT 5
