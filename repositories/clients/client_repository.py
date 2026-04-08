@@ -102,8 +102,8 @@ class ClientRepository(BaseRepository):
 
     def search(self, search_term: str) -> List[Any]:
         """Wyszukaj klientów po imieniu, nazwisku, telefonie lub emailu"""
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE
               AND (first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s)
             ORDER BY
@@ -116,8 +116,8 @@ class ClientRepository(BaseRepository):
 
     def search_by_name(self, name: str) -> List[Any]:
         """Wyszukaj klientów po imieniu lub nazwisku"""
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE
               AND (first_name ILIKE %s OR last_name ILIKE %s)
             ORDER BY last_name, first_name
@@ -127,8 +127,8 @@ class ClientRepository(BaseRepository):
 
     def search_by_phone(self, phone: str) -> List[Any]:
         """Wyszukaj klientów po numerze telefonu"""
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE AND phone ILIKE %s
             ORDER BY last_name, first_name
         """
@@ -137,13 +137,13 @@ class ClientRepository(BaseRepository):
 
     def find_by_email(self, email: str) -> Optional[Any]:
         """Znajdź klienta po dokładnym adresie email"""
-        query = "SELECT * FROM clients WHERE email = %s AND is_deleted = FALSE"
+        query = f"SELECT {self._columns} FROM clients WHERE email = %s AND is_deleted = FALSE"
         return self._fetch_one(query, (email,))
 
     def get_active_clients(self) -> List[Any]:
         """Pobierz tylko aktywnych klientów"""
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE AND is_active = TRUE
             ORDER BY
                 CASE WHEN last_name = '' OR last_name IS NULL THEN 1 ELSE 0 END,
@@ -154,8 +154,8 @@ class ClientRepository(BaseRepository):
 
     def get_recent_clients(self, limit: int = 10) -> List[Any]:
         """Pobierz ostatnio dodanych klientów"""
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE
             ORDER BY created_at DESC
             LIMIT %s
@@ -171,8 +171,8 @@ class ClientRepository(BaseRepository):
 
         # SQLite nie ma wbudowanej funkcji do porównywania samych miesięcy/dni,
         # więc musimy pobrać wszystkich klientów z datami urodzenia i filtrować w Pythonie
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE AND date_of_birth IS NOT NULL AND is_active = TRUE
             ORDER BY date_of_birth
         """
@@ -199,8 +199,8 @@ class ClientRepository(BaseRepository):
         """Pobierz klientów, którzy nie mieli wizyty od określonej liczby dni"""
         cutoff_date = date.today() - timedelta(days=days)
 
-        query = """
-            SELECT * FROM clients
+        query = f"""
+            SELECT {self._columns} FROM clients
             WHERE is_deleted = FALSE AND is_active = TRUE
             AND (last_visit_date IS NULL OR last_visit_date < %s)
             ORDER BY last_visit_date DESC NULLS LAST

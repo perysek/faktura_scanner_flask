@@ -60,7 +60,7 @@ class UserRepository(BaseRepository):
         Returns:
             User object lub None jeśli nie znaleziono
         """
-        query = "SELECT * FROM users WHERE email = %s"
+        query = f"SELECT {self._columns} FROM users WHERE email = %s"
         row = self._fetch_one(query, (email,))
 
         if not row:
@@ -147,7 +147,7 @@ class UserRepository(BaseRepository):
         Returns:
             Lista obiektów User
         """
-        query = "SELECT * FROM users WHERE role = %s AND is_active = TRUE ORDER BY full_name"
+        query = f"SELECT {self._columns} FROM users WHERE role = %s AND is_active = TRUE ORDER BY full_name"
         rows = self._fetch_all(query, (role,))
         return [self.row_to_user(row) for row in rows]
 
@@ -158,7 +158,7 @@ class UserRepository(BaseRepository):
         Returns:
             Lista obiektów User
         """
-        query = "SELECT * FROM users WHERE is_active = TRUE ORDER BY full_name"
+        query = f"SELECT {self._columns} FROM users WHERE is_active = TRUE ORDER BY full_name"
         rows = self._fetch_all(query)
         return [self.row_to_user(row) for row in rows]
 
