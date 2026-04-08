@@ -6,7 +6,7 @@ from typing import Any, List, Optional
 import psycopg2
 import psycopg2.extras
 
-from config.database import get_database_url
+from config.database import get_db_connection
 from database.models import UploadStaging
 
 
@@ -18,11 +18,8 @@ class UploadStagingRepository:
         pass
 
     def _get_connection(self) -> psycopg2.extensions.connection:
-        """Get a standalone psycopg2 connection (not Flask-g bound)"""
-        return psycopg2.connect(
-            get_database_url(),
-            cursor_factory=psycopg2.extras.RealDictCursor
-        )
+        """Get a pooled connection via Flask g (returned by teardown hook)."""
+        return get_db_connection()
 
     def create(self, staging: UploadStaging) -> int:
         """Add a file to upload staging. Returns ID of created entry."""
@@ -48,7 +45,6 @@ class UploadStagingRepository:
         ))
         staging_id = cursor.fetchone()['id']
         conn.commit()
-        conn.close()
         return staging_id
 
     def get_by_session(self, session_id: str) -> List[Any]:
@@ -61,7 +57,6 @@ class UploadStagingRepository:
             ORDER BY uploaded_at ASC
         """, (session_id,))
         rows = cursor.fetchall()
-        conn.close()
         return rows
 
     def row_to_upload_staging(self, row: Any) -> UploadStaging:
@@ -93,7 +88,6 @@ class UploadStagingRepository:
         """, (session_id, filename))
         deleted = cursor.rowcount > 0
         conn.commit()
-        conn.close()
         return deleted
 
     def delete_by_session(self, session_id: str) -> int:
@@ -106,7 +100,6 @@ class UploadStagingRepository:
         """, (session_id,))
         deleted_count = cursor.rowcount
         conn.commit()
-        conn.close()
         return deleted_count
 
     def cleanup_old_uploads(self, hours: int = 24) -> int:
@@ -119,5 +112,4 @@ class UploadStagingRepository:
         """, (hours,))
         deleted_count = cursor.rowcount
         conn.commit()
-        conn.close()
         return deleted_count
