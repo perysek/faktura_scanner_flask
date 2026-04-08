@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 06-code-robustness-05-PLAN.md
-last_updated: "2026-04-08T02:46:13.449Z"
+stopped_at: Completed 06-code-robustness-06-PLAN.md
+last_updated: "2026-04-08T02:52:18.800Z"
 last_activity: 2026-03-31 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -65,6 +65,8 @@ Recent decisions affecting current work:
 - [Phase 06-code-robustness]: ValueError in users routes re-raised as ValidationError to preserve semantic meaning from user_repo validation
 - [Phase 06-code-robustness]: op.execute() raw SQL for CHECK constraint replacement — more dialect-portable than Alembic constraint API
 - [Phase 06-code-robustness]: SSE and bulk_update errors send generic Polish messages to clients; str(e) details go to logging.exception() only
+- [Phase 06-code-robustness]: get_all_with_employee() JOIN query left unchanged — already has explicit named column aliases
+- [Phase 06-code-robustness]: IBAN test_iban_inny_kraj_nie_pl failure is pre-existing and out of scope for Plan 06-06
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T02:46:13.445Z
-Stopped at: Completed 06-code-robustness-05-PLAN.md
+Last session: 2026-04-08T02:52:18.794Z
+Stopped at: Completed 06-code-robustness-06-PLAN.md
 Resume file: None

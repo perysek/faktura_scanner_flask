@@ -15,7 +15,7 @@ v2.0 delivered a complete UI/UX overhaul. v3.0 addresses what's underneath: know
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 5: Data Integrity** - Soft delete for invoices + key entities, audit logging of DELETE operations restored
-- [ ] **Phase 6: Code Robustness** - Custom exception hierarchy, appointment status enum, SQL safety helpers, EmailService bare except fixed
+- [x] **Phase 6: Code Robustness** - Custom exception hierarchy, appointment status enum, SQL safety helpers, EmailService bare except fixed (completed 2026-04-08)
 - [ ] **Phase 7: Security Hardening** - Secret key validation at startup, environment-based logging configuration
 - [ ] **Phase 8: Database Performance** - Indexes on filtered columns, analytics query optimization, employee schedule batching
 - [ ] **Phase 9: Connection & Transactions** - Connection pooling, psycopg2 lifecycle management, multi-step transactional integrity, dependency audit
@@ -50,7 +50,7 @@ Plans:
   3. All appointment status values (`completed`, `cancelled`, `no_show`) come from a Python enum — searching the codebase for hardcoded status strings returns zero matches outside the enum definition
   4. Critical repository queries (clients, employees, users, income_records) use explicit column lists — `SELECT *` is absent from these files
   5. EmailService `disconnect()` catches specific IMAP exceptions instead of bare `except: pass` — failures are logged, not silently swallowed
-**Plans:** 6 plans
+**Plans:** 6/6 plans complete
 
 Plans:
 - [ ] 06-01-PLAN.md — Exception hierarchy foundation: DatabaseConnectionError, reparent AppointmentError/OCRExtractionError, BaseRepository wrapping
@@ -102,7 +102,7 @@ Phase 7 is independent but sequenced after Phase 6 for focus.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 5. Data Integrity | 1/2 | In Progress|  |
-| 6. Code Robustness | 0/6 | Not started | - |
+| 6. Code Robustness | 6/6 | Complete   | 2026-04-08 |
 | 7. Security Hardening | 0/? | Not started | - |
 | 8. Database Performance | 0/? | Not started | - |
 | 9. Connection & Transactions | 0/? | Not started | - |
