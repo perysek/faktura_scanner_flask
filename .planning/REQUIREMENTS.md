@@ -13,8 +13,8 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 - [ ] **FIX-01**: Audit DELETE operations log correctly — currently commented out in api_routes.py, deletions are silently unaudited
 - [ ] **FIX-02**: Audit logging FK constraint resolved — soft deletes eliminate the cascade conflict between ON DELETE CASCADE and post-delete logging
 - [x] **FIX-03**: EmailService bare `except: pass` in disconnect() replaced with specific IMAP exception handlers and logging
-- [ ] **FIX-04**: Debug logging configuration moved to environment-based settings — INFO level in production, DEBUG only when explicitly enabled
-- [ ] **FIX-05**: Flask SECRET_KEY hardcoded fallback removed — app raises error at startup if SECRET_KEY env var is not set
+- [x] **FIX-04**: Debug logging configuration moved to environment-based settings — INFO level in production, DEBUG only when explicitly enabled
+- [x] **FIX-05**: Flask SECRET_KEY hardcoded fallback removed — app raises error at startup if SECRET_KEY env var is not set
 
 ### Improvements (Code Robustness)
 
@@ -76,8 +76,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-01 | Phase 5 | Pending |
 | FIX-02 | Phase 5 | Pending |
 | FIX-03 | Phase 6 | Complete |
-| FIX-04 | Phase 7 | Pending |
-| FIX-05 | Phase 7 | Pending |
+| FIX-04 | Phase 7 | Complete |
+| FIX-05 | Phase 7 | Complete |
 | IMPR-01 | Phase 5 | Complete |
 | IMPR-02 | Phase 9 | Pending |
 | IMPR-03 | Phase 6 | Complete |
