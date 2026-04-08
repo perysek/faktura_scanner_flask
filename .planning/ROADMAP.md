@@ -68,7 +68,10 @@ Plans:
   1. Starting the app without `SECRET_KEY` set raises a clear startup error — Flask never boots with a predictable session key
   2. Running the app in production produces INFO-level logs — no DEBUG-level OCR/PDF log entries appear unless `DEBUG=true` is explicitly set in environment
   3. Running with `DEBUG=true` env var produces verbose DEBUG logs — the debug mode is intentional and controllable
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — SECRET_KEY startup validation + DEBUG env var log-level control
 
 ### Phase 8: Database Performance
 **Goal**: Common queries return results in milliseconds, not seconds — the scheduler and analytics load without noticeable delay
@@ -103,6 +106,6 @@ Phase 7 is independent but sequenced after Phase 6 for focus.
 |-------|----------------|--------|-----------|
 | 5. Data Integrity | 1/2 | In Progress|  |
 | 6. Code Robustness | 6/6 | Complete   | 2026-04-08 |
-| 7. Security Hardening | 0/? | Not started | - |
+| 7. Security Hardening | 0/1 | Not started | - |
 | 8. Database Performance | 0/? | Not started | - |
 | 9. Connection & Transactions | 0/? | Not started | - |
