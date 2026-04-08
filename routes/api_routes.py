@@ -1081,18 +1081,12 @@ def get_monthly_totals():
 @module_permission_required('invoices')
 def upload_files():
     """Upload and process PDF files"""
-    import sys
-    import traceback as tb
-    print("=== UPLOAD ENDPOINT CALLED ===", flush=True)
-    sys.stdout.flush()
-
     try:
         if 'files[]' not in request.files:
             return jsonify({'success': False, 'error': 'No files provided'}), 400
 
         files = request.files.getlist('files[]')
-        print(f"Files received: {len(files)}", flush=True)
-        sys.stdout.flush()
+        logging.info("upload_files: %d files received", len(files))
         results = []
 
         for file in files:
@@ -1242,11 +1236,7 @@ def upload_files():
                         results[-1]['saved'] = False
 
                 except Exception as e:
-                    # Log the full error with traceback
-                    import traceback
                     logging.exception(f"Error processing file {filename}")
-                    print(f"ERROR processing {filename}: {str(e)}")
-                    print(traceback.format_exc())
 
                     results.append({
                         'filename': filename,
@@ -1267,11 +1257,6 @@ def upload_files():
     except AppError:
         raise
     except Exception as e:
-        import sys
-        print(f"=== TOP LEVEL ERROR ===", flush=True)
-        print(f"Error: {str(e)}", flush=True)
-        print(tb.format_exc(), flush=True)
-        sys.stdout.flush()
         logging.exception('Unexpected error in upload_files')
         raise AppError('Wystapil blad serwera')
 
@@ -1460,16 +1445,16 @@ def import_from_email():
                     yield f"data: {json.dumps({'type': 'success', 'message': success_msg})}\n\n"
                     
                 except Exception as e:
-                    error_msg = f"✗ {file_data.get('filename', 'unknown')} - błąd: {str(e)}"
+                    logging.exception("SSE: failed to stage file %s", file_data.get('filename', 'unknown'))
+                    error_msg = f"✗ {file_data.get('filename', 'unknown')} - błąd przetwarzania"
                     yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
 
             # Send final results
             yield f"data: {json.dumps({'type': 'complete', 'total_processed': staged_count})}\n\n"
             
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            error_msg = f"Błąd: {str(e)}"
+            logging.exception("SSE: unexpected error in process_staged_files_sse")
+            error_msg = "Błąd przetwarzania — spróbuj ponownie"
             yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
     
     from flask import Response
@@ -1863,7 +1848,8 @@ def bulk_update_seller_invoices(seller_id: int):
                     updated_count += 1
                     
             except Exception as e:
-                errors.append(f"Invoice {invoice.id}: {str(e)}")
+                logging.exception("bulk_update: failed to update invoice %s", invoice.id)
+                errors.append(f"Faktura {invoice.id}: błąd aktualizacji")
         
         return jsonify({
             'success': True,
