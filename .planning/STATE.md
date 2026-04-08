@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 06-code-robustness-02-PLAN.md
-last_updated: "2026-04-07T23:44:52.551Z"
+stopped_at: Completed 06-code-robustness-05-PLAN.md
+last_updated: "2026-04-08T02:46:13.449Z"
 last_activity: 2026-03-31 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 1
+  total_plans: 8
+  completed_plans: 7
   percent: 0
 ---
 
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 - [Phase 06-code-robustness]: Log type(e).__name__ not str(e) in connect() — IMAP errors can echo credentials in message
 - [Phase 06-code-robustness]: Streaming SSE generator internals kept with per-item except blocks; AppError pattern applied only at outer route level
 - [Phase 06-code-robustness]: ValueError in users routes re-raised as ValidationError to preserve semantic meaning from user_repo validation
+- [Phase 06-code-robustness]: op.execute() raw SQL for CHECK constraint replacement — more dialect-portable than Alembic constraint API
+- [Phase 06-code-robustness]: SSE and bulk_update errors send generic Polish messages to clients; str(e) details go to logging.exception() only
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T15:48:14.491Z
-Stopped at: Completed 06-code-robustness-02-PLAN.md
+Last session: 2026-04-08T02:46:13.445Z
+Stopped at: Completed 06-code-robustness-05-PLAN.md
 Resume file: None
