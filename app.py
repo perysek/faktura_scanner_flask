@@ -2,6 +2,7 @@
 FakturaScanner - Flask Web Application
 Main Flask application with Jinja templates, TailwindCSS, and JavaScript
 """
+import atexit
 import base64
 import logging
 import os
@@ -31,7 +32,7 @@ if _log_level == logging.DEBUG:
 
 # Import configuration
 from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
-from config.database import initialize_database
+from config.database import initialize_database, initialize_pool, close_pool
 
 # Import repositories
 from repositories.invoice_repository import InvoiceRepository
@@ -119,7 +120,9 @@ def create_app():
     UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
     PDF_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    # Initialize database
+    # Initialize connection pool and database schema
+    initialize_pool()
+    atexit.register(close_pool)
     initialize_database()
 
     # Initialize repositories
