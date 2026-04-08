@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 06-code-robustness-06-PLAN.md
-last_updated: "2026-04-08T03:06:38.021Z"
+stopped_at: Completed 07-security-hardening-01-PLAN.md
+last_updated: "2026-04-08T03:18:32.267Z"
 last_activity: 2026-03-31 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
   percent: 0
 ---
 
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [Phase 06-code-robustness]: SSE and bulk_update errors send generic Polish messages to clients; str(e) details go to logging.exception() only
 - [Phase 06-code-robustness]: get_all_with_employee() JOIN query left unchanged — already has explicit named column aliases
 - [Phase 06-code-robustness]: IBAN test_iban_inny_kraj_nie_pl failure is pre-existing and out of scope for Plan 06-06
+- [Phase 07-security-hardening]: RuntimeError (not ValueError) for SECRET_KEY startup guard: startup misconfiguration is a runtime env problem not request-time validation
+- [Phase 07-security-hardening]: SECRET_KEY guard is unconditional: no FLASK_ENV dev bypass, enforces key from day one of development
+- [Phase 07-security-hardening]: DEBUG env var explicit opt-in for log verbosity: avoids debug leaking into staging that shares FLASK_ENV=development
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T02:52:18.794Z
-Stopped at: Completed 06-code-robustness-06-PLAN.md
+Last session: 2026-04-08T03:18:32.262Z
+Stopped at: Completed 07-security-hardening-01-PLAN.md
 Resume file: None
