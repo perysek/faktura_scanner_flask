@@ -470,7 +470,7 @@ class AnalyticsRepository:
 
         # 9. High cancellation rate
         cancellation_rate = float(occupancy_data.get('cancellation_rate', 0) or 0)
-        cancelled_count = int(occupancy_data.get('cancelled', 0) or 0)
+        cancelled_count = int(occupancy_data.get('cancelled', 0) or 0)  # dict key matches SQL AS alias
         if cancellation_rate > 15:
             insights.append({
                 'type': 'alert',
@@ -544,6 +544,7 @@ class AnalyticsRepository:
 
         cursor.execute(status_query, (start_date, end_date))
         row = cursor.fetchone()
+        # 'completed' and 'cancelled' are SQL AS alias names in status_query above, not status literals
         completed = int(row['completed'] or 0)
         cancelled = int(row['cancelled'] or 0)
         no_shows = int(row['no_shows'] or 0)
