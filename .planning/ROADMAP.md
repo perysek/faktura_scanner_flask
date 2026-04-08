@@ -50,13 +50,15 @@ Plans:
   3. All appointment status values (`completed`, `cancelled`, `no_show`) come from a Python enum — searching the codebase for hardcoded status strings returns zero matches outside the enum definition
   4. Critical repository queries (clients, employees, users, income_records) use explicit column lists — `SELECT *` is absent from these files
   5. EmailService `disconnect()` catches specific IMAP exceptions instead of bare `except: pass` — failures are logged, not silently swallowed
-**Plans:** 4 plans
+**Plans:** 6 plans
 
 Plans:
 - [ ] 06-01-PLAN.md — Exception hierarchy foundation: DatabaseConnectionError, reparent AppointmentError/OCRExtractionError, BaseRepository wrapping
 - [ ] 06-02-PLAN.md — Route handler migration: replace 140 except Exception + str(e) patterns across 9 route files
 - [ ] 06-03-PLAN.md — AppointmentStatus enum adoption + SELECT * column projection in 4 critical repos
 - [ ] 06-04-PLAN.md — EmailService error handling cleanup + credential masking + export_service bonus fix
+- [ ] 06-05-PLAN.md — Gap closure: Alembic migration for 'pending' status CHECK constraint + api_routes.py print()/str(e) cleanup
+- [ ] 06-06-PLAN.md — Gap closure: SELECT * replacement in ClientRepository/UserRepository custom methods + analytics dict key documentation
 
 ### Phase 7: Security Hardening
 **Goal**: The application refuses to start with insecure defaults — no silent production misconfigurations
@@ -100,7 +102,7 @@ Phase 7 is independent but sequenced after Phase 6 for focus.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 5. Data Integrity | 1/2 | In Progress|  |
-| 6. Code Robustness | 0/4 | Not started | - |
+| 6. Code Robustness | 0/6 | Not started | - |
 | 7. Security Hardening | 0/? | Not started | - |
 | 8. Database Performance | 0/? | Not started | - |
 | 9. Connection & Transactions | 0/? | Not started | - |
