@@ -816,6 +816,9 @@ class AnalyticsRepository:
                 )::date AS month_start
             ),
             first_appointments AS (
+                -- Intentionally unfiltered: MIN(appointment_date) must be the all-time first visit
+                -- to correctly classify a client as "new" vs "returning" in the given month.
+                -- Filtering by date here would incorrectly mark existing clients as new.
                 SELECT
                     client_id,
                     DATE_TRUNC('month', MIN(appointment_date))::date AS first_month
