@@ -243,6 +243,7 @@ class AnalyticsRepository:
                     LAG(appointment_date) OVER (PARTITION BY client_id ORDER BY appointment_date) as prev_visit
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
+                  AND appointment_date >= %s - INTERVAL '180 days'
             )
             SELECT
                 COUNT(CASE WHEN (appointment_date - prev_visit) <= 90 THEN 1 END) * 100.0 /
@@ -274,8 +275,8 @@ class AnalyticsRepository:
         cursor.execute(new_returning_query, (start_date, end_date, start_date, start_date))
         nr_row = cursor.fetchone()
 
-        # Retention
-        cursor.execute(retention_query, (start_date, end_date))
+        # Retention: start_date used twice — once for CTE 180-day lookback, once for outer BETWEEN
+        cursor.execute(retention_query, (start_date, start_date, end_date))
         ret_row = cursor.fetchone()
 
         # At-risk (reference point = end_date so it's period-aware)
