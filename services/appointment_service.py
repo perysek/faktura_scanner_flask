@@ -15,6 +15,7 @@ from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_addon_repository import ServiceAddonRepository
 from repositories.employees.employee_service_repository import EmployeeServiceRepository
 from config.appointment_statuses import AppointmentStatus
+from config.database import managed_transaction
 from exceptions import AppError
 from services.pricing_service import PricingService
 
@@ -88,31 +89,32 @@ class AppointmentBusinessService:
                 f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
             )
 
-        # 4. Utwórz wizytę
-        appointment = Appointment(
-            client_id=client_id,
-            employee_id=employee_id,
-            appointment_date=appt_date,
-            start_time=start_time,
-            end_time=end_time,
-            total_price=calculation['total_price'],
-            total_duration=total_duration,
-            notes=notes,
-            created_by=created_by
-        )
-        appointment_id = self.appt_repo.create(appointment)
-
-        # 5. Dodaj usługi ze snapshotem cenowym
-        for svc in calculation['breakdown']:
-            appt_svc = AppointmentService(
-                appointment_id=appointment_id,
-                service_id=svc['service_id'],
-                price_charged=svc['effective_price'],
-                duration_minutes=svc['effective_duration'],
-                commission_rate=svc['effective_commission'],
-                commission_amount=svc['commission_amount']
+        # 4-5. Utwórz wizytę + usługi w jednej transakcji
+        with managed_transaction():
+            appointment = Appointment(
+                client_id=client_id,
+                employee_id=employee_id,
+                appointment_date=appt_date,
+                start_time=start_time,
+                end_time=end_time,
+                total_price=calculation['total_price'],
+                total_duration=total_duration,
+                notes=notes,
+                created_by=created_by
             )
-            self.appt_svc_repo.add_service(appt_svc)
+            appointment_id = self.appt_repo.create(appointment)
+
+            # 5. Dodaj usługi ze snapshotem cenowym
+            for svc in calculation['breakdown']:
+                appt_svc = AppointmentService(
+                    appointment_id=appointment_id,
+                    service_id=svc['service_id'],
+                    price_charged=svc['effective_price'],
+                    duration_minutes=svc['effective_duration'],
+                    commission_rate=svc['effective_commission'],
+                    commission_amount=svc['commission_amount']
+                )
+                self.appt_svc_repo.add_service(appt_svc)
 
         return {
             'appointment_id': appointment_id,
@@ -202,28 +204,24 @@ class AppointmentBusinessService:
         net_amount = total_amount - disc
         commission_total = totals['total_commission']
 
-        # Utwórz income_record
-        income = IncomeRecord(
-            appointment_id=appointment_id,
-            client_id=row['client_id'],
-            employee_id=row['employee_id'],
-            total_amount=total_amount,
-            discount_amount=disc,
-            net_amount=net_amount,
-            commission_total=commission_total,
-            payment_method=payment_method,
-            payment_date=date.today()
-        )
-        income_id = self.income_repo.create(income)
+        # Utwórz income + zaktualizuj status/cenę/klienta w jednej transakcji
+        with managed_transaction():
+            income = IncomeRecord(
+                appointment_id=appointment_id,
+                client_id=row['client_id'],
+                employee_id=row['employee_id'],
+                total_amount=total_amount,
+                discount_amount=disc,
+                net_amount=net_amount,
+                commission_total=commission_total,
+                payment_method=payment_method,
+                payment_date=date.today()
+            )
+            income_id = self.income_repo.create(income)
 
-        # Zaktualizuj status
-        self.appt_repo.update_status(appointment_id, 'completed')
-
-        # Zaktualizuj total_price na wizyt (mogło się zmienić po addonach)
-        self.appt_repo.update_total_price(appointment_id, total_amount)
-
-        # Zaktualizuj last_visit_date klienta
-        self.client_repo.update_last_visit(row['client_id'], date.today())
+            self.appt_repo.update_status(appointment_id, 'completed')
+            self.appt_repo.update_total_price(appointment_id, total_amount)
+            self.client_repo.update_last_visit(row['client_id'], date.today())
 
         return {
             'income_id': income_id,
@@ -521,53 +519,51 @@ class AppointmentBusinessService:
             satisfaction_score=satisfaction_score,
         )
 
-        # 5. Zaktualizuj w bazie
-        self.appt_repo.update(appointment_id, appt)
+        # 5-7. Zaktualizuj wizytę, usługi i dochody w jednej transakcji
+        with managed_transaction():
+            self.appt_repo.update(appointment_id, appt)
 
-        # 6. Usuń stare usługi i dodaj nowe
-        self.appt_svc_repo.delete_all_for_appointment(appointment_id)
+            # 6. Usuń stare usługi i dodaj nowe
+            self.appt_svc_repo.delete_all_for_appointment(appointment_id)
 
-        for svc in services:
-            from database.models import AppointmentService as AppointmentServiceModel
-            appt_svc = AppointmentServiceModel(
-                appointment_id=appointment_id,
-                service_id=int(svc['service_id']),
-                price_charged=Decimal(str(svc['price_charged'])),
-                duration_minutes=int(svc['duration_minutes']),
-                commission_rate=Decimal('0'),  # Można dodać logikę prowizji
-                commission_amount=Decimal('0'),
-                is_addon=bool(svc.get('is_addon', False))
-            )
-            self.appt_svc_repo.add_service(appt_svc)
-
-        # 7. Obsługa dochodów przy zmianie statusu
-        existing_income = self.income_repo.get_by_appointment(appointment_id)
-
-        if status == 'completed' and old_status != 'completed':
-            # Zmiana NA 'completed' → utwórz rekord przychodu jeśli nie istnieje
-            if not existing_income:
-                # Oblicz sumy dla rekordu przychodu
-                totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
-                commission_total = totals.get('total_commission', Decimal('0'))
-
-                disc = Decimal(str(discount_amount))
-                income = IncomeRecord(
+            for svc in services:
+                from database.models import AppointmentService as AppointmentServiceModel
+                appt_svc = AppointmentServiceModel(
                     appointment_id=appointment_id,
-                    client_id=client_id,
-                    employee_id=employee_id,
-                    total_amount=total_price,
-                    discount_amount=disc,
-                    net_amount=total_price - disc,
-                    commission_total=commission_total,
-                    payment_method=None,  # Można dodać do parametrów jeśli potrzebne
-                    payment_date=date.today()
+                    service_id=int(svc['service_id']),
+                    price_charged=Decimal(str(svc['price_charged'])),
+                    duration_minutes=int(svc['duration_minutes']),
+                    commission_rate=Decimal('0'),
+                    commission_amount=Decimal('0'),
+                    is_addon=bool(svc.get('is_addon', False))
                 )
-                self.income_repo.create(income)
+                self.appt_svc_repo.add_service(appt_svc)
 
-        elif status != 'completed' and old_status == 'completed':
-            # Zmiana Z 'completed' na inny → usuń rekord przychodu
-            if existing_income:
-                self.income_repo.delete_by_appointment(appointment_id)
+            # 7. Obsługa dochodów przy zmianie statusu
+            existing_income = self.income_repo.get_by_appointment(appointment_id)
+
+            if status == 'completed' and old_status != 'completed':
+                if not existing_income:
+                    totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
+                    commission_total = totals.get('total_commission', Decimal('0'))
+
+                    disc = Decimal(str(discount_amount))
+                    income = IncomeRecord(
+                        appointment_id=appointment_id,
+                        client_id=client_id,
+                        employee_id=employee_id,
+                        total_amount=total_price,
+                        discount_amount=disc,
+                        net_amount=total_price - disc,
+                        commission_total=commission_total,
+                        payment_method=None,
+                        payment_date=date.today()
+                    )
+                    self.income_repo.create(income)
+
+            elif status != 'completed' and old_status == 'completed':
+                if existing_income:
+                    self.income_repo.delete_by_appointment(appointment_id)
 
         return {
             'appointment_id': appointment_id,
