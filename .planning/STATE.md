@@ -4,7 +4,7 @@ milestone: v3.0
 milestone_name: milestone
 status: planning
 stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-04-08T03:30:59.858Z"
+last_updated: "2026-04-08T03:31:09.941Z"
 last_activity: 2026-03-31 — Roadmap created
 progress:
   total_phases: 5
@@ -70,6 +70,7 @@ Recent decisions affecting current work:
 - [Phase 07-security-hardening]: RuntimeError (not ValueError) for SECRET_KEY startup guard: startup misconfiguration is a runtime env problem not request-time validation
 - [Phase 07-security-hardening]: SECRET_KEY guard is unconditional: no FLASK_ENV dev bypass, enforces key from day one of development
 - [Phase 07-security-hardening]: DEBUG env var explicit opt-in for log verbosity: avoids debug leaking into staging that shares FLASK_ENV=development
+- [Phase 08-database-performance]: Added ORDER BY s.name to STRING_AGG in get_multi_employee_schedule for deterministic service ordering
 
 ### Pending Todos
 
