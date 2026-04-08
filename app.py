@@ -15,8 +15,8 @@ load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
 from flask import Flask, render_template
 from flask_login import LoginManager
 
-# Configure logging — DEBUG only in development, INFO in production
-_log_level = logging.DEBUG if os.environ.get('FLASK_ENV') == 'development' else logging.INFO
+# Configure logging — DEBUG level only when DEBUG=true is explicitly set
+_log_level = logging.DEBUG if os.environ.get('DEBUG', '').lower() == 'true' else logging.INFO
 logging.basicConfig(
     level=_log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -24,7 +24,7 @@ logging.basicConfig(
         logging.StreamHandler(),  # Console output
     ]
 )
-# Verbose debug for core services only in development
+# Verbose debug for OCR/PDF services only when debug mode is active
 if _log_level == logging.DEBUG:
     logging.getLogger('utils.pdf_processor').setLevel(logging.DEBUG)
     logging.getLogger('services.ocr_service').setLevel(logging.DEBUG)
