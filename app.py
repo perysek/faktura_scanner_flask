@@ -71,11 +71,14 @@ def create_app():
     app.json = PostgreSQLJSONProvider(app)
 
     # Configuration
-    # SECRET_KEY: required in production, fallback only for development
+    # SECRET_KEY: required at all times — no fallback, no dev exception
     secret_key = os.environ.get('SECRET_KEY')
-    if not secret_key and os.environ.get('FLASK_ENV') != 'development':
-        raise ValueError('SECRET_KEY environment variable must be set in production')
-    app.config['SECRET_KEY'] = secret_key or 'dev-only-insecure-key'
+    if not secret_key:
+        raise RuntimeError(
+            'SECRET_KEY environment variable is not set. '
+            'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+        )
+    app.config['SECRET_KEY'] = secret_key
     app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['PDF_FOLDER'] = str(PDF_FOLDER)
