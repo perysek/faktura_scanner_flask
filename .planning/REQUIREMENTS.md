@@ -19,7 +19,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 ### Improvements (Code Robustness)
 
 - [x] **IMPR-01**: Soft delete for invoices and key entities — `is_deleted` boolean + `deleted_at` timestamp columns, all queries filter `WHERE is_deleted = FALSE`
-- [ ] **IMPR-02**: Multi-step operations (appointment creation/update/delete) wrapped in database transactions with savepoints and rollback on failure
+- [x] **IMPR-02**: Multi-step operations (appointment creation/update/delete) wrapped in database transactions with savepoints and rollback on failure
 - [x] **IMPR-03**: Custom exception hierarchy created — business logic errors (e.g. AppointmentConflictError) vs infrastructure errors (e.g. DatabaseConnectionError), routes catch specific types
 - [x] **IMPR-04**: Appointment status values defined as Python enum with PostgreSQL CHECK constraint — replaces hardcoded strings ('completed', 'cancelled', 'no_show') across all queries
 - [x] **IMPR-05**: `SELECT *` in base_repository.py replaced with explicit column lists in critical repositories (clients, employees, users, income_records)
@@ -34,7 +34,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 
 ### Migration Paths (Dependencies & Architecture)
 
-- [ ] **MIGR-01**: Deprecated/outdated packages audited via `pip check` and `pip list --outdated` — critical updates applied with compatibility testing
+- [x] **MIGR-01**: Deprecated/outdated packages audited via `pip check` and `pip list --outdated` — critical updates applied with compatibility testing
 - [x] **MIGR-02**: Psycopg2 connection management improved — connection lifecycle tied to request scope, timeout configuration, leak prevention via context managers
 
 ## v4.0 Requirements
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-04 | Phase 7 | Complete |
 | FIX-05 | Phase 7 | Complete |
 | IMPR-01 | Phase 5 | Complete |
-| IMPR-02 | Phase 9 | Pending |
+| IMPR-02 | Phase 9 | Complete |
 | IMPR-03 | Phase 6 | Complete |
 | IMPR-04 | Phase 6 | Complete |
 | IMPR-05 | Phase 6 | Complete |
@@ -88,7 +88,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCAL-02 | Phase 8 | Complete |
 | SCAL-03 | Phase 8 | Complete |
 | SCAL-04 | Phase 9 | Complete |
-| MIGR-01 | Phase 9 | Pending |
+| MIGR-01 | Phase 9 | Complete |
 | MIGR-02 | Phase 9 | Complete |
 
 **Coverage:**
@@ -98,4 +98,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after roadmap creation — all 17 requirements mapped*
+*Last updated: 2026-04-08 — v3.0 milestone complete, 15/17 requirements implemented (FIX-01, FIX-02 deferred to Phase 5 human verification)*
