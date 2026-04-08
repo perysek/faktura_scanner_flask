@@ -28,7 +28,7 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 ### Scaling (Performance & Database)
 
 - [ ] **SCAL-01**: Database indexes added on frequently filtered columns — appointments.appointment_date, appointments.employee_id, appointments.status, income_records.appointment_id, and composite indexes for multi-column WHERE + ORDER BY
-- [ ] **SCAL-02**: Analytics repository complex queries optimized — heavy aggregations refactored, STRING_AGG operations bounded, date range filtering enforced
+- [x] **SCAL-02**: Analytics repository complex queries optimized — heavy aggregations refactored, STRING_AGG operations bounded, date range filtering enforced
 - [ ] **SCAL-03**: Employee schedule fetching refactored from separate per-employee queries to single JOIN query with date range filter
 - [ ] **SCAL-04**: Database connection pooling implemented — proper pool size management, connection timeout, health checks, cleanup on request end
 
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IMPR-05 | Phase 6 | Complete |
 | IMPR-06 | Phase 6 | Complete |
 | SCAL-01 | Phase 8 | Pending |
-| SCAL-02 | Phase 8 | Pending |
+| SCAL-02 | Phase 8 | Complete |
 | SCAL-03 | Phase 8 | Pending |
 | SCAL-04 | Phase 9 | Pending |
 | MIGR-01 | Phase 9 | Pending |
