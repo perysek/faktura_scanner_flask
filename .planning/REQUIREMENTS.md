@@ -30,12 +30,12 @@ Requirements for the Functional-Improvements milestone. Each maps to a specific 
 - [x] **SCAL-01**: Database indexes added on frequently filtered columns — appointments.appointment_date, appointments.employee_id, appointments.status, income_records.appointment_id, and composite indexes for multi-column WHERE + ORDER BY
 - [x] **SCAL-02**: Analytics repository complex queries optimized — heavy aggregations refactored, STRING_AGG operations bounded, date range filtering enforced
 - [x] **SCAL-03**: Employee schedule fetching refactored from separate per-employee queries to single JOIN query with date range filter
-- [ ] **SCAL-04**: Database connection pooling implemented — proper pool size management, connection timeout, health checks, cleanup on request end
+- [x] **SCAL-04**: Database connection pooling implemented — proper pool size management, connection timeout, health checks, cleanup on request end
 
 ### Migration Paths (Dependencies & Architecture)
 
 - [ ] **MIGR-01**: Deprecated/outdated packages audited via `pip check` and `pip list --outdated` — critical updates applied with compatibility testing
-- [ ] **MIGR-02**: Psycopg2 connection management improved — connection lifecycle tied to request scope, timeout configuration, leak prevention via context managers
+- [x] **MIGR-02**: Psycopg2 connection management improved — connection lifecycle tied to request scope, timeout configuration, leak prevention via context managers
 
 ## v4.0 Requirements
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCAL-01 | Phase 8 | Complete |
 | SCAL-02 | Phase 8 | Complete |
 | SCAL-03 | Phase 8 | Complete |
-| SCAL-04 | Phase 9 | Pending |
+| SCAL-04 | Phase 9 | Complete |
 | MIGR-01 | Phase 9 | Pending |
-| MIGR-02 | Phase 9 | Pending |
+| MIGR-02 | Phase 9 | Complete |
 
 **Coverage:**
 - v3.0 requirements: 17 total
