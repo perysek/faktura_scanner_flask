@@ -1,18 +1,18 @@
 # Web Framework
-Flask==3.0.0
+Flask==3.1.3
 
 # Authentication & Security
 Flask-Login==0.6.3
 bcrypt==4.1.2
 
 # Database Migrations
-alembic==1.13.1
+alembic==1.18.4
 psycopg2-binary==2.9.9  # PostgreSQL support (future migration)
 
 # OCR i przetwarzanie PDF
 pytesseract==0.3.13
 pdf2image==1.17.0
-Pillow==10.4.0
+Pillow==12.2.0
 opencv-python>=4.8.0
 numpy>=1.24.0
 PyMuPDF>=1.24.0  # For direct text extraction from text-based PDFs
@@ -21,11 +21,11 @@ PyMuPDF>=1.24.0  # For direct text extraction from text-based PDFs
 openpyxl==3.1.5
 
 # Parsowanie i walidacja
-python-dateutil==2.9.0
-schwifty==2024.6.1
+python-dateutil==2.9.0.post0
+schwifty==2026.3.0
 
 # Utilities
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 
 # Production WSGI server (Render/Linux deployment)
 gunicorn==21.2.0
