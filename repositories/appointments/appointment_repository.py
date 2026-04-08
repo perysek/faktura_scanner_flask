@@ -252,32 +252,41 @@ class AppointmentRepository:
 
             employees = [dict(row) for row in cursor.fetchall()]
 
-            # Pobierz wizyty dla każdego pracownika (włącznie z anulowanymi dla statystyk)
-            schedules = {}
-            query_appointments = """
-                SELECT
-                    a.*,
-                    c.first_name || ' ' || c.last_name as client_name,
-                    c.phone as client_phone,
-                    e.first_name || ' ' || e.last_name as employee_name,
-                    STRING_AGG(s.name, ', ') as service_name,
-                    STRING_AGG(
-                        CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
-                    ) as addon_services
-                FROM appointments a
-                JOIN clients c ON c.id = a.client_id
-                JOIN employees e ON e.id = a.employee_id
-                LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
-                LEFT JOIN services s ON s.id = aps.service_id
-                WHERE a.employee_id = %s AND a.appointment_date = %s
-                AND a.is_deleted = FALSE
-                GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
-                ORDER BY a.start_time
-            """
+            # Bulk fetch all appointments for found employees in one query
+            schedules: dict = {emp['id']: [] for emp in employees}
 
-            for emp in employees:
-                cursor.execute(query_appointments, (emp['id'], schedule_date.isoformat()))
-                schedules[emp['id']] = [dict(row) for row in cursor.fetchall()]
+            if employees:
+                emp_ids = [emp['id'] for emp in employees]
+                placeholders = ','.join(['%s'] * len(emp_ids))
+                query_all_appointments = f"""
+                    SELECT
+                        a.*,
+                        c.first_name || ' ' || c.last_name AS client_name,
+                        c.phone AS client_phone,
+                        e.first_name || ' ' || e.last_name AS employee_name,
+                        STRING_AGG(s.name, ', ' ORDER BY s.name) AS service_name,
+                        STRING_AGG(
+                            CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END,
+                            ', ' ORDER BY s.name
+                        ) AS addon_services
+                    FROM appointments a
+                    JOIN clients c ON c.id = a.client_id
+                    JOIN employees e ON e.id = a.employee_id
+                    LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
+                    LEFT JOIN services s ON s.id = aps.service_id
+                    WHERE a.employee_id IN ({placeholders})
+                      AND a.appointment_date = %s
+                      AND a.is_deleted = FALSE
+                    GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
+                    ORDER BY a.employee_id, a.start_time
+                """
+                params = emp_ids + [schedule_date.isoformat()]
+                cursor.execute(query_all_appointments, params)
+                for row in cursor.fetchall():
+                    row_dict = dict(row)
+                    emp_id = row_dict['employee_id']
+                    if emp_id in schedules:
+                        schedules[emp_id].append(row_dict)
 
             return {
                 'employees': employees,
