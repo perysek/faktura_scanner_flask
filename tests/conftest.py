@@ -21,8 +21,9 @@ def app():
     os.environ['SECRET_KEY'] = 'test-secret-key'
     os.environ.setdefault('DATABASE_URL', 'postgresql://test:test@localhost/test')
 
-    # Patch DB initialization before importing app to prevent real connection
-    with patch('config.database.initialize_database', return_value=None):
+    # Patch pool + DB initialization before importing app to prevent real connection
+    with patch('config.database.initialize_pool', return_value=None), \
+         patch('config.database.initialize_database', return_value=None):
         from app import create_app
         app = create_app()
         app.config['TESTING'] = True
