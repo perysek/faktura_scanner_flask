@@ -4,7 +4,7 @@ Repository dla operacji na usługach przypisanych do wizyt (appointment_services
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import AppointmentService
 from repositories.db_utils import parse_dt
 
@@ -50,7 +50,7 @@ class AppointmentServiceRepository:
                 bool(appt_svc.is_addon),
             ))
             result_id = cursor.fetchone()["id"]
-            conn.commit()
+            safe_commit(conn)
             return result_id
 
     def add_addon_service(self, appt_svc: AppointmentService) -> int:
@@ -74,7 +74,7 @@ class AppointmentServiceRepository:
                 True,  # add_addon_service is always is_addon=True
             ))
             result_id = cursor.fetchone()["id"]
-            conn.commit()
+            safe_commit(conn)
             return result_id
 
     def get_all_for_appointment(self, appointment_id: int) -> List[Any]:
@@ -208,7 +208,7 @@ class AppointmentServiceRepository:
                 bool(is_addon),
                 appt_service_id,
             ))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def delete(self, appt_service_id: int) -> bool:
@@ -217,7 +217,7 @@ class AppointmentServiceRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appt_service_id,))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def delete_all_for_appointment(self, appointment_id: int) -> bool:
@@ -226,5 +226,5 @@ class AppointmentServiceRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
-            conn.commit()
+            safe_commit(conn)
             return True

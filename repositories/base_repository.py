@@ -7,7 +7,7 @@ from typing import Any, List, Optional
 import psycopg2
 import psycopg2.extensions
 
-from config.database import DatabaseConnection
+from config.database import DatabaseConnection, safe_commit
 from exceptions import DatabaseConnectionError
 
 
@@ -34,7 +34,7 @@ class BaseRepository:
 			conn = self._get_conn()
 			cursor = conn.cursor()
 			cursor.execute(query, params)
-			conn.commit()
+			safe_commit(conn)
 			return cursor
 		except psycopg2.OperationalError as e:
 			raise DatabaseConnectionError(f'Database unreachable: {type(e).__name__}') from e
@@ -49,7 +49,7 @@ class BaseRepository:
 			cursor = conn.cursor()
 			cursor.execute(query, params)
 			row = cursor.fetchone()
-			conn.commit()
+			safe_commit(conn)
 			return row['id'] if row else None
 		except psycopg2.OperationalError as e:
 			raise DatabaseConnectionError(f'Database unreachable: {type(e).__name__}') from e

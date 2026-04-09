@@ -3,6 +3,7 @@ Konfiguracja bazy danych PostgreSQL
 """
 import logging
 import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -83,6 +84,47 @@ def close_pool() -> None:
 def get_db_connection() -> psycopg2.extensions.connection:
     """Helper function to get database connection (used by repositories)"""
     return DatabaseConnection.get_connection()
+
+
+def is_in_transaction() -> bool:
+    """Check whether the current request is inside a managed_transaction scope."""
+    return getattr(g, '_in_transaction', False)
+
+
+def safe_commit(conn):
+    """Commit unless inside a managed_transaction scope.
+
+    Repository methods call this instead of ``conn.commit()`` so that
+    individual commits are suppressed when wrapped by managed_transaction.
+    """
+    if not is_in_transaction():
+        conn.commit()
+
+
+@contextmanager
+def managed_transaction():
+    """Wrap multiple repo calls in a single atomic transaction.
+
+    Usage::
+
+        with managed_transaction():
+            repo_a.create(...)
+            repo_b.create(...)
+        # commits on success, rolls back on any exception
+
+    Repo methods that normally call ``safe_commit(conn)`` will skip the
+    commit when ``g._in_transaction`` is ``True``.
+    """
+    conn = DatabaseConnection.get_connection()
+    g._in_transaction = True
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        g._in_transaction = False
 
 
 class DatabaseConnection:
