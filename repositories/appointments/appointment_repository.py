@@ -4,7 +4,7 @@ Repository dla operacji na wizytach (appointments)
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date, time
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from config.appointment_statuses import AppointmentStatus
 from database.models import Appointment
 from repositories.db_utils import parse_dt, parse_date, parse_time
@@ -64,7 +64,7 @@ class AppointmentRepository:
                 appt.created_by
             ))
             result_id = cursor.fetchone()["id"]
-            conn.commit()
+            safe_commit(conn)
             return result_id
 
     def get_by_id(self, appointment_id: int) -> Optional[Any]:
@@ -403,7 +403,7 @@ class AppointmentRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def update_satisfaction_score(self, appointment_id: int, score: int) -> bool:
@@ -417,7 +417,7 @@ class AppointmentRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (score, appointment_id))
-            conn.commit()
+            safe_commit(conn)
             return cursor.fetchone() is not None
 
     def update_total_price(self, appointment_id: int, new_total: Decimal) -> bool:
@@ -430,7 +430,7 @@ class AppointmentRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (str(new_total), appointment_id))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def update(self, appointment_id: int, appt: Appointment) -> bool:
@@ -460,7 +460,7 @@ class AppointmentRepository:
                 appt.notes,
                 appointment_id
             ))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def delete(self, appointment_id: int) -> bool:
@@ -469,7 +469,7 @@ class AppointmentRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def restore(self, appointment_id: int) -> bool:
@@ -478,7 +478,7 @@ class AppointmentRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def get_client_appointments(self, client_id: int, limit: int = 20) -> List[Any]:

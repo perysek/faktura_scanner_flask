@@ -4,7 +4,7 @@ Repository dla operacji na rekordach przychodu (income_records)
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import IncomeRecord
 from repositories.db_utils import parse_dt, parse_date
 
@@ -63,7 +63,7 @@ class IncomeRepository:
                 record.notes
             ))
             result_id = cursor.fetchone()["id"]
-            conn.commit()
+            safe_commit(conn)
             return result_id
 
     def get_by_appointment(self, appointment_id: int) -> Optional[Any]:
@@ -213,7 +213,7 @@ class IncomeRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
 
     def delete_by_appointment(self, appointment_id: int) -> bool:
@@ -222,5 +222,5 @@ class IncomeRepository:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
-            conn.commit()
+            safe_commit(conn)
             return cursor.rowcount > 0
