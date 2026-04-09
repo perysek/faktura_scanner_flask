@@ -14,11 +14,11 @@ v2.0 delivered a complete UI/UX overhaul. v3.0 addresses what's underneath: know
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 5: Data Integrity** - Soft delete for invoices + key entities, audit logging of DELETE operations restored
+- [x] **Phase 5: Data Integrity** - Soft delete for invoices + key entities, audit logging of DELETE operations restored (completed 2026-04-08)
 - [x] **Phase 6: Code Robustness** - Custom exception hierarchy, appointment status enum, SQL safety helpers, EmailService bare except fixed (completed 2026-04-08)
-- [ ] **Phase 7: Security Hardening** - Secret key validation at startup, environment-based logging configuration
-- [ ] **Phase 8: Database Performance** - Indexes on filtered columns, analytics query optimization, employee schedule batching
-- [ ] **Phase 9: Connection & Transactions** - Connection pooling, psycopg2 lifecycle management, multi-step transactional integrity, dependency audit
+- [x] **Phase 7: Security Hardening** - Secret key validation at startup, environment-based logging configuration (completed 2026-04-08)
+- [x] **Phase 8: Database Performance** - Indexes on filtered columns, analytics query optimization, employee schedule batching (completed 2026-04-08)
+- [x] **Phase 9: Connection & Transactions** - Connection pooling, psycopg2 lifecycle management, multi-step transactional integrity, dependency audit (completed 2026-04-08)
 
 ## Phase Details
 
@@ -104,8 +104,8 @@ Phase 7 is independent but sequenced after Phase 6 for focus.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 5. Data Integrity | 1/2 | In Progress|  |
-| 6. Code Robustness | 6/6 | Complete   | 2026-04-08 |
-| 7. Security Hardening | 0/1 | Not started | - |
-| 8. Database Performance | 2/3 | In Progress|  |
-| 9. Connection & Transactions | 1/3 | In Progress | - |
+| 5. Data Integrity | 2/2 | Complete | 2026-04-08 |
+| 6. Code Robustness | 6/6 | Complete | 2026-04-08 |
+| 7. Security Hardening | 1/1 | Complete | 2026-04-08 |
+| 8. Database Performance | 3/3 | Complete | 2026-04-08 |
+| 9. Connection & Transactions | 3/3 | Complete | 2026-04-08 |
