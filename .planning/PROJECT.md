@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Kompleksowa aplikacja webowa dla salonu kosmetycznego (MyWay Nails & Beauty). Obsługuje skanowanie faktur przez OCR, zarządzanie klientami, pracownikami, usługami, rezerwacjami i raportowanie dochodów. Dostęp oparty na rolach (superuser, admin, accountant, receptionist, stylist). Stack: Flask 3.0, PostgreSQL, Tailwind CSS, Jinja2.
+Kompleksowa aplikacja webowa dla salonu kosmetycznego (MyWay Nails & Beauty). Obsługuje skanowanie faktur przez OCR, zarządzanie klientami, pracownikami, usługami, rezerwacjami i raportowanie dochodów. Dostęp oparty na rolach (superuser, admin, accountant, receptionist, stylist). Codebase obejmuje soft delete, custom exceptions, transactional integrity i connection pooling. Stack: Flask 3.0, PostgreSQL, Tailwind CSS, Jinja2.
 
 ## Core Value
 
@@ -23,41 +23,35 @@ Recepcjonistka i stylistka muszą sprawnie zarządzać rezerwacjami i klientami 
 - ✓ Layout & spacing: !important elimination, base.html p-0 — v2.0
 - ✓ Color cleanup: hardcoded hex → CSS tokens/brand-* — v2.0
 - ✓ Accessibility: aria-labels, aria-live, skip-nav, retry buttons — v2.0
-
-## Current Milestone: v3.0 Functional-Improvements
-
-**Goal:** Fix known bugs, implement missing critical features, optimize performance, and harden the codebase based on concerns audit findings.
-
-**Target features:**
-- Bug fixes (audit logging, exception handling)
-- Missing critical features (soft deletes, transactional integrity)
-- Performance optimization (database indexes, query optimization)
-- Security hardening (secret key validation, explicit column selection)
-- Code robustness (custom exceptions, status enums, connection management)
+- ✓ Soft delete for invoices, clients, appointments, services — v3.0
+- ✓ Custom exception hierarchy (AppointmentConflictError, DatabaseConnectionError) — v3.0
+- ✓ AppointmentStatus enum + PostgreSQL CHECK constraint — v3.0
+- ✓ SELECT * replaced with explicit column lists in critical repos — v3.0
+- ✓ EmailService specific IMAP exception handling — v3.0
+- ✓ SECRET_KEY startup validation + environment-based DEBUG logging — v3.0
+- ✓ Database indexes on filtered columns + analytics optimization — v3.0
+- ✓ ThreadedConnectionPool with configurable health checks — v3.0
+- ✓ managed_transaction() for atomic multi-step operations — v3.0
+- ✓ Dependency audit — 6 packages updated — v3.0
 
 ### Active
 
-(Defined in REQUIREMENTS.md — v3.0 requirements)
+(No active requirements — next milestone not yet planned)
 
 ### Out of Scope
 
 - Aplikacja mobilna — web-first
 - Real-time WebSocket — polling jest wystarczający
 - Multi-tenant (wiele salonów) — single-tenant design
+- SQLAlchemy ORM migration — psycopg2 improvements sufficient for now
+- Async PDF/OCR processing (Celery) — not blocking current usage
+- Dark mode — no user demand
 
 ## Context
 
-v2.0 UI/UX Polish milestone completed (2026-03-24). UI audit improved from 17/24.
+v3.0 Functional-Improvements milestone completed (2026-04-09). Addressed codebase concerns from audit: soft deletes, exception hierarchy, database indexes, connection pooling, transactional integrity, security hardening. 15/17 requirements implemented (FIX-01/FIX-02 audit DELETE logging deferred).
 
-Current concerns (see `.planning/codebase/CONCERNS.md`):
-- Audit logging FK constraint blocks DELETE tracking
-- Broad exception handling masks real errors across routes/services
-- Missing database indexes on frequently filtered columns
-- PDF/OCR processing untested and single-threaded
-- No soft delete — hard deletes lose data permanently
-- No transactional integrity for multi-step operations (appointments)
-
-Stack: Python 3.11, Flask 3.0, PostgreSQL, Tailwind CSS 3.4, Jinja2, Alembic, Docker.
+Stack: Python 3.11, Flask 3.1.3, PostgreSQL, Tailwind CSS 3.4, Jinja2, Alembic 1.18.4, Docker.
 
 ## Constraints
 
@@ -69,9 +63,15 @@ Stack: Python 3.11, Flask 3.0, PostgreSQL, Tailwind CSS 3.4, Jinja2, Alembic, Do
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| CSS custom properties zamiast Tailwind do kolorów statusów | Status colors są semantyczne, Tailwind classes są zbyt utility-focused | ✓ Good |
-| Osobna gałąź do refaktoru hex kolorów | Izolacja zmiany, łatwy review | ✓ Good |
-| `--color-ink-muted` = #525252 zamiast #333 | Spójność z design system | ✓ Good |
+| CSS custom properties zamiast Tailwind do kolorów statusów | Status colors są semantyczne | ✓ Good |
+| base.html p-0 zamiast p-2 | Root cause fix for !important fights | ✓ Good |
+| Soft delete inline in repos, not BaseRepository refactor | Pragmatic — fewer entities, simpler | ✓ Good |
+| ServiceRepository.delete() does real soft-delete (is_deleted) not deactivation (is_active) | Consistent semantics across entities | ✓ Good |
+| Log type(e).__name__ not str(e) in connect() | IMAP errors can echo credentials | ✓ Good |
+| RuntimeError for SECRET_KEY guard, not ValueError | Startup misconfiguration is runtime problem | ✓ Good |
+| ThreadedConnectionPool with SELECT 1 health check | Dead connections discarded before use | ✓ Good |
+| safe_commit() + managed_transaction() pattern | Ambient transaction — repos don't need to know about tx scope | ✓ Good |
+| bcrypt major update deferred | Breaking API changes, needs separate investigation | — Pending |
 
 ---
-*Last updated: 2026-03-31 after v2.0 completion, starting milestone v3.0 Functional-Improvements*
+*Last updated: 2026-04-09 after v3.0 Functional-Improvements milestone*
