@@ -151,6 +151,7 @@ class EmployeeServiceRepository:
                 e.first_name,
                 e.last_name,
                 e.position,
+                e.work_schedule,
                 e.commission_rate as employee_default_commission,
                 s.price as default_price,
                 s.duration_minutes as default_duration,
