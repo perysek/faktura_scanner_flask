@@ -468,10 +468,12 @@
         }
 
         .bk-slots-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             font-size: 0.8125rem;
             color: var(--color-ink-subtle);
             padding: 1rem 0;
-            display: none;
         }
 
         /* ── Navigation Buttons ───────────────────────────────────────── */
@@ -1328,11 +1330,14 @@ async function loadSlots() {
     const emptyEl = document.getElementById('slots-empty');
     const errorEl = document.getElementById('slots-error');
 
-    loadEl.style.display = 'block';
+    loadEl.style.display = 'flex';
     gridEl.innerHTML = '';
     emptyEl.style.display = 'none';
     errorEl.style.display = 'none';
     document.getElementById('btn-next-3').disabled = true;
+
+    // Guarantee a browser paint before the network request so the spinner is visible
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
     try {
         const url = `/api/public/slots?employee_id=${state.employeeId}&date=${state.date}&duration=${state.serviceDuration}`;
@@ -1485,6 +1490,9 @@ function renderCalendar() {
 async function fetchAvailableDays() {
     calLoading = true;
     renderCalendar();
+
+    // Guarantee the loading pulse renders before the network request starts
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
     try {
         const url = `/api/public/available-days?employee_id=${state.employeeId}` +

@@ -368,27 +368,59 @@ class AppointmentBusinessService:
                              duration_minutes: int,
                              work_start: time = time(9, 0),
                              work_end: time = time(18, 0),
-                             slot_interval: int = 30) -> List[dict]:
+                             slot_interval: int = 30,
+                             booked: list = None) -> List[dict]:
         """Pobierz wolne sloty czasowe dla pracownika na dany dzień.
 
         Generuje sloty co `slot_interval` minut i sprawdza konflikty.
+
+        Args:
+            booked: Optional pre-fetched appointment rows for this day.
+                    When provided, uses in-memory conflict detection instead of
+                    per-slot DB queries — reduces N queries to 0 for bulk calls.
         """
         slots = []
         current = datetime.combine(slot_date, work_start)
         end_boundary = datetime.combine(slot_date, work_end)
 
+        # Normalise booked rows to (time, time) pairs once, outside the loop
+        booked_pairs = None
+        if booked is not None:
+            booked_pairs = []
+            for appt in booked:
+                s = appt['start_time']
+                e = appt['end_time']
+                # psycopg2 can return timedelta for TIME columns
+                if isinstance(s, timedelta):
+                    s = (datetime.min + s).time()
+                elif isinstance(s, str):
+                    s = datetime.strptime(s, '%H:%M:%S').time()
+                if isinstance(e, timedelta):
+                    e = (datetime.min + e).time()
+                elif isinstance(e, str):
+                    e = datetime.strptime(e, '%H:%M:%S').time()
+                booked_pairs.append((s, e))
+
         while current + timedelta(minutes=duration_minutes) <= end_boundary:
             slot_start = current.time()
             slot_end = (current + timedelta(minutes=duration_minutes)).time()
 
-            conflicts = self.appt_repo.check_conflicts(
-                employee_id, slot_date, slot_start, slot_end
-            )
+            if booked_pairs is not None:
+                # In-memory interval overlap: existing.start < proposed.end AND existing.end > proposed.start
+                has_conflict = any(
+                    appt_s < slot_end and appt_e > slot_start
+                    for appt_s, appt_e in booked_pairs
+                )
+            else:
+                conflicts = self.appt_repo.check_conflicts(
+                    employee_id, slot_date, slot_start, slot_end
+                )
+                has_conflict = len(conflicts) > 0
 
             slots.append({
                 'start_time': slot_start.strftime('%H:%M'),
                 'end_time': slot_end.strftime('%H:%M'),
-                'available': len(conflicts) == 0
+                'available': not has_conflict,
             })
 
             current += timedelta(minutes=slot_interval)

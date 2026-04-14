@@ -217,8 +217,12 @@ def get_available_days():
 
     Query params: employee_id, year (YYYY), month (1-12), duration (minutes)
     Skips past dates and off-days from work_schedule.
+
+    Performance: fetches all employee appointments in the month in ONE query,
+    then checks conflicts in Python memory — avoids N×M per-slot DB queries.
     """
     import calendar as _cal
+    from collections import defaultdict
     try:
         employee_id = request.args.get('employee_id', type=int)
         year        = request.args.get('year',  type=int)
@@ -231,11 +235,27 @@ def get_available_days():
             raise ValidationError('Nieprawidłowy miesiąc')
 
         from repositories.employees.employee_repository import EmployeeRepository
+        from repositories.appointments.appointment_repository import AppointmentRepository
         emp_row = EmployeeRepository().get_by_id(employee_id)
         work_schedule_json = emp_row['work_schedule'] if emp_row else None
 
         today = date.today()
         _, days_in_month = _cal.monthrange(year, month)
+
+        # Bulk fetch: ONE query for all appointments in the month
+        month_start = date(year, month, 1)
+        month_end   = date(year, month, days_in_month)
+        appt_rows = AppointmentRepository().get_appointments_in_range(
+            employee_id, month_start, month_end
+        )
+
+        # Group by ISO date string for O(1) lookup per day
+        appts_by_date = defaultdict(list)
+        for row in appt_rows:
+            d = row['appointment_date']
+            key = d.isoformat() if hasattr(d, 'isoformat') else str(d)
+            appts_by_date[key].append(row)
+
         svc = AppointmentBusinessService()
         available_dates = []
 
@@ -250,9 +270,11 @@ def get_available_days():
                 continue  # off day
 
             work_start, work_end = hours
+            day_booked = appts_by_date.get(day_date.isoformat(), [])
             slots = svc.get_available_slots(
                 employee_id, day_date, duration,
                 work_start=work_start, work_end=work_end,
+                booked=day_booked,  # in-memory conflict check — no extra DB queries
             )
             if any(s['available'] for s in slots):
                 available_dates.append(day_date.isoformat())
