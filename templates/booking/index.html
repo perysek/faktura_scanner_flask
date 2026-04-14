@@ -612,6 +612,144 @@
             line-height: 1.6;
         }
 
+        /* ── Monthly Calendar ────────────────────────────────────────── */
+        .bk-calendar {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            user-select: none;
+            max-width: 480px;
+        }
+
+        .bk-cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .bk-cal-month {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .bk-cal-nav {
+            background: none;
+            border: 1.5px solid var(--color-border);
+            border-radius: 3px;
+            width: 2rem;
+            height: 2rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--color-ink-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.15s ease;
+        }
+
+        .bk-cal-nav:hover:not(:disabled) {
+            border-color: var(--color-ink);
+            color: var(--color-ink);
+        }
+
+        .bk-cal-nav:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .bk-cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            margin-bottom: 0.375rem;
+        }
+
+        .bk-cal-wday {
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--color-ink-subtle);
+            padding: 0.25rem 0;
+        }
+
+        .bk-cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+
+        .bk-cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            border: 1.5px solid transparent;
+            color: var(--color-border);      /* default: unavailable */
+            cursor: default;
+        }
+
+        .bk-cal-day.past {
+            color: var(--color-border);
+        }
+
+        .bk-cal-day.avail {
+            cursor: pointer;
+            color: var(--color-ink);
+            border-color: var(--color-border);
+            background: white;
+            font-weight: 500;
+            transition: border-color 0.12s ease, background 0.12s ease;
+        }
+
+        .bk-cal-day.avail:hover {
+            border-color: var(--color-ink-muted);
+            background: var(--color-surface-warm);
+        }
+
+        .bk-cal-day.avail.today {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+            font-weight: 700;
+        }
+
+        .bk-cal-day.avail.selected {
+            background: var(--color-ink);
+            border-color: var(--color-ink);
+            color: white;
+            font-weight: 600;
+        }
+
+        .bk-cal-day.avail.today.selected {
+            background: var(--color-accent);
+            border-color: var(--color-accent);
+        }
+
+        .bk-cal-loading .bk-cal-day {
+            color: var(--color-border);
+            animation: calPulse 1.2s ease infinite;
+        }
+
+        @keyframes calPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.9; }
+        }
+
+        .bk-slots-header {
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--color-ink-subtle);
+            margin-bottom: 0.625rem;
+        }
+
         /* ── Loading Spinner ──────────────────────────────────────────── */
         .bk-spinner {
             display: inline-block;
@@ -736,19 +874,16 @@
         </div>
     </div>
 
-    <!-- ── Step 2: Choose Specialist & Date ───────────────────────────── -->
+    <!-- ── Step 2: Choose Specialist ─────────────────────────────────── -->
     <div class="bk-step-panel" id="panel-2">
-        <h2 class="bk-step-title">Wybierz specjalistę i datę</h2>
-        <p class="bk-step-sub">Kto ma wykonać usługę i kiedy?</p>
+        <h2 class="bk-step-title">Wybierz specjalistę</h2>
+        <p class="bk-step-sub">Kto ma wykonać wybraną usługę?</p>
 
         <div id="emp-loading" style="padding:1.5rem 0; color:var(--color-ink-subtle); font-size:0.85rem; display:none;">
             <span class="bk-spinner dark"></span> Wczytywanie specjalistów…
         </div>
         <div id="emp-error" class="bk-error-banner">Nie udało się wczytać specjalistów.</div>
         <div id="emp-list" class="bk-emp-grid"></div>
-
-        <label class="bk-field-label" style="margin-top:1.25rem;">Wybierz datę</label>
-        <input type="date" id="bk-date" class="bk-input" style="max-width:220px;" />
 
         <div class="bk-nav">
             <button class="bk-btn bk-btn-ghost" onclick="goToStep(1)">← Wstecz</button>
@@ -758,19 +893,40 @@
         </div>
     </div>
 
-    <!-- ── Step 3: Choose Time Slot ───────────────────────────────────── -->
+    <!-- ── Step 3: Calendar + Time Slots ─────────────────────────────── -->
     <div class="bk-step-panel" id="panel-3">
-        <h2 class="bk-step-title">Wybierz godzinę</h2>
-        <p class="bk-step-sub">Dostępne terminy na wybrany dzień</p>
+        <h2 class="bk-step-title">Wybierz termin</h2>
+        <p class="bk-step-sub">Kliknij dostępny dzień, aby zobaczyć wolne godziny</p>
 
-        <div class="bk-slots-loading" id="slots-loading">
-            <span class="bk-spinner dark"></span> Sprawdzanie dostępności…
+        <!-- Monthly calendar -->
+        <div class="bk-calendar" id="bk-calendar">
+            <div class="bk-cal-header">
+                <button class="bk-cal-nav" id="cal-prev" onclick="prevCalMonth()" title="Poprzedni miesiąc">&#8592;</button>
+                <span class="bk-cal-month" id="cal-month-label">…</span>
+                <button class="bk-cal-nav" id="cal-next" onclick="nextCalMonth()" title="Następny miesiąc">&#8594;</button>
+            </div>
+            <div class="bk-cal-weekdays">
+                <div class="bk-cal-wday">Pn</div>
+                <div class="bk-cal-wday">Wt</div>
+                <div class="bk-cal-wday">Śr</div>
+                <div class="bk-cal-wday">Cz</div>
+                <div class="bk-cal-wday">Pt</div>
+                <div class="bk-cal-wday">So</div>
+                <div class="bk-cal-wday">Nd</div>
+            </div>
+            <div class="bk-cal-grid" id="cal-grid"></div>
         </div>
-        <div id="slots-error" class="bk-error-banner">Nie udało się wczytać terminów.</div>
-        <div id="slots-work-hours" style="display:none; font-size:0.75rem; color:var(--color-ink-subtle); margin-bottom:0.875rem;"></div>
-        <div class="bk-slots-grid" id="slots-grid"></div>
-        <div class="bk-slots-empty" id="slots-empty" style="display:none;">
-            Brak wolnych terminów w tym dniu. Wybierz inną datę lub specjalistę.
+
+        <!-- Time slots — revealed after day selection -->
+        <div id="slots-section" style="display:none;">
+            <div class="bk-slots-header" id="slots-day-label"></div>
+            <div class="bk-slots-loading" id="slots-loading" style="display:none;">
+                <span class="bk-spinner dark"></span> Sprawdzanie dostępności…
+            </div>
+            <div id="slots-error" class="bk-error-banner"></div>
+            <div id="slots-work-hours" style="display:none; font-size:0.75rem; color:var(--color-ink-subtle); margin-bottom:0.75rem;"></div>
+            <div class="bk-slots-grid" id="slots-grid"></div>
+            <div class="bk-slots-empty" id="slots-empty" style="display:none;"></div>
         </div>
 
         <div class="bk-nav">
@@ -924,7 +1080,7 @@ function goToStep(n) {
 
     // Load data when entering a step
     if (n === 2 && state.serviceId) loadEmployees();
-    if (n === 3 && state.employeeId && state.date) loadSlots();
+    if (n === 3 && state.employeeId) initCalendar();
 }
 
 // ── Summary strip ─────────────────────────────────────────────────────────
@@ -1147,42 +1303,7 @@ function selectEmployee(id, name, duration) {
 }
 
 function checkStep2() {
-    const dateOk = !!(state.employeeId && state.date);
-    const offDay = dateOk && !isEmployeeAvailable(state.employeeId, state.date);
-    document.getElementById('btn-next-2').disabled = !dateOk || offDay;
-    showOffDayWarning(offDay);
-}
-
-function isEmployeeAvailable(empId, dateStr) {
-    if (!empId || !dateStr) return true;
-    const sched = empSchedule[empId];
-    if (!sched || !sched.available_days.length) return true; // no schedule = assume available
-    // Parse date as local time (no UTC shift)
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dt = new Date(y, m - 1, d);
-    const dayKey = ['mon','tue','wed','thu','fri','sat','sun'][dt.getDay() === 0 ? 6 : dt.getDay() - 1];
-    return sched.available_days.includes(dayKey);
-}
-
-function showOffDayWarning(show) {
-    let warn = document.getElementById('offday-warn');
-    if (!warn) {
-        warn = document.createElement('div');
-        warn.id = 'offday-warn';
-        warn.style.cssText = `
-            margin-top: 0.75rem;
-            padding: 0.625rem 1rem;
-            background: var(--color-status-in-progress-bg);
-            border: 1px solid rgba(217, 119, 6, 0.25);
-            border-radius: 4px;
-            font-size: 0.8rem;
-            color: var(--color-warning);
-            display: none;
-        `;
-        warn.textContent = 'Ten specjalista nie pracuje w wybranym dniu. Wybierz inną datę.';
-        document.getElementById('bk-date').parentElement.appendChild(warn);
-    }
-    warn.style.display = show ? 'block' : 'none';
+    document.getElementById('btn-next-2').disabled = !state.employeeId;
 }
 
 // Format available days into a compact label, e.g. "pon – pt" or "pon, śr, pt"
@@ -1275,23 +1396,139 @@ function selectSlot(startTime, endTime) {
     updateSummary();
 }
 
-// ── Date picker event ─────────────────────────────────────────────────────
-document.getElementById('bk-date').addEventListener('change', function() {
-    state.date = this.value;
+// ── Monthly Calendar ──────────────────────────────────────────────────────
+const MONTHS_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+                   'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+let calYear  = 0;
+let calMonth = 0;          // 0-indexed
+let calAvailable = new Set(); // ISO date strings with available slots
+let calLoading = false;
+
+function initCalendar() {
+    const now = new Date();
+    calYear  = now.getFullYear();
+    calMonth = now.getMonth();
+    calAvailable = new Set();
+    state.date = '';
     state.startTime = '';
     state.endTime = '';
-    updateSummary();
-    checkStep2();
-});
+    document.getElementById('slots-section').style.display = 'none';
+    document.getElementById('btn-next-3').disabled = true;
+    renderCalendar();
+    fetchAvailableDays();
+}
 
-// Set minimum date to today
-(function setMinDate() {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    document.getElementById('bk-date').min = `${yyyy}-${mm}-${dd}`;
-})();
+function prevCalMonth() {
+    const now = new Date();
+    if (calYear === now.getFullYear() && calMonth === now.getMonth()) return;
+    calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+    calAvailable = new Set();
+    state.date = ''; state.startTime = ''; state.endTime = '';
+    document.getElementById('slots-section').style.display = 'none';
+    document.getElementById('btn-next-3').disabled = true;
+    renderCalendar();
+    fetchAvailableDays();
+}
+
+function nextCalMonth() {
+    calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+    calAvailable = new Set();
+    state.date = ''; state.startTime = ''; state.endTime = '';
+    document.getElementById('slots-section').style.display = 'none';
+    document.getElementById('btn-next-3').disabled = true;
+    renderCalendar();
+    fetchAvailableDays();
+}
+
+function renderCalendar() {
+    document.getElementById('cal-month-label').textContent =
+        `${MONTHS_PL[calMonth]} ${calYear}`;
+
+    // Disable prev-month button when on current month
+    const now = new Date();
+    document.getElementById('cal-prev').disabled =
+        calYear === now.getFullYear() && calMonth === now.getMonth();
+
+    const todayStr = isoToday();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    // Monday-first offset (getDay: 0=Sun → offset 6, 1=Mon → 0, …)
+    const rawFirst = new Date(calYear, calMonth, 1).getDay();
+    const offset   = rawFirst === 0 ? 6 : rawFirst - 1;
+
+    let html = '';
+    for (let i = 0; i < offset; i++) html += '<div class="bk-cal-day"></div>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const ds = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+        const past  = ds < todayStr;
+        const today = ds === todayStr;
+        const sel   = ds === state.date;
+        const avail = !calLoading && calAvailable.has(ds);
+
+        if (avail) {
+            let cls = 'bk-cal-day avail';
+            if (today) cls += ' today';
+            if (sel)   cls += ' selected';
+            html += `<div class="${cls}" onclick="selectCalDay('${ds}')">${d}</div>`;
+        } else {
+            const cls = 'bk-cal-day' + (past ? ' past' : '');
+            html += `<div class="${cls}">${d}</div>`;
+        }
+    }
+
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = html;
+    grid.parentElement.classList.toggle('bk-cal-loading', calLoading);
+}
+
+async function fetchAvailableDays() {
+    calLoading = true;
+    renderCalendar();
+
+    try {
+        const url = `/api/public/available-days?employee_id=${state.employeeId}` +
+                    `&year=${calYear}&month=${calMonth + 1}&duration=${state.serviceDuration}`;
+        const res  = await fetch(url);
+        const data = await res.json();
+        calAvailable = new Set(data.available_dates || []);
+    } catch (_) {
+        calAvailable = new Set();
+    }
+
+    calLoading = false;
+    renderCalendar();
+}
+
+async function selectCalDay(dateStr) {
+    if (!calAvailable.has(dateStr)) return;
+
+    state.date     = dateStr;
+    state.startTime = '';
+    state.endTime   = '';
+    updateSummary();
+    renderCalendar(); // highlight selected day
+
+    // Show slots section with loading state
+    const section = document.getElementById('slots-section');
+    section.style.display = 'block';
+    document.getElementById('slots-day-label').textContent =
+        formatDateDisplay(dateStr).charAt(0).toUpperCase() + formatDateDisplay(dateStr).slice(1);
+    document.getElementById('slots-grid').innerHTML = '';
+    document.getElementById('slots-empty').style.display = 'none';
+    document.getElementById('btn-next-3').disabled = true;
+
+    await loadSlots();
+    // Smooth scroll to slots
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function isoToday() {
+    const n = new Date();
+    return `${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
 
 // ── Submit Booking ────────────────────────────────────────────────────────
 async function submitBooking() {

@@ -211,6 +211,60 @@ def get_public_employees():
         return jsonify({'success': False, 'error': 'Nie można wczytać pracowników'}), 500
 
 
+@booking_bp.route('/api/public/available-days', methods=['GET'])
+def get_available_days():
+    """Return ISO date strings in a given month that have at least one available slot.
+
+    Query params: employee_id, year (YYYY), month (1-12), duration (minutes)
+    Skips past dates and off-days from work_schedule.
+    """
+    import calendar as _cal
+    try:
+        employee_id = request.args.get('employee_id', type=int)
+        year        = request.args.get('year',  type=int)
+        month       = request.args.get('month', type=int)
+        duration    = request.args.get('duration', 60, type=int)
+
+        if not employee_id or not year or not month:
+            raise ValidationError('Wymagane: employee_id, year, month')
+        if not (1 <= month <= 12):
+            raise ValidationError('Nieprawidłowy miesiąc')
+
+        from repositories.employees.employee_repository import EmployeeRepository
+        emp_row = EmployeeRepository().get_by_id(employee_id)
+        work_schedule_json = emp_row['work_schedule'] if emp_row else None
+
+        today = date.today()
+        _, days_in_month = _cal.monthrange(year, month)
+        svc = AppointmentBusinessService()
+        available_dates = []
+
+        for day_num in range(1, days_in_month + 1):
+            day_date = date(year, month, day_num)
+            if day_date < today:
+                continue
+
+            day_key = _WEEKDAY_KEYS[day_date.weekday()]
+            hours = _work_hours_for_day(work_schedule_json, day_key)
+            if hours is None:
+                continue  # off day
+
+            work_start, work_end = hours
+            slots = svc.get_available_slots(
+                employee_id, day_date, duration,
+                work_start=work_start, work_end=work_end,
+            )
+            if any(s['available'] for s in slots):
+                available_dates.append(day_date.isoformat())
+
+        return jsonify({'success': True, 'available_dates': available_dates})
+    except AppError:
+        raise
+    except Exception:
+        logger.exception('Error fetching available days')
+        return jsonify({'success': False, 'error': 'Nie można wczytać kalendarza'}), 500
+
+
 @booking_bp.route('/api/public/slots', methods=['GET'])
 def get_public_slots():
     """Return available time slots for a given employee on a given date.
