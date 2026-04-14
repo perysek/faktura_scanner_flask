@@ -12,6 +12,7 @@ from exceptions import AppError, ValidationError
 from repositories.services.service_repository import ServiceRepository
 from repositories.employees.employee_service_repository import EmployeeServiceRepository
 from repositories.clients.client_repository import ClientRepository
+from repositories.audit_repository import AuditRepository
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from database.models import Client
 
@@ -421,6 +422,19 @@ def create_public_booking():
             created_by=None,  # Public booking — no logged-in user
         )
 
+        # ── Audit: appointment created via online booking ──────────────
+        try:
+            AuditRepository().log_event(
+                entity_type='appointment',
+                action='CREATE',
+                entity_id=result['appointment_id'],
+                entity_label=f"{data['date']} {data['start_time']}",
+                user_id=None,
+                user_name='Rezerwacja online',
+            )
+        except Exception:
+            logger.exception('Failed to log appointment creation from online booking')
+
         return jsonify({
             'success': True,
             'appointment_id': result['appointment_id'],
@@ -445,4 +459,20 @@ def _create_guest_client(client_repo: ClientRepository, data: dict) -> int:
         email=(data.get('email') or '').strip() or None,
         is_active=True,
     )
-    return client_repo.create(client)
+    client_id = client_repo.create(client)
+
+    # Audit: new client created via online booking
+    try:
+        name = f"{data['first_name'].strip()} {data['last_name'].strip()}"
+        AuditRepository().log_event(
+            entity_type='client',
+            action='CREATE',
+            entity_id=client_id,
+            entity_label=name,
+            user_id=None,
+            user_name='Rezerwacja online',
+        )
+    except Exception:
+        logger.exception('Failed to log client creation from online booking')
+
+    return client_id
