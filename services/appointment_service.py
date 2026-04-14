@@ -175,11 +175,25 @@ class AppointmentBusinessService:
             if new_status == AppointmentStatus.IN_PROGRESS:
                 # Block if appointment starts more than 30 minutes from now
                 if now < start_dt - window:
-                    mins_until = int((start_dt - now).total_seconds() / 60)
-                    raise AppointmentError(
-                        f"Za wcześnie na rozpoczęcie wizyty — start za {mins_until} min. "
-                        f"Zmiana statusu możliwa od {(start_dt - window).strftime('%H:%M')}."
-                    )
+                    diff      = start_dt - now
+                    earliest  = start_dt - window
+                    if now.date() < appt_date:
+                        # Cross-day: express in hours, include the visit date
+                        hours_until = max(1, int(diff.total_seconds() / 3600))
+                        raise AppointmentError(
+                            f"Za wcześnie na rozpoczęcie wizyty "
+                            f"z dnia {start_dt.strftime('%d.%m.%Y')}. "
+                            f"Do startu pozostało ok. {hours_until} godz. "
+                            f"Zmiana statusu możliwa od "
+                            f"{earliest.strftime('%d.%m.%Y %H:%M')}."
+                        )
+                    else:
+                        # Same day: express in minutes
+                        mins_until = int(diff.total_seconds() / 60)
+                        raise AppointmentError(
+                            f"Za wcześnie na rozpoczęcie wizyty — start za {mins_until} min. "
+                            f"Zmiana statusu możliwa od {earliest.strftime('%H:%M')}."
+                        )
 
             elif new_status == AppointmentStatus.COMPLETED:
                 # Block if now is more than 30 minutes away from the scheduled end
