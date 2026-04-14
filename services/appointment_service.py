@@ -129,6 +129,12 @@ class AppointmentBusinessService:
         """Zmień status wizyty z walidacją przepływu.
 
         Raises: AppointmentError jeśli przejście jest niedozwolone.
+
+        Time-window rules:
+        - in_progress: allowed only when now >= start_datetime - 30 min
+                       (appointment is starting within 30 min or already started)
+        - completed:   allowed only when |now - end_datetime| <= 30 min
+                       (within 30 minutes either side of the scheduled end)
         """
         row = self.appt_repo.get_by_id(appointment_id)
         if not row:
@@ -142,6 +148,47 @@ class AppointmentBusinessService:
                 f"Nie można zmienić statusu z '{current_status}' na '{new_status}'. "
                 f"Dozwolone: {', '.join(sorted(allowed)) if allowed else 'brak'}"
             )
+
+        # ── Time-window guard for in_progress / completed ─────────────────────
+        if new_status in (AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED):
+            appt_date = row['appointment_date']
+            start_t   = row['start_time']
+            end_t     = row['end_time']
+
+            # Normalise: psycopg2 may return date/time as objects, timedelta, or str
+            if isinstance(appt_date, str):
+                appt_date = datetime.strptime(appt_date, '%Y-%m-%d').date()
+            if isinstance(start_t, timedelta):
+                start_t = (datetime.min + start_t).time()
+            elif isinstance(start_t, str):
+                start_t = datetime.strptime(start_t, '%H:%M:%S').time()
+            if isinstance(end_t, timedelta):
+                end_t = (datetime.min + end_t).time()
+            elif isinstance(end_t, str):
+                end_t = datetime.strptime(end_t, '%H:%M:%S').time()
+
+            now      = datetime.now()
+            start_dt = datetime.combine(appt_date, start_t)
+            end_dt   = datetime.combine(appt_date, end_t)
+            window   = timedelta(minutes=30)
+
+            if new_status == AppointmentStatus.IN_PROGRESS:
+                # Block if appointment starts more than 30 minutes from now
+                if now < start_dt - window:
+                    mins_until = int((start_dt - now).total_seconds() / 60)
+                    raise AppointmentError(
+                        f"Za wcześnie na rozpoczęcie wizyty — start za {mins_until} min. "
+                        f"Zmiana statusu możliwa od {(start_dt - window).strftime('%H:%M')}."
+                    )
+
+            elif new_status == AppointmentStatus.COMPLETED:
+                # Block if now is more than 30 minutes away from the scheduled end
+                if abs(now - end_dt) > window:
+                    raise AppointmentError(
+                        f"Zakończenie wizyty możliwe tylko w ciągu 30 min od "
+                        f"planowanego końca ({end_dt.strftime('%H:%M')}). "
+                        f"Aktualna godzina: {now.strftime('%H:%M')}."
+                    )
 
         return self.appt_repo.update_status(
             appointment_id, new_status, cancellation_reason
