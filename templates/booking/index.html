@@ -1000,7 +1000,10 @@ async function loadServices() {
             html += '<div class="bk-cards-grid">';
             for (const svc of svcs) {
                 html += `
-                <div class="bk-card" id="svc-${svc.id}" onclick="selectService(${svc.id}, ${JSON.stringify(svc.name)}, ${svc.price}, ${svc.duration_minutes})">
+                <div class="bk-card" id="svc-${svc.id}"
+                     data-id="${svc.id}" data-name="${escHtml(svc.name)}"
+                     data-price="${svc.price}" data-duration="${svc.duration_minutes}"
+                     onclick="selectServiceCard(this)">
                     <div class="bk-card-name">${escHtml(svc.name)}</div>
                     ${svc.description ? `<div class="bk-card-desc">${escHtml(svc.description)}</div>` : ''}
                     <div class="bk-card-meta">
@@ -1017,6 +1020,25 @@ async function loadServices() {
         loadingEl.style.display = 'none';
         errorEl.style.display = 'block';
     }
+}
+
+function selectServiceCard(el) {
+    selectService(
+        parseInt(el.dataset.id),
+        el.dataset.name,
+        parseFloat(el.dataset.price),
+        parseInt(el.dataset.duration)
+    );
+}
+
+function selectEmployeeCard(el) {
+    // Walk up to the card root in case a child element was clicked
+    const card = el.closest('[data-id]') || el;
+    selectEmployee(
+        parseInt(card.dataset.id),
+        card.dataset.name,
+        parseInt(card.dataset.duration)
+    );
 }
 
 function selectService(id, name, price, duration) {
@@ -1080,7 +1102,9 @@ async function loadEmployees() {
             html += `
             <div class="bk-emp-card ${isSelected ? 'selected' : ''}"
                  id="emp-${emp.id}"
-                 onclick="selectEmployee(${emp.id}, ${JSON.stringify(emp.name)}, ${emp.effective_duration})">
+                 data-id="${emp.id}" data-name="${escHtml(emp.name)}"
+                 data-duration="${emp.effective_duration}"
+                 onclick="selectEmployeeCard(this)">
                 <div class="bk-emp-avatar">${escHtml(initials)}</div>
                 <div class="bk-emp-name">${escHtml(emp.name)}</div>
                 <div class="bk-emp-position">${escHtml(emp.position || '')}</div>
