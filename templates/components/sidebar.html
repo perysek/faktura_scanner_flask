@@ -180,7 +180,7 @@
      aria-hidden="true"></div>
 
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     var nav = document.querySelector('.sidebar-nav');
     if (!nav) return;
     var sections = nav.querySelectorAll('.sidebar-section');
@@ -293,5 +293,5 @@
             closeMobileSidebar();
         }
     });
-})();
+});
 </script>
