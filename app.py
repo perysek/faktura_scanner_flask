@@ -157,6 +157,7 @@ def create_app():
     from routes.analytics_routes import analytics_bp
     from routes.users.routes import users_bp
     from routes.roles.routes import roles_bp
+    from routes.booking_routes import booking_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -170,6 +171,7 @@ def create_app():
     app.register_blueprint(analytics_bp, url_prefix='/api')
     app.register_blueprint(users_bp)
     app.register_blueprint(roles_bp)
+    app.register_blueprint(booking_bp)
 
     # Error handlers
     from exceptions import AppError

@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezerwacja wizyty — {{ app_name }}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── Base ─────────────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: var(--color-surface-warm);
+            font-family: var(--font-body);
+            color: var(--color-ink);
+            margin: 0;
+        }
+
+        /* ── Header ──────────────────────────────────────────────────── */
+        .bk-header {
+            background: white;
+            border-bottom: 1px solid var(--color-border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .bk-logo {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--color-ink);
+        }
+
+        .bk-logo span {
+            color: var(--color-accent);
+        }
+
+        .bk-header-sub {
+            font-size: 0.75rem;
+            color: var(--color-ink-subtle);
+            font-weight: 300;
+        }
+
+        /* ── Progress Bar ────────────────────────────────────────────── */
+        .bk-progress {
+            background: white;
+            border-bottom: 1px solid var(--color-border);
+            padding: 0.75rem 1.5rem;
+        }
+
+        .bk-steps {
+            display: flex;
+            align-items: center;
+            max-width: 720px;
+            margin: 0 auto;
+            gap: 0;
+        }
+
+        .bk-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            position: relative;
+        }
+
+        .bk-step-num {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 50%;
+            border: 1.5px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--color-ink-subtle);
+            background: white;
+            flex-shrink: 0;
+            transition: all 0.25s ease;
+        }
+
+        .bk-step-label {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--color-ink-subtle);
+            white-space: nowrap;
+            transition: color 0.25s ease;
+        }
+
+        .bk-step-connector {
+            flex: 1;
+            height: 1px;
+            background: var(--color-border);
+            margin: 0 0.5rem;
+            transition: background 0.25s ease;
+        }
+
+        .bk-step.active .bk-step-num {
+            background: var(--color-ink);
+            border-color: var(--color-ink);
+            color: white;
+        }
+
+        .bk-step.active .bk-step-label {
+            color: var(--color-ink);
+        }
+
+        .bk-step.done .bk-step-num {
+            background: var(--color-accent);
+            border-color: var(--color-accent);
+            color: white;
+        }
+
+        .bk-step.done + .bk-step-connector,
+        .bk-step-connector.done {
+            background: var(--color-accent);
+        }
+
+        @media (max-width: 500px) {
+            .bk-step-label { display: none; }
+        }
+
+        /* ── Main Content ─────────────────────────────────────────────── */
+        .bk-main {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 2rem 1rem 4rem;
+        }
+
+        /* ── Selection Summary Strip ─────────────────────────────────── */
+        .bk-summary-strip {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            display: none;
+        }
+
+        .bk-summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.8rem;
+        }
+
+        .bk-summary-label {
+            font-size: 0.68rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--color-ink-subtle);
+        }
+
+        .bk-summary-value {
+            font-weight: 500;
+            color: var(--color-ink);
+        }
+
+        .bk-summary-sep {
+            color: var(--color-border);
+        }
+
+        /* ── Step Panels ──────────────────────────────────────────────── */
+        .bk-step-panel {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .bk-step-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .bk-step-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin: 0 0 0.25rem;
+        }
+
+        .bk-step-sub {
+            font-size: 0.8125rem;
+            color: var(--color-ink-subtle);
+            font-weight: 300;
+            margin: 0 0 1.5rem;
+        }
+
+        /* ── Service Cards ────────────────────────────────────────────── */
+        .bk-category-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-ink-subtle);
+            margin: 1.5rem 0 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-border-subtle);
+        }
+
+        .bk-category-title:first-child {
+            margin-top: 0;
+        }
+
+        .bk-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .bk-card {
+            background: white;
+            border: 1.5px solid var(--color-border);
+            border-radius: 4px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out-expo);
+            position: relative;
+            user-select: none;
+        }
+
+        .bk-card:hover {
+            border-color: var(--color-ink-muted);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+
+        .bk-card.selected {
+            border-color: var(--color-accent);
+            background: rgba(201, 162, 39, 0.03);
+        }
+
+        .bk-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            background: var(--color-accent);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.65rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.25rem;
+            text-align: center;
+        }
+
+        .bk-card-name {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin: 0 0 0.25rem;
+            padding-right: 1.5rem;
+        }
+
+        .bk-card-desc {
+            font-size: 0.78rem;
+            color: var(--color-ink-subtle);
+            font-weight: 300;
+            margin: 0 0 0.875rem;
+            line-height: 1.5;
+        }
+
+        .bk-card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .bk-card-price {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--color-ink);
+        }
+
+        .bk-card-duration {
+            font-size: 0.75rem;
+            color: var(--color-ink-subtle);
+            background: var(--color-surface-warm);
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+        }
+
+        /* ── Employee Cards ───────────────────────────────────────────── */
+        .bk-emp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .bk-emp-card {
+            background: white;
+            border: 1.5px solid var(--color-border);
+            border-radius: 4px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out-expo);
+            text-align: center;
+            user-select: none;
+            position: relative;
+        }
+
+        .bk-emp-card:hover {
+            border-color: var(--color-ink-muted);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .bk-emp-card.selected {
+            border-color: var(--color-accent);
+            background: rgba(201, 162, 39, 0.03);
+        }
+
+        .bk-emp-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 1.1rem;
+            height: 1.1rem;
+            background: var(--color-accent);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.6rem;
+            font-weight: 700;
+            line-height: 1.1rem;
+            text-align: center;
+        }
+
+        .bk-emp-avatar {
+            width: 3rem;
+            height: 3rem;
+            background: var(--color-surface-warm);
+            border-radius: 50%;
+            margin: 0 auto 0.625rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--color-ink-subtle);
+            border: 1px solid var(--color-border);
+        }
+
+        .bk-emp-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0 0 0.2rem;
+        }
+
+        .bk-emp-position {
+            font-size: 0.72rem;
+            color: var(--color-ink-subtle);
+            font-weight: 300;
+            margin: 0;
+        }
+
+        /* ── Date & Slots ─────────────────────────────────────────────── */
+        .bk-row-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 560px) {
+            .bk-row-2col { grid-template-columns: 1fr; }
+        }
+
+        .bk-field-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--color-ink-subtle);
+            margin-bottom: 0.5rem;
+        }
+
+        .bk-input {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            font-family: var(--font-body);
+            font-size: 0.8125rem;
+            font-weight: 400;
+            color: var(--color-ink);
+            background: white;
+            border: 1.5px solid var(--color-border);
+            border-radius: 4px;
+            transition: border-color 0.2s ease;
+            appearance: none;
+        }
+
+        .bk-input:focus {
+            outline: none;
+            border-color: var(--color-ink-muted);
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.05);
+        }
+
+        .bk-input.error {
+            border-color: var(--color-error);
+        }
+
+        .bk-field-error {
+            font-size: 0.72rem;
+            color: var(--color-error);
+            margin-top: 0.3rem;
+            display: none;
+        }
+
+        /* ── Slots ────────────────────────────────────────────────────── */
+        .bk-slots-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .bk-slot {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1.5px solid var(--color-border);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .bk-slot:hover {
+            border-color: var(--color-ink-muted);
+            background: var(--color-surface-warm);
+        }
+
+        .bk-slot.selected {
+            background: var(--color-ink);
+            border-color: var(--color-ink);
+            color: white;
+        }
+
+        .bk-slots-empty {
+            font-size: 0.8125rem;
+            color: var(--color-ink-subtle);
+            padding: 1rem 0;
+        }
+
+        .bk-slots-loading {
+            font-size: 0.8125rem;
+            color: var(--color-ink-subtle);
+            padding: 1rem 0;
+            display: none;
+        }
+
+        /* ── Navigation Buttons ───────────────────────────────────────── */
+        .bk-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border-subtle);
+        }
+
+        .bk-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.5rem;
+            font-family: var(--font-body);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .bk-btn-primary {
+            background: var(--color-ink);
+            color: white;
+        }
+
+        .bk-btn-primary:hover:not(:disabled) {
+            background: var(--color-ink-muted);
+        }
+
+        .bk-btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .bk-btn-ghost {
+            background: transparent;
+            color: var(--color-ink-subtle);
+            border: 1.5px solid var(--color-border);
+        }
+
+        .bk-btn-ghost:hover {
+            border-color: var(--color-ink-muted);
+            color: var(--color-ink);
+        }
+
+        .bk-btn-accent {
+            background: var(--color-accent);
+            color: white;
+            font-size: 0.875rem;
+            padding: 0.75rem 2rem;
+        }
+
+        .bk-btn-accent:hover:not(:disabled) {
+            background: #b8911f;
+        }
+
+        .bk-btn-accent:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* ── Confirmation ─────────────────────────────────────────────── */
+        .bk-confirm-icon {
+            width: 4rem;
+            height: 4rem;
+            background: rgba(45, 106, 79, 0.08);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            font-size: 1.75rem;
+        }
+
+        .bk-confirm-card {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+            text-align: center;
+        }
+
+        .bk-confirm-title {
+            font-size: 1.375rem;
+            font-weight: 600;
+            margin: 0 0 0.375rem;
+        }
+
+        .bk-confirm-sub {
+            font-size: 0.8125rem;
+            color: var(--color-ink-subtle);
+            font-weight: 300;
+            margin: 0 0 2rem;
+            line-height: 1.6;
+        }
+
+        .bk-confirm-details {
+            background: var(--color-surface-warm);
+            border-radius: 4px;
+            padding: 1.25rem;
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+
+        .bk-confirm-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.8125rem;
+            padding: 0.35rem 0;
+        }
+
+        .bk-confirm-row + .bk-confirm-row {
+            border-top: 1px solid var(--color-border-subtle);
+        }
+
+        .bk-confirm-row-label {
+            color: var(--color-ink-subtle);
+            font-size: 0.75rem;
+        }
+
+        .bk-confirm-row-value {
+            font-weight: 500;
+        }
+
+        .bk-confirm-note {
+            font-size: 0.75rem;
+            color: var(--color-ink-subtle);
+            line-height: 1.6;
+        }
+
+        /* ── Loading Spinner ──────────────────────────────────────────── */
+        .bk-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .bk-spinner.dark {
+            border-color: rgba(26,26,26,0.15);
+            border-top-color: var(--color-ink);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Error Banner ─────────────────────────────────────────────── */
+        .bk-error-banner {
+            background: var(--color-status-cancelled-bg);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            border-radius: 4px;
+            padding: 0.875rem 1.25rem;
+            font-size: 0.8125rem;
+            color: var(--color-error);
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        /* ── Info Box ─────────────────────────────────────────────────── */
+        .bk-info-box {
+            background: var(--color-info-bg);
+            border: 1px solid var(--color-info-border);
+            border-radius: 4px;
+            padding: 0.875rem 1.25rem;
+            font-size: 0.8rem;
+            color: var(--color-info-text);
+            margin-bottom: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────────────────── -->
+<header class="bk-header">
+    <div>
+        <div class="bk-logo">MyWay <span>Beauty Salon</span></div>
+        <div class="bk-header-sub">Rezerwacja online</div>
+    </div>
+</header>
+
+<!-- ── Progress ──────────────────────────────────────────────────────────── -->
+<div class="bk-progress">
+    <div class="bk-steps">
+        <div class="bk-step active" id="prog-1">
+            <div class="bk-step-num">1</div>
+            <div class="bk-step-label">Usługa</div>
+        </div>
+        <div class="bk-step-connector" id="conn-1"></div>
+        <div class="bk-step" id="prog-2">
+            <div class="bk-step-num">2</div>
+            <div class="bk-step-label">Specjalista</div>
+        </div>
+        <div class="bk-step-connector" id="conn-2"></div>
+        <div class="bk-step" id="prog-3">
+            <div class="bk-step-num">3</div>
+            <div class="bk-step-label">Termin</div>
+        </div>
+        <div class="bk-step-connector" id="conn-3"></div>
+        <div class="bk-step" id="prog-4">
+            <div class="bk-step-num">4</div>
+            <div class="bk-step-label">Dane</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<main class="bk-main">
+
+    <!-- Summary strip -->
+    <div class="bk-summary-strip" id="summary-strip">
+        <div class="bk-summary-item" id="sum-service" style="display:none;">
+            <span class="bk-summary-label">Usługa</span>
+            <span class="bk-summary-value" id="sum-service-val">—</span>
+        </div>
+        <span class="bk-summary-sep" id="sum-sep-1" style="display:none;">·</span>
+        <div class="bk-summary-item" id="sum-emp" style="display:none;">
+            <span class="bk-summary-label">Specjalista</span>
+            <span class="bk-summary-value" id="sum-emp-val">—</span>
+        </div>
+        <span class="bk-summary-sep" id="sum-sep-2" style="display:none;">·</span>
+        <div class="bk-summary-item" id="sum-date" style="display:none;">
+            <span class="bk-summary-label">Data</span>
+            <span class="bk-summary-value" id="sum-date-val">—</span>
+        </div>
+        <span class="bk-summary-sep" id="sum-sep-3" style="display:none;">·</span>
+        <div class="bk-summary-item" id="sum-time" style="display:none;">
+            <span class="bk-summary-label">Godzina</span>
+            <span class="bk-summary-value" id="sum-time-val">—</span>
+        </div>
+    </div>
+
+    <!-- ── Step 1: Choose Service ──────────────────────────────────────── -->
+    <div class="bk-step-panel active" id="panel-1">
+        <h2 class="bk-step-title">Wybierz usługę</h2>
+        <p class="bk-step-sub">Wybierz usługę, którą chcesz zarezerwować</p>
+
+        <div id="services-loading" style="padding:2rem 0; color:var(--color-ink-subtle); font-size:0.85rem;">
+            <span class="bk-spinner dark"></span> Wczytywanie usług…
+        </div>
+        <div id="services-list" style="display:none;"></div>
+        <div id="services-error" class="bk-error-banner">Nie udało się wczytać usług. Odśwież stronę.</div>
+
+        <div class="bk-nav">
+            <div></div>
+            <button class="bk-btn bk-btn-primary" id="btn-next-1" disabled onclick="goToStep(2)">
+                Dalej →
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Step 2: Choose Specialist & Date ───────────────────────────── -->
+    <div class="bk-step-panel" id="panel-2">
+        <h2 class="bk-step-title">Wybierz specjalistę i datę</h2>
+        <p class="bk-step-sub">Kto ma wykonać usługę i kiedy?</p>
+
+        <div id="emp-loading" style="padding:1.5rem 0; color:var(--color-ink-subtle); font-size:0.85rem; display:none;">
+            <span class="bk-spinner dark"></span> Wczytywanie specjalistów…
+        </div>
+        <div id="emp-error" class="bk-error-banner">Nie udało się wczytać specjalistów.</div>
+        <div id="emp-list" class="bk-emp-grid"></div>
+
+        <label class="bk-field-label" style="margin-top:1.25rem;">Wybierz datę</label>
+        <input type="date" id="bk-date" class="bk-input" style="max-width:220px;" />
+
+        <div class="bk-nav">
+            <button class="bk-btn bk-btn-ghost" onclick="goToStep(1)">← Wstecz</button>
+            <button class="bk-btn bk-btn-primary" id="btn-next-2" disabled onclick="goToStep(3)">
+                Dalej →
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Step 3: Choose Time Slot ───────────────────────────────────── -->
+    <div class="bk-step-panel" id="panel-3">
+        <h2 class="bk-step-title">Wybierz godzinę</h2>
+        <p class="bk-step-sub">Dostępne terminy na wybrany dzień</p>
+
+        <div class="bk-slots-loading" id="slots-loading">
+            <span class="bk-spinner dark"></span> Sprawdzanie dostępności…
+        </div>
+        <div id="slots-error" class="bk-error-banner">Nie udało się wczytać terminów.</div>
+        <div id="slots-work-hours" style="display:none; font-size:0.75rem; color:var(--color-ink-subtle); margin-bottom:0.875rem;"></div>
+        <div class="bk-slots-grid" id="slots-grid"></div>
+        <div class="bk-slots-empty" id="slots-empty" style="display:none;">
+            Brak wolnych terminów w tym dniu. Wybierz inną datę lub specjalistę.
+        </div>
+
+        <div class="bk-nav">
+            <button class="bk-btn bk-btn-ghost" onclick="goToStep(2)">← Wstecz</button>
+            <button class="bk-btn bk-btn-primary" id="btn-next-3" disabled onclick="goToStep(4)">
+                Dalej →
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Step 4: Contact Details ────────────────────────────────────── -->
+    <div class="bk-step-panel" id="panel-4">
+        <h2 class="bk-step-title">Twoje dane kontaktowe</h2>
+        <p class="bk-step-sub">Podaj dane, abyśmy mogli potwierdzić rezerwację</p>
+
+        <div id="booking-error" class="bk-error-banner" id="booking-error"></div>
+
+        <div class="bk-row-2col">
+            <div>
+                <label class="bk-field-label" for="f-first-name">Imię *</label>
+                <input type="text" id="f-first-name" class="bk-input" placeholder="np. Anna" autocomplete="given-name" />
+                <div class="bk-field-error" id="err-first-name">Podaj imię</div>
+            </div>
+            <div>
+                <label class="bk-field-label" for="f-last-name">Nazwisko *</label>
+                <input type="text" id="f-last-name" class="bk-input" placeholder="np. Kowalska" autocomplete="family-name" />
+                <div class="bk-field-error" id="err-last-name">Podaj nazwisko</div>
+            </div>
+        </div>
+
+        <div class="bk-row-2col">
+            <div>
+                <label class="bk-field-label" for="f-phone">Telefon *</label>
+                <input type="tel" id="f-phone" class="bk-input" placeholder="np. 500 100 200" autocomplete="tel" />
+                <div class="bk-field-error" id="err-phone">Podaj numer telefonu</div>
+            </div>
+            <div>
+                <label class="bk-field-label" for="f-email">E-mail <span style="font-weight:300;">(opcjonalnie)</span></label>
+                <input type="email" id="f-email" class="bk-input" placeholder="np. anna@example.com" autocomplete="email" />
+            </div>
+        </div>
+
+        <div>
+            <label class="bk-field-label" for="f-notes">Uwagi <span style="font-weight:300;">(opcjonalnie)</span></label>
+            <textarea id="f-notes" class="bk-input" rows="3"
+                      placeholder="Dodatkowe informacje np. alergie, preferencje..."
+                      style="resize:vertical; min-height:80px;"></textarea>
+        </div>
+
+        <div class="bk-nav">
+            <button class="bk-btn bk-btn-ghost" onclick="goToStep(3)">← Wstecz</button>
+            <button class="bk-btn bk-btn-accent" id="btn-submit" onclick="submitBooking()">
+                Zarezerwuj wizytę
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Step 5: Confirmation ───────────────────────────────────────── -->
+    <div class="bk-step-panel" id="panel-5">
+        <div class="bk-confirm-card">
+            <div class="bk-confirm-icon">✓</div>
+            <h2 class="bk-confirm-title">Wizyta zarezerwowana!</h2>
+            <p class="bk-confirm-sub">
+                Dziękujemy za rezerwację. Do zobaczenia w salonie!
+            </p>
+
+            <div class="bk-confirm-details">
+                <div class="bk-confirm-row">
+                    <span class="bk-confirm-row-label">Usługa</span>
+                    <span class="bk-confirm-row-value" id="conf-service">—</span>
+                </div>
+                <div class="bk-confirm-row">
+                    <span class="bk-confirm-row-label">Specjalista</span>
+                    <span class="bk-confirm-row-value" id="conf-emp">—</span>
+                </div>
+                <div class="bk-confirm-row">
+                    <span class="bk-confirm-row-label">Data i godzina</span>
+                    <span class="bk-confirm-row-value" id="conf-datetime">—</span>
+                </div>
+                <div class="bk-confirm-row">
+                    <span class="bk-confirm-row-label">Czas trwania</span>
+                    <span class="bk-confirm-row-value" id="conf-duration">—</span>
+                </div>
+                <div class="bk-confirm-row">
+                    <span class="bk-confirm-row-label">Cena</span>
+                    <span class="bk-confirm-row-value" id="conf-price">—</span>
+                </div>
+            </div>
+
+            <p class="bk-confirm-note">
+                W razie konieczności zmiany lub odwołania rezerwacji prosimy o kontakt telefoniczny.
+            </p>
+
+            <div style="margin-top:1.5rem;">
+                <a href="/booking" class="bk-btn bk-btn-ghost" style="margin:0 auto; display:inline-flex;">
+                    Zarezerwuj kolejną wizytę
+                </a>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+// empSchedule: keyed by employee id → {available_days, hours_display}
+const empSchedule = {};
+
+const state = {
+    serviceId: null,
+    serviceName: '',
+    servicePrice: 0,
+    serviceDuration: 0,
+    employeeId: null,
+    employeeName: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+};
+
+let currentStep = 1;
+
+// ── Navigation ────────────────────────────────────────────────────────────
+function goToStep(n) {
+    // Validation before advancing
+    if (n > currentStep) {
+        if (n === 2 && !state.serviceId) return;
+        if (n === 3 && (!state.employeeId || !state.date)) return;
+        if (n === 4 && !state.startTime) return;
+    }
+
+    // Hide current, show target
+    document.getElementById('panel-' + currentStep).classList.remove('active');
+    document.getElementById('panel-' + n).classList.add('active');
+
+    // Update progress indicators
+    for (let i = 1; i <= 4; i++) {
+        const step = document.getElementById('prog-' + i);
+        step.classList.remove('active', 'done');
+        if (i < n) step.classList.add('done');
+        else if (i === n) step.classList.add('active');
+
+        if (i < 4) {
+            const conn = document.getElementById('conn-' + i);
+            conn.style.background = (i < n) ? 'var(--color-accent)' : 'var(--color-border)';
+        }
+    }
+
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Load data when entering a step
+    if (n === 2 && state.serviceId) loadEmployees();
+    if (n === 3 && state.employeeId && state.date) loadSlots();
+}
+
+// ── Summary strip ─────────────────────────────────────────────────────────
+function updateSummary() {
+    const strip = document.getElementById('summary-strip');
+    const hasAny = state.serviceName || state.employeeName || state.date || state.startTime;
+    strip.style.display = hasAny ? 'flex' : 'none';
+
+    setSum('sum-service', 'sum-sep-1', state.serviceName, 'sum-service-val');
+    setSum('sum-emp', 'sum-sep-2', state.employeeName, 'sum-emp-val');
+    setSum('sum-date', 'sum-sep-3', state.date ? formatDateDisplay(state.date) : '', 'sum-date-val');
+
+    const timeEl = document.getElementById('sum-time');
+    const timeSep = document.getElementById('sum-sep-3');
+    if (state.startTime) {
+        timeEl.style.display = 'flex';
+        document.getElementById('sum-time-val').textContent = state.startTime;
+    } else {
+        timeEl.style.display = 'none';
+    }
+}
+
+function setSum(itemId, sepId, value, valId) {
+    const item = document.getElementById(itemId);
+    const sep = document.getElementById(sepId);
+    if (value) {
+        item.style.display = 'flex';
+        document.getElementById(valId).textContent = value;
+        if (sep) sep.style.display = 'inline';
+    } else {
+        item.style.display = 'none';
+        if (sep) sep.style.display = 'none';
+    }
+}
+
+function formatDateDisplay(dateStr) {
+    // Parse YYYY-MM-DD as local time (per project date formatting rules)
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return dt.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// ── Step 1: Load Services ─────────────────────────────────────────────────
+async function loadServices() {
+    const loadingEl = document.getElementById('services-loading');
+    const listEl    = document.getElementById('services-list');
+    const errorEl   = document.getElementById('services-error');
+
+    try {
+        const res = await fetch('/api/public/services');
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.error || 'Błąd');
+
+        loadingEl.style.display = 'none';
+        listEl.style.display = 'block';
+
+        if (!data.services.length) {
+            listEl.innerHTML = '<p style="color:var(--color-ink-subtle); font-size:0.85rem;">Brak dostępnych usług.</p>';
+            return;
+        }
+
+        // Group by category
+        const categories = {};
+        for (const svc of data.services) {
+            if (!categories[svc.category]) categories[svc.category] = [];
+            categories[svc.category].push(svc);
+        }
+
+        let html = '';
+        for (const [cat, svcs] of Object.entries(categories)) {
+            html += `<div class="bk-category-title">${escHtml(cat)}</div>`;
+            html += '<div class="bk-cards-grid">';
+            for (const svc of svcs) {
+                html += `
+                <div class="bk-card" id="svc-${svc.id}" onclick="selectService(${svc.id}, ${JSON.stringify(svc.name)}, ${svc.price}, ${svc.duration_minutes})">
+                    <div class="bk-card-name">${escHtml(svc.name)}</div>
+                    ${svc.description ? `<div class="bk-card-desc">${escHtml(svc.description)}</div>` : ''}
+                    <div class="bk-card-meta">
+                        <div class="bk-card-price">${svc.price.toFixed(2)} zł</div>
+                        <div class="bk-card-duration">${svc.duration_minutes} min</div>
+                    </div>
+                </div>`;
+            }
+            html += '</div>';
+        }
+        listEl.innerHTML = html;
+
+    } catch (e) {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+    }
+}
+
+function selectService(id, name, price, duration) {
+    // Deselect previous
+    if (state.serviceId) {
+        const prev = document.getElementById('svc-' + state.serviceId);
+        if (prev) prev.classList.remove('selected');
+    }
+
+    state.serviceId = id;
+    state.serviceName = name;
+    state.servicePrice = price;
+    state.serviceDuration = duration;
+
+    // Reset downstream selections when service changes
+    state.employeeId = null;
+    state.employeeName = '';
+    state.date = '';
+    state.startTime = '';
+    state.endTime = '';
+
+    document.getElementById('svc-' + id).classList.add('selected');
+    document.getElementById('btn-next-1').disabled = false;
+    updateSummary();
+}
+
+// ── Step 2: Load Employees ────────────────────────────────────────────────
+async function loadEmployees() {
+    const loadEl  = document.getElementById('emp-loading');
+    const listEl  = document.getElementById('emp-list');
+    const errorEl = document.getElementById('emp-error');
+
+    loadEl.style.display = 'block';
+    listEl.innerHTML = '';
+    errorEl.style.display = 'none';
+    document.getElementById('btn-next-2').disabled = true;
+
+    try {
+        const res = await fetch(`/api/public/employees?service_id=${state.serviceId}`);
+        const data = await res.json();
+
+        loadEl.style.display = 'none';
+        if (!data.success) throw new Error(data.error || 'Błąd');
+
+        if (!data.employees.length) {
+            listEl.innerHTML = '<p style="color:var(--color-ink-subtle); font-size:0.85rem; grid-column:1/-1;">Brak dostępnych specjalistów dla tej usługi.</p>';
+            return;
+        }
+
+        let html = '';
+        for (const emp of data.employees) {
+            // Store schedule data keyed by employee id for date-validation use
+            empSchedule[emp.id] = {
+                available_days: emp.available_days || [],
+                hours_display: emp.hours_display || '',
+            };
+
+            const initials = emp.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            const isSelected = emp.id === state.employeeId;
+            const daysLabel = formatDaysDisplay(emp.available_days || []);
+            html += `
+            <div class="bk-emp-card ${isSelected ? 'selected' : ''}"
+                 id="emp-${emp.id}"
+                 onclick="selectEmployee(${emp.id}, ${JSON.stringify(emp.name)}, ${emp.effective_duration})">
+                <div class="bk-emp-avatar">${escHtml(initials)}</div>
+                <div class="bk-emp-name">${escHtml(emp.name)}</div>
+                <div class="bk-emp-position">${escHtml(emp.position || '')}</div>
+                <div style="margin-top:0.5rem; font-size:0.68rem; color:var(--color-ink-subtle); line-height:1.5;">
+                    ${daysLabel ? `<span>${escHtml(daysLabel)}</span><br>` : ''}
+                    ${emp.hours_display ? `<span>${escHtml(emp.hours_display)}</span>` : ''}
+                </div>
+            </div>`;
+        }
+        listEl.innerHTML = html;
+
+        // Restore date picker if already set
+        const dateInput = document.getElementById('bk-date');
+        if (state.date) dateInput.value = state.date;
+
+        // Recheck step validity
+        checkStep2();
+
+    } catch (e) {
+        loadEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Nie udało się wczytać specjalistów.';
+    }
+}
+
+function selectEmployee(id, name, duration) {
+    if (state.employeeId) {
+        const prev = document.getElementById('emp-' + state.employeeId);
+        if (prev) prev.classList.remove('selected');
+    }
+    state.employeeId = id;
+    state.employeeName = name;
+    state.serviceDuration = duration; // use effective duration for this employee
+    // Reset slot when employee changes
+    state.startTime = '';
+    state.endTime = '';
+    document.getElementById('emp-' + id).classList.add('selected');
+    updateSummary();
+    checkStep2();
+}
+
+function checkStep2() {
+    const dateOk = !!(state.employeeId && state.date);
+    const offDay = dateOk && !isEmployeeAvailable(state.employeeId, state.date);
+    document.getElementById('btn-next-2').disabled = !dateOk || offDay;
+    showOffDayWarning(offDay);
+}
+
+function isEmployeeAvailable(empId, dateStr) {
+    if (!empId || !dateStr) return true;
+    const sched = empSchedule[empId];
+    if (!sched || !sched.available_days.length) return true; // no schedule = assume available
+    // Parse date as local time (no UTC shift)
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const dayKey = ['mon','tue','wed','thu','fri','sat','sun'][dt.getDay() === 0 ? 6 : dt.getDay() - 1];
+    return sched.available_days.includes(dayKey);
+}
+
+function showOffDayWarning(show) {
+    let warn = document.getElementById('offday-warn');
+    if (!warn) {
+        warn = document.createElement('div');
+        warn.id = 'offday-warn';
+        warn.style.cssText = `
+            margin-top: 0.75rem;
+            padding: 0.625rem 1rem;
+            background: var(--color-status-in-progress-bg);
+            border: 1px solid rgba(217, 119, 6, 0.25);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--color-warning);
+            display: none;
+        `;
+        warn.textContent = 'Ten specjalista nie pracuje w wybranym dniu. Wybierz inną datę.';
+        document.getElementById('bk-date').parentElement.appendChild(warn);
+    }
+    warn.style.display = show ? 'block' : 'none';
+}
+
+// Format available days into a compact label, e.g. "pon – pt" or "pon, śr, pt"
+function formatDaysDisplay(days) {
+    const plMap = {mon:'pon',tue:'wt',wed:'śr',thu:'czw',fri:'pt',sat:'sob',sun:'nd'};
+    if (!days || !days.length) return '';
+    const labels = days.map(d => plMap[d] || d);
+    // Detect contiguous range (e.g. mon-fri → "pon – pt")
+    const allKeys = ['mon','tue','wed','thu','fri','sat','sun'];
+    const idxs = days.map(d => allKeys.indexOf(d)).filter(i => i >= 0).sort((a,b)=>a-b);
+    const isContiguous = idxs.every((v, i) => i === 0 || v === idxs[i-1] + 1);
+    if (isContiguous && idxs.length > 2) {
+        return `${plMap[allKeys[idxs[0]]]} – ${plMap[allKeys[idxs[idxs.length-1]]]}`;
+    }
+    return labels.join(', ');
+}
+
+// ── Step 3: Load Slots ────────────────────────────────────────────────────
+async function loadSlots() {
+    const loadEl  = document.getElementById('slots-loading');
+    const gridEl  = document.getElementById('slots-grid');
+    const emptyEl = document.getElementById('slots-empty');
+    const errorEl = document.getElementById('slots-error');
+
+    loadEl.style.display = 'block';
+    gridEl.innerHTML = '';
+    emptyEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    document.getElementById('btn-next-3').disabled = true;
+
+    try {
+        const url = `/api/public/slots?employee_id=${state.employeeId}&date=${state.date}&duration=${state.serviceDuration}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        loadEl.style.display = 'none';
+        if (!data.success) throw new Error(data.error || 'Błąd');
+
+        // Update work-hours info label
+        const hoursInfo = document.getElementById('slots-work-hours');
+        if (data.work_hours && hoursInfo) {
+            hoursInfo.textContent = `Godziny pracy: ${data.work_hours}`;
+            hoursInfo.style.display = 'block';
+        } else if (hoursInfo) {
+            hoursInfo.style.display = 'none';
+        }
+
+        if (data.off_day || !data.slots.length) {
+            emptyEl.textContent = data.off_day
+                ? 'Specjalista nie pracuje w wybranym dniu. Wróć i wybierz inną datę.'
+                : 'Brak wolnych terminów w tym dniu. Wybierz inną datę lub specjalistę.';
+            emptyEl.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        for (const slot of data.slots) {
+            const isSelected = slot.start_time === state.startTime;
+            html += `<div class="bk-slot ${isSelected ? 'selected' : ''}"
+                          onclick="selectSlot('${slot.start_time}', '${slot.end_time}')">
+                         ${escHtml(slot.start_time)}
+                     </div>`;
+        }
+        gridEl.innerHTML = html;
+
+        if (state.startTime) {
+            document.getElementById('btn-next-3').disabled = false;
+        }
+
+    } catch (e) {
+        loadEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Nie udało się wczytać terminów.';
+    }
+}
+
+function selectSlot(startTime, endTime) {
+    // Deselect previous
+    document.querySelectorAll('.bk-slot.selected').forEach(el => el.classList.remove('selected'));
+
+    state.startTime = startTime;
+    state.endTime = endTime;
+
+    // Find and select new slot
+    document.querySelectorAll('.bk-slot').forEach(el => {
+        if (el.textContent.trim() === startTime) el.classList.add('selected');
+    });
+
+    document.getElementById('btn-next-3').disabled = false;
+    updateSummary();
+}
+
+// ── Date picker event ─────────────────────────────────────────────────────
+document.getElementById('bk-date').addEventListener('change', function() {
+    state.date = this.value;
+    state.startTime = '';
+    state.endTime = '';
+    updateSummary();
+    checkStep2();
+});
+
+// Set minimum date to today
+(function setMinDate() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('bk-date').min = `${yyyy}-${mm}-${dd}`;
+})();
+
+// ── Submit Booking ────────────────────────────────────────────────────────
+async function submitBooking() {
+    const errorBanner = document.getElementById('booking-error');
+    errorBanner.style.display = 'none';
+
+    // Validate form fields
+    const firstName = document.getElementById('f-first-name').value.trim();
+    const lastName  = document.getElementById('f-last-name').value.trim();
+    const phone     = document.getElementById('f-phone').value.trim();
+    const email     = document.getElementById('f-email').value.trim();
+    const notes     = document.getElementById('f-notes').value.trim();
+
+    let valid = true;
+
+    if (!firstName) { showFieldError('err-first-name', 'f-first-name'); valid = false; }
+    else clearFieldError('err-first-name', 'f-first-name');
+
+    if (!lastName) { showFieldError('err-last-name', 'f-last-name'); valid = false; }
+    else clearFieldError('err-last-name', 'f-last-name');
+
+    if (!phone || phone.replace(/\D/g, '').length < 9) {
+        showFieldError('err-phone', 'f-phone');
+        valid = false;
+    } else clearFieldError('err-phone', 'f-phone');
+
+    if (!valid) return;
+
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="bk-spinner"></span> Rezerwuję…';
+
+    try {
+        const res = await fetch('/api/public/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                service_id:  state.serviceId,
+                employee_id: state.employeeId,
+                date:        state.date,
+                start_time:  state.startTime,
+                first_name:  firstName,
+                last_name:   lastName,
+                phone:       phone,
+                email:       email || null,
+                notes:       notes || null,
+            })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Nie udało się dokonać rezerwacji');
+        }
+
+        // Populate confirmation screen
+        document.getElementById('conf-service').textContent  = state.serviceName;
+        document.getElementById('conf-emp').textContent      = state.employeeName;
+        document.getElementById('conf-datetime').textContent = `${formatDateDisplay(state.date)}, ${state.startTime}`;
+        document.getElementById('conf-duration').textContent = `${data.total_duration} min`;
+        document.getElementById('conf-price').textContent    = `${data.total_price.toFixed(2)} zł`;
+
+        // Show confirmation step
+        document.getElementById('panel-4').classList.remove('active');
+        document.getElementById('panel-5').classList.add('active');
+        document.querySelector('.bk-progress').style.display = 'none';
+        document.getElementById('summary-strip').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (e) {
+        errorBanner.textContent = e.message || 'Nie udało się dokonać rezerwacji. Spróbuj ponownie.';
+        errorBanner.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Zarezerwuj wizytę';
+    }
+}
+
+function showFieldError(errId, inputId) {
+    document.getElementById(errId).style.display = 'block';
+    document.getElementById(inputId).classList.add('error');
+}
+
+function clearFieldError(errId, inputId) {
+    document.getElementById(errId).style.display = 'none';
+    document.getElementById(inputId).classList.remove('error');
+}
+
+// ── HTML escape ───────────────────────────────────────────────────────────
+function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadServices();
+</script>
+</body>
+</html>
