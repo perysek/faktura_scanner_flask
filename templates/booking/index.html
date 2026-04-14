@@ -1139,7 +1139,7 @@ function goToStep(n) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Load data when entering a step
-    if (n === 2 && state.serviceId) loadEmployees();
+    if (n === 2 && primaryServiceId()) loadEmployees();
     if (n === 3 && state.employeeId) initCalendar();
 }
 
@@ -1303,29 +1303,6 @@ function selectEmployeeCard(el) {
     );
 }
 
-function selectService(id, name, price, duration) {
-    // Deselect previous
-    if (state.serviceId) {
-        const prev = document.getElementById('svc-' + state.serviceId);
-        if (prev) prev.classList.remove('selected');
-    }
-
-    state.serviceId = id;
-    state.serviceName = name;
-    state.servicePrice = price;
-    state.serviceDuration = duration;
-
-    // Reset downstream selections when service changes
-    state.employeeId = null;
-    state.employeeName = '';
-    state.date = '';
-    state.startTime = '';
-    state.endTime = '';
-
-    document.getElementById('svc-' + id).classList.add('selected');
-    document.getElementById('btn-next-1').disabled = false;
-    updateSummary();
-}
 
 // ── Step 2: Load Employees ────────────────────────────────────────────────
 async function loadEmployees() {
