@@ -381,6 +381,26 @@ class AppointmentRepository:
             ))
             return cursor.fetchall()
 
+    def get_appointments_in_range(self, employee_id: int,
+                                   date_from: date, date_to: date) -> List[Any]:
+        """Fetch all active appointments for an employee in a date range.
+
+        Returns only appointment_date, start_time, end_time — enough for
+        bulk in-memory conflict checking (avoids per-slot DB queries).
+        """
+        query = f"""
+            SELECT appointment_date, start_time, end_time
+            FROM appointments
+            WHERE employee_id = %s
+              AND appointment_date BETWEEN %s AND %s
+              AND status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+              AND is_deleted = FALSE
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (employee_id, date_from.isoformat(), date_to.isoformat()))
+            return cursor.fetchall()
+
     def update_status(self, appointment_id: int, new_status: str,
                        cancellation_reason: Optional[str] = None) -> bool:
         """Zaktualizuj status wizyty"""
