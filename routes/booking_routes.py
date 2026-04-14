@@ -4,7 +4,7 @@ Clients can browse services, check available slots, and book appointments.
 """
 import json
 import logging
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 
 from flask import Blueprint, jsonify, request, render_template
 
@@ -327,7 +327,16 @@ def get_public_slots():
             work_start=work_start,
             work_end=work_end,
         )
-        available = [s for s in all_slots if s['available']]
+        # On today's date, hide slots that start within the next 30 minutes
+        # (minimum travel time assumption — clients booking same-day need to arrive)
+        if slot_date == date.today():
+            cutoff = (datetime.now() + timedelta(minutes=30)).time()
+            available = [
+                s for s in all_slots
+                if s['available'] and datetime.strptime(s['start_time'], '%H:%M').time() > cutoff
+            ]
+        else:
+            available = [s for s in all_slots if s['available']]
 
         return jsonify({
             'success': True,
