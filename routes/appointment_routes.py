@@ -44,6 +44,15 @@ def _canonical(value) -> str:
     except (ValueError, TypeError):
         return str(value).strip()
 
+
+def _canonical_time(value) -> str:
+    """Normalize time values to HH:MM — strips seconds so '09:30:00' == '09:30'."""
+    s = _canonical(value)
+    # HH:MM:SS → HH:MM (two colons present)
+    if s.count(':') == 2:
+        return s[:5]
+    return s
+
 appointment_bp = Blueprint('appointments', __name__)
 
 
@@ -367,13 +376,15 @@ def update_appointment(appointment_id):
 
         entity_label = f"{data.get('appointment_date')} {data.get('start_time','')}"
         old_row = dict(row)
+        _TIME_FIELDS = {'start_time', 'end_time'}
         for field in ['appointment_date', 'start_time', 'end_time',
                       'employee_id', 'client_id', 'status', 'notes',
                       'discount_amount', 'satisfaction_score']:
             if field not in data:   # field was not sent — not a change
                 continue
-            old_val = _canonical(old_row.get(field))
-            new_val = _canonical(data.get(field))
+            _norm = _canonical_time if field in _TIME_FIELDS else _canonical
+            old_val = _norm(old_row.get(field))
+            new_val = _norm(data.get(field))
             if old_val != new_val:
                 _audit('appointment', 'UPDATE', entity_id=appointment_id,
                        entity_label=entity_label,
