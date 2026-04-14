@@ -299,7 +299,7 @@ def create_public_booking():
             client_id = existing[0]['id']
         else:
             # Also try by email if provided
-            email = data.get('email', '').strip()
+            email = (data.get('email') or '').strip()
             if email:
                 existing_by_email = client_repo.find_by_email(email)
                 if existing_by_email:
@@ -310,7 +310,7 @@ def create_public_booking():
                 client_id = _create_guest_client(client_repo, data)
 
         # ── Build notes ────────────────────────────────────────────────
-        user_notes = data.get('notes', '').strip()
+        user_notes = (data.get('notes') or '').strip()
         booking_note = 'Rezerwacja online'
         notes = f"{booking_note} — {user_notes}" if user_notes else booking_note
 
@@ -347,7 +347,7 @@ def _create_guest_client(client_repo: ClientRepository, data: dict) -> int:
         first_name=data['first_name'].strip(),
         last_name=data['last_name'].strip(),
         phone=data['phone'].strip(),
-        email=data.get('email', '').strip() or None,
+        email=(data.get('email') or '').strip() or None,
         is_active=True,
     )
     return client_repo.create(client)
