@@ -357,8 +357,11 @@ def create_public_booking():
     """Create a booking from the public booking page.
 
     Body (JSON):
-        service_id, employee_id, date (YYYY-MM-DD), start_time (HH:MM),
-        first_name, last_name, phone, email (optional), notes (optional)
+        service_ids (array, required), employee_id, date (YYYY-MM-DD),
+        start_time (HH:MM), first_name, last_name, phone,
+        email (optional), notes (optional)
+
+    Also accepts legacy single service_id for backwards compatibility.
 
     Logic:
         1. Find existing client by phone; create new one if not found.
@@ -369,8 +372,15 @@ def create_public_booking():
         if not data:
             raise ValidationError('Brak danych')
 
-        required = ['service_id', 'employee_id', 'date', 'start_time',
-                    'first_name', 'last_name', 'phone']
+        # Resolve service IDs — accept array (new) or single (legacy)
+        raw_ids = data.get('service_ids') or ([data.get('service_id')] if data.get('service_id') else [])
+        service_ids = [int(x) for x in raw_ids if x]
+        if not service_ids:
+            raise ValidationError('Wymagane: service_ids')
+        if len(service_ids) > 3:
+            raise ValidationError('Maksymalnie 3 usługi na wizytę')
+
+        required = ['employee_id', 'date', 'start_time', 'first_name', 'last_name', 'phone']
         missing = [f for f in required if not data.get(f)]
         if missing:
             raise ValidationError(f'Brakujące pola: {", ".join(missing)}')
@@ -404,7 +414,7 @@ def create_public_booking():
         result = appt_service.create_appointment(
             client_id=client_id,
             employee_id=int(data['employee_id']),
-            service_ids=[int(data['service_id'])],
+            service_ids=service_ids,
             appt_date=_parse_date(data['date']),
             start_time=_parse_time(data['start_time']),
             notes=notes,

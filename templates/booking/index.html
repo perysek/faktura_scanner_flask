@@ -304,6 +304,47 @@
             border-radius: 2px;
         }
 
+        .bk-card.disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+            filter: grayscale(0.25);
+        }
+
+        /* ── Services selection badge ─────────────────────────────────── */
+        .bk-svc-count-badge {
+            display: none;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--color-accent);
+            background: rgba(201, 162, 39, 0.1);
+            border: 1px solid rgba(201, 162, 39, 0.25);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2px;
+            margin-bottom: 1rem;
+        }
+
+        /* ── Floating Next button (step 1) ───────────────────────────── */
+        .bk-float-next {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 200;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            font-size: 0.875rem;
+            padding: 0.75rem 1.75rem;
+        }
+
+        @media (max-width: 600px) {
+            .bk-float-next {
+                bottom: 1rem;
+                left: 1rem;
+                right: 1rem;
+                justify-content: center;
+            }
+        }
+
         /* ── Employee Cards ───────────────────────────────────────────── */
         .bk-emp-grid {
             display: grid;
@@ -859,8 +900,12 @@
 
     <!-- ── Step 1: Choose Service ──────────────────────────────────────── -->
     <div class="bk-step-panel active" id="panel-1">
-        <h2 class="bk-step-title">Wybierz usługę</h2>
-        <p class="bk-step-sub">Wybierz usługę, którą chcesz zarezerwować</p>
+        <h2 class="bk-step-title">Wybierz usługi</h2>
+        <p class="bk-step-sub">Możesz wybrać do 3 usług w jednej wizycie</p>
+
+        <div class="bk-svc-count-badge" id="svc-count-badge">
+            <span id="svc-count-text">0 / 3 wybranych</span>
+        </div>
 
         <div id="services-loading" style="padding:2rem 0; color:var(--color-ink-subtle); font-size:0.85rem;">
             <span class="bk-spinner dark"></span> Wczytywanie usług…
@@ -874,6 +919,12 @@
                 Dalej →
             </button>
         </div>
+
+        <!-- Floating button — visible once ≥1 service selected, position:fixed keeps it in viewport -->
+        <button class="bk-btn bk-btn-primary bk-float-next" id="float-next-1"
+                style="display:none;" onclick="goToStep(2)">
+            Dalej →
+        </button>
     </div>
 
     <!-- ── Step 2: Choose Specialist ─────────────────────────────────── -->
@@ -1038,10 +1089,7 @@
 const empSchedule = {};
 
 const state = {
-    serviceId: null,
-    serviceName: '',
-    servicePrice: 0,
-    serviceDuration: 0,
+    selectedServices: [],  // [{id, name, price, duration}] — max 3
     employeeId: null,
     employeeName: '',
     date: '',
@@ -1049,13 +1097,23 @@ const state = {
     endTime: '',
 };
 
+// ── Service state helpers ─────────────────────────────────────────────────
+function primaryServiceId() { return state.selectedServices[0]?.id || null; }
+function totalDuration()    { return state.selectedServices.reduce((s, x) => s + x.duration, 0); }
+function servicesLabel() {
+    const n = state.selectedServices.length;
+    if (!n) return '';
+    if (n === 1) return state.selectedServices[0].name;
+    return `${state.selectedServices[0].name} +${n - 1}`;
+}
+
 let currentStep = 1;
 
 // ── Navigation ────────────────────────────────────────────────────────────
 function goToStep(n) {
     // Validation before advancing
     if (n > currentStep) {
-        if (n === 2 && !state.serviceId) return;
+        if (n === 2 && !primaryServiceId()) return;
         if (n === 3 && !state.employeeId) return;
         if (n === 4 && !state.startTime) return;
     }
@@ -1088,10 +1146,11 @@ function goToStep(n) {
 // ── Summary strip ─────────────────────────────────────────────────────────
 function updateSummary() {
     const strip = document.getElementById('summary-strip');
-    const hasAny = state.serviceName || state.employeeName || state.date || state.startTime;
+    const label = servicesLabel();
+    const hasAny = label || state.employeeName || state.date || state.startTime;
     strip.style.display = hasAny ? 'flex' : 'none';
 
-    setSum('sum-service', 'sum-sep-1', state.serviceName, 'sum-service-val');
+    setSum('sum-service', 'sum-sep-1', label, 'sum-service-val');
     setSum('sum-emp', 'sum-sep-2', state.employeeName, 'sum-emp-val');
     setSum('sum-date', 'sum-sep-3', state.date ? formatDateDisplay(state.date) : '', 'sum-date-val');
 
@@ -1181,12 +1240,57 @@ async function loadServices() {
 }
 
 function selectServiceCard(el) {
-    selectService(
-        parseInt(el.dataset.id),
-        el.dataset.name,
-        parseFloat(el.dataset.price),
-        parseInt(el.dataset.duration)
-    );
+    const id       = parseInt(el.dataset.id);
+    const name     = el.dataset.name;
+    const price    = parseFloat(el.dataset.price);
+    const duration = parseInt(el.dataset.duration);
+
+    const idx = state.selectedServices.findIndex(s => s.id === id);
+
+    if (idx >= 0) {
+        // Deselect — always allowed
+        state.selectedServices.splice(idx, 1);
+    } else {
+        // Select — enforce max 3
+        if (state.selectedServices.length >= 3) return;
+        state.selectedServices.push({ id, name, price, duration });
+    }
+
+    // Changing services resets downstream selections
+    state.employeeId  = null;
+    state.employeeName = '';
+    state.date       = '';
+    state.startTime  = '';
+    state.endTime    = '';
+
+    updateServiceCards();
+    updateSummary();
+    const hasAny = state.selectedServices.length > 0;
+    document.getElementById('btn-next-1').disabled = !hasAny;
+    document.getElementById('float-next-1').style.display = hasAny ? 'inline-flex' : 'none';
+}
+
+function updateServiceCards() {
+    const selectedIds = new Set(state.selectedServices.map(s => s.id));
+    const atMax = state.selectedServices.length >= 3;
+
+    document.querySelectorAll('.bk-card[data-id]').forEach(card => {
+        const id = parseInt(card.dataset.id);
+        const isSel = selectedIds.has(id);
+        card.classList.toggle('selected', isSel);
+        card.classList.toggle('disabled', atMax && !isSel);
+    });
+
+    // Count badge
+    const badge   = document.getElementById('svc-count-badge');
+    const counter = document.getElementById('svc-count-text');
+    const n = state.selectedServices.length;
+    if (n > 0) {
+        counter.textContent = `${n} / 3 wybranych`;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 function selectEmployeeCard(el) {
@@ -1235,7 +1339,7 @@ async function loadEmployees() {
     document.getElementById('btn-next-2').disabled = true;
 
     try {
-        const res = await fetch(`/api/public/employees?service_id=${state.serviceId}`);
+        const res = await fetch(`/api/public/employees?service_id=${primaryServiceId()}`);
         const data = await res.json();
 
         loadEl.style.display = 'none';
@@ -1274,10 +1378,6 @@ async function loadEmployees() {
         }
         listEl.innerHTML = html;
 
-        // Restore date picker if already set
-        const dateInput = document.getElementById('bk-date');
-        if (state.date) dateInput.value = state.date;
-
         // Recheck step validity
         checkStep2();
 
@@ -1293,12 +1393,11 @@ function selectEmployee(id, name, duration) {
         const prev = document.getElementById('emp-' + state.employeeId);
         if (prev) prev.classList.remove('selected');
     }
-    state.employeeId = id;
+    state.employeeId   = id;
     state.employeeName = name;
-    state.serviceDuration = duration; // use effective duration for this employee
     // Reset slot when employee changes
     state.startTime = '';
-    state.endTime = '';
+    state.endTime   = '';
     document.getElementById('emp-' + id).classList.add('selected');
     updateSummary();
     checkStep2();
@@ -1340,7 +1439,7 @@ async function loadSlots() {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
     try {
-        const url = `/api/public/slots?employee_id=${state.employeeId}&date=${state.date}&duration=${state.serviceDuration}`;
+        const url = `/api/public/slots?employee_id=${state.employeeId}&date=${state.date}&duration=${totalDuration()}`;
         const res = await fetch(url);
         const data = await res.json();
 
@@ -1496,7 +1595,7 @@ async function fetchAvailableDays() {
 
     try {
         const url = `/api/public/available-days?employee_id=${state.employeeId}` +
-                    `&year=${calYear}&month=${calMonth + 1}&duration=${state.serviceDuration}`;
+                    `&year=${calYear}&month=${calMonth + 1}&duration=${totalDuration()}`;
         const res  = await fetch(url);
         const data = await res.json();
         calAvailable = new Set(data.available_dates || []);
@@ -1574,7 +1673,7 @@ async function submitBooking() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                service_id:  state.serviceId,
+                service_ids: state.selectedServices.map(s => s.id),
                 employee_id: state.employeeId,
                 date:        state.date,
                 start_time:  state.startTime,
@@ -1593,7 +1692,7 @@ async function submitBooking() {
         }
 
         // Populate confirmation screen
-        document.getElementById('conf-service').textContent  = state.serviceName;
+        document.getElementById('conf-service').textContent  = state.selectedServices.map(s => s.name).join(', ');
         document.getElementById('conf-emp').textContent      = state.employeeName;
         document.getElementById('conf-datetime').textContent = `${formatDateDisplay(state.date)}, ${state.startTime}`;
         document.getElementById('conf-duration').textContent = `${data.total_duration} min`;
