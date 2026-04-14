@@ -98,7 +98,7 @@ class ServiceAddonRepository:
         if not main_service_ids:
             return []
 
-        placeholders = ','.join('%s' * len(main_service_ids))
+        placeholders = ','.join(['%s'] * len(main_service_ids))
         query = f"""
             SELECT DISTINCT s.* FROM services s
             WHERE s.service_type = 'addon' AND s.is_active = TRUE
