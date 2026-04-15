@@ -18,7 +18,7 @@
 
     {% set finanse_active = request.endpoint in ['main.dashboard', 'main.invoices_list', 'main.sellers_list', 'main.upload', 'main.analytics_dashboard'] %}
     {% set salon_active = request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment', 'main.clients_list'] %}
-    {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list'] %}
+    {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list', 'main.service_categories_list'] %}
     {% set korekta_active = request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit', 'main.superadmin_edit_table'] %}
     {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'roles.roles_list', 'auth.profile'] %}
 
@@ -83,6 +83,10 @@
                 url_for('main.services_list'), 'Uslugi',
                 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
                 request.endpoint == 'main.services_list') }}
+            {{ sidebar_link(
+                url_for('main.service_categories_list'), 'Kategorie uslug',
+                'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
+                request.endpoint == 'main.service_categories_list') }}
             {{ sidebar_link(
                 url_for('main.formy_zatrudnienia_list'), 'Rodzaje zatrudnienia',
                 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',

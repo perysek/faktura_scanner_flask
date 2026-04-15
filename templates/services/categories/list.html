@@ -1,0 +1,779 @@
+{% extends "base.html" %}
+
+{% block title %}Kategorie usług - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.refined-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    .page-title { margin-bottom: 0.25rem; }
+
+    .refined-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 1.75rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        margin-bottom: 1.5rem;
+    }
+    .card-title {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-ink-subtle);
+        margin-bottom: 1.25rem;
+    }
+
+    /* Form */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-ink-muted);
+    }
+    .refined-input, .refined-textarea {
+        padding: 0.625rem 0.875rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 300;
+        color: var(--color-ink);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        transition: border-color 0.2s;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .refined-input:focus, .refined-textarea:focus {
+        outline: none;
+        border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26,26,26,0.04);
+    }
+    .refined-textarea { resize: vertical; min-height: 64px; }
+    .form-actions { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
+
+    /* Buttons */
+    .refined-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1.125rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        background: var(--color-ink);
+        color: white;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: opacity 0.15s;
+    }
+    .refined-btn-primary:hover { opacity: 0.85; }
+    .refined-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .refined-btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: var(--color-ink-muted);
+        background: transparent;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .refined-btn-ghost:hover { background: var(--color-surface-warm); color: var(--color-ink); }
+
+    .refined-btn-danger {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: var(--color-error);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .refined-btn-danger:hover { background: rgba(155, 44, 44, 0.06); border-color: rgba(155,44,44,0.2); }
+
+    /* Table */
+    .refined-table { width: 100%; border-collapse: collapse; }
+    .refined-table thead { border-bottom: 2px solid var(--color-border); }
+    .refined-table th {
+        padding: 0.625rem 1rem;
+        text-align: left;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--color-ink-subtle);
+        white-space: nowrap;
+    }
+    .refined-table th:last-child { text-align: right; }
+    .refined-table tbody tr { border-bottom: 1px solid var(--color-border-subtle); transition: background 0.1s; }
+    .refined-table tbody tr:hover { background: var(--color-surface-warm); }
+    .refined-table td {
+        padding: 0.875rem 1rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        vertical-align: middle;
+    }
+    .refined-table tbody tr:last-child td { border-bottom: none; }
+
+    .service-count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.5rem;
+        height: 1.5rem;
+        padding: 0 0.5rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-decoration: none;
+    }
+    .service-count-badge.has-services {
+        background: rgba(26, 26, 26, 0.06);
+        color: var(--color-ink);
+        border: 1px solid var(--color-border);
+    }
+    .service-count-badge.has-services:hover {
+        background: var(--color-ink);
+        color: white;
+        border-color: var(--color-ink);
+    }
+    .service-count-badge.no-services {
+        background: transparent;
+        color: var(--color-ink-subtle);
+        cursor: default;
+        border: 1px solid var(--color-border-subtle);
+    }
+
+    .table-actions { display: flex; justify-content: flex-end; gap: 0.25rem; }
+
+    /* Edit inline row */
+    .edit-row { background: #fffdf9 !important; }
+    .edit-row td { padding: 0.5rem 1rem; }
+    .inline-input {
+        padding: 0.375rem 0.625rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .inline-textarea {
+        padding: 0.375rem 0.625rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        width: 100%;
+        box-sizing: border-box;
+        resize: none;
+        min-height: 2rem;
+    }
+    .inline-input:focus, .inline-textarea:focus { outline: none; border-color: var(--color-ink-muted); }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--color-ink-subtle);
+        font-size: 0.875rem;
+    }
+    .empty-state svg { margin-bottom: 0.75rem; opacity: 0.3; }
+
+    /* Toast */
+    #toast {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 2px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: white;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: all 0.25s var(--ease-out-expo);
+        pointer-events: none;
+        z-index: 9999;
+        max-width: 360px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: var(--color-success); }
+    #toast.error { background: var(--color-error); }
+
+    /* Services modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal-box {
+        background: white;
+        border-radius: 2px;
+        width: 100%;
+        max-width: 640px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+        transform: translateY(8px);
+        transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+    }
+    .modal-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+    .modal-subtitle {
+        font-size: 0.75rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.125rem;
+    }
+    .modal-close {
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--color-ink-muted);
+        border-radius: 2px;
+        transition: background 0.15s;
+    }
+    .modal-close:hover { background: var(--color-surface-warm); color: var(--color-ink); }
+
+    .modal-body { overflow-y: auto; padding: 1.25rem 1.5rem; flex: 1; }
+
+    .modal-table { width: 100%; border-collapse: collapse; }
+    .modal-table thead { border-bottom: 1px solid var(--color-border); }
+    .modal-table th {
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-ink-subtle);
+    }
+    .modal-table td {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        border-bottom: 1px solid var(--color-border-subtle);
+    }
+    .modal-table tbody tr:last-child td { border-bottom: none; }
+    .modal-table tbody tr:hover { background: var(--color-surface-warm); }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.45rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        border-radius: 2px;
+    }
+    .status-badge.active { background: rgba(45,106,79,0.1); color: var(--color-success); }
+    .status-badge.inactive { background: rgba(0,0,0,0.04); color: var(--color-ink-subtle); }
+
+    .modal-empty {
+        text-align: center;
+        padding: 2rem;
+        color: var(--color-ink-subtle);
+        font-size: 0.875rem;
+    }
+
+    /* Delete confirm dialog */
+    .confirm-dialog {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s;
+    }
+    .confirm-dialog.open { opacity: 1; pointer-events: all; }
+    .confirm-box {
+        background: white;
+        border-radius: 2px;
+        padding: 1.75rem;
+        max-width: 420px;
+        width: 100%;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    }
+    .confirm-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-ink);
+        margin-bottom: 0.625rem;
+    }
+    .confirm-body {
+        font-size: 0.8125rem;
+        color: var(--color-ink-muted);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+    .confirm-actions { display: flex; gap: 0.625rem; justify-content: flex-end; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Kategorie usług</h1>
+            <p class="page-subtitle">Zarządzanie kategoriami katalogu usług salonowych</p>
+        </div>
+    </div>
+
+    <!-- Create Form -->
+    <div class="refined-card">
+        <div class="card-title">Nowa kategoria</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="input-name">Nazwa <span style="color:var(--color-error)">*</span></label>
+                <input type="text" id="input-name" class="refined-input" placeholder="np. Strzyżenie, Koloryzacja" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input-desc">Dodatkowy opis</label>
+                <input type="text" id="input-desc" class="refined-input" placeholder="Opcjonalny opis kategorii">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="refined-btn-primary" id="btn-create" onclick="createCategory()">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Dodaj kategorię
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="refined-card">
+        <div class="card-title" id="table-count">Kategorie usług</div>
+        <table class="refined-table">
+            <thead>
+                <tr>
+                    <th>Nazwa</th>
+                    <th>Dodatkowy opis</th>
+                    <th style="text-align:center">Usługi</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="categories-tbody">
+                <tr><td colspan="4" class="empty-state">
+                    <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    <div>Ładowanie...</div>
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Services modal -->
+<div class="modal-overlay" id="services-modal" onclick="closeServicesModal(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="modal-category-name">Usługi w kategorii</div>
+                <div class="modal-subtitle" id="modal-service-count"></div>
+            </div>
+            <button class="modal-close" onclick="closeServicesModalDirect()">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" id="modal-body">
+            <div class="modal-empty">Ładowanie...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirm dialog -->
+<div class="confirm-dialog" id="confirm-dialog">
+    <div class="confirm-box">
+        <div class="confirm-title" id="confirm-title">Potwierdzenie usunięcia</div>
+        <div class="confirm-body" id="confirm-body"></div>
+        <div class="confirm-actions">
+            <button class="refined-btn-ghost" onclick="closeConfirm()">Anuluj</button>
+            <button class="refined-btn-danger" id="confirm-btn-delete-only" onclick="confirmDeleteOnly()">Usuń tylko kategorię</button>
+            <button class="refined-btn-primary" style="background:var(--color-error); flex:none; padding:0.375rem 0.75rem; font-size:0.75rem" id="confirm-btn-force" onclick="confirmDeleteForce()">Usuń z usługami</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const ENDPOINT = '/api/services/categories';
+let editingId = null;
+let pendingDeleteId = null;
+let pendingDeleteName = null;
+
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderTable(categories) {
+    const tbody = document.getElementById('categories-tbody');
+    const countEl = document.getElementById('table-count');
+    countEl.textContent = `Kategorie usług (${categories.length})`;
+
+    if (categories.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            <div>Brak kategorii. Dodaj pierwszą powyżej.</div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = categories.map(c => {
+        const badgeClass = c.service_count > 0 ? 'has-services' : 'no-services';
+        const badgeOnClick = c.service_count > 0
+            ? `onclick="openServicesModal(${c.id}, '${escapeHtml(c.name)}', ${c.service_count})"`
+            : '';
+        const badgeTitle = c.service_count > 0 ? `title="Pokaż usługi w tej kategorii"` : '';
+
+        return `
+        <tr id="row-${c.id}" data-id="${c.id}">
+            <td><strong>${escapeHtml(c.name)}</strong></td>
+            <td>${escapeHtml(c.additional_description) || '<span style="color:var(--color-ink-subtle)">—</span>'}</td>
+            <td style="text-align:center">
+                <span class="service-count-badge ${badgeClass}" ${badgeOnClick} ${badgeTitle}>${c.service_count}</span>
+            </td>
+            <td>
+                <div class="table-actions">
+                    <button class="refined-btn-ghost" onclick="startEdit(${c.id})">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Edytuj
+                    </button>
+                    <button class="refined-btn-danger" onclick="deleteCategory(${c.id}, '${escapeHtml(c.name)}')">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Usuń
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function loadCategories() {
+    try {
+        const res = await fetch(ENDPOINT);
+        const data = await res.json();
+        if (data.success) renderTable(data.categories);
+        else showToast('Błąd ładowania: ' + data.error, 'error');
+    } catch (e) {
+        showToast('Błąd połączenia z serwerem', 'error');
+    }
+}
+
+async function createCategory() {
+    const name = document.getElementById('input-name').value.trim();
+    if (!name) { showToast('Nazwa jest wymagana', 'error'); return; }
+
+    const btn = document.getElementById('btn-create');
+    btn.disabled = true;
+    try {
+        const res = await fetch(ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                additional_description: document.getElementById('input-desc').value.trim() || null,
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-desc').value = '';
+            showToast('Kategoria została dodana');
+            loadCategories();
+        } else {
+            showToast(data.error || 'Błąd tworzenia', 'error');
+        }
+    } catch (e) {
+        showToast('Błąd połączenia z serwerem', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function startEdit(id) {
+    if (editingId) cancelEdit();
+
+    const row = document.getElementById(`row-${id}`);
+    if (!row) return;
+
+    const cells = row.querySelectorAll('td');
+    const name = cells[0].querySelector('strong').textContent;
+    const desc = cells[1].textContent.trim() === '—' ? '' : cells[1].textContent.trim();
+
+    row.classList.add('edit-row');
+    row.innerHTML = `
+        <td><input class="inline-input" id="edit-name" value="${escapeHtml(name)}" maxlength="100"></td>
+        <td><input class="inline-input" id="edit-desc" value="${escapeHtml(desc)}" placeholder="Dodatkowy opis"></td>
+        <td></td>
+        <td>
+            <div class="table-actions">
+                <button class="refined-btn-primary" style="padding:0.375rem 0.75rem;font-size:0.75rem;flex:none" onclick="saveEdit(${id})">Zapisz</button>
+                <button class="refined-btn-ghost" onclick="cancelEdit()">Anuluj</button>
+            </div>
+        </td>
+    `;
+    document.getElementById('edit-name').focus();
+    editingId = id;
+}
+
+function cancelEdit() {
+    editingId = null;
+    loadCategories();
+}
+
+async function saveEdit(id) {
+    const name = document.getElementById('edit-name').value.trim();
+    if (!name) { showToast('Nazwa jest wymagana', 'error'); return; }
+
+    try {
+        const res = await fetch(`${ENDPOINT}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                additional_description: document.getElementById('edit-desc').value.trim() || null,
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            editingId = null;
+            showToast('Zapisano zmiany');
+            loadCategories();
+        } else {
+            showToast(data.error || 'Błąd zapisu', 'error');
+        }
+    } catch (e) {
+        showToast('Błąd połączenia z serwerem', 'error');
+    }
+}
+
+async function deleteCategory(id, name) {
+    try {
+        const res = await fetch(`${ENDPOINT}/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (data.success) {
+            showToast('Kategoria została usunięta');
+            loadCategories();
+        } else if (data.requires_confirmation) {
+            // Show custom confirmation dialog
+            pendingDeleteId = id;
+            pendingDeleteName = name;
+            document.getElementById('confirm-title').textContent = `Usuń kategorię "${name}"`;
+            document.getElementById('confirm-body').innerHTML =
+                `Ta kategoria jest przypisana do <strong>${data.service_count}</strong> usług(i).<br><br>` +
+                `Możesz usunąć tylko kategorię (usługi pozostają bez kategorii) lub usunąć kategorię razem ze wszystkimi powiązanymi usługami.<br><br>` +
+                `<strong>Obie operacje są nieodwracalne.</strong>`;
+            document.getElementById('confirm-dialog').classList.add('open');
+        } else {
+            showToast(data.error || 'Błąd usuwania', 'error');
+        }
+    } catch (e) {
+        showToast('Błąd połączenia z serwerem', 'error');
+    }
+}
+
+async function confirmDeleteOnly() {
+    closeConfirm();
+    if (!pendingDeleteId) return;
+    try {
+        // category_only=true: soft-delete the category row, leave services unchanged (orphaned text)
+        const res = await fetch(`${ENDPOINT}/${pendingDeleteId}?category_only=true`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Kategoria została usunięta (usługi pozostały bez zmian)');
+            loadCategories();
+        } else {
+            showToast(data.error || 'Błąd usuwania', 'error');
+        }
+    } catch (e) {
+        showToast('Błąd połączenia z serwerem', 'error');
+    } finally {
+        pendingDeleteId = null;
+        pendingDeleteName = null;
+    }
+}
+
+async function confirmDeleteForce() {
+    closeConfirm();
+    if (!pendingDeleteId) return;
+    try {
+        const res = await fetch(`${ENDPOINT}/${pendingDeleteId}?force=true`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Kategoria i powiązane usługi zostały usunięte');
+            loadCategories();
+        } else {
+            showToast(data.error || 'Błąd usuwania', 'error');
+        }
+    } catch (e) {
+        showToast('Błąd połączenia z serwerem', 'error');
+    } finally {
+        pendingDeleteId = null;
+        pendingDeleteName = null;
+    }
+}
+
+function closeConfirm() {
+    document.getElementById('confirm-dialog').classList.remove('open');
+}
+
+// Services modal
+async function openServicesModal(categoryId, categoryName, serviceCount) {
+    const modal = document.getElementById('services-modal');
+    document.getElementById('modal-category-name').textContent = categoryName;
+    document.getElementById('modal-service-count').textContent = `${serviceCount} usług(i) w tej kategorii`;
+    document.getElementById('modal-body').innerHTML = '<div class="modal-empty">Ładowanie...</div>';
+    modal.classList.add('open');
+
+    try {
+        const res = await fetch(`${ENDPOINT}/${categoryId}/services`);
+        const data = await res.json();
+        if (!data.success) {
+            document.getElementById('modal-body').innerHTML = '<div class="modal-empty">Błąd ładowania usług</div>';
+            return;
+        }
+        const services = data.services;
+        if (services.length === 0) {
+            document.getElementById('modal-body').innerHTML = '<div class="modal-empty">Brak usług w tej kategorii</div>';
+            return;
+        }
+        document.getElementById('modal-body').innerHTML = `
+            <table class="modal-table">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Cena</th>
+                        <th>Czas</th>
+                        <th>Typ</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${services.map(s => `
+                    <tr>
+                        <td><a href="/service/${s.id}" style="color:var(--color-ink);text-decoration:none;font-weight:500">${escapeHtml(s.name)}</a></td>
+                        <td>${s.price.toFixed(2)} zł</td>
+                        <td>${s.duration_minutes} min</td>
+                        <td style="color:var(--color-ink-subtle);font-size:0.75rem">${s.service_type === 'addon' ? 'Dodatkowa' : 'Główna'}</td>
+                        <td><span class="status-badge ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'Aktywna' : 'Nieaktywna'}</span></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (e) {
+        document.getElementById('modal-body').innerHTML = '<div class="modal-empty">Błąd połączenia z serwerem</div>';
+    }
+}
+
+function closeServicesModal(e) {
+    if (e && e.target !== document.getElementById('services-modal')) return;
+    closeServicesModalDirect();
+}
+
+function closeServicesModalDirect() {
+    document.getElementById('services-modal').classList.remove('open');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeServicesModalDirect();
+        closeConfirm();
+        if (editingId) cancelEdit();
+    }
+    if (e.key === 'Enter' && !e.shiftKey &&
+        document.activeElement.closest('.refined-card') &&
+        !document.activeElement.closest('#categories-tbody')) {
+        createCategory();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadCategories);
+</script>
+{% endblock %}

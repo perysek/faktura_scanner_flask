@@ -3160,18 +3160,238 @@ def get_service_statistics():
 @login_required
 @module_permission_required('services')
 def get_service_categories():
-    """Get all service categories"""
+    """Pobierz wszystkie aktywne kategorie usług wraz z liczbą powiązanych usług"""
     try:
-        categories = current_app.service_repo.get_categories()
-
-        return jsonify({
-            'success': True,
-            'categories': categories
-        })
+        categories = current_app.service_category_repo.get_all_with_service_counts()
+        return jsonify({'success': True, 'categories': categories})
     except AppError:
         raise
     except Exception as e:
         logging.exception('Unexpected error in get_service_categories')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/services/categories', methods=['POST'])
+@login_required
+@module_permission_required('services')
+def create_service_category():
+    """Utwórz nową kategorię usług"""
+    try:
+        data = request.get_json()
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify({'success': False, 'error': 'Nazwa kategorii jest wymagana'}), 400
+        if len(name) > 100:
+            return jsonify({'success': False, 'error': 'Nazwa nie może przekraczać 100 znaków'}), 400
+
+        if current_app.service_category_repo.name_exists(name):
+            return jsonify({'success': False, 'error': 'Kategoria o tej nazwie już istnieje'}), 409
+
+        from database.models import ServiceCategory
+        category = ServiceCategory(
+            name=name,
+            additional_description=(data.get('additional_description') or '').strip() or None,
+        )
+        new_id = current_app.service_category_repo.create(category)
+
+        current_app.audit_repo.log_event(
+            entity_type='service_category',
+            action='CREATE',
+            entity_id=new_id,
+            entity_label=name,
+            user_id=current_user.id,
+            user_name=current_user.full_name,
+        )
+
+        return jsonify({'success': True, 'id': new_id, 'message': 'Kategoria została dodana'})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in create_service_category')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/services/categories/<int:category_id>', methods=['GET'])
+@login_required
+@module_permission_required('services')
+def get_service_category(category_id):
+    """Pobierz pojedynczą kategorię"""
+    try:
+        row = current_app.service_category_repo.get_by_id(category_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Nie znaleziono kategorii'}), 404
+        cat = current_app.service_category_repo.row_to_category(row)
+        return jsonify({
+            'success': True,
+            'category': {
+                'id': cat.id,
+                'name': cat.name,
+                'additional_description': cat.additional_description,
+            }
+        })
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in get_service_category')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/services/categories/<int:category_id>', methods=['PUT'])
+@login_required
+@module_permission_required('services')
+def update_service_category(category_id):
+    """Zaktualizuj kategorię usług"""
+    try:
+        existing_row = current_app.service_category_repo.get_by_id(category_id)
+        if not existing_row:
+            return jsonify({'success': False, 'error': 'Nie znaleziono kategorii'}), 404
+
+        data = request.get_json()
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify({'success': False, 'error': 'Nazwa kategorii jest wymagana'}), 400
+        if len(name) > 100:
+            return jsonify({'success': False, 'error': 'Nazwa nie może przekraczać 100 znaków'}), 400
+
+        if current_app.service_category_repo.name_exists(name, exclude_id=category_id):
+            return jsonify({'success': False, 'error': 'Kategoria o tej nazwie już istnieje'}), 409
+
+        old_name = existing_row['name']
+        old_desc = existing_row['additional_description']
+        new_desc = (data.get('additional_description') or '').strip() or None
+
+        from database.models import ServiceCategory
+        updated = current_app.service_category_repo.update(
+            category_id,
+            ServiceCategory(name=name, additional_description=new_desc)
+        )
+
+        if not updated:
+            return jsonify({'success': False, 'error': 'Nie udało się zaktualizować kategorii'}), 500
+
+        # If name changed, propagate to services.category text field
+        if old_name != name:
+            from config.database import get_db_connection
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE services SET category = %s, updated_at = CURRENT_TIMESTAMP "
+                    "WHERE category = %s AND is_deleted = FALSE",
+                    (name, old_name)
+                )
+                conn.commit()
+
+        # Audit — log changed fields
+        changes = []
+        if old_name != name:
+            changes.append(('name', old_name, name))
+        if old_desc != new_desc:
+            changes.append(('additional_description', old_desc, new_desc))
+
+        for field_name, old_val, new_val in changes:
+            current_app.audit_repo.log_event(
+                entity_type='service_category',
+                action='UPDATE',
+                entity_id=category_id,
+                entity_label=name,
+                field_name=field_name,
+                old_value=str(old_val) if old_val is not None else None,
+                new_value=str(new_val) if new_val is not None else None,
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+            )
+
+        return jsonify({'success': True, 'message': 'Kategoria została zaktualizowana'})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in update_service_category')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/services/categories/<int:category_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('services')
+def delete_service_category(category_id):
+    """Soft-delete kategorii usług.
+
+    Query params:
+      force=true  — usuwa też powiązane usługi (soft-delete cascade)
+    """
+    try:
+        row = current_app.service_category_repo.get_by_id(category_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Nie znaleziono kategorii'}), 404
+
+        category_name = row['name']
+        service_count = current_app.service_category_repo.get_service_count(category_name)
+        force = request.args.get('force', 'false').lower() == 'true'
+        category_only = request.args.get('category_only', 'false').lower() == 'true'
+
+        if service_count > 0 and not force and not category_only:
+            return jsonify({
+                'success': False,
+                'requires_confirmation': True,
+                'service_count': service_count,
+                'error': (
+                    f'Kategoria "{category_name}" jest przypisana do {service_count} '
+                    f'usług(i). Czy usunąć kategorię razem z powiązanymi usługami?'
+                )
+            }), 409
+
+        if force and service_count > 0:
+            # Cascade soft-delete: remove category AND its services
+            deleted_services = current_app.service_category_repo.soft_delete_with_services(
+                category_id, category_name
+            )
+            current_app.audit_repo.log_event(
+                entity_type='service_category',
+                action='DELETE',
+                entity_id=category_id,
+                entity_label=category_name,
+                field_name='cascade_deleted_services',
+                old_value=str(deleted_services),
+                new_value='0',
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+            )
+        else:
+            # category_only=true OR no linked services: just remove the category row
+            current_app.service_category_repo.soft_delete(category_id)
+
+        current_app.audit_repo.log_event(
+            entity_type='service_category',
+            action='DELETE',
+            entity_id=category_id,
+            entity_label=category_name,
+            user_id=current_user.id,
+            user_name=current_user.full_name,
+        )
+
+        return jsonify({'success': True, 'message': 'Kategoria została usunięta'})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in delete_service_category')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/services/categories/<int:category_id>/services', methods=['GET'])
+@login_required
+@module_permission_required('services')
+def get_category_services(category_id):
+    """Pobierz usługi przypisane do kategorii (dla modalu podglądu)"""
+    try:
+        row = current_app.service_category_repo.get_by_id(category_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Nie znaleziono kategorii'}), 404
+
+        services = current_app.service_category_repo.get_services_for_category(row['name'])
+        return jsonify({'success': True, 'services': services, 'category_name': row['name']})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in get_category_services')
         raise AppError('Wystapil blad serwera')
 
 

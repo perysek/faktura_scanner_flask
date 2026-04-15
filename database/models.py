@@ -194,6 +194,18 @@ class FormaZatrudnienia:
 
 
 @dataclass
+class ServiceCategory:
+    """Model kategorii usług"""
+    name: str
+    additional_description: Optional[str] = None
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+@dataclass
 class Service:
     """Model usługi salonowej"""
     name: str
