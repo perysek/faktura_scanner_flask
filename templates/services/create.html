@@ -69,16 +69,9 @@
                         <label for="category" class="refined-label">Kategoria <span class="required-mark">*</span></label>
                         <select id="category" name="category" required class="refined-select">
                             <option value="">Wybierz kategorię</option>
-                            <option value="Strzyżenie">Strzyżenie</option>
-                            <option value="Koloryzacja">Koloryzacja</option>
-                            <option value="Stylizacja">Stylizacja</option>
-                            <option value="Trwała">Trwała</option>
-                            <option value="Pielęgnacja">Pielęgnacja</option>
-                            <option value="Masaż">Masaż</option>
-                            <option value="Manicure">Manicure</option>
-                            <option value="Pedicure">Pedicure</option>
-                            <option value="Makijaż">Makijaż</option>
-                            <option value="Inne">Inne</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.name }}">{{ cat.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

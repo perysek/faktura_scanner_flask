@@ -42,6 +42,7 @@ from repositories.seller_repository import SellerRepository
 from repositories.seller_password_repository import SellerPasswordRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_repository import ServiceRepository
+from repositories.services.service_category_repository import ServiceCategoryRepository
 from repositories.employees.employee_repository import EmployeeRepository
 from repositories.employees.forma_zatrudnienia_repository import FormaZatrudnieniaRepository
 
@@ -133,6 +134,7 @@ def create_app():
     app.seller_password_repo = SellerPasswordRepository()
     app.client_repo = ClientRepository()
     app.service_repo = ServiceRepository()
+    app.service_category_repo = ServiceCategoryRepository()
     app.employee_repo = EmployeeRepository()
     app.forma_zatrudnienia_repo = FormaZatrudnieniaRepository()
 

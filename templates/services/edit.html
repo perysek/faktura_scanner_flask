@@ -222,8 +222,8 @@
                     <div id="category-wrapper">
                         <label for="category" class="refined-label">Kategoria <span class="required-mark">*</span></label>
                         <select id="category" name="category" required class="refined-select">
-                            {% for cat in ['Strzyżenie','Koloryzacja','Stylizacja','Trwała','Pielęgnacja','Masaż','Manicure','Pedicure','Makijaż','Inne'] %}
-                            <option value="{{ cat }}" {% if service.category == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.name }}" {% if service.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
                             {% endfor %}
                         </select>
                     </div>

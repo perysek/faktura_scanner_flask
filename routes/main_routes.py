@@ -161,8 +161,9 @@ def services_list():
 @login_required
 @module_permission_required('services')
 def create_service():
-    """Create new service form"""
-    return render_template('services/create.html')
+    """Create new service form — inject categories from DB"""
+    categories = current_app.service_category_repo.get_all()
+    return render_template('services/create.html', categories=categories)
 
 
 @main_bp.route('/service/<int:service_id>')
@@ -182,13 +183,22 @@ def view_service(service_id):
 @login_required
 @module_permission_required('services')
 def edit_service(service_id):
-    """Edit service form"""
+    """Edit service form — inject categories from DB"""
     row = current_app.service_repo.get_by_id(service_id)
     if not row:
         return render_template('errors/404.html'), 404
 
     service = current_app.service_repo.row_to_service(row)
-    return render_template('services/edit.html', service=service)
+    categories = current_app.service_category_repo.get_all()
+    return render_template('services/edit.html', service=service, categories=categories)
+
+
+@main_bp.route('/services/categories')
+@login_required
+@module_permission_required('services')
+def service_categories_list():
+    """Zarządzanie kategoriami usług"""
+    return render_template('services/categories/list.html')
 
 
 # ============================================================================
