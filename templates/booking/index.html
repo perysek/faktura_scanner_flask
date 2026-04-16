@@ -1141,6 +1141,12 @@ function goToStep(n) {
     // Load data when entering a step
     if (n === 2 && primaryServiceId()) loadEmployees();
     if (n === 3 && state.employeeId) initCalendar();
+
+    // Clear stale error banner when re-entering the contact step
+    if (n === 4) {
+        const eb = document.getElementById('booking-error');
+        if (eb) eb.style.display = 'none';
+    }
 }
 
 // ── Summary strip ─────────────────────────────────────────────────────────
