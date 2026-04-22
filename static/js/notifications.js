@@ -34,7 +34,7 @@ const Notifications = {
 
         // Create toast element
         const toast = document.createElement('div');
-        toast.className = `toast-${type}`;
+        toast.className = `toast toast-${type}`;
 
         // Icon based on type
         const icons = {
@@ -46,22 +46,12 @@ const Notifications = {
 
         const icon = icons[type] || icons.info;
 
-        // Color based on type
-        const colors = {
-            success: 'text-status-success',
-            error: 'text-status-error',
-            warning: 'text-status-warning',
-            info: 'text-status-info'
-        };
-
-        const color = colors[type] || colors.info;
-
         toast.innerHTML = `
-            <span class="material-icons ${color}">${icon}</span>
+            <span class="material-icons">${icon}</span>
             <div class="flex-1">
-                <p class="text-sm font-medium text-gray-900">${escapeHtml(message)}</p>
+                <p class="text-sm font-medium" style="color: var(--color-ink);">${escapeHtml(message)}</p>
             </div>
-            <button class="text-gray-400 hover:text-gray-600 transition-colors" onclick="this.parentElement.remove()">
+            <button style="color: var(--color-ink-subtle);" class="hover:opacity-75 transition-opacity" onclick="this.parentElement.remove()">
                 <span class="material-icons text-sm">close</span>
             </button>
         `;
