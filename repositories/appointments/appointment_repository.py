@@ -127,7 +127,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE {where_clause}
             GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
-            ORDER BY a.appointment_date, a.start_time
+            ORDER BY a.appointment_date DESC, a.start_time DESC
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()

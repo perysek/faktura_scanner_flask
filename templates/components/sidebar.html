@@ -56,7 +56,7 @@
         {{ sidebar_section_start('salon', 'Salon', salon_active) }}
             {% if user_permissions.appointments %}
             {{ sidebar_link(
-                url_for('main.appointments_calendar'), 'Wizyty',
+                url_for('main.appointments_list'), 'Wizyty',
                 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
                 request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment']) }}
             {% endif %}

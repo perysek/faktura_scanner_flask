@@ -337,11 +337,18 @@ function updateViewLinks() {
     }
 }
 
-// Przy starcie pola dat są puste — ładujemy ostatnie 100 wizyt (mode=latest)
-// Jeśli zapisano stan filtrów, przywróć go i załaduj z tymi parametrami
+// Default to current week (Monday–Sunday); restore saved filter state if available.
 document.addEventListener('DOMContentLoaded', () => {
     updateViewLinks();
-    restoreFilterState('appointments', ['filter-start', 'filter-end', 'filter-status']);
+    const restored = restoreFilterState('appointments', ['filter-start', 'filter-end', 'filter-status']);
+    if (!restored) {
+        const today = new Date();
+        const daysFromMonday = today.getDay() === 0 ? 6 : today.getDay() - 1;
+        const monday = addDays(today, -daysFromMonday);
+        const sunday = addDays(monday, 6);
+        setDateToInput('filter-start', monday);
+        setDateToInput('filter-end', sunday);
+    }
     loadAppointments();
 });
 </script>
