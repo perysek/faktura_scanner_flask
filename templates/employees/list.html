@@ -193,6 +193,7 @@
         width: 100%;
         border-collapse: collapse;
         min-width: 1100px;
+        table-layout: fixed;
     }
 
     .refined-table thead { background: var(--color-surface); }
@@ -302,6 +303,41 @@
     .action-link:hover { color: var(--color-chart-blue-dark); }
     .action-link.secondary { color: var(--color-ink-muted); }
     .action-link.secondary:hover { color: var(--color-ink); }
+
+    /* Icon-only action buttons */
+    .action-icons {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.125rem;
+        justify-content: flex-end;
+    }
+
+    .action-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        background: transparent;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        color: var(--color-ink-subtle);
+        transition: color 0.2s ease, background 0.2s ease;
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+
+    .action-icon-btn:hover {
+        color: var(--color-ink);
+        background: var(--color-surface);
+    }
+
+    .action-icon-btn svg {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
 
     /* Empty State */
     .empty-state {
@@ -460,6 +496,18 @@
     <!-- Employees Table -->
     <div class="table-container">
         <table class="refined-table">
+            <colgroup>
+                <col style="width:19%"><!-- Imię i nazwisko -->
+                <col style="width:12%"><!-- Stanowisko -->
+                <col style="width:10%"><!-- Telefon -->
+                <col style="width:8%"> <!-- Prowizja -->
+                <col style="width:8%"> <!-- Status -->
+                <col style="width:10%"><!-- Ocena klientów -->
+                <col style="width:10%"><!-- Zaplanowanych wizyt -->
+                <col style="width:10%"><!-- Zakończonych wizyt -->
+                <col style="width:6%"> <!-- Pokrycie grafiku -->
+                <col style="width:7%"> <!-- Akcje -->
+            </colgroup>
             <thead>
                 <tr>
                     <th>Imię i nazwisko</th>
@@ -468,8 +516,8 @@
                     <th>Prowizja</th>
                     <th>Status</th>
                     <th>Ocena klientów</th>
-                    <th style="text-align:center;">Zaplanowanych wizyt</th>
-                    <th style="text-align:center;">Zakończonych wizyt</th>
+                    <th style="text-align:center;">Zaplano&shy;wanych wizyt</th>
+                    <th style="text-align:center;">Zakoń&shy;czonych wizyt</th>
                     <th style="text-align:center;">Pokrycie grafiku</th>
                     <th>Akcje</th>
                 </tr>
@@ -655,10 +703,20 @@ async function loadEmployees() {
                         <td style="text-align:center;">
                             ${renderCoverage(emp.schedule_coverage_pct)}
                         </td>
-                        <td style="text-align:right;">
-                            <a href="/employee/${emp.id}" class="action-link">Zobacz</a>
-                            <span style="margin:0 0.5rem;color:var(--color-border);">|</span>
-                            <a href="/employee/${emp.id}/edit" class="action-link secondary">Edytuj</a>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <div class="action-icons">
+                                <a href="/employee/${emp.id}" class="action-icon-btn" title="Zobacz" aria-label="Zobacz">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </a>
+                                <a href="/employee/${emp.id}/edit" class="action-icon-btn" title="Edytuj" aria-label="Edytuj">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 `;
