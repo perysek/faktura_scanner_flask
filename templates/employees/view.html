@@ -914,7 +914,7 @@ async function assignService() {
 
         if (data.success) {
             // Clear form
-            document.getElementById('new-service-id').value = '';
+            SearchableSelect.setValue('new-service-id', '');
             document.getElementById('new-custom-price').value = '';
             document.getElementById('new-commission').value = '';
             document.getElementById('new-duration').value = '';

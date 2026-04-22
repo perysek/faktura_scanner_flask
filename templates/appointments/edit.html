@@ -243,8 +243,8 @@ async function loadAppointment() {
 
     // Set form values
     document.getElementById('status-select').value = originalData.status;
-    document.getElementById('client-select').value = originalData.client_id;
-    document.getElementById('employee-select').value = originalData.employee_id;
+    SearchableSelect.setValue('client-select', originalData.client_id);
+    SearchableSelect.setValue('employee-select', originalData.employee_id);
     document.getElementById('appt-date').value = originalData.appointment_date;
     document.getElementById('appt-time').value = originalData.start_time.substring(0, 5);
     document.getElementById('appt-notes').value = originalData.notes || '';

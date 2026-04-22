@@ -909,8 +909,8 @@ async function addPreference() {
 
         if (data.success) {
             // Clear form
-            document.getElementById('new-pref-service-id').value = '';
-            document.getElementById('new-pref-employee-id').value = '';
+            SearchableSelect.setValue('new-pref-service-id', '');
+            SearchableSelect.setValue('new-pref-employee-id', '');
             document.getElementById('new-pref-notes').value = '';
             document.getElementById('add-pref-form').classList.remove('visible');
 
