@@ -222,9 +222,9 @@
         color: var(--color-ink);
         border-bottom: 1px solid var(--color-border-subtle);
         vertical-align: middle;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     .refined-table tbody tr:last-child td { border-bottom: none; }
@@ -254,23 +254,16 @@
 
     .employee-info > div:last-child {
         min-width: 0;
-        overflow: hidden;
     }
 
     .employee-name {
         font-weight: 500;
         color: var(--color-ink);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
     .employee-position {
         font-size: 0.75rem;
         color: var(--color-ink-subtle);
         font-weight: 300;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     /* Monthly stat cells */
@@ -518,12 +511,12 @@
     <div class="table-container">
         <table class="refined-table">
             <colgroup>
-                <col style="width:19%"><!-- Imię i nazwisko -->
-                <col style="width:12%"><!-- Stanowisko -->
+                <col style="width:22%"><!-- Imię i nazwisko -->
+                <col style="width:9%"> <!-- Stanowisko -->
                 <col style="width:10%"><!-- Telefon -->
-                <col style="width:8%"> <!-- Prowizja -->
-                <col style="width:8%"> <!-- Status -->
-                <col style="width:10%"><!-- Ocena klientów -->
+                <col style="width:6%"> <!-- Prowizja -->
+                <col style="width:12%"><!-- Status -->
+                <col style="width:8%"> <!-- Ocena klientów -->
                 <col style="width:10%"><!-- Zaplanowanych wizyt -->
                 <col style="width:10%"><!-- Zakończonych wizyt -->
                 <col style="width:6%"> <!-- Pokrycie grafiku -->
