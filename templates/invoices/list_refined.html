@@ -755,6 +755,19 @@
         color: white;
         border-color: var(--color-ink);
     }
+
+    /* Sidebar hide when preview panel is open */
+    #sidebar {
+        transition: opacity 0.3s ease, width 0.35s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #sidebar.preview-hidden {
+        opacity: 0;
+        width: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
 
@@ -1577,6 +1590,8 @@ function openPreviewPanel(invoiceId) {
     previewPanelOpen = true;
     document.getElementById('preview-panel').classList.add('open');
     document.getElementById('preview-toggle-btn').classList.add('active');
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.add('preview-hidden');
     if (invoiceId !== null) {
         loadInvoiceInPanel(invoiceId);
     }
@@ -1588,6 +1603,8 @@ function closePreviewPanel() {
     document.getElementById('preview-toggle-btn').classList.remove('active');
     document.getElementById('preview-iframe').src = '';
     document.getElementById('preview-panel-meta').textContent = '';
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('preview-hidden');
 }
 
 function loadInvoiceInPanel(invoiceId) {
