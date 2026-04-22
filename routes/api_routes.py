@@ -1,6 +1,7 @@
 """
 API routes - JSON endpoints for AJAX calls
 """
+import calendar
 import logging
 import tempfile
 from datetime import datetime, date
@@ -3638,11 +3639,20 @@ def get_employees():
                 for r in cur.fetchall():
                     avail_map[r['employee_id']] = float(r['available_minutes'] or 0)
 
+        # Fallback denominator: working days × 8h when employee_availability has no rows
+        today = date.today()
+        _, days_in_month = calendar.monthrange(today.year, today.month)
+        working_days = sum(
+            1 for d in range(1, days_in_month + 1)
+            if date(today.year, today.month, d).weekday() < 5
+        )
+        fallback_avail_min = working_days * 480  # 8 h × 60 min
+
         for employee in employees:
             sat_data = avg_satisfaction_map.get(employee.id, {})
             monthly = monthly_stats_map.get(employee.id, {})
             used_min = monthly.get('total_used_minutes', 0)
-            avail_min = avail_map.get(employee.id, 0)
+            avail_min = avail_map.get(employee.id, 0) or fallback_avail_min
             coverage_pct = (
                 round(used_min / avail_min * 100) if avail_min > 0 else None
             )
