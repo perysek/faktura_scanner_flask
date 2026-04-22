@@ -582,51 +582,37 @@ async function addCompatibleAddon() {
     }
 }
 
-async function removeCompatibleAddon(addonId) {
-    if (!confirm('Czy na pewno chcesz usunąć tę mikrousługę z listy kompatybilnych?')) {
-        return;
-    }
+function removeCompatibleAddon(addonId) {
+    Modals.confirm({
+        title: 'Usuń mikrousługę',
+        message: 'Czy na pewno chcesz usunąć tę mikrousługę z listy kompatybilnych?',
+        confirmText: 'Usuń',
+        onConfirm: async () => {
+            try {
+                const rulesResponse = await fetch(`/api/services/${addonId}/addon-rules`);
+                const rulesData = await rulesResponse.json();
+                if (!rulesData.success) throw new Error('Failed to fetch addon rules');
 
-    try {
-        // 1. Fetch addon's current compatibility rules
-        const rulesResponse = await fetch(`/api/services/${addonId}/addon-rules`);
-        const rulesData = await rulesResponse.json();
+                const currentMainIds = rulesData.rules.map(r => r.main_service_id);
+                const newMainIds = currentMainIds.filter(id => id !== MAIN_SERVICE_ID);
 
-        if (!rulesData.success) {
-            throw new Error('Failed to fetch addon rules');
+                const updateResponse = await fetch(`/api/services/${addonId}/compatibility`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ main_service_ids: newMainIds })
+                });
+                const updateData = await updateResponse.json();
+                if (updateData.success) {
+                    loadCompatibleAddons();
+                } else {
+                    Modals.alert({ title: 'Błąd', message: updateData.error, type: 'error' });
+                }
+            } catch (error) {
+                console.error('Error removing addon:', error);
+                Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
+            }
         }
-
-        // 2. Build new compatibility list (remove this main service)
-        const currentMainIds = rulesData.rules.map(r => r.main_service_id);
-        const newMainIds = currentMainIds.filter(id => id !== MAIN_SERVICE_ID);
-
-        // 3. Update compatibility via PUT
-        const updateResponse = await fetch(`/api/services/${addonId}/compatibility`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ main_service_ids: newMainIds })
-        });
-
-        const updateData = await updateResponse.json();
-
-        if (updateData.success) {
-            loadCompatibleAddons();
-        } else {
-            Modals.alert({
-                title: 'Błąd',
-                message: updateData.error,
-                type: 'error'
-            });
-        }
-
-    } catch (error) {
-        console.error('Error removing addon:', error);
-        Modals.alert({
-            title: 'Błąd połączenia',
-            message: 'Nie udało się połączyć z serwerem',
-            type: 'error'
-        });
-    }
+    });
 }
 
 function escapeHtml(text) {
@@ -635,34 +621,30 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-async function confirmDelete() {
-    if (!confirm('Czy na pewno chcesz dezaktywować usługę "{{ service.name }}"?')) return;
-
-    try {
-        const response = await fetch('/api/services/{{ service.id }}', { method: 'DELETE' });
-        const data = await response.json();
-
-        if (data.success) {
-            Modals.alert({
-                title: 'Sukces',
-                message: 'Usługa została dezaktywowana',
-                type: 'success',
-                onClose: () => window.location.href = '/services'
-            });
-        } else {
-            Modals.alert({
-                title: 'Błąd',
-                message: data.error,
-                type: 'error'
-            });
+function confirmDelete() {
+    Modals.confirm({
+        title: 'Dezaktywacja usługi',
+        message: 'Czy na pewno chcesz dezaktywować usługę "{{ service.name }}"?',
+        confirmText: 'Dezaktywuj',
+        onConfirm: async () => {
+            try {
+                const response = await fetch('/api/services/{{ service.id }}', { method: 'DELETE' });
+                const data = await response.json();
+                if (data.success) {
+                    Modals.alert({
+                        title: 'Sukces',
+                        message: 'Usługa została dezaktywowana',
+                        type: 'success',
+                        onClose: () => window.location.href = '/services'
+                    });
+                } else {
+                    Modals.alert({ title: 'Błąd', message: data.error, type: 'error' });
+                }
+            } catch (error) {
+                Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
+            }
         }
-    } catch (error) {
-        Modals.alert({
-            title: 'Błąd połączenia',
-            message: 'Nie udało się połączyć z serwerem',
-            type: 'error'
-        });
-    }
+    });
 }
 
 // Skrót klawiszowy: Esc = powrót do listy usług

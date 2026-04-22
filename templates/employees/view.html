@@ -948,98 +948,84 @@ async function assignService() {
 }
 
 // Remove service assignment
-async function removeService(esId) {
-    if (!confirm('Czy na pewno chcesz usunąć przypisanie tej usługi?')) return;
-
-    try {
-        const response = await fetch(`/api/employees/${EMPLOYEE_ID}/services/${esId}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            loadAssignedServices();
-            // Refresh skills tab if currently visible so deleted service disappears
-            const skillsTab = document.getElementById('tab-umiejetnosci');
-            if (skillsTab && skillsTab.style.display !== 'none' && typeof loadUmiejetnosci === 'function') {
-                loadUmiejetnosci();
-            }
-            if (typeof Notifications !== 'undefined') {
-                Notifications.success('Przypisanie usunięte');
-            }
-        } else {
-            if (typeof Notifications !== 'undefined') {
-                Notifications.error('Błąd: ' + data.error);
-            } else {
-                Modals.alert({
-                    title: 'Błąd',
-                    message: data.error,
-                    type: 'error'
+function removeService(esId) {
+    Modals.confirm({
+        title: 'Usuń przypisanie',
+        message: 'Czy na pewno chcesz usunąć przypisanie tej usługi?',
+        confirmText: 'Usuń',
+        onConfirm: async () => {
+            try {
+                const response = await fetch(`/api/employees/${EMPLOYEE_ID}/services/${esId}`, {
+                    method: 'DELETE'
                 });
+                const data = await response.json();
+                if (data.success) {
+                    loadAssignedServices();
+                    const skillsTab = document.getElementById('tab-umiejetnosci');
+                    if (skillsTab && skillsTab.style.display !== 'none' && typeof loadUmiejetnosci === 'function') {
+                        loadUmiejetnosci();
+                    }
+                    if (typeof Notifications !== 'undefined') {
+                        Notifications.success('Przypisanie usunięte');
+                    }
+                } else {
+                    if (typeof Notifications !== 'undefined') {
+                        Notifications.error('Błąd: ' + data.error);
+                    } else {
+                        Modals.alert({ title: 'Błąd', message: data.error, type: 'error' });
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing service:', error);
+                if (typeof Notifications !== 'undefined') {
+                    Notifications.error('Błąd połączenia z serwerem (500)');
+                } else {
+                    Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
+                }
             }
         }
-    } catch (error) {
-        console.error('Error removing service:', error);
-        if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd połączenia z serwerem (500)');
-        } else {
-            Modals.alert({
-                title: 'Błąd połączenia',
-                message: 'Nie udało się połączyć z serwerem',
-                type: 'error'
-            });
-        }
-    }
+    });
 }
 
 // Delete/deactivate employee
-async function confirmDelete() {
+function confirmDelete() {
     const isActive = {{ 'true' if employee.is_active else 'false' }};
     const action = isActive ? 'dezaktywować' : 'usunąć';
     const name = "{{ employee.full_name }}";
 
-    if (!confirm(`Czy na pewno chcesz ${action} pracownika "${name}"?`)) return;
-
-    try {
-        const response = await fetch(`/api/employees/${EMPLOYEE_ID}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            if (typeof Notifications !== 'undefined') {
-                Notifications.success('Pracownik został dezaktywowany');
-            }
-            // Delay redirect to show notification
-            setTimeout(() => {
-                window.location.href = '/employees';
-            }, 1500);
-        } else {
-            if (typeof Notifications !== 'undefined') {
-                Notifications.error('Błąd: ' + data.error);
-            } else {
-                Modals.alert({
-                    title: 'Błąd',
-                    message: data.error,
-                    type: 'error'
+    Modals.confirm({
+        title: isActive ? 'Dezaktywacja pracownika' : 'Usuń pracownika',
+        message: `Czy na pewno chcesz ${action} pracownika "${name}"?`,
+        confirmText: isActive ? 'Dezaktywuj' : 'Usuń',
+        onConfirm: async () => {
+            try {
+                const response = await fetch(`/api/employees/${EMPLOYEE_ID}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
                 });
+                const data = await response.json();
+                if (data.success) {
+                    if (typeof Notifications !== 'undefined') {
+                        Notifications.success('Pracownik został dezaktywowany');
+                    }
+                    setTimeout(() => { window.location.href = '/employees'; }, 1500);
+                } else {
+                    if (typeof Notifications !== 'undefined') {
+                        Notifications.error('Błąd: ' + data.error);
+                    } else {
+                        Modals.alert({ title: 'Błąd', message: data.error, type: 'error' });
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                if (typeof Notifications !== 'undefined') {
+                    Notifications.error('Błąd połączenia z serwerem (500)');
+                } else {
+                    Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
+                }
             }
         }
-    } catch (error) {
-        console.error('Error:', error);
-        if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd połączenia z serwerem (500)');
-        } else {
-            Modals.alert({
-                title: 'Błąd połączenia',
-                message: 'Nie udało się połączyć z serwerem',
-                type: 'error'
-            });
-        }
-    }
+    });
 }
 
 // Initialize

@@ -473,21 +473,26 @@ async function saveEdit(id) {
     }
 }
 
-async function deleteForma(id, nazwa) {
-    if (!confirm(`Usunąć formę zatrudnienia "${nazwa}"?\n\nOperacja jest nieodwracalna.`)) return;
-
-    try {
-        const res = await fetch(`${ENDPOINT}/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-            showToast('Forma zatrudnienia została usunięta');
-            loadFormy();
-        } else {
-            showToast(data.error || 'Błąd usuwania', 'error');
+function deleteForma(id, nazwa) {
+    Modals.confirm({
+        title: 'Usuń formę zatrudnienia',
+        message: `Usunąć formę zatrudnienia "${nazwa}"? Operacja jest nieodwracalna.`,
+        confirmText: 'Usuń',
+        onConfirm: async () => {
+            try {
+                const res = await fetch(`${ENDPOINT}/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Forma zatrudnienia została usunięta');
+                    loadFormy();
+                } else {
+                    showToast(data.error || 'Błąd usuwania', 'error');
+                }
+            } catch (e) {
+                showToast('Błąd połączenia z serwerem', 'error');
+            }
         }
-    } catch (e) {
-        showToast('Błąd połączenia z serwerem', 'error');
-    }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadFormy);

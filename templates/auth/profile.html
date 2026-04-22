@@ -156,55 +156,12 @@
         background: rgba(155, 44, 44, 0.1);
     }
 
-    .flash-message {
-        padding: 0.875rem 1rem;
-        border-radius: 2px;
-        margin-bottom: 1.5rem;
-        font-size: 0.8125rem;
-    }
-
-    .flash-error {
-        background: rgba(155, 44, 44, 0.08);
-        color: var(--color-error);
-        border: 1px solid rgba(155, 44, 44, 0.2);
-    }
-
-    .flash-success {
-        background: rgba(45, 106, 79, 0.08);
-        color: var(--color-success);
-        border: 1px solid rgba(45, 106, 79, 0.2);
-    }
-
-    .flash-warning {
-        background: rgba(201, 162, 39, 0.12);
-        color: var(--color-warning);
-        border: 1px solid rgba(201, 162, 39, 0.2);
-    }
-
-    .flash-info {
-        background: rgba(23, 162, 184, 0.08);
-        color: #0c7489; /* teal — no matching var, leave as-is */
-        border: 1px solid rgba(23, 162, 184, 0.2);
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto" style="padding: 2rem;">
     <h1 class="refined-page-title">Mój Profil</h1>
-
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div style="margin-bottom: 1.5rem;">
-                {% for category, message in messages %}
-                <div class="flash-message {% if category == 'error' %}flash-error{% elif category == 'success' %}flash-success{% elif category == 'warning' %}flash-warning{% else %}flash-info{% endif %}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
 
     <div class="grid grid-cols-1 md:grid-cols-2" style="gap: 1.5rem;">
         <!-- User Information Card -->
