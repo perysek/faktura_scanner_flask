@@ -606,6 +606,7 @@ async function loadPositions() {
                 opt.textContent = pos;
                 select.appendChild(opt);
             });
+            SearchableSelect.sync('filter-position');
         }
     } catch (error) {
         console.error('Error loading positions:', error);

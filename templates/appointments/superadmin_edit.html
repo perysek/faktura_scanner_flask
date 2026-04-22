@@ -594,6 +594,7 @@ function populateClientSelect(clients) {
         o.textContent = `${c.first_name} ${c.last_name}` + (c.phone ? ` (${c.phone})` : '');
         sel.appendChild(o);
     });
+    SearchableSelect.sync('client-select');
 }
 
 // ══════════════════════════════════════════════════════
@@ -618,6 +619,7 @@ function populateEmployeeSelect(employees) {
         o.textContent = `${e.first_name} ${e.last_name}` + (e.position ? ` (${e.position})` : '') + (!e.is_active ? ' [nieaktywny]' : '');
         sel.appendChild(o);
     });
+    SearchableSelect.sync('employee-select');
 }
 
 async function loadAllServices() {

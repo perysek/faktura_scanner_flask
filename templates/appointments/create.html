@@ -130,6 +130,7 @@ async function loadClients() {
             opt.textContent = `${c.first_name} ${c.last_name}` + (c.phone ? ` (${c.phone})` : '');
             sel.appendChild(opt);
         });
+        SearchableSelect.sync('client-select');
     }
 }
 
@@ -145,6 +146,7 @@ async function loadEmployees() {
             opt.textContent = `${e.first_name} ${e.last_name}` + (e.position ? ` — ${e.position}` : '');
             sel.appendChild(opt);
         });
+        SearchableSelect.sync('employee-select');
     }
 }
 

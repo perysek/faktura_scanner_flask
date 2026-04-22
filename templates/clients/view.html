@@ -640,6 +640,7 @@ async function loadEmployees() {
                 opt.textContent = `${e.first_name} ${e.last_name}`;
                 select.appendChild(opt);
             });
+            SearchableSelect.sync('new-pref-employee-id');
         }
     } catch (error) {
         console.error('Error loading employees:', error);
@@ -660,6 +661,7 @@ async function loadServices() {
                 opt.textContent = s.name;
                 select.appendChild(opt);
             });
+            SearchableSelect.sync('new-pref-service-id');
         }
     } catch (error) {
         console.error('Error loading services:', error);
@@ -709,6 +711,7 @@ async function filterServicesByEmployee(employeeId) {
                     serviceSelect.value = previousServiceId;
                 }
             }
+            SearchableSelect.sync('new-pref-service-id');
         }
     } catch (error) {
         console.error('Error filtering services:', error);
@@ -761,6 +764,7 @@ async function filterEmployeesByService(serviceId) {
                     employeeSelect.value = previousEmployeeId;
                 }
             }
+            SearchableSelect.sync('new-pref-employee-id');
         }
     } catch (error) {
         console.error('Error filtering employees:', error);

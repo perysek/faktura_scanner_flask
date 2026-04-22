@@ -800,6 +800,7 @@ async function loadAvailableServices() {
                     select.appendChild(opt);
                 });
             }
+            SearchableSelect.sync('new-service-id');
         } else {
             if (typeof Notifications !== 'undefined') {
                 Notifications.warning('Nie można załadować listy usług');
