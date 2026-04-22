@@ -663,36 +663,32 @@ def finalize_uploads():
                     'error': error_msg
                 })
 
-        # If all saved successfully
-        if not failed_invoices:
-            # Clean up empty temp directory
-            temp_dir = Path(current_app.config['UPLOAD_FOLDER']) / 'temp' / session_id
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            # Clear session
-            session.pop('upload_session_id', None)
+        # Always clean up staging — redirect happens regardless of partial failures (spec step 5)
+        try:
+            current_app.staging_repo.delete_by_session(session_id)
+        except Exception as cleanup_err:
+            logger.warning(f"[FINALIZE] Staging cleanup error: {cleanup_err}")
+        temp_dir = Path(current_app.config['UPLOAD_FOLDER']) / 'temp' / session_id
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        session.pop('upload_session_id', None)
 
+        if not failed_invoices:
             response_data = {
                 'success': True,
                 'saved_invoices': saved_invoices,
                 'count': len(saved_invoices)
             }
-            # Include seller warnings if any (non-blocking)
-            if seller_warnings:
-                response_data['seller_warnings'] = seller_warnings
-            return jsonify(response_data)
         else:
-            # Partial success
             response_data = {
                 'success': False,
                 'saved_invoices': saved_invoices,
                 'failed_invoices': failed_invoices,
                 'error': f"Zapisano {len(saved_invoices)} faktur, wystapily bledy przy {len(failed_invoices)}."
             }
-            # Include seller warnings if any
-            if seller_warnings:
-                response_data['seller_warnings'] = seller_warnings
-            return jsonify(response_data)
+        if seller_warnings:
+            response_data['seller_warnings'] = seller_warnings
+        return jsonify(response_data)
 
     except AppError:
         raise

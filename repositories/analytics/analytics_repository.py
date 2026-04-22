@@ -312,6 +312,7 @@ class AnalyticsRepository:
                 COALESCE(SUM(CASE WHEN status = 'Nieopłacona' THEN amount END), 0) AS unpaid_amount
             FROM invoices
             WHERE invoice_date BETWEEN %s AND %s
+              AND is_deleted = FALSE
         """
 
         conn = DatabaseConnection.get_connection()
@@ -752,6 +753,7 @@ class AnalyticsRepository:
                     COALESCE(SUM(amount), 0)                AS invoice_costs
                 FROM invoices
                 WHERE invoice_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  AND is_deleted = FALSE
                 GROUP BY DATE_TRUNC('month', invoice_date)::date
             )
             SELECT
@@ -966,6 +968,7 @@ class AnalyticsRepository:
                     COALESCE(SUM(amount), 0)                AS invoice_costs
                 FROM invoices
                 WHERE invoice_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  AND is_deleted = FALSE
                 GROUP BY DATE_TRUNC('month', invoice_date)::date
             )
             SELECT
