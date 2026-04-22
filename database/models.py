@@ -22,6 +22,8 @@ class Invoice:
     payment_term: Optional[str] = None
     status: str = "Nieopłacona"
     pdf_path: Optional[str] = None
+    pdf_data: Optional[bytes] = None
+    pdf_filename: Optional[str] = None
     ocr_confidence: Optional[float] = None
     is_duplicate: bool = False
     id: Optional[int] = None

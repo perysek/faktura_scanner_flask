@@ -29,8 +29,8 @@ class InvoiceRepository(BaseRepository):
             INSERT INTO invoices (
                 seller_name, seller_nip, invoice_number, invoice_date,
                 bank_account, amount, currency, payment_due_date, payment_term, status,
-                pdf_path, ocr_confidence, is_duplicate, seller_id
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                pdf_path, pdf_data, pdf_filename, ocr_confidence, is_duplicate, seller_id
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 		params = (
 			invoice.seller_name,
@@ -44,12 +44,24 @@ class InvoiceRepository(BaseRepository):
 			invoice.payment_term,
 			invoice.status,
 			invoice.pdf_path,
+			invoice.pdf_data,
+			invoice.pdf_filename,
 			invoice.ocr_confidence,
 			invoice.is_duplicate,
 			seller_id
 			)
-		
+
 		return self._execute_insert(query, params)
+
+	def get_pdf_data(self, invoice_id: int) -> Optional[tuple]:
+		"""Fetch only the binary PDF column to avoid loading it in every query.
+		Returns (pdf_data, pdf_filename, pdf_path) or None if not found.
+		"""
+		query = "SELECT pdf_data, pdf_filename, pdf_path FROM invoices WHERE id = %s"
+		row = self._fetch_one(query, (invoice_id,))
+		if not row:
+			return None
+		return (row["pdf_data"], row["pdf_filename"], row["pdf_path"])
 	
 	def update(self, invoice_id: int, invoice: Invoice, seller_id: int = None) -> bool:
 		"""Zaktualizuj fakturę"""
@@ -389,6 +401,12 @@ class InvoiceRepository(BaseRepository):
 		except (KeyError, IndexError):
 			pass
 
+		pdf_filename = None
+		try:
+			pdf_filename = row["pdf_filename"]
+		except (KeyError, IndexError):
+			pass
+
 		return Invoice(
 			id=row["id"],
 			seller_name=row["seller_name"],
@@ -402,6 +420,8 @@ class InvoiceRepository(BaseRepository):
 			payment_term=payment_term,
 			status=status,
 			pdf_path=row["pdf_path"],
+			pdf_filename=pdf_filename,
+			# pdf_data intentionally omitted — load via get_pdf_data() only when serving
 			ocr_confidence=row["ocr_confidence"],
 			is_duplicate=bool(row["is_duplicate"]),
 			created_at=parse_dt(row["created_at"]),
