@@ -1592,8 +1592,9 @@ function openPreviewPanel(invoiceId) {
     document.getElementById('preview-toggle-btn').classList.add('active');
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.classList.add('preview-hidden');
-    if (invoiceId !== null) {
-        loadInvoiceInPanel(invoiceId);
+    const targetId = invoiceId ?? filteredData[0]?.id ?? null;
+    if (targetId !== null) {
+        loadInvoiceInPanel(targetId);
     }
 }
 
