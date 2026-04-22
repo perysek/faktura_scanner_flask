@@ -168,7 +168,11 @@ class ClientRepository(BaseRepository):
             SELECT
                 c.id, c.first_name, c.last_name, c.phone, c.email,
                 c.date_of_birth, c.notes, c.preferences,
-                c.first_visit_date, c.last_visit_date,
+                c.first_visit_date,
+                GREATEST(
+                    c.last_visit_date,
+                    MAX(CASE WHEN a.status = 'completed' THEN a.appointment_date END)
+                ) AS last_visit_date,
                 c.is_active, c.created_at, c.updated_at,
                 COALESCE(COUNT(CASE WHEN a.status = 'completed' THEN 1 END), 0) AS completed_visits,
                 COALESCE(COUNT(CASE WHEN a.status = 'no_show' THEN 1 END), 0)  AS no_show_count,
