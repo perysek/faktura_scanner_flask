@@ -576,6 +576,22 @@
 let allClients = [];
 let currentSort = { field: 'last_visit_date', dir: 'desc' };
 
+function parseDateForSort(str) {
+    if (!str) return 0;
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d).getTime();
+}
+
+function saveClientState() {
+    saveFilterState('clients', ['search-input']);
+    try {
+        const state = JSON.parse(sessionStorage.getItem('filterState:clients') || '{}');
+        state._sortField = currentSort.field;
+        state._sortDir   = currentSort.dir;
+        sessionStorage.setItem('filterState:clients', JSON.stringify(state));
+    } catch(e) {}
+}
+
 function formatDate(dateString) {
     if (!dateString) return '—';
     // Parse as local time to avoid UTC off-by-one (YYYY-MM-DD strings are local)
@@ -600,6 +616,7 @@ function sortBy(field) {
     }
     updateSortHeaders();
     renderClients(allClients);
+    saveClientState();
 }
 
 function updateSortHeaders() {
@@ -618,8 +635,8 @@ function sortedClients(clients) {
         let av = a[field] ?? '';
         let bv = b[field] ?? '';
         if (field === 'last_visit_date') {
-            av = av ? new Date(av).getTime() : 0;
-            bv = bv ? new Date(bv).getTime() : 0;
+            av = parseDateForSort(av);
+            bv = parseDateForSort(bv);
         } else if (typeof av === 'number') {
             // numeric — already comparable
         } else {
@@ -747,7 +764,7 @@ async function loadStatistics() {
 }
 
 async function loadClients() {
-    saveFilterState('clients', ['search-input']);
+    saveClientState();
     const searchQuery = document.getElementById('search-input').value.trim();
     const tbody = document.getElementById('clients-tbody');
 
@@ -861,6 +878,15 @@ document.getElementById('search-input').addEventListener('keypress', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Restore sort + search state from previous visit
+    try {
+        const raw = sessionStorage.getItem('filterState:clients');
+        if (raw) {
+            const state = JSON.parse(raw);
+            if (state._sortField) currentSort.field = state._sortField;
+            if (state._sortDir)   currentSort.dir   = state._sortDir;
+        }
+    } catch(e) {}
     updateSortHeaders();
     loadStatistics();
     restoreFilterState('clients', ['search-input']);
