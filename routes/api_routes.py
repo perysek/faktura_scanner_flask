@@ -2536,22 +2536,15 @@ def get_password_for_seller(seller_id):
 @login_required
 @module_permission_required('clients', 'data_correction')
 def get_clients():
-    """Get all clients with optional search"""
+    """Get all clients with optional search, including visit statistics."""
     try:
         search_query = request.args.get('search', '').strip()
+        rows = current_app.client_repo.get_clients_with_stats(search_query)
 
-        if search_query:
-            rows = current_app.client_repo.search(search_query)
-        else:
-            rows = current_app.client_repo.get_active_clients()
-
-        # Convert to Client objects then to dicts
-        clients = [current_app.client_repo.row_to_client(row) for row in rows]
         clients_data = []
-
-        for client in clients:
+        for row in rows:
+            client = current_app.client_repo.row_to_client(row)
             client_dict = vars(client).copy()
-            # Convert dates to ISO format for JSON
             if client.date_of_birth:
                 client_dict['date_of_birth'] = client.date_of_birth.isoformat()
             if client.first_visit_date:
@@ -2562,9 +2555,12 @@ def get_clients():
                 client_dict['created_at'] = client.created_at.isoformat()
             if client.updated_at:
                 client_dict['updated_at'] = client.updated_at.isoformat()
-            # Add computed properties
             client_dict['full_name'] = client.full_name
             client_dict['age'] = client.age
+            # Visit stats from joined query
+            client_dict['completed_visits'] = int(row['completed_visits'] or 0)
+            client_dict['no_show_count'] = int(row['no_show_count'] or 0)
+            client_dict['cancelled_count'] = int(row['cancelled_count'] or 0)
             clients_data.append(client_dict)
 
         return jsonify({
@@ -2839,6 +2835,132 @@ def activate_client(client_id):
         raise
     except Exception as e:
         logging.exception('Unexpected error in activate_client')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/clients/<int:client_id>/deactivate', methods=['POST'])
+@login_required
+@module_permission_required('clients')
+def deactivate_client(client_id):
+    """Dezaktywuj klienta (is_active = False, nie usuwa rekordu)"""
+    try:
+        row = current_app.client_repo.get_by_id(client_id)
+        if not row:
+            return jsonify({'success': False, 'error': 'Klient nie istnieje'}), 404
+
+        success = current_app.client_repo.deactivate(client_id)
+        if success:
+            client_name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
+            _audit('client', 'UPDATE', entity_id=client_id, entity_label=client_name,
+                   field_name='is_active', old_value='True', new_value='False')
+            return jsonify({'success': True, 'message': 'Klient został dezaktywowany'})
+        return jsonify({'success': False, 'error': 'Nie udało się dezaktywować klienta'}), 500
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in deactivate_client')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/clients/bulk-update-preferences', methods=['POST'])
+@login_required
+@module_permission_required('clients')
+def bulk_update_client_preferences():
+    """Aktualizuj preferencje wszystkich klientów na podstawie historii wizyt.
+
+    Dla każdego klienta:
+    - top 20% najczęściej rezerwowanych pracowników → client_preferences
+    - top 80% najczęściej używanych usług → clients.preferences JSON (favorite_services)
+    """
+    import json
+    import math
+    from config.database import get_db_connection
+
+    try:
+        updated_count = 0
+
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+
+            cur.execute(
+                "SELECT id FROM clients WHERE is_deleted = FALSE AND is_active = TRUE"
+            )
+            client_ids = [r['id'] for r in cur.fetchall()]
+            total = len(client_ids)
+
+            for client_id in client_ids:
+                changed = False
+
+                # ── Top 20% employees ─────────────────────────────────────────
+                cur.execute("""
+                    SELECT employee_id, COUNT(*) AS cnt
+                    FROM appointments
+                    WHERE client_id = %s AND status = 'completed'
+                    GROUP BY employee_id
+                    ORDER BY cnt DESC
+                """, (client_id,))
+                emp_rows = cur.fetchall()
+                if emp_rows:
+                    top_n = max(1, math.ceil(len(emp_rows) * 0.2))
+                    top_employees = [r['employee_id'] for r in emp_rows[:top_n]]
+
+                    cur.execute(
+                        "DELETE FROM client_preferences WHERE client_id = %s",
+                        (client_id,)
+                    )
+                    for emp_id in top_employees:
+                        cur.execute("""
+                            INSERT INTO client_preferences
+                                (client_id, preferred_employee_id, notes)
+                            VALUES (%s, %s, 'auto')
+                        """, (client_id, emp_id))
+                    changed = True
+
+                # ── Top 80% services ──────────────────────────────────────────
+                cur.execute("""
+                    SELECT asvc.service_id, COUNT(*) AS cnt
+                    FROM appointment_services asvc
+                    JOIN appointments a ON a.id = asvc.appointment_id
+                    WHERE a.client_id = %s AND a.status = 'completed'
+                    GROUP BY asvc.service_id
+                    ORDER BY cnt DESC
+                """, (client_id,))
+                svc_rows = cur.fetchall()
+                if svc_rows:
+                    top_n = max(1, math.ceil(len(svc_rows) * 0.8))
+                    top_svc_ids = [r['service_id'] for r in svc_rows[:top_n]]
+
+                    cur.execute(
+                        "SELECT preferences FROM clients WHERE id = %s", (client_id,)
+                    )
+                    pref_row = cur.fetchone()
+                    try:
+                        prefs = json.loads(pref_row['preferences']) if pref_row and pref_row['preferences'] else {}
+                    except (ValueError, TypeError):
+                        prefs = {}
+
+                    prefs['favorite_services'] = top_svc_ids
+                    cur.execute("""
+                        UPDATE clients SET preferences = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                    """, (json.dumps(prefs), client_id))
+                    changed = True
+
+                if changed:
+                    updated_count += 1
+
+            conn.commit()
+
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'total_count': total,
+            'message': f'Zaktualizowano preferencje dla {updated_count} z {total} klientów'
+        })
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in bulk_update_client_preferences')
         raise AppError('Wystapil blad serwera')
 
 
@@ -3456,8 +3578,75 @@ def get_employees():
                         'rated_count': sat_row['rated_count']
                     }
 
+        # ── Current-month appointment stats ──────────────────────────────────
+        monthly_stats_map = {}
+        avail_map = {}
+        if employee_ids:
+            placeholders = ','.join(['%s'] * len(employee_ids))
+            monthly_q = f"""
+                SELECT
+                    employee_id,
+                    COUNT(CASE WHEN status IN
+                        ('scheduled','pending','confirmed','in_progress') THEN 1 END
+                    ) AS scheduled_count,
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) AS completed_count,
+                    COALESCE(SUM(CASE WHEN status IN
+                        ('scheduled','pending','confirmed','in_progress','completed')
+                        THEN total_duration ELSE 0 END), 0) AS total_used_minutes
+                FROM appointments
+                WHERE employee_id IN ({placeholders})
+                  AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE)
+                  AND appointment_date < DATE_TRUNC('month', CURRENT_DATE)
+                                      + INTERVAL '1 month'
+                GROUP BY employee_id
+            """
+            avail_q = f"""
+                WITH day_counts AS (
+                    SELECT
+                        MOD(EXTRACT(DOW FROM dt)::int + 6, 7) AS dow_0mon,
+                        COUNT(*) AS day_count
+                    FROM generate_series(
+                        DATE_TRUNC('month', CURRENT_DATE),
+                        DATE_TRUNC('month', CURRENT_DATE)
+                            + INTERVAL '1 month' - INTERVAL '1 day',
+                        INTERVAL '1 day'
+                    ) AS dt
+                    GROUP BY dow_0mon
+                )
+                SELECT
+                    ea.employee_id,
+                    SUM(
+                        EXTRACT(EPOCH FROM (ea.end_time - ea.start_time)) / 60.0
+                        * dc.day_count
+                    ) AS available_minutes
+                FROM employee_availability ea
+                JOIN day_counts dc ON dc.dow_0mon = ea.day_of_week
+                WHERE ea.is_available = TRUE
+                  AND ea.employee_id IN ({placeholders})
+                GROUP BY ea.employee_id
+            """
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute(monthly_q, tuple(employee_ids))
+                for r in cur.fetchall():
+                    monthly_stats_map[r['employee_id']] = {
+                        'scheduled_count': r['scheduled_count'],
+                        'completed_count': r['completed_count'],
+                        'total_used_minutes': int(r['total_used_minutes'] or 0)
+                    }
+                cur.execute(avail_q, tuple(employee_ids))
+                for r in cur.fetchall():
+                    avail_map[r['employee_id']] = float(r['available_minutes'] or 0)
+
         for employee in employees:
             sat_data = avg_satisfaction_map.get(employee.id, {})
+            monthly = monthly_stats_map.get(employee.id, {})
+            used_min = monthly.get('total_used_minutes', 0)
+            avail_min = avail_map.get(employee.id, 0)
+            coverage_pct = (
+                round(used_min / avail_min * 100) if avail_min > 0 else None
+            )
+
             employee_dict = {
                 'id': employee.id,
                 'user_id': employee.user_id,
@@ -3475,7 +3664,10 @@ def get_employees():
                 'is_active': employee.is_active,
                 'created_at': employee.created_at.isoformat() if employee.created_at else None,
                 'avg_satisfaction': sat_data.get('avg_satisfaction'),
-                'rated_count': sat_data.get('rated_count', 0)
+                'rated_count': sat_data.get('rated_count', 0),
+                'scheduled_this_month': monthly.get('scheduled_count', 0),
+                'completed_this_month': monthly.get('completed_count', 0),
+                'schedule_coverage_pct': coverage_pct,
             }
             employees_data.append(employee_dict)
 
@@ -3733,6 +3925,65 @@ def get_employee_positions():
         raise
     except Exception as e:
         logging.exception('Unexpected error in get_employee_positions')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/employees/bulk-update-services', methods=['POST'])
+@login_required
+@module_permission_required('employees')
+def bulk_update_employee_services():
+    """Aktualizuj employee_services na podstawie usług wykonanych >5 razy w historii wizyt."""
+    from config.database import get_db_connection
+
+    try:
+        updated_count = 0
+
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+
+            cur.execute("SELECT id FROM employees WHERE is_active = TRUE")
+            employee_ids = [r['id'] for r in cur.fetchall()]
+            total = len(employee_ids)
+
+            for emp_id in employee_ids:
+                # Services performed >5 times in completed appointments
+                cur.execute("""
+                    SELECT asvc.service_id, COUNT(*) AS cnt
+                    FROM appointment_services asvc
+                    JOIN appointments a ON a.id = asvc.appointment_id
+                    WHERE a.employee_id = %s AND a.status = 'completed'
+                    GROUP BY asvc.service_id
+                    HAVING COUNT(*) > 5
+                """, (emp_id,))
+                qualifying = [r['service_id'] for r in cur.fetchall()]
+                if not qualifying:
+                    continue
+
+                # ON CONFLICT DO NOTHING skips already-assigned services atomically
+                inserted = 0
+                for sid in qualifying:
+                    cur.execute("""
+                        INSERT INTO employee_services (employee_id, service_id)
+                        VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING
+                    """, (emp_id, sid))
+                    inserted += cur.rowcount
+
+                if inserted > 0:
+                    updated_count += 1
+
+            conn.commit()
+
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'total_count': total,
+            'message': f'Zaktualizowano usługi dla {updated_count} z {total} pracowników'
+        })
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in bulk_update_employee_services')
         raise AppError('Wystapil blad serwera')
 
 

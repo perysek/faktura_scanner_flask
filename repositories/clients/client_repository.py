@@ -152,6 +152,43 @@ class ClientRepository(BaseRepository):
         """
         return self._fetch_all(query)
 
+    def get_clients_with_stats(self, search_query: str = '') -> List[Any]:
+        """Pobierz aktywnych klientów ze statystykami wizyt (zakończone, no-show, anulowane)."""
+        params = []
+        search_clause = ''
+        if search_query:
+            search_clause = """
+                AND (c.first_name ILIKE %s OR c.last_name ILIKE %s
+                     OR c.phone ILIKE %s OR c.email ILIKE %s)
+            """
+            p = f'%{search_query}%'
+            params = [p, p, p, p]
+
+        query = f"""
+            SELECT
+                c.id, c.first_name, c.last_name, c.phone, c.email,
+                c.date_of_birth, c.notes, c.preferences,
+                c.first_visit_date, c.last_visit_date,
+                c.is_active, c.created_at, c.updated_at,
+                COALESCE(COUNT(CASE WHEN a.status = 'completed' THEN 1 END), 0) AS completed_visits,
+                COALESCE(COUNT(CASE WHEN a.status = 'no_show' THEN 1 END), 0)  AS no_show_count,
+                COALESCE(COUNT(CASE WHEN a.status = 'cancelled' THEN 1 END), 0) AS cancelled_count
+            FROM clients c
+            LEFT JOIN appointments a ON a.client_id = c.id
+            WHERE c.is_deleted = FALSE AND c.is_active = TRUE
+            {search_clause}
+            GROUP BY
+                c.id, c.first_name, c.last_name, c.phone, c.email,
+                c.date_of_birth, c.notes, c.preferences,
+                c.first_visit_date, c.last_visit_date,
+                c.is_active, c.created_at, c.updated_at
+            ORDER BY
+                CASE WHEN c.last_name = '' OR c.last_name IS NULL THEN 1 ELSE 0 END,
+                LOWER(c.last_name),
+                LOWER(c.first_name)
+        """
+        return self._fetch_all(query, tuple(params) if params else ())
+
     def get_recent_clients(self, limit: int = 10) -> List[Any]:
         """Pobierz ostatnio dodanych klientów"""
         query = f"""
