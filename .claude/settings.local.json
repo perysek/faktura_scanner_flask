@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Skill",
       "Bash(cat:*)",
       "Bash(git -C /c/Projects/faktura_scanner_flask log --oneline -15)",
       "Bash(npm install:*)",
