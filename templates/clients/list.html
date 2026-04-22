@@ -451,6 +451,16 @@
     .bulk-result-toast.success { background: var(--color-success); }
     .bulk-result-toast.error { background: var(--color-error); }
 
+    /* VIP toggle active state */
+    .refined-btn-secondary.btn-active {
+        border-color: var(--color-success);
+        color: var(--color-success);
+        background: rgba(45, 106, 79, 0.06);
+    }
+
+    /* Trend sparkline cell */
+    .trend-cell { line-height: 0; }
+
     /* Responsive */
     @media (max-width: 768px) {
         .page-header { flex-direction: column; align-items: flex-start; }
@@ -534,6 +544,10 @@
                 <span class="material-icons">search</span>
                 Szukaj
             </button>
+            <button id="btn-vip-only" class="refined-btn-secondary" onclick="toggleVip()" title="Minimum 3 wizyty w ostatnich 8 tygodniach">
+                <span class="material-icons" style="font-size:0.9rem;">star</span>
+                Tylko VIP
+            </button>
         </div>
     </div>
 
@@ -541,15 +555,16 @@
     <div class="table-container" aria-live="polite" aria-label="Lista klientów">
         <table class="refined-table">
             <colgroup>
-                <col style="width:22%"><!-- Imię i nazwisko -->
-                <col style="width:11%"><!-- Telefon -->
-                <col style="width:15%"><!-- Email -->
-                <col style="width:11%"><!-- Ostatnia wizyta -->
-                <col style="width:7%"> <!-- Wizyt -->
-                <col style="width:8%"> <!-- No-shows -->
-                <col style="width:9%"> <!-- Anulowanych -->
+                <col style="width:20%"><!-- Imię i nazwisko -->
+                <col style="width:10%"><!-- Telefon -->
+                <col style="width:13%"><!-- Email -->
+                <col style="width:10%"><!-- Ostatnia wizyta -->
+                <col style="width:6%"> <!-- Wizyt -->
+                <col style="width:7%"> <!-- No-shows -->
+                <col style="width:7%"> <!-- Anulowanych -->
+                <col style="width:8%"> <!-- Trend -->
                 <col style="width:9%"> <!-- Status -->
-                <col style="width:8%"> <!-- Akcje -->
+                <col style="width:10%"><!-- Akcje -->
             </colgroup>
             <thead>
                 <tr>
@@ -581,13 +596,14 @@
                         Anulo&shy;wanych
                         <span class="th-sort-icon" id="si-cancelled_count">▲</span>
                     </th>
+                    <th>Trend<br><span style="font-size:0.5625rem;font-weight:400;letter-spacing:0;text-transform:none;opacity:0.7;">6 mies.</span></th>
                     <th>Status</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="clients-tbody">
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="10" class="empty-state">
                         <span class="material-icons empty-icon">people</span>
                         <p class="empty-text">Ładowanie klientów...</p>
                     </td>
@@ -607,6 +623,8 @@
 {% block extra_scripts %}
 <script>
 let allClients = [];
+let clientTrends = {};   // {client_id: [week0_count, ..., week25_count]}
+let vipOnly = false;
 let currentSort = { field: 'last_visit_date', dir: 'desc' };
 
 function parseDateForSort(str) {
@@ -636,6 +654,50 @@ function formatDate(dateString) {
 function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// ── Sparkline helpers ─────────────────────────────────────────────────────────
+
+function trendColor(weeks) {
+    if (!weeks || weeks.length < 4) return '#9ca3af';
+    const half = Math.floor(weeks.length / 2);
+    const firstAvg = weeks.slice(0, half).reduce((a, b) => a + b, 0) / half;
+    const lastAvg  = weeks.slice(weeks.length - half).reduce((a, b) => a + b, 0) / half;
+    const delta = lastAvg - firstAvg;
+    if (delta > 0.15) return 'var(--color-success)';
+    if (delta < -0.15) return '#ef4444';
+    return '#9ca3af';
+}
+
+function sparklineSvg(weeks) {
+    if (!weeks || !weeks.length) return '<span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>';
+    const W = 60, H = 20, pad = 1.5;
+    const max = Math.max(...weeks, 1);
+    const step = (W - 2 * pad) / Math.max(weeks.length - 1, 1);
+    const color = trendColor(weeks);
+    const points = weeks.map((v, i) => {
+        const x = pad + i * step;
+        const y = pad + (H - 2 * pad) * (1 - v / max);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const maxLabel = max > 1 ? `max ${max}` : '';
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;" title="${maxLabel}">
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+}
+
+// ── VIP filter ────────────────────────────────────────────────────────────────
+
+function toggleVip() {
+    vipOnly = !vipOnly;
+    const btn = document.getElementById('btn-vip-only');
+    if (btn) btn.classList.toggle('btn-active', vipOnly);
+    renderClients(allClients);
+}
+
+function applyVip(clients) {
+    if (!vipOnly) return clients;
+    return clients.filter(c => (c.visits_last_8w || 0) >= 3);
 }
 
 // ── Sort ─────────────────────────────────────────────────────────────────────
@@ -686,12 +748,12 @@ function sortedClients(clients) {
 
 function renderClients(clients) {
     const tbody = document.getElementById('clients-tbody');
-    const sorted = sortedClients(clients);
+    const sorted = sortedClients(applyVip(clients));
 
     if (sorted.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="10" class="empty-state">
                     <span class="material-icons empty-icon">search_off</span>
                     <p class="empty-text">Nie znaleziono klientów</p>
                 </td>
@@ -757,6 +819,7 @@ function renderClients(clients) {
                 <td><span class="visit-count">${client.completed_visits || 0}</span></td>
                 <td>${noShowCell}</td>
                 <td><span class="visit-count">${client.cancelled_count || 0}</span></td>
+                <td class="trend-cell">${sparklineSvg(clientTrends[client.id])}</td>
                 <td>${statusBadge}</td>
                 <td style="text-align:right; white-space:nowrap;">
                     <div class="action-icons">
@@ -802,22 +865,32 @@ async function loadClients() {
     const tbody = document.getElementById('clients-tbody');
 
     try {
-        const url = searchQuery
+        const clientUrl = searchQuery
             ? `/api/clients?search=${encodeURIComponent(searchQuery)}`
             : '/api/clients';
 
-        const response = await fetch(url);
-        const data = await response.json();
+        const [clientsResp, trendsResp] = await Promise.all([
+            fetch(clientUrl).then(r => r.json()),
+            fetch('/api/clients/visit-trends').then(r => r.json()),
+        ]);
 
-        if (data.success) {
-            allClients = data.clients;
+        if (trendsResp.success) {
+            // Keys from JSON are strings — convert to int-keyed map
+            clientTrends = {};
+            for (const [k, v] of Object.entries(trendsResp.trends)) {
+                clientTrends[parseInt(k)] = v;
+            }
+        }
+
+        if (clientsResp.success) {
+            allClients = clientsResp.clients;
             renderClients(allClients);
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="10" class="empty-state">
                         <p class="empty-text" style="color:var(--color-error);">
-                            Błąd ładowania klientów: ${escapeHtml(data.error)}
+                            Błąd ładowania klientów: ${escapeHtml(clientsResp.error)}
                         </p>
                         <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top:0.75rem;">
                             Spróbuj ponownie
@@ -829,7 +902,7 @@ async function loadClients() {
         console.error('Error loading clients:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="10" class="empty-state">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top:0.75rem;">
                         Spróbuj ponownie
