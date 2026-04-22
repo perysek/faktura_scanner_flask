@@ -1,9 +1,14 @@
- Adjust upload and processing PDF files with invoices into steps:
+Invoices documents/data extracting workflow:
+
 1 - upload PDF files (folder or e-mail) triggered by user (button clicked) - no PDF content processing yet.
 2 - upload controls boxes (from folder and from e-mail) are removed from the view and only uploaded PDF files list table is displayed with columns:
 ##PDF file name
 ##related e-mail title (or disc folder path for disc file uploads), author e-mail address and e-mail date (or document name fetched from file metadata - if available, file last modification date for files uploaded from disc)
 Each table item with action button 'remove' to allow excluding selected files from further OCR processing.
 3 - 'Przetwórz documenty' button on the right-bottom which triggers PDF files processing with modal progress info as it is
-4 - The processing results table must have action buttons for each line: 'view PDF' for displaying the content in new browser window; 'Add to list' which adds the PDF file with OCRed data (if any) regardless the processing errors.
-5 - 'Zapisz i zakończ' button on the bottom which updates the database and returns to list view.
+4 - Once files processing is finished, the staging files table clears and is replaced by processing results table (as is defined
+now) action buttons for each line: 'view PDF' icon btn for displaying the content in new
+ browser window; 'Add to list' checkbox which adds the PDF file with OCRed data (if any) regardless the processing errors.
+5 - 'Zapisz i zakończ' button on the bottom which updates the database, clears staging files table and returns to invoices table
+pageview.
+
