@@ -3648,13 +3648,21 @@ def get_employees():
         )
         fallback_avail_min = working_days * 480  # 8 h × 60 min
 
+        # Pre-compute total used minutes across all employees for the "others" denominator
+        total_all_used_min = sum(
+            monthly_stats_map.get(emp.id, {}).get('total_used_minutes', 0)
+            for emp in employees
+        )
+
         for employee in employees:
             sat_data = avg_satisfaction_map.get(employee.id, {})
             monthly = monthly_stats_map.get(employee.id, {})
             used_min = monthly.get('total_used_minutes', 0)
             avail_min = avail_map.get(employee.id, 0) or fallback_avail_min
+            other_employees_used_min = total_all_used_min - used_min
+            denominator = avail_min - other_employees_used_min
             coverage_pct = (
-                round(used_min / avail_min * 100) if avail_min > 0 else None
+                round(used_min / denominator * 100, 2) if denominator > 0 else None
             )
 
             employee_dict = {
