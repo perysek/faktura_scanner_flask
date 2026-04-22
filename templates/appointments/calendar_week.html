@@ -533,11 +533,12 @@ async function loadWeekAndFilterEmployees() {
 }
 
 function updateEmployeeDropdown() {
+    const employeeDropdown = employeeSelect.closest('.ss-wrap') || employeeSelect;
     // Hide dropdown if only one employee
     if (employees.length === 1) {
-        employeeSelect.style.display = 'none';
+        employeeDropdown.style.display = 'none';
     } else {
-        employeeSelect.style.display = 'block';
+        employeeDropdown.style.display = 'block';
         employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
         employees.forEach(emp => {
             const option = document.createElement('option');
@@ -546,6 +547,7 @@ function updateEmployeeDropdown() {
             option.title = emp.full_name + (emp.position ? ` (${emp.position})` : '');
             employeeSelect.appendChild(option);
         });
+        SearchableSelect.sync('employeeSelect');
     }
 }
 

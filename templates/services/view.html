@@ -479,6 +479,7 @@ async function loadAllAddons() {
 
         if (!data.success || data.count === 0) {
             select.innerHTML = '<option value="">Brak dostępnych mikrousług</option>';
+            SearchableSelect.sync('addon-select');
             return;
         }
 
@@ -495,6 +496,7 @@ async function loadAllAddons() {
                     .map(addon => `<option value="${addon.id}">${escapeHtml(addon.name)} (${addon.formatted_price || addon.price + ' zł'})</option>`)
                     .join('');
         }
+        SearchableSelect.sync('addon-select');
 
     } catch (error) {
         console.error('Error loading addons:', error);

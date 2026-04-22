@@ -18,6 +18,51 @@
 
     {% block extra_head %}{% endblock %}
 
+    <!-- SearchableSelect styles (inline — independent of Tailwind build) -->
+    <style>
+        .ss-wrap { position: relative; display: block; }
+        .ss-trigger {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; padding: 0.5rem 0.75rem; gap: 0.5rem;
+            font-family: inherit; font-size: 0.8125rem; font-weight: 300;
+            color: var(--color-ink); background: white;
+            border: 1px solid var(--color-border); border-radius: 2px;
+            cursor: pointer; text-align: left;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ss-trigger:focus { outline: none; border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,.04); }
+        .ss-trigger--placeholder { color: var(--color-ink-subtle); }
+        .ss-chevron { flex-shrink: 0; color: var(--color-ink-subtle); transition: transform 0.18s ease; }
+        .ss-wrap.ss-open .ss-chevron { transform: rotate(180deg); }
+        .ss-panel {
+            position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+            background: white; border: 1px solid var(--color-border); border-radius: 2px;
+            box-shadow: 0 6px 20px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
+            z-index: 200; display: none;
+        }
+        .ss-wrap.ss-open .ss-panel { display: block; }
+        .ss-search {
+            display: block; width: 100%; padding: 0.5rem 0.75rem;
+            font-family: inherit; font-size: 0.8125rem; font-weight: 300;
+            color: var(--color-ink); background: var(--color-surface);
+            border: none; border-bottom: 1px solid var(--color-border-subtle);
+            outline: none;
+        }
+        .ss-list { max-height: 220px; overflow-y: auto; }
+        .ss-item {
+            padding: 0.5rem 0.75rem; font-size: 0.8125rem; cursor: pointer;
+            color: var(--color-ink); transition: background 0.12s ease;
+        }
+        .ss-item:hover, .ss-item--focused { background: var(--color-surface); }
+        .ss-item--selected { font-weight: 500; color: var(--color-ink); }
+        .ss-item--disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+        .ss-item mark { background: rgba(201,162,39,.25); color: inherit; border-radius: 1px; }
+        .ss-no-results { padding: 0.75rem; font-size: 0.8125rem; color: var(--color-ink-subtle); text-align: center; }
+        .ss-list::-webkit-scrollbar { width: 5px; }
+        .ss-list::-webkit-scrollbar-track { background: var(--color-surface); }
+        .ss-list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+    </style>
+
     <!-- Toast notification styles (inline — independent of Tailwind build) -->
     <style>
         @keyframes toast-slide-up {
@@ -121,6 +166,7 @@
     <script src="{{ url_for('static', filename='js/modals.js') }}"></script>
     <script src="{{ url_for('static', filename='js/table-utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/searchable-select.js') }}"></script>
 
     {% block scripts %}{% endblock %}
     {% block extra_scripts %}{% endblock %}
