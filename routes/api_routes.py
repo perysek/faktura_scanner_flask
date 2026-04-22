@@ -2892,59 +2892,42 @@ def bulk_update_client_preferences():
             for client_id in client_ids:
                 changed = False
 
-                # ── Top 20% employees ─────────────────────────────────────────
+                # ── Service-employee combinations covering 75% of visits ───────
                 cur.execute("""
-                    SELECT employee_id, COUNT(*) AS cnt
-                    FROM appointments
-                    WHERE client_id = %s AND status = 'completed'
-                    GROUP BY employee_id
+                    SELECT a.employee_id, asvc.service_id, COUNT(*) AS cnt
+                    FROM appointments a
+                    JOIN appointment_services asvc ON asvc.appointment_id = a.id
+                    WHERE a.client_id = %s
+                      AND a.status = 'completed'
+                      AND a.is_deleted = FALSE
+                    GROUP BY a.employee_id, asvc.service_id
                     ORDER BY cnt DESC
                 """, (client_id,))
-                emp_rows = cur.fetchall()
-                if emp_rows:
-                    top_n = max(1, math.ceil(len(emp_rows) * 0.2))
-                    top_employees = [r['employee_id'] for r in emp_rows[:top_n]]
+                combo_rows = cur.fetchall()
 
+                if combo_rows:
+                    total_cnt = sum(r['cnt'] for r in combo_rows)
+                    threshold = total_cnt * 0.75
+                    cumulative = 0
+                    combos_to_add = []
+                    for row in combo_rows:
+                        cumulative += row['cnt']
+                        combos_to_add.append(row)
+                        if cumulative >= threshold:
+                            break
+
+                    # Remove only auto-generated preferences; preserve manual ones
                     cur.execute(
-                        "DELETE FROM client_preferences WHERE client_id = %s",
+                        "DELETE FROM client_preferences WHERE client_id = %s AND notes = 'auto'",
                         (client_id,)
                     )
-                    for emp_id in top_employees:
+                    for combo in combos_to_add:
                         cur.execute("""
                             INSERT INTO client_preferences
-                                (client_id, preferred_employee_id, notes)
-                            VALUES (%s, %s, 'auto')
-                        """, (client_id, emp_id))
-                    changed = True
-
-                # ── Top 80% services ──────────────────────────────────────────
-                cur.execute("""
-                    SELECT asvc.service_id, COUNT(*) AS cnt
-                    FROM appointment_services asvc
-                    JOIN appointments a ON a.id = asvc.appointment_id
-                    WHERE a.client_id = %s AND a.status = 'completed'
-                    GROUP BY asvc.service_id
-                    ORDER BY cnt DESC
-                """, (client_id,))
-                svc_rows = cur.fetchall()
-                if svc_rows:
-                    top_n = max(1, math.ceil(len(svc_rows) * 0.8))
-                    top_svc_ids = [r['service_id'] for r in svc_rows[:top_n]]
-
-                    cur.execute(
-                        "SELECT preferences FROM clients WHERE id = %s", (client_id,)
-                    )
-                    pref_row = cur.fetchone()
-                    try:
-                        prefs = json.loads(pref_row['preferences']) if pref_row and pref_row['preferences'] else {}
-                    except (ValueError, TypeError):
-                        prefs = {}
-
-                    prefs['favorite_services'] = top_svc_ids
-                    cur.execute("""
-                        UPDATE clients SET preferences = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                    """, (json.dumps(prefs), client_id))
+                                (client_id, preferred_employee_id, service_id, notes)
+                            VALUES (%s, %s, %s, 'auto')
+                            ON CONFLICT DO NOTHING
+                        """, (client_id, combo['employee_id'], combo['service_id']))
                     changed = True
 
                 if changed:
