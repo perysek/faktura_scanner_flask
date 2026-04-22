@@ -2955,7 +2955,7 @@ def bulk_update_client_preferences():
 def get_client_visit_trends():
     """Weekly completed-visit counts per active client for the last 26 weeks."""
     try:
-        trends = current_app.client_repo.get_all_weekly_visit_trends(weeks=26)
+        trends = current_app.client_repo.get_all_monthly_visit_trends(months=12)
         return jsonify({'success': True, 'trends': trends})
     except AppError:
         raise
