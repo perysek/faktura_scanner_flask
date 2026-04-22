@@ -342,6 +342,7 @@ async function loadStagedFiles() {
             if (uploadedFiles.length > 0) {
                 displayUploadedFiles();
                 showUploadedFilesSection();
+                hideUploadControls();
             }
         }
     } catch (error) {
@@ -955,24 +956,20 @@ async function saveAndFinish() {
             });
         }
 
-        if (result.success) {
-            // Clear localStorage on success
-            clearSavedResults();
-            // Full success - redirect
-            setTimeout(() => {
-                window.location.href = '/invoices';
-            }, 1500);
-        } else {
-            // Partial success or failure - stay on page
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<span class="material-icons text-sm mr-2">save</span>Zapisz pozostałe';
-        }
+        // Always clear staging state and return to invoices table (spec step 5)
+        clearSavedResults();
+        const delay = result.failed_invoices?.length > 0 ? 2500 : 1500;
+        setTimeout(() => {
+            window.location.href = '/invoices';
+        }, delay);
 
     } catch (error) {
         console.error('Save error:', error);
         Notifications.error('Błąd zapisu: ' + error.message);
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<span class="material-icons text-sm mr-2">save</span>Zapisz i zakończ';
+        clearSavedResults();
+        setTimeout(() => {
+            window.location.href = '/invoices';
+        }, 2500);
     }
 }
 
