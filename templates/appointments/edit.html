@@ -386,12 +386,18 @@ function addService(serviceId, serviceName, price, duration) {
 }
 
 function removeService(index) {
-    if (!confirm('Czy na pewno chcesz usunąć tę usługę?')) return;
-    currentServices.splice(index, 1);
-    renderServices();
-    renderServicePicker();
-    updateSummary();
-    checkConflicts();
+    Modals.confirm({
+        title: 'Usuń usługę',
+        message: 'Czy na pewno chcesz usunąć tę usługę?',
+        confirmText: 'Usuń',
+        onConfirm: () => {
+            currentServices.splice(index, 1);
+            renderServices();
+            renderServicePicker();
+            updateSummary();
+            checkConflicts();
+        }
+    });
 }
 
 function updateSummary() {

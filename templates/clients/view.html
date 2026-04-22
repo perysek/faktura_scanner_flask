@@ -946,44 +946,39 @@ async function addPreference() {
 }
 
 // Remove preference
-async function removePreference(prefId) {
-    if (!confirm('Czy na pewno chcesz usunąć tę preferencję?')) return;
-
-    try {
-        const response = await fetch(`/api/clients/${CLIENT_ID}/preferences/${prefId}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            loadPreferences();
-            if (typeof Notifications !== 'undefined') {
-                Notifications.success('Preferencja usunięta');
-            }
-        } else {
-            if (typeof Notifications !== 'undefined') {
-                Notifications.error('Błąd: ' + data.error);
-            } else {
-                Modals.alert({
-                title: 'Błąd',
-                message: data.error,
-                type: 'error'
-            });
+function removePreference(prefId) {
+    Modals.confirm({
+        title: 'Usuń preferencję',
+        message: 'Czy na pewno chcesz usunąć tę preferencję?',
+        confirmText: 'Usuń',
+        onConfirm: async () => {
+            try {
+                const response = await fetch(`/api/clients/${CLIENT_ID}/preferences/${prefId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    loadPreferences();
+                    if (typeof Notifications !== 'undefined') {
+                        Notifications.success('Preferencja usunięta');
+                    }
+                } else {
+                    if (typeof Notifications !== 'undefined') {
+                        Notifications.error('Błąd: ' + data.error);
+                    } else {
+                        Modals.alert({ title: 'Błąd', message: data.error, type: 'error' });
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing preference:', error);
+                if (typeof Notifications !== 'undefined') {
+                    Notifications.error('Błąd połączenia z serwerem');
+                } else {
+                    Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
+                }
             }
         }
-    } catch (error) {
-        console.error('Error removing preference:', error);
-        if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd połączenia z serwerem');
-        } else {
-            Modals.alert({
-                title: 'Błąd połączenia',
-                message: 'Nie udało się połączyć z serwerem',
-                type: 'error'
-            });
-        }
-    }
+    });
 }
 
 // Delete/deactivate client
@@ -1059,48 +1054,39 @@ async function loadAppointmentHistory() {
     }
 }
 
-async function confirmDelete() {
+function confirmDelete() {
     const isActive = {{ 'true' if client.is_active else 'false' }};
     const action = isActive ? 'dezaktywować' : 'usunąć';
     const clientName = "{{ client.full_name }}";
 
-    if (!confirm(`Czy na pewno chcesz ${action} klienta "${clientName}"?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/clients/{{ client.id }}', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
+    Modals.confirm({
+        title: isActive ? 'Dezaktywacja klienta' : 'Usuń klienta',
+        message: `Czy na pewno chcesz ${action} klienta "${clientName}"?`,
+        confirmText: isActive ? 'Dezaktywuj' : 'Usuń',
+        onConfirm: async () => {
+            try {
+                const response = await fetch('/api/clients/{{ client.id }}', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    Modals.alert({
+                        title: 'Sukces',
+                        message: 'Klient został dezaktywowany',
+                        type: 'success',
+                        onClose: () => window.location.href = '/clients'
+                    });
+                    window.location.href = '/clients';
+                } else {
+                    Modals.alert({ title: 'Błąd', message: data.error, type: 'error' });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
             }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            Modals.alert({
-                title: 'Sukces',
-                message: 'Klient został dezaktywowany',
-                type: 'success',
-                onClose: () => window.location.href = '/clients'
-            });
-            window.location.href = '/clients';
-        } else {
-            Modals.alert({
-                title: 'Błąd',
-                message: data.error,
-                type: 'error'
-            });
         }
-    } catch (error) {
-        console.error('Error:', error);
-        Modals.alert({
-            title: 'Błąd połączenia',
-            message: 'Nie udało się połączyć z serwerem',
-            type: 'error'
-        });
-    }
+    });
 }
 
 // Skrót klawiszowy: Esc = powrót do listy klientów

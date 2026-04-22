@@ -918,21 +918,26 @@ async function loadClients() {
 
 // ── Deactivate client ─────────────────────────────────────────────────────────
 
-async function deactivateClient(clientId, clientName) {
-    if (!confirm(`Dezaktywować klienta "${clientName}"?`)) return;
-
-    try {
-        const resp = await fetch(`/api/clients/${clientId}/deactivate`, { method: 'POST' });
-        const data = await resp.json();
-        if (data.success) {
-            showToast('success', `Klient "${clientName}" został dezaktywowany.`);
-            loadClients();
-        } else {
-            showToast('error', data.error || 'Błąd dezaktywacji');
+function deactivateClient(clientId, clientName) {
+    Modals.confirm({
+        title: 'Dezaktywacja klienta',
+        message: `Dezaktywować klienta "${clientName}"?`,
+        confirmText: 'Dezaktywuj',
+        onConfirm: async () => {
+            try {
+                const resp = await fetch(`/api/clients/${clientId}/deactivate`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast('success', `Klient "${clientName}" został dezaktywowany.`);
+                    loadClients();
+                } else {
+                    showToast('error', data.error || 'Błąd dezaktywacji');
+                }
+            } catch (e) {
+                showToast('error', 'Błąd połączenia z serwerem');
+            }
         }
-    } catch (e) {
-        showToast('error', 'Błąd połączenia z serwerem');
-    }
+    });
 }
 
 // ── Bulk preferences update ───────────────────────────────────────────────────
