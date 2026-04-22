@@ -176,7 +176,9 @@ class ClientRepository(BaseRepository):
                 c.is_active, c.created_at, c.updated_at,
                 COALESCE(COUNT(CASE WHEN a.status = 'completed' THEN 1 END), 0) AS completed_visits,
                 COALESCE(COUNT(CASE WHEN a.status = 'no_show' THEN 1 END), 0)  AS no_show_count,
-                COALESCE(COUNT(CASE WHEN a.status = 'cancelled' THEN 1 END), 0) AS cancelled_count
+                COALESCE(COUNT(CASE WHEN a.status = 'cancelled' THEN 1 END), 0) AS cancelled_count,
+                COALESCE(COUNT(CASE WHEN a.status = 'completed'
+                    AND a.appointment_date >= CURRENT_DATE - INTERVAL '56 days' THEN 1 END), 0) AS visits_last_8w
             FROM clients c
             LEFT JOIN appointments a ON a.client_id = c.id
             WHERE c.is_deleted = FALSE AND c.is_active = TRUE
@@ -247,6 +249,50 @@ class ClientRepository(BaseRepository):
             ORDER BY last_visit_date DESC NULLS LAST
         """
         return self._fetch_all(query, (cutoff_date.isoformat(),))
+
+    def get_all_weekly_visit_trends(self, weeks: int = 26) -> dict:
+        """Returns {client_id: [count_week0, ..., count_weekN]} oldest to newest."""
+        query = """
+            WITH week_series AS (
+                SELECT
+                    gs AS week_idx,
+                    (date_trunc('week', CURRENT_DATE::date)
+                        - ((%s - 1 - gs) * INTERVAL '1 week'))::date AS week_start
+                FROM generate_series(0, %s - 1) AS gs
+            ),
+            completed AS (
+                SELECT
+                    a.client_id,
+                    date_trunc('week', a.appointment_date)::date AS week_start,
+                    COUNT(*) AS cnt
+                FROM appointments a
+                JOIN clients c ON c.id = a.client_id
+                WHERE a.status = 'completed'
+                  AND c.is_deleted = FALSE
+                  AND c.is_active = TRUE
+                  AND a.appointment_date >= (
+                      date_trunc('week', CURRENT_DATE::date) - (%s - 1) * INTERVAL '1 week'
+                  )
+                GROUP BY a.client_id, date_trunc('week', a.appointment_date)::date
+            )
+            SELECT
+                c.id AS client_id,
+                ws.week_idx,
+                COALESCE(comp.cnt, 0) AS visit_count
+            FROM clients c
+            CROSS JOIN week_series ws
+            LEFT JOIN completed comp ON comp.client_id = c.id AND comp.week_start = ws.week_start
+            WHERE c.is_deleted = FALSE AND c.is_active = TRUE
+            ORDER BY c.id, ws.week_idx
+        """
+        rows = self._fetch_all(query, (weeks, weeks, weeks))
+        result = {}
+        for row in rows:
+            cid = int(row['client_id'])
+            if cid not in result:
+                result[cid] = []
+            result[cid].append(int(row['visit_count'] or 0))
+        return result
 
     def update_last_visit(self, client_id: int, visit_date: date) -> bool:
         """Zaktualizuj datę ostatniej wizyty klienta"""

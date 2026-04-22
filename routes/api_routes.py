@@ -2562,6 +2562,7 @@ def get_clients():
             client_dict['completed_visits'] = int(row['completed_visits'] or 0)
             client_dict['no_show_count'] = int(row['no_show_count'] or 0)
             client_dict['cancelled_count'] = int(row['cancelled_count'] or 0)
+            client_dict['visits_last_8w'] = int(row['visits_last_8w'] or 0)
             clients_data.append(client_dict)
 
         return jsonify({
@@ -2945,6 +2946,21 @@ def bulk_update_client_preferences():
         raise
     except Exception as e:
         logging.exception('Unexpected error in bulk_update_client_preferences')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/clients/visit-trends', methods=['GET'])
+@login_required
+@module_permission_required('clients', 'data_correction')
+def get_client_visit_trends():
+    """Weekly completed-visit counts per active client for the last 26 weeks."""
+    try:
+        trends = current_app.client_repo.get_all_weekly_visit_trends(weeks=26)
+        return jsonify({'success': True, 'trends': trends})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in get_client_visit_trends')
         raise AppError('Wystapil blad serwera')
 
 
