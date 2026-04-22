@@ -677,7 +677,7 @@ function renderClients(clients) {
             ? '<span class="status-badge active">Aktywny</span>'
             : '<span class="status-badge inactive">Nieaktywny</span>';
 
-        const deactivateBtn = client.is_active
+        const deactivateBtn = client.is_active && (client.no_show_count || 0) > 2
             ? `<button class="action-icon-btn danger"
                        onclick="deactivateClient(${client.id}, '${escapeHtml(fullName)}')"
                        title="Dezaktywuj klienta" aria-label="Dezaktywuj klienta">
