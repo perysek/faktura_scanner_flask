@@ -250,20 +250,20 @@ class ClientRepository(BaseRepository):
         """
         return self._fetch_all(query, (cutoff_date.isoformat(),))
 
-    def get_all_weekly_visit_trends(self, weeks: int = 26) -> dict:
-        """Returns {client_id: [count_week0, ..., count_weekN]} oldest to newest."""
+    def get_all_monthly_visit_trends(self, months: int = 12) -> dict:
+        """Returns {client_id: [count_month0, ..., count_monthN]} oldest to newest."""
         query = """
-            WITH week_series AS (
+            WITH month_series AS (
                 SELECT
-                    gs AS week_idx,
-                    (date_trunc('week', CURRENT_DATE::date)
-                        - ((%s - 1 - gs) * INTERVAL '1 week'))::date AS week_start
+                    gs AS month_idx,
+                    (date_trunc('month', CURRENT_DATE::date)
+                        - ((%s - 1 - gs) * INTERVAL '1 month'))::date AS month_start
                 FROM generate_series(0, %s - 1) AS gs
             ),
             completed AS (
                 SELECT
                     a.client_id,
-                    date_trunc('week', a.appointment_date)::date AS week_start,
+                    date_trunc('month', a.appointment_date)::date AS month_start,
                     COUNT(*) AS cnt
                 FROM appointments a
                 JOIN clients c ON c.id = a.client_id
@@ -271,21 +271,21 @@ class ClientRepository(BaseRepository):
                   AND c.is_deleted = FALSE
                   AND c.is_active = TRUE
                   AND a.appointment_date >= (
-                      date_trunc('week', CURRENT_DATE::date) - (%s - 1) * INTERVAL '1 week'
+                      date_trunc('month', CURRENT_DATE::date) - (%s - 1) * INTERVAL '1 month'
                   )
-                GROUP BY a.client_id, date_trunc('week', a.appointment_date)::date
+                GROUP BY a.client_id, date_trunc('month', a.appointment_date)::date
             )
             SELECT
                 c.id AS client_id,
-                ws.week_idx,
+                ms.month_idx,
                 COALESCE(comp.cnt, 0) AS visit_count
             FROM clients c
-            CROSS JOIN week_series ws
-            LEFT JOIN completed comp ON comp.client_id = c.id AND comp.week_start = ws.week_start
+            CROSS JOIN month_series ms
+            LEFT JOIN completed comp ON comp.client_id = c.id AND comp.month_start = ms.month_start
             WHERE c.is_deleted = FALSE AND c.is_active = TRUE
-            ORDER BY c.id, ws.week_idx
+            ORDER BY c.id, ms.month_idx
         """
-        rows = self._fetch_all(query, (weeks, weeks, weeks))
+        rows = self._fetch_all(query, (months, months, months))
         result = {}
         for row in rows:
             cid = int(row['client_id'])

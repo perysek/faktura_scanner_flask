@@ -669,19 +669,23 @@ function trendColor(weeks) {
     return '#9ca3af';
 }
 
-function sparklineSvg(weeks) {
-    if (!weeks || !weeks.length) return '<span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>';
+function smooth2(data) {
+    return data.map((v, i) => i === 0 ? v : (v + data[i - 1]) / 2);
+}
+
+function sparklineSvg(months) {
+    if (!months || !months.length) return '<span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>';
+    const color = trendColor(months);
+    const data = smooth2(months);
     const W = 60, H = 20, pad = 1.5;
-    const max = Math.max(...weeks, 1);
-    const step = (W - 2 * pad) / Math.max(weeks.length - 1, 1);
-    const color = trendColor(weeks);
-    const points = weeks.map((v, i) => {
+    const max = Math.max(...data, 1);
+    const step = (W - 2 * pad) / Math.max(data.length - 1, 1);
+    const points = data.map((v, i) => {
         const x = pad + i * step;
         const y = pad + (H - 2 * pad) * (1 - v / max);
         return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
-    const maxLabel = max > 1 ? `max ${max}` : '';
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;" title="${maxLabel}">
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;">
         <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>`;
 }
