@@ -405,19 +405,33 @@ function renderSkillsTable(services) {
             type: 'radar',
             data: {
                 labels: rated.map(s => s.service_name),
-                datasets: [{
-                    label: 'Ocena manualna',
-                    data: rated.map(s => s.skill_rating),
-                    backgroundColor: CHART_COLORS.blueFill,
-                    borderColor: CHART_COLORS.blue,
-                    pointBackgroundColor: CHART_COLORS.blue,
-                    borderWidth: 2,
-                    pointRadius: 4,
-                }],
+                datasets: [
+                    {
+                        label: 'Ocena manualna',
+                        data: rated.map(s => s.skill_rating),
+                        backgroundColor: CHART_COLORS.blueFill,
+                        borderColor: CHART_COLORS.blue,
+                        pointBackgroundColor: CHART_COLORS.blue,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                    },
+                    {
+                        label: 'Ocena klientów',
+                        data: rated.map(s => s.avg_client_rating),
+                        fill: false,
+                        borderColor: CHART_COLORS.green,
+                        pointBackgroundColor: CHART_COLORS.green,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        spanGaps: false,
+                    },
+                ],
             },
             options: {
                 ...BASE_OPTS,
-                plugins: { legend: { display: false } },
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                },
                 scales: {
                     r: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, pointLabels: { font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
                 },
