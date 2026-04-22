@@ -35,6 +35,9 @@
     .page-header {
         margin-bottom: 1rem;
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 
     .page-title { margin: 0; line-height: 1.2; }
@@ -654,7 +657,7 @@
     }
 
     .preview-panel.open {
-        width: 420px;
+        width: 504px;
     }
 
     .preview-panel-header {
@@ -763,6 +766,13 @@
     <!-- Page Header -->
     <header class="page-header">
         <h1 class="page-title">Wykaz Faktur</h1>
+        <button class="btn-refined btn-refined-secondary" id="preview-toggle-btn" onclick="togglePreviewPanel()" title="Podgląd dokumentu" aria-label="Podgląd dokumentu">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M15 3v18"/>
+            </svg>
+            Podgląd
+        </button>
     </header>
 
     <!-- Filter Pills -->
@@ -824,14 +834,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 Sync sprzedawców
-            </button>
-
-            <button class="btn-refined btn-refined-secondary" id="preview-toggle-btn" onclick="togglePreviewPanel()" title="Podgląd dokumentu" aria-label="Podgląd dokumentu">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <path d="M15 3v18"/>
-                </svg>
-                Podgląd
             </button>
 
             <a href="{{ url_for('main.create_invoice') }}" class="btn-refined btn-refined-primary">
