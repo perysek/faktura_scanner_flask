@@ -75,12 +75,15 @@ class SellerRepository(BaseRepository):
                 SUM(CASE WHEN i.status IN ('Nieopłacona', 'Przeterminowana') THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
             LEFT JOIN invoices i ON (
-                i.seller_id = s.id
-                OR (
-                    i.seller_id IS NULL
-                    AND s.seller_nip IS NOT NULL
-                    AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+                (
+                    i.seller_id = s.id
+                    OR (
+                        i.seller_id IS NULL
+                        AND s.seller_nip IS NOT NULL
+                        AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+                    )
                 )
+                AND i.is_deleted = FALSE
             )
             WHERE s.seller_name ILIKE %s OR s.seller_nip ILIKE %s
             GROUP BY s.id
@@ -142,14 +145,15 @@ class SellerRepository(BaseRepository):
         Liczy wszystkie faktury, nawet te niepowiązane z tabelą sellers.
         """
         query = """
-            SELECT 
-                seller_name, 
-                seller_nip, 
-                COUNT(*) as actual_invoice_count, 
+            SELECT
+                seller_name,
+                seller_nip,
+                COUNT(*) as actual_invoice_count,
                 SUM(amount) as total_amount,
                 MAX(seller_id) as id
             FROM invoices
             WHERE seller_name IS NOT NULL AND seller_name != ''
+              AND is_deleted = FALSE
             GROUP BY seller_name, seller_nip
             ORDER BY actual_invoice_count DESC, total_amount DESC
             LIMIT %s
@@ -166,12 +170,15 @@ class SellerRepository(BaseRepository):
                 SUM(CASE WHEN i.status IN ('Nieopłacona', 'Przeterminowana') THEN i.amount ELSE 0 END) as total_unpaid
             FROM sellers s
             LEFT JOIN invoices i ON (
-                i.seller_id = s.id
-                OR (
-                    i.seller_id IS NULL
-                    AND s.seller_nip IS NOT NULL
-                    AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+                (
+                    i.seller_id = s.id
+                    OR (
+                        i.seller_id IS NULL
+                        AND s.seller_nip IS NOT NULL
+                        AND regexp_replace(COALESCE(i.seller_nip, ''), '[^0-9]', '', 'g') = s.seller_nip
+                    )
                 )
+                AND i.is_deleted = FALSE
             )
             GROUP BY s.id
             ORDER BY s.seller_name
@@ -214,6 +221,7 @@ class SellerRepository(BaseRepository):
                 SELECT COUNT(*)
                 FROM invoices
                 WHERE invoices.seller_id = sellers.id
+                  AND invoices.is_deleted = FALSE
             ),
             last_updated = CURRENT_TIMESTAMP
         """
