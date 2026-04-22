@@ -513,7 +513,11 @@ def finalize_uploads():
 
             file_moved = False
             try:
-                # Move file from temp to permanent storage
+                # Read file bytes for DB storage before touching the path
+                with open(temp_file_path, 'rb') as fh:
+                    pdf_bytes = fh.read()
+
+                # Keep a filesystem copy as fallback / legacy path reference
                 shutil.move(temp_file_path, str(permanent_path))
                 file_moved = True
 
@@ -550,6 +554,8 @@ def finalize_uploads():
                     payment_term=payment_term,
                     status='Nieopłacona',
                     pdf_path=str(permanent_path),
+                    pdf_data=pdf_bytes,
+                    pdf_filename=filename,
                     ocr_confidence=extracted_data.get('ocr_confidence'),
                     is_duplicate=False
                 )

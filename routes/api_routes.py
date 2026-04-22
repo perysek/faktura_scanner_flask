@@ -448,23 +448,24 @@ def create_invoice_manual():
         if 'pdf_file' in request.files:
             pdf_file = request.files['pdf_file']
             if pdf_file and pdf_file.filename:
-                # Save PDF file
                 import os
                 from werkzeug.utils import secure_filename
-                
-                # Create uploads directory if it doesn't exist
+
                 upload_dir = os.path.join(current_app.root_path, 'uploads', 'invoices')
                 os.makedirs(upload_dir, exist_ok=True)
-                
-                # Generate unique filename
+
                 filename = secure_filename(pdf_file.filename)
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 unique_filename = f"{timestamp}_{filename}"
                 pdf_path = os.path.join(upload_dir, unique_filename)
-                
-                # Save file
-                pdf_file.save(pdf_path)
+
+                pdf_bytes = pdf_file.read()
+                with open(pdf_path, 'wb') as fh:
+                    fh.write(pdf_bytes)
+
                 invoice.pdf_path = pdf_path
+                invoice.pdf_data = pdf_bytes
+                invoice.pdf_filename = unique_filename
         
         # Save invoice to database
         invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
@@ -1632,24 +1633,16 @@ def get_history_details():
 
 @api_bp.route('/pdf/<int:invoice_id>', methods=['GET'])
 def view_pdf(invoice_id: int):
-    """View PDF or image file for invoice"""
+    """View PDF or image file for invoice. Serves from DB (pdf_data) first,
+    falls back to filesystem path for older records that pre-date DB storage."""
+    import io
     try:
-        row = current_app.invoice_repo.get_by_id(invoice_id)
-        if not row:
+        pdf_tuple = current_app.invoice_repo.get_pdf_data(invoice_id)
+        if not pdf_tuple:
             return jsonify({'success': False, 'error': 'Invoice not found'}), 404
 
-        # Convert Row to Invoice object
-        invoice = current_app.invoice_repo.row_to_invoice(row)
+        pdf_data, pdf_filename, pdf_path = pdf_tuple
 
-        if not invoice.pdf_path:
-            return jsonify({'success': False, 'error': 'Document not found'}), 404
-
-        pdf_path = Path(invoice.pdf_path)
-        if not pdf_path.exists():
-            return jsonify({'success': False, 'error': 'Document file not found on disk'}), 404
-
-        # Detect file type and set appropriate MIME type
-        file_ext = pdf_path.suffix.lower()
         mime_types = {
             '.pdf': 'application/pdf',
             '.jpg': 'image/jpeg',
@@ -1661,12 +1654,31 @@ def view_pdf(invoice_id: int):
             '.tif': 'image/tiff',
             '.webp': 'image/webp',
         }
-        mimetype = mime_types.get(file_ext, 'application/octet-stream')
 
-        return send_file(
-            str(pdf_path),
-            mimetype=mimetype
-        )
+        # --- Primary: serve from database ---
+        if pdf_data:
+            name = pdf_filename or 'invoice.pdf'
+            ext = Path(name).suffix.lower()
+            mimetype = mime_types.get(ext, 'application/pdf')
+            return send_file(
+                io.BytesIO(bytes(pdf_data)),
+                mimetype=mimetype,
+                download_name=name,
+                as_attachment=False
+            )
+
+        # --- Fallback: serve from filesystem (legacy records) ---
+        if not pdf_path:
+            return jsonify({'success': False, 'error': 'Document not found'}), 404
+
+        fs_path = Path(pdf_path)
+        if not fs_path.exists():
+            return jsonify({'success': False, 'error': 'Document file not found on disk'}), 404
+
+        ext = fs_path.suffix.lower()
+        mimetype = mime_types.get(ext, 'application/octet-stream')
+        return send_file(str(fs_path), mimetype=mimetype)
+
     except AppError:
         raise
     except Exception as e:
