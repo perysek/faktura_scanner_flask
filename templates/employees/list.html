@@ -589,7 +589,7 @@ function getStatusBadge(employee) {
 function renderCoverage(pct) {
     if (pct == null) return '<span style="color:var(--color-ink-subtle)">—</span>';
     const cls = pct >= 70 ? 'coverage-high' : pct >= 40 ? 'coverage-mid' : 'coverage-low';
-    return `<span class="coverage-badge ${cls}">${pct}%</span>`;
+    return `<span class="coverage-badge ${cls}">${Number(pct).toFixed(2)}%</span>`;
 }
 
 // ── Load positions ────────────────────────────────────────────────────────────
