@@ -192,7 +192,7 @@
     .refined-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1100px;
+        min-width: 900px;
         table-layout: fixed;
     }
 
@@ -207,7 +207,8 @@
         color: var(--color-ink-subtle);
         text-align: left;
         border-bottom: 1px solid var(--color-border);
-        white-space: nowrap;
+        vertical-align: bottom;
+        line-height: 1.3;
     }
 
     .refined-table th:last-child { text-align: right; }
@@ -221,6 +222,9 @@
         color: var(--color-ink);
         border-bottom: 1px solid var(--color-border-subtle);
         vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .refined-table tbody tr:last-child td { border-bottom: none; }
@@ -229,6 +233,7 @@
     .employee-avatar {
         width: 2.5rem;
         height: 2.5rem;
+        min-width: 2.5rem;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--color-status-scheduled) 0%, var(--color-chart-blue-dark) 100%);
         display: flex;
@@ -237,19 +242,35 @@
         color: white;
         font-weight: 600;
         font-size: 0.875rem;
+        flex-shrink: 0;
     }
 
     .employee-info {
         display: flex;
         align-items: center;
         gap: 1rem;
+        min-width: 0;
     }
 
-    .employee-name { font-weight: 500; color: var(--color-ink); }
+    .employee-info > div:last-child {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .employee-name {
+        font-weight: 500;
+        color: var(--color-ink);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
     .employee-position {
         font-size: 0.75rem;
         color: var(--color-ink-subtle);
         font-weight: 300;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /* Monthly stat cells */
