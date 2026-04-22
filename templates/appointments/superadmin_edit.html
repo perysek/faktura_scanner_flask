@@ -654,8 +654,8 @@ async function populateForm(apptData) {
     renderStars(currentStar);
 
     // Set client/employee selects (dropdowns already populated from cache)
-    if (originalData.client_id) document.getElementById('client-select').value = originalData.client_id;
-    if (originalData.employee_id) document.getElementById('employee-select').value = originalData.employee_id;
+    if (originalData.client_id) SearchableSelect.setValue('client-select', originalData.client_id);
+    if (originalData.employee_id) SearchableSelect.setValue('employee-select', originalData.employee_id);
 
     currentServices = [...(apptData.main_services || []), ...(apptData.addon_services || [])].map(s => ({
         appointment_service_id: s.id,
@@ -888,8 +888,8 @@ function forceSave() {
 function resetFields() {
     if (!originalData) return;
     document.getElementById('status-select').value = originalData.status;
-    document.getElementById('client-select').value = originalData.client_id;
-    document.getElementById('employee-select').value = originalData.employee_id;
+    SearchableSelect.setValue('client-select', originalData.client_id);
+    SearchableSelect.setValue('employee-select', originalData.employee_id);
     document.getElementById('appt-date').value = originalData.appointment_date;
     document.getElementById('appt-time').value = (originalData.start_time || '').substring(0, 5);
     document.getElementById('appt-notes').value = originalData.notes || '';
