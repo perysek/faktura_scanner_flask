@@ -5,7 +5,7 @@
 {% block extra_css %}
 <style>
     /* Refined Minimal Design System */
-.refined-page {
+    .refined-page {
         max-width: 1400px;
         margin: 0 auto;
         padding: 2rem;
@@ -16,9 +16,17 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
     .page-title { margin-bottom: 0.5rem; }
+
+    .page-header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
 
     /* Statistics Grid */
     .stats-grid {
@@ -71,10 +79,12 @@
     .search-wrapper {
         display: flex;
         gap: 0.75rem;
+        flex-wrap: wrap;
     }
 
     .refined-input {
         flex: 1;
+        min-width: 200px;
         padding: 0.625rem 1rem;
         font-family: var(--font-body);
         font-size: 0.8125rem;
@@ -86,9 +96,7 @@
         transition: all 0.3s var(--ease-out-expo);
     }
 
-    .refined-input::placeholder {
-        color: var(--color-ink-subtle);
-    }
+    .refined-input::placeholder { color: var(--color-ink-subtle); }
 
     .refined-input:focus {
         outline: none;
@@ -131,12 +139,18 @@
         cursor: pointer;
         transition: all 0.25s var(--ease-out-expo);
         text-decoration: none;
+        white-space: nowrap;
     }
 
     .refined-btn-primary:hover {
         background: var(--color-ink-muted);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .refined-btn-primary:disabled {
+        opacity: 0.6;
+        pointer-events: none;
     }
 
     .refined-btn-secondary {
@@ -153,11 +167,17 @@
         border: 1px solid var(--color-border);
         cursor: pointer;
         transition: all 0.2s ease;
+        white-space: nowrap;
     }
 
     .refined-btn-secondary:hover {
         border-color: var(--color-ink-muted);
         background: var(--color-surface);
+    }
+
+    .refined-btn-secondary:disabled {
+        opacity: 0.6;
+        pointer-events: none;
     }
 
     /* Table */
@@ -166,17 +186,16 @@
         border: 1px solid var(--color-border);
         border-radius: 2px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
+        overflow: auto;
     }
 
     .refined-table {
         width: 100%;
         border-collapse: collapse;
+        min-width: 1100px;
     }
 
-    .refined-table thead {
-        background: var(--color-surface);
-    }
+    .refined-table thead { background: var(--color-surface); }
 
     .refined-table th {
         padding: 0.75rem 1rem;
@@ -190,17 +209,10 @@
         white-space: nowrap;
     }
 
-    .refined-table th:last-child {
-        text-align: right;
-    }
+    .refined-table th:last-child { text-align: right; }
 
-    .refined-table tbody tr {
-        transition: background-color 0.2s ease;
-    }
-
-    .refined-table tbody tr:hover {
-        background: var(--color-surface);
-    }
+    .refined-table tbody tr { transition: background-color 0.2s ease; }
+    .refined-table tbody tr:hover { background: var(--color-surface); }
 
     .refined-table td {
         padding: 0.75rem 1rem;
@@ -210,9 +222,7 @@
         vertical-align: middle;
     }
 
-    .refined-table tbody tr:last-child td {
-        border-bottom: none;
-    }
+    .refined-table tbody tr:last-child td { border-bottom: none; }
 
     /* Employee Info */
     .employee-avatar {
@@ -234,16 +244,32 @@
         gap: 1rem;
     }
 
-    .employee-name {
-        font-weight: 500;
-        color: var(--color-ink);
-    }
-
+    .employee-name { font-weight: 500; color: var(--color-ink); }
     .employee-position {
         font-size: 0.75rem;
         color: var(--color-ink-subtle);
         font-weight: 300;
     }
+
+    /* Monthly stat cells */
+    .month-stat {
+        font-weight: 500;
+        color: var(--color-ink);
+        text-align: center;
+    }
+
+    .coverage-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.5rem;
+        border-radius: 2px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .coverage-high  { background: rgba(45,106,79,0.10); color: var(--color-success); }
+    .coverage-mid   { background: rgba(234,88,12,0.10); color: #c2410c; }
+    .coverage-low   { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
 
     /* Status Badge */
     .status-badge {
@@ -257,31 +283,12 @@
         border-radius: 1px;
     }
 
-    .status-badge.active {
-        background: rgba(45, 106, 79, 0.08);
-        color: var(--color-success);
-    }
+    .status-badge.active   { background: rgba(45,106,79,0.08); color: var(--color-success); }
+    .status-badge.on-leave { background: rgba(234,88,12,0.08); color: #c2410c; }
+    .status-badge.terminated { background: rgba(155,44,44,0.08); color: var(--color-error); }
+    .status-badge.inactive  { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
 
-    .status-badge.on-leave {
-        background: rgba(234, 88, 12, 0.08);
-        color: #c2410c;
-    }
-
-    .status-badge.terminated {
-        background: rgba(155, 44, 44, 0.08);
-        color: var(--color-error);
-    }
-
-    .status-badge.inactive {
-        background: rgba(107, 114, 128, 0.08);
-        color: var(--color-ink-muted);
-    }
-
-    /* Commission display */
-    .commission-value {
-        font-weight: 500;
-        color: var(--color-purple);
-    }
+    .commission-value { font-weight: 500; color: var(--color-purple); }
 
     /* Action Links */
     .action-link {
@@ -292,17 +299,9 @@
         transition: color 0.2s ease;
     }
 
-    .action-link:hover {
-        color: var(--color-chart-blue-dark);
-    }
-
-    .action-link.secondary {
-        color: var(--color-ink-muted);
-    }
-
-    .action-link.secondary:hover {
-        color: var(--color-ink);
-    }
+    .action-link:hover { color: var(--color-chart-blue-dark); }
+    .action-link.secondary { color: var(--color-ink-muted); }
+    .action-link.secondary:hover { color: var(--color-ink); }
 
     /* Empty State */
     .empty-state {
@@ -323,38 +322,51 @@
         font-weight: 300;
     }
 
-    /* Material Icons */
-    .material-icons {
-        font-size: 1rem;
-        vertical-align: middle;
-    }
+    .material-icons { font-size: 1rem; vertical-align: middle; }
+    .material-icons.lg { font-size: 1.5rem; }
 
-    .material-icons.lg {
-        font-size: 1.5rem;
-    }
-
-    /* Fade-in Animation */
-    .fade-in {
-        animation: fadeIn 0.4s var(--ease-out-expo) forwards;
-    }
+    /* Fade-in */
+    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
 
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
+    /* ── Custom notification toast ─────────────────────── */
+    .bulk-result-toast {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--color-ink);
+        color: white;
+        padding: 0.875rem 1.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 400;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        z-index: 9999;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+        opacity: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        white-space: nowrap;
+    }
+
+    .bulk-result-toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    .bulk-result-toast.success { background: var(--color-success); }
+    .bulk-result-toast.error   { background: var(--color-error); }
+
     @media (max-width: 768px) {
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-        .search-wrapper {
-            flex-direction: column;
-        }
+        .page-header { flex-direction: column; align-items: flex-start; }
+        .stats-grid { grid-template-columns: 1fr; }
+        .search-wrapper { flex-direction: column; }
     }
 </style>
 {% endblock %}
@@ -366,10 +378,16 @@
             <h1 class="page-title">Pracownicy</h1>
             <p class="page-subtitle">Zarządzanie personelem salonu</p>
         </div>
-        <a href="{{ url_for('main.create_employee') }}" class="refined-btn-primary">
-            <span class="material-icons">add</span>
-            Dodaj pracownika
-        </a>
+        <div class="page-header-actions">
+            <button id="btn-update-services" class="refined-btn-secondary" onclick="bulkUpdateServices()">
+                <span class="material-icons">sync</span>
+                Aktualizuj preferencje
+            </button>
+            <a href="{{ url_for('main.create_employee') }}" class="refined-btn-primary">
+                <span class="material-icons">add</span>
+                Dodaj pracownika
+            </a>
+        </div>
     </header>
 
     <!-- Statistics Cards -->
@@ -450,12 +468,15 @@
                     <th>Prowizja</th>
                     <th>Status</th>
                     <th>Ocena klientów</th>
+                    <th style="text-align:center;">Zaplanowanych wizyt</th>
+                    <th style="text-align:center;">Zakończonych wizyt</th>
+                    <th style="text-align:center;">Pokrycie grafiku</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="employees-tbody">
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="10" class="empty-state">
                         <span class="material-icons empty-icon">badge</span>
                         <p class="empty-text">Ładowanie pracowników...</p>
                     </td>
@@ -463,6 +484,12 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Bulk result toast -->
+<div class="bulk-result-toast" id="bulk-toast">
+    <span class="material-icons" id="bulk-toast-icon">check_circle</span>
+    <span id="bulk-toast-msg"></span>
 </div>
 {% endblock %}
 
@@ -474,9 +501,13 @@ function escapeHtml(text) {
 }
 
 function renderAvgRating(avg, count) {
-    if (avg == null) return '<span style="color: var(--color-ink-subtle)">—</span>';
+    if (avg == null) return '<span style="color:var(--color-ink-subtle)">—</span>';
     const score = parseFloat(avg);
-    const color = score >= 4.5 ? 'var(--color-status-completed)' : score >= 3.5 ? 'var(--color-status-confirmed)' : score >= 2.5 ? 'var(--color-status-in-progress)' : 'var(--color-status-cancelled)';
+    const color = score >= 4.5
+        ? 'var(--color-status-completed)'
+        : score >= 3.5 ? 'var(--color-status-confirmed)'
+        : score >= 2.5 ? 'var(--color-status-in-progress)'
+        : 'var(--color-status-cancelled)';
     return `<span style="color:${color};font-weight:600;">★ ${score.toFixed(1)}</span>`
          + `<span style="color:var(--color-ink-subtle);font-size:0.75rem;margin-left:0.25rem;">(${count})</span>`;
 }
@@ -487,16 +518,20 @@ function getStatusBadge(employee) {
     }
     const status = employee.employment_status || 'active';
     switch (status) {
-        case 'on_leave':
-            return '<span class="status-badge on-leave">Na urlopie</span>';
-        case 'terminated':
-            return '<span class="status-badge terminated">Zwolniony</span>';
-        default:
-            return '<span class="status-badge active">Aktywny</span>';
+        case 'on_leave':    return '<span class="status-badge on-leave">Na urlopie</span>';
+        case 'terminated':  return '<span class="status-badge terminated">Zwolniony</span>';
+        default:            return '<span class="status-badge active">Aktywny</span>';
     }
 }
 
-// Load positions for filter dropdown
+function renderCoverage(pct) {
+    if (pct == null) return '<span style="color:var(--color-ink-subtle)">—</span>';
+    const cls = pct >= 70 ? 'coverage-high' : pct >= 40 ? 'coverage-mid' : 'coverage-low';
+    return `<span class="coverage-badge ${cls}">${pct}%</span>`;
+}
+
+// ── Load positions ────────────────────────────────────────────────────────────
+
 async function loadPositions() {
     try {
         const response = await fetch('/api/employees/positions');
@@ -515,36 +550,38 @@ async function loadPositions() {
     }
 }
 
-// Load statistics
+// ── Load statistics ───────────────────────────────────────────────────────────
+
 async function loadStatistics() {
     try {
         const response = await fetch('/api/employees/statistics');
         const data = await response.json();
-
         if (data.success) {
             const stats = data.statistics;
             document.getElementById('stat-total').textContent = stats.total_employees || 0;
             document.getElementById('stat-active').textContent = stats.active_employees || 0;
             const avgSalary = stats.avg_salary || 0;
-            document.getElementById('stat-commission').textContent = avgSalary > 0 ? avgSalary.toFixed(0) + ' zł' : '—';
+            document.getElementById('stat-commission').textContent =
+                avgSalary > 0 ? avgSalary.toFixed(0) + ' zł' : '—';
         }
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
 
-    // Count unique positions
     try {
         const response = await fetch('/api/employees/positions');
         const data = await response.json();
         if (data.success) {
-            document.getElementById('stat-positions').textContent = data.positions ? data.positions.length : 0;
+            document.getElementById('stat-positions').textContent =
+                data.positions ? data.positions.length : 0;
         }
     } catch (error) {
         console.error('Error loading positions count:', error);
     }
 }
 
-// Load employees list
+// ── Load employees ────────────────────────────────────────────────────────────
+
 async function loadEmployees() {
     saveFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
     const searchQuery = document.getElementById('search-input').value.trim();
@@ -554,7 +591,7 @@ async function loadEmployees() {
 
     try {
         let url = '/api/employees?active_only=false';
-        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+        if (searchQuery)    url += `&search=${encodeURIComponent(searchQuery)}`;
         if (positionFilter) url += `&position=${encodeURIComponent(positionFilter)}`;
 
         const response = await fetch(url);
@@ -563,7 +600,6 @@ async function loadEmployees() {
         if (data.success) {
             let employees = data.employees;
 
-            // Client-side status filtering
             if (statusFilter === 'active') {
                 employees = employees.filter(e => e.is_active);
             } else if (statusFilter === 'inactive') {
@@ -573,23 +609,26 @@ async function loadEmployees() {
             if (employees.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="10" class="empty-state">
                             <span class="material-icons empty-icon">search_off</span>
                             <p class="empty-text">Nie znaleziono pracowników</p>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
                 return;
             }
 
             tbody.innerHTML = employees.map(emp => {
-                const initials = escapeHtml(emp.first_name.charAt(0) + emp.last_name.charAt(0));
-                const fullName = escapeHtml(emp.full_name);
-                const position = emp.position ? escapeHtml(emp.position) : '<span style="color: var(--color-ink-subtle)">—</span>';
-                const phone = emp.phone ? escapeHtml(emp.phone) : '<span style="color: var(--color-ink-subtle)">—</span>';
+                const initials   = escapeHtml(emp.first_name.charAt(0) + emp.last_name.charAt(0));
+                const fullName   = escapeHtml(emp.full_name);
+                const position   = emp.position
+                    ? escapeHtml(emp.position)
+                    : '<span style="color:var(--color-ink-subtle)">—</span>';
+                const phone      = emp.phone
+                    ? escapeHtml(emp.phone)
+                    : '<span style="color:var(--color-ink-subtle)">—</span>';
                 const commission = emp.commission_rate != null
                     ? `<span class="commission-value">${emp.commission_rate}%</span>`
-                    : '<span style="color: var(--color-ink-subtle)">—</span>';
+                    : '<span style="color:var(--color-ink-subtle)">—</span>';
 
                 return `
                     <tr>
@@ -607,9 +646,18 @@ async function loadEmployees() {
                         <td>${commission}</td>
                         <td>${getStatusBadge(emp)}</td>
                         <td>${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
-                        <td style="text-align: right;">
+                        <td class="month-stat" style="text-align:center;">
+                            ${emp.scheduled_this_month ?? 0}
+                        </td>
+                        <td class="month-stat" style="text-align:center;">
+                            ${emp.completed_this_month ?? 0}
+                        </td>
+                        <td style="text-align:center;">
+                            ${renderCoverage(emp.schedule_coverage_pct)}
+                        </td>
+                        <td style="text-align:right;">
                             <a href="/employee/${emp.id}" class="action-link">Zobacz</a>
-                            <span style="margin: 0 0.5rem; color: var(--color-border);">|</span>
+                            <span style="margin:0 0.5rem;color:var(--color-border);">|</span>
                             <a href="/employee/${emp.id}/edit" class="action-link secondary">Edytuj</a>
                         </td>
                     </tr>
@@ -618,30 +666,73 @@ async function loadEmployees() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="empty-state">
-                        <p class="empty-text" style="color: var(--color-error);">Błąd ładowania: ${escapeHtml(data.error)}</p>
+                    <td colspan="10" class="empty-state">
+                        <p class="empty-text" style="color:var(--color-error);">
+                            Błąd ładowania: ${escapeHtml(data.error)}
+                        </p>
                     </td>
-                </tr>
-            `;
+                </tr>`;
         }
     } catch (error) {
         console.error('Error loading employees:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="empty-state">
-                    <p class="empty-text" style="color: var(--color-error);">Błąd połączenia z serwerem</p>
+                <td colspan="10" class="empty-state">
+                    <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     }
 }
 
-// Search on Enter
+// ── Bulk service update ───────────────────────────────────────────────────────
+
+async function bulkUpdateServices() {
+    const btn = document.getElementById('btn-update-services');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons">hourglass_empty</span> Aktualizowanie...';
+
+    try {
+        const resp = await fetch('/api/employees/bulk-update-services', { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(
+                'success',
+                `✓ Zaktualizowano usługi dla ${data.updated_count} z ${data.total_count} pracowników`
+            );
+        } else {
+            showToast('error', data.error || 'Błąd aktualizacji usług');
+        }
+    } catch (e) {
+        showToast('error', 'Błąd połączenia z serwerem');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">sync</span> Aktualizuj preferencje';
+    }
+}
+
+// ── Toast notification ────────────────────────────────────────────────────────
+
+function showToast(type, msg) {
+    const toast  = document.getElementById('bulk-toast');
+    const msgEl  = document.getElementById('bulk-toast-msg');
+    const iconEl = document.getElementById('bulk-toast-icon');
+
+    toast.className = `bulk-result-toast ${type}`;
+    msgEl.textContent = msg;
+    iconEl.textContent = type === 'success' ? 'check_circle' : 'error';
+
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 4500);
+    });
+}
+
+// ── Event wiring ──────────────────────────────────────────────────────────────
+
 document.getElementById('search-input').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') loadEmployees();
 });
 
-// Load data on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await loadPositions();
     loadStatistics();
