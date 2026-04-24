@@ -3134,6 +3134,18 @@ def create_service_endpoint():
         if data.get('price') is None:
             return jsonify({'success': False, 'error': 'Cena jest wymagana'}), 400
 
+        # Validate category exists in service_categories table
+        if service_type == 'main' and data.get('category'):
+            from config.database import get_db_connection
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT 1 FROM service_categories WHERE name = %s AND is_deleted = FALSE",
+                (data['category'],)
+            )
+            if not cur.fetchone():
+                return jsonify({'success': False, 'error': 'Wybrana kategoria nie istnieje'}), 400
+
         from database.models import Service
         service = Service(
             name=data.get('name'),
@@ -3177,6 +3189,17 @@ def update_service(service_id):
 
         data = request.get_json()
         service_type = data.get('service_type', 'main')
+
+        if service_type == 'main' and data.get('category'):
+            from config.database import get_db_connection
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT 1 FROM service_categories WHERE name = %s AND is_deleted = FALSE",
+                (data['category'],)
+            )
+            if not cur.fetchone():
+                return jsonify({'success': False, 'error': 'Wybrana kategoria nie istnieje'}), 400
 
         from database.models import Service
         service = Service(
