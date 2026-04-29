@@ -167,7 +167,7 @@ def fetch_xlsx(
         form_data.append(("filterRoomMultiselect", guid))
 
     # Step 3 — POST to export endpoint
-    print(f"Krok 3/3: Eksport danych {date_start} → {date_end}...")
+    print(f"Krok 3/3: Eksport danych {date_start} -> {date_end}...")
     export_resp = session.post(EXPORT_URL, data=form_data, timeout=60)
     export_resp.raise_for_status()
 
