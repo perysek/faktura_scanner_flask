@@ -56,8 +56,12 @@ from import_appointments_from_excel import (
     import_file,
 )
 
-CALDIS_LOGIN_URL   = "https://caldis.pl/logowanie"
-CALDIS_BOOKING_URL = "https://caldis.pl/Booking"
+CALDIS_BASE        = "https://caldis.pl"
+CALDIS_LOGIN_URL   = f"{CALDIS_BASE}/logowanie"
+CALDIS_BOOKING_URL = f"{CALDIS_BASE}/Booking"
+
+# Session state saved here so subsequent headless runs skip login entirely
+SESSION_FILE = PROJECT_ROOT / "assets" / "temp" / "caldis_session.json"
 
 
 # ---------------------------------------------------------------------------
@@ -73,63 +77,85 @@ async def fetch_xlsx_playwright(
     headed: bool = False,
 ) -> Path:
     """
-    Uruchom Chromium, zaloguj się do caldis.pl, ustaw filtry dat i
-    pobierz plik xlsx przez kliknięcie "Eksportuj do .xlsx".
+    Download the Rezerwacje.xlsx export from caldis.pl using Playwright.
+
+    Session persistence strategy:
+      - First run (no saved session): requires --headed so the user can log in
+        manually in the visible browser window. reCAPTCHA v3 blocks all
+        programmatic login attempts — only a real visible browser passes it.
+        After login the session is saved to caldis_session.json automatically.
+      - Subsequent runs: loads saved session, navigates directly to /Booking,
+        no login step needed. If the session has expired, prompts to re-run
+        with --headed.
 
     Returns:
-        output_path — ścieżka do zapisanego pliku xlsx.
+        output_path - path to the downloaded xlsx file.
     Raises:
-        RuntimeError gdy logowanie nie powiedzie się lub przycisk eksportu
-        nie zostanie znaleziony.
+        RuntimeError on authentication failure or missing export button.
     """
     from playwright.async_api import async_playwright, TimeoutError as PwTimeout
 
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=not headed)
-        ctx     = await browser.new_context(accept_downloads=True)
-        page    = await ctx.new_page()
 
-        # Step 1 — Log in
-        print("Krok 1/4: Logowanie do caldis.pl...")
-        await page.goto(CALDIS_LOGIN_URL, wait_until="networkidle")
-        await page.fill('input[name="Email"]',    email)
-        await page.fill('input[name="Password"]', password)
-        await page.click('button[type="submit"]')
+        # Load saved session if it exists
+        storage_kwarg = (
+            {"storage_state": str(SESSION_FILE)} if SESSION_FILE.exists() else {}
+        )
+        ctx  = await browser.new_context(accept_downloads=True, **storage_kwarg)
+        page = await ctx.new_page()
 
-        try:
-            await page.wait_for_url("**/Booking**", timeout=15_000)
-        except PwTimeout:
-            # Check if still on login page (bad credentials)
-            if "account/login" in page.url.lower():
+        # Step 1 — Ensure authenticated session
+        print("Krok 1/4: Sprawdzanie sesji caldis.pl...")
+        await page.goto(CALDIS_BOOKING_URL, wait_until="networkidle")
+
+        if "logowanie" in page.url.lower():
+            if not headed:
                 await browser.close()
-                raise RuntimeError(
-                    "Logowanie nie powiodło się — sprawdź e-mail i hasło "
-                    "(CALDIS_EMAIL / CALDIS_PASSWORD)."
+                session_hint = (
+                    "  Sesja wygasla." if SESSION_FILE.exists()
+                    else "  Brak zapisanej sesji."
                 )
-            # Otherwise we may have been redirected elsewhere — proceed
-        print("  Zalogowano pomyślnie.")
+                raise RuntimeError(
+                    f"{session_hint}\n"
+                    "Uruchom raz z flaga --headed, zaloguj sie recznie w przegladarce:\n"
+                    "  python scripts/import_appointments_playwright.py --headed\n"
+                    "Sesja zostanie zapisana i kolejne uruchomienia beda headless."
+                )
 
-        # Step 2 — Set date filter via JS (bypasses the datepicker widget)
+            # Headed mode — wait for user to complete login (including reCAPTCHA)
+            await page.goto(CALDIS_LOGIN_URL, wait_until="networkidle")
+            print("  Zaloguj sie recznie w oknie przegladarki (czekam do 2 minut)...")
+            await page.wait_for_url(
+                lambda url: "logowanie" not in url.lower(), timeout=120_000
+            )
+            print("  Zalogowano pomyslnie!")
+
+            SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+            await ctx.storage_state(path=str(SESSION_FILE))
+            print(f"  Sesja zapisana: {SESSION_FILE.name}")
+
+            await page.goto(CALDIS_BOOKING_URL, wait_until="networkidle")
+        else:
+            print("  Sesja aktywna.")
+
+        # Step 2 — Set date filter via JS (bypasses datepicker widget)
         print("Krok 2/4: Ustawianie zakresu dat...")
         ds = f"{date_start.strftime('%Y-%m-%d')}T00:00:00.000Z"
         de = f"{date_end.strftime('%Y-%m-%d')}T23:59:59.999Z"
-
         await page.evaluate(f"""
             const dsEl = document.getElementById('DateStart');
             const deEl = document.getElementById('DateEnd');
             if (dsEl) dsEl.value = '{ds}';
             if (deEl) deEl.value = '{de}';
         """)
-
-        # Wait for booking table to reflect the filter
         try:
             await page.wait_for_selector(
                 "#table-booking-list tbody tr", timeout=15_000
             )
         except PwTimeout:
-            print("  [INFO] Tabela nie załadowała się w czasie — kontynuuję mimo to.")
-
-        print(f"  Zakres: {date_start} → {date_end}")
+            print("  [INFO] Tabela nie zaladowala sie w czasie - kontynuuje.")
+        print(f"  Zakres: {date_start} -> {date_end}")
 
         # Step 3 — Open the "..." actions dropdown
         print("Krok 3/4: Otwieranie menu eksportu...")
@@ -141,11 +167,11 @@ async def fetch_xlsx_playwright(
         except PwTimeout:
             await browser.close()
             raise RuntimeError(
-                "Nie znaleziono przycisku eksportu '#dropdownMenuSend'.\n"
-                "Upewnij się, że strona caldis.pl nie zmieniła struktury UI."
+                "Nie znaleziono przycisku '#dropdownMenuSend'.\n"
+                "Sprawdz czy strona caldis.pl nie zmienila struktury UI."
             )
 
-        # Step 4 — Click export and intercept the file download
+        # Step 4 — Intercept file download
         print("Krok 4/4: Pobieranie pliku xlsx...")
         async with page.expect_download(timeout=60_000) as dl_info:
             await page.click('[data-export-bookings="/BookingExport/ExportToXlsx"]')
@@ -156,7 +182,6 @@ async def fetch_xlsx_playwright(
 
         size_kb = output_path.stat().st_size // 1024
         print(f"  Zapisano: {output_path.name} ({size_kb} KB)")
-
         await browser.close()
 
     return output_path
