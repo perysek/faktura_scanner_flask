@@ -1,0 +1,26 @@
+#appointments view
+Issue1: Currently initial appointments view page loads current day view and when clicked on list view it shows visits from 7 days ago until current day (should initialy show visits of current week)
+T1: On initial load of 'wizyty' view, initial page view should be a list view of appointments in current week (from monday to sunday), sorted by visit date/time descending.
+DONE
+
+#clients table page view
+Issue: preferences update btn 'aktualizuj preferencje' is feeding clients with employee preferred, but not linked with service ('typ' field empty).
+T1: It should feed all variations of service-employee preferences to each client based on number of visit for each service-employee combination. It should add preference combinations form most often visits done covering 75% of all visits.
+DONE
+
+#employee details page view, section analytics, tab 'umiejętności'
+Issue: the radial chart shows manual employee rating only
+TASK: add clients average ratings data to the chart: lines green color, no background color with opacity. Just lines. For services with no clients ratings, leave empty (no lines from nearby data points)
+DONE
+
+#clients table view
+Task: add column 'Trend' which shows small line chart of visits count per each week for last 6 months. No background. Color of line chart: green if trend is positive, gray if trend is near 0, red if trend is negative. This is to have a view of visits frequency dynamics per client (does he visit the salon less and less, or otherwise). In text filter row add on the right toggle btn 'only VIP clients' which shows only clients who have at least 3 visits finished in last 8 weeks.
+DONE with adjustments of logic
+
+#notification flash messages
+Task: for each pageview (html file + related js scripts and css) check flash messages integration. Each found usage of browser-native confirm dialog change to custom styled dialog
+DONE (toast messages restyling included)
+
+#all templates html files with dropdowns
+TASK: for each instane of dropdown found in htmll template - implement real-time items search while typing. Currently dropdowns mostly have only click-to item list rollout feature. I want to list only items that match search input text updating items list while typing in real-time
+DONE

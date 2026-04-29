@@ -77,3 +77,15 @@ nul
 200320260111.txt
 240320260201.txt
 250320262011.txt
+230420260128.txt
+audit trail.txt
+runtime_error.txt
+teams-mcp.txt
+
+# Machine-local tool configs
+.mcp.json
+mempalace.yaml
+entities.json
+
+# Claude Code worktrees
+.claude/worktrees/
