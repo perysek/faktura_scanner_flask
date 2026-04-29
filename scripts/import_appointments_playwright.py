@@ -43,6 +43,10 @@ SCRIPTS_DIR  = PROJECT_ROOT / "scripts"
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+from dotenv import load_dotenv
+load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(PROJECT_ROOT / ".env.local", override=True)
+
 from config.settings import DB_PATH
 from import_appointments_from_excel import (
     build_client_map,
@@ -52,7 +56,7 @@ from import_appointments_from_excel import (
     import_file,
 )
 
-CALDIS_LOGIN_URL   = "https://caldis.pl/Account/Login"
+CALDIS_LOGIN_URL   = "https://caldis.pl/logowanie"
 CALDIS_BOOKING_URL = "https://caldis.pl/Booking"
 
 
