@@ -1,4 +1,4 @@
-Invoices documents/data extracting workflow:
+Invoices documents/data extracting view: DOMs layout transformations on each step of files data extraction/OCR workflow.
 
 1 - upload PDF files (folder or e-mail) triggered by user (button clicked) - no PDF content processing yet.
 2 - upload controls boxes (from folder and from e-mail) are removed from the view and only uploaded PDF files list table is displayed with columns:
