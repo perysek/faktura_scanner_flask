@@ -324,7 +324,7 @@ def create_invoice_manual():
             id=None,  # Will be set by database
             invoice_number=data.get('invoice_number'),
             seller_name=data.get('seller_name'),
-            seller_nip=data.get('seller_nip'),
+            seller_nip=current_app.seller_service.normalize_nip(data.get('seller_nip') or ''),
             invoice_date=parse_date_string(data.get('invoice_date')),
             amount=Decimal(str(data.get('amount', 0))),
             currency=data.get('currency', 'PLN'),
@@ -562,6 +562,10 @@ def update_invoice(invoice_id: int):
                 elif key == 'ocr_confidence' and isinstance(value, str):
                     value = float(value) if value else None
                 
+                # Normalize NIP before it lands on the invoice object
+                if key == 'seller_nip' and value:
+                    value = current_app.seller_service.normalize_nip(value)
+
                 # Track seller field changes (NIP or name)
                 if key in ('seller_nip', 'seller_name'):
                     seller_fields_changed = True
@@ -739,7 +743,8 @@ def confirm_seller_and_update(invoice_id: int):
         # Normalize seller data
         normalized_nip = current_app.seller_service.normalize_nip(invoice.seller_nip)
         normalized_name = current_app.seller_service.normalize_seller_name(invoice.seller_name)
-        
+        invoice.seller_nip = normalized_nip
+
         seller_id = None
         message = ""
         
@@ -1149,6 +1154,7 @@ def upload_files():
                     if seller_nip:
                         try:
                             normalized_nip = current_app.seller_service.normalize_nip(seller_nip)
+                            extracted_data['seller_nip'] = normalized_nip
                             existing_seller_row = current_app.seller_repo.find_by_nip(normalized_nip)
                             if existing_seller_row:
                                 extracted_data['seller_name'] = existing_seller_row['seller_name']
