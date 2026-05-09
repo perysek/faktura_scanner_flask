@@ -151,46 +151,6 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .skill-row {
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 0.5rem;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-    .skill-remove-btn {
-        padding: 0.375rem 0.625rem;
-        background: transparent;
-        color: var(--color-error);
-        border: 1px solid transparent;
-        border-radius: 2px;
-        cursor: pointer;
-        font-size: 1rem;
-        line-height: 1;
-    }
-    .skill-remove-btn:hover { background: rgba(155,44,44,0.06); }
-
-    .chips-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.375rem;
-        min-height: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-        padding: 0.25rem 0.625rem;
-        background: rgba(37, 99, 235, 0.08);
-        color: #2563eb;
-        border-radius: 2px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    .chip-remove { background: none; border: none; cursor: pointer; color: #2563eb; font-size: 0.875rem; padding: 0; }
-    .chip-add-row { display: flex; gap: 0.5rem; }
-
     .schedule-grid { display: flex; flex-direction: column; gap: 0.375rem; }
     .schedule-row {
         display: grid;
@@ -210,6 +170,8 @@
     }
     .schedule-time:disabled { background: var(--color-surface-warm); color: var(--color-ink-subtle); }
     .schedule-time:focus { outline: none; border-color: var(--color-ink-muted); }
+
+    section + section { margin-top: 2rem; }
 </style>
 {% endblock %}
 
@@ -317,26 +279,6 @@
                 </div>
             </section>
 
-            <!-- Skills -->
-            <section>
-                <h2 class="section-title">Umiejętności</h2>
-                <div id="skills-container"></div>
-                <button type="button" class="refined-btn-secondary" style="font-size:0.75rem;padding:0.375rem 0.75rem;margin-top:0.5rem" onclick="addSkillRow()">
-                    + Dodaj umiejętność
-                </button>
-                <p class="input-hint" style="margin-top:0.5rem">Ocena 1–5: 1 = Podstawowy, 5 = Ekspert</p>
-            </section>
-
-            <!-- Specializations -->
-            <section>
-                <h2 class="section-title">Specjalizacje</h2>
-                <div class="chips-container" id="specs-chips"></div>
-                <div class="chip-add-row">
-                    <input type="text" id="spec-input" class="refined-input" style="max-width:260px" placeholder="np. Bridal, Balayage, Extensions">
-                    <button type="button" class="refined-btn-secondary" style="font-size:0.75rem;padding:0.375rem 0.75rem;white-space:nowrap" onclick="addSpec()">Dodaj</button>
-                </div>
-            </section>
-
             <!-- Work Schedule -->
             <section>
                 <h2 class="section-title">Harmonogram pracy</h2>
@@ -386,56 +328,7 @@
 {% block extra_scripts %}
 <script>
 // ── Pre-populated data from server ───────────────
-const INITIAL_SKILLS = {{ employee.get_skills_dict() | tojson }};
-const INITIAL_SPECS  = {{ employee.get_specializations_list() | tojson }};
-const INITIAL_SCHED  = {{ employee.get_work_schedule_dict() | tojson }};
-
-// ── Skills ───────────────────────────────────────
-function addSkillRow(name = '', rating = 3) {
-    const container = document.getElementById('skills-container');
-    const div = document.createElement('div');
-    div.className = 'skill-row';
-    div.innerHTML = `
-        <input type="text" class="refined-input skill-name" placeholder="Nazwa umiejętności" value="${String(name).replace(/"/g,'&quot;')}">
-        <select class="refined-select skill-rating" style="min-width:160px">
-            ${[1,2,3,4,5].map(n => `<option value="${n}" ${n==rating?'selected':''}>${n} — ${['Podstawowy','Podstawowy+','Średni','Zaawansowany','Ekspert'][n-1]}</option>`).join('')}
-        </select>
-        <button type="button" class="skill-remove-btn" onclick="this.parentElement.remove()">×</button>
-    `;
-    container.appendChild(div);
-}
-
-function populateSkills(dict) {
-    Object.entries(dict).forEach(([name, rating]) => addSkillRow(name, rating));
-}
-
-// ── Specializations ──────────────────────────────
-let specsArray = [];
-
-function addSpec() {
-    const inp = document.getElementById('spec-input');
-    const val = inp.value.trim();
-    if (!val || specsArray.includes(val)) { inp.value = ''; return; }
-    specsArray.push(val);
-    renderChips();
-    inp.value = '';
-}
-
-function removeSpec(idx) {
-    specsArray.splice(idx, 1);
-    renderChips();
-}
-
-function renderChips() {
-    document.getElementById('specs-chips').innerHTML = specsArray.map((s, i) =>
-        `<span class="chip">${s.replace(/</g,'&lt;')}<button type="button" class="chip-remove" onclick="removeSpec(${i})">×</button></span>`
-    ).join('');
-}
-
-function populateSpecs(arr) {
-    specsArray = [...arr];
-    renderChips();
-}
+const INITIAL_SCHED = {{ employee.get_work_schedule_dict() | tojson }};
 
 // ── Schedule ─────────────────────────────────────
 function toggleDay(day) {
@@ -485,13 +378,6 @@ function clearFieldError(fieldId) {
 document.getElementById('employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const skillsObj = {};
-    document.querySelectorAll('.skill-row').forEach(row => {
-        const name = row.querySelector('.skill-name').value.trim();
-        const rating = parseInt(row.querySelector('.skill-rating').value);
-        if (name) skillsObj[name] = rating;
-    });
-
     const scheduleObj = {};
     ['mon','tue','wed','thu','fri','sat','sun'].forEach(d => {
         const cb = document.getElementById(`sched-${d}`);
@@ -518,8 +404,6 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         commission_rate: document.getElementById('commission_rate').value ? parseFloat(document.getElementById('commission_rate').value) : null,
         employer_cost_rate: parseFloat(document.getElementById('employer_cost_rate').value) || 0.22,
         max_appointments_per_day: parseInt(document.getElementById('max_appointments_per_day').value) || 8,
-        skills: Object.keys(skillsObj).length ? skillsObj : null,
-        specializations: specsArray.length ? specsArray : null,
         work_schedule: Object.keys(scheduleObj).length ? scheduleObj : null,
         notes: document.getElementById('notes').value.trim() || null,
         is_active: document.getElementById('is_active').checked
@@ -554,13 +438,7 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
 
 // ── Initialize pre-populated values ──────────────
 document.addEventListener('DOMContentLoaded', () => {
-    populateSkills(INITIAL_SKILLS);
-    populateSpecs(INITIAL_SPECS);
     populateSchedule(INITIAL_SCHED);
-
-    document.getElementById('spec-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); addSpec(); }
-    });
 });
 
 // Skróty klawiszowe: Ctrl+S = zapisz, Esc = anuluj
