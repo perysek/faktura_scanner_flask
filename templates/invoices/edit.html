@@ -355,6 +355,111 @@
         font-size: 0.75rem;
         color: var(--color-ink-subtle);
     }
+
+    /* Seller lookup button in card-title */
+    .seller-lookup-btn {
+        margin-left: auto;
+        padding: 0.25rem 0.5rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        color: var(--color-ink-subtle);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .seller-lookup-btn:hover {
+        background: white;
+        color: var(--color-ink);
+        border-color: var(--color-ink-muted);
+    }
+    .seller-lookup-btn svg {
+        width: 0.75rem;
+        height: 0.75rem;
+    }
+
+    /* Seller lookup dropdown */
+    .seller-lookup-dropdown {
+        display: none;
+        margin-bottom: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        background: white;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .seller-lookup-dropdown.open {
+        display: block;
+    }
+    .seller-lookup-search-wrap {
+        position: relative;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .seller-lookup-search-wrap svg {
+        position: absolute;
+        left: 0.625rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0.8125rem;
+        height: 0.8125rem;
+        color: var(--color-ink-subtle);
+        pointer-events: none;
+    }
+    .seller-lookup-search {
+        width: 100%;
+        padding: 0.5rem 0.75rem 0.5rem 2rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        background: white;
+        border: none;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .seller-lookup-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .seller-lookup-item {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        border-bottom: 1px solid var(--color-surface);
+        transition: background 0.12s ease;
+    }
+    .seller-lookup-item:last-child { border-bottom: none; }
+    .seller-lookup-item:hover { background: var(--color-surface); }
+    .seller-lookup-item-name {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-ink);
+    }
+    .seller-lookup-item-nip {
+        font-size: 0.6875rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.125rem;
+    }
+    .seller-lookup-empty {
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.8125rem;
+        color: var(--color-ink-subtle);
+    }
+
+    /* Field auto-fill pulse animation */
+    @keyframes fieldFilledPulse {
+        0%   { border-color: var(--color-border); box-shadow: none; }
+        25%  { border-color: rgba(34, 197, 94, 0.75); box-shadow: 0 0 8px rgba(34, 197, 94, 0.28); }
+        50%  { border-color: rgba(34, 197, 94, 0.35); box-shadow: 0 0 3px rgba(34, 197, 94, 0.1); }
+        75%  { border-color: rgba(34, 197, 94, 0.75); box-shadow: 0 0 8px rgba(34, 197, 94, 0.28); }
+        100% { border-color: rgba(34, 197, 94, 0.5); box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.08); }
+    }
+    .field-filled {
+        animation: fieldFilledPulse 1.8s ease-in-out forwards;
+    }
 </style>
 {% endblock %}
 
@@ -480,7 +585,27 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
                         Dane sprzedawcy
+                        <button type="button" id="seller-lookup-btn" onclick="toggleSellerLookup()" class="seller-lookup-btn" title="Wybierz sprzedawcę z bazy danych">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Wybierz z bazy
+                        </button>
                     </h3>
+
+                    <div id="seller-lookup-dropdown" class="seller-lookup-dropdown">
+                        <div class="seller-lookup-search-wrap">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input type="text" id="seller-lookup-search" class="seller-lookup-search"
+                                   placeholder="Szukaj po nazwie lub NIP..."
+                                   oninput="filterSellers(this.value)">
+                        </div>
+                        <div id="seller-lookup-list" class="seller-lookup-list">
+                            <div class="seller-lookup-empty">Ładowanie...</div>
+                        </div>
+                    </div>
 
                     <div class="form-grid">
                         <div class="form-field form-grid-full">
@@ -671,6 +796,15 @@ const invoiceId = {{ invoice.id }};
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== DOM CONTENT LOADED ===');
     setupForm();
+
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('seller-lookup-dropdown');
+        const btn = document.getElementById('seller-lookup-btn');
+        if (dropdown && dropdown.classList.contains('open') &&
+            !dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.remove('open');
+        }
+    });
 });
 
 function setupForm() {
@@ -1229,6 +1363,116 @@ function showSellerConflictWarning(conflict) {
 function viewPDFFullscreen() {
     API.pdf.view(invoiceId);
 }
+
+// ─── Seller lookup ───────────────────────────────────────────────────────────
+
+let _allSellers = null;
+let _sellersFetchPromise = null;
+
+async function toggleSellerLookup() {
+    const dropdown = document.getElementById('seller-lookup-dropdown');
+    const searchInput = document.getElementById('seller-lookup-search');
+
+    if (dropdown.classList.contains('open')) {
+        dropdown.classList.remove('open');
+        return;
+    }
+
+    dropdown.classList.add('open');
+    searchInput.value = '';
+    searchInput.focus();
+
+    if (!_allSellers && !_sellersFetchPromise) {
+        document.getElementById('seller-lookup-list').innerHTML =
+            '<div class="seller-lookup-empty">Ładowanie...</div>';
+        _sellersFetchPromise = fetch('/api/sellers')
+            .then(r => r.json())
+            .then(data => {
+                _allSellers = data.success ? data.sellers : [];
+                return _allSellers;
+            })
+            .catch(() => { _allSellers = []; return []; });
+    }
+
+    const sellers = await (_sellersFetchPromise || Promise.resolve(_allSellers));
+    renderSellerList(sellers);
+}
+
+function filterSellers(query) {
+    if (!_allSellers) return;
+    const q = query.trim().toLowerCase();
+    const filtered = q
+        ? _allSellers.filter(s =>
+            (s.seller_name || '').toLowerCase().includes(q) ||
+            (s.seller_nip || '').toLowerCase().includes(q))
+        : _allSellers;
+    renderSellerList(filtered);
+}
+
+function renderSellerList(sellers) {
+    const list = document.getElementById('seller-lookup-list');
+    if (!sellers || sellers.length === 0) {
+        list.innerHTML = '<div class="seller-lookup-empty">Brak wyników</div>';
+        return;
+    }
+    list.innerHTML = '';
+    sellers.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'seller-lookup-item';
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'seller-lookup-item-name';
+        nameDiv.textContent = s.seller_name || '';
+        item.appendChild(nameDiv);
+
+        if (s.seller_nip) {
+            const nipDiv = document.createElement('div');
+            nipDiv.className = 'seller-lookup-item-nip';
+            nipDiv.textContent = `NIP: ${s.seller_nip}`;
+            item.appendChild(nipDiv);
+        }
+
+        item.addEventListener('click', () =>
+            selectSellerFromLookup(s.id, s.seller_name || '', s.seller_nip || ''));
+        list.appendChild(item);
+    });
+}
+
+async function selectSellerFromLookup(id, name, nip) {
+    document.getElementById('seller-lookup-dropdown').classList.remove('open');
+
+    const nameField = document.getElementById('seller_name');
+    const nipField  = document.getElementById('seller_nip');
+    const bankField = document.getElementById('bank_account');
+
+    nameField.value = name;
+    nipField.value  = nip;
+    triggerFieldFilled(nameField);
+    triggerFieldFilled(nipField);
+
+    try {
+        const resp = await fetch(`/api/sellers/${id}`);
+        const data = await resp.json();
+        if (data.success && data.invoices && data.invoices.length > 0) {
+            const withBank = data.invoices
+                .filter(inv => inv.bank_account)
+                .sort((a, b) => new Date(b.invoice_date || 0) - new Date(a.invoice_date || 0));
+            if (withBank.length > 0) {
+                bankField.value = withBank[0].bank_account;
+                triggerFieldFilled(bankField);
+            }
+        }
+    } catch (_) {}
+}
+
+function triggerFieldFilled(el) {
+    el.classList.remove('field-filled');
+    void el.offsetWidth;   // force reflow so animation restarts if re-triggered
+    el.classList.add('field-filled');
+    el.addEventListener('input', () => el.classList.remove('field-filled'), { once: true });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function pasteToField(fieldId) {
     navigator.clipboard.readText().then(text => {
