@@ -410,3 +410,61 @@ class IncomeRecord:
     notes: Optional[str] = None
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+# ── Absence management models ─────────────────────────────────────────────────
+
+@dataclass
+class AbsenceCategory:
+    """Kategoria nieobecności (urlop, L4, wyjście prywatne, ...).
+
+    absence_full_day=True  → wymaga date_from + date_to
+    absence_full_day=False → wymaga date (= date_from) + time_from + time_to
+    """
+    name: str
+    description: Optional[str] = None
+    absence_full_day: bool = True
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+@dataclass
+class EmployeeSupervisor:
+    """Powiązanie pracownik → przełożony (relacja M:M)."""
+    employee_id: int
+    supervisor_employee_id: int
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+@dataclass
+class EmployeeAbsence:
+    """Wniosek lub ręczna rejestracja nieobecności pracownika.
+
+    source='request' → złożony przez pracownika, wymaga zatwierdzenia
+    source='manual'  → wprowadzony ręcznie przez przełożonego (auto-approved)
+
+    Dla nieobecności całodziennych: time_from=None, time_to=None
+    Dla slotów czasowych:           time_from/time_to ustawione, date_to = date_from
+    """
+    employee_id: int
+    category_id: int
+    date_from: date
+    date_to: date
+    time_from: Optional[time] = None
+    time_to: Optional[time] = None
+    approver_id: Optional[int] = None
+    status: str = 'pending'           # pending | approved | rejected | cancelled
+    rejection_reason: Optional[str] = None
+    notes: Optional[str] = None
+    source: str = 'request'           # request | manual
+    requested_at: Optional[datetime] = field(default_factory=datetime.now)
+    responded_at: Optional[datetime] = None
+    created_by: Optional[int] = None  # users.id
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
