@@ -45,6 +45,9 @@ from repositories.services.service_repository import ServiceRepository
 from repositories.services.service_category_repository import ServiceCategoryRepository
 from repositories.employees.employee_repository import EmployeeRepository
 from repositories.employees.forma_zatrudnienia_repository import FormaZatrudnieniaRepository
+from repositories.absences.absence_category_repository import AbsenceCategoryRepository
+from repositories.absences.absence_repository import AbsenceRepository
+from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
 
 # Import services
 from services.ocr_service import OCRService
@@ -137,6 +140,9 @@ def create_app():
     app.service_category_repo = ServiceCategoryRepository()
     app.employee_repo = EmployeeRepository()
     app.forma_zatrudnienia_repo = FormaZatrudnieniaRepository()
+    app.absence_category_repo = AbsenceCategoryRepository()
+    app.absence_repo = AbsenceRepository()
+    app.supervisor_repo = EmployeeSupervisorRepository()
 
     # Initialize services
     app.ocr_service = OCRService()
