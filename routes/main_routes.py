@@ -256,11 +256,17 @@ def edit_employee(employee_id):
     forma_options = current_app.forma_zatrudnienia_repo.get_all()
     user_options = UserRepository().get_active_users()
 
-    # Supervisor section: all active employees except self + currently linked supervisors
+    # Direct reports section: all active employees except self
     all_employees = current_app.employee_repo.get_all(active_only=True)
     other_employees = [e for e in all_employees if e['id'] != employee_id]
+
+    # Current direct reports of this employee (they report to employee_id)
+    subordinate_rows = current_app.supervisor_repo.list_subordinates_for(employee_id)
+    current_direct_report_ids = {r['id'] for r in subordinate_rows}
+
+    # Employees who ARE supervisors of this employee — cannot be selected as direct reports
     supervisor_rows = current_app.supervisor_repo.list_supervisors_for(employee_id)
-    current_supervisor_ids = {r['id'] for r in supervisor_rows}
+    my_supervisor_ids = {r['id'] for r in supervisor_rows}
 
     return render_template(
         'employees/edit.html',
@@ -268,7 +274,8 @@ def edit_employee(employee_id):
         forma_options=forma_options,
         user_options=user_options,
         other_employees=other_employees,
-        current_supervisor_ids=current_supervisor_ids,
+        current_direct_report_ids=current_direct_report_ids,
+        my_supervisor_ids=my_supervisor_ids,
     )
 
 
