@@ -168,6 +168,7 @@ def create_app():
     from routes.users.routes import users_bp
     from routes.roles.routes import roles_bp
     from routes.booking_routes import booking_bp
+    from routes.absence_routes import absence_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -182,6 +183,7 @@ def create_app():
     app.register_blueprint(users_bp)
     app.register_blueprint(roles_bp)
     app.register_blueprint(booking_bp)
+    app.register_blueprint(absence_bp)
 
     # Error handlers
     from exceptions import AppError
@@ -214,12 +216,25 @@ def create_app():
     @app.context_processor
     def inject_globals():
         from flask_login import current_user
-        from config.auth_config import get_user_module_permissions
+        from config.auth_config import (
+            get_user_module_permissions, is_supervisor, get_linked_employee
+        )
 
         user_permissions = {}
+        _is_supervisor = False
+        _has_linked_employee = False
+
         if current_user.is_authenticated:
             try:
                 user_permissions = get_user_module_permissions(current_user.role)
+            except Exception:
+                pass
+            try:
+                emp = get_linked_employee(current_user)
+                _has_linked_employee = emp is not None
+                if emp:
+                    from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
+                    _is_supervisor = EmployeeSupervisorRepository().is_supervisor(emp['id'])
             except Exception:
                 pass
 
@@ -229,6 +244,8 @@ def create_app():
             'now': datetime.now,
             'logo_data_uri': logo_data_uri,
             'user_permissions': user_permissions,
+            'is_supervisor': _is_supervisor,
+            'has_linked_employee': _has_linked_employee,
         }
 
     # P4-3/P4-4: Clean up stale upload temp files on startup
