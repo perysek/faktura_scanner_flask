@@ -185,10 +185,11 @@ def management_index():
 @absence_management_required
 def approve_request(absence_id: int):
     emp = get_linked_employee(current_user)
-    if not emp:
+    emp_id = emp['id'] if emp else None
+    if emp_id is None and current_user.role not in ('superuser', 'admin'):
         return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
     try:
-        result = _svc().approve(absence_id, emp['id'])
+        result = _svc().approve(absence_id, emp_id)
         return jsonify({'success': True, **result})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -198,10 +199,11 @@ def approve_request(absence_id: int):
 @absence_management_required
 def force_approve(absence_id: int):
     emp = get_linked_employee(current_user)
-    if not emp:
+    emp_id = emp['id'] if emp else None
+    if emp_id is None and current_user.role not in ('superuser', 'admin'):
         return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
     try:
-        _svc().force_approve(absence_id, emp['id'])
+        _svc().force_approve(absence_id, emp_id)
         return jsonify({'success': True, 'status': 'approved'})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -211,12 +213,13 @@ def force_approve(absence_id: int):
 @absence_management_required
 def reject_request(absence_id: int):
     emp = get_linked_employee(current_user)
-    if not emp:
+    emp_id = emp['id'] if emp else None
+    if emp_id is None and current_user.role not in ('superuser', 'admin'):
         return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
     data = request.get_json(silent=True) or {}
     rejection_reason = data.get('rejection_reason', '').strip()
     try:
-        _svc().reject(absence_id, emp['id'], rejection_reason)
+        _svc().reject(absence_id, emp_id, rejection_reason)
         return jsonify({'success': True, 'status': 'rejected'})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -226,7 +229,8 @@ def reject_request(absence_id: int):
 @absence_management_required
 def create_manual():
     emp = get_linked_employee(current_user)
-    if not emp:
+    emp_id = emp['id'] if emp else None
+    if emp_id is None and current_user.role not in ('superuser', 'admin'):
         return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
     data = request.get_json(silent=True) or request.form
     try:
@@ -246,7 +250,7 @@ def create_manual():
             time_from=time_from,
             time_to=time_to,
             notes=notes,
-            creator_employee_id=emp['id'],
+            creator_employee_id=emp_id,
             created_by=current_user.id,
         )
         return jsonify({'success': True, **result})

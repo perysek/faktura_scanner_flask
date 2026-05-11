@@ -154,7 +154,7 @@ class AbsenceService:
                       date_from: date, date_to: date,
                       time_from: Optional[time], time_to: Optional[time],
                       notes: Optional[str],
-                      creator_employee_id: int,
+                      creator_employee_id: Optional[int],
                       created_by: Optional[int] = None) -> dict:
         """Utwórz nieobecność manualnie (np. L4).
 
@@ -271,7 +271,7 @@ class AbsenceService:
             raise AbsenceError("Wniosek nie istnieje")
         if row['status'] != 'pending':
             raise AbsenceError(f"Wniosek ma status '{row['status']}' — nie można go zatwierdzić/odrzucić")
-        if row['approver_id'] != approver_employee_id:
+        if approver_employee_id is not None and row['approver_id'] != approver_employee_id:
             raise AbsenceError("Nie jesteś wskazanym przełożonym dla tego wniosku")
         return row
 
