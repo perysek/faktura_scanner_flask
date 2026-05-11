@@ -234,6 +234,14 @@ class UserRepository(BaseRepository):
         cursor.execute(query)
         return cursor.fetchall()
 
+    def delete_user(self, user_id: int) -> bool:
+        """Usuń użytkownika. Najpierw odpina powiązanego pracownika (user_id = NULL)."""
+        with self.transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE employees SET user_id = NULL WHERE user_id = %s", (user_id,))
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            return cursor.rowcount > 0
+
     def get_linked_employee(self, user_id: int):
         """Pobierz pracownika powiązanego z użytkownikiem (lub None)"""
         query = "SELECT id, first_name, last_name FROM employees WHERE user_id = %s"
