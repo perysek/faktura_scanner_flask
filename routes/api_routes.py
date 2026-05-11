@@ -4034,6 +4034,53 @@ def bulk_update_employee_services():
 
 
 # ---------------------------------------------------------------------------
+# Supervisor links
+# ---------------------------------------------------------------------------
+
+@api_bp.route('/employees/<int:employee_id>/supervisors', methods=['POST'])
+@login_required
+@module_permission_required('employees')
+def set_employee_supervisors(employee_id):
+    """Replace the full set of supervisor links for an employee.
+
+    Body: {"supervisor_ids": [1, 2, 3]}
+    Replaces — not appends — so sending [] clears all links.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        raw_ids = data.get('supervisor_ids', [])
+        if not isinstance(raw_ids, list):
+            raise ValidationError('supervisor_ids must be a list')
+
+        supervisor_ids = []
+        for sid in raw_ids:
+            try:
+                parsed = int(sid)
+            except (TypeError, ValueError):
+                raise ValidationError(f'Invalid supervisor id: {sid}')
+            if parsed == employee_id:
+                raise ValidationError('Pracownik nie może być swoim własnym przełożonym')
+            supervisor_ids.append(parsed)
+
+        repo = current_app.supervisor_repo
+        # Clear existing links then add new ones atomically
+        repo.remove_all_supervisors_for(employee_id)
+        for sup_id in supervisor_ids:
+            repo.add_link(employee_id, sup_id)
+
+        return jsonify({
+            'success': True,
+            'supervisor_ids': supervisor_ids,
+            'message': f'Zaktualizowano {len(supervisor_ids)} przełożonych'
+        })
+    except (AppError, ValidationError):
+        raise
+    except Exception:
+        logging.exception('Error setting supervisors for employee %s', employee_id)
+        raise AppError('Błąd zapisu przełożonych')
+
+
+# ---------------------------------------------------------------------------
 # Formy zatrudnienia (employment types)
 # ---------------------------------------------------------------------------
 
