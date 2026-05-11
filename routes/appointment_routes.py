@@ -700,11 +700,34 @@ def get_multi_employee_schedule():
             for emp_id in page_employee_ids
         }
 
+        # Merge approved absences for the visible employees
+        page_absences = {}
+        try:
+            from repositories.absences.absence_repository import AbsenceRepository
+            abs_rows = AbsenceRepository().list_all(
+                status_in=['approved'],
+                date_from=schedule_date,
+                date_to=schedule_date,
+            )
+            for ab in abs_rows:
+                emp_id = ab['employee_id']
+                if emp_id not in page_employee_ids:
+                    continue
+                page_absences.setdefault(emp_id, []).append({
+                    'id': ab['id'],
+                    'category_name': ab.get('category_name', 'Nieobecność'),
+                    'time_from': str(ab['time_from'])[:5] if ab['time_from'] else None,
+                    'time_to':   str(ab['time_to'])[:5]   if ab['time_to']   else None,
+                })
+        except Exception:
+            logging.warning('Could not load absences for calendar', exc_info=True)
+
         return jsonify({
             'success': True,
             'date': schedule_date.isoformat(),
             'employees': page_employees,
             'schedules': page_schedules,
+            'absences': page_absences,
             'total_employees': total_employees,
             'page': current_page,
             'total_pages': total_pages,
