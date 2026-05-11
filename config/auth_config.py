@@ -25,6 +25,7 @@ MODULE_PERMISSIONS = {
     'settings': ['superuser', 'admin'],
     'reports': ['superuser', 'admin', 'accountant'],
     'data_correction': ['superuser'],
+    'absences': ['superuser', 'admin'],  # full management (categories CRUD + global list)
 }
 
 def role_required(*roles):
@@ -118,6 +119,66 @@ def get_user_modules(user_role: str) -> list:
         if user_role in allowed_roles:
             accessible_modules.append(module)
     return accessible_modules
+
+
+def is_supervisor(user) -> bool:
+    """True if the user's linked employee record appears on the supervisor side
+    of any employee_supervisors row. Used by context processor + decorator.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    try:
+        from repositories.employees.employee_repository import EmployeeRepository
+        from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
+        emp_row = EmployeeRepository().get_by_user_id(user.id)
+        if not emp_row:
+            return False
+        return EmployeeSupervisorRepository().is_supervisor(emp_row['id'])
+    except Exception:
+        return False
+
+
+def get_linked_employee(user):
+    """Return the employee row linked to this user, or None."""
+    if not user or not user.is_authenticated:
+        return None
+    try:
+        from repositories.employees.employee_repository import EmployeeRepository
+        return EmployeeRepository().get_by_user_id(user.id)
+    except Exception:
+        return None
+
+
+def absence_management_required(f):
+    """Allow access to absence management views for admin/superuser OR supervisors.
+
+    Supervisors (stylists who manage subordinates) get tabs #1 and #2 but NOT
+    tab #3 (categories), which is gated by module_permission_required('absences').
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('Musisz być zalogowany', 'error')
+            return redirect(url_for('auth.login'))
+
+        has_access = False
+        try:
+            from repositories.roles.role_repository import RoleRepository
+            if RoleRepository().role_has_module_access(current_user.role, 'absences'):
+                has_access = True
+        except Exception:
+            if current_user.role in MODULE_PERMISSIONS.get('absences', []):
+                has_access = True
+
+        if not has_access:
+            has_access = is_supervisor(current_user)
+
+        if not has_access:
+            flash('Brak uprawnień do zarządzania nieobecnościami', 'error')
+            return redirect(url_for('main.dashboard'))
+
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def get_user_module_permissions(role_name: str) -> dict:

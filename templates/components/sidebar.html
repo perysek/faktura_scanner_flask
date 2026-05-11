@@ -18,7 +18,7 @@
 
     {% set finanse_active = request.endpoint in ['main.dashboard', 'main.invoices_list', 'main.sellers_list', 'main.upload', 'main.analytics_dashboard'] %}
     {% set salon_active = request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment', 'main.clients_list'] %}
-    {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list', 'main.service_categories_list'] %}
+    {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list', 'main.service_categories_list', 'absence.management_index', 'absence.my_absences'] %}
     {% set korekta_active = request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit', 'main.superadmin_edit_table'] %}
     {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'roles.roles_list', 'auth.profile'] %}
 
@@ -70,13 +70,25 @@
         {% endif %}
 
         <!-- Zarzadzanie -->
-        {% if user_permissions.employees or user_permissions.services %}
+        {% if user_permissions.employees or user_permissions.services or is_supervisor or has_linked_employee %}
         {{ sidebar_section_start('zarzadzanie', 'Zarzadzanie', zarzadzanie_active) }}
             {% if user_permissions.employees %}
             {{ sidebar_link(
                 url_for('main.employees_list'), 'Pracownicy',
                 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
                 request.endpoint == 'main.employees_list') }}
+            {% endif %}
+            {% if is_supervisor or user_permissions.absences %}
+            {{ sidebar_link(
+                url_for('absence.management_index'), 'Nieobecnosci',
+                'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+                request.endpoint == 'absence.management_index') }}
+            {% endif %}
+            {% if has_linked_employee %}
+            {{ sidebar_link(
+                url_for('absence.my_absences'), 'Moje nieobecnosci',
+                'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+                request.endpoint == 'absence.my_absences') }}
             {% endif %}
             {% if user_permissions.services %}
             {{ sidebar_link(
