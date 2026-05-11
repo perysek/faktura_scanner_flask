@@ -522,20 +522,20 @@
                             <td>
                                 <div class="action-icons">
                                     {% if not cat['is_deleted'] %}
-                                    <button class="action-icon-btn"
-                                            onclick="Absences.openCategoryForm(
-                                                {{ cat['id'] }},
-                                                {{ cat['name']|tojson }},
-                                                {{ (cat['description'] or '')|tojson }},
-                                                {{ cat['absence_full_day']|tojson }})"
+                                    <button class="action-icon-btn js-cat-edit"
+                                            data-cat-id="{{ cat['id'] }}"
+                                            data-cat-name="{{ cat['name'] }}"
+                                            data-cat-desc="{{ cat['description'] or '' }}"
+                                            data-cat-fullday="{{ 'true' if cat['absence_full_day'] else 'false' }}"
                                             title="Edytuj" aria-label="Edytuj kategorię">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                                   d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                         </svg>
                                     </button>
-                                    <button class="action-icon-btn delete"
-                                            onclick="Absences.deleteCategory({{ cat['id'] }}, {{ cat['name']|tojson }})"
+                                    <button class="action-icon-btn delete js-cat-delete"
+                                            data-cat-id="{{ cat['id'] }}"
+                                            data-cat-name="{{ cat['name'] }}"
                                             title="Usuń" aria-label="Usuń kategorię">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -639,5 +639,25 @@ Absences.submitManual = function() {
     })
     .catch(() => Notifications.error('Błąd połączenia z serwerem'));
 };
+
+// ── Category button wiring via data-* attributes ──────────────────────────
+// (avoids tojson double-quote conflicts inside onclick="..." attributes)
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.js-cat-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            Absences.openCategoryForm(
+                parseInt(btn.dataset.catId),
+                btn.dataset.catName,
+                btn.dataset.catDesc,
+                btn.dataset.catFullday === 'true'
+            );
+        });
+    });
+    document.querySelectorAll('.js-cat-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            Absences.deleteCategory(parseInt(btn.dataset.catId), btn.dataset.catName);
+        });
+    });
+});
 </script>
 {% endblock %}
