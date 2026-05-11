@@ -664,7 +664,7 @@ function renderBalanceBadge(empId) {
                 : b.status === 'warning'  ? '#c2410c'
                 : 'var(--color-success,#16a34a)';
     const unitL = b.unit === 'hours' ? 'h' : 'd';
-    return `<span style="color:${color};font-weight:600;font-size:0.8125rem;">${b.used.toFixed(1)}/${b.limit}${unitL}</span>`;
+    return `<span style="color:${color};font-weight:600;font-size:0.8125rem;">${Math.round(b.used)}/${b.limit}${unitL}</span>`;
 }
 
 async function loadEmployees() {
