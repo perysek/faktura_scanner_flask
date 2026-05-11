@@ -4037,47 +4037,64 @@ def bulk_update_employee_services():
 # Supervisor links
 # ---------------------------------------------------------------------------
 
-@api_bp.route('/employees/<int:employee_id>/supervisors', methods=['POST'])
+@api_bp.route('/employees/<int:employee_id>/direct-reports', methods=['POST'])
 @login_required
 @module_permission_required('employees')
-def set_employee_supervisors(employee_id):
-    """Replace the full set of supervisor links for an employee.
+def set_employee_direct_reports(employee_id):
+    """Replace the full set of direct reports for a supervisor.
 
-    Body: {"supervisor_ids": [1, 2, 3]}
-    Replaces — not appends — so sending [] clears all links.
+    Body: {"direct_report_ids": [1, 2, 3]}
+    Replaces — not appends — so sending [] means this employee has no subordinates.
+
+    Validation: rejects any direct_report_id that is already listed as a
+    supervisor of employee_id (circular relationship prevention).
     """
     try:
         data = request.get_json(silent=True) or {}
-        raw_ids = data.get('supervisor_ids', [])
+        raw_ids = data.get('direct_report_ids', [])
         if not isinstance(raw_ids, list):
-            raise ValidationError('supervisor_ids must be a list')
+            raise ValidationError('direct_report_ids must be a list')
 
-        supervisor_ids = []
-        for sid in raw_ids:
+        direct_report_ids = []
+        for rid in raw_ids:
             try:
-                parsed = int(sid)
+                parsed = int(rid)
             except (TypeError, ValueError):
-                raise ValidationError(f'Invalid supervisor id: {sid}')
+                raise ValidationError(f'Nieprawidłowe ID pracownika: {rid}')
             if parsed == employee_id:
-                raise ValidationError('Pracownik nie może być swoim własnym przełożonym')
-            supervisor_ids.append(parsed)
+                raise ValidationError('Pracownik nie może być swoim własnym podwładnym')
+            direct_report_ids.append(parsed)
 
         repo = current_app.supervisor_repo
-        # Clear existing links then add new ones atomically
-        repo.remove_all_supervisors_for(employee_id)
-        for sup_id in supervisor_ids:
-            repo.add_link(employee_id, sup_id)
+
+        # Circular conflict check: any selected direct report that is already
+        # a supervisor of employee_id would create A→B and B→A simultaneously.
+        existing_supervisor_rows = repo.list_supervisors_for(employee_id)
+        existing_supervisor_ids = {r['id'] for r in existing_supervisor_rows}
+        conflicts = [rid for rid in direct_report_ids if rid in existing_supervisor_ids]
+        if conflicts:
+            return jsonify({
+                'success': False,
+                'error': 'Konflikt hierarchii: wybrany pracownik jest już przełożonym tego pracownika. '
+                         'Pracownicy nie mogą być jednocześnie przełożonym i podwładnym.',
+                'conflict_ids': conflicts,
+            }), 400
+
+        # Replace: clear all existing subordinates of this employee, then add new ones
+        repo.remove_all_subordinates_for(employee_id)
+        for dr_id in direct_report_ids:
+            repo.add_link(dr_id, employee_id)   # dr_id subordinate of employee_id
 
         return jsonify({
             'success': True,
-            'supervisor_ids': supervisor_ids,
-            'message': f'Zaktualizowano {len(supervisor_ids)} przełożonych'
+            'direct_report_ids': direct_report_ids,
+            'message': f'Zaktualizowano {len(direct_report_ids)} podwładnych',
         })
     except (AppError, ValidationError):
         raise
     except Exception:
-        logging.exception('Error setting supervisors for employee %s', employee_id)
-        raise AppError('Błąd zapisu przełożonych')
+        logging.exception('Error setting direct reports for employee %s', employee_id)
+        raise AppError('Błąd zapisu podwładnych')
 
 
 # ---------------------------------------------------------------------------

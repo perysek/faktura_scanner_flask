@@ -95,3 +95,12 @@ class EmployeeSupervisorRepository:
             cursor.execute(query, (employee_id,))
             conn.commit()
             return cursor.rowcount
+
+    def remove_all_subordinates_for(self, supervisor_employee_id: int) -> int:
+        """Usuń wszystkich podwładnych przełożonego (przy przebudowie hierarchii)."""
+        query = "DELETE FROM employee_supervisors WHERE supervisor_employee_id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (supervisor_employee_id,))
+            conn.commit()
+            return cursor.rowcount
