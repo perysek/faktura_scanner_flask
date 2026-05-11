@@ -66,6 +66,9 @@
     .appointments-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
     .appointment-block { position: absolute; left: 4px; right: 4px; background: white; border-left: 3px solid var(--color-status-scheduled); border-radius: 2px; padding: 0.375rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); pointer-events: auto; cursor: pointer; transition: all 0.2s var(--ease-out-expo); overflow: hidden; }
     .appointment-block:hover { transform: translateX(1px); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .absence-block { position:absolute; left:4px; right:4px; border-left:3px solid var(--color-ink-subtle); border-radius:2px; padding:0.3rem 0.4rem; overflow:hidden; opacity:0.82; background:repeating-linear-gradient(45deg,rgba(138,138,138,0.06),rgba(138,138,138,0.06) 6px,rgba(138,138,138,0.13) 6px,rgba(138,138,138,0.13) 12px); cursor:default; }
+    .absence-label { font-size:0.5625rem; font-weight:600; color:var(--color-ink-muted); text-transform:uppercase; letter-spacing:0.07em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .absence-time { font-size:0.5rem; color:var(--color-ink-subtle); }
 
     .appointment-block.scheduled { border-left-color: var(--color-status-scheduled); background: var(--color-status-scheduled-bg); }
     .appointment-block.confirmed { border-left-color: var(--color-status-confirmed); background: var(--color-status-confirmed-bg); }
@@ -478,12 +481,29 @@ async function loadWeekAndFilterEmployees() {
         // Save for "all employees" coverage calculation
         allWeekAppointments = allAppointments;
 
-        // Get unique employee IDs with appointments
+        // Also fetch approved absences for the week so employees with only absences appear
+        let weekAbsences = [];
+        try {
+            const absParams = new URLSearchParams({
+                start_date: formatLocalDate(currentWeekStart),
+                end_date: formatLocalDate(weekEnd)
+            });
+            const absResp = await fetch(`/api/appointments/absences?${absParams}`);
+            if (absResp.ok) {
+                const absData = await absResp.json();
+                weekAbsences = absData.absences || [];
+            }
+        } catch (_) {}
+        // Store for rendering
+        window._weekAbsences = weekAbsences;
+
+        // Union: employees with appointments OR approved absences
         const employeeIdsWithAppointments = new Set(
             allAppointments.map(apt => apt.employee_id)
         );
+        weekAbsences.forEach(ab => employeeIdsWithAppointments.add(ab.employee_id));
 
-        // Filter employees to only those with appointments
+        // Filter employees to only those with appointments or absences
         employees = allEmployees.filter(emp =>
             employeeIdsWithAppointments.has(emp.id)
         );
@@ -754,7 +774,10 @@ function renderWeek() {
         document.getElementById(`dayColumn${i}`).innerHTML = '';
     }
 
-    if (appointments.length === 0) {
+    const hasAbsencesThisWeek = (window._weekAbsences || []).some(
+        ab => ab.employee_id == currentEmployeeId
+    );
+    if (appointments.length === 0 && !hasAbsencesThisWeek) {
         emptyState.style.display = 'block';
         return;
     }
@@ -764,6 +787,22 @@ function renderWeek() {
     // Group appointments by day
     const appointmentsByDay = groupByDay(appointments);
 
+    // Group absences by date — expand multi-day absences into individual days
+    const absencesByDay = {};
+    (window._weekAbsences || []).forEach(ab => {
+        if (ab.employee_id != currentEmployeeId) return;
+        // Expand each date in the absence range
+        const from = new Date(ab.date_from + 'T00:00:00');
+        const to   = new Date(ab.date_to   + 'T00:00:00');
+        const cur  = new Date(from);
+        while (cur <= to) {
+            const ds = formatLocalDate(cur);
+            if (!absencesByDay[ds]) absencesByDay[ds] = [];
+            absencesByDay[ds].push(ab);
+            cur.setDate(cur.getDate() + 1);
+        }
+    });
+
     // Render each day
     for (let i = 0; i < 7; i++) {
         const date = new Date(currentWeekStart);
@@ -771,7 +810,8 @@ function renderWeek() {
         const dateStr = formatLocalDate(date);
 
         const dayAppointments = appointmentsByDay[dateStr] || [];
-        renderDayColumn(i, dayAppointments);
+        const dayAbsences = absencesByDay[dateStr] || [];
+        renderDayColumn(i, dayAppointments, dayAbsences);
     }
 }
 
@@ -786,13 +826,35 @@ function groupByDay(appointments) {
     return grouped;
 }
 
-function renderDayColumn(dayIndex, dayAppointments) {
+function renderDayColumn(dayIndex, dayAppointments, dayAbsences) {
     const column = document.getElementById(`dayColumn${dayIndex}`);
 
     dayAppointments.forEach(apt => {
         const block = createAppointmentBlock(apt);
         column.appendChild(block);
     });
+
+    (dayAbsences || []).forEach(ab => {
+        const block = createAbsenceBlock(ab);
+        column.appendChild(block);
+    });
+}
+
+function createAbsenceBlock(absence) {
+    const block = document.createElement('div');
+    block.className = 'absence-block';
+    block.title = absence.category_name;
+
+    const startStr = absence.time_from ? absence.time_from + ':00' : '07:00:00';
+    const endStr   = absence.time_to   ? absence.time_to   + ':00' : '23:00:00';
+    const position = calculatePosition(startStr, endStr);
+    block.style.top    = position.top + '%';
+    block.style.height = Math.max(position.height, 1.5) + '%';
+
+    block.innerHTML = `<div class="absence-label">${escapeHtml(absence.category_name)}</div>${
+        absence.time_from ? `<div class="absence-time">${absence.time_from}–${absence.time_to}</div>` : ''
+    }`;
+    return block;
 }
 
 function createAppointmentBlock(appointment) {
