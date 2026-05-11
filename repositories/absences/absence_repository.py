@@ -264,7 +264,7 @@ class AbsenceRepository:
                    s.name AS service_name
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
-            LEFT JOIN appointment_services aps ON aps.appointment_id = a.id AND aps.is_primary = TRUE
+            LEFT JOIN appointment_services aps ON aps.appointment_id = a.id AND aps.is_addon = FALSE
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s
               AND a.is_deleted = FALSE
