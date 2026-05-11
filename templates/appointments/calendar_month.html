@@ -346,12 +346,25 @@ async function loadMonthAndFilterEmployees() {
         // Save for "all employees" coverage calculation
         allMonthAppointments = allAppointments;
 
-        // Get unique employee IDs with appointments
+        // Also fetch approved absences so employees with only absences appear
+        let monthAbsences = [];
+        try {
+            const absParams = new URLSearchParams({ start_date: start, end_date: end });
+            const absResp = await fetch(`/api/appointments/absences?${absParams}`);
+            if (absResp.ok) {
+                const absData = await absResp.json();
+                monthAbsences = absData.absences || [];
+            }
+        } catch (_) {}
+        window._monthAbsences = monthAbsences;
+
+        // Union: employees with appointments OR approved absences
         const employeeIdsWithAppointments = new Set(
             allAppointments.map(apt => apt.employee_id)
         );
+        monthAbsences.forEach(ab => employeeIdsWithAppointments.add(ab.employee_id));
 
-        // Filter employees to only those with appointments
+        // Filter employees to only those with appointments or absences
         employees = allEmployees.filter(emp =>
             employeeIdsWithAppointments.has(emp.id)
         );
@@ -632,7 +645,10 @@ function renderMonth() {
         monthGrid.removeChild(monthGrid.lastChild);
     }
 
-    if (appointments.length === 0) {
+    const monthAbsencesForEmployee = (window._monthAbsences || []).filter(
+        ab => !currentEmployeeId || ab.employee_id == currentEmployeeId
+    );
+    if (appointments.length === 0 && monthAbsencesForEmployee.length === 0) {
         emptyState.style.display = 'block';
     } else {
         emptyState.style.display = 'none';
@@ -642,13 +658,33 @@ function renderMonth() {
     const appointmentsByDay = groupByDay(appointments);
     const today = new Date().toDateString();
 
+    // Group absences by date (expand multi-day ranges, filter to current employee)
+    const absencesByDay = {};
+    (window._monthAbsences || []).forEach(ab => {
+        if (currentEmployeeId && ab.employee_id != currentEmployeeId) return;
+        const from = new Date(ab.date_from + 'T00:00:00');
+        const to   = new Date(ab.date_to   + 'T00:00:00');
+        const cur  = new Date(from);
+        while (cur <= to) {
+            const ds = formatLocalDate(cur);
+            if (!absencesByDay[ds]) absencesByDay[ds] = [];
+            absencesByDay[ds].push(ab);
+            cur.setDate(cur.getDate() + 1);
+        }
+    });
+
     // Render 42 days (6 weeks)
     for (let i = 0; i < 42; i++) {
         const cellDate = new Date(startDate);
         cellDate.setDate(cellDate.getDate() + i);
         const dateStr = formatLocalDate(cellDate);
 
-        const cell = createDayCell(cellDate, appointmentsByDay[dateStr] || [], today);
+        const cell = createDayCell(
+            cellDate,
+            appointmentsByDay[dateStr] || [],
+            today,
+            absencesByDay[dateStr] || []
+        );
         monthGrid.appendChild(cell);
     }
 }
@@ -664,7 +700,8 @@ function groupByDay(appointments) {
     return grouped;
 }
 
-function createDayCell(date, dayAppointments, today) {
+function createDayCell(date, dayAppointments, today, dayAbsences) {
+    dayAbsences = dayAbsences || [];
     const cell = document.createElement('div');
     cell.className = 'day-cell';
 
@@ -704,6 +741,26 @@ function createDayCell(date, dayAppointments, today) {
     }
 
     cell.appendChild(aptList);
+
+    // Absence markers
+    if (dayAbsences.length > 0) {
+        const abDiv = document.createElement('div');
+        abDiv.style.cssText = 'margin-top:0.2rem;display:flex;flex-direction:column;gap:0.15rem;';
+        dayAbsences.slice(0, 2).forEach(ab => {
+            const tag = document.createElement('div');
+            tag.style.cssText = 'font-size:0.5625rem;font-weight:500;color:var(--color-ink-muted);background:repeating-linear-gradient(45deg,rgba(138,138,138,0.08),rgba(138,138,138,0.08) 4px,rgba(138,138,138,0.16) 4px,rgba(138,138,138,0.16) 8px);border-left:2px solid var(--color-ink-subtle);padding:0.1rem 0.35rem;border-radius:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+            tag.title = ab.category_name;
+            tag.textContent = ab.category_name;
+            abDiv.appendChild(tag);
+        });
+        if (dayAbsences.length > 2) {
+            const more = document.createElement('div');
+            more.style.cssText = 'font-size:0.5rem;color:var(--color-ink-subtle);padding-left:0.35rem;';
+            more.textContent = `+${dayAbsences.length - 2} nieob.`;
+            abDiv.appendChild(more);
+        }
+        cell.appendChild(abDiv);
+    }
 
     // Click handler → navigate to week view
     cell.addEventListener('click', () => {

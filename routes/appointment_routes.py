@@ -618,6 +618,47 @@ def get_employees_for_appointments():
         raise AppError('Wystapil blad serwera')
 
 
+@appointment_bp.route('/appointments/absences', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_absences_for_calendar():
+    """Return approved absences for a date range — used by week/month calendar views.
+
+    Query params: start_date (YYYY-MM-DD), end_date (YYYY-MM-DD)
+    Returns list of {employee_id, date_from, date_to, time_from, time_to, category_name}
+    """
+    try:
+        start_date = _parse_date(request.args.get('start_date'))
+        end_date   = _parse_date(request.args.get('end_date'))
+        if not start_date or not end_date:
+            raise ValidationError('Wymagane: start_date, end_date')
+
+        from repositories.absences.absence_repository import AbsenceRepository
+        rows = AbsenceRepository().list_all(
+            status_in=['approved'],
+            date_from=start_date,
+            date_to=end_date,
+        )
+
+        absences = []
+        for ab in rows:
+            absences.append({
+                'employee_id':   ab['employee_id'],
+                'date_from':     str(ab['date_from']),
+                'date_to':       str(ab['date_to']),
+                'time_from':     str(ab['time_from'])[:5] if ab['time_from'] else None,
+                'time_to':       str(ab['time_to'])[:5]   if ab['time_to']   else None,
+                'category_name': ab.get('category_name', 'Nieobecność'),
+            })
+
+        return jsonify({'success': True, 'absences': absences})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Error loading absences for calendar')
+        raise AppError('Błąd ładowania nieobecności')
+
+
 @appointment_bp.route('/appointments/daily-schedule', methods=['GET'])
 @login_required
 @module_permission_required('appointments')
