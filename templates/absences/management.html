@@ -594,13 +594,17 @@ Absences.submitManual = function() {
     const timeTo   = document.getElementById('manual-time-to');
     const notes    = document.getElementById('manual-notes');
 
-    if (!empSel?.value || !catSel?.value || !dateFrom?.value || !dateTo?.value) {
+    if (!empSel?.value || !catSel?.value || !dateFrom?.value) {
         Notifications.error('Uzupełnij wszystkie wymagane pola');
         return;
     }
     const catOpt  = catSel.options[catSel.selectedIndex];
     const fullDay = !catOpt || catOpt.dataset.fullDay !== 'false';
 
+    if (fullDay && !dateTo?.value) {
+        Notifications.error('Uzupełnij wszystkie wymagane pola');
+        return;
+    }
     if (!fullDay && (!timeFrom?.value || !timeTo?.value)) {
         Notifications.error('Dla nieobecności godzinowej wymagane są godziny');
         return;
