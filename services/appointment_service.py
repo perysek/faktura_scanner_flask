@@ -36,6 +36,8 @@ class AppointmentBusinessService:
         self.addon_repo = ServiceAddonRepository()
         self.emp_svc_repo = EmployeeServiceRepository()
         self.pricing = PricingService()
+        from repositories.absences.absence_repository import AbsenceRepository
+        self.absence_repo = AbsenceRepository()
 
     def create_appointment(self, client_id: int, employee_id: int,
                             service_ids: List[int], appt_date: date,
@@ -87,6 +89,17 @@ class AppointmentBusinessService:
                 employee_name = 'inny pracownik'
             raise AppointmentError(
                 f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
+            )
+
+        # 3c. Sprawdź konflikty z nieobecnościami pracownika
+        absence_conflicts = self.absence_repo.check_absence_conflicts(
+            employee_id, appt_date, start_time, end_time
+        )
+        if absence_conflicts:
+            raise AppointmentError(
+                f"Konflikt z nieobecnością pracownika: "
+                f"{absence_conflicts[0].get('category_name', 'nieobecność')} "
+                f"({absence_conflicts[0].get('date_from', '')})"
             )
 
         # 4-5. Utwórz wizytę + usługi w jednej transakcji
@@ -590,6 +603,18 @@ class AppointmentBusinessService:
                     employee_name = 'inny pracownik'
                 raise AppointmentError(
                     f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
+                )
+
+            # 2d. Sprawdź konflikty z nieobecnościami pracownika
+            absence_conflicts = self.absence_repo.check_absence_conflicts(
+                employee_id, appointment_date, start_time, end_time,
+                exclude_id=None
+            )
+            if absence_conflicts:
+                raise AppointmentError(
+                    f"Konflikt z nieobecnością pracownika: "
+                    f"{absence_conflicts[0].get('category_name', 'nieobecność')} "
+                    f"({absence_conflicts[0].get('date_from', '')})"
                 )
 
         # 3. Policz sumę cen i czasu trwania
