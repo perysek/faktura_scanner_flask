@@ -725,6 +725,33 @@ def get_multi_employee_schedule():
         # Pobierz wszystkich pracowników z wizytami tego dnia
         all_data = repo.get_multi_employee_schedule(schedule_date, employee_ids=None)
         all_employees = all_data['employees']
+
+        # Also include employees who have approved absences on this day but no appointments
+        try:
+            from repositories.absences.absence_repository import AbsenceRepository
+            from repositories.employees.employee_repository import EmployeeRepository
+            absence_rows = AbsenceRepository().list_all(
+                status_in=['approved'],
+                date_from=schedule_date,
+                date_to=schedule_date,
+            )
+            existing_ids = {emp['id'] for emp in all_employees}
+            emp_repo = EmployeeRepository()
+            for ab_row in absence_rows:
+                emp_id = ab_row['employee_id']
+                if emp_id not in existing_ids:
+                    emp = emp_repo.get_by_id(emp_id)
+                    if emp and emp['is_active']:
+                        all_employees.append({
+                            'id':       emp['id'],
+                            'full_name': f"{emp['first_name']} {emp['last_name']}",
+                            'position': emp['position'],
+                        })
+                        all_data['schedules'].setdefault(emp_id, [])
+                        existing_ids.add(emp_id)
+        except Exception:
+            logging.warning('Could not merge absence-only employees into day schedule', exc_info=True)
+
         total_employees = len(all_employees)
 
         # Oblicz paginację
