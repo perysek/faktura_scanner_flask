@@ -44,20 +44,22 @@ const Absences = {
         const select    = document.getElementById('ab-category');
         if (!select) return;
 
-        const grpDates  = document.getElementById('ab-group-dates');
-        const grpSlot   = document.getElementById('ab-group-slot');
-        const dateFrom  = document.getElementById('ab-date-from');
-        const dateTo    = document.getElementById('ab-date-to');
-        const slotDate  = document.getElementById('ab-slot-date');
-        const timeFrom  = document.getElementById('ab-time-from');
-        const timeTo    = document.getElementById('ab-time-to');
+        const grpDates    = document.getElementById('ab-group-dates');
+        const grpDatesTo  = document.getElementById('ab-group-dates-to');
+        const grpSlot     = document.getElementById('ab-group-slot');
+        const dateFrom    = document.getElementById('ab-date-from');
+        const dateTo      = document.getElementById('ab-date-to');
+        const slotDate    = document.getElementById('ab-slot-date');
+        const timeFrom    = document.getElementById('ab-time-from');
+        const timeTo      = document.getElementById('ab-time-to');
 
         const update = () => {
             const opt = select.options[select.selectedIndex];
             const isFullDay = !opt || opt.dataset.fullDay !== 'false';
 
-            if (grpDates) grpDates.style.display = isFullDay ? '' : 'none';
-            if (grpSlot)  grpSlot.style.display  = isFullDay ? 'none' : '';
+            if (grpDates)   grpDates.style.display   = isFullDay ? '' : 'none';
+            if (grpDatesTo) grpDatesTo.style.display  = isFullDay ? '' : 'none';
+            if (grpSlot)    grpSlot.style.display     = isFullDay ? 'none' : '';
 
             // required toggling
             if (dateFrom) dateFrom.required = isFullDay;
