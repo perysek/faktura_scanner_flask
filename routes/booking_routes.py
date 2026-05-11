@@ -257,6 +257,30 @@ def get_available_days():
             key = d.isoformat() if hasattr(d, 'isoformat') else str(d)
             appts_by_date[key].append(row)
 
+        # Merge approved absences — each absence date blocks slots like a booked appointment
+        from repositories.absences.absence_repository import AbsenceRepository
+        from datetime import timedelta as _td
+        absence_rows = AbsenceRepository().list_all(
+            status_in=['approved'],
+            employee_id=employee_id,
+            date_from=month_start,
+            date_to=month_end,
+        )
+        for ab in absence_rows:
+            ab_from = ab['date_from'] if hasattr(ab['date_from'], 'isoformat') else date.fromisoformat(str(ab['date_from']))
+            ab_to   = ab['date_to']   if hasattr(ab['date_to'],   'isoformat') else date.fromisoformat(str(ab['date_to']))
+            cur = ab_from
+            while cur <= ab_to:
+                if ab['time_from'] is None:
+                    # Full-day: use sentinel that will be resolved to work_start/work_end per-day below
+                    appts_by_date[cur.isoformat()].append({'_full_day_absence': True})
+                else:
+                    appts_by_date[cur.isoformat()].append({
+                        'start_time': ab['time_from'],
+                        'end_time':   ab['time_to'],
+                    })
+                cur += _td(days=1)
+
         svc = AppointmentBusinessService()
         available_dates = []
 
@@ -271,11 +295,18 @@ def get_available_days():
                 continue  # off day
 
             work_start, work_end = hours
-            day_booked = appts_by_date.get(day_date.isoformat(), [])
+            raw_booked = appts_by_date.get(day_date.isoformat(), [])
+            # Resolve full-day absence sentinels to the actual work window for this day
+            day_booked = []
+            for b in raw_booked:
+                if b.get('_full_day_absence'):
+                    day_booked.append({'start_time': work_start, 'end_time': work_end})
+                else:
+                    day_booked.append(b)
             slots = svc.get_available_slots(
                 employee_id, day_date, duration,
                 work_start=work_start, work_end=work_end,
-                booked=day_booked,  # in-memory conflict check — no extra DB queries
+                booked=day_booked,
             )
             if any(s['available'] for s in slots):
                 available_dates.append(day_date.isoformat())
@@ -322,11 +353,30 @@ def get_public_slots():
             return jsonify({'success': True, 'slots': [], 'off_day': True})
 
         work_start, work_end = hours
+
+        # Pre-fetch appointments + approved absences for in-memory conflict check
+        from repositories.appointments.appointment_repository import AppointmentRepository as _ApptRepo
+        from repositories.absences.absence_repository import AbsenceRepository as _AbsRepo
+        appt_rows = _ApptRepo().get_appointments_in_range(employee_id, slot_date, slot_date)
+        absence_rows = _AbsRepo().list_all(
+            status_in=['approved'],
+            employee_id=employee_id,
+            date_from=slot_date,
+            date_to=slot_date,
+        )
+        booked = list(appt_rows)
+        for ab in absence_rows:
+            if ab['time_from'] is None:
+                booked.append({'start_time': work_start, 'end_time': work_end})
+            else:
+                booked.append({'start_time': ab['time_from'], 'end_time': ab['time_to']})
+
         svc = AppointmentBusinessService()
         all_slots = svc.get_available_slots(
             employee_id, slot_date, duration,
             work_start=work_start,
             work_end=work_end,
+            booked=booked,
         )
         # On today's date, hide slots that start within the next 30 minutes
         # (minimum travel time assumption — clients booking same-day need to arrive)

@@ -56,6 +56,7 @@ from services.duplicate_detection_service import DuplicateDetectionService
 from services.email_service import EmailService
 from services.export_service import ExportService
 from services.seller_service import SellerService
+from services.absence_service import AbsenceService
 
 
 class PostgreSQLJSONProvider(DefaultJSONProvider):
@@ -151,6 +152,7 @@ def create_app():
     app.email_service = EmailService()
     app.export_service = ExportService()
     app.seller_service = SellerService(app.seller_repo, app.invoice_repo)
+    app.absence_service = AbsenceService()
 
     # Register blueprints
     from routes.main_routes import main_bp
