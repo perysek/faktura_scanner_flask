@@ -302,6 +302,37 @@
             <section>
                 <h2 class="section-title">Dodatkowe informacje</h2>
                 <div class="form-grid">
+                    <div style="grid-column: 1 / -1;">
+                        <label for="direct-reports-select" class="refined-label">
+                            Podwładni (bezpośredni)
+                            <span style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--color-ink-subtle);font-size:0.75rem;">
+                                — brak wyboru = ten pracownik nie jest przełożonym
+                            </span>
+                        </label>
+                        <select id="direct-reports-select" multiple
+                                style="width:100%;min-height:110px;max-height:180px;
+                                       padding:0.375rem 0.5rem;
+                                       font-family:var(--font-body);font-size:0.8125rem;font-weight:300;
+                                       color:var(--color-ink);background:white;
+                                       border:1px solid var(--color-border);border-radius:2px;
+                                       transition:border-color 0.2s ease,box-shadow 0.2s ease;"
+                                onfocus="this.style.borderColor='var(--color-ink-muted)';this.style.boxShadow='0 0 0 3px rgba(26,26,26,0.04)'"
+                                onblur="this.style.borderColor='var(--color-border)';this.style.boxShadow='none'">
+                            {% for emp in other_employees %}
+                            {% set is_conflict = emp['id'] in my_supervisor_ids %}
+                            <option value="{{ emp['id'] }}"
+                                    {% if emp['id'] in current_direct_report_ids %}selected{% endif %}
+                                    {% if is_conflict %}disabled{% endif %}
+                                    title="{{ '⚠ Konflikt: jest już przełożonym tego pracownika' if is_conflict else '' }}"
+                                    style="{{ 'color:var(--color-ink-subtle);font-style:italic;' if is_conflict else '' }}">
+                                {{ emp['first_name'] }} {{ emp['last_name'] }}{% if emp['position'] %} — {{ emp['position'] }}{% endif %}{% if is_conflict %} (przełożony — konflikt){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p style="font-size:0.6875rem;color:var(--color-ink-subtle);margin-top:0.375rem;">
+                            Ctrl+klik (Mac: Cmd+klik) aby zaznaczyć wielu pracowników. Opcje oznaczone jako „konflikt" są zablokowane.
+                        </p>
+                    </div>
                     <div>
                         <label for="notes" class="refined-label">Notatki</label>
                         <textarea id="notes" name="notes" class="refined-input">{{ employee.notes if employee.notes else '' }}</textarea>
@@ -323,60 +354,6 @@
         </form>
     </div>
 
-    <!-- ── Direct reports section — separate card, own save button ──────── -->
-    <div class="refined-card" style="margin-top:1.5rem;" id="direct-reports-card">
-        <h2 class="section-title">Podwładni (bezpośredni)</h2>
-        <p style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-bottom:1.25rem;">
-            Zaznacz pracowników, którzy bezpośrednio podlegają temu pracownikowi.
-            Gdy brak zaznaczonych — ten pracownik nie jest przełożonym.
-            Zaznaczeni będą mogli wskazać tego pracownika jako approver wniosków o nieobecność.
-        </p>
-
-        {% if other_employees %}
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.5rem;margin-bottom:1.25rem;">
-            {% for emp in other_employees %}
-            {% set is_my_supervisor = emp['id'] in my_supervisor_ids %}
-            {% set is_direct_report = emp['id'] in current_direct_report_ids %}
-            <label style="display:flex;align-items:center;gap:0.625rem;padding:0.625rem 0.875rem;
-                          border:1px solid {{ 'rgba(155,44,44,0.2)' if is_my_supervisor else 'var(--color-border)' }};
-                          border-radius:2px;
-                          background:{{ 'rgba(155,44,44,0.04)' if is_my_supervisor else 'white' }};
-                          cursor:{{ 'not-allowed' if is_my_supervisor else 'pointer' }};
-                          opacity:{{ '0.55' if is_my_supervisor else '1' }};
-                          transition:border-color 0.2s ease,background 0.2s ease;"
-                   {% if not is_my_supervisor %}
-                   onmouseenter="this.style.borderColor='var(--color-ink-muted)';this.style.background='var(--color-surface)'"
-                   onmouseleave="this.style.borderColor='var(--color-border)';this.style.background='white'"
-                   {% endif %}
-                   title="{{ 'Konflikt: ten pracownik jest już przełożonym edytowanej osoby' if is_my_supervisor else '' }}">
-                <input type="checkbox"
-                       class="dr-checkbox refined-checkbox"
-                       value="{{ emp['id'] }}"
-                       data-name="{{ emp['first_name'] }} {{ emp['last_name'] }}"
-                       {% if is_direct_report %}checked{% endif %}
-                       {% if is_my_supervisor %}disabled{% endif %}>
-                <span style="font-size:0.8125rem;color:var(--color-ink);">
-                    {{ emp['first_name'] }} {{ emp['last_name'] }}
-                    {% if emp['position'] %}<span style="color:var(--color-ink-subtle);font-size:0.75rem;"> — {{ emp['position'] }}</span>{% endif %}
-                    {% if is_my_supervisor %}<span style="color:var(--color-error);font-size:0.6875rem;"> (przełożony)</span>{% endif %}
-                </span>
-            </label>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p style="font-size:0.8125rem;color:var(--color-ink-subtle);padding:1rem 0;">
-            Brak innych aktywnych pracowników.
-        </p>
-        {% endif %}
-
-        <div style="display:flex;gap:0.75rem;align-items:center;">
-            <button type="button" id="btn-save-dr" class="refined-btn-primary" style="flex:0 0 auto;" onclick="saveDirectReports()">
-                <span class="material-icons">group</span>
-                Zapisz podwładnych
-            </button>
-            <span id="dr-save-msg" style="font-size:0.8125rem;display:none;"></span>
-        </div>
-    </div>
     </div>
 </div>
 {% endblock %}
@@ -475,6 +452,18 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         const data = await response.json();
 
         if (data.success) {
+            // Also save direct reports from the multi-select, then redirect
+            const drSelect = document.getElementById('direct-reports-select');
+            const directReportIds = drSelect
+                ? [...drSelect.selectedOptions].map(o => parseInt(o.value))
+                : [];
+            try {
+                await fetch('/api/employees/{{ employee.id }}/direct-reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ direct_report_ids: directReportIds }),
+                });
+            } catch (_) {}
             window.location.href = '/employee/{{ employee.id }}';
         } else {
             const errorMsg = data.error || 'Nieznany błąd';
@@ -496,44 +485,6 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
 document.addEventListener('DOMContentLoaded', () => {
     populateSchedule(INITIAL_SCHED);
 });
-
-// ── Save direct reports ───────────────────────────
-async function saveDirectReports() {
-    const btn = document.getElementById('btn-save-dr');
-    const msg = document.getElementById('dr-save-msg');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="material-icons">hourglass_empty</span> Zapisuję...';
-
-    const directReportIds = [...document.querySelectorAll('.dr-checkbox:checked')]
-        .map(cb => parseInt(cb.value));
-
-    try {
-        const r = await fetch('/api/employees/{{ employee.id }}/direct-reports', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ direct_report_ids: directReportIds }),
-        });
-        const data = await r.json();
-
-        if (data.success) {
-            msg.textContent = directReportIds.length === 0
-                ? 'Usunięto wszystkich podwładnych (pracownik nie jest przełożonym).'
-                : `Zapisano ${directReportIds.length} podwładnego/ych.`;
-            msg.style.color = 'var(--color-success)';
-        } else {
-            msg.textContent = data.error || 'Błąd zapisu';
-            msg.style.color = 'var(--color-error)';
-        }
-    } catch (_) {
-        msg.textContent = 'Błąd połączenia z serwerem';
-        msg.style.color = 'var(--color-error)';
-    } finally {
-        msg.style.display = 'inline';
-        btn.disabled = false;
-        btn.innerHTML = '<span class="material-icons">group</span> Zapisz podwładnych';
-        setTimeout(() => { msg.style.display = 'none'; }, 4000);
-    }
-}
 
 // Skróty klawiszowe: Ctrl+S = zapisz, Esc = anuluj
 document.addEventListener('keydown', function(e) {
