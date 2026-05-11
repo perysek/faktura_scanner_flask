@@ -61,10 +61,10 @@ const Absences = {
             if (grpDatesTo) grpDatesTo.style.display  = isFullDay ? '' : 'none';
             if (grpSlot)    grpSlot.style.display     = isFullDay ? 'none' : '';
 
-            // required toggling
-            if (dateFrom) dateFrom.required = isFullDay;
-            if (dateTo)   dateTo.required   = isFullDay;
-            if (slotDate) slotDate.required = !isFullDay;
+            // required + disabled toggling (disabled removes field from POST body)
+            if (dateFrom) { dateFrom.required = isFullDay;  dateFrom.disabled = !isFullDay; }
+            if (dateTo)   { dateTo.required   = isFullDay;  dateTo.disabled   = !isFullDay; }
+            if (slotDate) { slotDate.required = !isFullDay; slotDate.disabled = isFullDay;  }
             if (timeFrom) timeFrom.required = !isFullDay;
             if (timeTo)   timeTo.required   = !isFullDay;
         };
