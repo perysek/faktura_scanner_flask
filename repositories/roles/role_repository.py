@@ -5,7 +5,7 @@ from typing import Any, Optional
 from config.database import get_db_connection
 
 # All known modules (must match auth_config.MODULE_PERMISSIONS keys)
-ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction']
+ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction', 'absences']
 
 MODULE_DISPLAY_NAMES = {
     'invoices':         'Faktury / Koszty',
@@ -16,6 +16,7 @@ MODULE_DISPLAY_NAMES = {
     'settings':         'Ustawienia',
     'reports':          'Historia / Raporty',
     'data_correction':  'Korekta danych',
+    'absences':         'Nieobecnosci',
 }
 
 
@@ -133,7 +134,9 @@ class RoleRepository:
             cursor.execute(query, (role_name, module_name))
             row = cursor.fetchone()
         if row is None:
-            return False
+            # Fall back to static MODULE_PERMISSIONS when DB has no entry for this module
+            from config.auth_config import MODULE_PERMISSIONS
+            return role_name in MODULE_PERMISSIONS.get(module_name, [])
         return bool(row['has_access'])
 
     def get_user_module_permissions(self, role_name: str) -> dict:
@@ -153,4 +156,9 @@ class RoleRepository:
             rows = cursor.fetchall()
 
         db_perms = {row['module_name']: bool(row['has_access']) for row in rows}
-        return {m: db_perms.get(m, False) for m in ALL_MODULES}
+        # For modules with no DB row yet, fall back to static MODULE_PERMISSIONS
+        from config.auth_config import MODULE_PERMISSIONS
+        return {
+            m: db_perms[m] if m in db_perms else (role_name in MODULE_PERMISSIONS.get(m, []))
+            for m in ALL_MODULES
+        }
