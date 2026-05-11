@@ -429,6 +429,44 @@ class AbsenceCategory:
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
     updated_at: Optional[datetime] = field(default_factory=datetime.now)
+    # Balance tracking fields
+    is_tracked: bool = False
+    count_period: str = 'yearly'          # 'yearly' | 'monthly' | 'rolling'
+    resets_at: Optional[int] = 1          # day-of-year (yearly) or day-of-month (monthly)
+    rolling_days: Optional[int] = None    # rolling window length in days
+    warning_threshold_pct: float = 0.80
+    default_max_value: float = 0.0
+
+
+@dataclass
+class EmployeeAbsenceLimit:
+    """Indywidualny limit nieobecności pracownika dla danej kategorii."""
+    employee_id: int
+    category_id: int
+    max_value: float
+    notes: Optional[str] = None
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    created_by: Optional[int] = None
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+@dataclass
+class AbsenceBalanceAdjustment:
+    """Manualna korekta salda nieobecności (dodatnia lub ujemna)."""
+    employee_id: int
+    category_id: int
+    delta_value: float
+    reason: str
+    period_label: Optional[str] = None
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    created_by: Optional[int] = None
+    id: Optional[int] = None
+    created_at: Optional[datetime] = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = field(default_factory=datetime.now)
 
 
 @dataclass

@@ -226,7 +226,13 @@
                     <tbody>
                         {% for ab in requests_list %}
                         <tr id="ab-row-{{ ab['id'] }}">
-                            <td style="font-weight:500;">{{ ab.get('employee_name', '—') }}</td>
+                            <td style="font-weight:500;">
+                                {{ ab.get('employee_name', '—') }}
+                                <span class="balance-hint"
+                                      data-employee-id="{{ ab.get('employee_id', '') }}"
+                                      data-category-id="{{ ab.get('category_id', '') }}"
+                                      style="font-size:0.75rem;color:var(--color-ink-subtle);margin-left:0.375rem;font-weight:400;"></span>
+                            </td>
                             <td>
                                 {{ ab.get('category_name', '—') }}
                                 {% if not ab.get('absence_full_day', True) %}
@@ -431,7 +437,13 @@
                         {% for ab in manual_list %}
                         {% if ab['source'] == 'manual' %}
                         <tr>
-                            <td style="font-weight:500;">{{ ab.get('employee_name', '—') }}</td>
+                            <td style="font-weight:500;">
+                                {{ ab.get('employee_name', '—') }}
+                                <span class="balance-hint"
+                                      data-employee-id="{{ ab.get('employee_id', '') }}"
+                                      data-category-id="{{ ab.get('category_id', '') }}"
+                                      style="font-size:0.75rem;color:var(--color-ink-subtle);margin-left:0.375rem;font-weight:400;"></span>
+                            </td>
                             <td>{{ ab.get('category_name', '—') }}</td>
                             <td style="white-space:nowrap;">
                                 {% if ab['time_from'] %}
@@ -643,6 +655,35 @@ Absences.submitManual = function() {
     })
     .catch(() => Notifications.error('Błąd połączenia z serwerem'));
 };
+
+// ── Balance hints ─────────────────────────────────────────────────────────────
+(function () {
+    async function populateBalanceHints() {
+        try {
+            const r = await fetch('/api/absence-balances/summary');
+            const d = await r.json();
+            if (!d.success) return;
+            const summary = d.balances || {};
+            document.querySelectorAll('.balance-hint').forEach(span => {
+                const empId = span.dataset.employeeId;
+                const catId = span.dataset.categoryId;
+                if (!empId) return;
+                const b = summary[empId];
+                if (!b || !catId || String(b.category_id) !== catId) return;
+                const unitL = b.unit === 'hours' ? 'h' : 'd';
+                span.textContent = `(${b.used.toFixed(1)}/${b.limit}${unitL})`;
+                if (b.status === 'exceeded') {
+                    const cell = span.closest('td');
+                    if (cell) cell.style.background = 'rgba(155,44,44,0.04)';
+                    span.style.color = 'var(--color-error, #b91c1c)';
+                } else if (b.status === 'warning') {
+                    span.style.color = '#c2410c';
+                }
+            });
+        } catch (e) { /* balance hints are non-critical */ }
+    }
+    document.addEventListener('DOMContentLoaded', populateBalanceHints);
+}());
 
 // ── Category button wiring via data-* attributes ──────────────────────────
 // (avoids tojson double-quote conflicts inside onclick="..." attributes)

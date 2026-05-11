@@ -1,9 +1,0 @@
-TASK1:
-in clients list page add btn 'Aktualizuj preferencje' which would scan past visits for each client to get a list 20% of employees most often booked for visits, list of 80% of mostly used services and update the preferences data based on update lists for each client. After update finished, show summary custom instant notification badge pop up with info how many clients were updated for preferences (out of total clients count).
-
-TASK2:
-Do the same task in employee list view. Scanning is to update services linked to each employee based on list of services done during visits. list of services done must include only services performed more than 5 times during work of the employee. in the employee table add columns: 'Zaplanowanych wizyt', 'Zakończonych wizyt', with count per data displayed per each column + column 'Pokrycie grafiku' which shows % of coverage of calendar working time (finished and scheduled visits together). Values for each new column calculated for current month.
-
-TASK3: in clients table view add columns: 'Wizyt', 'no-shows', 'Anulowanych' which display count of: visits finished and payed, visits with no-show status, cancelled visits. If no-show count > 2 - highlight this number by adding small red circle on the right-top edge of clients initials blue circle of column 'imię i nazwisko' + action btn option 'dezaktywuj' which changes client's status to 'deactivated'. In the table of clients add feature of sorting icon button for each column header
-
-DONE

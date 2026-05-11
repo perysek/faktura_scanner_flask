@@ -520,6 +520,7 @@
                 <col style="width:10%"><!-- Zaplanowanych wizyt -->
                 <col style="width:10%"><!-- Zakończonych wizyt -->
                 <col style="width:6%"> <!-- Pokrycie grafiku -->
+                <col style="width:8%"> <!-- Bilans urlopu -->
                 <col style="width:7%"> <!-- Akcje -->
             </colgroup>
             <thead>
@@ -533,12 +534,13 @@
                     <th style="text-align:center;">Zaplano&shy;wanych wizyt</th>
                     <th style="text-align:center;">Zakoń&shy;czonych wizyt</th>
                     <th style="text-align:center;">Pokrycie grafiku</th>
+                    <th style="text-align:center;">Bilans urlopu</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="employees-tbody">
                 <tr>
-                    <td colspan="10" class="empty-state">
+                    <td colspan="11" class="empty-state">
                         <span class="material-icons empty-icon">badge</span>
                         <p class="empty-text">Ładowanie pracowników...</p>
                     </td>
@@ -645,6 +647,26 @@ async function loadStatistics() {
 
 // ── Load employees ────────────────────────────────────────────────────────────
 
+// Balance badge for employee list column
+let _balanceSummary = {};
+async function fetchBalanceSummary() {
+    try {
+        const r = await fetch('/api/absence-balances/summary');
+        const d = await r.json();
+        if (d.success) _balanceSummary = d.balances || {};
+    } catch (e) { /* non-critical */ }
+}
+function renderBalanceBadge(empId) {
+    const b = _balanceSummary[String(empId)];
+    if (!b) return '<span style="color:var(--color-ink-subtle)">—</span>';
+    if (b.status === 'unlimited') return '<span style="color:var(--color-ink-subtle)">∞</span>';
+    const color = b.status === 'exceeded' ? 'var(--color-error,#b91c1c)'
+                : b.status === 'warning'  ? '#c2410c'
+                : 'var(--color-success,#16a34a)';
+    const unitL = b.unit === 'hours' ? 'h' : 'd';
+    return `<span style="color:${color};font-weight:600;font-size:0.8125rem;">${b.used.toFixed(1)}/${b.limit}${unitL}</span>`;
+}
+
 async function loadEmployees() {
     saveFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
     const searchQuery = document.getElementById('search-input').value.trim();
@@ -657,7 +679,7 @@ async function loadEmployees() {
         if (searchQuery)    url += `&search=${encodeURIComponent(searchQuery)}`;
         if (positionFilter) url += `&position=${encodeURIComponent(positionFilter)}`;
 
-        const response = await fetch(url);
+        const [response] = await Promise.all([fetch(url), fetchBalanceSummary()]);
         const data = await response.json();
 
         if (data.success) {
@@ -672,7 +694,7 @@ async function loadEmployees() {
             if (employees.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="10" class="empty-state">
+                        <td colspan="11" class="empty-state">
                             <span class="material-icons empty-icon">search_off</span>
                             <p class="empty-text">Nie znaleziono pracowników</p>
                         </td>
@@ -717,6 +739,9 @@ async function loadEmployees() {
                         </td>
                         <td style="text-align:center;">
                             ${renderCoverage(emp.schedule_coverage_pct)}
+                        </td>
+                        <td style="text-align:center;">
+                            ${renderBalanceBadge(emp.id)}
                         </td>
                         <td style="text-align:right; white-space:nowrap;">
                             <div class="action-icons">

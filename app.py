@@ -48,6 +48,9 @@ from repositories.employees.forma_zatrudnienia_repository import FormaZatrudnien
 from repositories.absences.absence_category_repository import AbsenceCategoryRepository
 from repositories.absences.absence_repository import AbsenceRepository
 from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
+from repositories.absences.absence_limit_repository import AbsenceLimitRepository
+from repositories.absences.absence_adjustment_repository import AbsenceAdjustmentRepository
+from repositories.absences.absence_balance_repository import AbsenceBalanceRepository
 
 # Import services
 from services.ocr_service import OCRService
@@ -144,6 +147,9 @@ def create_app():
     app.absence_category_repo = AbsenceCategoryRepository()
     app.absence_repo = AbsenceRepository()
     app.supervisor_repo = EmployeeSupervisorRepository()
+    app.absence_limit_repo = AbsenceLimitRepository()
+    app.absence_adjustment_repo = AbsenceAdjustmentRepository()
+    app.absence_balance_repo = AbsenceBalanceRepository()
 
     # Initialize services
     app.ocr_service = OCRService()
@@ -169,6 +175,7 @@ def create_app():
     from routes.roles.routes import roles_bp
     from routes.booking_routes import booking_bp
     from routes.absence_routes import absence_bp
+    from routes.absence_balance_routes import absence_balance_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -184,6 +191,7 @@ def create_app():
     app.register_blueprint(roles_bp)
     app.register_blueprint(booking_bp)
     app.register_blueprint(absence_bp)
+    app.register_blueprint(absence_balance_bp)
 
     # Error handlers
     from exceptions import AppError
