@@ -93,7 +93,8 @@ class AppointmentBusinessService:
 
         # 3c. Sprawdź konflikty z nieobecnościami pracownika
         absence_conflicts = self.absence_repo.check_absence_conflicts(
-            employee_id, appt_date, start_time, end_time
+            employee_id, appt_date, appt_date,
+            start_time, end_time
         )
         if absence_conflicts:
             raise AppointmentError(
@@ -607,7 +608,8 @@ class AppointmentBusinessService:
 
             # 2d. Sprawdź konflikty z nieobecnościami pracownika
             absence_conflicts = self.absence_repo.check_absence_conflicts(
-                employee_id, appointment_date, start_time, end_time,
+                employee_id, appointment_date, appointment_date,
+                start_time, end_time,
                 exclude_id=None
             )
             if absence_conflicts:
