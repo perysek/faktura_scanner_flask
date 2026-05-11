@@ -255,7 +255,21 @@ def edit_employee(employee_id):
     from repositories.users.user_repository import UserRepository
     forma_options = current_app.forma_zatrudnienia_repo.get_all()
     user_options = UserRepository().get_active_users()
-    return render_template('employees/edit.html', employee=employee, forma_options=forma_options, user_options=user_options)
+
+    # Supervisor section: all active employees except self + currently linked supervisors
+    all_employees = current_app.employee_repo.get_all(active_only=True)
+    other_employees = [e for e in all_employees if e['id'] != employee_id]
+    supervisor_rows = current_app.supervisor_repo.list_supervisors_for(employee_id)
+    current_supervisor_ids = {r['id'] for r in supervisor_rows}
+
+    return render_template(
+        'employees/edit.html',
+        employee=employee,
+        forma_options=forma_options,
+        user_options=user_options,
+        other_employees=other_employees,
+        current_supervisor_ids=current_supervisor_ids,
+    )
 
 
 @main_bp.route('/formy-zatrudnienia')
