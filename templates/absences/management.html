@@ -1,11 +1,643 @@
-{% extends 'base.html' %}
-{% block title %}Zarządzanie nieobecnościami{% endblock %}
+{% extends "base.html" %}
+{% block title %}Zarządzanie nieobecnościami – {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .refined-page { max-width: 1300px; margin: 0 auto; padding: 2rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem; }
+    .page-title { margin-bottom: 0.25rem; font-size: 1.375rem; font-weight: 600; color: var(--color-ink); }
+    .page-subtitle { font-size: 0.8125rem; color: var(--color-ink-subtle); font-weight: 300; }
+
+    /* ── Tabs ───────────────────────────────────────────────────────────── */
+    .ab-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: 1.5rem;
+    }
+    .ab-tab {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        font-family: var(--font-body); font-size: 0.8125rem; font-weight: 400;
+        color: var(--color-ink-subtle);
+        background: transparent; border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer; white-space: nowrap;
+        transition: color 0.18s ease, border-color 0.18s ease;
+        margin-bottom: -1px;
+    }
+    .ab-tab:hover { color: var(--color-ink); }
+    .ab-tab--active {
+        color: var(--color-ink);
+        font-weight: 500;
+        border-bottom-color: var(--color-ink);
+    }
+    .ab-tab-count {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 1.375rem; height: 1.375rem; padding: 0 0.375rem;
+        font-size: 0.6875rem; font-weight: 600;
+        background: rgba(251,191,36,.18); color: #92400e;
+        border-radius: 1px;
+    }
+    .ab-tab-count.zero { background: var(--color-surface); color: var(--color-ink-subtle); }
+
+    .ab-panel--hidden { display: none; }
+
+    /* ── Card ───────────────────────────────────────────────────────────── */
+    .card {
+        background: white; border: 1px solid var(--color-border);
+        border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        margin-bottom: 1.5rem;
+    }
+    .card-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.125rem 1.5rem; border-bottom: 1px solid var(--color-border);
+    }
+    .card-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); }
+    .card-body { padding: 1.5rem; }
+
+    /* ── Form ───────────────────────────────────────────────────────────── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .form-col-full { grid-column: 1 / -1; }
+    @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .form-col-full { grid-column: 1; } }
+
+    .field-label {
+        display: block; font-size: 0.6875rem; font-weight: 500;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--color-ink-muted); margin-bottom: 0.375rem;
+    }
+    .field-required { color: var(--color-error); }
+
+    .refined-input, .refined-select, .refined-textarea {
+        width: 100%; padding: 0.625rem 0.875rem;
+        font-family: var(--font-body); font-size: 0.8125rem; font-weight: 300;
+        color: var(--color-ink); background: white;
+        border: 1px solid var(--color-border); border-radius: 2px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease; box-sizing: border-box;
+    }
+    .refined-input:focus, .refined-select:focus, .refined-textarea:focus {
+        outline: none; border-color: var(--color-ink-muted);
+        box-shadow: 0 0 0 3px rgba(26,26,26,.04);
+    }
+    .refined-textarea { resize: vertical; min-height: 72px; }
+
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .refined-btn-primary {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        padding: 0.625rem 1.25rem; font-family: var(--font-body);
+        font-size: 0.8125rem; font-weight: 500;
+        background: var(--color-ink); color: white;
+        border: none; border-radius: 2px; cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .refined-btn-primary:hover { background: var(--color-ink-muted); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+
+    .refined-btn-secondary {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        padding: 0.625rem 1rem; font-family: var(--font-body);
+        font-size: 0.8125rem; font-weight: 400;
+        background: white; color: var(--color-ink-muted);
+        border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .refined-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); }
+    .form-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+
+    /* ── Table ──────────────────────────────────────────────────────────── */
+    .table-container { overflow: auto; background: white; }
+    .refined-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    .refined-table thead { background: var(--color-surface); }
+    .refined-table th {
+        padding: 0.625rem 1rem; font-size: 0.6875rem; font-weight: 500;
+        text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-subtle);
+        text-align: left; border-bottom: 1px solid var(--color-border);
+    }
+    .refined-table th:last-child { text-align: right; }
+    .refined-table td {
+        padding: 0.75rem 1rem; font-size: 0.8125rem; color: var(--color-ink);
+        border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle;
+    }
+    .refined-table tbody tr:last-child td { border-bottom: none; }
+    .refined-table tbody tr:hover { background: var(--color-surface); }
+
+    /* ── Status badges ──────────────────────────────────────────────────── */
+    .ab-status {
+        display: inline-flex; align-items: center;
+        padding: 0.2rem 0.55rem; font-size: 0.6875rem; font-weight: 500;
+        text-transform: uppercase; letter-spacing: 0.06em; border-radius: 1px;
+    }
+    .ab-status--pending    { background: rgba(251,191,36,.12); color: #92400e; }
+    .ab-status--approved   { background: rgba(45,106,79,.08); color: var(--color-success); }
+    .ab-status--rejected   { background: rgba(155,44,44,.08); color: var(--color-error); }
+    .ab-status--cancelled  { background: rgba(107,114,128,.08); color: var(--color-ink-muted); }
+    .ab-status--manual     { background: rgba(147,51,234,.08); color: #7e22ce; }
+
+    .source-badge { font-size: 0.6875rem; color: var(--color-ink-subtle); font-style: italic; }
+
+    /* ── Action icon buttons ─────────────────────────────────────────────── */
+    .action-icons { display: inline-flex; align-items: center; gap: 0.125rem; justify-content: flex-end; }
+    .action-icon-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 2rem; height: 2rem; background: transparent; border: none;
+        border-radius: 2px; cursor: pointer; color: var(--color-ink-subtle);
+        transition: color 0.2s ease, background 0.2s ease;
+    }
+    .action-icon-btn:hover { color: var(--color-ink); background: var(--color-surface); }
+    .action-icon-btn.approve:hover { color: var(--color-success); }
+    .action-icon-btn.reject:hover  { color: var(--color-error); }
+    .action-icon-btn.delete:hover  { color: var(--color-error); }
+    .action-icon-btn svg { width: 1rem; height: 1rem; }
+
+    /* ── Empty state ─────────────────────────────────────────────────────── */
+    .empty-state { padding: 3rem 2rem; text-align: center; }
+    .empty-text  { font-size: 0.875rem; color: var(--color-ink-subtle); font-weight: 300; }
+
+    /* ── Categories (soft-deleted row) ───────────────────────────────────── */
+    .row-deleted { opacity: 0.45; }
+    .cat-type-badge {
+        display: inline-flex; align-items: center;
+        padding: 0.15rem 0.45rem; font-size: 0.6875rem; font-weight: 500;
+        letter-spacing: 0.04em; border-radius: 1px;
+    }
+    .cat-type-full { background: rgba(59,130,246,.08); color: #1d4ed8; }
+    .cat-type-slot { background: rgba(234,88,12,.08); color: #c2410c; }
+
+    .fade-in { animation: fadeIn 0.35s var(--ease-out-expo) forwards; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Rejection note inline */
+    .rejection-note { font-size: 0.75rem; color: var(--color-error); margin-top: 0.2rem; font-style: italic; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="p-8">
-    <h1 class="text-2xl font-semibold mb-4">Zarządzanie nieobecnościami</h1>
-    <p class="text-sm" style="color: var(--color-ink-subtle);">
-        Widok w trakcie budowy — dostępny w fazie 4.
-        Oczekujące wnioski: <strong>{{ pending_count }}</strong>
-    </p>
+<div class="refined-page fade-in">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Zarządzanie nieobecnościami</h1>
+            <p class="page-subtitle">Wnioski pracowników, L4, i konfiguracja kategorii</p>
+        </div>
+    </header>
+
+    <!-- ── Tab bar ──────────────────────────────────────────────────────── -->
+    <div class="ab-tabs" role="tablist">
+        <button class="ab-tab" data-tab="requests" role="tab" aria-selected="true">
+            <span class="material-icons" style="font-size:1rem;">inbox</span>
+            Wnioski
+            <span class="ab-tab-count {{ 'zero' if pending_count == 0 else '' }}">{{ pending_count }}</span>
+        </button>
+        <button class="ab-tab" data-tab="manual" role="tab" aria-selected="false">
+            <span class="material-icons" style="font-size:1rem;">edit_calendar</span>
+            L4 / Manualne
+        </button>
+        {% if user_permissions.absences %}
+        <button class="ab-tab" data-tab="categories" role="tab" aria-selected="false">
+            <span class="material-icons" style="font-size:1rem;">category</span>
+            Kategorie
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TAB 1 — Requests                                                 -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div id="tab-requests" class="ab-panel" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Wnioski pracowników</span>
+                <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
+                    {{ requests_list|length }} {{ 'wpis' if requests_list|length == 1 else 'wpisów' }}
+                </span>
+            </div>
+            <div class="table-container">
+                {% if requests_list %}
+                <table class="refined-table">
+                    <thead>
+                        <tr>
+                            <th>Pracownik</th>
+                            <th>Kategoria</th>
+                            <th>Okres</th>
+                            <th>Status</th>
+                            <th>Złożono</th>
+                            <th>Odpowiedź</th>
+                            <th style="text-align:right;">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ab in requests_list %}
+                        <tr id="ab-row-{{ ab['id'] }}">
+                            <td style="font-weight:500;">{{ ab.get('employee_name', '—') }}</td>
+                            <td>
+                                {{ ab.get('category_name', '—') }}
+                                {% if not ab.get('absence_full_day', True) %}
+                                <span class="source-badge"> godzinowa</span>
+                                {% endif %}
+                            </td>
+                            <td style="white-space:nowrap;">
+                                {% if ab['time_from'] %}
+                                    {{ ab['date_from'] }},
+                                    {{ ab['time_from']|string|truncate(5,true,'') }}–{{ ab['time_to']|string|truncate(5,true,'') }}
+                                {% elif ab['date_from'] == ab['date_to'] %}
+                                    {{ ab['date_from'] }}
+                                {% else %}
+                                    {{ ab['date_from'] }} – {{ ab['date_to'] }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ab['status'] == 'pending' %}
+                                    <span class="ab-status ab-status--pending">Oczekujący</span>
+                                {% elif ab['status'] == 'approved' %}
+                                    <span class="ab-status ab-status--approved">Zatwierdzony</span>
+                                {% elif ab['status'] == 'rejected' %}
+                                    <span class="ab-status ab-status--rejected">Odrzucony</span>
+                                    {% if ab.get('rejection_reason') %}
+                                    <div class="rejection-note">{{ ab['rejection_reason']|truncate(60) }}</div>
+                                    {% endif %}
+                                {% elif ab['status'] == 'cancelled' %}
+                                    <span class="ab-status ab-status--cancelled">Anulowany</span>
+                                {% endif %}
+                            </td>
+                            <td style="color:var(--color-ink-subtle);white-space:nowrap;font-size:0.75rem;">
+                                {% if ab['requested_at'] %}
+                                    {{ ab['requested_at'].strftime('%d.%m.%y %H:%M') }}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td style="color:var(--color-ink-subtle);white-space:nowrap;font-size:0.75rem;">
+                                {% if ab['responded_at'] %}
+                                    {{ ab['responded_at'].strftime('%d.%m.%y %H:%M') }}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>
+                                <div class="action-icons">
+                                    {% if ab['status'] == 'pending' %}
+                                    <button id="btn-approve-{{ ab['id'] }}"
+                                            class="action-icon-btn approve"
+                                            onclick="Absences.approve({{ ab['id'] }})"
+                                            title="Zatwierdź" aria-label="Zatwierdź wniosek">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </button>
+                                    <button class="action-icon-btn reject"
+                                            onclick="Absences.reject({{ ab['id'] }})"
+                                            title="Odrzuć" aria-label="Odrzuć wniosek">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                    {% else %}
+                                    <span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <span class="material-icons" style="font-size:2.5rem;color:var(--color-ink-subtle);opacity:.3;display:block;margin-bottom:0.75rem;">inbox</span>
+                    <p class="empty-text">Brak wniosków</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TAB 2 — Manual (L4)                                              -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div id="tab-manual" class="ab-panel ab-panel--hidden" role="tabpanel">
+
+        <!-- Manual creation form -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">
+                    <span class="material-icons" style="font-size:1rem;vertical-align:middle;margin-right:0.375rem;">add_circle_outline</span>
+                    Rejestruj nieobecność manualnie
+                </span>
+                <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
+                    Nieobecności L4 i inne — automatycznie zatwierdzone
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="form-grid">
+                    <!-- Employee select -->
+                    <div>
+                        <label for="manual-employee" class="field-label">
+                            Pracownik <span class="field-required">*</span>
+                        </label>
+                        <select id="manual-employee" class="refined-select" required>
+                            <option value="">— wybierz pracownika —</option>
+                            {% set shown_ids = [] %}
+                            {% for ab in manual_list %}
+                                {# Collect subordinates from manual list #}
+                            {% endfor %}
+                            {# We need to load employees — use the API or pass via route #}
+                        </select>
+                    </div>
+
+                    <!-- Category select -->
+                    <div>
+                        <label for="manual-category" class="field-label">
+                            Kategoria <span class="field-required">*</span>
+                        </label>
+                        <select id="manual-category" class="refined-select" required>
+                            <option value="">— wybierz —</option>
+                            {% for cat in categories %}
+                            {% if not cat['is_deleted'] %}
+                            <option value="{{ cat['id'] }}"
+                                    data-full-day="{{ 'true' if cat['absence_full_day'] else 'false' }}">
+                                {{ cat['name'] }}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div><!-- spacer --></div>
+
+                    <!-- Date from -->
+                    <div>
+                        <label for="manual-date-from" class="field-label">
+                            Data od <span class="field-required">*</span>
+                        </label>
+                        <input type="date" id="manual-date-from" class="refined-input" required>
+                    </div>
+
+                    <!-- Date to -->
+                    <div>
+                        <label for="manual-date-to" class="field-label">
+                            Data do <span class="field-required">*</span>
+                        </label>
+                        <input type="date" id="manual-date-to" class="refined-input" required>
+                    </div>
+
+                    <div><!-- spacer --></div>
+
+                    <!-- Time-slot row (hidden for full-day) -->
+                    <div id="manual-group-slot" style="display:none;" class="form-col-full">
+                        <div class="form-grid">
+                            <div>
+                                <label for="manual-time-from" class="field-label">Godzina od <span class="field-required">*</span></label>
+                                <input type="time" id="manual-time-from" class="refined-input">
+                            </div>
+                            <div>
+                                <label for="manual-time-to" class="field-label">Godzina do <span class="field-required">*</span></label>
+                                <input type="time" id="manual-time-to" class="refined-input">
+                            </div>
+                            <div><!-- spacer --></div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="form-col-full">
+                        <label for="manual-notes" class="field-label">Uwagi</label>
+                        <textarea id="manual-notes" class="refined-textarea"
+                                  placeholder="Np. numer zwolnienia L4, dodatkowe informacje..."></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="refined-btn-primary" onclick="Absences.submitManual()">
+                        <span class="material-icons" style="font-size:1rem;">save</span>
+                        Zapisz nieobecność
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual absences list -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Zarejestrowane nieobecności manualne</span>
+                <span style="font-size:0.75rem;color:var(--color-ink-subtle);">{{ manual_list|length }} wpisów</span>
+            </div>
+            <div class="table-container">
+                {% if manual_list %}
+                <table class="refined-table">
+                    <thead>
+                        <tr>
+                            <th>Pracownik</th>
+                            <th>Kategoria</th>
+                            <th>Okres</th>
+                            <th>Źródło</th>
+                            <th>Dodano</th>
+                            <th style="text-align:right;">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ab in manual_list %}
+                        {% if ab['source'] == 'manual' %}
+                        <tr>
+                            <td style="font-weight:500;">{{ ab.get('employee_name', '—') }}</td>
+                            <td>{{ ab.get('category_name', '—') }}</td>
+                            <td style="white-space:nowrap;">
+                                {% if ab['time_from'] %}
+                                    {{ ab['date_from'] }},
+                                    {{ ab['time_from']|string|truncate(5,true,'') }}–{{ ab['time_to']|string|truncate(5,true,'') }}
+                                {% elif ab['date_from'] == ab['date_to'] %}
+                                    {{ ab['date_from'] }}
+                                {% else %}
+                                    {{ ab['date_from'] }} – {{ ab['date_to'] }}
+                                {% endif %}
+                            </td>
+                            <td><span class="ab-status ab-status--manual">Ręczna</span></td>
+                            <td style="color:var(--color-ink-subtle);font-size:0.75rem;">
+                                {% if ab['requested_at'] %}{{ ab['requested_at'].strftime('%d.%m.%y') }}{% else %}—{% endif %}
+                            </td>
+                            <td>
+                                <div class="action-icons">
+                                    <button class="action-icon-btn delete"
+                                            onclick="Absences.deleteAbsence({{ ab['id'] }})"
+                                            title="Usuń" aria-label="Usuń nieobecność">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <span class="material-icons" style="font-size:2.5rem;color:var(--color-ink-subtle);opacity:.3;display:block;margin-bottom:0.75rem;">edit_calendar</span>
+                    <p class="empty-text">Brak manualnych nieobecności</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TAB 3 — Categories (admin only)                                  -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    {% if user_permissions.absences %}
+    <div id="tab-categories" class="ab-panel ab-panel--hidden" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Kategorie nieobecności</span>
+                <button class="refined-btn-primary"
+                        onclick="Absences.openCategoryForm(null, '', '', true)">
+                    <span class="material-icons" style="font-size:1rem;">add</span>
+                    Nowa kategoria
+                </button>
+            </div>
+            <div class="table-container">
+                {% if categories %}
+                <table class="refined-table">
+                    <thead>
+                        <tr>
+                            <th>Nazwa</th>
+                            <th>Opis</th>
+                            <th>Typ</th>
+                            <th>Status</th>
+                            <th style="text-align:right;">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cat in categories %}
+                        <tr class="{{ 'row-deleted' if cat['is_deleted'] else '' }}">
+                            <td style="font-weight:500;">{{ cat['name'] }}</td>
+                            <td style="color:var(--color-ink-subtle);">{{ cat['description'] or '—' }}</td>
+                            <td>
+                                {% if cat['absence_full_day'] %}
+                                <span class="cat-type-badge cat-type-full">Całodniowa</span>
+                                {% else %}
+                                <span class="cat-type-badge cat-type-slot">Godzinowa</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cat['is_deleted'] %}
+                                <span class="ab-status ab-status--cancelled">Usunięta</span>
+                                {% else %}
+                                <span class="ab-status ab-status--approved">Aktywna</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-icons">
+                                    {% if not cat['is_deleted'] %}
+                                    <button class="action-icon-btn"
+                                            onclick="Absences.openCategoryForm(
+                                                {{ cat['id'] }},
+                                                {{ cat['name']|tojson }},
+                                                {{ (cat['description'] or '')|tojson }},
+                                                {{ cat['absence_full_day']|tojson }})"
+                                            title="Edytuj" aria-label="Edytuj kategorię">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="action-icon-btn delete"
+                                            onclick="Absences.deleteCategory({{ cat['id'] }}, {{ cat['name']|tojson }})"
+                                            title="Usuń" aria-label="Usuń kategorię">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                    {% else %}
+                                    <span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <p class="empty-text">Brak kategorii</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/absences.js') }}"></script>
+<script>
+// ── Load employees for manual form via API ────────────────────────────────
+(async function loadEmployeesForManual() {
+    try {
+        const r = await fetch('/api/employees?active_only=true');
+        const d = await r.json();
+        if (!d.success) return;
+        const sel = document.getElementById('manual-employee');
+        if (!sel) return;
+        (d.employees || []).forEach(emp => {
+            const opt = document.createElement('option');
+            opt.value = emp.id;
+            opt.textContent = `${emp.full_name}${emp.position ? ' – ' + emp.position : ''}`;
+            sel.appendChild(opt);
+        });
+    } catch (_) {}
+})();
+
+// ── Manual absence submission via JSON ────────────────────────────────────
+Absences.submitManual = function() {
+    const empSel  = document.getElementById('manual-employee');
+    const catSel  = document.getElementById('manual-category');
+    const dateFrom = document.getElementById('manual-date-from');
+    const dateTo   = document.getElementById('manual-date-to');
+    const timeFrom = document.getElementById('manual-time-from');
+    const timeTo   = document.getElementById('manual-time-to');
+    const notes    = document.getElementById('manual-notes');
+
+    if (!empSel?.value || !catSel?.value || !dateFrom?.value || !dateTo?.value) {
+        Notifications.error('Uzupełnij wszystkie wymagane pola');
+        return;
+    }
+    const catOpt  = catSel.options[catSel.selectedIndex];
+    const fullDay = !catOpt || catOpt.dataset.fullDay !== 'false';
+
+    if (!fullDay && (!timeFrom?.value || !timeTo?.value)) {
+        Notifications.error('Dla nieobecności godzinowej wymagane są godziny');
+        return;
+    }
+
+    const payload = {
+        employee_id:  parseInt(empSel.value),
+        category_id:  parseInt(catSel.value),
+        date_from:    dateFrom.value,
+        date_to:      fullDay ? dateTo.value : dateFrom.value,
+        time_from:    fullDay ? null : (timeFrom?.value || null),
+        time_to:      fullDay ? null : (timeTo?.value || null),
+        notes:        notes?.value?.trim() || null,
+    };
+
+    fetch('/absences/manual', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (!res.success) {
+            Notifications.error(res.error || 'Błąd zapisu');
+            return;
+        }
+        if (res.conflicts && res.conflicts.length > 0) {
+            Notifications.warning(`Nieobecność zapisana. Uwaga: ${res.conflicts.length} kolidujących wizyt.`);
+        } else {
+            Notifications.success('Nieobecność zapisana');
+        }
+        setTimeout(() => location.reload(), 900);
+    })
+    .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+};
+</script>
 {% endblock %}
