@@ -410,11 +410,15 @@ const Absences = {
     initManualForm() {
         const sel = document.getElementById('manual-category');
         if (!sel) return;
-        const grpSlot = document.getElementById('manual-group-slot');
+        const grpSlot   = document.getElementById('manual-group-slot');
+        const grpDateTo = document.getElementById('manual-group-date-to');
+        const dateTo    = document.getElementById('manual-date-to');
         const update = () => {
             const opt = sel.options[sel.selectedIndex];
             const isFullDay = !opt || opt.dataset.fullDay !== 'false';
-            if (grpSlot) grpSlot.style.display = isFullDay ? 'none' : '';
+            if (grpSlot)   grpSlot.style.display   = isFullDay ? 'none' : '';
+            if (grpDateTo) grpDateTo.style.display  = isFullDay ? '' : 'none';
+            if (dateTo)    dateTo.required           = isFullDay;
             ['manual-time-from', 'manual-time-to'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.required = !isFullDay;
