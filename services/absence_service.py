@@ -14,6 +14,7 @@ from repositories.absences.absence_category_repository import AbsenceCategoryRep
 from repositories.absences.absence_repository import AbsenceRepository
 from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
 from repositories.employees.employee_repository import EmployeeRepository
+from services.absence_balance_service import AbsenceBalanceService
 
 
 class AbsenceError(AppError):
@@ -62,6 +63,19 @@ class AbsenceService:
             if time_to <= time_from:
                 raise AbsenceError("Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia")
             date_to = date_from  # D5: time-slot absences always span a single day
+
+        if bool(cat_row['is_tracked']):
+            proposed = self._compute_proposed_value(
+                full_day, date_from, date_to, time_from, time_to
+            )
+            balance_check = AbsenceBalanceService().check_before_submit(
+                employee_id, category_id, proposed, source='request'
+            )
+            if balance_check['blocked']:
+                raise AbsenceError(
+                    f"Przekroczono limit nieobecności: {balance_check['message']} "
+                    f"Skontaktuj się z przełożonym."
+                )
 
         supervisors = self.supervisor_repo.list_supervisors_for(employee_id)
         supervisor_ids = {row['id'] for row in supervisors}
@@ -177,6 +191,17 @@ class AbsenceService:
             time_from = None
             time_to = None
 
+        balance_warning = None
+        if bool(cat_row['is_tracked']):
+            proposed = self._compute_proposed_value(
+                full_day, date_from, date_to, time_from, time_to
+            )
+            bcheck = AbsenceBalanceService().check_before_submit(
+                employee_id, category_id, proposed, source='manual'
+            )
+            if bcheck.get('warning'):
+                balance_warning = bcheck
+
         now = datetime.now()
         absence = EmployeeAbsence(
             employee_id=employee_id,
@@ -201,6 +226,7 @@ class AbsenceService:
         return {
             'absence_id': absence_id,
             'conflicts': [self._format_appt_conflict(c) for c in appt_conflicts],
+            'balance_warning': balance_warning,
         }
 
     def update_manual(self, absence_id: int, category_id: int,
@@ -274,6 +300,18 @@ class AbsenceService:
         if approver_employee_id is not None and row['approver_id'] != approver_employee_id:
             raise AbsenceError("Nie jesteś wskazanym przełożonym dla tego wniosku")
         return row
+
+    @staticmethod
+    def _compute_proposed_value(full_day: bool, date_from: date, date_to: date,
+                                 time_from, time_to) -> float:
+        """Oblicz proponowaną liczbę dni (whole-day) lub godzin (time-slot)."""
+        if full_day:
+            return float((date_to - date_from).days + 1)
+        if time_from and time_to:
+            secs = (datetime.combine(date_from, time_to) -
+                    datetime.combine(date_from, time_from)).seconds
+            return secs / 3600.0
+        return 0.0
 
     @staticmethod
     def _format_appt_conflict(row) -> dict:

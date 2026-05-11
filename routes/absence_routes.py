@@ -289,6 +289,39 @@ def delete_absence(absence_id: int):
 
 # ── categories (admin only) ───────────────────────────────────────────────────
 
+def _parse_category_balance_fields(data: dict) -> dict:
+    """Wyciągnij pola balance-tracking z danych żądania."""
+    def _bool(key, default=False):
+        v = data.get(key, default)
+        if isinstance(v, bool):
+            return v
+        return str(v).lower() in ('true', '1', 'yes')
+
+    def _float(key, default=0.0):
+        try:
+            return float(data.get(key, default))
+        except (ValueError, TypeError):
+            return default
+
+    def _int_opt(key):
+        v = data.get(key)
+        if v is None or v == '':
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    return {
+        'is_tracked': _bool('is_tracked', False),
+        'count_period': data.get('count_period', 'yearly') or 'yearly',
+        'resets_at': _int_opt('resets_at'),
+        'rolling_days': _int_opt('rolling_days'),
+        'warning_threshold_pct': _float('warning_threshold_pct', 0.80),
+        'default_max_value': _float('default_max_value', 0.0),
+    }
+
+
 @absence_bp.route('/absences/categories', methods=['POST'])
 @module_permission_required('absences')
 def create_category():
@@ -299,8 +332,12 @@ def create_category():
     full_day    = str(data.get('absence_full_day', 'true')).lower() in ('true', '1', 'yes')
     if not name:
         return jsonify({'success': False, 'error': 'Nazwa kategorii jest wymagana'}), 400
+    bf = _parse_category_balance_fields(data)
     try:
-        cat = AbsenceCategory(name=name, description=description, absence_full_day=full_day)
+        cat = AbsenceCategory(
+            name=name, description=description, absence_full_day=full_day,
+            **bf,
+        )
         new_id = current_app.absence_category_repo.create(cat)
         return jsonify({'success': True, 'id': new_id}), 201
     except Exception as e:
@@ -318,7 +355,8 @@ def update_category(category_id: int):
     full_day    = str(data.get('absence_full_day', 'true')).lower() in ('true', '1', 'yes')
     if not name:
         return jsonify({'success': False, 'error': 'Nazwa kategorii jest wymagana'}), 400
-    cat = AbsenceCategory(name=name, description=description, absence_full_day=full_day)
+    bf = _parse_category_balance_fields(data)
+    cat = AbsenceCategory(name=name, description=description, absence_full_day=full_day, **bf)
     updated = current_app.absence_category_repo.update(category_id, cat)
     if not updated:
         return jsonify({'success': False, 'error': 'Kategoria nie istnieje'}), 404

@@ -14,7 +14,9 @@ class AbsenceCategoryRepository:
 
     _COLUMNS = (
         'id, name, description, absence_full_day, '
-        'is_deleted, deleted_at, created_at, updated_at'
+        'is_deleted, deleted_at, created_at, updated_at, '
+        'is_tracked, count_period, resets_at, rolling_days, '
+        'warning_threshold_pct, default_max_value'
     )
 
     def row_to_category(self, row: Any) -> AbsenceCategory:
@@ -29,6 +31,12 @@ class AbsenceCategoryRepository:
             deleted_at=parse_dt(row['deleted_at']),
             created_at=parse_dt(row['created_at']),
             updated_at=parse_dt(row['updated_at']),
+            is_tracked=bool(row['is_tracked']),
+            count_period=row['count_period'] or 'yearly',
+            resets_at=row['resets_at'],
+            rolling_days=row['rolling_days'],
+            warning_threshold_pct=float(row['warning_threshold_pct'] or 0.80),
+            default_max_value=float(row['default_max_value'] or 0.0),
         )
 
     # ── reads ─────────────────────────────────────────────────────────────────
@@ -72,10 +80,25 @@ class AbsenceCategoryRepository:
 
     # ── writes ────────────────────────────────────────────────────────────────
 
+    def list_tracked(self) -> List[Any]:
+        """Kategorie z włączonym śledzeniem bilansu (is_tracked=TRUE)."""
+        query = f"""
+            SELECT {self._COLUMNS} FROM absence_categories
+            WHERE is_tracked = TRUE AND is_deleted = FALSE
+            ORDER BY absence_full_day DESC, name
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            return cursor.fetchall()
+
     def create(self, category: AbsenceCategory) -> int:
         query = """
-            INSERT INTO absence_categories (name, description, absence_full_day)
-            VALUES (%s, %s, %s)
+            INSERT INTO absence_categories
+                (name, description, absence_full_day,
+                 is_tracked, count_period, resets_at, rolling_days,
+                 warning_threshold_pct, default_max_value)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         with get_db_connection() as conn:
@@ -84,6 +107,12 @@ class AbsenceCategoryRepository:
                 category.name,
                 category.description,
                 category.absence_full_day,
+                category.is_tracked,
+                category.count_period,
+                category.resets_at,
+                category.rolling_days,
+                category.warning_threshold_pct,
+                category.default_max_value,
             ))
             new_id = cursor.fetchone()['id']
             conn.commit()
@@ -95,6 +124,12 @@ class AbsenceCategoryRepository:
             SET name = %s,
                 description = %s,
                 absence_full_day = %s,
+                is_tracked = %s,
+                count_period = %s,
+                resets_at = %s,
+                rolling_days = %s,
+                warning_threshold_pct = %s,
+                default_max_value = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
@@ -104,6 +139,12 @@ class AbsenceCategoryRepository:
                 category.name,
                 category.description,
                 category.absence_full_day,
+                category.is_tracked,
+                category.count_period,
+                category.resets_at,
+                category.rolling_days,
+                category.warning_threshold_pct,
+                category.default_max_value,
                 category_id,
             ))
             conn.commit()

@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+{% block title %}Bilanse urlopowe – {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .refined-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem; }
+    .page-title { margin-bottom: 0.25rem; font-size: 1.375rem; font-weight: 600; color: var(--color-ink); }
+    .page-subtitle { font-size: 0.8125rem; color: var(--color-ink-subtle); font-weight: 300; }
+
+    /* Stats cards */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+    .stat-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1.125rem 1.375rem; }
+    .stat-label { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-subtle); margin-bottom: 0.375rem; }
+    .stat-value { font-size: 1.625rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
+    .stat-value.warning { color: #c2410c; }
+    .stat-value.exceeded { color: var(--color-error, #b91c1c); }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
+    .filter-input { font-family: var(--font-body); font-size: 0.8125rem; padding: 0.375rem 0.75rem;
+        border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);
+        outline: none; }
+    .filter-input:focus { border-color: var(--color-ink-subtle); }
+
+    /* Table */
+    .card { background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    .card-body { padding: 0; }
+    table.balance-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    table.balance-table thead tr { border-bottom: 1px solid var(--color-border); }
+    table.balance-table th { padding: 0.75rem 1rem; font-size: 0.6875rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-subtle);
+        text-align: left; white-space: nowrap; }
+    table.balance-table td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--color-border-subtle);
+        vertical-align: middle; }
+    table.balance-table tr:last-child td { border-bottom: none; }
+    table.balance-table tr.exceeded-row td:first-child { background: rgba(185,28,28,.03); }
+
+    /* Progress bar */
+    .progress-wrap { height: 6px; background: var(--color-border); border-radius: 2px; overflow: hidden; min-width: 80px; }
+    .progress-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+    .bar-ok { background: var(--color-success, #16a34a); }
+    .bar-warning { background: #c2410c; }
+    .bar-exceeded { background: var(--color-error, #b91c1c); }
+
+    /* Status badge */
+    .status-badge { display: inline-block; padding: 0.1875rem 0.5rem; border-radius: 2px;
+        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-ok { background: rgba(22,163,74,.1); color: #15803d; }
+    .badge-warning { background: rgba(194,65,12,.1); color: #c2410c; }
+    .badge-exceeded { background: rgba(185,28,28,.1); color: #b91c1c; }
+    .badge-unlimited { background: var(--color-surface); color: var(--color-ink-subtle); }
+
+    /* Audit sub-row */
+    .audit-subrow td { background: var(--color-surface); padding: 1rem 1.5rem; }
+    .audit-subrow table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .audit-subrow th { color: var(--color-ink-subtle); font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.05em; font-size: 0.6875rem; padding: 0.25rem 0.5rem; text-align: left; }
+    .audit-subrow td.inner { padding: 0.25rem 0.5rem; color: var(--color-ink); }
+
+    /* Action buttons */
+    .btn-xs { font-family: var(--font-body); font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.625rem;
+        border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; background: white;
+        color: var(--color-ink); transition: background 0.15s; white-space: nowrap; }
+    .btn-xs:hover { background: var(--color-surface); }
+    .btn-xs.danger { color: var(--color-error, #b91c1c); border-color: rgba(185,28,28,.3); }
+    .btn-xs.danger:hover { background: rgba(185,28,28,.06); }
+
+    /* Modal overlay */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: flex;
+        align-items: center; justify-content: center; }
+    .modal-box { background: white; border-radius: 2px; padding: 1.75rem; min-width: 360px; max-width: 480px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+    .modal-title { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .form-label { font-size: 0.8125rem; font-weight: 500; color: var(--color-ink); margin-bottom: 0.25rem; display: block; }
+    .form-input { width: 100%; font-family: var(--font-body); font-size: 0.8125rem; padding: 0.5rem 0.75rem;
+        border: 1px solid var(--color-border); border-radius: 2px; outline: none; box-sizing: border-box; }
+    .form-input:focus { border-color: var(--color-ink); }
+    .form-row { margin-bottom: 1rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+    .btn-primary { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 500; padding: 0.5rem 1.25rem;
+        background: var(--color-ink); color: white; border: none; border-radius: 2px; cursor: pointer; }
+    .btn-secondary { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 400; padding: 0.5rem 1rem;
+        background: white; color: var(--color-ink); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="refined-page">
+    <!-- Page header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Bilanse urlopowe</h1>
+            <p class="page-subtitle">Zarządzanie limitami i korektami</p>
+        </div>
+        <button onclick="openNewAdjModal()" class="refined-btn-primary refined-btn-sm" style="margin-top:0.25rem;">
+            <span class="material-icons">tune</span>
+            Nowa korekta
+        </button>
+    </div>
+
+    <!-- Stats cards -->
+    <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+            <div class="stat-label">Pracownicy ze śledzeniem</div>
+            <div class="stat-value" id="stat-tracked">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Śledzone kategorie</div>
+            <div class="stat-value">{{ tracked_categories | length }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Bliscy limitu</div>
+            <div class="stat-value warning" id="stat-warning">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Przekroczony limit</div>
+            <div class="stat-value exceeded" id="stat-exceeded">—</div>
+        </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+        <input type="text" class="filter-input" id="search-input"
+               placeholder="Szukaj pracownika…" oninput="filterTable()"
+               style="min-width:220px;">
+        <select class="filter-input" id="cat-filter" onchange="filterTable()">
+            <option value="">Wszystkie kategorie</option>
+            {% for cat in tracked_categories %}
+            <option value="{{ cat['id'] }}">{{ cat['name'] }}</option>
+            {% endfor %}
+        </select>
+        <select class="filter-input" id="status-filter" onchange="filterTable()">
+            <option value="">Wszystkie statusy</option>
+            <option value="ok">OK</option>
+            <option value="warning">Blisko limitu</option>
+            <option value="exceeded">Przekroczony</option>
+            <option value="unlimited">Bez limitu</option>
+        </select>
+    </div>
+
+    <!-- Main table -->
+    <div class="card">
+        <div class="card-body">
+            <table class="balance-table" id="balance-table">
+                <thead>
+                    <tr>
+                        <th>Pracownik</th>
+                        <th>Kategoria</th>
+                        <th>Okres</th>
+                        <th style="text-align:right;">Wykorzystano</th>
+                        <th style="text-align:right;">Limit</th>
+                        <th style="min-width:100px;">%</th>
+                        <th>Status</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="balance-tbody">
+                    <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">
+                        Ładowanie…
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- New adjustment modal -->
+<div id="new-adj-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal-box">
+        <div class="modal-title">Nowa korekta bilansu</div>
+        <div class="form-row">
+            <label class="form-label">Pracownik *</label>
+            <select class="form-input" id="adj-employee-id">
+                <option value="">Wybierz pracownika…</option>
+                {% for emp in employees %}
+                <option value="{{ emp['id'] }}">{{ emp['first_name'] }} {{ emp['last_name'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label class="form-label">Kategoria *</label>
+            <select class="form-input" id="adj-category-id">
+                <option value="">Wybierz kategorię…</option>
+                {% for cat in tracked_categories %}
+                <option value="{{ cat['id'] }}">{{ cat['name'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label class="form-label">Korekta (+ / −) *</label>
+            <input type="number" step="0.5" class="form-input" id="adj-delta" placeholder="np. 2.0 lub -1.0">
+        </div>
+        <div class="form-row">
+            <label class="form-label">Powód *</label>
+            <input type="text" class="form-input" id="adj-reason" placeholder="Wymagane">
+        </div>
+        <div class="form-row">
+            <label class="form-label">Okres (opcjonalne)</label>
+            <input type="text" class="form-input" id="adj-period-label" placeholder="np. 2026">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeNewAdjModal()">Anuluj</button>
+            <button class="btn-primary" onclick="submitNewAdj()">Zapisz korektę</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    let allRows = [];  // {employee_id, employee_name, category_id, category_name, period_label, used, limit, unit, pct, status}
+
+    // ── Load data ────────────────────────────────────────────────────────────
+
+    async function loadSummary() {
+        try {
+            const [summaryRes, balancesRes] = await Promise.all([
+                fetch('/api/absence-balances/summary'),
+                buildDetailedRows(),
+            ]);
+            const sData = await summaryRes.json();
+            if (!sData.success) return;
+
+            allRows = balancesRes;
+            updateStats();
+            renderTable(allRows);
+            warnIfExceeded();
+        } catch (e) {
+            console.error('loadSummary', e);
+        }
+    }
+
+    async function buildDetailedRows() {
+        // Fetch per-employee balances for all employees who appear in the summary
+        const summaryRes = await fetch('/api/absence-balances/summary');
+        const sData = await summaryRes.json();
+        if (!sData.success) return [];
+
+        const rows = [];
+        const empIds = Object.keys(sData.balances || {});
+
+        for (const empIdStr of empIds) {
+            const empId = parseInt(empIdStr, 10);
+            try {
+                const r = await fetch(`/api/employees/${empId}/absence-balances`);
+                const d = await r.json();
+                if (!d.success) continue;
+                for (const b of (d.balances || [])) {
+                    rows.push({
+                        employee_id: empId,
+                        employee_name: d.employee_name,
+                        category_id: b.category_id,
+                        category_name: b.category_name,
+                        period_label: b.period_label,
+                        period_start: b.period_start,
+                        used: b.net_used,
+                        limit: b.limit,
+                        unit: b.unit,
+                        pct: b.pct,
+                        status: b.status,
+                        warning_threshold_pct: b.warning_threshold_pct,
+                    });
+                }
+            } catch (e) { /* skip this employee */ }
+        }
+        return rows;
+    }
+
+    // ── Stats ────────────────────────────────────────────────────────────────
+
+    function updateStats() {
+        const tracked = new Set(allRows.map(r => r.employee_id)).size;
+        const warnings = allRows.filter(r => r.status === 'warning').length;
+        const exceeded = allRows.filter(r => r.status === 'exceeded').length;
+        document.getElementById('stat-tracked').textContent = tracked;
+        document.getElementById('stat-warning').textContent = warnings;
+        document.getElementById('stat-exceeded').textContent = exceeded;
+    }
+
+    function warnIfExceeded() {
+        const exc = allRows.filter(r => r.status === 'exceeded');
+        if (exc.length > 0 && typeof Notifications !== 'undefined') {
+            const names = [...new Set(exc.map(r => r.employee_name))].slice(0, 3).join(', ');
+            setTimeout(() => Notifications.warning(`Przekroczony limit: ${names}`), 800);
+        }
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────────
+
+    function renderTable(rows) {
+        const tbody = document.getElementById('balance-tbody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Brak danych</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(renderRow).join('');
+    }
+
+    function barClass(status) {
+        if (status === 'exceeded') return 'bar-exceeded';
+        if (status === 'warning') return 'bar-warning';
+        return 'bar-ok';
+    }
+
+    function badgeClass(status) {
+        if (status === 'exceeded') return 'badge-exceeded';
+        if (status === 'warning') return 'badge-warning';
+        if (status === 'unlimited') return 'badge-unlimited';
+        return 'badge-ok';
+    }
+
+    function badgeLabel(status) {
+        return {exceeded: 'Przekroczony', warning: 'Blisko limitu',
+                unlimited: 'Bez limitu', ok: 'OK'}[status] || status;
+    }
+
+    function unitLabel(unit) { return unit === 'hours' ? 'h' : 'd'; }
+
+    function renderRow(row) {
+        const pctCapped = Math.min(row.pct, 100);
+        const unitL = unitLabel(row.unit);
+        const limitStr = row.status === 'unlimited' ? '∞' : row.limit;
+        const exceededCls = row.status === 'exceeded' ? 'exceeded-row' : '';
+        return `
+        <tr class="${exceededCls}" data-emp-id="${row.employee_id}"
+            data-cat-id="${row.category_id}" data-status="${row.status}"
+            data-emp-name="${row.employee_name.toLowerCase()}"
+            data-cat-name="${row.category_name.toLowerCase()}">
+            <td style="font-weight:500;">${row.employee_name}</td>
+            <td>${row.category_name}</td>
+            <td style="color:var(--color-ink-subtle);">${row.period_label || ''}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;">${row.used.toFixed(1)} ${unitL}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;">${limitStr} ${row.status !== 'unlimited' ? unitL : ''}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div class="progress-wrap" style="flex:1;">
+                        <div class="progress-bar ${barClass(row.status)}"
+                             style="width:${pctCapped}%;"></div>
+                    </div>
+                    <span style="font-size:0.75rem;color:var(--color-ink-subtle);min-width:2.5rem;text-align:right;">
+                        ${row.status === 'unlimited' ? '—' : row.pct.toFixed(0) + '%'}
+                    </span>
+                </div>
+            </td>
+            <td><span class="status-badge ${badgeClass(row.status)}">${badgeLabel(row.status)}</span></td>
+            <td>
+                <div style="display:flex;gap:0.375rem;flex-wrap:wrap;">
+                    <button class="btn-xs" onclick="openAdjModal(${row.employee_id},'${row.employee_name}',${row.category_id},'${row.category_name}')">Korekta</button>
+                    <button class="btn-xs" onclick="openLimitModal(${row.employee_id},'${row.employee_name}',${row.category_id},'${row.category_name}',${row.limit})">Limit</button>
+                    <button class="btn-xs" onclick="toggleAudit(this,${row.employee_id})">Historia</button>
+                </div>
+            </td>
+        </tr>
+        <tr class="audit-subrow" id="audit-${row.employee_id}-${row.category_id}" style="display:none;">
+            <td colspan="8"><div class="audit-inner-${row.employee_id}">Ładowanie…</div></td>
+        </tr>`;
+    }
+
+    // ── Filter ───────────────────────────────────────────────────────────────
+
+    window.filterTable = function () {
+        const search = document.getElementById('search-input').value.toLowerCase();
+        const catId = document.getElementById('cat-filter').value;
+        const statusFilter = document.getElementById('status-filter').value;
+
+        const filtered = allRows.filter(row => {
+            if (search && !row.employee_name.toLowerCase().includes(search)) return false;
+            if (catId && String(row.category_id) !== catId) return false;
+            if (statusFilter && row.status !== statusFilter) return false;
+            return true;
+        });
+        renderTable(filtered);
+    };
+
+    // ── Audit toggle ─────────────────────────────────────────────────────────
+
+    window.toggleAudit = async function (btn, empId) {
+        const subrow = document.getElementById(`audit-${empId}-${btn.closest('tr').dataset.catId || ''}`);
+        if (!subrow) {
+            // find the next sibling audit row
+            const parentRow = btn.closest('tr');
+            const nextRow = parentRow.nextElementSibling;
+            if (!nextRow || !nextRow.classList.contains('audit-subrow')) return;
+            const isHidden = nextRow.style.display === 'none';
+            nextRow.style.display = isHidden ? '' : 'none';
+            if (isHidden) {
+                const inner = nextRow.querySelector('[class^="audit-inner-"]');
+                await loadAudit(empId, inner);
+            }
+            return;
+        }
+        subrow.style.display = subrow.style.display === 'none' ? '' : 'none';
+        if (subrow.style.display !== 'none') {
+            const inner = subrow.querySelector('.audit-inner-' + empId);
+            await loadAudit(empId, inner);
+        }
+    };
+
+    async function loadAudit(empId, container) {
+        if (!container) return;
+        container.textContent = 'Ładowanie…';
+        try {
+            const r = await fetch(`/api/employees/${empId}/absence-balance-audit`);
+            const d = await r.json();
+            if (!d.success || !d.entries.length) {
+                container.textContent = 'Brak historii zmian.';
+                return;
+            }
+            container.innerHTML = `
+                <table>
+                    <thead><tr>
+                        <th>Kiedy</th><th>Kto</th><th>Akcja</th><th>Pole</th><th>Stara wartość</th><th>Nowa wartość</th>
+                    </tr></thead>
+                    <tbody>
+                    ${d.entries.slice(0, 30).map(e => `<tr>
+                        <td class="inner">${e.timestamp ? new Date(e.timestamp).toLocaleString('pl-PL') : '—'}</td>
+                        <td class="inner">${e.user_name || '—'}</td>
+                        <td class="inner">${e.action || '—'}</td>
+                        <td class="inner">${e.field_name || '—'}</td>
+                        <td class="inner">${e.old_value ?? '—'}</td>
+                        <td class="inner">${e.new_value ?? '—'}</td>
+                    </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        } catch (e) {
+            container.textContent = 'Błąd ładowania historii.';
+        }
+    }
+
+    // ── Quick adjustment modal ────────────────────────────────────────────────
+
+    let _adjEmpId = null, _adjCatId = null;
+
+    window.openAdjModal = function (empId, empName, catId, catName) {
+        _adjEmpId = empId; _adjCatId = catId;
+        document.getElementById('adj-employee-id').value = empId;
+        document.getElementById('adj-category-id').value = catId;
+        document.getElementById('adj-delta').value = '';
+        document.getElementById('adj-reason').value = '';
+        document.getElementById('adj-period-label').value = '';
+        document.getElementById('new-adj-modal').style.display = 'flex';
+        document.getElementById('adj-delta').focus();
+    };
+
+    window.openNewAdjModal = function () {
+        _adjEmpId = null; _adjCatId = null;
+        document.getElementById('adj-employee-id').value = '';
+        document.getElementById('adj-category-id').value = '';
+        document.getElementById('adj-delta').value = '';
+        document.getElementById('adj-reason').value = '';
+        document.getElementById('adj-period-label').value = '';
+        document.getElementById('new-adj-modal').style.display = 'flex';
+        document.getElementById('adj-employee-id').focus();
+    };
+
+    window.closeNewAdjModal = function () {
+        document.getElementById('new-adj-modal').style.display = 'none';
+    };
+
+    window.submitNewAdj = async function () {
+        const empId = parseInt(document.getElementById('adj-employee-id').value, 10);
+        const catId = parseInt(document.getElementById('adj-category-id').value, 10);
+        const delta = parseFloat(document.getElementById('adj-delta').value);
+        const reason = document.getElementById('adj-reason').value.trim();
+        const periodLabel = document.getElementById('adj-period-label').value.trim() || null;
+
+        if (!empId || !catId || isNaN(delta) || !reason) {
+            if (typeof Notifications !== 'undefined') Notifications.error('Uzupełnij wszystkie wymagane pola.');
+            return;
+        }
+
+        if (typeof Modals !== 'undefined') {
+            Modals.confirm({
+                title: 'Potwierdź korektę',
+                message: `Zapisać korektę ${delta > 0 ? '+' : ''}${delta.toFixed(1)} dla tego pracownika?`,
+                confirmText: 'Zapisz',
+                onConfirm: () => doSaveAdj(empId, catId, delta, reason, periodLabel),
+            });
+        } else {
+            await doSaveAdj(empId, catId, delta, reason, periodLabel);
+        }
+    };
+
+    async function doSaveAdj(empId, catId, delta, reason, periodLabel) {
+        try {
+            const r = await fetch(`/api/employees/${empId}/absence-adjustments`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({category_id: catId, delta_value: delta,
+                                      reason, period_label: periodLabel}),
+            });
+            const d = await r.json();
+            if (d.success) {
+                closeNewAdjModal();
+                if (typeof Notifications !== 'undefined') Notifications.success('Korekta zapisana');
+                await loadSummary();
+            } else {
+                if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd zapisu');
+            }
+        } catch (e) {
+            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+        }
+    }
+
+    // ── Limit modal (inline) ─────────────────────────────────────────────────
+
+    window.openLimitModal = function (empId, empName, catId, catName, currentLimit) {
+        const newVal = prompt(`Ustaw limit dla ${empName} — ${catName}\n(aktualnie: ${currentLimit}, 0 = bez limitu):`, currentLimit);
+        if (newVal === null) return;
+        const val = parseFloat(newVal);
+        if (isNaN(val) || val < 0) { alert('Nieprawidłowa wartość'); return; }
+
+        if (typeof Modals !== 'undefined') {
+            Modals.confirm({
+                title: 'Zmień limit',
+                message: `Ustawić limit ${val} dla ${empName} (${catName})?`,
+                confirmText: 'Ustaw',
+                onConfirm: () => doSetLimit(empId, catId, val),
+            });
+        } else {
+            doSetLimit(empId, catId, val);
+        }
+    };
+
+    async function doSetLimit(empId, catId, val) {
+        try {
+            const r = await fetch(`/api/employees/${empId}/absence-limits`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({category_id: catId, max_value: val}),
+            });
+            const d = await r.json();
+            if (d.success) {
+                if (typeof Notifications !== 'undefined') Notifications.success('Limit zaktualizowany');
+                await loadSummary();
+            } else {
+                if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd zapisu');
+            }
+        } catch (e) {
+            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+        }
+    }
+
+    // ── ESC key ──────────────────────────────────────────────────────────────
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('new-adj-modal');
+            if (modal && modal.style.display !== 'none') {
+                closeNewAdjModal();
+                return;
+            }
+            if (!document.querySelector('.modal-overlay[style*="flex"]')) {
+                window.location.href = '/absences';
+            }
+        }
+    });
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', loadSummary);
+
+}());
+</script>
+{% endblock %}

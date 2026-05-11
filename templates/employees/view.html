@@ -430,6 +430,68 @@
         </div>
     </div>
 
+    <!-- Absence Balances Card -->
+    <div class="refined-card" id="absence-balances-card">
+        <div class="section-header">
+            <h2 class="section-title">Bilanse nieobecności</h2>
+            <button onclick="openAdjustmentModal()" class="refined-btn-secondary refined-btn-sm">
+                <span class="material-icons">tune</span>
+                Dostosuj
+            </button>
+        </div>
+        <div id="balances-container" style="margin-top:1rem;">
+            <p style="font-size:0.8125rem;color:var(--color-ink-subtle);">Ładowanie bilansu…</p>
+        </div>
+        <div id="adj-history-section" style="display:none;margin-top:1rem;border-top:1px solid var(--color-border-subtle);padding-top:1rem;">
+            <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-subtle);margin-bottom:0.5rem;">
+                Historia korekt bilansu
+            </div>
+            <table id="adj-history-table" style="width:100%;border-collapse:collapse;font-size:0.8125rem;">
+                <thead><tr>
+                    <th style="text-align:left;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink-subtle);">Kategoria</th>
+                    <th style="text-align:left;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink-subtle);">Korekta</th>
+                    <th style="text-align:left;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink-subtle);">Powód</th>
+                    <th style="text-align:left;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink-subtle);">Kto</th>
+                    <th style="text-align:left;padding:0.25rem 0.5rem;font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink-subtle);">Kiedy</th>
+                </tr></thead>
+                <tbody id="adj-history-tbody"><tr><td colspan="5" style="padding:0.5rem;color:var(--color-ink-subtle);">Brak korekt.</td></tr></tbody>
+            </table>
+        </div>
+        <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
+            <button onclick="toggleAdjHistory()" class="refined-btn-secondary refined-btn-sm">
+                <span class="material-icons">history</span>
+                Historia korekt
+            </button>
+        </div>
+    </div>
+
+    <!-- Adjustment modal -->
+    <div id="adj-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:2px;padding:1.75rem;min-width:340px;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+            <div style="font-size:1rem;font-weight:600;margin-bottom:1.25rem;">Korekta bilansu nieobecności</div>
+            <div style="margin-bottom:0.875rem;">
+                <label style="font-size:0.8125rem;font-weight:500;display:block;margin-bottom:0.25rem;">Kategoria *</label>
+                <select id="modal-cat-id" style="width:100%;font-family:var(--font-body);font-size:0.8125rem;padding:0.5rem 0.75rem;border:1px solid var(--color-border);border-radius:2px;outline:none;"></select>
+            </div>
+            <div style="margin-bottom:0.875rem;">
+                <label style="font-size:0.8125rem;font-weight:500;display:block;margin-bottom:0.25rem;">Korekta (+ / −) *</label>
+                <input type="number" step="0.5" id="modal-delta" style="width:100%;font-family:var(--font-body);font-size:0.8125rem;padding:0.5rem 0.75rem;border:1px solid var(--color-border);border-radius:2px;outline:none;box-sizing:border-box;" placeholder="np. 2.0 lub -1.0">
+            </div>
+            <div style="margin-bottom:0.875rem;">
+                <label style="font-size:0.8125rem;font-weight:500;display:block;margin-bottom:0.25rem;">Powód *</label>
+                <input type="text" id="modal-reason" style="width:100%;font-family:var(--font-body);font-size:0.8125rem;padding:0.5rem 0.75rem;border:1px solid var(--color-border);border-radius:2px;outline:none;box-sizing:border-box;" placeholder="Wymagane">
+            </div>
+            <div style="margin-bottom:0.875rem;">
+                <label style="font-size:0.8125rem;font-weight:500;display:block;margin-bottom:0.25rem;">Okres (opcjonalne)</label>
+                <input type="text" id="modal-period" style="width:100%;font-family:var(--font-body);font-size:0.8125rem;padding:0.5rem 0.75rem;border:1px solid var(--color-border);border-radius:2px;outline:none;box-sizing:border-box;" placeholder="np. 2026">
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem;">
+                <button onclick="closeAdjModal()" style="font-family:var(--font-body);font-size:0.8125rem;padding:0.5rem 1rem;border:1px solid var(--color-border);border-radius:2px;background:white;cursor:pointer;">Anuluj</button>
+                <button onclick="submitAdj()" style="font-family:var(--font-body);font-size:0.8125rem;font-weight:500;padding:0.5rem 1.25rem;background:var(--color-ink);color:white;border:none;border-radius:2px;cursor:pointer;">Zapisz</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Skills & Specializations -->
     {% set skills = employee.get_skills_dict() %}
     {% set specs = employee.get_specializations_list() %}
@@ -1028,6 +1090,146 @@ function confirmDelete() {
         }
     });
 }
+
+// ── Absence Balance Card ──────────────────────────────────────────────────────
+
+(function () {
+    const EMP_ID = {{ employee.id }};
+    let _trackedCategories = [];
+
+    async function loadBalances() {
+        try {
+            const r = await fetch(`/api/employees/${EMP_ID}/absence-balances`);
+            const d = await r.json();
+            if (!d.success) return;
+            _trackedCategories = (d.balances || []).map(b => ({id: b.category_id, name: b.category_name}));
+            renderBalances(d.balances || []);
+            const hasAlert = (d.balances || []).some(b => b.status === 'warning' || b.status === 'exceeded');
+            if (hasAlert && typeof Notifications !== 'undefined') {
+                setTimeout(() => Notifications.warning('Uwaga: limit nieobecności przekroczony lub bliski przekroczenia'), 800);
+            }
+        } catch (e) { console.error('loadBalances', e); }
+    }
+
+    function barColor(b) {
+        if (b.status === 'exceeded') return 'var(--color-error, #b91c1c)';
+        if (b.status === 'warning') return '#c2410c';
+        return 'var(--color-success, #16a34a)';
+    }
+
+    function renderBalances(balances) {
+        const container = document.getElementById('balances-container');
+        if (!balances.length) {
+            container.innerHTML = '<p style="font-size:0.8125rem;color:var(--color-ink-subtle);">Brak śledzonych kategorii nieobecności.</p>';
+            return;
+        }
+        container.innerHTML = balances.map(b => {
+            const pct = Math.min(b.pct || 0, 100);
+            const unitL = b.unit === 'hours' ? 'godz.' : 'dni';
+            const limitStr = b.has_limit ? b.limit : '∞';
+            return `
+            <div class="balance-row" style="margin-bottom:1rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.375rem;">
+                    <span style="font-size:0.8125rem;font-weight:500;">${b.category_name}</span>
+                    <span style="font-size:0.8125rem;color:var(--color-ink-subtle);">
+                        ${b.net_used.toFixed(1)} / ${limitStr} ${unitL}
+                    </span>
+                </div>
+                <div style="height:8px;background:var(--color-border);border-radius:2px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${barColor(b)};transition:width 0.4s ease;border-radius:2px;"></div>
+                </div>
+                <div style="font-size:0.75rem;color:var(--color-ink-subtle);margin-top:0.25rem;">
+                    ${b.has_limit ? b.pct.toFixed(1) + '%' : 'Brak limitu'} — okres od ${b.period_start || ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window.toggleAdjHistory = async function () {
+        const sec = document.getElementById('adj-history-section');
+        const isHidden = sec.style.display === 'none';
+        sec.style.display = isHidden ? '' : 'none';
+        if (isHidden) {
+            try {
+                const r = await fetch(`/api/employees/${EMP_ID}/absence-adjustments`);
+                const d = await r.json();
+                const tbody = document.getElementById('adj-history-tbody');
+                if (!d.success || !d.adjustments.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding:0.5rem;color:var(--color-ink-subtle);">Brak korekt.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = d.adjustments.map(a => `
+                    <tr>
+                        <td style="padding:0.375rem 0.5rem;">${a.category_name}</td>
+                        <td style="padding:0.375rem 0.5rem;font-variant-numeric:tabular-nums;">${a.delta_value > 0 ? '+' : ''}${a.delta_value.toFixed(1)}</td>
+                        <td style="padding:0.375rem 0.5rem;">${a.reason}</td>
+                        <td style="padding:0.375rem 0.5rem;color:var(--color-ink-subtle);">${a.created_by_name || '—'}</td>
+                        <td style="padding:0.375rem 0.5rem;color:var(--color-ink-subtle);">${a.created_at ? new Date(a.created_at).toLocaleDateString('pl-PL') : '—'}</td>
+                    </tr>`).join('');
+            } catch (e) { console.error('toggleAdjHistory', e); }
+        }
+    };
+
+    window.openAdjustmentModal = function () {
+        const sel = document.getElementById('modal-cat-id');
+        sel.innerHTML = _trackedCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('modal-delta').value = '';
+        document.getElementById('modal-reason').value = '';
+        document.getElementById('modal-period').value = '';
+        const modal = document.getElementById('adj-modal');
+        modal.style.display = 'flex';
+        document.getElementById('modal-delta').focus();
+    };
+
+    window.closeAdjModal = function () {
+        document.getElementById('adj-modal').style.display = 'none';
+    };
+
+    window.submitAdj = async function () {
+        const catId = parseInt(document.getElementById('modal-cat-id').value, 10);
+        const delta = parseFloat(document.getElementById('modal-delta').value);
+        const reason = document.getElementById('modal-reason').value.trim();
+        const period = document.getElementById('modal-period').value.trim() || null;
+
+        if (!catId || isNaN(delta) || !reason) {
+            if (typeof Notifications !== 'undefined') Notifications.error('Uzupełnij wszystkie wymagane pola.');
+            return;
+        }
+
+        const doSave = async () => {
+            try {
+                const r = await fetch(`/api/employees/${EMP_ID}/absence-adjustments`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({category_id: catId, delta_value: delta, reason, period_label: period}),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    closeAdjModal();
+                    if (typeof Notifications !== 'undefined') Notifications.success('Korekta zapisana');
+                    await loadBalances();
+                } else {
+                    if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd zapisu');
+                }
+            } catch (e) {
+                if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+            }
+        };
+
+        if (typeof Modals !== 'undefined') {
+            Modals.confirm({
+                title: 'Potwierdź korektę',
+                message: `Zapisać korektę ${delta > 0 ? '+' : ''}${delta.toFixed(1)} dla tego pracownika?`,
+                confirmText: 'Zapisz',
+                onConfirm: doSave,
+            });
+        } else {
+            await doSave();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', loadBalances);
+}());
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
