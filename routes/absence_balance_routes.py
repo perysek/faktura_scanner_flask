@@ -33,7 +33,7 @@ def _balance_svc() -> AbsenceBalanceService:
 @absence_balance_bp.route('/absence-balances')
 @absence_management_required
 def balances_index():
-    employees = current_app.employee_repo.list_active()
+    employees = current_app.employee_repo.get_all(active_only=True)
     tracked_categories = current_app.absence_category_repo.list_tracked()
     return render_template(
         'absences/balances.html',

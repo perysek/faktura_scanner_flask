@@ -86,7 +86,7 @@ class AbsenceBalanceRepository:
             employees_active AS (
                 SELECT e.id AS employee_id
                 FROM employees e
-                WHERE e.is_deleted = FALSE
+                WHERE e.is_active = TRUE
             ),
             -- pick the first tracked category (lowest id) per employee
             primary_cat AS (
