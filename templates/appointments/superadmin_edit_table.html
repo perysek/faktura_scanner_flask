@@ -785,7 +785,7 @@ function deleteVisit(appointmentId) {
         confirmText: 'Usuń',
         onConfirm: async () => {
             try {
-                const resp = await fetch(`/appointments/${appointmentId}`, {
+                const resp = await fetch(`/api/appointments/${appointmentId}`, {
                     method: 'DELETE',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 });
