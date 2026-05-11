@@ -263,6 +263,45 @@ def api_update(user_id):
         raise AppError('Wystapil blad serwera')
 
 
+@users_bp.route('/api/<int:user_id>', methods=['DELETE'])
+@login_required
+@role_required('superuser', 'admin')
+def api_delete(user_id):
+    """DELETE /system/users/api/<id> — usuń użytkownika"""
+    if user_id == current_user.id:
+        from exceptions import ValidationError as VE
+        raise VE('Nie możesz usunąć własnego konta')
+
+    user_repo = _user_repo()
+    row = user_repo.get_by_id(user_id)
+    if not row:
+        raise NotFoundError('Uzytkownik nie znaleziony')
+
+    existing = user_repo.row_to_user(row)
+    if existing.role == 'superuser' and current_user.role != 'superuser':
+        from exceptions import PermissionDeniedError
+        raise PermissionDeniedError('Brak uprawnien do usunięcia konta właściciela')
+
+    try:
+        deleted = user_repo.delete_user(user_id)
+        if not deleted:
+            raise NotFoundError('Uzytkownik nie znaleziony')
+        try:
+            current_app.audit_repo.log_event(
+                entity_type='user', action='DELETE',
+                entity_id=user_id, entity_label=existing.email,
+                user_id=current_user.id, user_name=current_user.full_name,
+            )
+        except Exception:
+            pass
+        return jsonify({'success': True})
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in api_delete (users)')
+        raise AppError('Wystapil blad serwera')
+
+
 @users_bp.route('/api/<int:user_id>/toggle-active', methods=['PUT'])
 @login_required
 @role_required('superuser', 'admin')
