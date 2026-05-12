@@ -66,7 +66,8 @@ const Notifications = {
         // Create toast element
         const toast = document.createElement('div');
         toast.setAttribute('data-toast', '');
-        toast.className = `pointer-events-auto min-w-[320px] max-w-sm rounded-xl p-4 shadow-lg shadow-slate-200/50 flex items-start gap-3 transition-all duration-300 translate-y-2 opacity-0 transform ${theme.colors} ${theme.ring}`;
+        toast.className = `pointer-events-auto min-w-[320px] max-w-sm rounded-xl p-4 shadow-lg shadow-slate-200/50 flex
+        items-start gap-3 transition-all duration-1000 translate-y-2 opacity-0 transform ${theme.colors} ${theme.ring}`;
 
         toast.innerHTML = `
             <span class="material-icons ${theme.iconColor} text-xl mt-0.5">${theme.icon}</span>
@@ -90,7 +91,7 @@ const Notifications = {
             setTimeout(() => {
                 if (toast.parentElement) {
                     toast.classList.add('translate-x-full', 'opacity-0');
-                    setTimeout(() => toast.remove(), 300);
+                    setTimeout(() => toast.remove(), 900);
                 }
             }, duration);
         }
@@ -146,11 +147,12 @@ const Modals = {
 
         // Overlay
         const overlay = document.createElement('div');
-        overlay.className = 'fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200 opacity-0 modal-overlay';
+        overlay.className = 'fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4
+        transition-opacity duration-500 opacity-0 modal-overlay';
 
         // Content
         const modalContent = `
-            <div class="bg-white w-full ${maxWidthClass} rounded-2xl shadow-2xl flex flex-col max-h-[90vh] transition-all duration-300 transform scale-95 opacity-0 modal-panel">
+            <div class="bg-white w-full ${maxWidthClass} rounded-2xl shadow-2xl flex flex-col max-h-[90vh] transition-all duration-600 transform scale-95 opacity-0 modal-panel">
                 <!-- Header -->
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                     <h3 class="text-lg font-semibold text-slate-800">${escapeHtml(title)}</h3>
@@ -261,7 +263,7 @@ const Modals = {
         }
         overlay.classList.remove('opacity-100');
         overlay.classList.add('opacity-0');
-        setTimeout(() => overlay.remove(), 200);
+        setTimeout(() => overlay.remove(), 500);
     },
 
     closeAll() {

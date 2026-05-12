@@ -62,8 +62,8 @@ const Notifications = {
         if (duration > 0) {
             setTimeout(() => {
                 if (toast.parentElement) {
-                    toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-                    setTimeout(() => toast.remove(), 300);
+                    toast.classList.add('opacity-0', 'transition-opacity', 'duration-900');
+                    setTimeout(() => toast.remove(), 900);
                 }
             }, duration);
         }

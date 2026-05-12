@@ -125,6 +125,64 @@ class AuditRepository(BaseRepository):
 
         return results
 
+    def get_for_employee_balance(self, employee_id: int) -> List[dict]:
+        """Historia zmian limitów i korekt dla konkretnego pracownika."""
+        query = """
+            SELECT
+                a.id, a.entity_type, a.entity_id, a.entity_label,
+                a.action, a.field_name, a.old_value, a.new_value,
+                a.user_id,
+                COALESCE(a.user_name, u.full_name) AS user_name,
+                a.changed_at
+            FROM audit_log a
+            LEFT JOIN users u ON u.id = a.user_id
+            WHERE (
+                (a.entity_type = 'absence_limit' AND a.entity_id IN (
+                    SELECT id FROM employee_absence_limits WHERE employee_id = %s
+                ))
+                OR
+                (a.entity_type = 'absence_adjustment' AND a.entity_id IN (
+                    SELECT id FROM absence_balance_adjustments WHERE employee_id = %s
+                ))
+            )
+            ORDER BY a.changed_at DESC, a.id DESC
+            LIMIT 200
+        """
+        rows = self._fetch_all(query, (employee_id, employee_id))
+        return [
+            {
+                'id': r['id'],
+                'entity_type': r['entity_type'],
+                'entity_id': r['entity_id'],
+                'entity_label': r['entity_label'],
+                'action': r['action'],
+                'field_name': r['field_name'],
+                'old_value': r['old_value'],
+                'new_value': r['new_value'],
+                'user_id': r['user_id'],
+                'user_name': r['user_name'],
+                'timestamp': r['changed_at'],
+            }
+            for r in rows
+        ]
+
+    def delete_for_employee_balance(self, employee_id: int) -> int:
+        """Usuń wpisy historii zmian dla bilansów konkretnego pracownika."""
+        query = """
+            DELETE FROM audit_log
+            WHERE (
+                (entity_type = 'absence_limit' AND entity_id IN (
+                    SELECT id FROM employee_absence_limits WHERE employee_id = %s
+                ))
+                OR
+                (entity_type = 'absence_adjustment' AND entity_id IN (
+                    SELECT id FROM absence_balance_adjustments WHERE employee_id = %s
+                ))
+            )
+        """
+        cursor = self._execute(query, (employee_id, employee_id))
+        return cursor.rowcount
+
     def get_details_by_ids(self, ids_list: List[int]) -> List[dict]:
         """Pobierz szczegóły zmian dla podanych ID"""
         if not ids_list:
