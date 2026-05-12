@@ -291,48 +291,86 @@ const Absences = {
 
     // ── Category management ───────────────────────────────────────────────────
 
-    openCategoryForm(id, name, desc, fullDay) {
-        const isNew   = !id;
-        const inputId = isNew ? 'new' : id;
+    openCategoryForm(id, name, desc, fullDay, isTracked, countPeriod, resetsAt, defaultMax, warnPct) {
+        const isNew      = !id;
+        const inputId    = isNew ? 'new' : id;
+        isTracked  = isTracked  || false;
+        countPeriod = countPeriod || 'yearly';
+        resetsAt   = (resetsAt   != null) ? resetsAt   : 1;
+        defaultMax = (defaultMax != null) ? defaultMax : 0;
+        warnPct    = (warnPct    != null) ? warnPct    : 0.80;
+
+        const fieldStyle = 'width:100%;padding:0.5rem 0.75rem;font-family:inherit;font-size:0.8125rem;border:1px solid var(--color-border);border-radius:2px;outline:none;color:var(--color-ink);box-sizing:border-box;';
+        const labelStyle = 'display:block;font-size:0.75rem;font-weight:500;color:var(--color-ink-muted);margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em;';
+        const rowStyle   = 'margin-bottom:0.75rem;';
+
         const overlay = Modals.show({
             title: isNew ? 'Nowa kategoria nieobecności' : 'Edytuj kategorię',
-            size: 'small',
+            size: 'medium',
             content: `
-                <div style="display:flex;flex-direction:column;gap:0.875rem;">
-                    <div>
-                        <label style="display:block;font-size:0.75rem;font-weight:500;color:var(--color-ink-muted);margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.06em;">
-                            Nazwa <span style="color:var(--color-error)">*</span>
-                        </label>
+                <div style="display:flex;flex-direction:column;gap:0;">
+                    <div style="${rowStyle}">
+                        <label style="${labelStyle}">Nazwa <span style="color:var(--color-error)">*</span></label>
                         <input id="cat-name-${inputId}" type="text" value="${escapeHtml(name || '')}"
-                            placeholder="np. Urlop okolicznościowy"
-                            style="width:100%;padding:0.625rem 0.875rem;font-family:inherit;
-                                   font-size:0.8125rem;border:1px solid var(--color-border);
-                                   border-radius:2px;outline:none;color:var(--color-ink);"
-                            onfocus="this.style.borderColor='var(--color-ink-muted)'"
-                            onblur="this.style.borderColor='var(--color-border)'">
+                               placeholder="np. Urlop okolicznościowy" style="${fieldStyle}">
                     </div>
-                    <div>
-                        <label style="display:block;font-size:0.75rem;font-weight:500;color:var(--color-ink-muted);margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.06em;">
-                            Opis
-                        </label>
+                    <div style="${rowStyle}">
+                        <label style="${labelStyle}">Opis</label>
                         <input id="cat-desc-${inputId}" type="text" value="${escapeHtml(desc || '')}"
-                            placeholder="Opcjonalny opis..."
-                            style="width:100%;padding:0.625rem 0.875rem;font-family:inherit;
-                                   font-size:0.8125rem;border:1px solid var(--color-border);
-                                   border-radius:2px;outline:none;color:var(--color-ink);"
-                            onfocus="this.style.borderColor='var(--color-ink-muted)'"
-                            onblur="this.style.borderColor='var(--color-border)'">
+                               placeholder="Opcjonalny opis…" style="${fieldStyle}">
                     </div>
-                    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.625rem 0.875rem;
-                                border:1px solid var(--color-border);border-radius:2px;cursor:pointer;"
+                    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.75rem;
+                                border:1px solid var(--color-border);border-radius:2px;cursor:pointer;margin-bottom:0.75rem;"
                          onclick="const cb=document.getElementById('cat-fullday-${inputId}');cb.checked=!cb.checked;">
-                        <input type="checkbox" id="cat-fullday-${inputId}"
-                               ${fullDay !== false ? 'checked' : ''}
+                        <input type="checkbox" id="cat-fullday-${inputId}" ${fullDay !== false ? 'checked' : ''}
                                style="width:1rem;height:1rem;cursor:pointer;accent-color:var(--color-ink);"
                                onclick="event.stopPropagation()">
                         <div>
                             <div style="font-size:0.8125rem;font-weight:500;color:var(--color-ink);">Nieobecność całodniowa</div>
-                            <div style="font-size:0.75rem;color:var(--color-ink-subtle);">Odznacz dla nieobecności godzinowych (slot czasowy)</div>
+                            <div style="font-size:0.75rem;color:var(--color-ink-subtle);">Odznacz dla nieobecności godzinowych</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top:1px solid var(--color-border-subtle);padding-top:0.75rem;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.75rem;
+                                    border:1px solid var(--color-border);border-radius:2px;cursor:pointer;margin-bottom:0.75rem;"
+                             onclick="const cb=document.getElementById('cat-tracked-${inputId}');cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'));">
+                            <input type="checkbox" id="cat-tracked-${inputId}" ${isTracked ? 'checked' : ''}
+                                   style="width:1rem;height:1rem;cursor:pointer;accent-color:var(--color-ink);"
+                                   onclick="event.stopPropagation()">
+                            <div>
+                                <div style="font-size:0.8125rem;font-weight:500;color:var(--color-ink);">Śledzenie bilansu</div>
+                                <div style="font-size:0.75rem;color:var(--color-ink-subtle);">Włącz aby kontrolować limity i saldo tej kategorii</div>
+                            </div>
+                        </div>
+
+                        <div id="cat-tracking-details-${inputId}" style="display:${isTracked ? '' : 'none'};
+                             background:var(--color-surface,#f8f8f7);border:1px solid var(--color-border-subtle);
+                             border-radius:2px;padding:0.875rem;display:${isTracked ? 'grid' : 'none'};
+                             grid-template-columns:1fr 1fr;gap:0.75rem;">
+                            <div>
+                                <label style="${labelStyle}">Okres rozliczeniowy</label>
+                                <select id="cat-period-${inputId}" style="${fieldStyle}">
+                                    <option value="yearly"  ${countPeriod === 'yearly'  ? 'selected' : ''}>Roczny</option>
+                                    <option value="monthly" ${countPeriod === 'monthly' ? 'selected' : ''}>Miesięczny</option>
+                                    <option value="rolling" ${countPeriod === 'rolling' ? 'selected' : ''}>Kroczący</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="${labelStyle}">Reset (dzień)</label>
+                                <input id="cat-resets-${inputId}" type="number" min="1" max="28" value="${resetsAt}"
+                                       style="${fieldStyle}" placeholder="1">
+                            </div>
+                            <div>
+                                <label style="${labelStyle}">Domyślny limit</label>
+                                <input id="cat-maxval-${inputId}" type="number" min="0" step="0.5" value="${defaultMax}"
+                                       style="${fieldStyle}" placeholder="0">
+                            </div>
+                            <div>
+                                <label style="${labelStyle}">Próg ostrzeżenia (%)</label>
+                                <input id="cat-warnpct-${inputId}" type="number" min="0" max="100" step="5" value="${Math.round(warnPct * 100)}"
+                                       style="${fieldStyle}" placeholder="80">
+                            </div>
                         </div>
                     </div>
                 </div>`,
@@ -348,10 +386,17 @@ const Absences = {
                             document.getElementById(`cat-name-${inputId}`).focus();
                             return;
                         }
+                        const tracked    = document.getElementById(`cat-tracked-${inputId}`)?.checked || false;
+                        const warnInput  = parseFloat(document.getElementById(`cat-warnpct-${inputId}`)?.value || '80');
                         const payload = {
                             name: nameVal,
                             description: document.getElementById(`cat-desc-${inputId}`)?.value?.trim() || '',
                             absence_full_day: document.getElementById(`cat-fullday-${inputId}`)?.checked ? 'true' : 'false',
+                            is_tracked: tracked,
+                            count_period: document.getElementById(`cat-period-${inputId}`)?.value || 'yearly',
+                            resets_at: parseInt(document.getElementById(`cat-resets-${inputId}`)?.value || '1', 10),
+                            default_max_value: parseFloat(document.getElementById(`cat-maxval-${inputId}`)?.value || '0'),
+                            warning_threshold_pct: warnInput / 100.0,
                         };
                         const url     = isNew ? '/absences/categories' : `/absences/categories/${id}`;
                         const method  = isNew ? 'POST' : 'PUT';
@@ -378,6 +423,15 @@ const Absences = {
                 },
             ],
         });
+
+        // Wire tracking checkbox → show/hide details
+        const trackedCb  = document.getElementById(`cat-tracked-${inputId}`);
+        const detailsDiv = document.getElementById(`cat-tracking-details-${inputId}`);
+        if (trackedCb && detailsDiv) {
+            trackedCb.addEventListener('change', () => {
+                detailsDiv.style.display = trackedCb.checked ? 'grid' : 'none';
+            });
+        }
         setTimeout(() => document.getElementById(`cat-name-${inputId}`)?.focus(), 80);
     },
 

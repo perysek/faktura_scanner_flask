@@ -531,6 +531,11 @@
                                             data-cat-name="{{ cat['name'] }}"
                                             data-cat-desc="{{ cat['description'] or '' }}"
                                             data-cat-fullday="{{ 'true' if cat['absence_full_day'] else 'false' }}"
+                                            data-cat-tracked="{{ 'true' if cat['is_tracked'] else 'false' }}"
+                                            data-cat-period="{{ cat['count_period'] or 'yearly' }}"
+                                            data-cat-resets="{{ cat['resets_at'] or 1 }}"
+                                            data-cat-maxval="{{ cat['default_max_value'] or 0 }}"
+                                            data-cat-warnpct="{{ cat['warning_threshold_pct'] or 0.80 }}"
                                             title="Edytuj" aria-label="Edytuj kategorię">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -710,7 +715,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 parseInt(btn.dataset.catId),
                 btn.dataset.catName,
                 btn.dataset.catDesc,
-                btn.dataset.catFullday === 'true'
+                btn.dataset.catFullday === 'true',
+                btn.dataset.catTracked === 'true',
+                btn.dataset.catPeriod  || 'yearly',
+                parseInt(btn.dataset.catResets  || '1',  10),
+                parseFloat(btn.dataset.catMaxval || '0'),
+                parseFloat(btn.dataset.catWarnpct || '0.80')
             );
         });
     });
