@@ -495,11 +495,26 @@
             <div class="table-container">
                 {% if categories %}
                 <table class="refined-table">
+                    <colgroup>
+                        <col style="width:21%"> <!-- Nazwa -->
+                        <col style="width:14%"> <!-- Opis -->
+                        <col style="width:9%">  <!-- Typ -->
+                        <col style="width:8%">  <!-- Śledzony -->
+                        <col style="width:9%">  <!-- Okres -->
+                        <col style="width:8%">  <!-- Reset -->
+                        <col style="width:8%">  <!-- Limit -->
+                        <col style="width:8%">  <!-- Status -->
+                        <col style="width:15%"> <!-- Akcje -->
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Nazwa</th>
                             <th>Opis</th>
                             <th>Typ</th>
+                            <th>Śledzony</th>
+                            <th>Okres</th>
+                            <th style="text-align:center;">Reset</th>
+                            <th style="text-align:right;">Limit</th>
                             <th>Status</th>
                             <th style="text-align:right;">Akcje</th>
                         </tr>
@@ -508,12 +523,46 @@
                         {% for cat in categories %}
                         <tr class="{{ 'row-deleted' if cat['is_deleted'] else '' }}">
                             <td style="font-weight:500;">{{ cat['name'] }}</td>
-                            <td style="color:var(--color-ink-subtle);">{{ cat['description'] or '—' }}</td>
+                            <td style="color:var(--color-ink-subtle);max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                {{ cat['description'] or '—' }}
+                            </td>
                             <td>
                                 {% if cat['absence_full_day'] %}
                                 <span class="cat-type-badge cat-type-full">Całodniowa</span>
                                 {% else %}
                                 <span class="cat-type-badge cat-type-slot">Godzinowa</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cat['is_tracked'] %}
+                                <span class="ab-status ab-status--approved" style="font-size:0.6875rem;">Tak</span>
+                                {% else %}
+                                <span class="ab-status" style="background:var(--color-surface);color:var(--color-ink-subtle);font-size:0.6875rem;">Nie</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not cat['is_tracked'] %}
+                                <span style="color:var(--color-ink-subtle);">—</span>
+                                {% elif cat['count_period'] == 'yearly' %}Roczny
+                                {% elif cat['count_period'] == 'monthly' %}Miesięczny
+                                {% elif cat['count_period'] == 'rolling' %}Kroczący
+                                {% else %}{{ cat['count_period'] }}{% endif %}
+                            </td>
+                            <td style="text-align:center;font-variant-numeric:tabular-nums;">
+                                {% if not cat['is_tracked'] %}
+                                <span style="color:var(--color-ink-subtle);">—</span>
+                                {% elif cat['count_period'] == 'rolling' %}
+                                <span title="Okno kroczące">{{ cat['rolling_days'] or '—' }} d</span>
+                                {% else %}
+                                {{ cat['resets_at'] or 1 }}
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;font-variant-numeric:tabular-nums;">
+                                {% if not cat['is_tracked'] or cat['default_max_value'] == 0 %}
+                                <span style="color:var(--color-ink-subtle);">—</span>
+                                {% else %}
+                                {{ cat['default_max_value'] | int }}
+                                {% if cat['absence_full_day'] %} d{% else %} h{% endif %}
                                 {% endif %}
                             </td>
                             <td>
