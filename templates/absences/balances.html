@@ -93,10 +93,6 @@
             <h1 class="page-title">Bilanse urlopowe</h1>
             <p class="page-subtitle">Zarządzanie limitami i korektami</p>
         </div>
-        <button onclick="openNewAdjModal()" class="refined-btn-primary refined-btn-sm" style="margin-top:0.25rem;">
-            <span class="material-icons">tune</span>
-            Nowa korekta
-        </button>
     </div>
 
     <!-- Stats cards -->
@@ -132,7 +128,6 @@
             <option value="ok">OK</option>
             <option value="warning">Blisko limitu</option>
             <option value="exceeded">Przekroczony</option>
-            <option value="unlimited">Bez limitu</option>
         </select>
     </div>
 
@@ -366,7 +361,7 @@
             <td style="font-weight:500;">${row.employee_name}</td>
             <td>${row.category_name}</td>
             <td style="color:var(--color-ink-subtle);">${row.period_label || ''}</td>
-            <td style="text-align:right;font-variant-numeric:tabular-nums;">${row.used.toFixed(1)} ${unitL}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;">${Math.round(row.used)} ${unitL}</td>
             <td style="text-align:right;font-variant-numeric:tabular-nums;">${limitStr} ${row.status !== 'unlimited' ? unitL : ''}</td>
             <td>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
