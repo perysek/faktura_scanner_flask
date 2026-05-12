@@ -286,6 +286,18 @@ def clear_employee_balance_audit(employee_id: int):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@absence_balance_bp.route('/api/absence-balance-audit/employees-with-history', methods=['GET'])
+@login_required
+def employees_with_balance_history():
+    """Zwróć listę ID pracowników mających wpisy w historii bilansów."""
+    try:
+        ids = current_app.audit_repo.get_employee_ids_with_balance_history()
+        return jsonify({'success': True, 'employee_ids': ids})
+    except Exception as e:
+        logger.exception('employees_with_balance_history failed')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @absence_balance_bp.route('/api/absence-balance/check', methods=['POST'])
 @login_required
 def check_absence_balance():

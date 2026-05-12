@@ -183,6 +183,25 @@ class AuditRepository(BaseRepository):
         cursor = self._execute(query, (employee_id, employee_id))
         return cursor.rowcount
 
+    def get_employee_ids_with_balance_history(self) -> List[int]:
+        """Zwróć listę ID pracowników mających wpisy w historii bilansów."""
+        query = """
+            SELECT DISTINCT emp_id FROM (
+                SELECT eal.employee_id AS emp_id
+                FROM audit_log a
+                JOIN employee_absence_limits eal ON a.entity_id = eal.id
+                WHERE a.entity_type = 'absence_limit'
+                UNION
+                SELECT aba.employee_id AS emp_id
+                FROM audit_log a
+                JOIN absence_balance_adjustments aba ON a.entity_id = aba.id
+                WHERE a.entity_type = 'absence_adjustment'
+            ) sub
+            WHERE emp_id IS NOT NULL
+        """
+        rows = self._fetch_all(query, ())
+        return [r['emp_id'] for r in rows]
+
     def get_details_by_ids(self, ids_list: List[int]) -> List[dict]:
         """Pobierz szczegóły zmian dla podanych ID"""
         if not ids_list:
