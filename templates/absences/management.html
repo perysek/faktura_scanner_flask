@@ -643,6 +643,33 @@
 })();
 
 // ── Manual absence submission via JSON ────────────────────────────────────
+window._limitCheckResult = null;
+
+function _doManualSubmit(payload) {
+    fetch('/absences/manual', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (!res.success) {
+            Notifications.error(res.error || 'Błąd zapisu');
+            return;
+        }
+        if (res.conflicts && res.conflicts.length > 0) {
+            Notifications.warning(`Nieobecność zapisana. Uwaga: ${res.conflicts.length} kolidujących wizyt.`);
+        } else {
+            Notifications.success('Nieobecność zapisana');
+        }
+        setTimeout(() => location.reload(), 900);
+    })
+    .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+}
+
 Absences.submitManual = function() {
     const empSel  = document.getElementById('manual-employee');
     const catSel  = document.getElementById('manual-category');
@@ -678,28 +705,18 @@ Absences.submitManual = function() {
         notes:        notes?.value?.trim() || null,
     };
 
-    fetch('/absences/manual', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify(payload),
-    })
-    .then(r => r.json())
-    .then(res => {
-        if (!res.success) {
-            Notifications.error(res.error || 'Błąd zapisu');
-            return;
-        }
-        if (res.conflicts && res.conflicts.length > 0) {
-            Notifications.warning(`Nieobecność zapisana. Uwaga: ${res.conflicts.length} kolidujących wizyt.`);
-        } else {
-            Notifications.success('Nieobecność zapisana');
-        }
-        setTimeout(() => location.reload(), 900);
-    })
-    .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+    if (window._limitCheckResult?.will_exceed) {
+        const msg = window._limitCheckResult.message || 'Ta nieobecność przekroczy limit bilansu.';
+        Modals.confirm({
+            title: 'Uwaga: Przekroczenie limitu',
+            message: msg + ' Czy zapisać mimo to?',
+            confirmText: 'Zapisz mimo to',
+            onConfirm: () => _doManualSubmit(payload),
+        });
+        return;
+    }
+
+    _doManualSubmit(payload);
 };
 
 // ── Dynamic absence category dropdown ────────────────────────────────────────
@@ -753,6 +770,71 @@ Absences.submitManual = function() {
         } catch (e) { /* balance hints are non-critical */ }
     }
     document.addEventListener('DOMContentLoaded', populateBalanceHints);
+}());
+
+// ── Limit exceeded auto-check while typing (manual form) ─────────────────
+(function () {
+    let _checkTimeout = null;
+
+    async function runLimitCheck() {
+        const empId  = parseInt(document.getElementById('manual-employee')?.value  || '0');
+        const catSel = document.getElementById('manual-category');
+        const catId  = parseInt(catSel?.value || '0');
+        const dateFrom = document.getElementById('manual-date-from')?.value;
+
+        if (!empId || !catId || !dateFrom) { window._limitCheckResult = null; return; }
+
+        const catOpt  = catSel.options[catSel.selectedIndex];
+        const fullDay = !catOpt || catOpt.dataset.fullDay !== 'false';
+
+        if (fullDay) {
+            if (!document.getElementById('manual-date-to')?.value) { window._limitCheckResult = null; return; }
+        } else {
+            const tf = document.getElementById('manual-time-from')?.value;
+            const tt = document.getElementById('manual-time-to')?.value;
+            if (!tf || !tt) { window._limitCheckResult = null; return; }
+        }
+
+        const payload = { employee_id: empId, category_id: catId, date_from: dateFrom };
+        if (fullDay) {
+            payload.date_to = document.getElementById('manual-date-to').value;
+        } else {
+            payload.time_from = document.getElementById('manual-time-from').value;
+            payload.time_to   = document.getElementById('manual-time-to').value;
+        }
+
+        try {
+            const r = await fetch('/api/absence-balance/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const d = await r.json();
+            if (!d.success) { window._limitCheckResult = null; return; }
+            window._limitCheckResult = Object.assign({}, d.check, { will_exceed: d.will_exceed });
+            if (d.check?.warning) {
+                Notifications.warning(d.check.message, 7000);
+            }
+        } catch (_) {
+            window._limitCheckResult = null;
+        }
+    }
+
+    function scheduleCheck() {
+        clearTimeout(_checkTimeout);
+        _checkTimeout = setTimeout(runLimitCheck, 450);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        ['manual-employee', 'manual-category', 'manual-date-from',
+         'manual-date-to', 'manual-time-from', 'manual-time-to'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', scheduleCheck);
+                el.addEventListener('input', scheduleCheck);
+            }
+        });
+    });
 }());
 
 // ── Category button wiring via data-* attributes ──────────────────────────

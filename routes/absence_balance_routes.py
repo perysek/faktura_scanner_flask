@@ -265,10 +265,76 @@ def delete_employee_adjustment(employee_id: int, adj_id: int):
 def employee_balance_audit(employee_id: int):
     """Historia zmian limitów i korekt dla danego pracownika."""
     try:
-        entries = current_app.audit_repo.get_all(entity_type='absence_limit')
-        entries += current_app.audit_repo.get_all(entity_type='absence_adjustment')
-        entries.sort(key=lambda x: x.get('timestamp') or '', reverse=True)
-        return jsonify({'success': True, 'entries': entries[:200]})
+        entries = current_app.audit_repo.get_for_employee_balance(employee_id)
+        return jsonify({'success': True, 'entries': entries})
     except Exception as e:
         logger.exception('employee_balance_audit failed')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@absence_balance_bp.route(
+    '/api/employees/<int:employee_id>/absence-balance-audit',
+    methods=['DELETE'])
+@absence_management_required
+def clear_employee_balance_audit(employee_id: int):
+    """Usuń historię zmian bilansów dla pracownika."""
+    try:
+        deleted = current_app.audit_repo.delete_for_employee_balance(employee_id)
+        return jsonify({'success': True, 'deleted': deleted})
+    except Exception as e:
+        logger.exception('clear_employee_balance_audit failed')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@absence_balance_bp.route('/api/absence-balance/check', methods=['POST'])
+@login_required
+def check_absence_balance():
+    """Sprawdź czy planowana nieobecność przekroczy limit bilansu."""
+    data = request.get_json(silent=True) or {}
+    try:
+        employee_id = int(data['employee_id'])
+        category_id = int(data['category_id'])
+        date_from_str = data['date_from']
+        date_to_str = data.get('date_to') or date_from_str
+        time_from_str = data.get('time_from')
+        time_to_str = data.get('time_to')
+    except (KeyError, ValueError, TypeError) as e:
+        return jsonify({'success': False, 'error': f'Nieprawidłowe dane: {e}'}), 400
+
+    try:
+        from datetime import date, datetime
+
+        cat_row = current_app.absence_category_repo.get_by_id(category_id)
+        if not cat_row or not bool(cat_row.get('is_tracked')):
+            return jsonify({'success': True, 'check': {'ok': True, 'warning': False},
+                            'will_exceed': False})
+
+        if bool(cat_row['absence_full_day']):
+            d_from = date.fromisoformat(date_from_str)
+            d_to = date.fromisoformat(date_to_str)
+            proposed_value = float((d_to - d_from).days + 1)
+        else:
+            if not time_from_str or not time_to_str:
+                return jsonify({'success': True, 'check': {'ok': True, 'warning': False},
+                                'will_exceed': False})
+            t1 = datetime.strptime(time_from_str[:5], '%H:%M')
+            t2 = datetime.strptime(time_to_str[:5], '%H:%M')
+            proposed_value = (t2 - t1).seconds / 3600.0
+
+        if proposed_value <= 0:
+            return jsonify({'success': True, 'check': {'ok': True, 'warning': False},
+                            'will_exceed': False})
+
+        check = _balance_svc().check_before_submit(
+            employee_id, category_id, proposed_value, 'manual'
+        )
+
+        will_exceed = False
+        if check.get('warning') and check.get('balance') and check['balance'].get('has_limit'):
+            bal = check['balance']
+            will_exceed = (bal['net_used'] + proposed_value) > bal['limit']
+
+        return jsonify({'success': True, 'check': check, 'will_exceed': will_exceed})
+    except Exception as e:
+        logger.exception('check_absence_balance failed')
         return jsonify({'success': False, 'error': str(e)}), 500

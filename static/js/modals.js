@@ -124,8 +124,8 @@ const Modals = {
      */
     close(overlay) {
         if (overlay && overlay.parentElement) {
-            overlay.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-            setTimeout(() => overlay.remove(), 300);
+            overlay.classList.add('opacity-0', 'transition-opacity', 'duration-600');
+            setTimeout(() => overlay.remove(), 600);
         }
     },
 
