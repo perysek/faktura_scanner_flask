@@ -113,6 +113,7 @@ class AbsenceBalanceService:
             'adjustments': round(adjustments, 2),
             'net_used': round(net_used, 2),
             'limit': limit,
+            'default_max_value': float(cat_row['default_max_value']),
             'has_limit': has_limit,
             'pct': round(pct, 2),
             'warning_threshold_pct': warning_pct,
