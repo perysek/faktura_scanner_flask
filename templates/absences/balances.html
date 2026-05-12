@@ -107,7 +107,7 @@
         </div>
         <div class="stat-card">
             <div class="stat-label">Śledzone kategorie</div>
-            <div class="stat-value">{{ tracked_categories | length }}</div>
+            <div class="stat-value" id="stat-cat-count">—</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Bliscy limitu</div>
@@ -126,9 +126,6 @@
                style="min-width:220px;">
         <select class="filter-input" id="cat-filter" onchange="filterTable()">
             <option value="">Wszystkie kategorie</option>
-            {% for cat in tracked_categories %}
-            <option value="{{ cat['id'] }}">{{ cat['name'] }}</option>
-            {% endfor %}
         </select>
         <select class="filter-input" id="status-filter" onchange="filterTable()">
             <option value="">Wszystkie statusy</option>
@@ -173,18 +170,12 @@
             <label class="form-label">Pracownik *</label>
             <select class="form-input" id="adj-employee-id">
                 <option value="">Wybierz pracownika…</option>
-                {% for emp in employees %}
-                <option value="{{ emp['id'] }}">{{ emp['first_name'] }} {{ emp['last_name'] }}</option>
-                {% endfor %}
             </select>
         </div>
         <div class="form-row">
             <label class="form-label">Kategoria *</label>
             <select class="form-input" id="adj-category-id">
                 <option value="">Wybierz kategorię…</option>
-                {% for cat in tracked_categories %}
-                <option value="{{ cat['id'] }}">{{ cat['name'] }}</option>
-                {% endfor %}
             </select>
         </div>
         <div class="form-row">
@@ -217,11 +208,52 @@
 
     // ── Load data ────────────────────────────────────────────────────────────
 
+    function populateSelect(selectId, items, valueKey, labelFn, placeholder) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>`;
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item[valueKey];
+            opt.textContent = labelFn(item);
+            sel.appendChild(opt);
+        });
+        if (current) sel.value = current;  // restore previous selection if still valid
+    }
+
+    async function loadDropdownData() {
+        try {
+            const [catRes, empRes] = await Promise.all([
+                fetch('/api/absence-categories/tracked'),
+                fetch('/api/employees?active_only=false'),
+            ]);
+            const catData = await catRes.json();
+            const empData = await empRes.json();
+
+            if (catData.success) {
+                const cats = catData.categories || [];
+                populateSelect('cat-filter', cats, 'id', c => c.name, 'Wszystkie kategorie');
+                populateSelect('adj-category-id', cats, 'id', c => c.name, 'Wybierz kategorię…');
+                const statEl = document.getElementById('stat-cat-count');
+                if (statEl) statEl.textContent = cats.length;
+            }
+            if (empData.success) {
+                const emps = empData.employees || [];
+                populateSelect('adj-employee-id', emps, 'id',
+                    e => `${e.first_name} ${e.last_name}`, 'Wybierz pracownika…');
+            }
+        } catch (e) {
+            console.error('loadDropdownData', e);
+        }
+    }
+
     async function loadSummary() {
         try {
             const [summaryRes, balancesRes] = await Promise.all([
                 fetch('/api/absence-balances/summary'),
                 buildDetailedRows(),
+                loadDropdownData(),
             ]);
             const sData = await summaryRes.json();
             if (!sData.success) return;
