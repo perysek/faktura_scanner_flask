@@ -65,6 +65,7 @@
     .btn-xs:hover { background: var(--color-surface); }
     .btn-xs.danger { color: var(--color-error, #b91c1c); border-color: rgba(185,28,28,.3); }
     .btn-xs.danger:hover { background: rgba(185,28,28,.06); }
+    .btn-xs:disabled { opacity: 0.45; cursor: not-allowed; }
 
     /* Modal overlay */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: flex;
@@ -326,6 +327,7 @@
             return;
         }
         tbody.innerHTML = rows.map(renderRow).join('');
+        applyHistoriaButtonStates();
     }
 
     function barClass(status) {
@@ -353,6 +355,9 @@
         const unitL = unitLabel(row.unit);
         const limitStr = row.status === 'unlimited' ? '∞' : row.limit;
         const exceededCls = row.status === 'exceeded' ? 'exceeded-row' : '';
+        const statusLabel = row.status === 'ok'
+            ? `Pozostało ${Math.round(row.limit - row.used)} ${unitL}`
+            : badgeLabel(row.status);
         return `
         <tr class="${exceededCls}" data-emp-id="${row.employee_id}"
             data-cat-id="${row.category_id}" data-status="${row.status}"
@@ -374,7 +379,7 @@
                     </span>
                 </div>
             </td>
-            <td><span class="status-badge ${badgeClass(row.status)}">${badgeLabel(row.status)}</span></td>
+            <td><span class="status-badge ${badgeClass(row.status)}">${statusLabel}</span></td>
             <td>
                 <div style="display:flex;gap:0.375rem;flex-wrap:wrap;">
                     <button class="btn-xs" onclick="openAdjModal(${row.employee_id},'${row.employee_name}',${row.category_id},'${row.category_name}')">Korekta</button>
@@ -471,6 +476,32 @@
         }
     }
 
+    // ── Historia button state ─────────────────────────────────────────────────
+
+    let _employeeIdsWithHistory = null;
+
+    async function fetchEmployeesWithHistory() {
+        if (_employeeIdsWithHistory !== null) return _employeeIdsWithHistory;
+        try {
+            const r = await fetch('/api/absence-balance-audit/employees-with-history');
+            const d = await r.json();
+            _employeeIdsWithHistory = d.success ? new Set(d.employee_ids) : new Set();
+        } catch (_) {
+            _employeeIdsWithHistory = new Set();
+        }
+        return _employeeIdsWithHistory;
+    }
+
+    function applyHistoriaButtonStates() {
+        fetchEmployeesWithHistory().then(withHistory => {
+            document.querySelectorAll('tr[data-emp-id]').forEach(tr => {
+                const empId = parseInt(tr.dataset.empId, 10);
+                const btn = tr.querySelector('button[onclick^="toggleAudit"]');
+                if (btn) btn.disabled = !withHistory.has(empId);
+            });
+        });
+    }
+
     window.clearBalanceHistory = async function (empId) {
         Modals.confirm({
             title: 'Wyczyść historię',
@@ -484,15 +515,16 @@
                     const d = await r.json();
                     if (d.success) {
                         if (typeof Notifications !== 'undefined') Notifications.success('Historia wyczyszczona');
-                        // Reload the audit subrow
-                        const parentRow = document.querySelector(`tr[data-emp-id="${empId}"]`);
-                        if (parentRow) {
-                            const nextRow = parentRow.nextElementSibling;
-                            if (nextRow && nextRow.classList.contains('audit-subrow')) {
-                                const inner = nextRow.querySelector('[class^="audit-inner-"]');
-                                if (inner) await loadAudit(empId, inner);
-                            }
-                        }
+                        // Collapse all open audit subrows for this employee
+                        document.querySelectorAll(`[id^="audit-${empId}-"]`).forEach(sub => {
+                            sub.style.display = 'none';
+                        });
+                        // Disable Historia buttons for this employee
+                        document.querySelectorAll(`tr[data-emp-id="${empId}"] button[onclick^="toggleAudit"]`).forEach(btn => {
+                            btn.disabled = true;
+                        });
+                        // Invalidate cache entry
+                        if (_employeeIdsWithHistory) _employeeIdsWithHistory.delete(empId);
                     } else {
                         if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd czyszczenia');
                     }
