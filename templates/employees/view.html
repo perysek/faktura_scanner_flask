@@ -1170,7 +1170,14 @@ function confirmDelete() {
         }
     };
 
-    window.openAdjustmentModal = function () {
+    window.openAdjustmentModal = async function () {
+        // Always fetch fresh categories so newly added ones appear
+        try {
+            const r = await fetch('/api/absence-categories/tracked');
+            const d = await r.json();
+            if (d.success) _trackedCategories = d.categories || [];
+        } catch (e) { /* use cached _trackedCategories if fetch fails */ }
+
         const sel = document.getElementById('modal-cat-id');
         sel.innerHTML = _trackedCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         document.getElementById('modal-delta').value = '';

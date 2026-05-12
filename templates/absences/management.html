@@ -352,14 +352,6 @@
                         </label>
                         <select id="manual-category" class="refined-select" required>
                             <option value="">— wybierz —</option>
-                            {% for cat in categories %}
-                            {% if not cat['is_deleted'] %}
-                            <option value="{{ cat['id'] }}"
-                                    data-full-day="{{ 'true' if cat['absence_full_day'] else 'false' }}">
-                                {{ cat['name'] }}
-                            </option>
-                            {% endif %}
-                            {% endfor %}
                         </select>
                     </div>
 
@@ -655,6 +647,30 @@ Absences.submitManual = function() {
     })
     .catch(() => Notifications.error('Błąd połączenia z serwerem'));
 };
+
+// ── Dynamic absence category dropdown ────────────────────────────────────────
+(function () {
+    async function loadAbsenceCategories() {
+        try {
+            const r = await fetch('/api/absence-categories');
+            const d = await r.json();
+            if (!d.success) return;
+            const sel = document.getElementById('manual-category');
+            if (!sel) return;
+            const current = sel.value;
+            sel.innerHTML = '<option value="">— wybierz —</option>';
+            (d.categories || []).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                opt.dataset.fullDay = cat.absence_full_day ? 'true' : 'false';
+                sel.appendChild(opt);
+            });
+            if (current) sel.value = current;
+        } catch (e) { /* non-critical */ }
+    }
+    document.addEventListener('DOMContentLoaded', loadAbsenceCategories);
+}());
 
 // ── Balance hints ─────────────────────────────────────────────────────────────
 (function () {

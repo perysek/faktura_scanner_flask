@@ -2,6 +2,7 @@
 Routes zarządzania bilansem nieobecności.
 
 GET  /absence-balances                           — strona zarządzania bilansami
+GET  /api/absence-categories/tracked             — JSON: lista śledzonych kategorii (dla dropdownów)
 GET  /api/absence-balances/summary               — JSON: podsumowanie dla listy pracowników
 GET  /api/employees/<id>/absence-balances        — JSON: bilanse danego pracownika
 POST /api/employees/<id>/absence-limits          — ustaw indywidualny limit
@@ -43,6 +44,33 @@ def balances_index():
 
 
 # ── JSON API ──────────────────────────────────────────────────────────────────
+
+@absence_balance_bp.route('/api/absence-categories/tracked')
+@absence_management_required
+def tracked_categories_json():
+    """Zwraca aktualne śledzone kategorie jako JSON (do dynamicznych dropdownów)."""
+    try:
+        rows = current_app.absence_category_repo.list_tracked()
+        cats = [{'id': r['id'], 'name': r['name']} for r in rows]
+        return jsonify({'success': True, 'categories': cats})
+    except Exception as e:
+        logger.exception('tracked_categories_json failed')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@absence_balance_bp.route('/api/absence-categories')
+@absence_management_required
+def all_categories_json():
+    """Zwraca wszystkie aktywne kategorie jako JSON (do formularzy tworzenia nieobecności)."""
+    try:
+        rows = current_app.absence_category_repo.list_active()
+        cats = [{'id': r['id'], 'name': r['name'],
+                 'absence_full_day': bool(r['absence_full_day'])} for r in rows]
+        return jsonify({'success': True, 'categories': cats})
+    except Exception as e:
+        logger.exception('all_categories_json failed')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @absence_balance_bp.route('/api/absence-balances/summary')
 @absence_management_required
