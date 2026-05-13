@@ -30,6 +30,7 @@ from config.auth_config import (
 )
 from database.models import AbsenceCategory
 from exceptions import AppError
+from repositories.audit_repository import AuditRepository
 from services.absence_service import AbsenceService, AbsenceError
 
 logger = logging.getLogger(__name__)
@@ -235,6 +236,8 @@ def create_manual():
     data = request.get_json(silent=True) or request.form
     try:
         employee_id = int(data['employee_id'])
+        if employee_id == emp_id and current_user.role not in ('superuser', 'admin'):
+            return jsonify({'success': False, 'error': 'Nie możesz tworzyć manualnej nieobecności dla siebie. Złóż wniosek przez "Moje nieobecności".'}), 403
         category_id = int(data['category_id'])
         date_from   = _parse_date(data.get('date_from'))
         date_to     = _parse_date(data.get('date_to', data.get('date_from')))
@@ -281,7 +284,7 @@ def update_absence(absence_id: int):
 @absence_management_required
 def delete_absence(absence_id: int):
     try:
-        _svc().soft_delete(absence_id)
+        _svc().soft_delete(absence_id, deleted_by=current_user.id)
         return jsonify({'success': True})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -339,6 +342,14 @@ def create_category():
             **bf,
         )
         new_id = current_app.absence_category_repo.create(cat)
+        AuditRepository().log_event(
+            entity_type='absence_category',
+            action='CREATE',
+            entity_id=new_id,
+            entity_label=name,
+            user_id=current_user.id,
+            user_name=current_user.full_name,
+        )
         return jsonify({'success': True, 'id': new_id}), 201
     except Exception as e:
         logger.exception('create_category failed')
@@ -360,6 +371,14 @@ def update_category(category_id: int):
     updated = current_app.absence_category_repo.update(category_id, cat)
     if not updated:
         return jsonify({'success': False, 'error': 'Kategoria nie istnieje'}), 404
+    AuditRepository().log_event(
+        entity_type='absence_category',
+        action='UPDATE',
+        entity_id=category_id,
+        entity_label=name,
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+    )
     return jsonify({'success': True})
 
 
@@ -370,4 +389,15 @@ def delete_category(category_id: int):
     deleted = current_app.absence_category_repo.soft_delete(category_id)
     if not deleted:
         return jsonify({'success': False, 'error': 'Kategoria nie istnieje lub już usunięta'}), 404
+    AuditRepository().log_event(
+        entity_type='absence_category',
+        action='DELETE',
+        entity_id=category_id,
+        entity_label=str(category_id),
+        field_name='is_deleted',
+        old_value='false',
+        new_value='true',
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+    )
     return jsonify({'success': True})

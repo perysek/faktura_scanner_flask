@@ -69,13 +69,16 @@ def api_list():
         roles_data = []
         for row in rows:
             perms = role_repo.get_permissions(row['id'])
+            # Flatten for the list view: just has_access booleans per module
+            perms_flat = {m: v['has_access'] for m, v in perms.items()}
             roles_data.append({
                 'id': row['id'],
                 'name': row['name'],
                 'display_name': row['display_name'],
                 'is_protected': bool(row['is_protected']),
                 'access_count': row['access_count'],
-                'permissions': perms,
+                'permissions': perms_flat,
+                'permissions_detail': perms,
             })
         return jsonify({'roles': roles_data, 'count': len(roles_data)})
     except AppError:

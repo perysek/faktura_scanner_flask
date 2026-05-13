@@ -87,36 +87,82 @@ class RoleRepository:
 
     def get_permissions(self, role_id: int) -> dict:
         """
-        Zwraca słownik modułów i ich dostępu dla danej roli.
-        Przykład: {'invoices': True, 'clients': False, ...}
-        Nieznane moduły defaultują do False.
+        Zwraca słownik modułów z pełnymi flagami dostępu dla danej roli.
+        Przykład: {'invoices': {'has_access': True, 'read_only': False, 'own_data': False}, ...}
         """
-        query = "SELECT module_name, has_access FROM role_permissions WHERE role_id = %s"
+        query = "SELECT module_name, has_access, read_only, own_data FROM role_permissions WHERE role_id = %s"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (role_id,))
             rows = cursor.fetchall()
 
-        db_perms = {row['module_name']: bool(row['has_access']) for row in rows}
-        # Fill in missing modules with False
-        return {m: db_perms.get(m, False) for m in ALL_MODULES}
+        db_perms = {
+            row['module_name']: {
+                'has_access': bool(row['has_access']),
+                'read_only': bool(row['read_only']),
+                'own_data': bool(row['own_data']),
+            }
+            for row in rows
+        }
+        default = {'has_access': False, 'read_only': False, 'own_data': False}
+        return {m: db_perms.get(m, dict(default)) for m in ALL_MODULES}
 
     def set_permissions(self, role_id: int, permissions: dict):
         """
-        Ustaw uprawnienia roli. permissions = {'invoices': True, 'clients': False, ...}
-        Wykonuje upsert dla każdego modułu.
+        Ustaw uprawnienia roli.
+        permissions = {
+            'invoices': {'has_access': True, 'read_only': False, 'own_data': False},
+            ...
+        }
+        Akceptuje też stary format {'invoices': True} dla kompatybilności wstecznej.
         """
         query = """
-            INSERT INTO role_permissions (role_id, module_name, has_access)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (role_id, module_name) DO UPDATE SET has_access = EXCLUDED.has_access
+            INSERT INTO role_permissions (role_id, module_name, has_access, read_only, own_data)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (role_id, module_name) DO UPDATE
+                SET has_access = EXCLUDED.has_access,
+                    read_only  = EXCLUDED.read_only,
+                    own_data   = EXCLUDED.own_data
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
             for module in ALL_MODULES:
-                has_access = bool(permissions.get(module, False))
-                cursor.execute(query, (role_id, module, has_access))
+                val = permissions.get(module, False)
+                if isinstance(val, dict):
+                    has_access = bool(val.get('has_access', False))
+                    read_only = bool(val.get('read_only', False))
+                    own_data = bool(val.get('own_data', False))
+                else:
+                    has_access = bool(val)
+                    read_only = False
+                    own_data = False
+                cursor.execute(query, (role_id, module, has_access, read_only, own_data))
             conn.commit()
+
+    def get_permission_flags(self, role_name: str, module_name: str) -> dict:
+        """
+        Zwraca pełne flagi uprawnień dla pary rola+moduł.
+        Przykład: {'has_access': True, 'read_only': False, 'own_data': True}
+        """
+        query = """
+            SELECT rp.has_access, rp.read_only, rp.own_data
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            WHERE r.name = %s AND rp.module_name = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (role_name, module_name))
+            row = cursor.fetchone()
+        if row is None:
+            from config.auth_config import MODULE_PERMISSIONS
+            has_access = role_name in MODULE_PERMISSIONS.get(module_name, [])
+            return {'has_access': has_access, 'read_only': False, 'own_data': False}
+        return {
+            'has_access': bool(row['has_access']),
+            'read_only': bool(row['read_only']),
+            'own_data': bool(row['own_data']),
+        }
 
     def role_has_module_access(self, role_name: str, module_name: str) -> bool:
         """
