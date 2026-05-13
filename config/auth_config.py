@@ -181,6 +181,31 @@ def absence_management_required(f):
     return decorated_function
 
 
+def get_permission_flags(role_name: str, module_name: str) -> dict:
+    """
+    Zwraca pełne flagi uprawnień {has_access, read_only, own_data} dla roli+modułu.
+    Używane przez dekoratory i helpery wymuszające ograniczenia read_only/own_data.
+    """
+    try:
+        from repositories.roles.role_repository import RoleRepository
+        return RoleRepository().get_permission_flags(role_name, module_name)
+    except Exception:
+        has_access = role_name in MODULE_PERMISSIONS.get(module_name, [])
+        return {'has_access': has_access, 'read_only': False, 'own_data': False}
+
+
+def is_read_only(role_name: str, module_name: str) -> bool:
+    """True jeśli rola ma dostęp do modułu tylko do odczytu."""
+    flags = get_permission_flags(role_name, module_name)
+    return flags['has_access'] and flags['read_only']
+
+
+def is_own_data_only(role_name: str, module_name: str) -> bool:
+    """True jeśli rola może widzieć tylko własne dane w module."""
+    flags = get_permission_flags(role_name, module_name)
+    return flags['has_access'] and flags['own_data']
+
+
 def get_user_module_permissions(role_name: str) -> dict:
     """
     Pobierz dict {module: bool} dla roli użytkownika.

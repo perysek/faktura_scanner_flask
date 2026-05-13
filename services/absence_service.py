@@ -13,6 +13,7 @@ from exceptions import AppError
 from repositories.absences.absence_category_repository import AbsenceCategoryRepository
 from repositories.absences.absence_repository import AbsenceRepository
 from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
+from repositories.audit_repository import AuditRepository
 from repositories.employees.employee_repository import EmployeeRepository
 from services.absence_balance_service import AbsenceBalanceService
 
@@ -30,6 +31,13 @@ class AbsenceService:
         self.category_repo = AbsenceCategoryRepository()
         self.supervisor_repo = EmployeeSupervisorRepository()
         self.employee_repo = EmployeeRepository()
+        self.audit_repo = AuditRepository()
+
+    def _employee_label(self, employee_id: int) -> str:
+        row = self.employee_repo.get_by_id(employee_id)
+        if row:
+            return f"{row['first_name']} {row['last_name']}"
+        return str(employee_id)
 
     # ── submission ────────────────────────────────────────────────────────────
 
@@ -104,7 +112,19 @@ class AbsenceService:
             source='request',
             created_by=created_by,
         )
-        return self.absence_repo.create(absence)
+        absence_id = self.absence_repo.create(absence)
+        cat_row = self.category_repo.get_by_id(category_id)
+        cat_name = cat_row['name'] if cat_row else str(category_id)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='CREATE',
+            entity_id=absence_id,
+            entity_label=f"{self._employee_label(employee_id)} — {cat_name} ({date_from}→{date_to})",
+            field_name='status',
+            new_value='pending',
+            user_id=created_by,
+        )
+        return absence_id
 
     # ── approval flow ─────────────────────────────────────────────────────────
 
@@ -135,12 +155,32 @@ class AbsenceService:
             }
 
         self.absence_repo.respond(absence_id, 'approved', approver_employee_id)
+        row = self.absence_repo.get_by_id(absence_id)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='APPROVE',
+            entity_id=absence_id,
+            entity_label=self._employee_label(row['employee_id']) if row else str(absence_id),
+            field_name='status',
+            old_value='pending',
+            new_value='approved',
+        )
         return {'status': 'approved'}
 
     def force_approve(self, absence_id: int, approver_employee_id: int) -> None:
         """Zatwierdź wniosek pomijając konflikty z wizytami (po ręcznej rozgrywce)."""
         self._get_pending_or_raise(absence_id, approver_employee_id)
         self.absence_repo.respond(absence_id, 'approved', approver_employee_id)
+        row = self.absence_repo.get_by_id(absence_id)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='APPROVE_FORCED',
+            entity_id=absence_id,
+            entity_label=self._employee_label(row['employee_id']) if row else str(absence_id),
+            field_name='status',
+            old_value='pending',
+            new_value='approved',
+        )
 
     def reject(self, absence_id: int, approver_employee_id: int,
                rejection_reason: str) -> None:
@@ -150,6 +190,16 @@ class AbsenceService:
         self._get_pending_or_raise(absence_id, approver_employee_id)
         self.absence_repo.respond(absence_id, 'rejected', approver_employee_id,
                                   rejection_reason=rejection_reason.strip())
+        row = self.absence_repo.get_by_id(absence_id)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='REJECT',
+            entity_id=absence_id,
+            entity_label=self._employee_label(row['employee_id']) if row else str(absence_id),
+            field_name='rejection_reason',
+            old_value=None,
+            new_value=rejection_reason.strip(),
+        )
 
     def cancel_own(self, absence_id: int, employee_id: int) -> None:
         """Anuluj własny wniosek (tylko status=pending). D8."""
@@ -161,6 +211,16 @@ class AbsenceService:
         if row['status'] != 'pending':
             raise AbsenceError("Można anulować tylko wnioski oczekujące na zatwierdzenie")
         self.absence_repo.cancel(absence_id)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='CANCEL',
+            entity_id=absence_id,
+            entity_label=self._employee_label(employee_id),
+            field_name='status',
+            old_value='pending',
+            new_value='cancelled',
+            user_id=employee_id,
+        )
 
     # ── manual creation (supervisor) ──────────────────────────────────────────
 
@@ -219,6 +279,15 @@ class AbsenceService:
             created_by=created_by,
         )
         absence_id = self.absence_repo.create(absence)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='CREATE_MANUAL',
+            entity_id=absence_id,
+            entity_label=f"{self._employee_label(employee_id)} — {cat_row['name']} ({date_from}→{date_to})",
+            field_name='status',
+            new_value='approved',
+            user_id=created_by,
+        )
 
         appt_conflicts = self.absence_repo.get_overlapping_appointments(
             employee_id, date_from, date_to, time_from, time_to
@@ -265,15 +334,35 @@ class AbsenceService:
             notes=notes,
         )
         self.absence_repo.update(absence_id, updated)
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='UPDATE',
+            entity_id=absence_id,
+            entity_label=f"{self._employee_label(row['employee_id'])} — ({date_from}→{date_to})",
+            field_name='category_id',
+            old_value=str(row['category_id']),
+            new_value=str(category_id),
+        )
 
         appt_conflicts = self.absence_repo.get_overlapping_appointments(
             row['employee_id'], date_from, date_to, time_from, time_to
         )
         return {'conflicts': [self._format_appt_conflict(c) for c in appt_conflicts]}
 
-    def soft_delete(self, absence_id: int) -> None:
+    def soft_delete(self, absence_id: int, deleted_by: Optional[int] = None) -> None:
+        row = self.absence_repo.get_by_id(absence_id)
         if not self.absence_repo.soft_delete(absence_id):
             raise AbsenceError("Nieobecność nie istnieje lub już usunięta")
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='DELETE',
+            entity_id=absence_id,
+            entity_label=self._employee_label(row['employee_id']) if row else str(absence_id),
+            field_name='is_deleted',
+            old_value='false',
+            new_value='true',
+            user_id=deleted_by,
+        )
 
     # ── list helpers ──────────────────────────────────────────────────────────
 
