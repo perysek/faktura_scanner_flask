@@ -42,6 +42,30 @@
     .status-badge.completed { background: rgba(45,106,79,0.08); color: var(--color-status-completed); }
     .status-badge.cancelled { background: rgba(239,68,68,0.08); color: var(--color-status-cancelled); }
     .status-badge.no_show { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
+    .status-badge.clickable { cursor: pointer; transition: opacity 0.15s ease; }
+    .status-badge.clickable:hover { opacity: 0.7; }
+
+    .th-sortable { cursor: pointer; user-select: none; }
+    .th-sortable:hover { color: var(--color-ink); }
+    .sort-icon { display: inline-block; margin-left: 0.25rem; opacity: 0.35; font-size: 0.75em; }
+    .th-sortable.sort-asc .sort-icon, .th-sortable.sort-desc .sort-icon { opacity: 1; }
+
+    /* Status modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .modal-backdrop.hidden { display: none; }
+    .modal-box { background: white; border: 1px solid var(--color-border); border-radius: 3px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); width: 420px; max-width: 95vw; padding: 1.5rem; }
+    .modal-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.25rem; }
+    .modal-meta { font-size: 0.75rem; color: var(--color-ink-muted); margin-bottom: 1rem; }
+    .modal-section-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); margin-bottom: 0.5rem; }
+    .modal-status-options { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .modal-status-option { display: none; }
+    .modal-status-option + label { display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: all 0.15s ease; }
+    .modal-status-option:checked + label { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+    .modal-reason-wrap { margin-bottom: 1rem; }
+    .modal-reason-wrap label { font-size: 0.75rem; font-weight: 500; display: block; margin-bottom: 0.25rem; color: var(--color-ink-muted); }
+    .modal-reason-wrap textarea { width: 100%; padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; resize: vertical; min-height: 60px; font-family: inherit; box-sizing: border-box; }
+    .modal-error { font-size: 0.8125rem; color: var(--color-error, #dc2626); background: rgba(220,38,38,0.06); border-radius: 2px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; display: none; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
 
     .action-link { color: var(--color-status-scheduled); font-size: 0.8125rem; text-decoration: none; }
     .action-link:hover { color: var(--color-chart-blue-dark); }
@@ -107,14 +131,14 @@
             </button>
         </div>
 
-        <!-- Kontrolki paginacji tygodniowej -->
+        <!-- Kontrolki paginacji miesięcznej -->
         <div style="margin-left: auto; align-self: flex-end; display: flex; gap: 0.5rem;">
-            <button onclick="previousWeek()" class="refined-btn-secondary" title="Poprzedni tydzień" aria-label="Poprzedni tydzień">
+            <button onclick="previousMonth()" class="refined-btn-secondary" title="Poprzedni miesiąc (–30 dni)" aria-label="Poprzedni miesiąc">
                 <span class="material-icons">chevron_left</span>
-                Poprzedni
+                –30 dni
             </button>
-            <button onclick="nextWeek()" class="refined-btn-secondary" title="Następny tydzień" aria-label="Następny tydzień">
-                Następny
+            <button onclick="nextMonth()" class="refined-btn-secondary" title="Następny miesiąc (+30 dni)" aria-label="Następny miesiąc">
+                +30 dni
                 <span class="material-icons">chevron_right</span>
             </button>
         </div>
@@ -125,14 +149,14 @@
         <table class="refined-table">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Godzina</th>
-                    <th>Klient</th>
-                    <th>Usługa</th>
-                    <th>Pracownik</th>
-                    <th>Kwota</th>
-                    <th>Status</th>
-                    <th>Ocena</th>
+                    <th class="th-sortable" onclick="sortBy('appointment_date')" id="th-appointment_date">Data <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('start_time')" id="th-start_time">Godzina <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('client_name')" id="th-client_name">Klient <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('service_name')" id="th-service_name">Usługa <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('employee_name')" id="th-employee_name">Pracownik <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('total_price')" id="th-total_price">Kwota <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('status')" id="th-status">Status <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('satisfaction_score')" id="th-satisfaction_score">Ocena <span class="sort-icon">↕</span></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -147,6 +171,31 @@
         </table>
     </div>
 </div>
+<!-- Status Update Modal -->
+<div id="statusModal" class="modal-backdrop hidden" onclick="handleBackdropClick(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-title">Zmień status wizyty</div>
+        <div class="modal-meta" id="modalMeta"></div>
+
+        <div class="modal-section-label">Aktualny status</div>
+        <div style="margin-bottom:1rem;" id="modalCurrentStatus"></div>
+
+        <div class="modal-section-label">Nowy status</div>
+        <div class="modal-status-options" id="modalStatusOptions"></div>
+
+        <div class="modal-reason-wrap" id="modalReasonWrap" style="display:none;">
+            <label for="modalCancellationReason">Powód anulowania</label>
+            <textarea id="modalCancellationReason" placeholder="Opcjonalnie — wpisz powód anulowania..."></textarea>
+        </div>
+
+        <div class="modal-error" id="modalError"></div>
+
+        <div class="modal-actions">
+            <button class="refined-btn-secondary" onclick="closeStatusModal()">Zamknij</button>
+            <button class="refined-btn-primary" id="modalSubmitBtn" onclick="submitStatusChange()">Zapisz</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -154,12 +203,29 @@
 const IS_SUPERUSER = {{ (current_user.role == 'superuser') | tojson }};
 const STATUS_LABELS = {
     'scheduled': 'Zaplanowana',
+    'pending': 'Oczekująca',
     'confirmed': 'Potwierdzona',
     'in_progress': 'W trakcie',
     'completed': 'Zakończona',
     'cancelled': 'Anulowana',
     'no_show': 'Nieobecność'
 };
+const VALID_TRANSITIONS = {
+    'scheduled': ['confirmed', 'cancelled'],
+    'pending':   ['confirmed', 'cancelled'],
+    'confirmed': ['in_progress', 'cancelled', 'no_show'],
+    'in_progress': ['completed', 'cancelled'],
+    'completed': [],
+    'cancelled': [],
+    'no_show': []
+};
+
+// Sort state
+let allAppointments = [];
+let sortState = { column: null, direction: 'asc' };
+
+// Status modal state
+let modalAppointmentId = null;
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -175,8 +241,9 @@ function renderVisitRating(score) {
 
 function formatDate(dateStr) {
     if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const date = new Date(y, m - 1, d);  // local time — avoids UTC midnight shift
+    return date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function formatTime(timeStr) {
@@ -189,7 +256,6 @@ function formatCurrency(amount) {
     return parseFloat(amount).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
 }
 
-// Funkcje pomocnicze dla paginacji tygodniowej
 function formatDateForInput(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -199,7 +265,9 @@ function formatDateForInput(date) {
 
 function getDateFromInput(inputId) {
     const dateStr = document.getElementById(inputId).value;
-    return dateStr ? new Date(dateStr + 'T12:00:00') : null; // T12:00:00 unika problemów z timezone
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);  // local time
 }
 
 function setDateToInput(inputId, date) {
@@ -212,49 +280,119 @@ function addDays(date, days) {
     return result;
 }
 
-// Poprzedni tydzień
-function previousWeek() {
+// ── Period navigation (±30 days) ─────────────────────────────────────────────
+
+function previousMonth() {
     const startDate = getDateFromInput('filter-start');
     const endDate = getDateFromInput('filter-end');
-
     if (!startDate || !endDate) {
-        // Brak dat - ustaw domyślne (tydzień wstecz od dzisiaj)
         const today = new Date();
-        const weekBefore = addDays(today, -7);
-        setDateToInput('filter-start', weekBefore);
+        setDateToInput('filter-start', addDays(today, -30));
         setDateToInput('filter-end', today);
     } else {
-        // Przesuń istniejące daty o -7 dni
-        const newStart = addDays(startDate, -7);
-        const newEnd = addDays(endDate, -7);
-        setDateToInput('filter-start', newStart);
-        setDateToInput('filter-end', newEnd);
+        setDateToInput('filter-start', addDays(startDate, -30));
+        setDateToInput('filter-end', addDays(endDate, -30));
     }
-
-    loadAppointments(); // Auto-load
+    loadAppointments();
 }
 
-// Następny tydzień
-function nextWeek() {
+function nextMonth() {
     const startDate = getDateFromInput('filter-start');
     const endDate = getDateFromInput('filter-end');
-
     if (!startDate || !endDate) {
-        // Brak dat - ustaw domyślne (tydzień do przodu od dzisiaj)
         const today = new Date();
-        const weekLater = addDays(today, 7);
         setDateToInput('filter-start', today);
-        setDateToInput('filter-end', weekLater);
+        setDateToInput('filter-end', addDays(today, 30));
     } else {
-        // Przesuń istniejące daty o +7 dni
-        const newStart = addDays(startDate, 7);
-        const newEnd = addDays(endDate, 7);
-        setDateToInput('filter-start', newStart);
-        setDateToInput('filter-end', newEnd);
+        setDateToInput('filter-start', addDays(startDate, 30));
+        setDateToInput('filter-end', addDays(endDate, 30));
     }
-
-    loadAppointments(); // Auto-load
+    loadAppointments();
 }
+
+// ── Sorting ───────────────────────────────────────────────────────────────────
+
+function sortBy(column) {
+    if (sortState.column === column) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortState.column = column;
+        sortState.direction = 'asc';
+    }
+    updateSortHeaders();
+    renderTable(allAppointments);
+}
+
+function updateSortHeaders() {
+    document.querySelectorAll('.th-sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        th.querySelector('.sort-icon').textContent = '↕';
+    });
+    if (!sortState.column) return;
+    const th = document.getElementById('th-' + sortState.column);
+    if (!th) return;
+    th.classList.add('sort-' + sortState.direction);
+    th.querySelector('.sort-icon').textContent = sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getSortValue(a, column) {
+    const v = a[column];
+    if (v == null) return '';
+    if (column === 'total_price' || column === 'satisfaction_score') return parseFloat(v) || 0;
+    return String(v).toLowerCase();
+}
+
+function getSortedAppointments(appointments) {
+    if (!sortState.column) return appointments;
+    return [...appointments].sort((a, b) => {
+        const va = getSortValue(a, sortState.column);
+        const vb = getSortValue(b, sortState.column);
+        let cmp = 0;
+        if (typeof va === 'number' && typeof vb === 'number') {
+            cmp = va - vb;
+        } else {
+            cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        }
+        return sortState.direction === 'asc' ? cmp : -cmp;
+    });
+}
+
+// ── Table rendering ───────────────────────────────────────────────────────────
+
+function renderTable(appointments) {
+    const tbody = document.getElementById('appointments-tbody');
+    const sorted = getSortedAppointments(appointments);
+    if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = sorted.map(a => {
+        const statusLabel = STATUS_LABELS[a.status] || a.status;
+        const serviceName = a.service_name || 'Brak usługi';
+        const hasTransitions = (VALID_TRANSITIONS[a.status] || []).length > 0;
+        const badgeClass = hasTransitions ? 'clickable' : '';
+        const badgeData = hasTransitions
+            ? `data-appt-id="${a.id}" data-status="${a.status}" data-client="${escapeHtml(a.client_name || '')}" data-date="${a.appointment_date || ''}" data-time="${formatTime(a.start_time)}"`
+            : '';
+        return `
+            <tr>
+                <td>${formatDate(a.appointment_date)}</td>
+                <td>${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
+                <td>${escapeHtml(a.client_name)}</td>
+                <td>${escapeHtml(serviceName)}</td>
+                <td>${escapeHtml(a.employee_name)}</td>
+                <td>${formatCurrency(a.total_price)}</td>
+                <td><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
+                <td>${renderVisitRating(a.satisfaction_score)}</td>
+                <td style="text-align:right;">
+                    <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list`}" class="action-link">Modyfikuj</a><span class="action-separator">|</span><a href="/appointment/${a.id}?from=list" class="action-link">Szczegóły</a>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
 
 async function loadAppointments() {
     saveFilterState('appointments', ['filter-start', 'filter-end', 'filter-status']);
@@ -275,33 +413,9 @@ async function loadAppointments() {
     try {
         const response = await fetch(`/api/appointments?${params}`);
         const data = await response.json();
-
         if (data.success) {
-            if (data.appointments.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = data.appointments.map(a => {
-                const statusLabel = STATUS_LABELS[a.status] || a.status;
-                const serviceName = a.service_name || 'Brak usługi';
-
-                return `
-                    <tr>
-                        <td>${formatDate(a.appointment_date)}</td>
-                        <td>${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
-                        <td>${escapeHtml(a.client_name)}</td>
-                        <td>${escapeHtml(serviceName)}</td>
-                        <td>${escapeHtml(a.employee_name)}</td>
-                        <td>${formatCurrency(a.total_price)}</td>
-                        <td><span class="status-badge ${a.status}">${statusLabel}</span></td>
-                        <td>${renderVisitRating(a.satisfaction_score)}</td>
-                        <td style="text-align:right;">
-                            <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list`}" class="action-link">Modyfikuj</a><span class="action-separator">|</span><a href="/appointment/${a.id}?from=list" class="action-link">Szczegóły</a>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            allAppointments = data.appointments;
+            renderTable(allAppointments);
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
@@ -316,11 +430,115 @@ async function loadAppointments() {
     }
 }
 
-// Update view links to preserve employee_id from URL
+// ── Status modal ──────────────────────────────────────────────────────────────
+
+function openStatusModal(id, currentStatus, clientName, date, time) {
+    modalAppointmentId = id;
+    document.getElementById('modalMeta').textContent = `${clientName} — ${date} ${time}`;
+    document.getElementById('modalCurrentStatus').innerHTML = `<span class="status-badge ${currentStatus}">${STATUS_LABELS[currentStatus] || currentStatus}</span>`;
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('modalError').textContent = '';
+    document.getElementById('modalCancellationReason').value = '';
+    document.getElementById('modalReasonWrap').style.display = 'none';
+
+    const options = VALID_TRANSITIONS[currentStatus] || [];
+    const container = document.getElementById('modalStatusOptions');
+    container.innerHTML = options.map(s => `
+        <input type="radio" class="modal-status-option" name="newStatus" id="ns_${s}" value="${s}" onchange="onStatusOptionChange('${s}')">
+        <label for="ns_${s}">${STATUS_LABELS[s] || s}</label>
+    `).join('');
+
+    // Pre-select first option
+    if (options.length > 0) {
+        const firstRadio = document.getElementById('ns_' + options[0]);
+        if (firstRadio) {
+            firstRadio.checked = true;
+            onStatusOptionChange(options[0]);
+        }
+    }
+
+    document.getElementById('modalSubmitBtn').disabled = options.length === 0;
+    document.getElementById('statusModal').classList.remove('hidden');
+}
+
+function onStatusOptionChange(selectedStatus) {
+    const reasonWrap = document.getElementById('modalReasonWrap');
+    reasonWrap.style.display = selectedStatus === 'cancelled' ? 'block' : 'none';
+}
+
+function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    modalAppointmentId = null;
+}
+
+function handleBackdropClick(event) {
+    if (event.target === document.getElementById('statusModal')) {
+        closeStatusModal();
+    }
+}
+
+async function submitStatusChange() {
+    const selected = document.querySelector('input[name="newStatus"]:checked');
+    if (!selected) return;
+    const newStatus = selected.value;
+    const cancellationReason = document.getElementById('modalCancellationReason').value.trim();
+
+    const errorEl = document.getElementById('modalError');
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Zapisywanie...';
+
+    try {
+        const payload = { status: newStatus };
+        if (cancellationReason) payload.cancellation_reason = cancellationReason;
+
+        const resp = await fetch(`/api/appointments/${modalAppointmentId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            closeStatusModal();
+            loadAppointments();
+        } else {
+            const msg = data.error || data.message || 'Nieznany błąd';
+            errorEl.textContent = msg;
+            errorEl.style.display = 'block';
+        }
+    } catch (err) {
+        errorEl.textContent = 'Błąd połączenia z serwerem';
+        errorEl.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Zapisz';
+    }
+}
+
+// ── Status badge click delegation ────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('appointments-tbody').addEventListener('click', e => {
+        const badge = e.target.closest('.status-badge.clickable');
+        if (!badge) return;
+        openStatusModal(
+            parseInt(badge.dataset.apptId),
+            badge.dataset.status,
+            badge.dataset.client,
+            badge.dataset.date,
+            badge.dataset.time
+        );
+    });
+});
+
+// ── View links & init ─────────────────────────────────────────────────────────
+
 function updateViewLinks() {
     const urlParams = new URLSearchParams(window.location.search);
     const employeeId = urlParams.get('employee_id');
-
     if (employeeId) {
         const baseUrls = {
             'nav-day': '{{ url_for("main.appointments_calendar") }}',
@@ -328,26 +546,20 @@ function updateViewLinks() {
             'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
             'nav-list': '{{ url_for("main.appointments_list") }}'
         };
-
         Object.entries(baseUrls).forEach(([id, baseUrl]) => {
             const link = document.getElementById(id);
-            if (link) {
-                link.href = `${baseUrl}?employee_id=${employeeId}`;
-            }
+            if (link) link.href = `${baseUrl}?employee_id=${employeeId}`;
         });
     }
 }
 
-// Always open on current week — never restore stale date ranges from a previous visit.
+// Default: today → today+30 days (next 30 days)
 document.addEventListener('DOMContentLoaded', () => {
     updateViewLinks();
-    restoreFilterState('appointments', ['filter-status']); // restore status filter only
+    restoreFilterState('appointments', ['filter-status']);
     const today = new Date();
-    const daysFromMonday = today.getDay() === 0 ? 6 : today.getDay() - 1;
-    const monday = addDays(today, -daysFromMonday);
-    const sunday = addDays(monday, 6);
-    setDateToInput('filter-start', monday);
-    setDateToInput('filter-end', sunday);
+    setDateToInput('filter-start', today);
+    setDateToInput('filter-end', addDays(today, 30));
     loadAppointments();
 });
 </script>
