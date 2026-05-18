@@ -35,6 +35,7 @@ def sms_credentials_save():
         account_sid=data.get('account_sid', '').strip(),
         auth_token=data.get('auth_token', '').strip(),
         from_number=data.get('from_number', '').strip(),
+        messaging_service_sid=data.get('messaging_service_sid', '').strip() or None,
         is_active=('is_active' in data),
     )
     flash('Dane dostępowe Twilio zapisane', 'success')
@@ -103,6 +104,7 @@ def sms_test():
         auth_token=data.get('auth_token', ''),
         from_number=data.get('from_number', ''),
         to_number=data.get('to_number', ''),
+        messaging_service_sid=data.get('messaging_service_sid', '') or None,
     )
     return jsonify({'success': ok, 'result': result})
 

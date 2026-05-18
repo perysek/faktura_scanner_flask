@@ -261,7 +261,17 @@ textarea.form-input { resize: vertical; min-height: 80px; }
                 <input type="text" name="from_number" class="form-input"
                        placeholder="+48XXXXXXXXX"
                        value="{{ settings.from_number or '' }}">
-                <p class="form-hint">Numer Twilio lub alfanumeryczny nadawca SMS</p>
+                <p class="form-hint">Numer Twilio w formacie E.164. Używany gdy Messaging Service SID nie jest ustawiony.</p>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Messaging Service SID <span style="font-weight:400;color:var(--color-ink-muted);">(opcjonalnie)</span></label>
+                <input type="text" name="messaging_service_sid" class="form-input"
+                       placeholder="MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                       value="{{ settings.messaging_service_sid or '' }}">
+                <p class="form-hint">
+                    SID z konsoli Twilio → Messaging → Services.
+                    Jeśli ustawiony, <strong>ma pierwszeństwo</strong> przed numerem nadawcy i umożliwia wysyłkę z puli numerów (Copilot).
+                </p>
             </div>
             <div class="form-field form-field--inline">
                 <input type="checkbox" name="is_active" id="sms-active"
@@ -426,10 +436,11 @@ async function sendTestSms() {
     resultEl.style.color = '';
 
     try {
+        const msid = document.querySelector('[name=messaging_service_sid]')?.value.trim() || '';
         const resp = await fetch('{{ url_for("sms.sms_test") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ account_sid: sid, auth_token: token, from_number: from, to_number: to })
+            body: JSON.stringify({ account_sid: sid, auth_token: token, from_number: from, to_number: to, messaging_service_sid: msid || null })
         });
         const data = await resp.json();
         if (data.success) {
