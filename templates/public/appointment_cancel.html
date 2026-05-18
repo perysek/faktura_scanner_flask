@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anulowanie wizyty — MyWay Beauty Salon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f0;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .card {
+            background: white; border-radius: 8px;
+            padding: 2rem 1.5rem; max-width: 420px; width: 100%;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        }
+        .salon-name {
+            font-size: 0.75rem; font-weight: 500; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #888; margin-bottom: 1.5rem;
+        }
+        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem; }
+        .subheading { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; line-height: 1.5; }
+        .details-block {
+            background: #f9f9f7; border-radius: 6px;
+            padding: 1rem; margin-bottom: 1.5rem;
+        }
+        .detail-row {
+            display: flex; justify-content: space-between;
+            padding: 0.375rem 0; font-size: 0.875rem;
+        }
+        .detail-label { color: #888; }
+        .detail-value { font-weight: 500; color: #1a1a1a; }
+        .warning-box {
+            background: #fff7ed; border: 1px solid #fed7aa;
+            border-radius: 6px; padding: 0.875rem 1rem;
+            margin-bottom: 1.5rem; font-size: 0.8125rem; color: #92400e;
+            line-height: 1.5;
+        }
+        .btn-cancel {
+            display: block; width: 100%; padding: 0.875rem;
+            background: #dc2626; color: white; border: none; border-radius: 6px;
+            font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+            cursor: pointer; margin-bottom: 0.75rem;
+            transition: background 0.15s;
+        }
+        .btn-cancel:active { background: #b91c1c; }
+        .btn-back {
+            display: block; width: 100%; padding: 0.875rem;
+            background: white; color: #666; border: 1px solid #ddd; border-radius: 6px;
+            font-family: inherit; font-size: 0.875rem; cursor: pointer;
+            text-align: center; text-decoration: none;
+        }
+        .status-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .status-message { font-size: 0.875rem; color: #666; margin-top: 0.5rem; line-height: 1.5; }
+        .contact-hint {
+            margin-top: 1.5rem; padding-top: 1rem;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.75rem; color: #aaa; text-align: center;
+        }
+        .toast {
+            position: fixed; bottom: 1.5rem; left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a; color: white;
+            padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 0.875rem;
+            animation: slideup 0.3s ease; white-space: nowrap;
+        }
+        @keyframes slideup {
+            from { transform: translateX(-50%) translateY(16px); opacity: 0; }
+            to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <p class="salon-name">MyWay Beauty Salon</p>
+
+    {% if already_cancelled %}
+        {% if just_submitted %}
+            <div class="status-icon">✅</div>
+            <h1 class="heading">Wizyta anulowana</h1>
+            <p class="status-message">Twoja wizyta została pomyślnie anulowana. Skontaktuj się z nami, jeśli chcesz umówić się ponownie.</p>
+            <script>
+                window.addEventListener('load', () => {
+                    const t = document.createElement('div');
+                    t.className = 'toast';
+                    t.textContent = 'Wizyta anulowana.';
+                    document.body.appendChild(t);
+                    setTimeout(() => t.remove(), 3500);
+                });
+            </script>
+        {% else %}
+            <div class="status-icon">❌</div>
+            <h1 class="heading">Wizyta już anulowana</h1>
+            <p class="status-message">Ta wizyta została wcześniej anulowana. Skontaktuj się z nami, jeśli chcesz umówić się ponownie.</p>
+        {% endif %}
+        <p class="contact-hint">Masz pytania? Zadzwoń do nas.</p>
+
+    {% elif not can_cancel %}
+        <div class="status-icon">⚠️</div>
+        <h1 class="heading">Nie można anulować</h1>
+        <p class="status-message">
+            Ta wizyta jest w trakcie realizacji lub już została zakończona — nie można jej teraz anulować.
+            Skontaktuj się bezpośrednio z salonem.
+        </p>
+        <p class="contact-hint">Masz pytania? Zadzwoń do nas.</p>
+
+    {% else %}
+        <h1 class="heading">Anulowanie wizyty</h1>
+        <p class="subheading">Czy na pewno chcesz anulować tę wizytę?</p>
+
+        <div class="details-block">
+            <div class="detail-row">
+                <span class="detail-label">Data</span>
+                <span class="detail-value">{{ appointment.appointment_date }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Godzina</span>
+                <span class="detail-value">{{ appointment.start_time|string|truncate(5, True, '') }}</span>
+            </div>
+            {% if appointment.employee_name %}
+            <div class="detail-row">
+                <span class="detail-label">Specjalista</span>
+                <span class="detail-value">{{ appointment.employee_name }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="warning-box">
+            Po anulowaniu wizyty skontaktujemy się z Tobą w razie potrzeby.
+            Aby umówić się ponownie, zadzwoń do salonu.
+        </div>
+
+        <form method="POST" action="/cancel/{{ token }}">
+            <button type="submit" class="btn-cancel">Tak, anuluję wizytę</button>
+        </form>
+        <a href="javascript:history.back()" class="btn-back">Wróć — nie anuluj</a>
+    {% endif %}
+</div>
+</body>
+</html>

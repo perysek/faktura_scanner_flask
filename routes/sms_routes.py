@@ -54,6 +54,7 @@ def sms_message_type_save(type_id):
         send_hours_before=int(data.get('send_hours_before', 24)),
         template_text=data.get('template_text', '').strip(),
         include_confirm_link=('include_confirm_link' in data),
+        send_only_if_confirmed=('send_only_if_confirmed' in data),
         name=data.get('name', '').strip(),
     )
     flash('Typ wiadomości SMS zaktualizowany', 'success')
