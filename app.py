@@ -176,6 +176,8 @@ def create_app():
     from routes.booking_routes import booking_bp
     from routes.absence_routes import absence_bp
     from routes.absence_balance_routes import absence_balance_bp
+    from routes.sms_routes import sms_bp
+    from routes.public_routes import public_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -192,6 +194,8 @@ def create_app():
     app.register_blueprint(booking_bp)
     app.register_blueprint(absence_bp)
     app.register_blueprint(absence_balance_bp)
+    app.register_blueprint(sms_bp)
+    app.register_blueprint(public_bp)
 
     # Error handlers
     from exceptions import AppError
@@ -259,6 +263,17 @@ def create_app():
     # P4-3/P4-4: Clean up stale upload temp files on startup
     from routes.upload_routes import cleanup_stale_uploads
     cleanup_stale_uploads(app)
+
+    # SMS auto-send background scheduler
+    import os
+    app.config['BASE_URL'] = os.environ.get('BASE_URL', 'http://localhost:5000')
+    try:
+        from scheduler import start_scheduler, stop_scheduler
+        import atexit as _atexit
+        start_scheduler(app)
+        _atexit.register(stop_scheduler)
+    except Exception as _sched_err:
+        logging.warning("SMS scheduler not started: %s", _sched_err)
 
     return app
 

@@ -103,7 +103,29 @@ def get_appointments():
             rows = repo.get_by_date_range(start_date, end_date, employee_id, status)
 
         appointments = [dict(row) for row in rows]
-        return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+
+        # Batch-load SMS state for the visible appointments
+        sms_sent_map: dict = {}
+        sms_types: list = []
+        try:
+            from repositories.sms.sms_repository import (
+                SmsSettingsRepository, SmsMessageTypeRepository, SmsReminderRepository
+            )
+            sms_active = (SmsSettingsRepository().get_settings() or {}).get('is_active', False)
+            if sms_active:
+                appt_ids = [a['id'] for a in appointments]
+                sms_sent_map = SmsReminderRepository().get_sent_types_batch(appt_ids)
+                sms_types = SmsMessageTypeRepository().get_all()
+        except Exception:
+            logging.exception('SMS batch load failed in get_appointments (non-fatal)')
+
+        return jsonify({
+            'success': True,
+            'appointments': appointments,
+            'count': len(appointments),
+            'sms_sent_map': sms_sent_map,
+            'sms_types': sms_types,
+        })
     except AppError:
         raise
     except Exception as e:

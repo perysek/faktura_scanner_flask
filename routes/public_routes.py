@@ -1,0 +1,79 @@
+"""
+Public routes — no authentication required.
+Client-facing pages accessed via SMS confirmation links.
+"""
+import logging
+from flask import Blueprint, render_template, request
+from repositories.appointments.appointment_repository import AppointmentRepository
+from repositories.clients.client_repository import ClientRepository
+from repositories.audit_repository import AuditRepository
+
+public_bp = Blueprint('public', __name__)
+
+
+@public_bp.route('/confirm/<token>', methods=['GET'])
+def appointment_confirm_view(token):
+    repo = AppointmentRepository()
+    appt = repo.get_by_confirmation_token(token)
+    if not appt:
+        return render_template('public/confirm_invalid.html'), 404
+
+    appt = dict(appt)
+    client = ClientRepository().get_by_id(appt['client_id'])
+    return render_template(
+        'public/appointment_confirm.html',
+        appointment=appt,
+        client=client,
+        token=token,
+        already_responded=(appt.get('confirmation_status') is not None),
+        confirmation_status=appt.get('confirmation_status'),
+        just_submitted=False,
+    )
+
+
+@public_bp.route('/confirm/<token>', methods=['POST'])
+def appointment_confirm_submit(token):
+    repo = AppointmentRepository()
+    appt = repo.get_by_confirmation_token(token)
+    if not appt:
+        return render_template('public/confirm_invalid.html'), 404
+
+    appt = dict(appt)
+
+    if appt.get('confirmation_status'):
+        return render_template(
+            'public/appointment_confirm.html',
+            appointment=appt, client=None, token=token,
+            already_responded=True,
+            confirmation_status=appt['confirmation_status'],
+            just_submitted=False,
+        )
+
+    action = request.form.get('action')
+    if action not in ('confirmed', 'declined'):
+        return render_template(
+            'public/appointment_confirm.html',
+            appointment=appt, client=None, token=token,
+            error='Nieprawidłowa akcja', already_responded=False,
+            confirmation_status=None, just_submitted=False,
+        )
+
+    repo.update_confirmation_status(appt['id'], action)
+    try:
+        AuditRepository().log_event(
+            entity_type='appointment', action='CLIENT_CONFIRMATION',
+            entity_id=appt['id'],
+            entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
+            field_name='confirmation_status',
+            old_value=None, new_value=action,
+            user_id=None, user_name='Klient (SMS)',
+        )
+    except Exception:
+        logging.exception("Audit log failed for confirmation token=%s", token)
+
+    return render_template(
+        'public/appointment_confirm.html',
+        appointment=appt, client=None, token=token,
+        just_submitted=True, already_responded=True,
+        confirmation_status=action,
+    )

@@ -78,6 +78,15 @@
     .material-icons.lg { font-size: 1.5rem; }
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .col-sms { width: 140px; white-space: nowrap; }
+    .sms-tag { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 2px; font-size: 0.625rem; font-weight: 500; letter-spacing: 0.02em; margin-right: 2px; margin-bottom: 2px; cursor: default; }
+    .sms-tag--confirmed { background: #dcfce7; color: #166534; }
+    .sms-tag--declined  { background: #fee2e2; color: #991b1b; }
+    .sms-tag--ok        { background: #dbeafe; color: #1e40af; }
+    .sms-tag--fail      { background: #fee2e2; color: #991b1b; }
+    .sms-tag--pending   { background: #f3f4f6; color: #6b7280; border: 1px dashed #d1d5db; }
+    .sms-tag--none      { color: #9ca3af; }
 </style>
 {% endblock %}
 
@@ -157,12 +166,13 @@
                     <th class="th-sortable" onclick="sortBy('total_price')" id="th-total_price">Kwota <span class="sort-icon">↕</span></th>
                     <th class="th-sortable" onclick="sortBy('status')" id="th-status">Status <span class="sort-icon">↕</span></th>
                     <th class="th-sortable" onclick="sortBy('satisfaction_score')" id="th-satisfaction_score">Ocena <span class="sort-icon">↕</span></th>
+                    <th class="col-sms">SMS</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="appointments-tbody">
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="10" class="empty-state">
                         <span class="material-icons empty-icon">calendar_today</span>
                         <p class="empty-text">Ładowanie wizyt...</p>
                     </td>
@@ -223,6 +233,37 @@ const VALID_TRANSITIONS = {
 // Sort state
 let allAppointments = [];
 let sortState = { column: null, direction: 'asc' };
+let smsSentMap = {};
+let smsTypes = [];
+
+function renderSmsCell(apptId, confirmStatus) {
+    const sent = smsSentMap[apptId] || [];
+    const sentKeys = new Set(sent.map(s => s.type_key));
+    const tags = [];
+
+    if (confirmStatus === 'confirmed')
+        tags.push(`<span class="sms-tag sms-tag--confirmed" title="Klient potwierdził">✓ Potw.</span>`);
+    else if (confirmStatus === 'declined')
+        tags.push(`<span class="sms-tag sms-tag--declined" title="Klient odmówił">✕ Odmowa</span>`);
+
+    const seenKeys = new Set();
+    for (const entry of sent) {
+        if (seenKeys.has(entry.type_key)) continue;
+        seenKeys.add(entry.type_key);
+        const cls = ['sent','delivered'].includes(entry.status) ? 'ok' : 'fail';
+        const shortName = (entry.type_name || entry.type_key).slice(0, 8);
+        tags.push(`<span class="sms-tag sms-tag--${cls}" title="${escapeHtml(entry.type_name || '')}: ${entry.status}">${shortName}</span>`);
+    }
+
+    for (const mt of smsTypes) {
+        if (mt.is_enabled && !sentKeys.has(mt.type_key)) {
+            const shortName = mt.name.slice(0, 8);
+            tags.push(`<span class="sms-tag sms-tag--pending" title="${escapeHtml(mt.name)}: oczekuje">${shortName}…</span>`);
+        }
+    }
+
+    return tags.length ? tags.join('') : '<span class="sms-tag sms-tag--none">—</span>';
+}
 
 // Status modal state
 let modalAppointmentId = null;
@@ -363,7 +404,7 @@ function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
@@ -384,6 +425,7 @@ function renderTable(appointments) {
                 <td>${formatCurrency(a.total_price)}</td>
                 <td><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
                 <td>${renderVisitRating(a.satisfaction_score)}</td>
+                <td class="col-sms">${renderSmsCell(a.id, a.confirmation_status)}</td>
                 <td style="text-align:right;">
                     <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list`}" class="action-link">Modyfikuj</a><span class="action-separator">|</span><a href="/appointment/${a.id}?from=list" class="action-link">Szczegóły</a>
                 </td>
@@ -415,13 +457,15 @@ async function loadAppointments() {
         const data = await response.json();
         if (data.success) {
             allAppointments = data.appointments;
+            smsSentMap = data.sms_sent_map || {};
+            smsTypes = data.sms_types || [];
             renderTable(allAppointments);
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="10" class="empty-state">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadAppointments()" class="refined-btn-secondary" style="margin-top:0.75rem;">Spróbuj ponownie</button>
                 </td>

@@ -57,6 +57,41 @@
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* SMS dropdown */
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-menu {
+        display: none; position: absolute; right: 0; top: 100%;
+        min-width: 200px; background: white;
+        border: 1px solid var(--color-border); border-radius: 2px;
+        box-shadow: 0 4px 16px rgba(0,0,0,.12); z-index: 100;
+        list-style: none; padding: 0.25rem 0; margin: 0;
+    }
+    .dropdown.open .dropdown-menu { display: block; }
+    .dropdown-item {
+        display: flex; align-items: center; justify-content: space-between;
+        width: 100%; padding: 0.5rem 0.875rem;
+        font-size: 0.8125rem; color: var(--color-ink);
+        background: none; border: none; cursor: pointer; text-align: left;
+        font-family: var(--font-body);
+    }
+    .dropdown-item:hover { background: var(--color-surface); }
+    .sms-sent-badge {
+        font-size: 0.625rem; padding: 0.125rem 0.375rem;
+        background: #f3f4f6; color: #6b7280; border-radius: 9999px;
+    }
+
+    /* SMS log table */
+    .sms-log-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.75rem; }
+    .sms-log-table th { padding: 0.5rem 0.75rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: left; }
+    .sms-log-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
+    .sms-log-table tr:last-child td { border-bottom: none; }
+    .sms-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 9999px; font-size: 0.6rem; font-weight: 500; }
+    .sms-badge-green { background: #dcfce7; color: #166534; }
+    .sms-badge-teal  { background: #ccfbf1; color: #0f766e; }
+    .sms-badge-red   { background: #fee2e2; color: #991b1b; }
+    .sms-badge-gray  { background: #f3f4f6; color: #6b7280; }
+    .badge-count { font-size: 0.6875rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 9999px; padding: 0.125rem 0.5rem; margin-left: 0.5rem; }
 </style>
 {% endblock %}
 
@@ -111,6 +146,29 @@
         <p id="d-notes" style="font-size: 0.8125rem; color: var(--color-ink-muted);"></p>
     </div>
 
+    <!-- SMS History panel -->
+    {% if settings_sms_active %}
+    <details id="sms-log-panel" class="detail-card" style="padding:0;">
+        <summary style="padding:1rem 1.5rem;cursor:pointer;font-size:1rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:0.5rem;">
+            Historia SMS
+            <span class="badge-count" id="sms-count"></span>
+        </summary>
+        <div style="padding:0 1.5rem 1rem;">
+            <table class="sms-log-table">
+                <thead>
+                    <tr>
+                        <th>Data</th><th>Typ</th><th>Status</th>
+                        <th>Numer</th><th>Treść</th><th>Twilio SID</th><th>Wysłał</th>
+                    </tr>
+                </thead>
+                <tbody id="sms-log-tbody">
+                    <tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Kliknij aby załadować...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </details>
+    {% endif %}
+
     <!-- Satisfaction Rating — visible only for completed appointments -->
     <div class="detail-card" id="satisfaction-card" style="display:none;">
         <h2>Ocena wizyty przez klienta</h2>
@@ -131,6 +189,9 @@
 {% block extra_scripts %}
 <script>
 const APPT_ID = {{ appointment_id }};
+const SMS_ACTIVE = {{ settings_sms_active | tojson }};
+const SMS_TYPES = {{ sms_message_types | tojson }};
+const SMS_SENT_KEYS = new Set({{ sms_sent_type_keys | tojson }});
 const STATUS_LABELS = {
     'scheduled':'Zaplanowana','confirmed':'Potwierdzona','in_progress':'W trakcie',
     'completed':'Zakończona','cancelled':'Anulowana','no_show':'Nieobecność'
@@ -257,6 +318,36 @@ async function loadAppointment() {
     }
 
     bar.innerHTML = actionsHTML;
+
+    // SMS dropdown — inject after status actions
+    if (SMS_ACTIVE && SMS_TYPES.length > 0) {
+        const items = SMS_TYPES.map(mt => {
+            const alreadySent = SMS_SENT_KEYS.has(mt.type_key);
+            return `<li><button type="button" class="dropdown-item"
+                onclick="sendSms(${APPT_ID}, '${mt.type_key}', ${JSON.stringify(mt.name)})">
+                ${esc(mt.name)}
+                ${alreadySent ? '<span class="sms-sent-badge">Wysłano</span>' : ''}
+            </button></li>`;
+        }).join('');
+        bar.insertAdjacentHTML('beforeend', `
+            <div class="dropdown" id="sms-dropdown">
+                <button class="btn-action" type="button" onclick="toggleSmsDropdown(event)">
+                    📱 Wyślij SMS ▾
+                </button>
+                <ul class="dropdown-menu">${items}</ul>
+            </div>
+        `);
+
+        // Confirmation status badge
+        const confirmStatus = a.confirmation_status;
+        if (confirmStatus === 'confirmed') {
+            bar.insertAdjacentHTML('beforeend', '<span style="margin-left:0.5rem;padding:0.25rem 0.625rem;background:#dcfce7;color:#166534;border-radius:9999px;font-size:0.75rem;">✓ Potwierdzona przez klienta</span>');
+        } else if (confirmStatus === 'declined') {
+            bar.insertAdjacentHTML('beforeend', '<span style="margin-left:0.5rem;padding:0.25rem 0.625rem;background:#fee2e2;color:#991b1b;border-radius:9999px;font-size:0.75rem;">✕ Odmowa przez klienta</span>');
+        } else if (SMS_SENT_KEYS.size > 0) {
+            bar.insertAdjacentHTML('beforeend', '<span style="margin-left:0.5rem;padding:0.25rem 0.625rem;background:#f3f4f6;color:#6b7280;border-radius:9999px;font-size:0.75rem;">Oczekuje na odpowiedź klienta</span>');
+        }
+    }
 
     // Addon section
     if (data.can_add_addon) {
@@ -411,6 +502,72 @@ function initSatisfactionWidget(currentScore) {
 }
 
 document.addEventListener('DOMContentLoaded', loadAppointment);
+
+// ── SMS ───────────────────────────────────────────────────────────────
+
+function toggleSmsDropdown(event) {
+    event.stopPropagation();
+    document.getElementById('sms-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+    const dd = document.getElementById('sms-dropdown');
+    if (dd) dd.classList.remove('open');
+});
+
+async function sendSms(appointmentId, typeKey, typeName) {
+    if (!confirm(`Wysłać SMS "${typeName}" do klienta?`)) return;
+    try {
+        const resp = await fetch('/api/sms/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({appointment_id: appointmentId, message_type_key: typeKey})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            SMS_SENT_KEYS.add(typeKey);
+            if (typeof Notifications !== 'undefined') Notifications.success(`SMS "${typeName}" wysłany`);
+            else alert(`SMS "${typeName}" wysłany`);
+        } else {
+            if (typeof Notifications !== 'undefined') Notifications.error('Błąd: ' + data.message);
+            else alert('Błąd: ' + data.message);
+        }
+    } catch (e) {
+        if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+    }
+    document.getElementById('sms-dropdown')?.classList.remove('open');
+}
+
+function statusBadgeClass(s) {
+    return {sent:'sms-badge-green', delivered:'sms-badge-teal', failed:'sms-badge-red', pending:'sms-badge-gray'}[s] ?? 'sms-badge-gray';
+}
+
+const smsLogPanel = document.getElementById('sms-log-panel');
+if (smsLogPanel) {
+    let smsLoaded = false;
+    smsLogPanel.addEventListener('toggle', async function() {
+        if (!this.open || smsLoaded) return;
+        smsLoaded = true;
+        const resp = await fetch(`/api/sms/appointment/${APPT_ID}/log`);
+        const data = await resp.json();
+        const tbody = document.getElementById('sms-log-tbody');
+        if (!data.reminders || !data.reminders.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Brak wysyłek SMS</td></tr>';
+            return;
+        }
+        document.getElementById('sms-count').textContent = data.reminders.length;
+        tbody.innerHTML = data.reminders.map(r => `
+            <tr>
+                <td>${(r.sent_at || '').slice(0,16) || '—'}</td>
+                <td>${esc(r.type_name || r.message_type_key)}</td>
+                <td><span class="sms-badge ${statusBadgeClass(r.status)}">${r.status}</span></td>
+                <td style="font-family:monospace;">${esc(r.phone_number)}</td>
+                <td title="${esc(r.message_body)}">${esc((r.message_body || '').slice(0,60))}${(r.message_body || '').length > 60 ? '…' : ''}</td>
+                <td style="font-family:monospace;font-size:0.625rem;">${esc(r.twilio_sid || '—')}</td>
+                <td>${esc(r.sender_name || r.created_by_name || 'System')}</td>
+            </tr>
+        `).join('');
+    });
+}
 
 // Skrót klawiszowy: Esc = powrót (dynamiczny URL z przycisku #back-button)
 document.addEventListener('keydown', function(e) {
