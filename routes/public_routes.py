@@ -59,8 +59,13 @@ def appointment_confirm_submit(token):
         )
 
     repo.update_confirmation_status(appt['id'], action)
+
+    if action == 'confirmed' and appt.get('status') == 'scheduled':
+        repo.update_status(appt['id'], 'confirmed')
+
     try:
-        AuditRepository().log_event(
+        audit = AuditRepository()
+        audit.log_event(
             entity_type='appointment', action='CLIENT_CONFIRMATION',
             entity_id=appt['id'],
             entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
@@ -68,6 +73,15 @@ def appointment_confirm_submit(token):
             old_value=None, new_value=action,
             user_id=None, user_name='Klient (SMS)',
         )
+        if action == 'confirmed' and appt.get('status') == 'scheduled':
+            audit.log_event(
+                entity_type='appointment', action='STATUS_CHANGED',
+                entity_id=appt['id'],
+                entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
+                field_name='status',
+                old_value='scheduled', new_value='confirmed',
+                user_id=None, user_name='Klient (SMS)',
+            )
     except Exception:
         logging.exception("Audit log failed for confirmation token=%s", token)
 
