@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potwierdzenie wizyty — MyWay Beauty Salon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f0;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .card {
+            background: white; border-radius: 8px;
+            padding: 2rem 1.5rem; max-width: 420px; width: 100%;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        }
+        .salon-name { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.1em;
+                      text-transform: uppercase; color: #888; margin-bottom: 1.5rem; }
+        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem; }
+        .subheading { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+        .details-block { background: #f9f9f7; border-radius: 6px;
+                         padding: 1rem; margin-bottom: 1.5rem; }
+        .detail-row { display: flex; justify-content: space-between;
+                      padding: 0.375rem 0; font-size: 0.875rem; }
+        .detail-label { color: #888; }
+        .detail-value { font-weight: 500; color: #1a1a1a; }
+        .btn-confirm {
+            display: block; width: 100%; padding: 0.875rem;
+            background: #1a1a1a; color: white; border: none; border-radius: 6px;
+            font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+            cursor: pointer; margin-bottom: 0.75rem;
+        }
+        .btn-confirm:active { background: #333; }
+        .btn-decline {
+            display: block; width: 100%; padding: 0.875rem;
+            background: white; color: #666; border: 1px solid #ddd; border-radius: 6px;
+            font-family: inherit; font-size: 0.875rem; cursor: pointer;
+        }
+        .status-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .status-message { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
+        .toast {
+            position: fixed; bottom: 1.5rem; left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a; color: white;
+            padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 0.875rem;
+            animation: slideup 0.3s ease;
+        }
+        @keyframes slideup {
+            from { transform: translateX(-50%) translateY(16px); opacity: 0; }
+            to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <p class="salon-name">MyWay Beauty Salon</p>
+
+    {% if already_responded %}
+        {% if confirmation_status == 'confirmed' %}
+            <div class="status-icon">✅</div>
+            <h1 class="heading">Wizyta potwierdzona</h1>
+            <p class="status-message">Dziękujemy za potwierdzenie. Do zobaczenia!</p>
+        {% elif confirmation_status == 'declined' %}
+            <div class="status-icon">❌</div>
+            <h1 class="heading">Wizyta odrzucona</h1>
+            <p class="status-message">Otrzymaliśmy Twoją odpowiedź. Skontaktujemy się w razie potrzeby.</p>
+        {% else %}
+            <div class="status-icon">✅</div>
+            <h1 class="heading">Odpowiedź zapisana</h1>
+            <p class="status-message">Dziękujemy za odpowiedź.</p>
+        {% endif %}
+
+        {% if just_submitted %}
+        <script>
+            window.addEventListener('load', () => {
+                const t = document.createElement('div');
+                t.className = 'toast';
+                t.textContent = '{% if confirmation_status == "confirmed" %}Wizyta potwierdzona!{% else %}Odpowiedź zapisana.{% endif %}';
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 3500);
+            });
+        </script>
+        {% endif %}
+
+    {% else %}
+        <h1 class="heading">Potwierdzenie wizyty</h1>
+        <p class="subheading">Prosimy o potwierdzenie lub anulowanie wizyty.</p>
+
+        <div class="details-block">
+            <div class="detail-row">
+                <span class="detail-label">Data</span>
+                <span class="detail-value">{{ appointment.appointment_date }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Godzina</span>
+                <span class="detail-value">{{ appointment.start_time|string|truncate(5, True, '') }}</span>
+            </div>
+            {% if appointment.employee_name %}
+            <div class="detail-row">
+                <span class="detail-label">Specjalista</span>
+                <span class="detail-value">{{ appointment.employee_name }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if error %}
+        <p style="color:#dc2626;font-size:0.875rem;margin-bottom:1rem;">{{ error }}</p>
+        {% endif %}
+
+        <form method="POST" action="/confirm/{{ token }}">
+            <button type="submit" name="action" value="confirmed" class="btn-confirm">
+                Potwierdzam wizytę
+            </button>
+            <button type="submit" name="action" value="declined" class="btn-decline">
+                Odwołuję wizytę
+            </button>
+        </form>
+    {% endif %}
+</div>
+</body>
+</html>

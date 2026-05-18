@@ -336,7 +336,19 @@ def create_appointment():
 @module_permission_required('appointments')
 def view_appointment(appointment_id):
     """View appointment details"""
-    return render_template('appointments/view.html', appointment_id=appointment_id)
+    from repositories.sms.sms_repository import (
+        SmsSettingsRepository, SmsMessageTypeRepository, SmsReminderRepository
+    )
+    sms_settings = SmsSettingsRepository().get_settings() or {}
+    sms_types = SmsMessageTypeRepository().get_all() if sms_settings.get('is_active') else []
+    sms_sent_keys = SmsReminderRepository().get_sent_type_keys_for_appointment(appointment_id)
+    return render_template(
+        'appointments/view.html',
+        appointment_id=appointment_id,
+        settings_sms_active=sms_settings.get('is_active', False),
+        sms_message_types=sms_types,
+        sms_sent_type_keys=sms_sent_keys,
+    )
 
 
 @main_bp.route('/appointment/<int:appointment_id>/edit')

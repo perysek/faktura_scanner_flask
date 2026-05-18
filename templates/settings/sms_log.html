@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Historia SMS — {{ app_name }}{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
+
+{% block extra_css %}
+<style>
+#main-content { background: var(--color-surface-warm); }
+.refined-page { max-width: 1300px; margin: 0 auto; padding: 1rem 1.5rem; }
+.page-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.page-title { margin: 0; }
+.back-link { font-size: 0.8125rem; color: var(--color-ink-muted); text-decoration: none; }
+
+.table-container { background: white; border: 1px solid var(--color-border); border-radius: 2px; overflow: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.data-table th { padding: 0.625rem 0.875rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); background: var(--color-surface); border-bottom: 1px solid var(--color-border); white-space: nowrap; text-align: left; }
+.data-table td { padding: 0.625rem 0.875rem; border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--color-surface); }
+
+.badge-pill { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 500; }
+.badge-gray   { background: #f3f4f6; color: #6b7280; }
+.badge-green  { background: #dcfce7; color: #166534; }
+.badge-teal   { background: #ccfbf1; color: #0f766e; }
+.badge-red    { background: #fee2e2; color: #991b1b; }
+
+.mono { font-family: monospace; font-size: 0.6875rem; }
+
+.pagination { display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end; }
+.pagination a { padding: 0.375rem 0.875rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink); text-decoration: none; background: white; }
+.pagination a:hover { border-color: var(--color-ink-muted); }
+
+.empty-row td { text-align: center; padding: 2rem; color: var(--color-ink-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <div class="page-header">
+        <a href="{{ url_for('sms.sms_settings') }}" class="back-link">← Ustawienia SMS</a>
+        <h1 class="page-title">Historia wysyłek SMS</h1>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Data wysyłki</th>
+                    <th>Typ SMS</th>
+                    <th>Klient</th>
+                    <th>Telefon</th>
+                    <th>Wizyta</th>
+                    <th>Status</th>
+                    <th>Twilio SID</th>
+                    <th>Wysłał</th>
+                    <th>Potwierdzenie</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if not rows %}
+                <tr class="empty-row"><td colspan="9">Brak historii wysyłek SMS</td></tr>
+                {% endif %}
+                {% for r in rows %}
+                <tr>
+                    <td>{{ r.sent_at|string|truncate(16, True, '') if r.sent_at else '—' }}</td>
+                    <td>{{ r.type_name or r.message_type_key }}</td>
+                    <td>{{ r.client_name }}</td>
+                    <td class="mono">{{ r.phone_number }}</td>
+                    <td>{{ r.appointment_date }} {{ r.start_time|string|truncate(5, True, '') if r.start_time else '' }}</td>
+                    <td>
+                        {% if r.status == 'sent' %}
+                            <span class="badge-pill badge-green">Wysłany</span>
+                        {% elif r.status == 'delivered' %}
+                            <span class="badge-pill badge-teal">Dostarczony</span>
+                        {% elif r.status == 'failed' %}
+                            <span class="badge-pill badge-red" title="{{ r.error_message or '' }}">Błąd</span>
+                        {% else %}
+                            <span class="badge-pill badge-gray">Oczekuje</span>
+                        {% endif %}
+                    </td>
+                    <td class="mono">{{ r.twilio_sid or '—' }}</td>
+                    <td>{{ r.created_by_name or '—' }}</td>
+                    <td>
+                        {% if r.appt_confirmation_status == 'confirmed' %}
+                            <span style="color:#166534;">✓</span>
+                        {% elif r.appt_confirmation_status == 'declined' %}
+                            <span style="color:#991b1b;">✗</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        {% if offset > 0 %}
+        <a href="{{ url_for('sms.sms_log', offset=[offset-100, 0]|max) }}">← Poprzednie</a>
+        {% endif %}
+        {% if rows|length == 100 %}
+        <a href="{{ url_for('sms.sms_log', offset=offset+100) }}">Następne →</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

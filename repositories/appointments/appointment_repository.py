@@ -667,6 +667,62 @@ class AppointmentRepository:
 
         return {'prev': row_to_dict(prev_row), 'next': row_to_dict(next_row)}
 
+    def update_confirmation_token(self, appointment_id: int, token: str) -> bool:
+        query = "UPDATE appointments SET confirmation_token = %s WHERE id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (token, appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def get_by_confirmation_token(self, token: str) -> Optional[Any]:
+        query = """
+            SELECT a.*, e.first_name || ' ' || e.last_name AS employee_name
+            FROM appointments a
+            LEFT JOIN employees e ON e.id = a.employee_id
+            WHERE a.confirmation_token = %s AND a.is_deleted IS NOT TRUE
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (token,))
+            return cursor.fetchone()
+
+    def update_confirmation_status(self, appointment_id: int, status: str) -> bool:
+        query = """
+            UPDATE appointments
+            SET confirmation_status = %s, confirmation_updated_at = NOW()
+            WHERE id = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (status, appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def get_appointments_due_for_type(self, hours_before: int,
+                                       message_type_key: str) -> List[Any]:
+        query = """
+            SELECT a.*, c.phone, c.first_name AS client_first_name
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            WHERE a.status IN ('scheduled', 'pending', 'confirmed')
+              AND a.is_deleted IS NOT TRUE
+              AND c.phone IS NOT NULL AND c.phone != ''
+              AND (a.appointment_date::timestamp + a.start_time::interval)
+                  BETWEEN NOW() + INTERVAL '1 minute' * (%s * 60 - 15)
+                      AND NOW() + INTERVAL '1 minute' * (%s * 60 + 15)
+              AND a.id NOT IN (
+                  SELECT DISTINCT appointment_id
+                  FROM sms_reminders
+                  WHERE message_type_key = %s
+                    AND status IN ('sent', 'delivered', 'pending')
+              )
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (hours_before, hours_before, message_type_key))
+            return cursor.fetchall()
+
     def get_past_pending_appointments(self) -> List[Any]:
         """
         Pobierz przeszłe wizyty które nie mają jeszcze finalnego statusu.

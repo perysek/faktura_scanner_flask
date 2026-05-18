@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+
+{% block title %}Ustawienia SMS — {{ app_name }}{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+{% block breadcrumb %}{% endblock %}
+
+{% block extra_css %}
+<style>
+#main-content { background: var(--color-surface-warm); }
+
+.refined-page {
+    font-family: var(--font-body);
+    color: var(--color-ink);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+}
+.page-header { margin-bottom: 1.5rem; }
+.page-title { margin: 0 0 0.25rem 0; }
+.page-subtitle { font-size: 0.875rem; color: var(--color-ink-muted); font-weight: 300; }
+
+.form-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+.form-card summary {
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.form-card summary::-webkit-details-marker { display: none; }
+.form-card[open] summary { margin-bottom: 1.25rem; }
+
+.form-field { margin-bottom: 1.25rem; }
+.form-field:last-child { margin-bottom: 0; }
+.form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-bottom: 0.375rem;
+    letter-spacing: 0.01em;
+}
+.form-hint { font-size: 0.6875rem; color: var(--color-ink-muted); margin-top: 0.25rem; }
+.form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: var(--color-ink);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+.form-input:focus { outline: none; border-color: var(--color-ink-muted); }
+.form-input[readonly] { background: var(--color-surface); color: var(--color-ink-muted); }
+
+textarea.form-input { resize: vertical; min-height: 80px; }
+
+.form-field--inline { display: flex; align-items: center; gap: 0.5rem; }
+.form-field--inline .form-label { margin-bottom: 0; cursor: pointer; }
+
+.btn-primary {
+    padding: 0.5rem 1.25rem;
+    background: var(--color-ink);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+.btn-primary:hover { background: var(--color-ink-muted); }
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
+.btn-danger {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 2px;
+    font-family: var(--font-body);
+    cursor: pointer;
+}
+.btn-danger:hover { background: #b91c1c; }
+.btn-secondary {
+    padding: 0.5rem 1.25rem;
+    background: white;
+    color: var(--color-ink);
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.badge-pill {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+}
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-gray  { background: #f3f4f6; color: #6b7280; }
+
+.type-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.type-name { font-size: 0.9375rem; font-weight: 600; }
+.type-timing { font-size: 0.75rem; color: var(--color-ink-muted); margin-left: auto; }
+.type-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+
+/* Stats */
+.stats-section { margin-bottom: 1.5rem; }
+.period-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.period-tab {
+    padding: 0.375rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    background: white;
+    cursor: pointer;
+    color: var(--color-ink-muted);
+    font-family: var(--font-body);
+}
+.period-tab.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+}
+.stat-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    padding: 1rem;
+}
+.stat-label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); margin-bottom: 0.375rem; }
+.stat-value { font-size: 1.5rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
+.stat-sub { font-size: 0.75rem; color: var(--color-ink-muted); margin-top: 0.25rem; }
+@media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Variable reference */
+.variable-reference {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+}
+.var-ref-title { color: var(--color-ink-muted); margin-bottom: 0.375rem; }
+.variable-reference code {
+    display: inline-block;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.6875rem;
+    margin: 0.125rem;
+    color: var(--color-ink);
+    font-family: monospace;
+}
+
+/* Eye toggle */
+.input-group { position: relative; }
+.eye-toggle {
+    position: absolute; right: 0.5rem; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--color-ink-muted); padding: 0.25rem;
+    font-size: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="refined-page">
+    <div class="page-header">
+        <h1 class="page-title">Ustawienia SMS</h1>
+        <p class="page-subtitle">Konfiguracja Twilio i szablonów wiadomości SMS</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for cat, msg in messages %}
+        <div style="padding:0.75rem 1rem;margin-bottom:1rem;border-radius:2px;font-size:0.8125rem;
+            {% if cat=='success' %}background:#dcfce7;color:#166534;border:1px solid #bbf7d0;
+            {% else %}background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;{% endif %}">
+            {{ msg }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Stats -->
+    <div class="stats-section">
+        <div class="period-tabs">
+            <button class="period-tab active" onclick="showPeriod('mtd1', this)">Bieżący miesiąc</button>
+            <button class="period-tab" onclick="showPeriod('mtd3', this)">Ostatnie 3 miesiące</button>
+        </div>
+        {% set mtd1_conf_pct = (stats.mtd1_confirmed / stats.mtd1_confirm_requests * 100)|int if stats.mtd1_confirm_requests else 0 %}
+        {% set mtd1_decl_pct = (stats.mtd1_declined / stats.mtd1_confirm_requests * 100)|int if stats.mtd1_confirm_requests else 0 %}
+        {% set mtd3_conf_pct = (stats.mtd3_confirmed / stats.mtd3_confirm_requests * 100)|int if stats.mtd3_confirm_requests else 0 %}
+        {% set mtd3_decl_pct = (stats.mtd3_declined / stats.mtd3_confirm_requests * 100)|int if stats.mtd3_confirm_requests else 0 %}
+
+        <div class="stats-grid" id="stats-mtd1">
+            <div class="stat-card"><p class="stat-label">Wysłane SMS</p><p class="stat-value">{{ stats.mtd1_sent or 0 }}</p></div>
+            <div class="stat-card"><p class="stat-label">Nieudane</p><p class="stat-value">{{ stats.mtd1_failed or 0 }}</p></div>
+            <div class="stat-card"><p class="stat-label">Prośby o potwierdzenie</p><p class="stat-value">{{ stats.mtd1_confirm_requests or 0 }}</p></div>
+            <div class="stat-card"><p class="stat-label">Potwierdzenia</p><p class="stat-value">{{ stats.mtd1_confirmed or 0 }}</p><p class="stat-sub">{{ mtd1_conf_pct }}%</p></div>
+            <div class="stat-card"><p class="stat-label">Odmowy</p><p class="stat-value">{{ stats.mtd1_declined or 0 }}</p><p class="stat-sub">{{ mtd1_decl_pct }}%</p></div>
+        </div>
+        <div class="stats-grid" id="stats-mtd3" style="display:none;">
+            <div class="stat-card"><p class="stat-label">Wysłane SMS</p><p class="stat-value">{{ stats.mtd3_sent or 0 }}</p></div>
+            <div class="stat-card"><p class="stat-label">Nieudane</p><p class="stat-value">{{ stats.mtd3_failed or 0 }}</p></div>
+            <div class="stat-card"><p class="stat-label">Prośby o potwierdzenie</p><p class="stat-value">{{ stats.mtd3_confirm_requests or 0 }}</p></div>
+            <div class="stat-card"><p class="stat-label">Potwierdzenia</p><p class="stat-value">{{ stats.mtd3_confirmed or 0 }}</p><p class="stat-sub">{{ mtd3_conf_pct }}%</p></div>
+            <div class="stat-card"><p class="stat-label">Odmowy</p><p class="stat-value">{{ stats.mtd3_declined or 0 }}</p><p class="stat-sub">{{ mtd3_decl_pct }}%</p></div>
+        </div>
+    </div>
+
+    <!-- Twilio credentials -->
+    <div class="form-card">
+        <h2 style="font-size:0.9375rem;font-weight:600;margin-bottom:1.25rem;">Dane dostępowe Twilio</h2>
+        <form method="POST" action="{{ url_for('sms.sms_credentials_save') }}">
+            <div class="form-field">
+                <label class="form-label">Account SID</label>
+                <input type="text" name="account_sid" class="form-input"
+                       placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                       value="{{ settings.account_sid or '' }}">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Auth Token</label>
+                <div class="input-group">
+                    <input type="password" name="auth_token" id="auth-token-input" class="form-input"
+                           placeholder="••••••••••••••••••••••••••••••••"
+                           value="{{ settings.auth_token or '' }}">
+                    <button type="button" class="eye-toggle" onclick="toggleAuthToken()">👁</button>
+                </div>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Numer nadawcy</label>
+                <input type="text" name="from_number" class="form-input"
+                       placeholder="+48XXXXXXXXX"
+                       value="{{ settings.from_number or '' }}">
+                <p class="form-hint">Numer Twilio lub alfanumeryczny nadawca SMS</p>
+            </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="is_active" id="sms-active"
+                       {% if settings.is_active %}checked{% endif %}>
+                <label class="form-label" for="sms-active">Włącz wysyłanie SMS</label>
+            </div>
+            <button type="submit" class="btn-primary">Zapisz dane Twilio</button>
+        </form>
+    </div>
+
+    <!-- Test connection -->
+    <details class="form-card">
+        <summary>Test połączenia Twilio</summary>
+        <div class="form-field">
+            <label class="form-label">Numer testowy (odbiorcy)</label>
+            <input type="text" id="test-to-number" class="form-input" placeholder="+48XXXXXXXXX">
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:center;">
+            <button type="button" class="btn-secondary" onclick="sendTestSms()">Wyślij test</button>
+            <span id="test-result" style="font-size:0.8125rem;"></span>
+        </div>
+    </details>
+
+    <!-- Message types -->
+    <h2 style="font-size:0.875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-muted);margin:1.5rem 0 0.75rem 0;">Typy wiadomości SMS</h2>
+
+    {% for mt in message_types %}
+    <details class="form-card" id="type-{{ mt.id }}">
+        <summary class="type-summary">
+            <span class="type-name">{{ mt.name }}</span>
+            {% if mt.is_enabled %}
+                <span class="badge-pill badge-green">Aktywny</span>
+            {% else %}
+                <span class="badge-pill badge-gray">Nieaktywny</span>
+            {% endif %}
+            <span class="type-timing">{% if mt.is_enabled %}{{ mt.send_hours_before }}h przed wizytą{% endif %}</span>
+        </summary>
+
+        <form method="POST" action="{{ url_for('sms.sms_message_type_save', type_id=mt.id) }}">
+            <div class="form-field">
+                <label class="form-label">Nazwa</label>
+                <input type="text" name="name" class="form-input"
+                       value="{{ mt.name }}"
+                       {% if not mt.is_custom %}readonly{% endif %}>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Wyślij X godzin przed wizytą</label>
+                <input type="number" name="send_hours_before" class="form-input"
+                       value="{{ mt.send_hours_before }}" min="1" max="168" style="width:120px;">
+                <p class="form-hint">Zakres: 1h – 168h (7 dni)</p>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Treść wiadomości</label>
+                <textarea name="template_text" class="form-input"
+                          data-char-counter="true"
+                          id="tmpl-{{ mt.id }}">{{ mt.template_text }}</textarea>
+                <p class="form-hint char-counter" id="cnt-{{ mt.id }}">0 / 160 znaków</p>
+            </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_confirm_link" id="cl-{{ mt.id }}"
+                       {% if mt.include_confirm_link %}checked{% endif %}>
+                <label class="form-label" for="cl-{{ mt.id }}">Dołącz link potwierdzenia ({confirm_url})</label>
+            </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="is_enabled" id="en-{{ mt.id }}"
+                       {% if mt.is_enabled %}checked{% endif %}>
+                <label class="form-label" for="en-{{ mt.id }}">Włącz automatyczne wysyłanie</label>
+            </div>
+            <div class="type-actions">
+                <button type="submit" class="btn-primary btn-sm">Zapisz</button>
+                {% if mt.is_custom %}
+                <form method="POST"
+                      action="{{ url_for('sms.sms_message_type_delete', type_id=mt.id) }}"
+                      style="display:inline"
+                      onsubmit="return confirm('Usunąć ten typ wiadomości?')">
+                    <button type="submit" class="btn-danger">Usuń</button>
+                </form>
+                {% endif %}
+            </div>
+        </form>
+    </details>
+    {% endfor %}
+
+    <!-- Variable reference -->
+    <div class="variable-reference">
+        <p class="var-ref-title">Dostępne zmienne w treści wiadomości:</p>
+        <code>{salon_name}</code> <code>{client_name}</code> <code>{date}</code>
+        <code>{time}</code> <code>{employee_name}</code> <code>{services}</code>
+        <code>{hours_before}</code> <code>{confirm_url}</code>
+    </div>
+
+    <!-- Add custom type -->
+    <details class="form-card" id="add-custom-type" style="margin-top:1rem;">
+        <summary>+ Dodaj własny typ wiadomości</summary>
+        <form method="POST" action="{{ url_for('sms.sms_message_type_create') }}">
+            <div class="form-field">
+                <label class="form-label">Nazwa <span style="color:#dc2626">*</span></label>
+                <input type="text" name="name" class="form-input" placeholder="np. Przypomnienie 3 dni" required>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Wyślij X godzin przed wizytą</label>
+                <input type="number" name="send_hours_before" class="form-input" value="24" min="1" max="168" style="width:120px;">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Treść wiadomości</label>
+                <textarea name="template_text" class="form-input" rows="3"></textarea>
+            </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_confirm_link" id="new-cl">
+                <label class="form-label" for="new-cl">Dołącz link potwierdzenia</label>
+            </div>
+            <button type="submit" class="btn-primary">Dodaj typ</button>
+        </form>
+    </details>
+
+    <!-- Footer links -->
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--color-border);">
+        <a href="{{ url_for('sms.sms_log') }}" style="font-size:0.8125rem;color:var(--color-ink-muted);">Historia wysyłek SMS →</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function showPeriod(period, btn) {
+    document.getElementById('stats-mtd1').style.display = period === 'mtd1' ? 'grid' : 'none';
+    document.getElementById('stats-mtd3').style.display = period === 'mtd3' ? 'grid' : 'none';
+    document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function toggleAuthToken() {
+    const inp = document.getElementById('auth-token-input');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// Char counter for all textareas with data-char-counter
+document.querySelectorAll('textarea[data-char-counter]').forEach(ta => {
+    const id = ta.id.replace('tmpl-', '');
+    const counter = document.getElementById('cnt-' + id);
+    if (!counter) return;
+    function update() {
+        const len = ta.value.length;
+        const segments = Math.ceil(len / 160) || 1;
+        counter.textContent = `${len} znaków${segments > 1 ? ` (${segments} SMS)` : ''}`;
+        counter.style.color = len > 160 ? '#dc2626' : '';
+    }
+    ta.addEventListener('input', update);
+    update();
+});
+
+async function sendTestSms() {
+    const sid = document.querySelector('[name=account_sid]').value.trim();
+    const token = document.querySelector('[name=auth_token]').value.trim();
+    const from = document.querySelector('[name=from_number]').value.trim();
+    const to = document.getElementById('test-to-number').value.trim();
+    const resultEl = document.getElementById('test-result');
+
+    if (!to) { resultEl.textContent = 'Wpisz numer odbiorcy'; resultEl.style.color = '#dc2626'; return; }
+
+    resultEl.textContent = 'Wysyłanie...';
+    resultEl.style.color = '';
+
+    try {
+        const resp = await fetch('{{ url_for("sms.sms_test") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_sid: sid, auth_token: token, from_number: from, to_number: to })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            resultEl.textContent = '✓ Wysłano — SID: ' + data.result;
+            resultEl.style.color = '#166534';
+        } else {
+            resultEl.textContent = '✗ Błąd: ' + data.result;
+            resultEl.style.color = '#dc2626';
+        }
+    } catch (e) {
+        resultEl.textContent = '✗ Błąd połączenia';
+        resultEl.style.color = '#dc2626';
+    }
+}
+</script>
+{% endblock %}
