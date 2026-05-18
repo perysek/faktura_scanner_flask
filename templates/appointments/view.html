@@ -338,15 +338,16 @@ async function loadAppointment() {
     if (SMS_ACTIVE && SMS_TYPES.length > 0) {
         const items = SMS_TYPES.map(mt => {
             const alreadySent = SMS_SENT_KEYS.has(mt.type_key);
-            return `<li><button type="button" class="dropdown-item"
-                onclick="sendSms(${APPT_ID}, '${mt.type_key}', ${JSON.stringify(mt.name)})">
+            return `<li><button type="button" class="dropdown-item sms-type-btn"
+                data-type-key="${esc(mt.type_key)}"
+                data-type-name="${esc(mt.name)}">
                 ${esc(mt.name)}
                 ${alreadySent ? '<span class="sms-sent-badge">Wysłano</span>' : ''}
             </button></li>`;
         }).join('');
         bar.insertAdjacentHTML('beforeend', `
             <div class="dropdown" id="sms-dropdown">
-                <button class="btn-action" type="button" onclick="toggleSmsDropdown(event)">
+                <button class="btn-action" type="button" id="sms-toggle-btn">
                     📱 Wyślij SMS ▾
                 </button>
                 <ul class="dropdown-menu">${items}</ul>
@@ -520,13 +521,27 @@ document.addEventListener('DOMContentLoaded', loadAppointment);
 
 // ── SMS ───────────────────────────────────────────────────────────────
 
-function toggleSmsDropdown(event) {
-    event.stopPropagation();
-    document.getElementById('sms-dropdown').classList.toggle('open');
-}
-document.addEventListener('click', () => {
+document.addEventListener('click', function(e) {
+    const toggle = e.target.closest('#sms-toggle-btn');
     const dd = document.getElementById('sms-dropdown');
-    if (dd) dd.classList.remove('open');
+    if (!dd) return;
+
+    if (toggle) {
+        e.stopPropagation();
+        dd.classList.toggle('open');
+        return;
+    }
+
+    const typeBtn = e.target.closest('.sms-type-btn');
+    if (typeBtn && dd.contains(typeBtn)) {
+        dd.classList.remove('open');
+        const typeKey = typeBtn.dataset.typeKey;
+        const typeName = typeBtn.dataset.typeName;
+        sendSms(APPT_ID, typeKey, typeName);
+        return;
+    }
+
+    dd.classList.remove('open');
 });
 
 async function sendSms(appointmentId, typeKey, typeName) {
