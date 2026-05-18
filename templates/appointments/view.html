@@ -197,10 +197,22 @@ const STATUS_LABELS = {
     'completed':'Zakończona','cancelled':'Anulowana','no_show':'Nieobecność'
 };
 const TRANSITIONS = {
-    'scheduled': [{status:'confirmed',label:'Potwierdź',cls:'primary'},{status:'cancelled',label:'Anuluj',cls:'danger'},{status:'no_show',label:'Nieobecność',cls:''}],
-    'confirmed': [{status:'in_progress',label:'Rozpocznij',cls:'primary'},{status:'cancelled',label:'Anuluj',cls:'danger'}],
-    'in_progress': [{status:'completed',label:'Zamknij wizytę',cls:'success'},{status:'cancelled',label:'Anuluj',cls:'danger'}]
+    'scheduled':   [{status:'confirmed',  label:'Potwierdź',     cls:'primary'},
+                    {status:'cancelled',  label:'Anuluj',        cls:'danger'}],
+    'confirmed':   [{status:'in_progress',label:'Rozpocznij',    cls:'primary'},
+                    {status:'no_show',   label:'Nieobecność',    cls:''},
+                    {status:'cancelled',  label:'Anuluj',        cls:'danger'}],
+    'in_progress': [{status:'completed',  label:'Zamknij wizytę',cls:'success'},
+                    {status:'cancelled',  label:'Anuluj',        cls:'danger'}]
 };
+
+function isNoShowAllowed(dateStr, startTimeStr) {
+    if (!dateStr || !startTimeStr) return false;
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const [h, min]  = String(startTimeStr).split(':').map(Number);
+    const startDt   = new Date(y, m - 1, d, h, min, 0);
+    return Date.now() >= startDt.getTime() - 30 * 60 * 1000;
+}
 
 // Handle back button based on 'from' query parameter
 (function() {
@@ -293,8 +305,10 @@ async function loadAppointment() {
         <div class="totals-row grand"><span>Razem:</span><span>${fmtPrice(t.total_price)}</span></div>
     `;
 
-    // Actions
-    const actions = TRANSITIONS[a.status] || [];
+    // Actions — filter no_show by time guard (same window as in_progress)
+    const actions = (TRANSITIONS[a.status] || []).filter(act =>
+        act.status !== 'no_show' || isNoShowAllowed(a.appointment_date, a.start_time)
+    );
     const bar = document.getElementById('action-bar');
 
     let actionsHTML = '';
