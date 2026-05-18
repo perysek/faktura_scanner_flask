@@ -476,6 +476,14 @@ async function loadAppointments() {
 
 // ── Status modal ──────────────────────────────────────────────────────────────
 
+function isNoShowAllowed(dateStr, startTimeStr) {
+    if (!dateStr || !startTimeStr) return false;
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const [h, min]  = String(startTimeStr).split(':').map(Number);
+    const startDt   = new Date(y, m - 1, d, h, min, 0);
+    return Date.now() >= startDt.getTime() - 30 * 60 * 1000;
+}
+
 function openStatusModal(id, currentStatus, clientName, date, time) {
     modalAppointmentId = id;
     document.getElementById('modalMeta').textContent = `${clientName} — ${date} ${time}`;
@@ -485,7 +493,9 @@ function openStatusModal(id, currentStatus, clientName, date, time) {
     document.getElementById('modalCancellationReason').value = '';
     document.getElementById('modalReasonWrap').style.display = 'none';
 
-    const options = VALID_TRANSITIONS[currentStatus] || [];
+    const options = (VALID_TRANSITIONS[currentStatus] || []).filter(s =>
+        s !== 'no_show' || isNoShowAllowed(date, time)
+    );
     const container = document.getElementById('modalStatusOptions');
     container.innerHTML = options.map(s => `
         <input type="radio" class="modal-status-option" name="newStatus" id="ns_${s}" value="${s}" onchange="onStatusOptionChange('${s}')">
