@@ -265,7 +265,6 @@ def create_app():
     cleanup_stale_uploads(app)
 
     # SMS auto-send background scheduler
-    import os
     app.config['BASE_URL'] = os.environ.get('BASE_URL', 'http://localhost:5000')
     try:
         from scheduler import start_scheduler, stop_scheduler
