@@ -60,15 +60,20 @@ class SmsService:
         return self._type_repo.delete_custom(type_id)
 
     def test_connection(self, account_sid: str, auth_token: str,
-                        from_number: str, to_number: str) -> Tuple[bool, str]:
+                        from_number: str, to_number: str,
+                        messaging_service_sid: Optional[str] = None) -> Tuple[bool, str]:
         try:
             from twilio.rest import Client
             client = Client(account_sid, auth_token)
-            msg = client.messages.create(
-                body="Test wiadomości SMS z MyWay Beauty Salon.",
-                from_=from_number,
-                to=to_number,
-            )
+            send_kwargs = {
+                'body': "Test wiadomości SMS z MyWay Beauty Salon.",
+                'to': to_number,
+            }
+            if messaging_service_sid:
+                send_kwargs['messaging_service_sid'] = messaging_service_sid
+            else:
+                send_kwargs['from_'] = from_number
+            msg = client.messages.create(**send_kwargs)
             return True, msg.sid
         except Exception as e:
             return False, str(e)
@@ -93,8 +98,8 @@ class SmsService:
         settings = self.get_settings()
         if not settings.get('account_sid') or not settings.get('auth_token'):
             raise SmsError("Brak konfiguracji Twilio (account_sid / auth_token)")
-        if not settings.get('from_number'):
-            raise SmsError("Brak numeru nadawcy SMS")
+        if not settings.get('messaging_service_sid') and not settings.get('from_number'):
+            raise SmsError("Brak numeru nadawcy SMS lub Messaging Service SID")
         if not settings.get('is_active'):
             raise SmsError("Wysyłanie SMS jest wyłączone w ustawieniach")
 
@@ -141,11 +146,12 @@ class SmsService:
         try:
             from twilio.rest import Client as TwilioClient
             twilio = TwilioClient(settings['account_sid'], settings['auth_token'])
-            msg = twilio.messages.create(
-                body=message_body,
-                from_=settings['from_number'],
-                to=phone,
-            )
+            send_kwargs = {'body': message_body, 'to': phone}
+            if settings.get('messaging_service_sid'):
+                send_kwargs['messaging_service_sid'] = settings['messaging_service_sid']
+            else:
+                send_kwargs['from_'] = settings['from_number']
+            msg = twilio.messages.create(**send_kwargs)
             twilio_sid = msg.sid
             self._reminder_repo.update_status(reminder_id, 'sent', twilio_sid=twilio_sid)
 
