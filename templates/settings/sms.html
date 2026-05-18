@@ -340,6 +340,11 @@ textarea.form-input { resize: vertical; min-height: 80px; }
                        {% if mt.is_enabled %}checked{% endif %}>
                 <label class="form-label" for="en-{{ mt.id }}">Włącz automatyczne wysyłanie</label>
             </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="send_only_if_confirmed" id="soc-{{ mt.id }}"
+                       {% if mt.send_only_if_confirmed %}checked{% endif %}>
+                <label class="form-label" for="soc-{{ mt.id }}">Wysyłaj tylko jeżeli status <strong>Potwierdzona</strong></label>
+            </div>
             <div class="type-actions">
                 <button type="submit" class="btn-primary btn-sm">Zapisz</button>
                 {% if mt.is_custom %}
@@ -360,7 +365,7 @@ textarea.form-input { resize: vertical; min-height: 80px; }
         <p class="var-ref-title">Dostępne zmienne w treści wiadomości:</p>
         <code>{salon_name}</code> <code>{client_name}</code> <code>{date}</code>
         <code>{time}</code> <code>{employee_name}</code> <code>{services}</code>
-        <code>{hours_before}</code> <code>{confirm_url}</code>
+        <code>{hours_before}</code> <code>{confirm_url}</code> <code>{cancel_url}</code>
     </div>
 
     <!-- Add custom type -->
