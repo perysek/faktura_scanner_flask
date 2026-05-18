@@ -50,10 +50,12 @@ class SmsService:
         return self._type_repo.update(type_id, **fields)
 
     def create_custom_type(self, name: str, send_hours_before: int,
-                           template_text: str, include_confirm_link: bool) -> int:
+                           template_text: str, include_confirm_link: bool,
+                           include_cancel_link: bool = False) -> int:
         return self._type_repo.create_custom(
             name=name, send_hours_before=send_hours_before,
-            template_text=template_text, include_confirm_link=include_confirm_link
+            template_text=template_text, include_confirm_link=include_confirm_link,
+            include_cancel_link=include_cancel_link,
         )
 
     def delete_custom_type(self, type_id: int) -> bool:
@@ -257,6 +259,9 @@ class SmsService:
             hours_before = msg_type['send_hours_before']
 
         template = msg_type['template_text']
+        has_confirm_placeholder = '{confirm_url}' in template
+        has_cancel_placeholder = '{cancel_url}' in template
+
         body = (template
             .replace('{salon_name}', salon_name)
             .replace('{client_name}', client_first)
@@ -265,6 +270,13 @@ class SmsService:
             .replace('{services}', service_names)
             .replace('{hours_before}', str(hours_before))
             .replace('{confirm_url}', confirm_url if msg_type['include_confirm_link'] else '')
-            .replace('{cancel_url}', cancel_url)
+            .replace('{cancel_url}', cancel_url if msg_type.get('include_cancel_link') else '')
         )
+
+        if msg_type['include_confirm_link'] and not has_confirm_placeholder:
+            body = body.rstrip() + '\n' + confirm_url
+
+        if msg_type.get('include_cancel_link') and not has_cancel_placeholder:
+            body = body.rstrip() + '\n' + cancel_url
+
         return body.strip()

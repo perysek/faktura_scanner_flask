@@ -336,6 +336,11 @@ textarea.form-input { resize: vertical; min-height: 80px; }
                 <label class="form-label" for="cl-{{ mt.id }}">Dołącz link potwierdzenia ({confirm_url})</label>
             </div>
             <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_cancel_link" id="cxl-{{ mt.id }}"
+                       {% if mt.include_cancel_link %}checked{% endif %}>
+                <label class="form-label" for="cxl-{{ mt.id }}">Dołącz link anulowania ({cancel_url})</label>
+            </div>
+            <div class="form-field form-field--inline">
                 <input type="checkbox" name="is_enabled" id="en-{{ mt.id }}"
                        {% if mt.is_enabled %}checked{% endif %}>
                 <label class="form-label" for="en-{{ mt.id }}">Włącz automatyczne wysyłanie</label>
@@ -387,6 +392,10 @@ textarea.form-input { resize: vertical; min-height: 80px; }
             <div class="form-field form-field--inline">
                 <input type="checkbox" name="include_confirm_link" id="new-cl">
                 <label class="form-label" for="new-cl">Dołącz link potwierdzenia</label>
+            </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_cancel_link" id="new-cxl">
+                <label class="form-label" for="new-cxl">Dołącz link anulowania</label>
             </div>
             <button type="submit" class="btn-primary">Dodaj typ</button>
         </form>
