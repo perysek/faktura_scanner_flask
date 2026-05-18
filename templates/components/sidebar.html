@@ -20,7 +20,7 @@
     {% set salon_active = request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment', 'main.clients_list'] %}
     {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list', 'main.service_categories_list', 'absence.management_index', 'absence.my_absences', 'absence_balance.balances_index'] %}
     {% set korekta_active = request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit', 'main.superadmin_edit_table'] %}
-    {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'roles.roles_list', 'auth.profile'] %}
+    {% set system_active = request.endpoint in ['main.history', 'main.email_settings', 'users.users_list', 'roles.roles_list', 'auth.profile', 'sms.sms_settings', 'sms.sms_log'] %}
 
     <!-- Navigation -->
     <nav class="sidebar-nav flex-1 px-4 py-2 overflow-y-auto" aria-label="Menu glowne">
@@ -155,6 +155,10 @@
                 url_for('roles.roles_list'), 'Poziomy dostepu',
                 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
                 request.endpoint == 'roles.roles_list') }}
+            {{ sidebar_link(
+                url_for('sms.sms_settings'), 'Ustawienia SMS',
+                'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
+                request.endpoint in ['sms.sms_settings', 'sms.sms_log']) }}
             {% endif %}
             {{ sidebar_link(
                 url_for('auth.profile'), 'Profil',

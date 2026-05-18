@@ -260,6 +260,7 @@ function isNoShowAllowed(dateStr, startTimeStr) {
 })();
 
 function esc(t){if(!t)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};return String(t).replace(/[&<>"']/g,c=>m[c]);}
+function escapeHtml(t){return esc(t);}
 function fmtDate(d){return d?new Date(d).toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'—';}
 function fmtTime(t){return t?t.substring(0,5):'—';}
 function fmtPrice(a){return a!=null?parseFloat(a).toFixed(2)+' zł':'—';}
@@ -529,7 +530,7 @@ document.addEventListener('click', () => {
 });
 
 async function sendSms(appointmentId, typeKey, typeName) {
-    if (!confirm(`Wysłać SMS "${typeName}" do klienta?`)) return;
+    document.getElementById('sms-dropdown')?.classList.remove('open');
     try {
         const resp = await fetch('/api/sms/send', {
             method: 'POST',
@@ -539,33 +540,37 @@ async function sendSms(appointmentId, typeKey, typeName) {
         const data = await resp.json();
         if (data.success) {
             SMS_SENT_KEYS.add(typeKey);
-            if (typeof Notifications !== 'undefined') Notifications.success(`SMS "${typeName}" wysłany`);
-            else alert(`SMS "${typeName}" wysłany`);
+            Notifications.success(`SMS "${typeName}" wysłany`);
+            loadSmsLog(true);
         } else {
-            if (typeof Notifications !== 'undefined') Notifications.error('Błąd: ' + data.message);
-            else alert('Błąd: ' + data.message);
+            Notifications.error('Błąd: ' + (data.message || 'Nieznany błąd'));
         }
     } catch (e) {
-        if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+        Notifications.error('Błąd połączenia z serwerem');
     }
-    document.getElementById('sms-dropdown')?.classList.remove('open');
 }
 
 function statusBadgeClass(s) {
     return {sent:'sms-badge-green', delivered:'sms-badge-teal', failed:'sms-badge-red', pending:'sms-badge-gray'}[s] ?? 'sms-badge-gray';
 }
 
-const smsLogPanel = document.getElementById('sms-log-panel');
-if (smsLogPanel) {
-    let smsLoaded = false;
-    smsLogPanel.addEventListener('toggle', async function() {
-        if (!this.open || smsLoaded) return;
-        smsLoaded = true;
+let smsLoaded = false;
+
+async function loadSmsLog(force = false) {
+    const panel = document.getElementById('sms-log-panel');
+    if (!panel) return;
+    if (!force && smsLoaded) return;
+    smsLoaded = true;
+
+    const tbody = document.getElementById('sms-log-tbody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Ładowanie...</td></tr>';
+
+    try {
         const resp = await fetch(`/api/sms/appointment/${APPT_ID}/log`);
         const data = await resp.json();
-        const tbody = document.getElementById('sms-log-tbody');
         if (!data.reminders || !data.reminders.length) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Brak wysyłek SMS</td></tr>';
+            document.getElementById('sms-count').textContent = '';
             return;
         }
         document.getElementById('sms-count').textContent = data.reminders.length;
@@ -580,6 +585,15 @@ if (smsLogPanel) {
                 <td>${esc(r.sender_name || r.created_by_name || 'System')}</td>
             </tr>
         `).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-error);">Błąd ładowania historii SMS</td></tr>';
+    }
+}
+
+const smsLogPanel = document.getElementById('sms-log-panel');
+if (smsLogPanel) {
+    smsLogPanel.addEventListener('toggle', function() {
+        if (this.open) loadSmsLog();
     });
 }
 
