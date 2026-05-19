@@ -173,12 +173,36 @@
         return false;
     }
 
-    // Close on Escape key
+    // Close on Escape key + tab trap inside modal
     document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('confirm-modal');
+        if (!modal || modal.classList.contains('hidden')) return;
+
         if (e.key === 'Escape') {
-            const modal = document.getElementById('confirm-modal');
-            if (modal && !modal.classList.contains('hidden')) {
-                closeConfirmModal();
+            closeConfirmModal();
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            const panel = document.getElementById('confirm-modal-panel');
+            const focusable = Array.from(
+                panel.querySelectorAll('button:not([disabled])')
+            ).filter(el => el.offsetParent !== null);
+            if (focusable.length < 2) return;
+
+            const first = focusable[0];
+            const last  = focusable[focusable.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                }
+            } else {
+                if (document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
             }
         }
     });
