@@ -60,7 +60,8 @@ def appointment_confirm_submit(token):
 
     repo.update_confirmation_status(appt['id'], action)
 
-    if action == 'confirmed' and appt.get('status') == 'scheduled':
+    old_status = appt.get('status')
+    if action == 'confirmed' and old_status in ('scheduled', 'pending'):
         repo.update_status(appt['id'], 'confirmed')
 
     try:
@@ -73,13 +74,13 @@ def appointment_confirm_submit(token):
             old_value=None, new_value=action,
             user_id=None, user_name='Klient (SMS)',
         )
-        if action == 'confirmed' and appt.get('status') == 'scheduled':
+        if action == 'confirmed' and old_status in ('scheduled', 'pending'):
             audit.log_event(
                 entity_type='appointment', action='STATUS_CHANGED',
                 entity_id=appt['id'],
                 entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
                 field_name='status',
-                old_value='scheduled', new_value='confirmed',
+                old_value=old_status, new_value='confirmed',
                 user_id=None, user_name='Klient (SMS)',
             )
     except Exception:

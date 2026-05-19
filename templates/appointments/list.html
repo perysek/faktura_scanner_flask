@@ -616,6 +616,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setDateToInput('filter-end', addDays(today, 30));
     loadAppointments();
 });
+
+// Refresh when user returns to this tab (catches status changes made via client confirmation link)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) loadAppointments();
+});
 </script>
 
 <!-- Past Visits Scanner -->
