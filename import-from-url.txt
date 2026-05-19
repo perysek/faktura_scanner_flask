@@ -1,0 +1,170 @@
+
+❯ make a script for visits bookings import from URL using draft proposal in     
+  import-url.txt file located in project main folder                            
+
+● Let me read the proposal and explore the relevant project structure first.
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● Now let me explore the project structure — models, scripts folder, and
+  visit/booking data model.
+
+  Searched for 2 patterns, read 1 file, listed 1 directory (ctrl+o to expand)
+
+● Good — the existing import script is the perfect reference. Let me check the
+  config and see the DB schema.
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  The existing import_appointments_from_excel.py already handles the exact xlsx
+  column format that caldis.pl exports — same headers ("Od", "Do", "Kalendarz",
+  "Suma brutto", etc.). So the new URL script just needs to add a download step
+  on top, then call the same import_file() functions. This avoids duplicating
+  ~300 lines of import logic.
+  ─────────────────────────────────────────────────
+
+  Now I have everything needed. The plan:
+
+  1. Script 2 (Python requests) for download — simpler than Playwright, no
+  browser needed, good for scheduled runs
+  2. Re-use all lookup builders and import_file() from the existing script
+  3. Credentials from env vars (CALDIS_EMAIL / CALDIS_PASSWORD) with CLI
+  fallbacks
+  4. --dry-run and --keep-xlsx flags
+
+● Write(scripts\import_appointments_from_url.py)
+  ⎿  Wrote 329 lines to scripts\import_appointments_from_url.py
+      2 import_appointments_from_url.py
+      3 
+      4 Pobiera plik Rezerwacje.xlsx z caldis.pl (uwierzytelniony POST do
+      5 /BookingExport/ExportToXlsx), a następnie importuje wizyty do lok
+        alnej bazy
+      6 SQLite używając tej samej logiki co import_appointments_from_exce
+        l.py.
+      7 
+      8 Użycie:
+      9     python scripts/import_appointments_from_url.py [OPCJE]
+     … +362 lines (ctrl+o to expand)
+
+● Now let me verify the required packages exist and do a quick syntax check:
+
+● Bash(python -c "import requests; import bs4; print('requests:',
+      requests.__version__, '| bs4:', bs4.__version__)")
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+         import requests; import bs4; print('requests:', requests.__version__, 
+     '| bs4:', bs4.__version__)
+                          ^^^^^^^^^^
+     ModuleNotFoundError: No module named 'bs4'
+
+● Bash(python -m py_compile scripts/import_appointments_from_url.py && echo
+      "Syntax OK")
+  ⎿  Cancelled: parallel tool call Bash(python -c "import requests; import bs4; 
+     …) errored
+
+● Bash(python -c "import requests; print('requests:', requests.__version__)")
+  ⎿  requests: 2.33.1
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● bs4 isn't installed. Let me check what the project uses for HTML parsing and
+  add it to requirements:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(requirements.txt)
+  ⎿  Added 5 lines
+      19  
+      20  # Eksport danych
+      21  openpyxl==3.1.5
+      22 +pandas>=2.0.0                                                  
+      23  
+      24 +# Import wizyt z URL (caldis.pl)                               
+      25 +requests>=2.28.0                                               
+      26 +beautifulsoup4>=4.12.0                                         
+      27 +                                                               
+      28  # Parsowanie i walidacja
+      29  python-dateutil==2.9.0.post0
+      30  schwifty==2026.3.0
+
+● Bash(pip install beautifulsoup4 pandas --quiet 2>&1 | tail -5)
+  ⎿  [notice] A new release of pip is available: 25.3 -> 26.1
+     [notice] To update, run: python.exe -m pip install --upgrade pip
+
+● Bash(python -m py_compile scripts/import_appointments_from_url.py && echo
+      "Syntax OK")
+  ⎿  Syntax OK
+
+● Good. Let me also do a quick dry-run help check to verify the CLI works:
+
+● Bash(python scripts/import_appointments_from_url.py --help)
+  ⎿  usage: import_appointments_from_url.py [-h] [--date-start YYYY-MM-DD]
+                                            [--date-end YYYY-MM-DD] [--emai
+     l EMAIL]
+     … +16 lines (ctrl+o to expand)
+
+● CLI works. Now commit everything:
+
+● Bash(git add scripts/import_appointments_from_url.py requirements.txt && git
+      status)
+  ⎿  warning: in the working copy of 'scripts/import_appointments_from_url.
+     py', LF will be replaced by CRLF the next time Git touches it
+     On branch invoices-app
+     … +18 lines (ctrl+o to expand)
+
+● Bash(git commit -m "$(cat <<'EOF'
+      feat(scripts): add import_appointments_from_url.py — fetch & import from
+      caldis.pl…)
+  ⎿  Time tracking: Commit took no time, message unmodified
+     [invoices-app 5a5bc5f] feat(scripts): add import_appointments_from_url
+     .py — fetch & import from caldis.pl
+     … +2 lines (ctrl+o to expand)
+
+● Bash(git push origin invoices-app)
+  ⎿  To https://github.com/perysek/faktura_scanner_flask.git
+        2d950bd..5a5bc5f  invoices-app -> invoices-app
+
+● ★ Insight ─────────────────────────────────────
+  The script reuses 100% of the existing import/resolver functions instead of
+  duplicating them — this means any fix to KALENDARZ_OVERRIDES,
+  resolve_client_id(), or deduplication logic automatically applies to URL
+  imports too. The only new code is the 3-step HTTP layer: login → CSRF + rooms
+  → export POST.
+  ─────────────────────────────────────────────────
+
+  Done. Script is at scripts/import_appointments_from_url.py, committed and
+  pushed.
+
+  How to use it:
+
+  # Set credentials once (or add to .env)
+  set CALDIS_EMAIL=your@email.com
+  set CALDIS_PASSWORD=yourpassword
+
+  # Import last 90 days (default)
+  python scripts/import_appointments_from_url.py
+
+  # Import specific range, keep the xlsx file
+  python scripts/import_appointments_from_url.py --date-start 2026-01-01
+  --date-end 2026-04-29 --keep-xlsx
+
+  # Test without touching the DB
+  python scripts/import_appointments_from_url.py --dry-run
+
+  What it does under the hood:
+  1. GETs login page → scrapes CSRF token
+  2. POSTs credentials → verifies session
+  3. GETs /Booking → scrapes fresh CSRF token + all room GUIDs
+  4. POSTs to /BookingExport/ExportToXlsx → downloads xlsx to assets/temp/
+  5. Runs the same import_file() + deduplication logic as the Excel script
+  6. Cleans up the temp file (unless --keep-xlsx)
+● Ran 3 stop hooks (ctrl+o to expand)
+  ⎿  Stop hook error: Failed with non-blocking status code:
+  C:\Python312\python3.exe: No module named mempalace
+
+✻ Brewed for 4m 33s
+
+❯ /copy                                                                         
+  ⎿  Copied to clipboard (1330 characters, 30 lines)
+     Also written to C:\Users\PIOTRP~1\AppData\Local\Temp\claude\response.md

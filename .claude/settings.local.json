@@ -99,12 +99,16 @@
       "Bash(cd C:/Projects/faktura_scanner_flask && .venv/Scripts/pip list 2>&1 | grep -i -E \"flask|psycopg|bcrypt|login\")",
       "Skill(gsd:new-milestone)",
       "Skill(gsd:plan-phase)",
-      "Skill(gsd:execute-phase)"
+      "Skill(gsd:execute-phase)",
+      "Bash(rm -f \"/c/Users/piotrperesiak/.mempalace/palace/765c0170-e2a3-4a27-8977-5b759b60a7b1/\"*)",
+      "Bash(rm -f \"/c/Users/piotrperesiak/.mempalace/palace/b1183c66-2db8-4cec-b95b-811e09888735/\"*)",
+      "Bash(rm -f \"/c/Users/piotrperesiak/.mempalace/palace/f0c38fa2-b7c5-4cd6-91fb-40d858165b72/\"*)",
+      "Read(//c/Users/piotrperesiak/.mempalace/palace/765c0170-e2a3-4a27-8977-5b759b60a7b1//**)"
     ],
     "deny": [],
     "ask": []
   },
   "disableAllHooks": false,
   "outputStyle": "Explanatory",
-  "prefersReducedMotion": true
+  "prefersReducedMotion": false
 }
