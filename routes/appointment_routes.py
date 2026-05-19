@@ -5,7 +5,10 @@ import logging
 from datetime import datetime, date, time
 from decimal import Decimal
 
-from flask import Blueprint, jsonify, request
+import json
+import time as _time
+
+from flask import Blueprint, jsonify, request, Response, stream_with_context
 from flask_login import login_required, current_user
 
 from config.appointment_statuses import AppointmentStatus
@@ -236,6 +239,40 @@ def get_appointment(appointment_id):
     except Exception as e:
         logging.exception('Unexpected error in get_appointment')
         raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/events')
+@login_required
+@module_permission_required('appointments', 'data_correction')
+def appointment_events(appointment_id):
+    """SSE stream: pushes confirmation_status changes to the edit page in real time."""
+    repo = AppointmentRepository()
+
+    def generate():
+        row = repo.get_by_id(appointment_id)
+        if not row:
+            return
+        last_status = row['confirmation_status']
+        yield f"data: {json.dumps({'confirmation_status': last_status})}\n\n"
+
+        tick = 0
+        while True:
+            _time.sleep(3)
+            tick += 1
+            row = repo.get_by_id(appointment_id)
+            if not row:
+                return
+            current = row['confirmation_status']
+            if current != last_status:
+                last_status = current
+                yield f"data: {json.dumps({'confirmation_status': current})}\n\n"
+            elif tick % 5 == 0:
+                yield ": hb\n\n"
+
+    resp = Response(stream_with_context(generate()), mimetype='text/event-stream')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['X-Accel-Buffering'] = 'no'
+    return resp
 
 
 @appointment_bp.route('/appointments/check-conflict', methods=['GET'])
