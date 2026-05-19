@@ -401,6 +401,19 @@ class AppointmentRepository:
             cursor.execute(query, (employee_id, date_from.isoformat(), date_to.isoformat()))
             return cursor.fetchall()
 
+    def reset_confirmation(self, appointment_id: int) -> bool:
+        """Wyczyść odpowiedź klienta (SMS link) — używane gdy pracownik ręcznie zmienia status."""
+        query = """
+            UPDATE appointments
+            SET confirmation_status = NULL, confirmation_updated_at = NULL
+            WHERE id = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
     def update_status(self, appointment_id: int, new_status: str,
                        cancellation_reason: Optional[str] = None) -> bool:
         """Zaktualizuj status wizyty"""
@@ -408,7 +421,8 @@ class AppointmentRepository:
             query = """
                 UPDATE appointments
                 SET status = %s, cancellation_reason = %s, cancelled_at = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP,
+                    confirmation_status = NULL, confirmation_updated_at = NULL
                 WHERE id = %s
             """
             params = (new_status, cancellation_reason, appointment_id)
