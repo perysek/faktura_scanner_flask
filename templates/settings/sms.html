@@ -437,6 +437,43 @@ document.querySelectorAll('textarea[data-char-counter]').forEach(ta => {
     update();
 });
 
+// Wire URL checkboxes → textarea: append placeholder on check, remove on uncheck
+function wireUrlCheckbox(checkbox, placeholder, textarea) {
+    checkbox.addEventListener('change', function () {
+        let val = textarea.value;
+        if (this.checked) {
+            if (!val.includes(placeholder)) {
+                textarea.value = val.trimEnd() + '\n' + placeholder;
+            }
+        } else {
+            textarea.value = val
+                .split(placeholder).join('')
+                .replace(/\n{3,}/g, '\n\n')
+                .trimEnd();
+        }
+        textarea.dispatchEvent(new Event('input')); // refresh char counter
+    });
+}
+
+// Existing type cards: cl-{id} / cxl-{id} → tmpl-{id}
+document.querySelectorAll('[id^="cl-"]').forEach(cb => {
+    const ta = document.getElementById('tmpl-' + cb.id.replace('cl-', ''));
+    if (ta) wireUrlCheckbox(cb, '{confirm_url}', ta);
+});
+document.querySelectorAll('[id^="cxl-"]').forEach(cb => {
+    const ta = document.getElementById('tmpl-' + cb.id.replace('cxl-', ''));
+    if (ta) wireUrlCheckbox(cb, '{cancel_url}', ta);
+});
+
+// New-type form
+const _newTa = document.querySelector('#add-custom-type textarea[name="template_text"]');
+if (_newTa) {
+    const _newCl  = document.getElementById('new-cl');
+    const _newCxl = document.getElementById('new-cxl');
+    if (_newCl)  wireUrlCheckbox(_newCl,  '{confirm_url}', _newTa);
+    if (_newCxl) wireUrlCheckbox(_newCxl, '{cancel_url}',  _newTa);
+}
+
 async function sendTestSms() {
     const sid = document.querySelector('[name=account_sid]').value.trim();
     const token = document.querySelector('[name=auth_token]').value.trim();
