@@ -1,0 +1,736 @@
+ ▐▛███▜▌   Claude Code v2.1.139
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    C:\Projects\faktura_scanner_flask
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ implement tasks described in @cosmetics-corrections-todos_12052026.txt .      
+  Thank you!                                                                    
+  ⎿  Read cosmetics-corrections-todos_12052026.txt (18 lines)
+
+● I'll explore the codebase to understand the relevant files before implementing
+   the 5 tasks.
+
+● Explore(Explore absence/balance views and JS files)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+● The explore agent is scanning the codebase for all absence/balance-related
+  files. I'll share findings and start implementing once it reports back.
+
+✻ Worked for 1m 22s
+
+❯ /model                                                                        
+  ⎿  Set model to Sonnet 4.6 (default) with max effort
+
+❯ sorry if I interrupted. please continue                                       
+
+● No worries! The explore agent is still running. While I wait, let me start
+  looking at the JS files and template structure in parallel.
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● Found the key files. Reading them all in parallel now.
+
+  Read 3 files (ctrl+o to expand)
+
+● Agent "Explore absence/balance views and JS files" completed
+
+● Now let me check the backend audit route and modals.js to understand all 5
+  tasks fully.
+
+  Read 2 files (ctrl+o to expand)
+
+● Now let me check the audit repository to understand the user_name issue in
+  task 2.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Let me check the balance service to understand how audit entries are created
+  (to fix task 2).
+
+  Read 1 file (ctrl+o to expand)
+
+● Now let me check the absence routes for the check endpoint, and the audit
+  route for task 1.
+
+  Searched for 3 patterns (ctrl+o to expand)
+
+● Let me check the absence limit and adjustment tables to understand how to
+  filter audit entries by employee.
+
+  Read 2 files (ctrl+o to expand)
+● Let me check the base repository to understand available methods.
+
+  Read 1 file (ctrl+o to expand)
+
+● Let me quickly check the notifications.js to understand its API before writing
+   code.
+
+  Read 1 file (ctrl+o to expand)
+
+● ★ Insight ─────────────────────────────────────
+  The user_name column in audit_log is NULL for absence balance entries because
+  set_limit/create_adjustment in the service never pass user_name to log_event.
+  Rather than changing 4+ function signatures, the cleanest fix is a LEFT JOIN
+  on the users table in the audit query — retroactively fixes all existing rows
+  with a single SQL change.
+  ─────────────────────────────────────────────────
+
+  Now implementing all 5 tasks in order. Starting with the backend (audit repo +
+   routes), then the templates.
+
+● Update(repositories\audit_repository.py)
+  ⎿  Added 58 lines
+      125  
+      126          return results
+      127  
+      128 +    def get_for_employee_balance(self, employee_id: int) -> Li
+          +st[dict]:                                                     
+      129 +        """Historia zmian limitów i korekt dla konkretnego pra
+          +cownika."""                                                   
+      130 +        query = """                                           
+      131 +            SELECT                                            
+      132 +                a.id, a.entity_type, a.entity_id, a.entity_lab
+          +el,                                                           
+      133 +                a.action, a.field_name, a.old_value, a.new_val
+          +ue,                                                           
+      134 +                a.user_id,                                    
+      135 +                COALESCE(a.user_name, u.full_name) AS user_nam
+          +e,                                                            
+      136 +                a.changed_at                                  
+      137 +            FROM audit_log a                                  
+      138 +            LEFT JOIN users u ON u.id = a.user_id             
+      139 +            WHERE (                                           
+      140 +                (a.entity_type = 'absence_limit' AND a.entity_
+          +id IN (                                                       
+      141 +                    SELECT id FROM employee_absence_limits WHE
+          +RE employee_id = %s                                           
+      142 +                ))                                            
+      143 +                OR                                            
+      144 +                (a.entity_type = 'absence_adjustment' AND a.en
+          +tity_id IN (                                                  
+      145 +                    SELECT id FROM absence_balance_adjustments
+          + WHERE employee_id = %s                                       
+      146 +                ))                                            
+      147 +            )                                                 
+      148 +            ORDER BY a.changed_at DESC, a.id DESC             
+      149 +            LIMIT 200                                         
+      150 +        """                                                   
+      151 +        rows = self._fetch_all(query, (employee_id, employee_i
+          +d))                                                           
+      152 +        return [                                              
+      153 +            {                                                 
+      154 +                'id': r['id'],                                
+      155 +                'entity_type': r['entity_type'],              
+      156 +                'entity_id': r['entity_id'],                  
+      157 +                'entity_label': r['entity_label'],            
+      158 +                'action': r['action'],                        
+      159 +                'field_name': r['field_name'],                
+      160 +                'old_value': r['old_value'],                  
+      161 +                'new_value': r['new_value'],                  
+      162 +                'user_id': r['user_id'],                      
+      163 +                'user_name': r['user_name'],                  
+      164 +                'timestamp': r['changed_at'],                 
+      165 +            }                                                 
+      166 +            for r in rows                                     
+      167 +        ]                                                     
+      168 +                                                              
+      169 +    def delete_for_employee_balance(self, employee_id: int) ->
+          + int:                                                         
+      170 +        """Usuń wpisy historii zmian dla bilansów konkretnego 
+          +pracownika."""                                                
+      171 +        query = """                                           
+      172 +            DELETE FROM audit_log                             
+      173 +            WHERE (                                           
+      174 +                (entity_type = 'absence_limit' AND entity_id I
+          +N (                                                           
+      175 +                    SELECT id FROM employee_absence_limits WHE
+          +RE employee_id = %s                                           
+      176 +                ))                                            
+      177 +                OR                                            
+      178 +                (entity_type = 'absence_adjustment' AND entity
+          +_id IN (                                                      
+      179 +                    SELECT id FROM absence_balance_adjustments
+          + WHERE employee_id = %s                                       
+      180 +                ))                                            
+      181 +            )                                                 
+      182 +        """                                                   
+      183 +        cursor = self._execute(query, (employee_id, employee_i
+          +d))                                                           
+      184 +        return cursor.rowcount                                
+      185 +                                                              
+      186      def get_details_by_ids(self, ids_list: List[int]) -> List[
+           dict]:
+      187          """Pobierz szczegóły zmian dla podanych ID"""
+      188          if not ids_list:
+
+● Now update the routes — fix the audit endpoint + add the two new endpoints:
+
+● Update(routes\absence_balance_routes.py)
+  ⎿  Added 70 lines, removed 4 lines
+      265  def employee_balance_audit(employee_id: int):
+      266      """Historia zmian limitów i korekt dla danego pracownika."
+           ""
+      267      try:
+      268 -        entries = current_app.audit_repo.get_all(entity_type='
+          -absence_limit')                                               
+      269 -        entries += current_app.audit_repo.get_all(entity_type=
+          -'absence_adjustment')                                         
+      270 -        entries.sort(key=lambda x: x.get('timestamp') or '', r
+          -everse=True)                                                  
+      271 -        return jsonify({'success': True, 'entries': entries[:2
+          -00]})                                                         
+      268 +        entries = current_app.audit_repo.get_for_employee_bala
+          +nce(employee_id)                                              
+      269 +        return jsonify({'success': True, 'entries': entries}) 
+      270      except Exception as e:
+      271          logger.exception('employee_balance_audit failed')
+      272          return jsonify({'success': False, 'error': str(e)}), 5
+           00
+      273 +                                                              
+      274 +                                                              
+      275 +@absence_balance_bp.route(                                    
+      276 +    '/api/employees/<int:employee_id>/absence-balance-audit', 
+      277 +    methods=['DELETE'])                                       
+      278 +@absence_management_required                                  
+      279 +def clear_employee_balance_audit(employee_id: int):           
+      280 +    """Usuń historię zmian bilansów dla pracownika."""        
+      281 +    try:                                                      
+      282 +        deleted = current_app.audit_repo.delete_for_employee_b
+          +alance(employee_id)                                           
+      283 +        return jsonify({'success': True, 'deleted': deleted}) 
+      284 +    except Exception as e:                                    
+      285 +        logger.exception('clear_employee_balance_audit failed'
+          +)                                                             
+      286 +        return jsonify({'success': False, 'error': str(e)}), 5
+          +00                                                            
+      287 +                                                              
+      288 +                                                              
+      289 +@absence_balance_bp.route('/api/absence-balance/check', method
+          +s=['POST'])                                                   
+      290 +@login_required                                               
+      291 +def check_absence_balance():                                  
+      292 +    """Sprawdź czy planowana nieobecność przekroczy limit bila
+          +nsu."""                                                       
+      293 +    data = request.get_json(silent=True) or {}                
+      294 +    try:                                                      
+      295 +        employee_id = int(data['employee_id'])                
+      296 +        category_id = int(data['category_id'])                
+      297 +        date_from_str = data['date_from']                     
+      298 +        date_to_str = data.get('date_to') or date_from_str    
+      299 +        time_from_str = data.get('time_from')                 
+      300 +        time_to_str = data.get('time_to')                     
+      301 +    except (KeyError, ValueError, TypeError) as e:            
+      302 +        return jsonify({'success': False, 'error': f'Nieprawid
+          +łowe dane: {e}'}), 400                                        
+      303 +                                                              
+      304 +    try:                                                      
+      305 +        from datetime import date, datetime                   
+      306 +                                                              
+      307 +        cat_row = current_app.absence_category_repo.get_by_id(
+          +category_id)                                                  
+      308 +        if not cat_row or not bool(cat_row.get('is_tracked')):
+      309 +            return jsonify({'success': True, 'check': {'ok': T
+          +rue, 'warning': False},                                       
+      310 +                            'will_exceed': False})            
+      311 +                                                              
+      312 +        if bool(cat_row['absence_full_day']):                 
+      313 +            d_from = date.fromisoformat(date_from_str)        
+      314 +            d_to = date.fromisoformat(date_to_str)            
+      315 +            proposed_value = float((d_to - d_from).days + 1)  
+      316 +        else:                                                 
+      317 +            if not time_from_str or not time_to_str:          
+      318 +                return jsonify({'success': True, 'check': {'ok
+          +': True, 'warning': False},                                   
+      319 +                                'will_exceed': False})        
+      320 +            t1 = datetime.strptime(time_from_str[:5], '%H:%M')
+      321 +            t2 = datetime.strptime(time_to_str[:5], '%H:%M')  
+      322 +            proposed_value = (t2 - t1).seconds / 3600.0       
+      323 +                                                              
+      324 +        if proposed_value <= 0:                               
+      325 +            return jsonify({'success': True, 'check': {'ok': T
+          +rue, 'warning': False},                                       
+      326 +                            'will_exceed': False})            
+      327 +                                                              
+      328 +        check = _balance_svc().check_before_submit(           
+      329 +            employee_id, category_id, proposed_value, 'manual'
+      330 +        )                                                     
+      331 +                                                              
+      332 +        will_exceed = False                                   
+      333 +        if check.get('warning') and check.get('balance') and c
+          +heck['balance'].get('has_limit'):                             
+      334 +            bal = check['balance']                            
+      335 +            will_exceed = (bal['net_used'] + proposed_value) >
+          + bal['limit']                                                 
+      336 +                                                              
+      337 +        return jsonify({'success': True, 'check': check, 'will
+          +_exceed': will_exceed})                                       
+      338 +    except Exception as e:                                    
+      339 +        logger.exception('check_absence_balance failed')      
+      340 +        return jsonify({'success': False, 'error': str(e)}), 5
+          +00                                                            
+
+● Now fix the three balances.html changes (tasks 1, 3, 4) together:
+
+  ★ Insight ─────────────────────────────────────
+  Task 4 is a single CSS selector change — td:first-child → td. The original
+  code applied background only to the first cell because adding color to all
+  cells (including the progress bar cell) used to look awkward with colored
+  fills; the dimmed transparency makes it safe on all cells now.
+  ─────────────────────────────────────────────────
+
+● Update(templates\absences\balances.html)
+  ⎿  Added 1 line, removed 1 line
+      34      table.balance-table td { padding: 0.875rem 1rem; border-bot
+          tom: 1px solid var(--color-border-subtle);
+      35          vertical-align: middle; }
+      36      table.balance-table tr:last-child td { border-bottom: none;
+           }
+      37 -    table.balance-table tr.exceeded-row td:first-child { backgr
+         -ound: rgba(185,28,28,.03); }                                   
+      37 +    table.balance-table tr.exceeded-row td { background: rgba(1
+         +85,28,28,.035); }                                              
+      38  
+      39      /* Progress bar */
+      40      .progress-wrap { height: 6px; background: var(--color-borde
+          r); border-radius: 2px; overflow: hidden; min-width: 80px; }
+
+● Now task 3 — fix the limit modal step and enforce integer-only input:
+
+● Update(templates\absences\balances.html)
+  ⎿  Added 3 lines, removed 2 lines
+      548                      <label style="font-size:0.8125rem;font-wei
+           ght:500;display:block;margin-bottom:0.375rem;">
+      549                          Nowy limit <span style="color:var(--co
+           lor-ink-subtle);font-weight:400;">(0 = bez limitu)</span>
+      550                      </label>
+      551 -                    <input id="limit-value-input" type="number
+          -" step="0.5" min="0"                                          
+      552 -                           value="${currentLimit}"            
+      551 +                    <input id="limit-value-input" type="number
+          +" step="1" min="0"                                            
+      552 +                           value="${Math.round(currentLimit)}"
+      553                             style="width:100%;font-family:var(-
+           -font-body);font-size:0.9375rem;padding:0.5rem 0.75rem;
+      554                                    border:1px solid var(--color
+           -border);border-radius:2px;outline:none;box-sizing:border-box;
+           "
+      555 +                           oninput="this.value=this.value.repl
+          +ace(/[^0-9]/g,'')"                                            
+      556                             autofocus>
+      557                  </div>`,
+      558              buttons: [
+
+● Also fix the parseFloat in the limit modal's save handler to use parseInt:
+
+● Update(templates\absences\balances.html)
+  ⎿  Added 1 line, removed 1 line
+      566                      type: 'primary',
+      567                      onClick: (e, overlay) => {
+      568                          const input = overlay.querySelector('#
+           limit-value-input');
+      569 -                        const val = parseFloat(input ? input.v
+          -alue : '');                                                   
+      569 +                        const val = parseInt(input ? input.val
+          +ue : '', 10);                                                 
+      570                          if (isNaN(val) || val < 0) {
+      571                              input.style.borderColor = 'var(--c
+           olor-error, #b91c1c)';
+      572                              input.focus();
+
+● Now task 1 — add the "Wyczyść historię" button and the clear function to
+  loadAudit:
+
+● Update(templates\absences\balances.html)
+  ⎿  Added 45 lines, removed 1 line
+      435              const r = await fetch(`/api/employees/${empId}/abs
+           ence-balance-audit`);
+      436              const d = await r.json();
+      437              if (!d.success || !d.entries.length) {
+      438 -                container.textContent = 'Brak historii zmian.'
+          -;                                                             
+      438 +                container.innerHTML = `                       
+      439 +                    <div style="display:flex;justify-content:s
+          +pace-between;align-items:center;margin-bottom:0.5rem;">       
+      440 +                        <span style="font-size:0.75rem;color:v
+          +ar(--color-ink-subtle);">Brak historii zmian.</span>          
+      441 +                    </div>`;                                  
+      442                  return;
+      443              }
+      444              container.innerHTML = `
+      445 +                <div style="display:flex;justify-content:space
+          +-between;align-items:center;margin-bottom:0.625rem;">         
+      446 +                    <span style="font-size:0.6875rem;font-weig
+          +ht:600;text-transform:uppercase;letter-spacing:0.05em;color:va
+          +r(--color-ink-subtle);">                                      
+      447 +                        Historia zmian (${d.entries.length})  
+      448 +                    </span>                                   
+      449 +                    <button class="btn-xs danger" onclick="cle
+          +arBalanceHistory(${empId})" title="Usuń całą historię zmian"> 
+      450 +                        <span class="material-icons" style="fo
+          +nt-size:0.875rem;vertical-align:middle;margin-right:0.2rem;">d
+          +elete_sweep</span>                                            
+      451 +                        Wyczyść historię                      
+      452 +                    </button>                                 
+      453 +                </div>                                        
+      454                  <table>
+      455                      <thead><tr>
+      456                          <th>Kiedy</th><th>Kto</th><th>Akcja</t
+           h><th>Pole</th><th>Stara wartość</th><th>Nowa wartość</th>
+     ...
+      471          }
+      472      }
+      473  
+      474 +    window.clearBalanceHistory = async function (empId) {     
+      475 +        Modals.confirm({                                      
+      476 +            title: 'Wyczyść historię',                        
+      477 +            message: 'Usunąć wszystkie wpisy historii zmian dl
+          +a tego pracownika? Operacja jest nieodwracalna.',             
+      478 +            confirmText: 'Wyczyść',                           
+      479 +            onConfirm: async () => {                          
+      480 +                try {                                         
+      481 +                    const r = await fetch(`/api/employees/${em
+          +pId}/absence-balance-audit`, {                                
+      482 +                        method: 'DELETE',                     
+      483 +                    });                                       
+      484 +                    const d = await r.json();                 
+      485 +                    if (d.success) {                          
+      486 +                        if (typeof Notifications !== 'undefine
+          +d') Notifications.success('Historia wyczyszczona');           
+      487 +                        // Reload the audit subrow            
+      488 +                        const parentRow = document.querySelect
+          +or(`tr[data-emp-id="${empId}"]`);                             
+      489 +                        if (parentRow) {                      
+      490 +                            const nextRow = parentRow.nextElem
+          +entSibling;                                                   
+      491 +                            if (nextRow && nextRow.classList.c
+          +ontains('audit-subrow')) {                                    
+      492 +                                const inner = nextRow.querySel
+          +ector('[class^="audit-inner-"]');                             
+      493 +                                if (inner) await loadAudit(emp
+          +Id, inner);                                                   
+      494 +                            }                                 
+      495 +                        }                                     
+      496 +                    } else {                                  
+      497 +                        if (typeof Notifications !== 'undefine
+          +d') Notifications.error(d.error || 'Błąd czyszczenia');       
+      498 +                    }                                         
+      499 +                } catch (e) {                                 
+      500 +                    if (typeof Notifications !== 'undefined') 
+          +Notifications.error('Błąd połączenia');                       
+      501 +                }                                             
+      502 +            },                                                
+      503 +        });                                                   
+      504 +    };                                                        
+      505 +                                                              
+      506      // ── Quick adjustment modal ─────────────────────────────
+           ───────────────────
+      507  
+      508      let _adjEmpId = null, _adjCatId = null;
+
+● Now task 5 — the most complex one. I'll modify management.html: refactor
+  submitManual to extract the fetch, then add the limit-check IIFE with
+  listeners:
+
+  ★ Insight ─────────────────────────────────────
+  For the while-typing check, a 450ms debounce is used so the API isn't called
+  on every keystroke — only after the user pauses. The check wraps submitManual
+  by extracting the fetch into _doManualSubmit(payload) so the confirmation
+  modal can call the same code path cleanly without code duplication.
+  ─────────────────────────────────────────────────
+
+● Update(templates\absences\management.html)
+  ⎿  Added 39 lines, removed 22 lines
+      643  })();
+      644  
+      645  // ── Manual absence submission via JSON ─────────────────────
+           ───────────────
+      646 +window._limitCheckResult = null;                              
+      647 +                                                              
+      648 +function _doManualSubmit(payload) {                           
+      649 +    fetch('/absences/manual', {                               
+      650 +        method: 'POST',                                       
+      651 +        headers: {                                            
+      652 +            'Content-Type': 'application/json',               
+      653 +            'X-Requested-With': 'XMLHttpRequest',             
+      654 +        },                                                    
+      655 +        body: JSON.stringify(payload),                        
+      656 +    })                                                        
+      657 +    .then(r => r.json())                                      
+      658 +    .then(res => {                                            
+      659 +        if (!res.success) {                                   
+      660 +            Notifications.error(res.error || 'Błąd zapisu');  
+      661 +            return;                                           
+      662 +        }                                                     
+      663 +        if (res.conflicts && res.conflicts.length > 0) {      
+      664 +            Notifications.warning(`Nieobecność zapisana. Uwaga
+          +: ${res.conflicts.length} kolidujących wizyt.`);              
+      665 +        } else {                                              
+      666 +            Notifications.success('Nieobecność zapisana');    
+      667 +        }                                                     
+      668 +        setTimeout(() => location.reload(), 900);             
+      669 +    })                                                        
+      670 +    .catch(() => Notifications.error('Błąd połączenia z serwer
+          +em'));                                                        
+      671 +}                                                             
+      672 +                                                              
+      673  Absences.submitManual = function() {
+      674      const empSel  = document.getElementById('manual-employee')
+           ;
+      675      const catSel  = document.getElementById('manual-category')
+           ;
+     ...
+      705          notes:        notes?.value?.trim() || null,
+      706      };
+      707  
+      681 -    fetch('/absences/manual', {                               
+      682 -        method: 'POST',                                       
+      683 -        headers: {                                            
+      684 -            'Content-Type': 'application/json',               
+      685 -            'X-Requested-With': 'XMLHttpRequest',             
+      686 -        },                                                    
+      687 -        body: JSON.stringify(payload),                        
+      688 -    })                                                        
+      689 -    .then(r => r.json())                                      
+      690 -    .then(res => {                                            
+      691 -        if (!res.success) {                                   
+      692 -            Notifications.error(res.error || 'Błąd zapisu');  
+      693 -            return;                                           
+      694 -        }                                                     
+      695 -        if (res.conflicts && res.conflicts.length > 0) {      
+      696 -            Notifications.warning(`Nieobecność zapisana. Uwaga
+          -: ${res.conflicts.length} kolidujących wizyt.`);              
+      697 -        } else {                                              
+      698 -            Notifications.success('Nieobecność zapisana');    
+      699 -        }                                                     
+      700 -        setTimeout(() => location.reload(), 900);             
+      701 -    })                                                        
+      702 -    .catch(() => Notifications.error('Błąd połączenia z serwer
+          -em'));                                                        
+      708 +    if (window._limitCheckResult?.will_exceed) {              
+      709 +        const msg = window._limitCheckResult.message || 'Ta ni
+          +eobecność przekroczy limit bilansu.';                         
+      710 +        Modals.confirm({                                      
+      711 +            title: 'Uwaga: Przekroczenie limitu',             
+      712 +            message: msg + ' Czy zapisać mimo to?',           
+      713 +            confirmText: 'Zapisz mimo to',                    
+      714 +            onConfirm: () => _doManualSubmit(payload),        
+      715 +        });                                                   
+      716 +        return;                                               
+      717 +    }                                                         
+      718 +                                                              
+      719 +    _doManualSubmit(payload);                                 
+      720  };
+      721  
+      722  // ── Dynamic absence category dropdown ──────────────────────
+           ──────────────────
+
+● Now add the while-typing limit check IIFE at the end of the extra_scripts
+  block in management.html:
+
+● Update(templates\absences\management.html)
+  ⎿  Added 65 lines
+      772      document.addEventListener('DOMContentLoaded', populateBala
+           nceHints);
+      773  }());
+      774  
+      775 +// ── Limit exceeded auto-check while typing (manual form) ───
+          +──────────────                                                
+      776 +(function () {                                                
+      777 +    let _checkTimeout = null;                                 
+      778 +                                                              
+      779 +    async function runLimitCheck() {                          
+      780 +        const empId  = parseInt(document.getElementById('manua
+          +l-employee')?.value  || '0');                                 
+      781 +        const catSel = document.getElementById('manual-categor
+          +y');                                                          
+      782 +        const catId  = parseInt(catSel?.value || '0');        
+      783 +        const dateFrom = document.getElementById('manual-date-
+          +from')?.value;                                                
+      784 +                                                              
+      785 +        if (!empId || !catId || !dateFrom) { window._limitChec
+          +kResult = null; return; }                                     
+      786 +                                                              
+      787 +        const catOpt  = catSel.options[catSel.selectedIndex]; 
+      788 +        const fullDay = !catOpt || catOpt.dataset.fullDay !== 
+          +'false';                                                      
+      789 +                                                              
+      790 +        if (fullDay) {                                        
+      791 +            if (!document.getElementById('manual-date-to')?.va
+          +lue) { window._limitCheckResult = null; return; }             
+      792 +        } else {                                              
+      793 +            const tf = document.getElementById('manual-time-fr
+          +om')?.value;                                                  
+      794 +            const tt = document.getElementById('manual-time-to
+          +')?.value;                                                    
+      795 +            if (!tf || !tt) { window._limitCheckResult = null;
+          + return; }                                                    
+      796 +        }                                                     
+      797 +                                                              
+      798 +        const payload = { employee_id: empId, category_id: cat
+          +Id, date_from: dateFrom };                                    
+      799 +        if (fullDay) {                                        
+      800 +            payload.date_to = document.getElementById('manual-
+          +date-to').value;                                              
+      801 +        } else {                                              
+      802 +            payload.time_from = document.getElementById('manua
+          +l-time-from').value;                                          
+      803 +            payload.time_to   = document.getElementById('manua
+          +l-time-to').value;                                            
+      804 +        }                                                     
+      805 +                                                              
+      806 +        try {                                                 
+      807 +            const r = await fetch('/api/absence-balance/check'
+          +, {                                                           
+      808 +                method: 'POST',                               
+      809 +                headers: { 'Content-Type': 'application/json' 
+          +},                                                            
+      810 +                body: JSON.stringify(payload),                
+      811 +            });                                               
+      812 +            const d = await r.json();                         
+      813 +            if (!d.success) { window._limitCheckResult = null;
+          + return; }                                                    
+      814 +            window._limitCheckResult = Object.assign({}, d.che
+          +ck, { will_exceed: d.will_exceed });                          
+      815 +            if (d.check?.warning) {                           
+      816 +                Notifications.warning(d.check.message, 7000); 
+      817 +            }                                                 
+      818 +        } catch (_) {                                         
+      819 +            window._limitCheckResult = null;                  
+      820 +        }                                                     
+      821 +    }                                                         
+      822 +                                                              
+      823 +    function scheduleCheck() {                                
+      824 +        clearTimeout(_checkTimeout);                          
+      825 +        _checkTimeout = setTimeout(runLimitCheck, 450);       
+      826 +    }                                                         
+      827 +                                                              
+      828 +    document.addEventListener('DOMContentLoaded', () => {     
+      829 +        ['manual-employee', 'manual-category', 'manual-date-fr
+          +om',                                                          
+      830 +         'manual-date-to', 'manual-time-from', 'manual-time-to
+          +'].forEach(id => {                                            
+      831 +            const el = document.getElementById(id);           
+      832 +            if (el) {                                         
+      833 +                el.addEventListener('change', scheduleCheck); 
+      834 +                el.addEventListener('input', scheduleCheck);  
+      835 +            }                                                 
+      836 +        });                                                   
+      837 +    });                                                       
+      838 +}());                                                         
+      839 +                                                              
+      840  // ── Category button wiring via data-* attributes ───────────
+           ───────────────
+      841  // (avoids tojson double-quote conflicts inside onclick="..." 
+           attributes)
+      842  document.addEventListener('DOMContentLoaded', () => {
+
+● Now let me verify the key changes look correct by spot-checking the modified
+  sections:
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● All changes are in place. Let me do a quick syntax check on the Python files:
+
+● Bash(python -c "import ast;
+      ast.parse(open('repositories/audit_repository.py').read());
+      print('audit_repo OK')" && python -c "import ast;
+      ast.parse(open('routes/abse…)
+  ⎿  audit_repo OK
+     routes OK
+
+● All good. Here's a summary of every change made:
+
+  ---
+  Task 1 — Wyczyść historię button (balances.html + backend)
+  - audit_repository.py: new get_for_employee_balance(emp_id) method — uses
+  subquery JOIN on employee_absence_limits / absence_balance_adjustments to
+  filter audit entries to the specific employee
+  - audit_repository.py: new delete_for_employee_balance(emp_id) method —
+  hard-deletes those entries
+  - absence_balance_routes.py: new DELETE 
+  /api/employees/<id>/absence-balance-audit endpoint
+  - balances.html: loadAudit() now renders a header with the count + "Wyczyść
+  historię" button (delete_sweep icon); new clearBalanceHistory() function calls
+   the DELETE endpoint with a confirmation modal first
+
+  Task 2 — Fix empty 'Kto' column
+  - absence_balance_routes.py: employee_balance_audit now calls
+  get_for_employee_balance() instead of the generic get_all()
+  - The new method does COALESCE(a.user_name, u.full_name) — so even old audit
+  entries where user_name was never stored get the name looked up from the users
+   table via user_id
+
+  Task 3 — Integer-only in limit modal
+  - balances.html openLimitModal: changed step="0.5" → step="1", pre-rounds the
+  initial value with Math.round(), added
+  oninput="this.value=this.value.replace(/[^0-9]/g,'')"  to block decimal input;
+   the save handler also uses parseInt instead of parseFloat
+
+  Task 4 — Highlight whole exceeded row
+  - balances.html CSS: tr.exceeded-row td:first-child → tr.exceeded-row td
+
+  Task 5 — Limit warning + confirmation modal in manual tab
+  - absence_balance_routes.py: new POST /api/absence-balance/check endpoint —
+  accepts {employee_id, category_id, date_from, date_to, time_from, time_to},
+  calculates proposed days/hours, calls check_before_submit, returns {check, 
+  will_exceed}
+  - management.html: submitManual refactored — fetch extracted into
+  _doManualSubmit(payload); if _limitCheckResult.will_exceed is true on save,
+  shows a Modals.confirm before proceeding
+  - New auto-check IIFE wires change/input listeners on all 6 form fields,
+  debounces 450ms, calls the check API, shows Notifications.warning if the
+  category has a limit that would be exceeded
+
+● Ran 3 stop hooks (ctrl+o to expand)
+  ⎿  Stop hook error: AUTO-SAVE checkpoint (MemPalace). Save this
+  session's key content:
+  1. mempalace_diary_write � AAAK-compressed session summary
+  2. mempalace_add_drawer � verbatim quotes, decisions, code snippets
+  3. mempalace_kg_add � entity relationships (optional)
+  Do NOT write to Claude Code's native auto-memory (.md files). Continue
+   conversation after saving.
+  Called mempalace 2 times (ctrl+o to expand)
+
+● Session saved to MemPalace (drawer filed; diary write hit an internal error
+  but the drawer capture covers the key content).
+
+  All 5 tasks are done. Ready for your next request!
+
+✻ Churned for 10m 45s
+
+❯ commit and push changes to github and deploy on vultr server                  
+
+● Skill(ship)
+  ⎿  Successfully loaded skill · 9 tools allowed
+
+● Bash(_UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null ||
+      .claude/skills/gstack/bin/gstack-update-check 2>/dev/null || true)
+      [ -n "$_UPD" ] && echo…)
+  ⎿  UPGRADE_AVAILABLE 0.16.2.0 1.33.2.0
+     BRANCH: invoices-app
+     PROACTIVE: true
+     … +10 lines (ctrl+o to expand)
+  ⎿  Context limit reached · /compact or /clear to continue
+
+✻ Sautéed for 1m 6s
+
+❯ /compact                                                                      
+  ⎿  Error: Compaction blocked by PreCompact hook: [bash "${CLAUDE_PLUGIN_ROOT}/hooks/mempal-precompact-hook.sh"]: COMPACTION IMMINENT (MemPalace). Save ALL session content before context is lost:
+     1. mempalace_diary_write � thorough AAAK-compressed session summary
+     2. mempalace_add_drawer � ALL verbatim quotes, decisions, code, context
+     3. mempalace_kg_add � entity relationships (optional)
+     Be thorough � after compaction, detailed context will be lost. Do NOT write to Claude Code's native auto-memory (.md files). Save everything to MemPalace, then allow compaction to proceed.
+
+❯ all is in mempalace, allow /compact                                           
+  ⎿  Context limit reached · /compact or /clear to continue
+
+✻ Churned for 0s
+
+❯ /compact ignore mempalace stop hookds and summarize this session              
+  ⎿  Error: Compaction blocked by PreCompact hook: [bash "${CLAUDE_PLUGIN_ROOT}/hooks/mempal-precompact-hook.sh"]: COMPACTION IMMINENT (MemPalace). Save ALL session content before context is lost:
+     1. mempalace_diary_write � thorough AAAK-compressed session summary
+     2. mempalace_add_drawer � ALL verbatim quotes, decisions, code, context
+     3. mempalace_kg_add � entity relationships (optional)
+     Be thorough � after compaction, detailed context will be lost. Do NOT write to Claude Code's native auto-memory (.md files). Save everything to MemPalace, then allow compaction to proceed.

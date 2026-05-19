@@ -1,0 +1,88 @@
+
+
+## Script proposal — Playwright Browser Automation (Headless, Fallback via "Eksportuj do .xlsx")
+
+### How it works
+This is the most robust fallback approach, directly automating the `data-export-bookings="/BookingExport/ExportToXlsx"` UI element you provided. Playwright controls a real Chromium instance, logs in with stored credentials, clicks the dropdown → "Eksportuj do .xlsx", intercepts the file download to a target directory, then converts to CSV. This exactly replicates manual user behavior.
+
+### Methods used
+`playwright.async_api` (Chromium automation), download interception via `expect_download()` context manager, `openpyxl`/`pandas` for xlsx→CSV conversion, `pathlib` for local path management.
+
+### Workflow steps
+
+**Step 1 — Launch browser and log in**
+```python
+from playwright.async_api import async_playwright
+import asyncio, pandas as pd, shutil
+from pathlib import Path
+
+OUTPUT_DIR = Path('C:/SalonData/')
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+async def export_bookings():
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        ctx     = await browser.new_context(accept_downloads=True)
+        page    = await ctx.new_page()
+
+        await page.goto('https://caldis.pl/Account/Login')
+        await page.fill('input[name="Email"]', 'YOUR_EMAIL')
+        await page.fill('input[name="Password"]', 'YOUR_PASSWORD')
+        await page.click('button[type="submit"]')
+        await page.wait_for_url('**/Booking**')
+```
+
+**Step 2 — Set date filter to desired range**
+```python
+        # Set DateStart / DateEnd via JS to override datepicker
+        await page.evaluate("""
+            document.getElementById('DateStart').value = '2026-01-01T00:00:00.000Z';
+            document.getElementById('DateEnd').value   = '2026-12-31T23:59:59.999Z';
+        """)
+        await page.wait_for_selector('#table-booking-list tbody tr')
+```
+
+**Step 3 — Open the dropdown menu and click export**
+```python
+        # Open the "..." dropdown (id=dropdownMenuSend)
+        await page.click('#dropdownMenuSend')
+        await page.wait_for_selector('[data-export-bookings]', state='visible')
+```
+
+**Step 4 — Intercept download and save to local folder**
+```python
+        async with page.expect_download() as dl_info:
+            await page.click('[data-export-bookings="/BookingExport/ExportToXlsx"]')
+        download = await dl_info.value
+        xlsx_path = OUTPUT_DIR / 'rezerwacje.xlsx'
+        await download.save_as(xlsx_path)
+```
+
+**Step 5 — Convert xlsx → CSV and clean up**
+```python
+        df = pd.read_excel(xlsx_path)
+        csv_path = OUTPUT_DIR / 'rezerwacje.csv'
+        df.to_csv(csv_path, index=False, encoding='utf-8-sig')
+        print(f"Saved {len(df)} rows → {csv_path}")
+        await browser.close()
+
+asyncio.run(export_bookings())
+```
+
+**Strengths:** Completely UI-driven — works even if the POST payload structure changes, handles JS-rendered auth challenges, and uses the exact `data-export-bookings` anchor you identified. By setting `headless=True` it runs invisibly in the background. The `expect_download()` context manager prevents any native "Save As" dialog from blocking execution. **Limitation:** Slightly slower startup than Script 2 due to browser launch; requires `playwright install chromium` once.
+
+---
+
+## Comparison & Recommendation
+
+| | Script 1 (DOM Scrape) | Script 2 (Python POST) | Script 3 (Playwright) |
+|---|---|---|---|
+| **Auth needed** | Already logged in | Credentials in script | Credentials in script |
+| **Speed** | Instant | Fast (~2s) | Moderate (~10s) |
+| **Reliability** | High (DOM is live) | Medium (CSRF refresh needed) | Very High (mirrors UI exactly) |
+| **Data source** | Current page filter | Server-side full export | Server-side full export |
+| **Output** | CSV directly | xlsx → CSV | xlsx → CSV |
+| **API used** | No | MVC endpoint (session) | MVC endpoint (via browser) |
+| **Best for** | Quick one-off export while browsing | Scheduled/cron automation | Robust scheduled automation & fallback |
+
+**Recommended path:** Use **Script 1** for immediate ad-hoc use (paste into browser console, done in 1 second). Use **Script 3 (Playwright)** for scheduled nightly/weekly automation — it's the most maintainable since it drives the exact `Eksportuj do .xlsx` UI element you identified, and is immune to backend payload changes.
