@@ -82,10 +82,15 @@
     }
 
     /* SMS log table */
-    .sms-log-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.75rem; }
-    .sms-log-table th { padding: 0.5rem 0.75rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: left; }
-    .sms-log-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
+    .sms-log-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.75rem; table-layout: fixed; }
+    .sms-log-table th { padding: 0.5rem 0.75rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: left; overflow: hidden; }
+    .sms-log-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sms-log-table tr:last-child td { border-bottom: none; }
+    .sms-log-table .col-date   { width: 130px; white-space: nowrap; }
+    .sms-log-table .col-type   { width: 120px; }
+    .sms-log-table .col-status { width: 80px; }
+    .sms-log-table .col-body   { }
+    .sms-log-table .col-sender { width: 110px; }
     .sms-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 9999px; font-size: 0.6rem; font-weight: 500; }
     .sms-badge-green { background: #dcfce7; color: #166534; }
     .sms-badge-teal  { background: #ccfbf1; color: #0f766e; }
@@ -157,12 +162,15 @@
             <table class="sms-log-table">
                 <thead>
                     <tr>
-                        <th>Data</th><th>Typ</th><th>Status</th>
-                        <th>Numer</th><th>Treść</th><th>Twilio SID</th><th>Wysłał</th>
+                        <th class="col-date">Data</th>
+                        <th class="col-type">Typ</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-body">Treść</th>
+                        <th class="col-sender">Wysłał</th>
                     </tr>
                 </thead>
                 <tbody id="sms-log-tbody">
-                    <tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Kliknij aby załadować...</td></tr>
+                    <tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Kliknij aby załadować...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -519,6 +527,15 @@ function initSatisfactionWidget(currentScore) {
 
 document.addEventListener('DOMContentLoaded', loadAppointment);
 
+// Refresh when user returns to this tab (catches status changes made from other devices/tabs)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        loadAppointment();
+        const panel = document.getElementById('sms-log-panel');
+        if (panel && panel.open) loadSmsLog(true);
+    }
+});
+
 // ── SMS ───────────────────────────────────────────────────────────────
 
 document.addEventListener('click', function(e) {
@@ -578,30 +595,28 @@ async function loadSmsLog(force = false) {
     smsLoaded = true;
 
     const tbody = document.getElementById('sms-log-tbody');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Ładowanie...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Ładowanie...</td></tr>';
 
     try {
         const resp = await fetch(`/api/sms/appointment/${APPT_ID}/log`);
         const data = await resp.json();
         if (!data.reminders || !data.reminders.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Brak wysyłek SMS</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Brak wysyłek SMS</td></tr>';
             document.getElementById('sms-count').textContent = '';
             return;
         }
         document.getElementById('sms-count').textContent = data.reminders.length;
         tbody.innerHTML = data.reminders.map(r => `
             <tr>
-                <td>${(r.sent_at || '').slice(0,16) || '—'}</td>
-                <td>${esc(r.type_name || r.message_type_key)}</td>
-                <td><span class="sms-badge ${statusBadgeClass(r.status)}">${r.status}</span></td>
-                <td style="font-family:monospace;">${esc(r.phone_number)}</td>
-                <td title="${esc(r.message_body)}">${esc((r.message_body || '').slice(0,60))}${(r.message_body || '').length > 60 ? '…' : ''}</td>
-                <td style="font-family:monospace;font-size:0.625rem;">${esc(r.twilio_sid || '—')}</td>
-                <td>${esc(r.sender_name || r.created_by_name || 'System')}</td>
+                <td class="col-date">${(r.sent_at || '').slice(0,16) || '—'}</td>
+                <td class="col-type" title="${esc(r.type_name || r.message_type_key)}">${esc(r.type_name || r.message_type_key)}</td>
+                <td class="col-status"><span class="sms-badge ${statusBadgeClass(r.status)}">${r.status}</span></td>
+                <td class="col-body" title="${esc(r.message_body)}">${esc((r.message_body || '').slice(0,80))}${(r.message_body || '').length > 80 ? '…' : ''}</td>
+                <td class="col-sender" title="${esc(r.sender_name || r.created_by_name || 'System')}">${esc(r.sender_name || r.created_by_name || 'System')}</td>
             </tr>
         `).join('');
     } catch {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--color-error);">Błąd ładowania historii SMS</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--color-error);">Błąd ładowania historii SMS</td></tr>';
     }
 }
 
