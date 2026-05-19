@@ -498,19 +498,24 @@ async function deleteMessageType(id, e) {
     if (!confirm('Usunąć ten typ wiadomości?')) return;
 
     const url = `/settings/sms/message-type/${id}/delete`;
+    let resp;
     try {
-        const resp = await fetch(url, {
-            method: 'POST',
-            headers: { 'Accept': 'application/json' }
-        });
-        const data = await resp.json();
-        if (data.success) {
-            document.getElementById(`type-${id}`).remove();
-        } else {
-            alert(data.message || 'Nie można usunąć tego typu wiadomości');
-        }
+        resp = await fetch(url, { method: 'POST' });
     } catch (_) {
         alert('Błąd połączenia — spróbuj ponownie');
+        return;
+    }
+    let data;
+    try {
+        data = await resp.json();
+    } catch (_) {
+        alert(`Błąd serwera (${resp.status}) — spróbuj ponownie`);
+        return;
+    }
+    if (data.success) {
+        document.getElementById(`type-${id}`).remove();
+    } else {
+        alert(data.message || 'Nie można usunąć tego typu wiadomości');
     }
 }
 
