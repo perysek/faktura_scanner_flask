@@ -124,6 +124,25 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 .type-name { font-size: 0.9375rem; font-weight: 600; }
 .type-timing { font-size: 0.75rem; color: var(--color-ink-muted); margin-left: auto; }
 .type-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+.btn-delete-type {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-ink-muted);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, color 0.15s;
+    border-radius: 2px;
+}
+.btn-delete-type .material-icons { font-size: 1rem; }
+.btn-delete-type:hover { color: #dc2626; }
+.type-summary:hover .btn-delete-type { opacity: 1; pointer-events: auto; }
+/* Hide delete icon when card is expanded */
+details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
 
 /* Stats */
 .stats-section { margin-bottom: 1.5rem; }
@@ -308,6 +327,13 @@ textarea.form-input { resize: vertical; min-height: 80px; }
                 <span class="badge-pill badge-gray">Nieaktywny</span>
             {% endif %}
             <span class="type-timing">{% if mt.is_enabled %}{{ mt.send_hours_before }}h przed wizytą{% endif %}</span>
+            {% if mt.is_custom %}
+            <button type="button" class="btn-delete-type"
+                    title="Usuń typ wiadomości"
+                    onclick="deleteMessageType({{ mt.id }}, event)">
+                <span class="material-icons">delete</span>
+            </button>
+            {% endif %}
         </summary>
 
         <form method="POST" action="{{ url_for('sms.sms_message_type_save', type_id=mt.id) }}">
@@ -352,14 +378,6 @@ textarea.form-input { resize: vertical; min-height: 80px; }
             </div>
             <div class="type-actions">
                 <button type="submit" class="btn-primary btn-sm">Zapisz</button>
-                {% if mt.is_custom %}
-                <form method="POST"
-                      action="{{ url_for('sms.sms_message_type_delete', type_id=mt.id) }}"
-                      style="display:inline"
-                      onsubmit="return confirm('Usunąć ten typ wiadomości?')">
-                    <button type="submit" class="btn-danger">Usuń</button>
-                </form>
-                {% endif %}
             </div>
         </form>
     </details>
@@ -472,6 +490,28 @@ if (_newTa) {
     const _newCxl = document.getElementById('new-cxl');
     if (_newCl)  wireUrlCheckbox(_newCl,  '{confirm_url}', _newTa);
     if (_newCxl) wireUrlCheckbox(_newCxl, '{cancel_url}',  _newTa);
+}
+
+async function deleteMessageType(id, e) {
+    e.preventDefault();
+    e.stopPropagation(); // prevent summary from toggling the details panel
+    if (!confirm('Usunąć ten typ wiadomości?')) return;
+
+    const url = `/settings/sms/message-type/${id}/delete`;
+    try {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById(`type-${id}`).remove();
+        } else {
+            alert(data.message || 'Nie można usunąć tego typu wiadomości');
+        }
+    } catch (_) {
+        alert('Błąd połączenia — spróbuj ponownie');
+    }
 }
 
 async function sendTestSms() {

@@ -89,6 +89,12 @@ def sms_message_type_create():
 def sms_message_type_delete(type_id):
     svc = SmsService()
     ok = svc.delete_custom_type(type_id)
+    # AJAX path: caller wants JSON (fetch with Accept: application/json)
+    if request.headers.get('Accept') == 'application/json':
+        if ok:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'message': 'Nie można usunąć wbudowanego typu'}), 400
+    # Legacy form-POST path
     if ok:
         flash('Typ wiadomości usunięty', 'success')
     else:
