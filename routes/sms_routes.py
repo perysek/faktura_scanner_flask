@@ -87,19 +87,15 @@ def sms_message_type_create():
 @login_required
 @module_permission_required('settings')
 def sms_message_type_delete(type_id):
-    svc = SmsService()
-    ok = svc.delete_custom_type(type_id)
-    # AJAX path: caller wants JSON (fetch with Accept: application/json)
-    if request.headers.get('Accept') == 'application/json':
+    try:
+        svc = SmsService()
+        ok = svc.delete_custom_type(type_id)
         if ok:
             return jsonify({'success': True})
-        return jsonify({'success': False, 'message': 'Nie można usunąć wbudowanego typu'}), 400
-    # Legacy form-POST path
-    if ok:
-        flash('Typ wiadomości usunięty', 'success')
-    else:
-        flash('Nie można usunąć wbudowanego typu wiadomości', 'error')
-    return redirect(url_for('sms.sms_settings'))
+        return jsonify({'success': False, 'message': 'Nie można usunąć wbudowanego typu wiadomości'}), 400
+    except Exception:
+        logging.exception('Error in sms_message_type_delete')
+        return jsonify({'success': False, 'message': 'Błąd serwera'}), 500
 
 
 @sms_bp.route('/settings/sms/test', methods=['POST'])
