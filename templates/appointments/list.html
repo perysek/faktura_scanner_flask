@@ -621,9 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) loadAppointments();
 });
-
-// Poll every 60 s so client confirmation responses appear without manual reload
-setInterval(() => { if (!document.hidden) loadAppointments(); }, 60000);
 </script>
 
 <!-- Past Visits Scanner -->
