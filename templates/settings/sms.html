@@ -492,31 +492,39 @@ if (_newTa) {
     if (_newCxl) wireUrlCheckbox(_newCxl, '{cancel_url}',  _newTa);
 }
 
-async function deleteMessageType(id, e) {
+function deleteMessageType(id, e) {
     e.preventDefault();
     e.stopPropagation(); // prevent summary from toggling the details panel
-    if (!confirm('Usunąć ten typ wiadomości?')) return;
 
-    const url = `/settings/sms/message-type/${id}/delete`;
-    let resp;
-    try {
-        resp = await fetch(url, { method: 'POST' });
-    } catch (_) {
-        alert('Błąd połączenia — spróbuj ponownie');
-        return;
-    }
-    let data;
-    try {
-        data = await resp.json();
-    } catch (_) {
-        alert(`Błąd serwera (${resp.status}) — spróbuj ponownie`);
-        return;
-    }
-    if (data.success) {
-        document.getElementById(`type-${id}`).remove();
-    } else {
-        alert(data.message || 'Nie można usunąć tego typu wiadomości');
-    }
+    showConfirmModal(
+        null,
+        'Usuń typ wiadomości',
+        'Czy na pewno chcesz usunąć ten typ wiadomości? Tej operacji nie można cofnąć.',
+        'Usuń',
+        'danger',
+        async function() {
+            const url = `/settings/sms/message-type/${id}/delete`;
+            let resp;
+            try {
+                resp = await fetch(url, { method: 'POST' });
+            } catch (_) {
+                Notifications.error('Błąd połączenia — spróbuj ponownie');
+                return;
+            }
+            let data;
+            try {
+                data = await resp.json();
+            } catch (_) {
+                Notifications.error(`Błąd serwera (${resp.status}) — spróbuj ponownie`);
+                return;
+            }
+            if (data.success) {
+                document.getElementById(`type-${id}`).remove();
+            } else {
+                Notifications.error(data.message || 'Nie można usunąć tego typu wiadomości');
+            }
+        }
+    );
 }
 
 async function sendTestSms() {
