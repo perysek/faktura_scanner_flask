@@ -706,6 +706,11 @@ class AppointmentBusinessService:
                 if existing_income:
                     self.income_repo.delete_by_appointment(appointment_id)
 
+            # Reset client SMS confirmation when employee manually moves status back to
+            # scheduled (un-confirms) or cancels — client's previous response is no longer valid.
+            if old_status != status and status in (AppointmentStatus.SCHEDULED, AppointmentStatus.CANCELLED):
+                self.appt_repo.reset_confirmation(appointment_id)
+
         return {
             'appointment_id': appointment_id,
             'total_price': float(total_price),
