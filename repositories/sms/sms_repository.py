@@ -2,6 +2,7 @@
 Repositories for sms_settings, sms_message_types, and sms_reminders.
 """
 from typing import Optional, List
+from config.database import DatabaseConnection, safe_commit
 from repositories.base_repository import BaseRepository
 
 
@@ -80,11 +81,21 @@ class SmsMessageTypeRepository(BaseRepository):
         ))
 
     def delete_custom(self, type_id: int) -> bool:
-        cursor = self._execute(
+        # Nullify FK in send history first — message_type_key string is preserved for audit.
+        # Both ops share one connection so FK violation can't occur between them.
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sms_reminders SET message_type_id = NULL WHERE message_type_id = %s",
+            (type_id,)
+        )
+        cursor.execute(
             "DELETE FROM sms_message_types WHERE id = %s AND is_custom = TRUE",
             (type_id,)
         )
-        return cursor.rowcount > 0
+        deleted = cursor.rowcount > 0
+        safe_commit(conn)
+        return deleted
 
 
 class SmsReminderRepository(BaseRepository):
