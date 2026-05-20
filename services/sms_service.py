@@ -139,7 +139,7 @@ class SmsService:
         confirm_url = f"{base_url}/confirm/{token}"
         cancel_url = f"{base_url}/cancel/{token}"
 
-        message_body = self._build_message(appt, client, msg_type, confirm_url, cancel_url)
+        message_body = self._build_message(appt, client, msg_type, confirm_url, cancel_url, base_url)
 
         reminder_id = self._reminder_repo.create(
             appointment_id=appointment_id,
@@ -320,7 +320,8 @@ class SmsService:
             return date_str
 
     def _build_message(self, appt: dict, client, msg_type: dict,
-                       confirm_url: str, cancel_url: str = '') -> str:
+                       confirm_url: str, cancel_url: str = '',
+                       base_url: str = '') -> str:
         from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
         services_rows = AppointmentServiceRepository().get_all_for_appointment(appt['id'])
         service_names = ', '.join(s['service_name'] for s in services_rows) if services_rows else ''
