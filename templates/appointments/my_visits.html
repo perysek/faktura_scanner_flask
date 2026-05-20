@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Moje wizyty dziś{% endblock %}
+
+{% block extra_head %}
+<style>
+.mv-card {
+    background: white;
+    border: 1px solid #e5e5e0;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+}
+.mv-time {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1;
+}
+.mv-client {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin-top: 0.25rem;
+}
+.mv-service {
+    font-size: 0.8125rem;
+    color: #666;
+    margin-top: 0.125rem;
+}
+.mv-status {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    margin-top: 0.5rem;
+}
+.mv-status-scheduled { background: #f0f0eb; color: #555; }
+.mv-status-confirmed  { background: #e8f4e8; color: #2d6a2d; }
+.mv-status-in_progress { background: #fff3cd; color: #856404; }
+.mv-status-completed  { background: #e8f4e8; color: #2d6a2d; }
+
+.mv-btn-link {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 0.875rem;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+}
+.mv-btn-link:disabled {
+    background: #d0d0cc;
+    color: #888;
+    cursor: not-allowed;
+}
+.mv-btn-open {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    background: #16a34a;
+    color: white;
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+}
+.mv-timer {
+    font-size: 0.8125rem;
+    color: #888;
+    text-align: center;
+    margin-top: 0.375rem;
+}
+.mv-error {
+    font-size: 0.8125rem;
+    color: #c0392b;
+    margin-top: 0.375rem;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-4 py-6">
+    <h1 class="text-xl font-semibold text-gray-900 mb-1">Moje wizyty dziś</h1>
+
+    {% if no_employee %}
+    <div class="mv-card text-center py-8">
+        <p class="text-gray-500 text-sm">Twoje konto nie jest przypisane do pracownika.<br>
+        Skontaktuj się z administratorem.</p>
+    </div>
+
+    {% elif not appointments %}
+    <div class="mv-card text-center py-8">
+        <p class="text-gray-500 text-sm">Brak wizyt na dziś.</p>
+    </div>
+
+    {% else %}
+    <p class="text-sm text-gray-500 mb-4">
+        {{ employee.first_name }} {{ employee.last_name }} &mdash;
+        {{ appointments | length }} wizyt{{ 'a' if appointments|length == 1 else ('y' if appointments|length < 5 else '') }}
+    </p>
+
+    {% for appt in appointments %}
+    <div class="mv-card" id="card-{{ appt.id }}">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="mv-time">{{ appt.start_time }}</div>
+                <div class="mv-client">{{ appt.client_name }}</div>
+                <div class="mv-service">{{ appt.service_name or '—' }}</div>
+                <span class="mv-status mv-status-{{ appt.status }}">
+                    {% if appt.status == 'scheduled' %}Zaplanowana
+                    {% elif appt.status == 'confirmed' %}Potwierdzona
+                    {% elif appt.status == 'in_progress' %}W trakcie
+                    {% elif appt.status == 'completed' %}Zakończona
+                    {% else %}{{ appt.status }}{% endif %}
+                </span>
+            </div>
+        </div>
+
+        {% if appt.status in ('completed', 'cancelled', 'no_show') %}
+            <p class="mv-timer">Wizyta zakończona</p>
+
+        {% elif appt.status == 'in_progress' %}
+            {# Already started — show direct link immediately #}
+            <a href="/visit/{{ appt.employee_token }}"
+               class="mv-btn-open" target="_blank">
+               Otwórz formularz wizyty →
+            </a>
+
+        {% else %}
+            {% if appt.minutes_until <= 20 %}
+            {# Within 20 min — show Get Link button #}
+            <button class="mv-btn-link"
+                    onclick="getVisitLink({{ appt.id }}, this)"
+                    id="btn-{{ appt.id }}">
+                Pobierz link do wizyty
+            </button>
+            <div id="link-area-{{ appt.id }}"></div>
+            {% else %}
+            {# Too early — show disabled button with countdown #}
+            <button class="mv-btn-link" disabled id="btn-{{ appt.id }}">
+                Pobierz link do wizyty
+            </button>
+            <p class="mv-timer" id="timer-{{ appt.id }}">
+                Dostępny za {{ appt.minutes_until - 20 }} min
+                (20 min przed wizytą)
+            </p>
+            <div id="link-area-{{ appt.id }}"></div>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<script>
+function getVisitLink(appointmentId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Ładowanie…';
+
+    fetch('/api/appointments/' + appointmentId + '/visit-link')
+        .then(r => r.json())
+        .then(data => {
+            const area = document.getElementById('link-area-' + appointmentId);
+            if (data.success) {
+                area.innerHTML =
+                    '<a href="' + data.url + '" class="mv-btn-open" target="_blank">' +
+                    'Otwórz formularz wizyty →</a>';
+                btn.style.display = 'none';
+            } else if (data.too_early) {
+                btn.disabled = false;
+                btn.textContent = 'Pobierz link do wizyty';
+                area.innerHTML =
+                    '<p class="mv-error">Za wcześnie — spróbuj za ' +
+                    data.minutes_remaining + ' min</p>';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Pobierz link do wizyty';
+                area.innerHTML =
+                    '<p class="mv-error">' + (data.error || 'Błąd — spróbuj ponownie') + '</p>';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.textContent = 'Pobierz link do wizyty';
+            document.getElementById('link-area-' + appointmentId).innerHTML =
+                '<p class="mv-error">Błąd połączenia — spróbuj ponownie</p>';
+        });
+}
+
+// Auto-enable disabled buttons when window approaches (refresh every 30s)
+setInterval(function() {
+    document.querySelectorAll('[id^="timer-"]').forEach(function(timerEl) {
+        const id = timerEl.id.replace('timer-', '');
+        const btn = document.getElementById('btn-' + id);
+        if (!btn) return;
+        fetch('/api/appointments/' + id + '/visit-link', {method: 'GET'})
+            .then(r => r.json())
+            .then(data => {
+                if (data.success || !data.too_early) {
+                    btn.disabled = false;
+                    btn.onclick = function() { getVisitLink(parseInt(id), btn); };
+                    timerEl.textContent = 'Kliknij aby pobrać link';
+                }
+            }).catch(() => {});
+    });
+}, 30000);
+</script>
+{% endblock %}

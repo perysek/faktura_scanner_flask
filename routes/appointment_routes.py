@@ -1089,6 +1089,53 @@ def set_satisfaction_score(appointment_id: int):
     return jsonify({'success': True, 'appointment_id': appointment_id, 'score': score})
 
 
+@appointment_bp.route('/appointments/<int:appointment_id>/visit-link', methods=['GET'])
+@login_required
+def get_visit_link(appointment_id: int):
+    """Return tokenized /visit/<token> URL for the employee owning this appointment.
+    Time-gated: only available within 20 minutes of scheduled start."""
+    from datetime import datetime, timedelta
+    from repositories.employees.employee_repository import EmployeeRepository
+
+    repo = AppointmentRepository()
+    appt = repo.get_by_id(appointment_id)
+    if not appt:
+        return jsonify({'success': False, 'error': 'Wizyta nie istnieje'}), 404
+    appt = dict(appt)
+
+    # Verify the requesting user owns this appointment via employee record
+    employee = EmployeeRepository().get_by_user_id(current_user.id)
+    if not employee or employee['id'] != appt.get('employee_id'):
+        return jsonify({'success': False, 'error': 'Brak dostępu do tej wizyty'}), 403
+
+    # Time gate: only within 20 minutes of start (or already in progress)
+    if appt.get('status') not in ('in_progress',):
+        try:
+            start_time = appt['start_time']
+            h, m = str(start_time)[:5].split(':')
+            appt_dt = datetime.combine(appt['appointment_date'],
+                                       datetime.min.time().replace(hour=int(h), minute=int(m)))
+            minutes_until = (appt_dt - datetime.now()).total_seconds() / 60
+        except Exception:
+            minutes_until = 9999
+
+        if minutes_until > 20:
+            return jsonify({
+                'success': False,
+                'too_early': True,
+                'minutes_remaining': int(minutes_until - 20),
+                'error': f'Link dostępny za {int(minutes_until - 20)} min',
+            }), 425
+
+    employee_token = appt.get('employee_token')
+    if not employee_token:
+        return jsonify({'success': False, 'error': 'Brak tokenu wizyty'}), 500
+
+    base_url = current_app.config.get('BASE_URL', request.host_url.rstrip('/'))
+    visit_url = f"{base_url}/visit/{employee_token}"
+    return jsonify({'success': True, 'url': visit_url, 'appointment_id': appointment_id})
+
+
 @appointment_bp.route('/appointments/adjacent', methods=['GET'])
 @login_required
 @module_permission_required('data_correction')

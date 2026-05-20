@@ -271,8 +271,8 @@ def _employee_visit_state(appt: dict) -> tuple:
     if status == 'in_progress':
         return 'end_visit', {}
     if status in ('scheduled', 'confirmed', 'pending'):
-        if minutes_until > 30:
-            return 'too_early', {'minutes_remaining': int(minutes_until - 30)}
+        if minutes_until > 20:
+            return 'too_early', {'minutes_remaining': int(minutes_until - 20)}
         return 'start_visit', {}
     return 'wrong_status', {}
 

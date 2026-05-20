@@ -824,6 +824,31 @@ class AppointmentRepository:
             safe_commit(conn)
             return cursor.rowcount > 0
 
+    def get_today_for_employee(self, employee_id: int) -> List[Any]:
+        """Today's appointments for an employee, ordered by start time."""
+        sql = """
+            SELECT a.id, a.appointment_date, a.start_time, a.end_time,
+                   a.status, a.employee_token,
+                   c.first_name || ' ' || c.last_name AS client_name,
+                   STRING_AGG(s.name, ', ') AS service_name
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
+            LEFT JOIN services s ON s.id = aps.service_id
+            WHERE a.employee_id = %s
+              AND a.appointment_date = CURRENT_DATE
+              AND a.is_deleted = FALSE
+              AND a.status NOT IN ('cancelled', 'no_show')
+            GROUP BY a.id, a.appointment_date, a.start_time, a.end_time,
+                     a.status, a.employee_token,
+                     c.first_name, c.last_name
+            ORDER BY a.start_time ASC
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (employee_id,))
+            return cursor.fetchall()
+
     def get_by_employee_token(self, token: str) -> Optional[Any]:
         """Public lookup by employee_token. Used by employee mobile form route."""
         sql = """
