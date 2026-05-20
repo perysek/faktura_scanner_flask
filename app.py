@@ -269,7 +269,8 @@ def create_app():
     # Flip any orphaned import_logs rows (status='running') left by a previous crash
     try:
         from repositories.data_import.import_log_repository import ImportLogRepository
-        _orphan_count = ImportLogRepository().cleanup_orphans()
+        with app.app_context():
+            _orphan_count = ImportLogRepository().cleanup_orphans()
         if _orphan_count:
             logging.info("Flipped %d orphaned import_logs rows to 'failed'", _orphan_count)
     except Exception as _imp_err:
