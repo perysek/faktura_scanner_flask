@@ -60,9 +60,13 @@ class DataImportService:
         so the runner can log it.
         """
         stats = self._zero_stats()
-        conn: Optional[psycopg2.extensions.connection] = None
         pool = get_pool()
         xlsx_path: Optional[Path] = None
+
+        # Acquire DB connection upfront — before Playwright download — so
+        # the failure handler always has a valid conn (no flask.g fallback
+        # needed in a background thread).
+        conn = pool.getconn()
 
         try:
             self._emit(progress_callback, 'log',
@@ -71,9 +75,6 @@ class DataImportService:
             # ── Phase 1: Playwright download ─────────────────────────────────
             xlsx_path = self._download_xlsx(import_id, date_start, date_end,
                                             progress_callback)
-
-            # ── Phase 2: open thread-local DB connection ─────────────────────
-            conn = pool.getconn()
 
             # ── Phase 3: build lookup maps ───────────────────────────────────
             self._emit(progress_callback, 'log', 'Budowanie tablic wyszukiwania...')

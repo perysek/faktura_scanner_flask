@@ -16,6 +16,7 @@ import queue as queue_module
 from datetime import date, datetime, timedelta
 from typing import Optional
 
+from config.database import get_pool
 from exceptions import ConflictError
 from repositories.data_import.import_log_repository import ImportLogRepository
 from services.data_import_service import DataImportService
@@ -98,7 +99,14 @@ class ImportRunner:
                     'message': str(exc) or type(exc).__name__,
                     'timestamp': datetime.now().isoformat(),
                 })
-                ImportLogRepository().mark_failed(import_id, str(exc) or type(exc).__name__)
+                # Use pool directly — no flask.g in background threads
+                pool = get_pool()
+                _conn = pool.getconn()
+                try:
+                    ImportLogRepository().mark_failed(
+                        import_id, str(exc) or type(exc).__name__, conn=_conn)
+                finally:
+                    pool.putconn(_conn)
             except Exception:
                 logger.exception("Could not record thread-crash failure")
         finally:
