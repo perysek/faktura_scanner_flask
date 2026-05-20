@@ -317,12 +317,15 @@ async function loadHistory() {
 
 // ── SSE event handler ───────────────────────────────────────────────────────
 var activeEventSource = null;
+var _lastImportStatus = null;   // tracks the last 'status' type event
+var _lastImportStats  = null;   // tracks the last stats seen
 
 function handleImportEvent(event, importId) {
     if (event.type === 'log') {
         appendLog(event.message, event.level || 'info');
     } else if (event.type === 'stats') {
         const s = event.stats || {};
+        _lastImportStats = s;
         setStatusMsg(
             'Wstawiono: ' + (s.inserted ?? 0) +
             ' | Pominięto: ' + ((s.skipped_zero ?? 0) + (s.skipped_no_client ?? 0) + (s.skipped_no_employee ?? 0) + (s.skipped_duplicate ?? 0)) +
@@ -330,6 +333,7 @@ function handleImportEvent(event, importId) {
             'info'
         );
     } else if (event.type === 'status') {
+        _lastImportStatus = event.status;
         if (event.status === 'failed') {
             setStatusMsg('Import zakończony błędem.', 'error');
         }
@@ -340,13 +344,18 @@ function handleImportEvent(event, importId) {
         }
         setImportBusy(false);
 
-        const ok = event.status === 'completed';
+        // 'done' sentinel may omit status — fall back to last 'status' event
+        const finalStatus = event.status || _lastImportStatus || 'unknown';
+        const finalStats  = event.stats  || _lastImportStats  || {};
+        const ok = finalStatus === 'completed';
         setStatusMsg(
-            ok ? 'Import zakończony.' : ('Import zakończony ze statusem: ' + (event.status || 'unknown')),
+            ok ? 'Import zakończony.' : ('Import zakończony ze statusem: ' + finalStatus),
             ok ? 'success' : 'error'
         );
-        showResult(event.stats || {}, event.error_message);
-        appendLog('— Koniec (' + (event.status || 'done') + ') —', ok ? 'info' : 'error');
+        showResult(finalStats, event.error_message);
+        appendLog('— Koniec (' + finalStatus + ') —', ok ? 'info' : 'error');
+        _lastImportStatus = null;
+        _lastImportStats  = null;
         setTimeout(loadHistory, 1000);
     }
 }
