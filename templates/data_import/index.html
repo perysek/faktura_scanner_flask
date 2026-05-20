@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% block title %}Import danych — MyWay{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold" style="color: var(--text-primary);">
+        Import danych z caldis.pl
+      </h1>
+      <p class="text-sm mt-1" style="color: var(--text-secondary);">
+        Pobiera rezerwacje z caldis.pl przez Playwright i importuje do bazy danych.
+      </p>
+    </div>
+  </div>
+
+  <!-- Session status card -->
+  <div class="rounded-xl border p-4" style="background: var(--card-bg); border-color: var(--card-border);">
+    <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">Sesja caldis.pl</h2>
+    <div class="flex items-center gap-3 flex-wrap">
+      <span id="session-badge"
+            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+        Sprawdzanie...
+      </span>
+      <button id="reconnect-btn"
+              class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                     bg-yellow-600 hover:bg-yellow-500 text-white transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Odnów sesję
+      </button>
+      <p id="reconnect-manual"
+         class="hidden text-xs text-yellow-400">
+        Serwer bez interfejsu graficznego. Uruchom raz: <code class="font-mono bg-gray-800 px-1 rounded">python scripts/import_appointments_playwright.py --headed</code>
+      </p>
+    </div>
+    <p id="session-age" class="mt-2 text-xs hidden" style="color: var(--text-secondary);"></p>
+  </div>
+
+  <!-- Import form card -->
+  <div class="rounded-xl border p-4" style="background: var(--card-bg); border-color: var(--card-border);">
+    <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">Parametry importu</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="date-start" class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">
+          Data od
+        </label>
+        <input type="date" id="date-start" name="date_start"
+               class="w-full rounded-lg border px-3 py-2 text-sm"
+               style="background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary);">
+      </div>
+      <div>
+        <label for="date-end" class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">
+          Data do
+        </label>
+        <input type="date" id="date-end" name="date_end"
+               class="w-full rounded-lg border px-3 py-2 text-sm"
+               style="background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary);">
+      </div>
+    </div>
+    <div class="mt-3 flex items-center gap-2">
+      <input type="checkbox" id="dry-run" name="dry_run"
+             class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500">
+      <label for="dry-run" class="text-sm" style="color: var(--text-secondary);">
+        Suchy przebieg (parsuj, nie zapisuj do bazy)
+      </label>
+    </div>
+    <div class="mt-4 flex items-center gap-3">
+      <button id="import-btn" type="button"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                     bg-primary-600 hover:bg-primary-500 text-white transition-colors
+                     disabled:opacity-50 disabled:cursor-not-allowed">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        <span id="import-btn-label">Importuj</span>
+      </button>
+      <svg id="import-spinner" class="hidden w-5 h-5 animate-spin text-primary-400"
+           fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
+      <span id="import-status-msg" class="text-xs" style="color: var(--text-secondary);"></span>
+    </div>
+  </div>
+
+  <!-- Live log panel card -->
+  <div class="rounded-xl border p-4" style="background: var(--card-bg); border-color: var(--card-border);">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-sm font-semibold" style="color: var(--text-primary);">Log importu</h2>
+      <div id="progress-bar-wrapper" class="hidden flex-1 ml-4">
+        <div class="h-1 rounded bg-gray-700 overflow-hidden">
+          <div id="progress-bar" class="h-full bg-primary-500 transition-all duration-300" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div id="log-panel"
+         class="font-mono text-xs rounded-lg p-3 h-64 overflow-y-auto scroll-smooth whitespace-pre-wrap leading-relaxed"
+         style="background: #0f172a; color: #4ade80;">
+      <span style="color:#4b5563">Brak aktywnego importu.</span>
+    </div>
+  </div>
+
+  <!-- Result summary card (hidden until done) -->
+  <div id="result-card" class="hidden rounded-xl border p-4"
+       style="background: var(--card-bg); border-color: var(--card-border);">
+    <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">Wynik importu</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="result-stats"></div>
+    <p id="result-error" class="hidden mt-3 text-sm text-red-400"></p>
+  </div>
+
+  <!-- Import history table card -->
+  <div class="rounded-xl border p-4" style="background: var(--card-bg); border-color: var(--card-border);">
+    <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">Historia importów (ostatnie 20)</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-left" style="color: var(--text-secondary);">
+            <th class="pb-2 pr-3 font-medium">Rozpoczęto</th>
+            <th class="pb-2 pr-3 font-medium">Zakres</th>
+            <th class="pb-2 pr-3 font-medium">Przez</th>
+            <th class="pb-2 pr-3 font-medium">Status</th>
+            <th class="pb-2 pr-3 font-medium text-right">Wstawiono</th>
+            <th class="pb-2 pr-3 font-medium text-right">Pominięto</th>
+            <th class="pb-2 pr-3 font-medium text-right">Błędy</th>
+            <th class="pb-2 pr-3 font-medium">Suchy</th>
+            <th class="pb-2 font-medium text-right">Czas</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody">
+          <tr id="history-placeholder">
+            <td colspan="9" class="text-center py-6" style="color: var(--text-secondary);">
+              Ładowanie historii...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Utilities ──────────────────────────────────────────────────────────────
+function fmtDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function setImportBusy(busy) {
+    const btn = document.getElementById('import-btn');
+    const spinner = document.getElementById('import-spinner');
+    btn.disabled = busy;
+    busy ? spinner.classList.remove('hidden') : spinner.classList.add('hidden');
+}
+
+function setStatusMsg(msg, level) {
+    const el = document.getElementById('import-status-msg');
+    const colours = { info: 'var(--text-secondary)', error: '#f87171', success: '#4ade80' };
+    el.textContent = msg;
+    el.style.color = colours[level] || colours.info;
+}
+
+function clearLog() {
+    document.getElementById('log-panel').innerHTML =
+        '<span style="color:#4b5563">— Start importu —</span>\n';
+}
+
+function appendLog(msg, level) {
+    const panel = document.getElementById('log-panel');
+    const colour = { info: '#4ade80', warning: '#facc15', error: '#f87171', progress: '#67e8f9' }[level] || '#4ade80';
+    const span = document.createElement('span');
+    span.style.color = colour;
+    span.textContent = (msg || '') + '\n';
+    panel.appendChild(span);
+    panel.scrollTop = panel.scrollHeight;
+}
+
+function hideResult() {
+    document.getElementById('result-card').classList.add('hidden');
+}
+
+function showResult(stats, errorMsg) {
+    const card = document.getElementById('result-card');
+    const statsEl = document.getElementById('result-stats');
+    const errEl = document.getElementById('result-error');
+    const s = stats || {};
+
+    const metrics = [
+        { label: 'Wstawiono',  value: s.inserted  ?? 0, colour: '#4ade80' },
+        { label: 'Duplikaty',  value: s.skipped_duplicate ?? 0, colour: '#facc15' },
+        { label: 'Pominięto',  value: (s.skipped_zero ?? 0) + (s.skipped_no_client ?? 0) + (s.skipped_no_employee ?? 0), colour: '#94a3b8' },
+        { label: 'Błędy',      value: s.errors ?? 0, colour: '#f87171' },
+    ];
+
+    statsEl.innerHTML = metrics.map(function(m) {
+        return `<div class="text-center rounded-lg p-3" style="background:var(--card-bg-deep,#1e293b)">
+            <div class="text-2xl font-bold" style="color:${m.colour}">${m.value}</div>
+            <div class="text-xs mt-1" style="color:var(--text-secondary)">${m.label}</div>
+        </div>`;
+    }).join('');
+
+    if (errorMsg) {
+        errEl.textContent = 'Błąd: ' + errorMsg;
+        errEl.classList.remove('hidden');
+    } else {
+        errEl.classList.add('hidden');
+    }
+    card.classList.remove('hidden');
+}
+
+// ── API calls ───────────────────────────────────────────────────────────────
+async function loadSessionStatus() {
+    const badge = document.getElementById('session-badge');
+    const reconnectBtn = document.getElementById('reconnect-btn');
+    const ageEl = document.getElementById('session-age');
+
+    try {
+        const resp = await fetch('/api/import/session-status');
+        const data = await resp.json();
+
+        const statusMap = {
+            active:  { label: 'Aktywna',   cls: 'bg-green-700 text-green-100' },
+            expired: { label: 'Wygasła',   cls: 'bg-yellow-700 text-yellow-100' },
+            missing: { label: 'Brak sesji', cls: 'bg-red-700 text-red-100' },
+        };
+        const s = statusMap[data.status] || { label: data.status, cls: 'bg-gray-700 text-gray-300' };
+
+        badge.textContent = s.label;
+        badge.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${s.cls}`;
+
+        if (data.status !== 'active') {
+            reconnectBtn.classList.remove('hidden');
+        } else {
+            reconnectBtn.classList.add('hidden');
+        }
+
+        if (data.age_days !== null && data.age_days !== undefined) {
+            ageEl.textContent = 'Wiek sesji: ' + data.age_days + ' dni';
+            ageEl.classList.remove('hidden');
+        }
+    } catch (e) {
+        badge.textContent = 'Błąd sprawdzania';
+        badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-400';
+    }
+}
+
+async function loadHistory() {
+    const tbody = document.getElementById('history-tbody');
+    const placeholder = document.getElementById('history-placeholder');
+
+    try {
+        const resp = await fetch('/api/import/history');
+        const data = await resp.json();
+
+        if (!data.history || data.history.length === 0) {
+            if (placeholder) placeholder.querySelector('td').textContent = 'Brak historii importów.';
+            return;
+        }
+
+        if (placeholder) placeholder.remove();
+        tbody.innerHTML = '';
+
+        data.history.forEach(function(row) {
+            const statusBadge = {
+                completed: '<span class="px-2 py-0.5 rounded-full bg-green-800 text-green-200 text-xs">Ukończony</span>',
+                running:   '<span class="px-2 py-0.5 rounded-full bg-blue-800 text-blue-200 text-xs">W toku</span>',
+                failed:    '<span class="px-2 py-0.5 rounded-full bg-red-800 text-red-200 text-xs">Błąd</span>',
+                cancelled: '<span class="px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-xs">Anulowany</span>',
+            }[row.status] || ('<span class="text-xs">' + row.status + '</span>');
+
+            const started = row.started_at
+                ? new Date(row.started_at).toLocaleString('pl-PL', {dateStyle:'short', timeStyle:'short'})
+                : '—';
+
+            const range = (row.date_range_start && row.date_range_end)
+                ? row.date_range_start.slice(0, 10) + ' → ' + row.date_range_end.slice(0, 10)
+                : '—';
+
+            let duration = '—';
+            if (row.started_at && row.finished_at) {
+                const ms = new Date(row.finished_at) - new Date(row.started_at);
+                duration = ms < 60000 ? (Math.round(ms / 1000) + 's') : (Math.round(ms / 60000) + 'm');
+            }
+
+            const s = row.stats || {};
+            const skipped = (s.skipped_zero ?? 0) + (s.skipped_no_client ?? 0) + (s.skipped_no_employee ?? 0) + (s.skipped_duplicate ?? 0);
+            const errColour = (s.errors ?? 0) > 0 ? '#f87171' : 'var(--text-secondary)';
+
+            const tr = document.createElement('tr');
+            tr.style.borderTop = '1px solid var(--card-border)';
+            tr.innerHTML = `
+                <td class="py-2 pr-3 text-xs" style="color:var(--text-primary)">${started}</td>
+                <td class="py-2 pr-3 text-xs" style="color:var(--text-secondary)">${range}</td>
+                <td class="py-2 pr-3 text-xs" style="color:var(--text-secondary)">${row.triggered_by_name || '—'}</td>
+                <td class="py-2 pr-3">${statusBadge}</td>
+                <td class="py-2 pr-3 text-xs text-right" style="color:var(--text-primary)">${s.inserted ?? '—'}</td>
+                <td class="py-2 pr-3 text-xs text-right" style="color:var(--text-secondary)">${skipped || '—'}</td>
+                <td class="py-2 pr-3 text-xs text-right" style="color:${errColour}">${s.errors ?? '—'}</td>
+                <td class="py-2 pr-3 text-xs">${row.dry_run ? '✓' : ''}</td>
+                <td class="py-2 text-xs text-right" style="color:var(--text-secondary)">${duration}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {
+        if (placeholder) placeholder.querySelector('td').textContent = 'Błąd ładowania historii.';
+    }
+}
+
+// ── SSE event handler ───────────────────────────────────────────────────────
+var activeEventSource = null;
+
+function handleImportEvent(event, importId) {
+    if (event.type === 'log') {
+        appendLog(event.message, event.level || 'info');
+    } else if (event.type === 'stats') {
+        const s = event.stats || {};
+        setStatusMsg(
+            'Wstawiono: ' + (s.inserted ?? 0) +
+            ' | Pominięto: ' + ((s.skipped_zero ?? 0) + (s.skipped_no_client ?? 0) + (s.skipped_no_employee ?? 0) + (s.skipped_duplicate ?? 0)) +
+            ' | Błędy: ' + (s.errors ?? 0),
+            'info'
+        );
+    } else if (event.type === 'status') {
+        if (event.status === 'failed') {
+            setStatusMsg('Import zakończony błędem.', 'error');
+        }
+    } else if (event.type === 'done') {
+        if (activeEventSource) {
+            activeEventSource.close();
+            activeEventSource = null;
+        }
+        setImportBusy(false);
+
+        const ok = event.status === 'completed';
+        setStatusMsg(
+            ok ? 'Import zakończony.' : ('Import zakończony ze statusem: ' + (event.status || 'unknown')),
+            ok ? 'success' : 'error'
+        );
+        showResult(event.stats || {}, event.error_message);
+        appendLog('— Koniec (' + (event.status || 'done') + ') —', ok ? 'info' : 'error');
+        setTimeout(loadHistory, 1000);
+    }
+}
+
+// ── Event listeners ─────────────────────────────────────────────────────────
+document.getElementById('reconnect-btn').addEventListener('click', async function() {
+    const btn = this;
+    const manualMsg = document.getElementById('reconnect-manual');
+    btn.disabled = true;
+    btn.textContent = 'Łączę...';
+
+    try {
+        const resp = await fetch('/api/import/reconnect-session', { method: 'POST' });
+        if (resp.status === 503) {
+            manualMsg.classList.remove('hidden');
+        } else if (resp.ok) {
+            await loadSessionStatus();
+            manualMsg.classList.add('hidden');
+        } else {
+            const data = await resp.json().catch(function() { return {}; });
+            setStatusMsg(data.error || 'Błąd podczas odnawiania sesji.', 'error');
+        }
+    } catch (e) {
+        setStatusMsg('Błąd połączenia z serwerem.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Odnów sesję';
+    }
+});
+
+document.getElementById('import-btn').addEventListener('click', async function() {
+    const dateStart = document.getElementById('date-start').value;
+    const dateEnd   = document.getElementById('date-end').value;
+    const dryRun    = document.getElementById('dry-run').checked;
+
+    if (!dateStart || !dateEnd) {
+        setStatusMsg('Wybierz zakres dat.', 'error'); return;
+    }
+    if (dateStart > dateEnd) {
+        setStatusMsg('Data od musi być wcześniejsza niż data do.', 'error'); return;
+    }
+
+    setImportBusy(true);
+    clearLog();
+    hideResult();
+    setStatusMsg('Uruchamiam import...', 'info');
+
+    var importId;
+    try {
+        const resp = await fetch('/api/import/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date_start: dateStart, date_end: dateEnd, dry_run: dryRun }),
+        });
+        if (resp.status === 409) {
+            setStatusMsg('Import już trwa — poczekaj na zakończenie.', 'error');
+            setImportBusy(false); return;
+        }
+        if (!resp.ok) {
+            const d = await resp.json().catch(function() { return {}; });
+            setStatusMsg(d.error || 'Błąd uruchamiania importu.', 'error');
+            setImportBusy(false); return;
+        }
+        const data = await resp.json();
+        importId = data.import_id;
+        setStatusMsg('Import #' + importId + ' — trwa...', 'info');
+    } catch (e) {
+        setStatusMsg('Błąd połączenia z serwerem.', 'error');
+        setImportBusy(false); return;
+    }
+
+    if (activeEventSource) activeEventSource.close();
+    activeEventSource = new EventSource('/api/import/' + importId + '/stream');
+
+    activeEventSource.onmessage = function(evt) {
+        var event;
+        try { event = JSON.parse(evt.data); } catch(e) { return; }
+        handleImportEvent(event, importId);
+    };
+
+    activeEventSource.onerror = function() {
+        appendLog('[WARN] Połączenie SSE przerwane — czekam na reconnect...', 'warning');
+    };
+});
+
+// ── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Set date defaults using local time (not UTC) per date-formatting rule
+    const today = new Date();
+    const ninetyDaysAgo = new Date(today);
+    ninetyDaysAgo.setDate(today.getDate() - 90);
+    document.getElementById('date-start').value = fmtDate(ninetyDaysAgo);
+    document.getElementById('date-end').value   = fmtDate(today);
+
+    loadSessionStatus();
+    loadHistory();
+});
+</script>
+{% endblock %}

@@ -178,6 +178,7 @@ def create_app():
     from routes.absence_balance_routes import absence_balance_bp
     from routes.sms_routes import sms_bp
     from routes.public_routes import public_bp
+    from routes.import_routes import import_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -196,6 +197,7 @@ def create_app():
     app.register_blueprint(absence_balance_bp)
     app.register_blueprint(sms_bp)
     app.register_blueprint(public_bp)
+    app.register_blueprint(import_bp, url_prefix='/api')
 
     # Error handlers
     from exceptions import AppError
@@ -263,6 +265,15 @@ def create_app():
     # P4-3/P4-4: Clean up stale upload temp files on startup
     from routes.upload_routes import cleanup_stale_uploads
     cleanup_stale_uploads(app)
+
+    # Flip any orphaned import_logs rows (status='running') left by a previous crash
+    try:
+        from repositories.data_import.import_log_repository import ImportLogRepository
+        _orphan_count = ImportLogRepository().cleanup_orphans()
+        if _orphan_count:
+            logging.info("Flipped %d orphaned import_logs rows to 'failed'", _orphan_count)
+    except Exception as _imp_err:
+        logging.warning("Could not run import_logs orphan cleanup at startup: %s", _imp_err)
 
     # SMS auto-send background scheduler
     app.config['BASE_URL'] = os.environ.get('BASE_URL', 'http://localhost:5000')

@@ -25,6 +25,7 @@ MODULE_PERMISSIONS = {
     'settings': ['superuser', 'admin'],
     'reports': ['superuser', 'admin', 'accountant'],
     'data_correction': ['superuser'],
+    'data_import': ['superuser', 'admin'],
     'absences': ['superuser', 'admin'],  # full management (categories CRUD + global list)
 }
 
