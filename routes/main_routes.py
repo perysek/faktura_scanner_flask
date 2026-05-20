@@ -458,3 +458,11 @@ def my_visits():
 def email_settings():
     """Email settings view - IMAP configuration"""
     return render_template('settings/email.html')
+
+
+@main_bp.route('/import')
+@login_required
+@module_permission_required('data_import')
+def import_page():
+    """Admin import page — caldis.pl Playwright import."""
+    return render_template('data_import/index.html')
