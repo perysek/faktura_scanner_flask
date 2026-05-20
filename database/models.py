@@ -353,6 +353,11 @@ class Appointment:
     cancellation_reason: Optional[str] = None
     cancelled_at: Optional[datetime] = None
     satisfaction_score: Optional[int] = None
+    rating_token:   Optional[str]      = None   # UUID — client rating form URL
+    rating_status:  Optional[str]      = None   # 'scheduled'|'sent'|'awaiting_feedback'|'received'
+    rated_on:       Optional[datetime] = None
+    rated_by:       Optional[str]      = None   # 'client'
+    employee_token: Optional[str]      = None   # UUID — employee mobile form URL (time-gated)
     created_by: Optional[int] = None
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
@@ -506,3 +511,31 @@ class EmployeeAbsence:
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
     updated_at: Optional[datetime] = field(default_factory=datetime.now)
+
+
+# ── SMS event models (visit rating & real-time status notifications) ──────────
+
+@dataclass
+class SmsEvent:
+    """Scheduled event-triggered SMS job (post-visit rating, etc.)."""
+    appointment_id:  int
+    event_type:      str
+    scheduled_at:    datetime
+    status:          str                = 'scheduled'
+    sent_at:         Optional[datetime] = None
+    sms_reminder_id: Optional[int]     = None
+    error_message:   Optional[str]     = None
+    retry_count:     int               = 0
+    created_at:      Optional[datetime] = None
+    id:              Optional[int]     = None
+
+
+@dataclass
+class StatusChangeEvent:
+    """Real-time status-change notification event (employee mobile form)."""
+    appointment_id: int
+    new_status:     str
+    old_status:     Optional[str] = None
+    triggered_by:   str           = 'employee_mobile'
+    created_at:     Optional[datetime] = None
+    id:             Optional[int] = None

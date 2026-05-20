@@ -171,5 +171,67 @@
     {% block scripts %}{% endblock %}
     {% block extra_scripts %}{% endblock %}
     {% include 'components/undo_toast.html' %}
+
+    <!-- Real-time status change toast polling (P10c) — authenticated only -->
+    {% if current_user.is_authenticated %}
+    <style>
+    .status-toast {
+        position: fixed; bottom: 1.5rem; right: 1.5rem;
+        background: #1a1a1a; color: white;
+        padding: 0.75rem 1.25rem; border-radius: 6px;
+        font-size: 0.875rem; z-index: 9999;
+        animation: status-toast-in 0.25s ease;
+        max-width: 320px; pointer-events: none;
+        box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    }
+    @keyframes status-toast-in {
+        from { transform: translateX(16px); opacity: 0; }
+        to   { transform: translateX(0);    opacity: 1; }
+    }
+    </style>
+    <script>
+    (function () {
+        'use strict';
+        var STATUS_LABELS = {
+            in_progress: 'W trakcie',
+            completed:   'Zakonczona',
+            cancelled:   'Anulowana'
+        };
+        var lastPoll = new Date().toISOString();
+
+        function pollStatusEvents() {
+            fetch('/api/appointments/status-events?since=' + encodeURIComponent(lastPoll))
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data) return;
+                    lastPoll = data.server_time;
+                    (data.events || []).forEach(function (evt) {
+                        var label = STATUS_LABELS[evt.new_status] || evt.new_status;
+                        showStatusToast('Wizyta — ' + evt.client_name + ': status → "' + label + '"');
+                    });
+                })
+                .catch(function () {});  // Non-critical; silence network errors
+        }
+
+        function showStatusToast(msg) {
+            if (typeof window.showToast === 'function') {
+                window.showToast(msg, 'info', 6000);
+                return;
+            }
+            var el = document.createElement('div');
+            el.className = 'status-toast';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(function () {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.3s';
+                setTimeout(function () { el.parentNode && el.parentNode.removeChild(el); }, 350);
+            }, 5000);
+        }
+
+        setInterval(pollStatusEvents, 5000);
+    })();
+    </script>
+    {% endif %}
 </body>
 </html>

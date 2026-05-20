@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oceń wizytę — MyWay Beauty Salon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f0;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .card {
+            background: white; border-radius: 8px;
+            padding: 2rem 1.5rem; max-width: 420px; width: 100%;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        }
+        .salon-name { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.1em;
+                      text-transform: uppercase; color: #888; margin-bottom: 1.5rem; }
+        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem; }
+        .subheading { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+        .details-block { background: #f9f9f7; border-radius: 6px;
+                         padding: 1rem; margin-bottom: 1.5rem; }
+        .detail-row { display: flex; justify-content: space-between;
+                      padding: 0.375rem 0; font-size: 0.875rem; }
+        .detail-label { color: #888; }
+        .detail-value { font-weight: 500; color: #1a1a1a; }
+        .status-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .status-message { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
+
+        /* Stars */
+        .stars-row {
+            display: flex; gap: 0.5rem; justify-content: center; margin: 1.5rem 0;
+        }
+        .star {
+            font-size: 2.75rem; background: none; border: none;
+            cursor: pointer; color: #d0cfc9; padding: 0.25rem; line-height: 1;
+            transition: color 0.12s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .star.active { color: #f59e0b; }
+        .star:active  { transform: scale(1.15); }
+        .stars-readonly .star { cursor: default; }
+
+        /* Buttons */
+        .btn-submit {
+            display: block; width: 100%; padding: 0.875rem;
+            background: #1a1a1a; color: white; border: none; border-radius: 6px;
+            font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+            cursor: pointer; margin-bottom: 0.75rem;
+        }
+        .btn-submit:active { background: #333; }
+        .btn-skip {
+            display: block; width: 100%; padding: 0.875rem;
+            background: white; color: #666; border: 1px solid #ddd; border-radius: 6px;
+            font-family: inherit; font-size: 0.875rem; cursor: pointer;
+        }
+
+        .error-msg { color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem; }
+
+        .toast {
+            position: fixed; bottom: 1.5rem; left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a; color: white;
+            padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 0.875rem;
+            animation: slideup 0.3s ease;
+        }
+        @keyframes slideup {
+            from { transform: translateX(-50%) translateY(16px); opacity: 0; }
+            to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <p class="salon-name">MyWay Beauty Salon</p>
+
+    {% if already_rated %}
+        {% if just_submitted %}
+            <div class="status-icon">⭐</div>
+            <h1 class="heading">Dziękujemy za ocenę!</h1>
+            <p class="status-message">Twoja opinia jest dla nas bardzo cenna.</p>
+        {% else %}
+            <div class="status-icon">✅</div>
+            <h1 class="heading">Wizyta już oceniona</h1>
+            <p class="status-message">Już oceniłeś/aś tę wizytę. Dziękujemy!</p>
+        {% endif %}
+
+        {% if current_score %}
+        <div class="stars-row stars-readonly" style="margin-top:1.25rem;">
+            {% for i in range(1, 6) %}
+            <span class="star {% if i <= current_score %}active{% endif %}">★</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if just_submitted %}
+        <script>
+            window.addEventListener('load', () => {
+                const t = document.createElement('div');
+                t.className = 'toast';
+                t.textContent = 'Ocena zapisana!';
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 3500);
+            });
+        </script>
+        {% endif %}
+
+    {% else %}
+        <h1 class="heading">Oceń swoją wizytę</h1>
+        <p class="subheading">Jak oceniasz naszą usługę? Kliknij gwiazdkę.</p>
+
+        {% if appointment.appointment_date %}
+        <div class="details-block">
+            <div class="detail-row">
+                <span class="detail-label">Data</span>
+                <span class="detail-value">{{ appointment.appointment_date }}</span>
+            </div>
+            {% if appointment.start_time %}
+            <div class="detail-row">
+                <span class="detail-label">Godzina</span>
+                <span class="detail-value">{{ appointment.start_time | string | truncate(5, True, '') }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <p class="error-msg">{{ error }}</p>
+        {% endif %}
+
+        <div class="stars-row" id="stars">
+            {% for i in range(1, 6) %}
+            <button class="star" data-score="{{ i }}" type="button"
+                    aria-label="Ocena {{ i }}/5">★</button>
+            {% endfor %}
+        </div>
+
+        <div id="submit-area" style="display:none;">
+            <form id="rating-form" method="POST" action="/rate/{{ token }}">
+                <input type="hidden" name="score" id="score-input">
+                <button class="btn-submit" id="btn-submit" type="submit">
+                    Prześlij ocenę
+                </button>
+                <button class="btn-skip" id="btn-skip" type="button">
+                    Nie teraz
+                </button>
+            </form>
+        </div>
+
+        <div id="skip-message" style="display:none;">
+            <p class="status-message">Może następnym razem. Dziękujemy za wizytę!</p>
+        </div>
+
+        <script>
+        (function () {
+            let selectedScore = 0;
+            const stars      = document.querySelectorAll('#stars .star');
+            const submitArea = document.getElementById('submit-area');
+            const skipMsg    = document.getElementById('skip-message');
+            const scoreInput = document.getElementById('score-input');
+
+            stars.forEach(function (star) {
+                star.addEventListener('click', function () {
+                    selectedScore = parseInt(star.dataset.score, 10);
+                    stars.forEach(function (s, idx) {
+                        s.classList.toggle('active', idx < selectedScore);
+                    });
+                    scoreInput.value = selectedScore;
+                    submitArea.style.display = 'block';
+                    skipMsg.style.display    = 'none';
+                });
+            });
+
+            document.getElementById('btn-skip').addEventListener('click', function () {
+                submitArea.style.display = 'none';
+                skipMsg.style.display    = 'block';
+            });
+        })();
+        </script>
+    {% endif %}
+</div>
+</body>
+</html>

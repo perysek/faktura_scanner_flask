@@ -52,9 +52,11 @@ def sms_message_type_save(type_id):
         type_id,
         is_enabled=('is_enabled' in data),
         send_hours_before=int(data.get('send_hours_before', 24)),
+        send_delay_minutes=int(data.get('send_delay_minutes', 0)),
         template_text=data.get('template_text', '').strip(),
         include_confirm_link=('include_confirm_link' in data),
         include_cancel_link=('include_cancel_link' in data),
+        include_rate_link=('include_rate_link' in data),
         send_only_if_confirmed=('send_only_if_confirmed' in data),
         name=data.get('name', '').strip(),
     )

@@ -780,3 +780,62 @@ class AppointmentRepository:
             cursor = conn.cursor()
             cursor.execute(query)
             return cursor.fetchall()
+
+    # ------------------------------------------------------------------
+    # Visit rating methods (P03a)
+    # ------------------------------------------------------------------
+
+    def get_by_rating_token(self, token: str) -> Optional[Any]:
+        """Public lookup by rating_token (no auth required)."""
+        sql = """
+            SELECT a.*, c.first_name, c.last_name, c.phone
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            WHERE a.rating_token = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (token,))
+            return cursor.fetchone()
+
+    def update_rating(self, appointment_id: int, score: int,
+                      rated_on, rated_by: str = 'client') -> bool:
+        """Set satisfaction_score + rating metadata atomically."""
+        sql = """
+            UPDATE appointments
+            SET satisfaction_score = %s,
+                rated_on           = %s,
+                rated_by           = %s,
+                rating_status      = 'received'
+            WHERE id = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (score, rated_on, rated_by, appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def update_rating_status(self, appointment_id: int, status: str) -> bool:
+        """Update the rating workflow status on an appointment."""
+        sql = "UPDATE appointments SET rating_status = %s WHERE id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (status, appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def get_by_employee_token(self, token: str) -> Optional[Any]:
+        """Public lookup by employee_token. Used by employee mobile form route."""
+        sql = """
+            SELECT a.*,
+                   c.first_name, c.last_name, c.phone,
+                   e.first_name || ' ' || e.last_name AS employee_name
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            LEFT JOIN employees e ON e.id = a.employee_id
+            WHERE a.employee_token = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (token,))
+            return cursor.fetchone()

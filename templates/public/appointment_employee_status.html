@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status wizyty — MyWay Beauty Salon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f0;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .card {
+            background: white; border-radius: 8px;
+            padding: 2rem 1.5rem; max-width: 420px; width: 100%;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        }
+        .salon-name { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.1em;
+                      text-transform: uppercase; color: #888; margin-bottom: 1.5rem; }
+        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem; }
+        .subheading { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+        .details-block { background: #f9f9f7; border-radius: 6px;
+                         padding: 1rem; margin-bottom: 1.5rem; }
+        .detail-row { display: flex; justify-content: space-between;
+                      padding: 0.375rem 0; font-size: 0.875rem; }
+        .detail-label { color: #888; }
+        .detail-value { font-weight: 500; color: #1a1a1a; }
+        .btn-confirm {
+            display: block; width: 100%; padding: 0.875rem;
+            background: #1a1a1a; color: white; border: none; border-radius: 6px;
+            font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+            cursor: pointer; margin-bottom: 0.75rem;
+        }
+        .btn-confirm:active { background: #333; }
+        .status-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .status-message { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
+        .error-msg { color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <p class="salon-name">MyWay Beauty Salon</p>
+
+    {% if error %}
+    <p class="error-msg">{{ error }}</p>
+    {% endif %}
+
+    {% if state == 'too_early' %}
+        <div class="status-icon">⏳</div>
+        <h1 class="heading">Za wcześnie</h1>
+        <p class="status-message">
+            Formularz będzie dostępny
+            {% if minutes_remaining is defined %}za {{ minutes_remaining }} min{% endif %}
+            (30 minut przed wizytą).
+        </p>
+
+    {% elif state == 'already_done' %}
+        <div class="status-icon">✅</div>
+        <h1 class="heading">Wizyta już zakończona</h1>
+        <p class="status-message">Ta wizyta ma już finalny status. Brak dostępnych akcji.</p>
+
+    {% elif state == 'wrong_status' %}
+        <div class="status-icon">⚠️</div>
+        <h1 class="heading">Nieprawidłowy status</h1>
+        <p class="status-message">Wizyta ma status, który nie pozwala na zmianę przez ten formularz.</p>
+
+    {% elif state == 'success' %}
+        <div class="status-icon">✅</div>
+        <h1 class="heading">Status zaktualizowany</h1>
+        <p class="status-message" id="success-msg">
+            Wizyta oznaczona jako
+            <strong>{% if new_status == 'in_progress' %}W trakcie{% else %}Zakończona{% endif %}</strong>.
+        </p>
+        <script>
+            setTimeout(function () {
+                var el = document.getElementById('success-msg');
+                if (el) el.textContent += ' Możesz zamknąć tę stronę.';
+            }, 1500);
+        </script>
+
+    {% elif state == 'start_visit' %}
+        <h1 class="heading">Rozpocznij wizytę</h1>
+        <p class="subheading">Potwierdź rozpoczęcie wizyty.</p>
+        <div class="details-block">
+            <div class="detail-row">
+                <span class="detail-label">Klient</span>
+                <span class="detail-value">{{ appointment.first_name }} {{ appointment.last_name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Data</span>
+                <span class="detail-value">{{ appointment.appointment_date }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Godzina</span>
+                <span class="detail-value">{{ appointment.start_time | string | truncate(5, True, '') }}</span>
+            </div>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="start">
+            <button class="btn-confirm" type="submit">Wizyta rozpoczęta</button>
+        </form>
+
+    {% elif state == 'end_visit' %}
+        <h1 class="heading">Zakończ wizytę</h1>
+        <p class="subheading">Potwierdź zakończenie wizyty.</p>
+        <div class="details-block">
+            <div class="detail-row">
+                <span class="detail-label">Klient</span>
+                <span class="detail-value">{{ appointment.first_name }} {{ appointment.last_name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Data</span>
+                <span class="detail-value">{{ appointment.appointment_date }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Godzina</span>
+                <span class="detail-value">{{ appointment.start_time | string | truncate(5, True, '') }}</span>
+            </div>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="end">
+            <button class="btn-confirm" type="submit">Wizyta zakończona</button>
+        </form>
+    {% endif %}
+
+</div>
+</body>
+</html>

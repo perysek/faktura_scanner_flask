@@ -190,6 +190,16 @@
             <span class="material-icons">save</span>
             Zapisz ocenę
         </button>
+
+        <!-- Rating status chip (populated by JS after appointment load) -->
+        <div id="rating-status-block" style="margin-top:1rem;display:none;">
+            <span id="rating-status-badge" style="
+                display:inline-flex;align-items:center;padding:0.2rem 0.6rem;
+                font-size:0.6875rem;font-weight:500;border-radius:1px;
+                text-transform:uppercase;letter-spacing:0.05em;">
+            </span>
+            <small id="rating-status-date" style="font-size:0.75rem;color:var(--color-ink-subtle);margin-left:0.5rem;"></small>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -382,7 +392,41 @@ async function loadAppointment() {
     // Satisfaction widget — only for completed appointments
     if (a.status === 'completed') {
         initSatisfactionWidget(a.satisfaction_score || null);
+        initRatingStatusChip(a.rating_status, a.rated_on);
     }
+}
+
+function initRatingStatusChip(ratingStatus, ratedOn) {
+    const block = document.getElementById('rating-status-block');
+    const badge = document.getElementById('rating-status-badge');
+    const dateEl = document.getElementById('rating-status-date');
+    if (!block || !badge) return;
+
+    const RATING_STATUS = {
+        'scheduled':         { label: 'SMS zaplanowany',         bg: 'rgba(59,130,246,0.08)', color: '#1d4ed8' },
+        'sent':              { label: 'Oczekiwanie na ocenę',    bg: 'rgba(245,158,11,0.08)', color: '#92400e' },
+        'awaiting_feedback': { label: 'Oczekiwanie na ocenę',    bg: 'rgba(245,158,11,0.08)', color: '#92400e' },
+        'received':          { label: 'Ocena otrzymana',         bg: 'rgba(45,106,79,0.08)',  color: '#2d6a4f' },
+    };
+
+    if (!ratingStatus || !RATING_STATUS[ratingStatus]) { block.style.display = 'none'; return; }
+
+    const cfg = RATING_STATUS[ratingStatus];
+    badge.textContent = cfg.label;
+    badge.style.background = cfg.bg;
+    badge.style.color = cfg.color;
+
+    if (ratingStatus === 'received' && ratedOn) {
+        // Parse ISO string as-is (server sends full ISO with tz)
+        const dt = new Date(ratedOn);
+        if (!isNaN(dt.getTime())) {
+            dateEl.textContent = dt.toLocaleDateString('pl-PL', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+            });
+        }
+    }
+    block.style.display = 'block';
 }
 
 async function changeStatus(status) {

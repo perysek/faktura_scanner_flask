@@ -80,6 +80,16 @@ class SmsMessageTypeRepository(BaseRepository):
             template_text, include_confirm_link, include_cancel_link
         ))
 
+    def get_event_triggered_by_status(self, trigger_on_status: str) -> List[dict]:
+        """Return all enabled event-triggered types for a status transition."""
+        sql = """
+            SELECT * FROM sms_message_types
+            WHERE is_event_triggered = TRUE
+              AND trigger_on_status  = %s
+              AND is_enabled         = TRUE
+        """
+        return [dict(r) for r in self._fetch_all(sql, (trigger_on_status,))]
+
     def delete_custom(self, type_id: int) -> bool:
         # Nullify FK in send history first — message_type_key string is preserved for audit.
         # Both ops share one connection so FK violation can't occur between them.

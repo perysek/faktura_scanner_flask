@@ -162,3 +162,196 @@ def appointment_cancel_submit(token):
         appointment=appt, client=None, token=token,
         already_cancelled=True, can_cancel=False, just_submitted=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# Visit rating routes (P08)
+# ---------------------------------------------------------------------------
+
+@public_bp.route('/rate/<token>', methods=['GET'])
+def appointment_rate_view(token):
+    """Public rating form — no auth required."""
+    appt = AppointmentRepository().get_by_rating_token(token)
+    if not appt:
+        return render_template('public/rate_invalid.html'), 404
+
+    appt = dict(appt)
+    already_rated = appt.get('satisfaction_score') is not None
+    return render_template(
+        'public/appointment_rate.html',
+        appointment=appt, token=token,
+        already_rated=already_rated,
+        current_score=appt.get('satisfaction_score'),
+        just_submitted=False,
+    )
+
+
+@public_bp.route('/rate/<token>', methods=['POST'])
+def appointment_rate_submit(token):
+    """Save client rating — idempotent."""
+    repo = AppointmentRepository()
+    appt = repo.get_by_rating_token(token)
+    if not appt:
+        return render_template('public/rate_invalid.html'), 404
+
+    appt = dict(appt)
+
+    # Idempotent guard: already rated -> show confirmation, no DB write
+    if appt.get('satisfaction_score') is not None:
+        return render_template(
+            'public/appointment_rate.html',
+            appointment=appt, token=token,
+            already_rated=True,
+            current_score=appt['satisfaction_score'],
+            just_submitted=False,
+        )
+
+    try:
+        score = int(request.form.get('score', 0))
+        if not 1 <= score <= 5:
+            raise ValueError('score out of range')
+    except (ValueError, TypeError):
+        return render_template(
+            'public/appointment_rate.html',
+            appointment=appt, token=token,
+            already_rated=False, current_score=None,
+            error='Nieprawidlowa ocena — wybierz od 1 do 5 gwiazdek.',
+            just_submitted=False,
+        )
+
+    from datetime import datetime, timezone
+    repo.update_rating(
+        appointment_id=appt['id'],
+        score=score,
+        rated_on=datetime.now(timezone.utc),
+        rated_by='client',
+    )
+
+    try:
+        AuditRepository().log_event(
+            entity_type='appointment', action='CLIENT_RATING',
+            entity_id=appt['id'],
+            entity_label=f"{appt.get('appointment_date')} — ocena: {score}/5",
+            field_name='satisfaction_score',
+            old_value=None, new_value=str(score),
+            user_id=None, user_name='Klient (SMS)',
+        )
+    except Exception:
+        logging.exception("Audit log failed for rating token=%s", token)
+
+    return render_template(
+        'public/appointment_rate.html',
+        appointment=appt, token=token,
+        already_rated=True, current_score=score, just_submitted=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Employee visit status routes (P10b)
+# ---------------------------------------------------------------------------
+
+def _employee_visit_state(appt: dict) -> tuple:
+    """Return (state_str, context_dict) for the employee visit form."""
+    from datetime import datetime, time as _time
+    now       = datetime.now()
+    start_time = appt['start_time']
+    appt_date  = appt['appointment_date']
+
+    if hasattr(start_time, 'hour'):
+        appt_dt = datetime.combine(appt_date, start_time)
+    else:
+        h, m = str(start_time)[:5].split(':')
+        appt_dt = datetime.combine(appt_date, _time(int(h), int(m)))
+
+    minutes_until = (appt_dt - now).total_seconds() / 60
+    status = appt['status']
+
+    if status in ('completed', 'cancelled', 'no_show'):
+        return 'already_done', {}
+    if status == 'in_progress':
+        return 'end_visit', {}
+    if status in ('scheduled', 'confirmed', 'pending'):
+        if minutes_until > 30:
+            return 'too_early', {'minutes_remaining': int(minutes_until - 30)}
+        return 'start_visit', {}
+    return 'wrong_status', {}
+
+
+@public_bp.route('/visit/<token>', methods=['GET'])
+def employee_visit_status_view(token):
+    """Employee mobile form — time-gated visit status transition."""
+    appt = AppointmentRepository().get_by_employee_token(token)
+    if not appt:
+        return render_template('public/confirm_invalid.html'), 404
+
+    appt = dict(appt)
+    state, ctx = _employee_visit_state(appt)
+    return render_template(
+        'public/appointment_employee_status.html',
+        appointment=appt, state=state, **ctx,
+    )
+
+
+@public_bp.route('/visit/<token>', methods=['POST'])
+def employee_visit_status_submit(token):
+    """Process employee start/end visit action."""
+    repo = AppointmentRepository()
+    appt = repo.get_by_employee_token(token)
+    if not appt:
+        return render_template('public/confirm_invalid.html'), 404
+
+    appt = dict(appt)
+    action = request.form.get('action')   # 'start' | 'end'
+    state, ctx = _employee_visit_state(appt)
+
+    # Server-side re-validation (never trust client-only guards)
+    if action == 'start' and state != 'start_visit':
+        return render_template(
+            'public/appointment_employee_status.html',
+            appointment=appt, state=state,
+            error='Akcja niedostepna w biezacym stanie wizyty.', **ctx,
+        )
+    if action == 'end' and state != 'end_visit':
+        return render_template(
+            'public/appointment_employee_status.html',
+            appointment=appt, state=state,
+            error='Akcja niedostepna w biezacym stanie wizyty.', **ctx,
+        )
+
+    old_status = appt['status']
+    new_status  = 'in_progress' if action == 'start' else 'completed'
+
+    repo.update_status(appt['id'], new_status)
+
+    # Real-time notification event
+    from repositories.appointments.status_change_event_repository import StatusChangeEventRepository
+    try:
+        StatusChangeEventRepository().create(appt['id'], old_status, new_status, 'employee_mobile')
+    except Exception:
+        logging.exception("StatusChangeEvent insert failed appt=%s", appt['id'])
+
+    # Audit log
+    try:
+        AuditRepository().log_event(
+            entity_type='appointment', action='STATUS_CHANGED',
+            entity_id=appt['id'],
+            entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
+            field_name='status', old_value=old_status, new_value=new_status,
+            user_id=None, user_name='Pracownik (mobile)',
+        )
+    except Exception:
+        logging.exception("Audit log failed for employee visit token=%s", token)
+
+    # Trigger post-visit rating SMS when completing
+    if new_status == 'completed':
+        try:
+            from routes.appointment_routes import _schedule_post_visit_sms
+            _schedule_post_visit_sms(appt['id'])
+        except Exception:
+            logging.exception("_schedule_post_visit_sms failed appt=%s", appt['id'])
+
+    appt['status'] = new_status
+    return render_template(
+        'public/appointment_employee_status.html',
+        appointment=appt, state='success', new_status=new_status,
+    )
