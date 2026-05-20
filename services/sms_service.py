@@ -187,6 +187,85 @@ class SmsService:
     # Auto-send: called by APScheduler every 15 minutes
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Event-triggered SMS scheduling (P04)
+    # ------------------------------------------------------------------
+
+    def schedule_event_sms(self, appointment_id: int, event_type: str,
+                           delay_minutes: int, base_url: str) -> Optional[int]:
+        """
+        Create an sms_events row to fire event_type SMS after delay_minutes.
+        Updates appointment.rating_status = 'scheduled' for post_visit_message.
+        Returns sms_events.id, or None if SMS globally disabled.
+        """
+        from datetime import datetime, timedelta, timezone
+        from repositories.sms.sms_event_repository import SmsEventRepository
+
+        settings = self.get_settings()
+        if not settings.get('is_active'):
+            return None
+
+        scheduled_at = datetime.now(timezone.utc) + timedelta(minutes=delay_minutes)
+        event_id = SmsEventRepository().create(appointment_id, event_type, scheduled_at)
+
+        if event_type == 'post_visit_message':
+            self._appt_repo.update_rating_status(appointment_id, 'scheduled')
+
+        return event_id
+
+    def send_due_event_sms(self, base_url: str) -> dict:
+        """
+        Called by scheduler every 15 min. Sends all due sms_events rows.
+        Returns {sent, failed, skipped}.
+        """
+        from repositories.sms.sms_event_repository import SmsEventRepository
+        event_repo = SmsEventRepository()
+
+        sent = failed = skipped = 0
+        for event in event_repo.get_due():
+            try:
+                result = self.send(
+                    appointment_id=event['appointment_id'],
+                    message_type_key=event['event_type'],
+                    base_url=base_url,
+                )
+                if result.get('success'):
+                    event_repo.mark_sent(event['id'], result.get('reminder_id'))
+                    if event['event_type'] == 'post_visit_message':
+                        self._appt_repo.update_rating_status(
+                            event['appointment_id'], 'sent'
+                        )
+                    sent += 1
+                else:
+                    event_repo.mark_failed(event['id'], result.get('error', ''))
+                    failed += 1
+            except Exception as e:
+                event_repo.mark_failed(event['id'], str(e))
+                failed += 1
+
+        return {'sent': sent, 'failed': failed, 'skipped': skipped}
+
+    def schedule_status_triggered_sms(self, appointment_id: int,
+                                       trigger_status: str, base_url: str) -> int:
+        """
+        Look up all enabled event-triggered types for trigger_status,
+        schedule each, and return count scheduled.
+        """
+        settings = self.get_settings()
+        if not settings.get('is_active'):
+            return 0
+
+        types = self._type_repo.get_event_triggered_by_status(trigger_status)
+        count = 0
+        for mt in types:
+            if mt.get('is_enabled'):
+                self.schedule_event_sms(
+                    appointment_id, mt['type_key'],
+                    mt.get('send_delay_minutes', 0), base_url,
+                )
+                count += 1
+        return count
+
     def send_due_reminders(self, base_url: str) -> dict:
         enabled_types = self._type_repo.get_enabled()
         sent = skipped = failed = 0
@@ -261,6 +340,10 @@ class SmsService:
         template = msg_type['template_text']
         has_confirm_placeholder = '{confirm_url}' in template
         has_cancel_placeholder = '{cancel_url}' in template
+        has_rate_placeholder = '{rate_url}' in template
+
+        rating_token = appt.get('rating_token', '')
+        rate_url = f"{base_url.rstrip('/')}/rate/{rating_token}" if rating_token else ''
 
         body = (template
             .replace('{salon_name}', salon_name)
@@ -271,6 +354,7 @@ class SmsService:
             .replace('{hours_before}', str(hours_before))
             .replace('{confirm_url}', confirm_url if msg_type['include_confirm_link'] else '')
             .replace('{cancel_url}', cancel_url if msg_type.get('include_cancel_link') else '')
+            .replace('{rate_url}', rate_url if msg_type.get('include_rate_link') else '')
         )
 
         if msg_type['include_confirm_link'] and not has_confirm_placeholder:
@@ -278,5 +362,8 @@ class SmsService:
 
         if msg_type.get('include_cancel_link') and not has_cancel_placeholder:
             body = body.rstrip() + '\n' + cancel_url
+
+        if msg_type.get('include_rate_link') and not has_rate_placeholder and rate_url:
+            body = body.rstrip() + '\n' + rate_url
 
         return body.strip()

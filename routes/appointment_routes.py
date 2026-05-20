@@ -20,6 +20,27 @@ from repositories.appointments.appointment_service_repository import Appointment
 from repositories.audit_repository import AuditRepository
 
 
+def _schedule_post_visit_sms(appointment_id: int) -> None:
+    """Schedule post-visit rating SMS when visit status -> completed. Swallows errors.
+    Called from admin status-change route AND employee mobile form route."""
+    try:
+        from services.sms_service import SmsService
+        from flask import current_app
+        base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
+        SmsService().schedule_status_triggered_sms(appointment_id, 'completed', base_url)
+    except Exception as exc:
+        logging.error('_schedule_post_visit_sms failed appt_id=%s: %s', appointment_id, exc)
+
+
+def _cancel_event_sms(appointment_id: int) -> None:
+    """Cancel all pending sms_events when appointment is cancelled."""
+    try:
+        from repositories.sms.sms_event_repository import SmsEventRepository
+        SmsEventRepository().cancel_pending_for_appointment(appointment_id)
+    except Exception as exc:
+        logging.error('_cancel_event_sms failed appt_id=%s: %s', appointment_id, exc)
+
+
 def _audit(entity_type, action, entity_id=None, entity_label=None,
            field_name=None, old_value=None, new_value=None):
     """Helper: log audit event with current user context. Logs errors to stderr."""
@@ -973,6 +994,13 @@ def update_past_appointment_status(appointment_id):
                    field_name='status',
                    old_value=old_status,
                    new_value=new_val)
+
+            # Event-triggered SMS hooks
+            if new_status == AppointmentStatus.COMPLETED:
+                _schedule_post_visit_sms(appointment_id)
+            elif new_status == AppointmentStatus.CANCELLED:
+                _cancel_event_sms(appointment_id)
+
             return jsonify({'success': True, 'message': f'Status zaktualizowany na: {new_status}'})
         else:
             raise AppError('Nie udalo sie zaktualizowac statusu')
@@ -982,6 +1010,36 @@ def update_past_appointment_status(appointment_id):
     except Exception as e:
         logging.exception('Unexpected error in update_past_appointment_status')
         raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/status-events', methods=['GET'])
+@login_required
+def get_status_change_events():
+    """5-second polling endpoint for real-time visit status toast notifications."""
+    since_str = request.args.get('since', '')
+    try:
+        from datetime import datetime, timedelta, timezone
+        since = datetime.fromisoformat(since_str) if since_str else \
+                datetime.now(timezone.utc) - timedelta(seconds=10)
+    except ValueError:
+        from datetime import datetime, timedelta, timezone
+        since = datetime.now(timezone.utc) - timedelta(seconds=10)
+
+    from repositories.appointments.status_change_event_repository import StatusChangeEventRepository
+    from datetime import datetime, timezone
+    events = StatusChangeEventRepository().get_since(since)
+    # Serialize datetimes for JSON
+    serialized = []
+    for e in events:
+        row = dict(e)
+        for k, v in row.items():
+            if hasattr(v, 'isoformat'):
+                row[k] = v.isoformat()
+        serialized.append(row)
+    return jsonify({
+        'events': serialized,
+        'server_time': datetime.now(timezone.utc).isoformat(),
+    })
 
 
 @appointment_bp.route('/clients/<int:client_id>/appointments', methods=['GET'])

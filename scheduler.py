@@ -17,10 +17,20 @@ def _run_auto_reminders(app):
 
         base_url = app.config.get('BASE_URL', 'http://localhost:5000')
         from services.sms_service import SmsService
-        result = SmsService().send_due_reminders(base_url)
+        svc = SmsService()
+
+        # Existing: time-based pre-appointment reminders
+        result = svc.send_due_reminders(base_url)
         if result['sent'] > 0 or result['failed'] > 0:
-            logging.info("Auto SMS: sent=%s failed=%s skipped=%s",
+            logging.info("Auto SMS reminders: sent=%s failed=%s skipped=%s",
                          result['sent'], result['failed'], result['skipped'])
+
+        # New: event-triggered SMS (post_visit_message, etc.)
+        event_result = svc.send_due_event_sms(base_url)
+        if event_result['sent'] > 0 or event_result['failed'] > 0:
+            logging.info("SMS events: sent=%s failed=%s skipped=%s",
+                         event_result['sent'], event_result['failed'],
+                         event_result['skipped'])
 
 
 def start_scheduler(app):

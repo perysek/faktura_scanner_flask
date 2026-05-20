@@ -326,7 +326,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
             {% else %}
                 <span class="badge-pill badge-gray">Nieaktywny</span>
             {% endif %}
-            <span class="type-timing">{% if mt.is_enabled %}{{ mt.send_hours_before }}h przed wizytą{% endif %}</span>
+            <span class="type-timing">{% if mt.is_enabled %}{% if mt.is_event_triggered %}{{ mt.send_delay_minutes | default(0) }}min po zmianie statusu{% else %}{{ mt.send_hours_before }}h przed wizytą{% endif %}{% endif %}</span>
             {% if mt.is_custom %}
             <button type="button" class="btn-delete-type"
                     title="Usuń typ wiadomości"
@@ -343,12 +343,21 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
                        value="{{ mt.name }}"
                        {% if not mt.is_custom %}readonly{% endif %}>
             </div>
+            {% if mt.is_event_triggered %}
+            <div class="form-field">
+                <label class="form-label">Opóźnienie wysyłki (minuty)</label>
+                <input type="number" name="send_delay_minutes" class="form-input"
+                       value="{{ mt.send_delay_minutes | default(0) }}" min="0" max="1440" style="width:120px;">
+                <p class="form-hint">0 = natychmiast po zmianie statusu. Wyzwalacz: status <strong>{{ mt.trigger_on_status }}</strong></p>
+            </div>
+            {% else %}
             <div class="form-field">
                 <label class="form-label">Wyślij X godzin przed wizytą</label>
                 <input type="number" name="send_hours_before" class="form-input"
                        value="{{ mt.send_hours_before }}" min="1" max="168" style="width:120px;">
                 <p class="form-hint">Zakres: 1h – 168h (7 dni)</p>
             </div>
+            {% endif %}
             <div class="form-field">
                 <label class="form-label">Treść wiadomości</label>
                 <textarea name="template_text" class="form-input"
@@ -366,6 +375,13 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
                        {% if mt.include_cancel_link %}checked{% endif %}>
                 <label class="form-label" for="cxl-{{ mt.id }}">Dołącz link anulowania ({cancel_url})</label>
             </div>
+            {% if mt.is_event_triggered %}
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_rate_link" id="rl-{{ mt.id }}"
+                       {% if mt.include_rate_link %}checked{% endif %}>
+                <label class="form-label" for="rl-{{ mt.id }}">Dołącz link oceny wizyty ({rate_url})</label>
+            </div>
+            {% endif %}
             <div class="form-field form-field--inline">
                 <input type="checkbox" name="is_enabled" id="en-{{ mt.id }}"
                        {% if mt.is_enabled %}checked{% endif %}>
@@ -388,7 +404,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
         <p class="var-ref-title">Dostępne zmienne w treści wiadomości:</p>
         <code>{salon_name}</code> <code>{client_name}</code> <code>{date}</code>
         <code>{time}</code> <code>{employee_name}</code> <code>{services}</code>
-        <code>{hours_before}</code> <code>{confirm_url}</code> <code>{cancel_url}</code>
+        <code>{hours_before}</code> <code>{confirm_url}</code> <code>{cancel_url}</code> <code>{rate_url}</code>
     </div>
 
     <!-- Add custom type -->
