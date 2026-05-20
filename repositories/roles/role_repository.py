@@ -5,7 +5,7 @@ from typing import Any, Optional
 from config.database import get_db_connection
 
 # All known modules (must match auth_config.MODULE_PERMISSIONS keys)
-ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction', 'absences']
+ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction', 'data_import', 'absences']
 
 MODULE_DISPLAY_NAMES = {
     'invoices':         'Faktury / Koszty',
