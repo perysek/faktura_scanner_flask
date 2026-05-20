@@ -417,6 +417,41 @@ def analytics_dashboard():
 # SETTINGS ROUTES
 # ============================================================================
 
+@main_bp.route('/my-visits')
+@login_required
+def my_visits():
+    """Mobile-first page: today's appointments for the logged-in employee."""
+    from repositories.employees.employee_repository import EmployeeRepository
+    from repositories.appointments.appointment_repository import AppointmentRepository
+    from datetime import datetime, timedelta
+
+    employee = EmployeeRepository().get_by_user_id(current_user.id)
+    if not employee:
+        return render_template('appointments/my_visits.html',
+                               appointments=[], employee=None, no_employee=True)
+
+    rows = AppointmentRepository().get_today_for_employee(employee['id'])
+    now = datetime.now()
+    appointments = []
+    for row in rows:
+        a = dict(row)
+        a['start_time'] = str(a['start_time'])[:5]
+        a['appointment_date'] = str(a['appointment_date'])
+        # Compute minutes until start for the template
+        try:
+            h, m = a['start_time'].split(':')
+            start_dt = datetime.combine(datetime.today(), datetime.min.time().replace(
+                hour=int(h), minute=int(m)))
+            a['minutes_until'] = int((start_dt - now).total_seconds() / 60)
+        except Exception:
+            a['minutes_until'] = 9999
+        appointments.append(a)
+
+    return render_template('appointments/my_visits.html',
+                           appointments=appointments, employee=dict(employee),
+                           no_employee=False)
+
+
 @main_bp.route('/settings/email')
 @login_required
 @module_permission_required('invoices')
