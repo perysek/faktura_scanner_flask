@@ -87,8 +87,15 @@ def get_db_connection() -> psycopg2.extensions.connection:
 
 
 def is_in_transaction() -> bool:
-    """Check whether the current request is inside a managed_transaction scope."""
-    return getattr(g, '_in_transaction', False)
+    """Check whether the current request is inside a managed_transaction scope.
+
+    Returns False when called from a background thread (no app context) —
+    threads have no managed_transaction, so safe_commit always commits.
+    """
+    try:
+        return getattr(g, '_in_transaction', False)
+    except RuntimeError:
+        return False  # No app context = no managed transaction
 
 
 def safe_commit(conn):
