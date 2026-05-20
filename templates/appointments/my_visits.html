@@ -199,13 +199,13 @@ function getVisitLink(appointmentId, btn) {
         });
 }
 
-// Auto-enable disabled buttons when window approaches (refresh every 30s)
+// Auto-enable disabled buttons when the 20-min window opens (check every 30s)
 setInterval(function() {
     document.querySelectorAll('[id^="timer-"]').forEach(function(timerEl) {
         const id = timerEl.id.replace('timer-', '');
         const btn = document.getElementById('btn-' + id);
         if (!btn) return;
-        fetch('/api/appointments/' + id + '/visit-link', {method: 'GET'})
+        fetch('/api/appointments/' + id + '/visit-link')
             .then(r => r.json())
             .then(data => {
                 if (data.success || !data.too_early) {
@@ -216,5 +216,24 @@ setInterval(function() {
             }).catch(() => {});
     });
 }, 30000);
+
+// Live status refresh: reload page when admin changes status via web UI
+(function() {
+    const apptIds = new Set([
+        {% for appt in appointments %}{{ appt.id }}{% if not loop.last %}, {% endif %}{% endfor %}
+    ]);
+    if (!apptIds.size) return;
+    let lastPoll = new Date().toISOString();
+    setInterval(function() {
+        fetch('/api/appointments/status-events?since=' + encodeURIComponent(lastPoll))
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                lastPoll = data.server_time || new Date().toISOString();
+                const changed = (data.events || []).some(e => apptIds.has(e.appointment_id));
+                if (changed) location.reload();
+            }).catch(() => {});
+    }, 10000);
+})();
 </script>
 {% endblock %}

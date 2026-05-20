@@ -41,6 +41,24 @@ def _cancel_event_sms(appointment_id: int) -> None:
         logging.error('_cancel_event_sms failed appt_id=%s: %s', appointment_id, exc)
 
 
+def _schedule_employee_reminder_sms(appointment_id: int,
+                                     appointment_date, start_time_str: str) -> None:
+    """Schedule employee_visit_reminder SMS 20 min before appointment start. Swallows errors.
+    Also cancels any existing pending reminder (handles reschedules cleanly)."""
+    try:
+        from datetime import datetime
+        from services.sms_service import SmsService
+        h, m = str(start_time_str)[:5].split(':')
+        if hasattr(appointment_date, 'year'):
+            appt_dt = datetime.combine(appointment_date,
+                                       datetime.min.time().replace(hour=int(h), minute=int(m)))
+        else:
+            appt_dt = datetime.strptime(f"{appointment_date} {h}:{m}", '%Y-%m-%d %H:%M')
+        SmsService().schedule_employee_reminder(appointment_id, appt_dt)
+    except Exception as exc:
+        logging.error('_schedule_employee_reminder_sms failed appt_id=%s: %s', appointment_id, exc)
+
+
 def _audit(entity_type, action, entity_id=None, entity_label=None,
            field_name=None, old_value=None, new_value=None):
     """Helper: log audit event with current user context. Logs errors to stderr."""
@@ -228,6 +246,10 @@ def create_appointment():
         _audit('appointment', 'CREATE', entity_id=result.get('appointment_id'),
                entity_label=f"{appt_date} {data.get('start_time','')}",
                new_value=f"klient={data.get('client_id')} pracownik={data.get('employee_id')}")
+
+        _schedule_employee_reminder_sms(
+            result.get('appointment_id'), appt_date, data.get('start_time', ''))
+
         return jsonify({'success': True, **result}), 201
     except AppError:
         raise
@@ -471,6 +493,11 @@ def update_appointment(appointment_id):
                        field_name=field,
                        old_value=old_val or None,
                        new_value=new_val or None)
+
+        # Reschedule employee reminder whenever date/time/employee changes
+        _schedule_employee_reminder_sms(
+            appointment_id, data.get('appointment_date'), data.get('start_time', ''))
+
         return jsonify({'success': True, **result})
     except AppError:
         raise

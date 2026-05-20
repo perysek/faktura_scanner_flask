@@ -213,6 +213,57 @@ class SmsService:
 
         return event_id
 
+    def schedule_employee_reminder(self, appointment_id: int,
+                                    appointment_dt) -> Optional[int]:
+        """Schedule employee_visit_reminder SMS 20 min before appointment start.
+        Cancels any existing pending reminder first (handles reschedules).
+        Returns sms_events.id or None if SMS disabled / window already passed."""
+        from datetime import datetime, timedelta
+        from repositories.sms.sms_event_repository import SmsEventRepository
+
+        settings = self.get_settings()
+        if not settings.get('is_active'):
+            return None
+
+        scheduled_at = appointment_dt - timedelta(minutes=20)
+        if scheduled_at <= datetime.now():
+            return None
+
+        repo = SmsEventRepository()
+        repo.cancel_type_for_appointment(appointment_id, 'employee_visit_reminder')
+        return repo.create(appointment_id, 'employee_visit_reminder', scheduled_at)
+
+    def _send_employee_reminder_direct(self, event: dict, base_url: str) -> dict:
+        """Send visit-reminder SMS to the employee's phone (not the client's)."""
+        settings = self.get_settings()
+        employee_phone = event.get('employee_phone')
+        if not employee_phone:
+            return {'success': False, 'error': 'Brak numeru telefonu pracownika'}
+
+        employee_name  = event.get('employee_first_name', 'Pracowniku')
+        client_name    = event.get('employee_client_name', '')
+        start_time     = str(event.get('start_time', ''))[:5]
+        employee_token = event.get('employee_token', '')
+        visit_url = f"{base_url.rstrip('/')}/visit/{employee_token}" if employee_token else ''
+
+        body = (
+            f"Hej {employee_name}! Za 20 min wizyta: {client_name} godz. {start_time}. "
+            f"Formularz: {visit_url}"
+        )
+
+        try:
+            from twilio.rest import Client as TwilioClient
+            twilio = TwilioClient(settings['account_sid'], settings['auth_token'])
+            send_kwargs = {'body': body, 'to': employee_phone}
+            if settings.get('messaging_service_sid'):
+                send_kwargs['messaging_service_sid'] = settings['messaging_service_sid']
+            else:
+                send_kwargs['from_'] = settings['from_number']
+            twilio.messages.create(**send_kwargs)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
     def send_due_event_sms(self, base_url: str) -> dict:
         """
         Called by scheduler every 15 min. Sends all due sms_events rows.
@@ -224,21 +275,30 @@ class SmsService:
         sent = failed = skipped = 0
         for event in event_repo.get_due():
             try:
-                result = self.send(
-                    appointment_id=event['appointment_id'],
-                    message_type_key=event['event_type'],
-                    base_url=base_url,
-                )
-                if result.get('success'):
-                    event_repo.mark_sent(event['id'], result.get('reminder_id'))
-                    if event['event_type'] == 'post_visit_message':
-                        self._appt_repo.update_rating_status(
-                            event['appointment_id'], 'sent'
-                        )
-                    sent += 1
+                if event['event_type'] == 'employee_visit_reminder':
+                    result = self._send_employee_reminder_direct(event, base_url)
+                    if result.get('success'):
+                        event_repo.mark_sent(event['id'], None)
+                        sent += 1
+                    else:
+                        event_repo.mark_failed(event['id'], result.get('error', ''))
+                        failed += 1
                 else:
-                    event_repo.mark_failed(event['id'], result.get('error', ''))
-                    failed += 1
+                    result = self.send(
+                        appointment_id=event['appointment_id'],
+                        message_type_key=event['event_type'],
+                        base_url=base_url,
+                    )
+                    if result.get('success'):
+                        event_repo.mark_sent(event['id'], result.get('reminder_id'))
+                        if event['event_type'] == 'post_visit_message':
+                            self._appt_repo.update_rating_status(
+                                event['appointment_id'], 'sent'
+                            )
+                        sent += 1
+                    else:
+                        event_repo.mark_failed(event['id'], result.get('error', ''))
+                        failed += 1
             except Exception as e:
                 event_repo.mark_failed(event['id'], str(e))
                 failed += 1

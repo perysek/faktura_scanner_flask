@@ -27,7 +27,7 @@ class AppointmentStatus:
 
     # Valid status transitions (state machine)
     VALID_TRANSITIONS = {
-        SCHEDULED: {CONFIRMED, CANCELLED},
+        SCHEDULED: {CONFIRMED, IN_PROGRESS, CANCELLED},   # IN_PROGRESS: walk-in bypass (no confirmation needed)
         PENDING: {CONFIRMED, CANCELLED},
         CONFIRMED: {IN_PROGRESS, CANCELLED, NO_SHOW},
         IN_PROGRESS: {COMPLETED, CANCELLED},

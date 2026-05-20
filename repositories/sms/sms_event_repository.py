@@ -24,14 +24,29 @@ class SmsEventRepository(BaseRepository):
         """Return all events where scheduled_at <= NOW() and status = 'scheduled'."""
         sql = """
             SELECT e.*, a.rating_token, a.client_id,
-                   a.appointment_date, a.start_time
+                   a.appointment_date, a.start_time, a.employee_token,
+                   emp.phone      AS employee_phone,
+                   emp.first_name AS employee_first_name,
+                   emp.last_name  AS employee_last_name,
+                   c.first_name || ' ' || c.last_name AS employee_client_name
             FROM sms_events e
             JOIN appointments a ON a.id = e.appointment_id
+            LEFT JOIN employees emp ON emp.id = a.employee_id
+            LEFT JOIN clients   c   ON c.id  = a.client_id
             WHERE e.scheduled_at <= NOW()
               AND e.status = 'scheduled'
             ORDER BY e.scheduled_at
         """
         return [dict(r) for r in self._fetch_all(sql, ())]
+
+    def cancel_type_for_appointment(self, appointment_id: int, event_type: str) -> int:
+        """Cancel pending events of a specific type for this appointment."""
+        sql = """
+            UPDATE sms_events SET status = 'cancelled'
+            WHERE appointment_id = %s AND event_type = %s AND status = 'scheduled'
+        """
+        cursor = self._execute(sql, (appointment_id, event_type))
+        return cursor.rowcount
 
     def mark_sent(self, event_id: int, sms_reminder_id: Optional[int]) -> bool:
         """Mark an event as successfully sent."""
