@@ -11,11 +11,12 @@ This is the in-app equivalent of scripts/import_appointments_playwright.py:
 Reuses fetch_xlsx_playwright() from the reference script unchanged.
 """
 import asyncio
+import csv
 import json
 import logging
 from datetime import date, datetime
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import pandas as pd
 import psycopg2.extensions
@@ -62,6 +63,7 @@ class DataImportService:
         stats = self._zero_stats()
         pool = get_pool()
         xlsx_path: Optional[Path] = None
+        csv_rows: List[dict] = []
 
         # Acquire DB connection upfront — before Playwright download — so
         # the failure handler always has a valid conn (no flask.g fallback
@@ -96,7 +98,8 @@ class DataImportService:
 
             for idx, row in df.iterrows():
                 self._process_row(row, idx, conn, dry_run, stats,
-                                  employee_map, client_map, phone_map, service_list)
+                                  employee_map, client_map, phone_map, service_list,
+                                  csv_rows=csv_rows)
                 processed = (stats['inserted'] + stats['skipped_zero']
                              + stats['skipped_no_client'] + stats['skipped_no_employee']
                              + stats['skipped_duplicate'] + stats['errors'])
@@ -113,6 +116,13 @@ class DataImportService:
             self.log_repo.mark_completed(import_id, stats, conn=conn)
             skipped = (stats['skipped_zero'] + stats['skipped_no_client']
                        + stats['skipped_no_employee'] + stats['skipped_duplicate'])
+
+            # ── Phase 6: export CSV audit file ──────────────────────────────
+            csv_path = self._export_csv(
+                csv_rows, import_id, date_start, date_end, dry_run)
+            self._emit(progress_callback, 'log',
+                       f"CSV zapisany: {csv_path.name}")
+
             self._emit(progress_callback, 'log',
                        f"Zakończono. Dodano: {stats['inserted']}, "
                        f"pominięto: {skipped}, błędy: {stats['errors']}")
@@ -152,6 +162,45 @@ class DataImportService:
                     xlsx_path.unlink()
                 except Exception:
                     logger.warning("Could not delete xlsx %s", xlsx_path)
+
+    # ── CSV export ───────────────────────────────────────────────────────────
+    def _export_csv(self, csv_rows: List[dict], import_id: int,
+                    date_start: date, date_end: date, dry_run: bool) -> Path:
+        """Write a PostgreSQL-safe audit CSV to the project root.
+
+        Column values are typed to pass all DB constraints:
+          - dates:    YYYY-MM-DD  (matches DATE columns)
+          - times:    HH:MM:SS    (matches TIME columns)
+          - decimals: plain N.NN  (no currency symbols, matches NUMERIC)
+          - booleans: TRUE/FALSE  (PostgreSQL literal)
+          - nulls:    empty string (pgcopy NULL token)
+
+        File name: caldis_import_<date_start>_<date_end>_<import_id>.csv
+        Saved to:  project root (two levels above services/)
+        """
+        project_root = Path(__file__).resolve().parent.parent
+        tag = 'dryrun' if dry_run else 'real'
+        filename = (f"caldis_import_{date_start}_{date_end}"
+                    f"_{import_id}_{tag}.csv")
+        csv_path = project_root / filename
+
+        fieldnames = [
+            'row_num', 'action', 'skip_reason',
+            'appointment_date', 'start_time', 'end_time', 'duration_minutes',
+            'created_at', 'client_id', 'employee_id', 'service_id',
+            'total_price', 'commission_rate', 'commission_amount',
+            'payment_date', 'status', 'dry_run', 'is_addon', 'discount_amount',
+            'raw_name', 'raw_kalendarz', 'raw_kategoria',
+        ]
+
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames,
+                                    extrasaction='ignore', quoting=csv.QUOTE_ALL)
+            writer.writeheader()
+            writer.writerows(csv_rows)
+
+        logger.info("CSV audit file written: %s (%d rows)", csv_path, len(csv_rows))
+        return csv_path
 
     # ── helpers ──────────────────────────────────────────────────────────────
     @staticmethod
@@ -203,8 +252,41 @@ class DataImportService:
                      conn: psycopg2.extensions.connection,
                      dry_run: bool, stats: dict,
                      employee_map: dict, client_map: dict,
-                     phone_map: dict, service_list: list) -> None:
-        """Parse + dedupe + insert a single xlsx row. Updates stats in place."""
+                     phone_map: dict, service_list: list,
+                     csv_rows: Optional[List[dict]] = None) -> None:
+        """Parse + dedupe + insert a single xlsx row. Updates stats in place.
+
+        Appends a CSV-ready dict to csv_rows for every row (valid or skipped)
+        so the caller can write a full audit file after processing.
+        """
+        def _append_csv(action: str, skip_reason: str = '', **extra):
+            if csv_rows is None:
+                return
+            csv_rows.append({
+                'row_num': idx,
+                'action': action,
+                'skip_reason': skip_reason,
+                'appointment_date': extra.get('appointment_date', ''),
+                'start_time': extra.get('start_time', ''),
+                'end_time': extra.get('end_time', ''),
+                'duration_minutes': extra.get('duration_minutes', ''),
+                'created_at': extra.get('created_at', ''),
+                'client_id': extra.get('client_id', ''),
+                'employee_id': extra.get('employee_id', ''),
+                'service_id': extra.get('service_id', ''),
+                'total_price': extra.get('total_price', ''),
+                'commission_rate': extra.get('commission_rate', ''),
+                'commission_amount': extra.get('commission_amount', ''),
+                'payment_date': extra.get('appointment_date', ''),
+                'status': 'completed' if action == 'inserted' else '',
+                'dry_run': 'TRUE' if dry_run else 'FALSE',
+                'is_addon': 'FALSE',
+                'discount_amount': '0',
+                'raw_name': str(row.get('Imię i nazwisko', row.get('Imie i nazwisko', ''))),
+                'raw_kalendarz': str(row.get('Kalendarz', '')),
+                'raw_kategoria': str(row.get('Kategoria', '')),
+            })
+
         try:
             suma_brutto_raw = row.get('Suma brutto', '0')
             try:
@@ -213,6 +295,7 @@ class DataImportService:
                 suma_brutto = 0.0
             if suma_brutto == 0:
                 stats['skipped_zero'] += 1
+                _append_csv('skipped_zero', 'Suma brutto = 0')
                 return
 
             od_cell       = row.get('Od', '')
@@ -230,6 +313,7 @@ class DataImportService:
 
             if not (appointment_date and start_time and end_time):
                 stats['errors'] += 1
+                _append_csv('error', f'Brak daty/czasu: od={od_cell!r} do={do_cell!r}')
                 return
 
             kal_lower = str(kalendarz_cell).strip().lower() if kalendarz_cell else ''
@@ -241,11 +325,16 @@ class DataImportService:
 
             if employee_id is None:
                 stats['skipped_no_employee'] += 1
+                _append_csv('skipped_no_employee', f'Nie znaleziono pracownika: {kalendarz_cell!r}',
+                            appointment_date=appointment_date, start_time=start_time)
                 return
 
             client_id = resolve_client_id(imie_cell, client_map, telefon_cell, phone_map)
             if client_id is None:
                 stats['skipped_no_client'] += 1
+                _append_csv('skipped_no_client', f'Nie znaleziono klienta: {imie_cell!r}',
+                            appointment_date=appointment_date, start_time=start_time,
+                            employee_id=employee_id)
                 return
 
             # Duplicate check
@@ -260,6 +349,10 @@ class DataImportService:
             )
             if cursor.fetchone() is not None:
                 stats['skipped_duplicate'] += 1
+                _append_csv('skipped_duplicate',
+                            f'Duplikat: employee_id={employee_id} date={appointment_date} time={start_time}',
+                            appointment_date=appointment_date, start_time=start_time,
+                            end_time=end_time, client_id=client_id, employee_id=employee_id)
                 return
 
             service_id = (forced_service_id if forced_service_id is not None
@@ -274,6 +367,13 @@ class DataImportService:
 
             if dry_run:
                 stats['inserted'] += 1
+                _append_csv('inserted',
+                            appointment_date=appointment_date, start_time=start_time,
+                            end_time=end_time, duration_minutes=duration_minutes,
+                            created_at=created_at, client_id=client_id,
+                            employee_id=employee_id, service_id=service_id,
+                            total_price=total_price, commission_rate=commission_rate,
+                            commission_amount=commission_amount)
                 return
 
             # INSERT appointments
@@ -332,7 +432,15 @@ class DataImportService:
             )
 
             stats['inserted'] += 1
+            _append_csv('inserted',
+                        appointment_date=appointment_date, start_time=start_time,
+                        end_time=end_time, duration_minutes=duration_minutes,
+                        created_at=created_at, client_id=client_id,
+                        employee_id=employee_id, service_id=service_id,
+                        total_price=total_price, commission_rate=commission_rate,
+                        commission_amount=commission_amount)
 
         except Exception:
             logger.exception("Error processing row %d", idx)
             stats['errors'] += 1
+            _append_csv('error', f'Exception na wierszu {idx}')
