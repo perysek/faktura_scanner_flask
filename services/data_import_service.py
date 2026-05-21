@@ -11,7 +11,6 @@ This is the in-app equivalent of scripts/import_appointments_playwright.py:
 Reuses fetch_xlsx_playwright() from the reference script unchanged.
 """
 import asyncio
-import csv
 import json
 import logging
 from datetime import date, datetime
@@ -63,7 +62,8 @@ class DataImportService:
         stats = self._zero_stats()
         pool = get_pool()
         xlsx_path: Optional[Path] = None
-        csv_rows: List[dict] = []
+        # Three parallel lists — one per DB table — each row keyed by row_num
+        row_data: dict = {'appointments': [], 'appointment_services': [], 'income_records': []}
 
         # Acquire DB connection upfront — before Playwright download — so
         # the failure handler always has a valid conn (no flask.g fallback
@@ -99,7 +99,7 @@ class DataImportService:
             for idx, row in df.iterrows():
                 self._process_row(row, idx, conn, dry_run, stats,
                                   employee_map, client_map, phone_map, service_list,
-                                  csv_rows=csv_rows)
+                                  row_data=row_data)
                 processed = (stats['inserted'] + stats['skipped_zero']
                              + stats['skipped_no_client'] + stats['skipped_no_employee']
                              + stats['skipped_duplicate'] + stats['errors'])
@@ -117,11 +117,11 @@ class DataImportService:
             skipped = (stats['skipped_zero'] + stats['skipped_no_client']
                        + stats['skipped_no_employee'] + stats['skipped_duplicate'])
 
-            # ── Phase 6: export CSV audit file ──────────────────────────────
-            csv_path = self._export_csv(
-                csv_rows, import_id, date_start, date_end, dry_run)
+            # ── Phase 6: export XLSX audit file ─────────────────────────────
+            xlsx_out = self._export_xlsx(
+                row_data, import_id, date_start, date_end, dry_run, stats)
             self._emit(progress_callback, 'log',
-                       f"CSV zapisany: {csv_path.name}")
+                       f"XLSX zapisany: {xlsx_out.name}")
 
             self._emit(progress_callback, 'log',
                        f"Zakończono. Dodano: {stats['inserted']}, "
@@ -163,44 +163,118 @@ class DataImportService:
                 except Exception:
                     logger.warning("Could not delete xlsx %s", xlsx_path)
 
-    # ── CSV export ───────────────────────────────────────────────────────────
-    def _export_csv(self, csv_rows: List[dict], import_id: int,
-                    date_start: date, date_end: date, dry_run: bool) -> Path:
-        """Write a PostgreSQL-safe audit CSV to the project root.
+    # ── XLSX export ──────────────────────────────────────────────────────────
+    def _export_xlsx(self, row_data: dict, import_id: int,
+                     date_start: date, date_end: date,
+                     dry_run: bool, stats: dict) -> Path:
+        """Write a multi-sheet XLSX audit file to the project root.
 
-        Column values are typed to pass all DB constraints:
-          - dates:    YYYY-MM-DD  (matches DATE columns)
-          - times:    HH:MM:SS    (matches TIME columns)
-          - decimals: plain N.NN  (no currency symbols, matches NUMERIC)
-          - booleans: TRUE/FALSE  (PostgreSQL literal)
-          - nulls:    empty string (pgcopy NULL token)
+        Sheets:
+          1. Wizyty          — mirrors the `appointments` table (all rows + skipped)
+          2. Uslugi_wizyt    — mirrors `appointment_services` (valid rows only)
+          3. Przychody       — mirrors `income_records` (valid rows only)
+          4. Podsumowanie    — import stats + metadata
 
-        File name: caldis_import_<date_start>_<date_end>_<import_id>.csv
-        Saved to:  project root (two levels above services/)
+        Cell types are Python native (int, float, datetime.date, datetime.datetime,
+        bool) so Excel displays them correctly and PostgreSQL accepts them without
+        additional casting. Skipped/error rows appear only in sheet 1 with
+        action + skip_reason for auditability.
+
+        File: caldis_import_<date_start>_<date_end>_<import_id>_<dryrun|real>.xlsx
+        Path: project root (two levels above services/)
         """
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+
         project_root = Path(__file__).resolve().parent.parent
         tag = 'dryrun' if dry_run else 'real'
         filename = (f"caldis_import_{date_start}_{date_end}"
-                    f"_{import_id}_{tag}.csv")
-        csv_path = project_root / filename
+                    f"_{import_id}_{tag}.xlsx")
+        out_path = project_root / filename
 
-        fieldnames = [
+        wb = Workbook()
+
+        header_font = Font(bold=True, color='FFFFFF')
+        header_fill = PatternFill(fill_type='solid', fgColor='1F4E79')
+
+        def _make_sheet(title: str, headers: list, rows: List[dict]) -> None:
+            ws = wb.create_sheet(title=title)
+            ws.append(headers)
+            for cell in ws[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center')
+            ws.freeze_panes = 'A2'
+            for r in rows:
+                ws.append([r.get(h) for h in headers])
+            # Auto-fit column widths (cap at 40)
+            for col_idx, header in enumerate(headers, 1):
+                max_len = max(
+                    (len(str(ws.cell(row=r, column=col_idx).value or ''))
+                     for r in range(1, ws.max_row + 1)),
+                    default=len(header),
+                )
+                ws.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 2, 40)
+
+        # ── Sheet 1: Wizyty (appointments) ────────────────────────────────
+        wb.remove(wb.active)  # remove default sheet
+        _make_sheet('Wizyty', [
             'row_num', 'action', 'skip_reason',
-            'appointment_date', 'start_time', 'end_time', 'duration_minutes',
-            'created_at', 'client_id', 'employee_id', 'service_id',
-            'total_price', 'commission_rate', 'commission_amount',
-            'payment_date', 'status', 'dry_run', 'is_addon', 'discount_amount',
-            'raw_name', 'raw_kalendarz', 'raw_kategoria',
+            'client_id', 'employee_id', 'status',
+            'appointment_date', 'start_time', 'end_time',
+            'total_price', 'total_duration', 'discount_amount',
+            'created_at', 'updated_at', 'is_deleted',
+            'raw_name', 'raw_kalendarz', 'raw_kategoria', 'dry_run',
+        ], row_data.get('appointments', []))
+
+        # ── Sheet 2: Uslugi_wizyt (appointment_services) ──────────────────
+        _make_sheet('Uslugi_wizyt', [
+            'row_num',
+            'appointment_id', 'service_id',
+            'price_charged', 'duration_minutes',
+            'commission_rate', 'commission_amount', 'is_addon',
+        ], row_data.get('appointment_services', []))
+
+        # ── Sheet 3: Przychody (income_records) ───────────────────────────
+        _make_sheet('Przychody', [
+            'row_num',
+            'appointment_id', 'client_id', 'employee_id',
+            'total_amount', 'discount_amount', 'net_amount', 'commission_total',
+            'payment_date', 'created_at',
+        ], row_data.get('income_records', []))
+
+        # ── Sheet 4: Podsumowanie (summary) ──────────────────────────────
+        ws_sum = wb.create_sheet(title='Podsumowanie')
+        summary_rows = [
+            ('import_id', import_id),
+            ('date_range_start', date_start),
+            ('date_range_end', date_end),
+            ('dry_run', dry_run),
+            ('generated_at', datetime.now()),
+            ('', ''),
+            ('inserted', stats.get('inserted', 0)),
+            ('skipped_zero', stats.get('skipped_zero', 0)),
+            ('skipped_no_client', stats.get('skipped_no_client', 0)),
+            ('skipped_no_employee', stats.get('skipped_no_employee', 0)),
+            ('skipped_duplicate', stats.get('skipped_duplicate', 0)),
+            ('errors', stats.get('errors', 0)),
+            ('total_rows', sum(stats.values())),
         ]
+        for label, value in summary_rows:
+            row = ws_sum.append([label, value])
+        ws_sum.column_dimensions['A'].width = 22
+        ws_sum.column_dimensions['B'].width = 28
+        for cell in ws_sum['A']:
+            if cell.value:
+                cell.font = Font(bold=True)
 
-        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames,
-                                    extrasaction='ignore', quoting=csv.QUOTE_ALL)
-            writer.writeheader()
-            writer.writerows(csv_rows)
-
-        logger.info("CSV audit file written: %s (%d rows)", csv_path, len(csv_rows))
-        return csv_path
+        wb.save(out_path)
+        logger.info("XLSX audit written: %s (%d appt rows, %d svc rows, %d income rows)",
+                    out_path, len(row_data.get('appointments', [])),
+                    len(row_data.get('appointment_services', [])),
+                    len(row_data.get('income_records', [])))
+        return out_path
 
     # ── helpers ──────────────────────────────────────────────────────────────
     @staticmethod
@@ -253,38 +327,111 @@ class DataImportService:
                      dry_run: bool, stats: dict,
                      employee_map: dict, client_map: dict,
                      phone_map: dict, service_list: list,
-                     csv_rows: Optional[List[dict]] = None) -> None:
+                     row_data: Optional[dict] = None) -> None:
         """Parse + dedupe + insert a single xlsx row. Updates stats in place.
 
-        Appends a CSV-ready dict to csv_rows for every row (valid or skipped)
-        so the caller can write a full audit file after processing.
+        Appends typed dicts to row_data['appointments'], ['appointment_services'],
+        ['income_records'] for every row so the XLSX export captures all FK
+        relationships and cross-reference tables.
+
+        All values are stored as Python native types (int, float, datetime.date,
+        datetime.datetime, bool) — not strings — so openpyxl writes them with
+        correct Excel cell types, and PostgreSQL accepts them without casting.
         """
-        def _append_csv(action: str, skip_reason: str = '', **extra):
-            if csv_rows is None:
+        raw_name      = str(row.get('Imię i nazwisko', row.get('Imie i nazwisko', '')))
+        raw_kalendarz = str(row.get('Kalendarz', ''))
+        raw_kategoria = str(row.get('Kategoria', ''))
+
+        def _appt(action: str, skip_reason: str = '', **extra) -> None:
+            """Append to the appointments audit sheet."""
+            if row_data is None:
                 return
-            csv_rows.append({
-                'row_num': idx,
-                'action': action,
-                'skip_reason': skip_reason,
-                'appointment_date': extra.get('appointment_date', ''),
-                'start_time': extra.get('start_time', ''),
-                'end_time': extra.get('end_time', ''),
-                'duration_minutes': extra.get('duration_minutes', ''),
-                'created_at': extra.get('created_at', ''),
-                'client_id': extra.get('client_id', ''),
-                'employee_id': extra.get('employee_id', ''),
-                'service_id': extra.get('service_id', ''),
-                'total_price': extra.get('total_price', ''),
-                'commission_rate': extra.get('commission_rate', ''),
-                'commission_amount': extra.get('commission_amount', ''),
-                'payment_date': extra.get('appointment_date', ''),
-                'status': 'completed' if action == 'inserted' else '',
-                'dry_run': 'TRUE' if dry_run else 'FALSE',
-                'is_addon': 'FALSE',
-                'discount_amount': '0',
-                'raw_name': str(row.get('Imię i nazwisko', row.get('Imie i nazwisko', ''))),
-                'raw_kalendarz': str(row.get('Kalendarz', '')),
-                'raw_kategoria': str(row.get('Kategoria', '')),
+            # Parse appointment_date to datetime.date for typed Excel cell
+            appt_dt = None
+            if extra.get('appointment_date'):
+                try:
+                    from datetime import date as _date
+                    appt_dt = _date.fromisoformat(extra['appointment_date'])
+                except Exception:
+                    appt_dt = extra['appointment_date']
+            # Parse created_at to datetime for typed Excel cell
+            created_dt = None
+            if extra.get('created_at'):
+                try:
+                    created_dt = datetime.strptime(extra['created_at'], '%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    created_dt = extra.get('created_at')
+            row_data['appointments'].append({
+                'row_num':          int(idx),
+                'action':           action,
+                'skip_reason':      skip_reason,
+                # ── appointments table columns ───────────────────────────────
+                'client_id':        extra.get('client_id'),     # INTEGER FK → clients.id
+                'employee_id':      extra.get('employee_id'),   # INTEGER FK → employees.id
+                'status':           'completed' if action == 'inserted' else None,
+                'appointment_date': appt_dt,                    # DATE → YYYY-MM-DD
+                'start_time':       extra.get('start_time'),    # TIME → HH:MM:SS string
+                'end_time':         extra.get('end_time'),      # TIME → HH:MM:SS string
+                'total_price':      extra.get('total_price'),   # NUMERIC
+                'total_duration':   extra.get('duration_minutes'), # INTEGER (minutes)
+                'discount_amount':  0.0,                        # NUMERIC NOT NULL DEFAULT 0
+                'created_at':       created_dt,                 # TIMESTAMP
+                'updated_at':       created_dt,                 # TIMESTAMP (same as created)
+                'is_deleted':       False,                      # BOOLEAN NOT NULL DEFAULT FALSE
+                # ── source columns (audit metadata) ─────────────────────────
+                'raw_name':         raw_name,
+                'raw_kalendarz':    raw_kalendarz,
+                'raw_kategoria':    raw_kategoria,
+                'dry_run':          dry_run,
+            })
+
+        def _appt_svc(appointment_id, service_id, total_price,
+                      duration_minutes, commission_rate, commission_amount) -> None:
+            """Append to the appointment_services audit sheet."""
+            if row_data is None:
+                return
+            row_data['appointment_services'].append({
+                'row_num':           int(idx),
+                # ── appointment_services table columns ───────────────────────
+                'appointment_id':    appointment_id,   # INTEGER FK → appointments.id (NULL=dry_run)
+                'service_id':        int(service_id),  # INTEGER FK → services.id
+                'price_charged':     float(total_price),     # NUMERIC
+                'duration_minutes':  int(duration_minutes),  # INTEGER
+                'commission_rate':   float(commission_rate), # NUMERIC
+                'commission_amount': float(commission_amount), # NUMERIC
+                'is_addon':          False,             # BOOLEAN NOT NULL DEFAULT FALSE
+            })
+
+        def _income(appointment_id, client_id, employee_id,
+                    total_price, commission_amount, appointment_date, created_at) -> None:
+            """Append to the income_records audit sheet."""
+            if row_data is None:
+                return
+            appt_dt = None
+            if appointment_date:
+                try:
+                    from datetime import date as _date
+                    appt_dt = _date.fromisoformat(appointment_date)
+                except Exception:
+                    appt_dt = appointment_date
+            created_dt = None
+            if created_at:
+                try:
+                    created_dt = datetime.strptime(created_at, '%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    created_dt = created_at
+            row_data['income_records'].append({
+                'row_num':          int(idx),
+                # ── income_records table columns ─────────────────────────────
+                'appointment_id':   appointment_id,       # INTEGER FK → appointments.id
+                'client_id':        int(client_id),       # INTEGER FK → clients.id
+                'employee_id':      int(employee_id),     # INTEGER FK → employees.id
+                'total_amount':     float(total_price),   # NUMERIC
+                'discount_amount':  0.0,                  # NUMERIC NOT NULL DEFAULT 0
+                'net_amount':       float(total_price),   # NUMERIC (gross = net here)
+                'commission_total': float(commission_amount), # NUMERIC
+                'payment_date':     appt_dt,              # DATE
+                'created_at':       created_dt,           # TIMESTAMP
             })
 
         try:
@@ -295,7 +442,7 @@ class DataImportService:
                 suma_brutto = 0.0
             if suma_brutto == 0:
                 stats['skipped_zero'] += 1
-                _append_csv('skipped_zero', 'Suma brutto = 0')
+                _appt('skipped_zero', 'Suma brutto = 0')
                 return
 
             od_cell       = row.get('Od', '')
@@ -313,7 +460,7 @@ class DataImportService:
 
             if not (appointment_date and start_time and end_time):
                 stats['errors'] += 1
-                _append_csv('error', f'Brak daty/czasu: od={od_cell!r} do={do_cell!r}')
+                _appt('error', f'Brak daty/czasu: od={od_cell!r} do={do_cell!r}')
                 return
 
             kal_lower = str(kalendarz_cell).strip().lower() if kalendarz_cell else ''
@@ -325,16 +472,18 @@ class DataImportService:
 
             if employee_id is None:
                 stats['skipped_no_employee'] += 1
-                _append_csv('skipped_no_employee', f'Nie znaleziono pracownika: {kalendarz_cell!r}',
-                            appointment_date=appointment_date, start_time=start_time)
+                _appt('skipped_no_employee',
+                      f'Nie znaleziono pracownika: {kalendarz_cell!r}',
+                      appointment_date=appointment_date, start_time=start_time)
                 return
 
             client_id = resolve_client_id(imie_cell, client_map, telefon_cell, phone_map)
             if client_id is None:
                 stats['skipped_no_client'] += 1
-                _append_csv('skipped_no_client', f'Nie znaleziono klienta: {imie_cell!r}',
-                            appointment_date=appointment_date, start_time=start_time,
-                            employee_id=employee_id)
+                _appt('skipped_no_client',
+                      f'Nie znaleziono klienta: {imie_cell!r}',
+                      appointment_date=appointment_date, start_time=start_time,
+                      employee_id=employee_id)
                 return
 
             # Duplicate check
@@ -349,10 +498,13 @@ class DataImportService:
             )
             if cursor.fetchone() is not None:
                 stats['skipped_duplicate'] += 1
-                _append_csv('skipped_duplicate',
-                            f'Duplikat: employee_id={employee_id} date={appointment_date} time={start_time}',
-                            appointment_date=appointment_date, start_time=start_time,
-                            end_time=end_time, client_id=client_id, employee_id=employee_id)
+                _appt('skipped_duplicate',
+                      f'Duplikat: employee_id={employee_id} '
+                      f'date={appointment_date} time={start_time}',
+                      appointment_date=appointment_date, start_time=start_time,
+                      end_time=end_time, client_id=client_id,
+                      employee_id=employee_id, duration_minutes=duration_minutes,
+                      created_at=created_at)
                 return
 
             service_id = (forced_service_id if forced_service_id is not None
@@ -367,13 +519,15 @@ class DataImportService:
 
             if dry_run:
                 stats['inserted'] += 1
-                _append_csv('inserted',
-                            appointment_date=appointment_date, start_time=start_time,
-                            end_time=end_time, duration_minutes=duration_minutes,
-                            created_at=created_at, client_id=client_id,
-                            employee_id=employee_id, service_id=service_id,
-                            total_price=total_price, commission_rate=commission_rate,
-                            commission_amount=commission_amount)
+                _appt('inserted',
+                      appointment_date=appointment_date, start_time=start_time,
+                      end_time=end_time, duration_minutes=duration_minutes,
+                      created_at=created_at, client_id=int(client_id),
+                      employee_id=int(employee_id), total_price=total_price)
+                _appt_svc(None, service_id, total_price,
+                          duration_minutes, commission_rate, commission_amount)
+                _income(None, client_id, employee_id,
+                        total_price, commission_amount, appointment_date, created_at)
                 return
 
             # INSERT appointments
@@ -432,15 +586,17 @@ class DataImportService:
             )
 
             stats['inserted'] += 1
-            _append_csv('inserted',
-                        appointment_date=appointment_date, start_time=start_time,
-                        end_time=end_time, duration_minutes=duration_minutes,
-                        created_at=created_at, client_id=client_id,
-                        employee_id=employee_id, service_id=service_id,
-                        total_price=total_price, commission_rate=commission_rate,
-                        commission_amount=commission_amount)
+            _appt('inserted',
+                  appointment_date=appointment_date, start_time=start_time,
+                  end_time=end_time, duration_minutes=duration_minutes,
+                  created_at=created_at, client_id=int(client_id),
+                  employee_id=int(employee_id), total_price=total_price)
+            _appt_svc(int(appointment_id), service_id, total_price,
+                      duration_minutes, commission_rate, commission_amount)
+            _income(int(appointment_id), client_id, employee_id,
+                    total_price, commission_amount, appointment_date, created_at)
 
         except Exception:
             logger.exception("Error processing row %d", idx)
             stats['errors'] += 1
-            _append_csv('error', f'Exception na wierszu {idx}')
+            _appt('error', f'Exception na wierszu {idx}')
