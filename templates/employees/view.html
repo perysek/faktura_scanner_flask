@@ -233,9 +233,17 @@
     .price-custom { color: var(--color-purple); font-weight: 500; }
     .price-default { color: var(--color-ink-subtle); }
 
-    /* Inline Add Form */
+    /* Inline Add Form — animated slide */
     .add-service-form {
-        display: none;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: max-height 0.5s ease, opacity 0.4s ease;
+    }
+
+    .add-service-form.visible {
+        max-height: 400px;
+        opacity: 1;
         margin-top: 1rem;
         padding: 1rem;
         background: var(--color-surface);
@@ -243,7 +251,10 @@
         border-radius: 2px;
     }
 
-    .add-service-form.visible { display: block; }
+    /* Modal — matches appointments list golden master */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .modal-backdrop.hidden { display: none; }
+    .modal-box { background: white; border: 1px solid var(--color-border); border-radius: 3px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); width: 440px; max-width: 95vw; padding: 1.75rem; }
 
     .form-row {
         display: grid;
@@ -466,8 +477,8 @@
     </div>
 
     <!-- Adjustment modal -->
-    <div id="adj-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
-        <div style="background:white;border-radius:2px;padding:1.75rem;min-width:340px;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div id="adj-modal" class="modal-backdrop hidden" onclick="handleAdjBackdropClick(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
             <div style="font-size:1rem;font-weight:600;margin-bottom:1.25rem;">Korekta bilansu nieobecności</div>
             <div style="margin-bottom:0.875rem;">
                 <label style="font-size:0.8125rem;font-weight:500;display:block;margin-bottom:0.25rem;">Kategoria *</label>
@@ -551,9 +562,9 @@
     <div class="refined-card">
         <div class="section-header">
             <h2 class="section-title">Przypisane usługi</h2>
-            <button onclick="toggleAddForm()" class="refined-btn-secondary refined-btn-sm">
-                <span class="material-icons">add</span>
-                Dodaj usługę
+            <button id="toggle-add-service-btn" onclick="toggleAddForm()" class="refined-btn-secondary refined-btn-sm">
+                <span class="material-icons" id="toggle-add-service-icon">add</span>
+                <span id="toggle-add-service-label">Dodaj usługę</span>
             </button>
         </div>
 
@@ -832,9 +843,23 @@ function escapeHtml(text) {
 
 function toggleAddForm() {
     const form = document.getElementById('add-service-form');
+    const isOpen = form.classList.contains('visible');
     form.classList.toggle('visible');
-    // Refresh dropdown when opening to reflect current assignments
-    if (form.classList.contains('visible')) {
+
+    const icon = document.getElementById('toggle-add-service-icon');
+    const label = document.getElementById('toggle-add-service-label');
+
+    if (isOpen) {
+        // Closing via header button = user cancelled
+        icon.textContent = 'add';
+        label.textContent = 'Dodaj usługę';
+        if (typeof Notifications !== 'undefined') {
+            Notifications.info('Przypisywanie usługi zostało przerwane');
+        }
+    } else {
+        // Opening
+        icon.textContent = 'remove';
+        label.textContent = 'Anuluj';
         loadAvailableServices();
     }
 }
@@ -975,12 +1000,14 @@ async function assignService() {
         const data = await response.json();
 
         if (data.success) {
-            // Clear form
+            // Clear form and reset button state
             SearchableSelect.setValue('new-service-id', '');
             document.getElementById('new-custom-price').value = '';
             document.getElementById('new-commission').value = '';
             document.getElementById('new-duration').value = '';
             document.getElementById('add-service-form').classList.remove('visible');
+            document.getElementById('toggle-add-service-icon').textContent = 'add';
+            document.getElementById('toggle-add-service-label').textContent = 'Dodaj usługę';
             loadAssignedServices();
             if (typeof Notifications !== 'undefined') {
                 Notifications.success('Usługa została przypisana');
@@ -1183,13 +1210,18 @@ function confirmDelete() {
         document.getElementById('modal-delta').value = '';
         document.getElementById('modal-reason').value = '';
         document.getElementById('modal-period').value = '';
-        const modal = document.getElementById('adj-modal');
-        modal.style.display = 'flex';
+        document.getElementById('adj-modal').classList.remove('hidden');
         document.getElementById('modal-delta').focus();
     };
 
     window.closeAdjModal = function () {
-        document.getElementById('adj-modal').style.display = 'none';
+        document.getElementById('adj-modal').classList.add('hidden');
+    };
+
+    window.handleAdjBackdropClick = function (event) {
+        if (event.target === document.getElementById('adj-modal')) {
+            closeAdjModal();
+        }
     };
 
     window.submitAdj = async function () {
@@ -1244,12 +1276,17 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAssignedServices();
 });
 
-// Skrót klawiszowy: Esc = powrót do listy pracowników
+// Skrót klawiszowy: Esc = zamknij otwarty modal lub wróć do listy
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         if (document.querySelector('.modal-overlay')) return;
         const cm = document.getElementById('confirm-modal');
         if (cm && !cm.classList.contains('hidden')) return;
+        const adjModal = document.getElementById('adj-modal');
+        if (adjModal && !adjModal.classList.contains('hidden')) {
+            closeAdjModal();
+            return;
+        }
         window.location.href = '{{ url_for("main.employees_list") }}';
     }
 });

@@ -1,0 +1,30 @@
+***
+Employee view
+***
+TODO#1
+WEAK-POINT: in section 'przypisane usługi', when 'dodaj usługę' btn is clicked and edit box slides out - if user clicks again 'dodaj usługę' btn placed within main 'przypisane usługi' section-bar instead of 'Dodaj' btn placed inside sliding edit-box, the edit-box slides in.
+
+TWEAK-TO-STRONG: once the edit-box slides out, make the text label of 'dodaj usługę' button changes to 'Anuluj' together with change of leading icon from "+" into "-". Make slide-in / slide-out animated for 0.5s. Also when cancelled make info toast notification pops up saying: "Przypisywanie usługi zostało przerwane".
+
+TODO#2
+WEAK-POINT: in panel-section 'bilanse nieobecności', when config btn 'Dostosuj' is clicked, the styled custom modal dialog appears. currently UI behavior is: modal elevated, form area gets dimmmed gray leaving the rest of main-view side areas intact. Also scolling up/down is accessible and the form area scrolls together with modal box.
+
+TWEAK-TO-STRONG: make the UI/UX same as in appointments list page-view when status color-badge is clicked which displays custom modal box with status change option buttons. Adjust the page-view where WEAK-POINT mentioned above is located to precisely match what is in the golden-master 'appointments list' page-view.
+
+GLOBAL IMPROVEMENT TODO from TODO#2:
+Look up accross all page-views linked code files (js, css, html, services, repositories, routes etc.) for same/similar WEAK-POINTS and make same tweak-adjustments on each WEAK-POINT found to level up into STRONG-POINT.
+
+TO COMPLETE THIS ACTIVITY create the MD file which contains the list of files with range of code lines clasified as WEAK-POINT.
+For each item describe: #1 observations that met the criteria of WEAK-POINT classification #2 what was changed/modified/added to re-classify into STRONG-POINT up-level category. On top of it, define the general aproach and methodology + the workflow to be used to process each list-item.
+When md finished, pasue and wait my review and approval to start implementing.
+
+
+ 
+
+
+
+
+
+
+ 
+
