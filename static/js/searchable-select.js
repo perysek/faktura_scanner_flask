@@ -74,12 +74,21 @@ const SearchableSelect = (() => {
         });
 
         wrap.classList.add('ss-open');
-        const searchEl = wrap.querySelector('.ss-search');
-        const listEl   = wrap.querySelector('.ss-list');
+        const triggerEl = wrap.querySelector('.ss-trigger');
+        const searchEl  = wrap.querySelector('.ss-search');
+        const listEl    = wrap.querySelector('.ss-list');
+        const panel     = wrap.querySelector('.ss-panel');
+
+        // Position using viewport coords — works even inside overflow:hidden containers
+        const rect = triggerEl.getBoundingClientRect();
+        panel.style.top   = (rect.bottom + 3) + 'px';
+        panel.style.left  = rect.left + 'px';
+        panel.style.width = rect.width + 'px';
+
         searchEl.value = '';
         renderItems(listEl, getOptions(selectEl), '', selectEl);
         searchEl.focus();
-        wrap.querySelector('.ss-trigger').setAttribute('aria-expanded', 'true');
+        triggerEl.setAttribute('aria-expanded', 'true');
     }
 
     function close(wrap) {
