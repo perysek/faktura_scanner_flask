@@ -35,10 +35,10 @@
         .ss-chevron { flex-shrink: 0; color: var(--color-ink-subtle); transition: transform 0.18s ease; }
         .ss-wrap.ss-open .ss-chevron { transform: rotate(180deg); }
         .ss-panel {
-            position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+            position: fixed; /* fixed escapes any ancestor overflow:hidden */
             background: white; border: 1px solid var(--color-border); border-radius: 2px;
             box-shadow: 0 6px 20px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
-            z-index: 200; display: none;
+            z-index: 9999; display: none;
         }
         .ss-wrap.ss-open .ss-panel { display: block; }
         .ss-search {
