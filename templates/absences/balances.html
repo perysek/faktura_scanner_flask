@@ -19,76 +19,84 @@
     /* Filter bar */
     .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
     .filter-input { font-family: var(--font-body); font-size: 0.8125rem; padding: 0.375rem 0.75rem;
-        border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);
-        outline: none; }
+        border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); outline: none; }
     .filter-input:focus { border-color: var(--color-ink-subtle); }
 
     /* Table */
     .card { background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
     .card-body { padding: 0; }
     table.balance-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-    table.balance-table thead tr { border-bottom: 1px solid var(--color-border); }
+    table.balance-table thead tr { border-bottom: 2px solid var(--color-border); }
     table.balance-table th { padding: 0.75rem 1rem; font-size: 0.6875rem; font-weight: 600;
         text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-subtle);
         text-align: left; white-space: nowrap; }
-    table.balance-table td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--color-border-subtle);
-        vertical-align: middle; }
+    table.balance-table td { padding: 0.625rem 1rem; border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
     table.balance-table tr:last-child td { border-bottom: none; }
     table.balance-table tr.exceeded-row td { background: rgba(185,28,28,.035); }
+
+    /* Employee group borders — applied to all td in first/last row of each group */
+    table.balance-table tr.group-first td { border-top: 2px solid var(--color-border); }
+    table.balance-table tr.group-last  td { border-bottom: 2px solid var(--color-border) !important; }
 
     /* Progress bar */
     .progress-wrap { height: 6px; background: var(--color-border); border-radius: 2px; overflow: hidden; min-width: 80px; }
     .progress-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
-    .bar-ok { background: var(--color-success, #16a34a); }
-    .bar-warning { background: #c2410c; }
+    .bar-ok       { background: var(--color-success, #16a34a); }
+    .bar-warning  { background: #c2410c; }
     .bar-exceeded { background: var(--color-error, #b91c1c); }
 
     /* Status badge */
     .status-badge { display: inline-block; padding: 0.1875rem 0.5rem; border-radius: 2px;
         font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-    .badge-ok { background: rgba(22,163,74,.1); color: #15803d; }
-    .badge-warning { background: rgba(194,65,12,.1); color: #c2410c; }
-    .badge-exceeded { background: rgba(185,28,28,.1); color: #b91c1c; }
-    .badge-unlimited { background: var(--color-surface); color: var(--color-ink-subtle); }
+    .badge-ok       { background: rgba(22,163,74,.1);   color: #15803d; }
+    .badge-warning  { background: rgba(194,65,12,.1);   color: #c2410c; }
+    .badge-exceeded { background: rgba(185,28,28,.1);   color: #b91c1c; }
+    .badge-unlimited{ background: var(--color-surface); color: var(--color-ink-subtle); }
 
-    /* Audit sub-row */
-    .audit-subrow td { background: var(--color-surface); padding: 1rem 1.5rem; }
-    .audit-subrow table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-    .audit-subrow th { color: var(--color-ink-subtle); font-weight: 600; text-transform: uppercase;
-        letter-spacing: 0.05em; font-size: 0.6875rem; padding: 0.25rem 0.5rem; text-align: left; }
-    .audit-subrow td.inner { padding: 0.25rem 0.5rem; color: var(--color-ink); }
+    /* Inline row spinbox */
+    .row-spinbox-wrap { position: relative; display: inline-flex; align-items: center; }
+    .row-spinbox { width: 4rem; padding: 0.2rem 1.25rem 0.2rem 0.4rem;
+        font-family: var(--font-body); font-size: 0.8125rem;
+        border: 1px solid var(--color-border); border-radius: 2px;
+        text-align: right; -moz-appearance: textfield; outline: none; }
+    .row-spinbox:focus { border-color: var(--color-ink-muted); }
+    .row-spinbox::-webkit-outer-spin-button,
+    .row-spinbox::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .row-spinbox-arrows { position: absolute; right: 1px; top: 1px; bottom: 1px;
+        display: flex; flex-direction: column; width: 1rem;
+        border-left: 1px solid var(--color-border-subtle); }
+    .row-arrow { flex: 1; border: none; background: transparent; cursor: pointer; padding: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.4rem; color: var(--color-ink-subtle); }
+    .row-arrow:hover { color: var(--color-ink); background: var(--color-surface); }
+    .row-period-input { width: 5.5rem; padding: 0.2rem 0.5rem; font-family: var(--font-body);
+        font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; outline: none; }
+    .row-period-input:focus { border-color: var(--color-ink-muted); }
 
-    /* Action buttons */
-    .btn-xs { font-family: var(--font-body); font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.625rem;
-        border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; background: white;
-        color: var(--color-ink); transition: background 0.15s; white-space: nowrap; }
-    .btn-xs:hover { background: var(--color-surface); }
-    .btn-xs.danger { color: var(--color-error, #b91c1c); border-color: rgba(185,28,28,.3); }
-    .btn-xs.danger:hover { background: rgba(185,28,28,.06); }
-    .btn-xs:disabled { opacity: 0.45; cursor: not-allowed; }
+    /* Icon action buttons */
+    .icon-btn { width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center;
+        justify-content: center; border: 1px solid var(--color-border); border-radius: 2px;
+        background: white; cursor: pointer; transition: background 0.15s; padding: 0; flex-shrink: 0; }
+    .icon-btn .material-icons { font-size: 0.9375rem; }
+    .icon-btn:hover:not(:disabled) { background: var(--color-surface); }
+    .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .icon-btn.delete-btn { border-color: rgba(185,28,28,.3); color: #b91c1c; }
+    .icon-btn.delete-btn:hover:not(:disabled) { background: rgba(185,28,28,.06); }
+    .icon-btn.save-btn   { border-color: rgba(22,163,74,.35); color: #15803d; }
+    .icon-btn.save-btn:hover:not(:disabled)  { background: rgba(22,163,74,.06); }
+    .icon-btn.undo-btn   { color: var(--color-ink-muted); }
 
-    /* Modal overlay */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: flex;
-        align-items: center; justify-content: center; }
-    .modal-box { background: white; border-radius: 2px; padding: 1.75rem; min-width: 360px; max-width: 480px;
-        box-shadow: 0 8px 32px rgba(0,0,0,.18); }
-    .modal-title { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
-    .form-label { font-size: 0.8125rem; font-weight: 500; color: var(--color-ink); margin-bottom: 0.25rem; display: block; }
-    .form-input { width: 100%; font-family: var(--font-body); font-size: 0.8125rem; padding: 0.5rem 0.75rem;
-        border: 1px solid var(--color-border); border-radius: 2px; outline: none; box-sizing: border-box; }
-    .form-input:focus { border-color: var(--color-ink); }
-    .form-row { margin-bottom: 1rem; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
-    .btn-primary { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 500; padding: 0.5rem 1.25rem;
-        background: var(--color-ink); color: white; border: none; border-radius: 2px; cursor: pointer; }
-    .btn-secondary { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 400; padding: 0.5rem 1rem;
-        background: white; color: var(--color-ink); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; }
+    /* Inline reason input — visible only when used-value changes */
+    .row-reason { display: none; width: 100%; margin-top: 0.3rem; padding: 0.2rem 0.4rem;
+        font-family: var(--font-body); font-size: 0.75rem;
+        border: 1px solid var(--color-border); border-radius: 2px;
+        outline: none; box-sizing: border-box; }
+    .row-reason:focus { border-color: var(--color-ink-muted); }
 </style>
 {% endblock %}
 
 {% block content %}
 <main class="refined-page">
-    <!-- Page header -->
     <div class="page-header">
         <div>
             <h1 class="page-title">Bilanse urlopowe</h1>
@@ -96,8 +104,8 @@
         </div>
     </div>
 
-    <!-- Stats cards -->
-    <div class="stats-row" id="stats-row">
+    <!-- Stats -->
+    <div class="stats-row">
         <div class="stat-card">
             <div class="stat-label">Pracownicy ze śledzeniem</div>
             <div class="stat-value" id="stat-tracked">—</div>
@@ -116,11 +124,10 @@
         </div>
     </div>
 
-    <!-- Filter bar -->
+    <!-- Filters -->
     <div class="filter-bar">
         <input type="text" class="filter-input" id="search-input"
-               placeholder="Szukaj pracownika…" oninput="filterTable()"
-               style="min-width:220px;">
+               placeholder="Szukaj pracownika…" oninput="filterTable()" style="min-width:220px;">
         <select class="filter-input" id="cat-filter" onchange="filterTable()">
             <option value="">Wszystkie kategorie</option>
         </select>
@@ -132,7 +139,7 @@
         </select>
     </div>
 
-    <!-- Main table -->
+    <!-- Table -->
     <div class="card">
         <div class="card-body">
             <table class="balance-table" id="balance-table">
@@ -149,50 +156,12 @@
                     </tr>
                 </thead>
                 <tbody id="balance-tbody">
-                    <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">
-                        Ładowanie…
-                    </td></tr>
+                    <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Ładowanie…</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 </main>
-
-<!-- New adjustment modal -->
-<div id="new-adj-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
-    <div class="modal-box">
-        <div class="modal-title">Nowa korekta bilansu</div>
-        <div class="form-row">
-            <label class="form-label">Pracownik *</label>
-            <select class="form-input" id="adj-employee-id">
-                <option value="">Wybierz pracownika…</option>
-            </select>
-        </div>
-        <div class="form-row">
-            <label class="form-label">Kategoria *</label>
-            <select class="form-input" id="adj-category-id">
-                <option value="">Wybierz kategorię…</option>
-            </select>
-        </div>
-        <div class="form-row">
-            <label class="form-label">Korekta (+ / −) *</label>
-            <input type="number" step="0.5" class="form-input" id="adj-delta" placeholder="np. 2.0 lub -1.0">
-        </div>
-        <div class="form-row">
-            <label class="form-label">Powód *</label>
-            <input type="text" class="form-input" id="adj-reason" placeholder="Wymagane">
-        </div>
-        <div class="form-row">
-            <label class="form-label">Okres (opcjonalne)</label>
-            <input type="text" class="form-input" id="adj-period-label" placeholder="np. 2026">
-        </div>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeNewAdjModal()">Anuluj</button>
-            <button class="btn-primary" onclick="submitNewAdj()">Zapisz korektę</button>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -200,14 +169,33 @@
 (function () {
     'use strict';
 
-    let allRows = [];  // {employee_id, employee_name, category_id, category_name, period_label, used, limit, unit, pct, status}
+    let allRows = [];
 
-    // ── Load data ────────────────────────────────────────────────────────────
+    // ── Utilities ─────────────────────────────────────────────────────────────
+
+    function escHtml(str) {
+        return String(str).replace(/[&<>"']/g,
+            c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    }
+
+    function unitLabel(unit) { return unit === 'hours' ? 'h' : 'd'; }
+
+    function barClass(s) {
+        return s === 'exceeded' ? 'bar-exceeded' : s === 'warning' ? 'bar-warning' : 'bar-ok';
+    }
+    function badgeClass(s) {
+        return {exceeded:'badge-exceeded', warning:'badge-warning',
+                unlimited:'badge-unlimited', ok:'badge-ok'}[s] || 'badge-ok';
+    }
+    function badgeLabel(s) {
+        return {exceeded:'Przekroczony', warning:'Blisko limitu',
+                unlimited:'Bez limitu', ok:'OK'}[s] || s;
+    }
 
     function populateSelect(selectId, items, valueKey, labelFn, placeholder) {
         const sel = document.getElementById(selectId);
         if (!sel) return;
-        const current = sel.value;
+        const cur = sel.value;
         sel.innerHTML = `<option value="">${placeholder}</option>`;
         items.forEach(item => {
             const opt = document.createElement('option');
@@ -215,63 +203,31 @@
             opt.textContent = labelFn(item);
             sel.appendChild(opt);
         });
-        if (current) sel.value = current;  // restore previous selection if still valid
+        if (cur) sel.value = cur;
     }
+
+    // ── Load ─────────────────────────────────────────────────────────────────
 
     async function loadDropdownData() {
         try {
-            const [catRes, empRes] = await Promise.all([
-                fetch('/api/absence-categories/tracked'),
-                fetch('/api/employees?active_only=false'),
-            ]);
-            const catData = await catRes.json();
-            const empData = await empRes.json();
-
-            if (catData.success) {
-                const cats = catData.categories || [];
+            const res  = await fetch('/api/absence-categories/tracked');
+            const data = await res.json();
+            if (data.success) {
+                const cats = data.categories || [];
                 populateSelect('cat-filter', cats, 'id', c => c.name, 'Wszystkie kategorie');
-                populateSelect('adj-category-id', cats, 'id', c => c.name, 'Wybierz kategorię…');
-                const statEl = document.getElementById('stat-cat-count');
-                if (statEl) statEl.textContent = cats.length;
+                const el = document.getElementById('stat-cat-count');
+                if (el) el.textContent = cats.length;
             }
-            if (empData.success) {
-                const emps = empData.employees || [];
-                populateSelect('adj-employee-id', emps, 'id',
-                    e => `${e.first_name} ${e.last_name}`, 'Wybierz pracownika…');
-            }
-        } catch (e) {
-            console.error('loadDropdownData', e);
-        }
-    }
-
-    async function loadSummary() {
-        try {
-            const [summaryRes, balancesRes] = await Promise.all([
-                fetch('/api/absence-balances/summary'),
-                buildDetailedRows(),
-                loadDropdownData(),
-            ]);
-            const sData = await summaryRes.json();
-            if (!sData.success) return;
-
-            allRows = balancesRes;
-            updateStats();
-            renderTable(allRows);
-            warnIfExceeded();
-        } catch (e) {
-            console.error('loadSummary', e);
-        }
+        } catch (e) { console.error('loadDropdownData', e); }
     }
 
     async function buildDetailedRows() {
-        // Fetch per-employee balances for all employees who appear in the summary
-        const summaryRes = await fetch('/api/absence-balances/summary');
-        const sData = await summaryRes.json();
+        const sumRes = await fetch('/api/absence-balances/summary');
+        const sData  = await sumRes.json();
         if (!sData.success) return [];
 
-        const rows = [];
+        const rows   = [];
         const empIds = Object.keys(sData.balances || {});
-
         for (const empIdStr of empIds) {
             const empId = parseInt(empIdStr, 10);
             try {
@@ -280,45 +236,60 @@
                 if (!d.success) continue;
                 for (const b of (d.balances || [])) {
                     rows.push({
-                        employee_id: empId,
-                        employee_name: d.employee_name,
-                        category_id: b.category_id,
-                        category_name: b.category_name,
-                        period_label: b.period_label,
-                        period_start: b.period_start,
-                        used: b.net_used,
-                        limit: b.limit,
-                        unit: b.unit,
-                        pct: b.pct,
-                        status: b.status,
+                        employee_id:         empId,
+                        employee_name:       d.employee_name,
+                        category_id:         b.category_id,
+                        category_name:       b.category_name,
+                        period_label:        b.period_label,
+                        used:                b.net_used,
+                        limit:               b.limit,
+                        unit:                b.unit,
+                        pct:                 b.pct,
+                        status:              b.status,
                         warning_threshold_pct: b.warning_threshold_pct,
                     });
                 }
-            } catch (e) { /* skip this employee */ }
+            } catch (_) { /* skip */ }
         }
         return rows;
     }
 
-    // ── Stats ────────────────────────────────────────────────────────────────
+    async function loadSummary() {
+        try {
+            const [sumRes, rows] = await Promise.all([
+                fetch('/api/absence-balances/summary'),
+                buildDetailedRows(),
+                loadDropdownData(),
+            ]);
+            const sData = await sumRes.json();
+            if (!sData.success) return;
+            allRows = rows;
+            updateStats();
+            renderTable(allRows);
+            warnIfExceeded();
+        } catch (e) { console.error('loadSummary', e); }
+    }
+
+    // ── Stats ─────────────────────────────────────────────────────────────────
 
     function updateStats() {
-        const tracked = new Set(allRows.map(r => r.employee_id)).size;
+        const tracked  = new Set(allRows.map(r => r.employee_id)).size;
         const warnings = allRows.filter(r => r.status === 'warning').length;
         const exceeded = allRows.filter(r => r.status === 'exceeded').length;
-        document.getElementById('stat-tracked').textContent = tracked;
-        document.getElementById('stat-warning').textContent = warnings;
+        document.getElementById('stat-tracked').textContent  = tracked;
+        document.getElementById('stat-warning').textContent  = warnings;
         document.getElementById('stat-exceeded').textContent = exceeded;
     }
 
     function warnIfExceeded() {
         const exc = allRows.filter(r => r.status === 'exceeded');
-        if (exc.length > 0 && typeof Notifications !== 'undefined') {
+        if (exc.length && typeof Notifications !== 'undefined') {
             const names = [...new Set(exc.map(r => r.employee_name))].slice(0, 3).join(', ');
             setTimeout(() => Notifications.warning(`Przekroczony limit: ${names}`), 800);
         }
     }
 
-    // ── Render ───────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
 
     function renderTable(rows) {
         const tbody = document.getElementById('balance-tbody');
@@ -326,367 +297,448 @@
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Brak danych</td></tr>';
             return;
         }
-        tbody.innerHTML = rows.map(renderRow).join('');
-        applyHistoriaButtonStates();
+
+        // Sort descending by employee name (Z → A)
+        const sorted = [...rows].sort((a, b) =>
+            b.employee_name.localeCompare(a.employee_name, 'pl', {sensitivity: 'base'}));
+
+        const html    = [];
+        let prevEmpId = null;
+        for (let i = 0; i < sorted.length; i++) {
+            const row     = sorted[i];
+            const isFirst = row.employee_id !== prevEmpId;
+            const isLast  = i === sorted.length - 1 || sorted[i + 1].employee_id !== row.employee_id;
+            html.push(renderRow(row, isFirst, isLast));
+            prevEmpId = row.employee_id;
+        }
+        tbody.innerHTML = html.join('');
     }
 
-    function barClass(status) {
-        if (status === 'exceeded') return 'bar-exceeded';
-        if (status === 'warning') return 'bar-warning';
-        return 'bar-ok';
-    }
-
-    function badgeClass(status) {
-        if (status === 'exceeded') return 'badge-exceeded';
-        if (status === 'warning') return 'badge-warning';
-        if (status === 'unlimited') return 'badge-unlimited';
-        return 'badge-ok';
-    }
-
-    function badgeLabel(status) {
-        return {exceeded: 'Przekroczony', warning: 'Blisko limitu',
-                unlimited: 'Bez limitu', ok: 'OK'}[status] || status;
-    }
-
-    function unitLabel(unit) { return unit === 'hours' ? 'h' : 'd'; }
-
-    function renderRow(row) {
-        const pctCapped = Math.min(row.pct, 100);
-        const unitL = unitLabel(row.unit);
-        const limitStr = row.status === 'unlimited' ? '∞' : row.limit;
-        const exceededCls = row.status === 'exceeded' ? 'exceeded-row' : '';
-        const statusLabel = row.status === 'ok'
-            ? `Pozostało ${Math.round(row.limit - row.used)} ${unitL}`
+    function renderRow(row, isFirst, isLast) {
+        const step         = row.unit === 'hours' ? 0.5 : 1;
+        const unitL        = unitLabel(row.unit);
+        const pctCapped    = Math.min(row.pct || 0, 100);
+        const exceededCls  = row.status === 'exceeded' ? 'exceeded-row' : '';
+        const groupCls     = [isFirst ? 'group-first' : '', isLast ? 'group-last' : ''].filter(Boolean).join(' ');
+        const usedVal      = row.used.toFixed(step === 1 ? 0 : 1);
+        const origLimit    = row.status === 'unlimited' ? 0 : row.limit;
+        const limitVal     = String(origLimit);
+        const statusLabel  = row.status === 'ok'
+            ? `Pozostało ${(row.limit - row.used).toFixed(step === 1 ? 0 : 1)} ${unitL}`
             : badgeLabel(row.status);
+
+        // Employee name only in first row of each group
+        const empCell = isFirst
+            ? `<td style="font-weight:500;white-space:nowrap;">${escHtml(row.employee_name)}</td>`
+            : `<td></td>`;
+
+        // Spinbox builder
+        function spinbox(cls, val) {
+            return `<div class="row-spinbox-wrap">
+                        <input type="number" class="row-spinbox ${cls}" value="${val}"
+                               step="${step}" min="0" oninput="onRowChange(this.closest('tr'))">
+                        <div class="row-spinbox-arrows">
+                            <button type="button" class="row-arrow" onclick="stepRowSpinbox(this,1)" tabindex="-1">&#9650;</button>
+                            <button type="button" class="row-arrow" onclick="stepRowSpinbox(this,-1)" tabindex="-1">&#9660;</button>
+                        </div>
+                    </div>`;
+        }
+
+        const limitCell = `<td style="text-align:right;">
+            <div style="display:inline-flex;align-items:center;gap:0.25rem;">
+                ${spinbox('limit-input', limitVal)}
+                <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
+                    ${row.status === 'unlimited' ? '∞' : unitL}
+                </span>
+            </div>
+        </td>`;
+
         return `
-        <tr class="${exceededCls}" data-emp-id="${row.employee_id}"
-            data-cat-id="${row.category_id}" data-status="${row.status}"
-            data-emp-name="${row.employee_name.toLowerCase()}"
-            data-cat-name="${row.category_name.toLowerCase()}">
-            <td style="font-weight:500;">${row.employee_name}</td>
-            <td>${row.category_name}</td>
-            <td style="color:var(--color-ink-subtle);">${row.period_label || ''}</td>
-            <td style="text-align:right;font-variant-numeric:tabular-nums;">${Math.round(row.used)} ${unitL}</td>
-            <td style="text-align:right;font-variant-numeric:tabular-nums;">${limitStr} ${row.status !== 'unlimited' ? unitL : ''}</td>
+        <tr class="${exceededCls} ${groupCls}"
+            data-emp-id="${row.employee_id}"
+            data-cat-id="${row.category_id}"
+            data-status="${row.status}"
+            data-emp-name="${escHtml(row.employee_name).toLowerCase()}"
+            data-cat-name="${escHtml(row.category_name).toLowerCase()}"
+            data-unit="${row.unit}"
+            data-orig-used="${usedVal}"
+            data-orig-limit="${limitVal}"
+            data-orig-period="${escHtml(row.period_label || '')}"
+            data-warning-threshold="${row.warning_threshold_pct || 80}">
+            ${empCell}
+            <td>${escHtml(row.category_name)}</td>
+            <td>
+                <input type="text" class="row-period-input period-input"
+                       value="${escHtml(row.period_label || '')}"
+                       oninput="onRowChange(this.closest('tr'))"
+                       placeholder="np. 2026">
+            </td>
+            <td style="text-align:right;">
+                <div style="display:inline-flex;align-items:center;gap:0.25rem;">
+                    ${spinbox('used-input', usedVal)}
+                    <span style="font-size:0.75rem;color:var(--color-ink-subtle);">${unitL}</span>
+                </div>
+            </td>
+            ${limitCell}
             <td>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <div class="progress-wrap" style="flex:1;">
-                        <div class="progress-bar ${barClass(row.status)}"
+                        <div class="progress-bar row-bar ${barClass(row.status)}"
                              style="width:${pctCapped}%;"></div>
                     </div>
-                    <span style="font-size:0.75rem;color:var(--color-ink-subtle);min-width:2.5rem;text-align:right;">
-                        ${row.status === 'unlimited' ? '—' : row.pct.toFixed(0) + '%'}
+                    <span class="row-pct-label"
+                          style="font-size:0.75rem;color:var(--color-ink-subtle);min-width:2.5rem;text-align:right;">
+                        ${row.status === 'unlimited' ? '—' : (row.pct || 0).toFixed(0) + '%'}
                     </span>
                 </div>
             </td>
-            <td><span class="status-badge ${badgeClass(row.status)}">${statusLabel}</span></td>
             <td>
-                <div style="display:flex;gap:0.375rem;flex-wrap:wrap;">
-                    <button class="btn-xs" onclick="openAdjModal(${row.employee_id},'${row.employee_name}',${row.category_id},'${row.category_name}')">Korekta</button>
-                    <button class="btn-xs" onclick="openLimitModal(${row.employee_id},'${row.employee_name}',${row.category_id},'${row.category_name}',${row.limit})">Limit</button>
-                    <button class="btn-xs" onclick="toggleAudit(this,${row.employee_id})">Historia</button>
+                <span class="status-badge row-badge ${badgeClass(row.status)}">${statusLabel}</span>
+            </td>
+            <td>
+                <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0.25rem;">
+                    <div style="display:flex;gap:0.25rem;">
+                        <button type="button" class="icon-btn delete-btn"
+                                onclick="deleteRow(this,${row.employee_id},${row.category_id})"
+                                title="Resetuj bilans do zera">
+                            <span class="material-icons">delete</span>
+                        </button>
+                        <button type="button" class="icon-btn save-btn"
+                                onclick="saveRow(this,${row.employee_id},${row.category_id})"
+                                title="Zapisz zmiany" disabled>
+                            <span class="material-icons">save</span>
+                        </button>
+                        <button type="button" class="icon-btn undo-btn"
+                                onclick="undoRow(this,${row.employee_id},${row.category_id})"
+                                title="Cofnij ostatni zapis" disabled>
+                            <span class="material-icons">undo</span>
+                        </button>
+                    </div>
+                    <input type="text" class="row-reason"
+                           placeholder="Powód zmiany…"
+                           oninput="onReasonChange(this.closest('tr'))">
                 </div>
             </td>
-        </tr>
-        <tr class="audit-subrow" id="audit-${row.employee_id}-${row.category_id}" style="display:none;">
-            <td colspan="8"><div class="audit-inner-${row.employee_id}">Ładowanie…</div></td>
         </tr>`;
     }
 
-    // ── Filter ───────────────────────────────────────────────────────────────
+    // ── Filter ────────────────────────────────────────────────────────────────
 
     window.filterTable = function () {
-        const search = document.getElementById('search-input').value.toLowerCase();
-        const catId = document.getElementById('cat-filter').value;
-        const statusFilter = document.getElementById('status-filter').value;
+        const search  = document.getElementById('search-input').value.toLowerCase();
+        const catId   = document.getElementById('cat-filter').value;
+        const statusF = document.getElementById('status-filter').value;
 
-        const filtered = allRows.filter(row => {
-            if (search && !row.employee_name.toLowerCase().includes(search)) return false;
-            if (catId && String(row.category_id) !== catId) return false;
-            if (statusFilter && row.status !== statusFilter) return false;
+        renderTable(allRows.filter(row => {
+            if (search  && !row.employee_name.toLowerCase().includes(search)) return false;
+            if (catId   && String(row.category_id) !== catId) return false;
+            if (statusF && row.status !== statusF) return false;
             return true;
-        });
-        renderTable(filtered);
+        }));
     };
 
-    // ── Audit toggle ─────────────────────────────────────────────────────────
+    // ── Row change helpers ────────────────────────────────────────────────────
 
-    window.toggleAudit = async function (btn, empId) {
-        const subrow = document.getElementById(`audit-${empId}-${btn.closest('tr').dataset.catId || ''}`);
-        if (!subrow) {
-            // find the next sibling audit row
-            const parentRow = btn.closest('tr');
-            const nextRow = parentRow.nextElementSibling;
-            if (!nextRow || !nextRow.classList.contains('audit-subrow')) return;
-            const isHidden = nextRow.style.display === 'none';
-            nextRow.style.display = isHidden ? '' : 'none';
-            if (isHidden) {
-                const inner = nextRow.querySelector('[class^="audit-inner-"]');
-                await loadAudit(empId, inner);
-            }
+    function getOriginals(tr) {
+        return {
+            used:   parseFloat(tr.dataset.origUsed)   || 0,
+            limit:  parseFloat(tr.dataset.origLimit)  || 0,
+            period: tr.dataset.origPeriod || '',
+        };
+    }
+
+    function getCurrentValues(tr) {
+        return {
+            used:   parseFloat(tr.querySelector('.used-input')?.value)   || 0,
+            limit:  parseFloat(tr.querySelector('.limit-input')?.value)  || 0,
+            period: (tr.querySelector('.period-input')?.value || '').trim(),
+        };
+    }
+
+    function hasChanges(tr) {
+        const o = getOriginals(tr), c = getCurrentValues(tr);
+        return (
+            Math.abs(c.used - o.used)   >= 0.001 ||
+            Math.abs(c.limit - o.limit) >= 0.001 ||
+            c.period !== o.period
+        );
+    }
+
+    window.onRowChange = function (tr) {
+        updateRowDisplay(tr);
+        const o = getOriginals(tr), c = getCurrentValues(tr);
+        const dirty      = hasChanges(tr);
+        const usedDirty  = Math.abs(c.used - o.used) >= 0.001;
+        const reasonEl   = tr.querySelector('.row-reason');
+        const saveBtn    = tr.querySelector('.save-btn');
+
+        // Reason field only required when 'used' value is edited (API mandate)
+        reasonEl.style.display = (dirty && usedDirty) ? '' : 'none';
+        if (!usedDirty) reasonEl.value = '';
+
+        const reasonOk = !usedDirty || reasonEl.value.trim().length > 0;
+        saveBtn.disabled = !dirty || !reasonOk;
+    };
+
+    window.onReasonChange = function (tr) {
+        const o = getOriginals(tr), c = getCurrentValues(tr);
+        const usedDirty = Math.abs(c.used - o.used) >= 0.001;
+        const dirty     = hasChanges(tr);
+        const reasonEl  = tr.querySelector('.row-reason');
+        const reasonOk  = !usedDirty || reasonEl.value.trim().length > 0;
+        tr.querySelector('.save-btn').disabled = !dirty || !reasonOk;
+    };
+
+    window.stepRowSpinbox = function (btn, dir) {
+        const input  = btn.closest('.row-spinbox-wrap').querySelector('.row-spinbox');
+        const step   = parseFloat(input.step) || 1;
+        const newVal = Math.max(0, (parseFloat(input.value) || 0) + dir * step);
+        input.value  = newVal.toFixed(step === 1 ? 0 : 1);
+        window.onRowChange(input.closest('tr'));
+    };
+
+    function updateRowDisplay(tr) {
+        const usedInput  = tr.querySelector('.used-input');
+        const limitInput = tr.querySelector('.limit-input');
+        const barEl      = tr.querySelector('.row-bar');
+        const badgeEl    = tr.querySelector('.row-badge');
+        const pctEl      = tr.querySelector('.row-pct-label');
+        if (!usedInput || !barEl || !badgeEl) return;
+
+        const used   = parseFloat(usedInput.value)  || 0;
+        const limit  = parseFloat(limitInput?.value) || 0;
+        const unit   = tr.dataset.unit;
+        const unitL  = unitLabel(unit);
+        const step   = unit === 'hours' ? 0.5 : 1;
+        const wThresh = parseFloat(tr.dataset.warningThreshold) || 80;
+
+        if (!limitInput || limit <= 0) {
+            barEl.className = 'progress-bar row-bar bar-ok';
+            barEl.style.width = '0%';
+            badgeEl.className = 'status-badge row-badge badge-unlimited';
+            badgeEl.textContent = 'Bez limitu';
+            if (pctEl) pctEl.textContent = '—';
             return;
         }
-        subrow.style.display = subrow.style.display === 'none' ? '' : 'none';
-        if (subrow.style.display !== 'none') {
-            const inner = subrow.querySelector('.audit-inner-' + empId);
-            await loadAudit(empId, inner);
+
+        const pct    = (used / limit) * 100;
+        const status = pct >= 100 ? 'exceeded' : pct >= wThresh ? 'warning' : 'ok';
+
+        barEl.className   = `progress-bar row-bar ${barClass(status)}`;
+        barEl.style.width = Math.min(pct, 100) + '%';
+        badgeEl.className = `status-badge row-badge ${badgeClass(status)}`;
+
+        if (status === 'ok') {
+            badgeEl.textContent = `Pozostało ${(limit - used).toFixed(step === 1 ? 0 : 1)} ${unitL}`;
+        } else {
+            badgeEl.textContent = badgeLabel(status);
+        }
+        if (pctEl) pctEl.textContent = pct.toFixed(0) + '%';
+
+        if (status === 'exceeded') {
+            tr.classList.add('exceeded-row');
+            if (!tr._warnedExceeded) {
+                tr._warnedExceeded = true;
+                if (typeof Notifications !== 'undefined')
+                    Notifications.warning('Wartość wykorzystania przekracza limit!');
+            }
+        } else {
+            tr.classList.remove('exceeded-row');
+            tr._warnedExceeded = false;
+        }
+    }
+
+    // ── Save ──────────────────────────────────────────────────────────────────
+
+    window.saveRow = async function (btn, empId, catId) {
+        const tr       = btn.closest('tr');
+        const o        = getOriginals(tr);
+        const c        = getCurrentValues(tr);
+        const delta    = parseFloat((c.used - o.used).toFixed(1));
+        const limChg   = Math.abs(c.limit - o.limit) >= 0.001;
+        const reasonEl = tr.querySelector('.row-reason');
+        const reason   = reasonEl ? reasonEl.value.trim() : '';
+
+        if (Math.abs(delta) >= 0.001 && !reason) {
+            if (typeof Notifications !== 'undefined') Notifications.error('Podaj powód zmiany wykorzystania');
+            if (reasonEl) { reasonEl.style.display = ''; reasonEl.focus(); }
+            return;
+        }
+
+        const calls = [];
+        if (Math.abs(delta) >= 0.001) {
+            calls.push(fetch(`/api/employees/${empId}/absence-adjustments`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    category_id: catId, delta_value: delta,
+                    reason, period_label: c.period || null,
+                }),
+            }).then(r => r.json()));
+        }
+        if (limChg) {
+            calls.push(fetch(`/api/employees/${empId}/absence-limits`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({category_id: catId, max_value: c.limit}),
+            }).then(r => r.json()));
+        }
+        if (!calls.length) return;
+
+        try {
+            const results = await Promise.all(calls);
+            if (results.every(d => d.success)) {
+                // Store undo state before overwriting originals
+                tr.dataset.undoUsed   = o.used;
+                tr.dataset.undoLimit  = o.limit;
+                tr.dataset.undoPeriod = o.period;
+                tr.dataset.undoDelta  = -delta;
+
+                tr.dataset.origUsed   = c.used;
+                tr.dataset.origLimit  = c.limit;
+                tr.dataset.origPeriod = c.period;
+
+                btn.disabled = true;
+                const undoBtn = tr.querySelector('.undo-btn');
+                if (undoBtn) undoBtn.disabled = false;
+                if (reasonEl) { reasonEl.style.display = 'none'; reasonEl.value = ''; }
+
+                if (typeof Notifications !== 'undefined') Notifications.success('Zmiany zapisane');
+
+                allRows = allRows.map(r =>
+                    r.employee_id === empId && r.category_id === catId
+                        ? {...r, used: c.used, limit: c.limit, period_label: c.period}
+                        : r);
+                updateStats();
+            } else {
+                const err = results.find(d => !d.success)?.error || 'Błąd zapisu';
+                if (typeof Notifications !== 'undefined') Notifications.error(err);
+            }
+        } catch (_) {
+            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
         }
     };
 
-    async function loadAudit(empId, container) {
-        if (!container) return;
-        container.textContent = 'Ładowanie…';
+    // ── Undo ─────────────────────────────────────────────────────────────────
+
+    window.undoRow = async function (btn, empId, catId) {
+        const tr         = btn.closest('tr');
+        const undoDelta  = parseFloat(tr.dataset.undoDelta  || '0');
+        const undoLimit  = parseFloat(tr.dataset.undoLimit  || '0');
+        const undoPeriod = tr.dataset.undoPeriod || '';
+        const currLimit  = parseFloat(tr.dataset.origLimit  || '0');
+
+        const calls = [];
+        if (Math.abs(undoDelta) >= 0.001) {
+            calls.push(fetch(`/api/employees/${empId}/absence-adjustments`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    category_id: catId, delta_value: undoDelta,
+                    reason: 'Cofnięcie ostatniego zapisu',
+                    period_label: undoPeriod || null,
+                }),
+            }).then(r => r.json()));
+        }
+        if (Math.abs(undoLimit - currLimit) >= 0.001) {
+            calls.push(fetch(`/api/employees/${empId}/absence-limits`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({category_id: catId, max_value: undoLimit}),
+            }).then(r => r.json()));
+        }
+
         try {
-            const r = await fetch(`/api/employees/${empId}/absence-balance-audit`);
-            const d = await r.json();
-            if (!d.success || !d.entries.length) {
-                container.innerHTML = `
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-                        <span style="font-size:0.75rem;color:var(--color-ink-subtle);">Brak historii zmian.</span>
-                    </div>`;
-                return;
+            if (calls.length) {
+                const results = await Promise.all(calls);
+                if (!results.every(d => d.success)) {
+                    if (typeof Notifications !== 'undefined') Notifications.error('Błąd cofania');
+                    return;
+                }
             }
-            container.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.625rem;">
-                    <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink-subtle);">
-                        Historia zmian (${d.entries.length})
-                    </span>
-                    <button class="btn-xs danger" onclick="clearBalanceHistory(${empId})" title="Usuń całą historię zmian">
-                        <span class="material-icons" style="font-size:0.875rem;vertical-align:middle;margin-right:0.2rem;">delete_sweep</span>
-                        Wyczyść historię
-                    </button>
-                </div>
-                <table>
-                    <thead><tr>
-                        <th>Kiedy</th><th>Kto</th><th>Akcja</th><th>Pole</th><th>Stara wartość</th><th>Nowa wartość</th>
-                    </tr></thead>
-                    <tbody>
-                    ${d.entries.slice(0, 30).map(e => `<tr>
-                        <td class="inner">${e.timestamp ? new Date(e.timestamp).toLocaleString('pl-PL') : '—'}</td>
-                        <td class="inner">${e.user_name || '—'}</td>
-                        <td class="inner">${e.action || '—'}</td>
-                        <td class="inner">${e.field_name || '—'}</td>
-                        <td class="inner">${e.old_value ?? '—'}</td>
-                        <td class="inner">${e.new_value ?? '—'}</td>
-                    </tr>`).join('')}
-                    </tbody>
-                </table>`;
-        } catch (e) {
-            container.textContent = 'Błąd ładowania historii.';
-        }
-    }
 
-    // ── Historia button state ─────────────────────────────────────────────────
+            const step = tr.dataset.unit === 'hours' ? 0.5 : 1;
+            const usedInput   = tr.querySelector('.used-input');
+            const limitInput  = tr.querySelector('.limit-input');
+            const periodInput = tr.querySelector('.period-input');
+            if (usedInput)   usedInput.value   = parseFloat(tr.dataset.undoUsed || '0').toFixed(step === 1 ? 0 : 1);
+            if (limitInput)  limitInput.value  = undoLimit;
+            if (periodInput) periodInput.value = undoPeriod;
 
-    let _employeeIdsWithHistory = null;
+            tr.dataset.origUsed   = tr.dataset.undoUsed || '0';
+            tr.dataset.origLimit  = undoLimit;
+            tr.dataset.origPeriod = undoPeriod;
+            delete tr.dataset.undoUsed;
+            delete tr.dataset.undoLimit;
+            delete tr.dataset.undoPeriod;
+            delete tr.dataset.undoDelta;
 
-    async function fetchEmployeesWithHistory() {
-        if (_employeeIdsWithHistory !== null) return _employeeIdsWithHistory;
-        try {
-            const r = await fetch('/api/absence-balance-audit/employees-with-history');
-            const d = await r.json();
-            _employeeIdsWithHistory = d.success ? new Set(d.employee_ids) : new Set();
+            btn.disabled = true;
+            tr.querySelector('.save-btn').disabled = true;
+            const reasonEl = tr.querySelector('.row-reason');
+            if (reasonEl) { reasonEl.style.display = 'none'; reasonEl.value = ''; }
+
+            updateRowDisplay(tr);
+            if (typeof Notifications !== 'undefined') Notifications.success('Cofnięto ostatni zapis');
+
+            allRows = allRows.map(r =>
+                r.employee_id === empId && r.category_id === catId
+                    ? {...r, used: parseFloat(tr.dataset.origUsed), limit: undoLimit, period_label: undoPeriod}
+                    : r);
+            updateStats();
+
         } catch (_) {
-            _employeeIdsWithHistory = new Set();
+            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
         }
-        return _employeeIdsWithHistory;
-    }
+    };
 
-    function applyHistoriaButtonStates() {
-        fetchEmployeesWithHistory().then(withHistory => {
-            document.querySelectorAll('tr[data-emp-id]').forEach(tr => {
-                const empId = parseInt(tr.dataset.empId, 10);
-                const btn = tr.querySelector('button[onclick^="toggleAudit"]');
-                if (btn) btn.disabled = !withHistory.has(empId);
-            });
-        });
-    }
+    // ── Delete / reset ────────────────────────────────────────────────────────
 
-    window.clearBalanceHistory = async function (empId) {
+    window.deleteRow = function (btn, empId, catId) {
+        const tr   = btn.closest('tr');
+        const used = parseFloat(tr.dataset.origUsed) || 0;
+
         Modals.confirm({
-            title: 'Wyczyść historię',
-            message: 'Usunąć wszystkie wpisy historii zmian dla tego pracownika? Operacja jest nieodwracalna.',
-            confirmText: 'Wyczyść',
+            title: 'Resetuj bilans',
+            message: `Wyzerować bilans tej kategorii nieobecności? Zostanie dodana korekta −${used.toFixed(1)} i zapisana w historii.`,
+            confirmText: 'Resetuj',
             onConfirm: async () => {
+                if (used <= 0) {
+                    if (typeof Notifications !== 'undefined') Notifications.info('Bilans już wynosi 0');
+                    return;
+                }
                 try {
-                    const r = await fetch(`/api/employees/${empId}/absence-balance-audit`, {
-                        method: 'DELETE',
+                    const r = await fetch(`/api/employees/${empId}/absence-adjustments`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            category_id: catId,
+                            delta_value: -used,
+                            reason: 'Resetowanie bilansu',
+                            period_label: null,
+                        }),
                     });
                     const d = await r.json();
                     if (d.success) {
-                        if (typeof Notifications !== 'undefined') Notifications.success('Historia wyczyszczona');
-                        // Collapse all open audit subrows for this employee
-                        document.querySelectorAll(`[id^="audit-${empId}-"]`).forEach(sub => {
-                            sub.style.display = 'none';
-                        });
-                        // Disable Historia buttons for this employee
-                        document.querySelectorAll(`tr[data-emp-id="${empId}"] button[onclick^="toggleAudit"]`).forEach(btn => {
-                            btn.disabled = true;
-                        });
-                        // Invalidate cache entry
-                        if (_employeeIdsWithHistory) _employeeIdsWithHistory.delete(empId);
+                        if (typeof Notifications !== 'undefined') Notifications.success('Bilans zresetowany do zera');
+                        await loadSummary();
                     } else {
-                        if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd czyszczenia');
+                        if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd');
                     }
-                } catch (e) {
+                } catch (_) {
                     if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
                 }
             },
         });
     };
 
-    // ── Quick adjustment modal ────────────────────────────────────────────────
-
-    let _adjEmpId = null, _adjCatId = null;
-
-    window.openAdjModal = function (empId, empName, catId, catName) {
-        _adjEmpId = empId; _adjCatId = catId;
-        document.getElementById('adj-employee-id').value = empId;
-        document.getElementById('adj-category-id').value = catId;
-        document.getElementById('adj-delta').value = '';
-        document.getElementById('adj-reason').value = '';
-        document.getElementById('adj-period-label').value = '';
-        document.getElementById('new-adj-modal').style.display = 'flex';
-        document.getElementById('adj-delta').focus();
-    };
-
-    window.openNewAdjModal = function () {
-        _adjEmpId = null; _adjCatId = null;
-        document.getElementById('adj-employee-id').value = '';
-        document.getElementById('adj-category-id').value = '';
-        document.getElementById('adj-delta').value = '';
-        document.getElementById('adj-reason').value = '';
-        document.getElementById('adj-period-label').value = '';
-        document.getElementById('new-adj-modal').style.display = 'flex';
-        document.getElementById('adj-employee-id').focus();
-    };
-
-    window.closeNewAdjModal = function () {
-        document.getElementById('new-adj-modal').style.display = 'none';
-    };
-
-    window.submitNewAdj = async function () {
-        const empId = parseInt(document.getElementById('adj-employee-id').value, 10);
-        const catId = parseInt(document.getElementById('adj-category-id').value, 10);
-        const delta = parseFloat(document.getElementById('adj-delta').value);
-        const reason = document.getElementById('adj-reason').value.trim();
-        const periodLabel = document.getElementById('adj-period-label').value.trim() || null;
-
-        if (!empId || !catId || isNaN(delta) || !reason) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Uzupełnij wszystkie wymagane pola.');
-            return;
-        }
-
-        if (typeof Modals !== 'undefined') {
-            Modals.confirm({
-                title: 'Potwierdź korektę',
-                message: `Zapisać korektę ${delta > 0 ? '+' : ''}${delta.toFixed(1)} dla tego pracownika?`,
-                confirmText: 'Zapisz',
-                onConfirm: () => doSaveAdj(empId, catId, delta, reason, periodLabel),
-            });
-        } else {
-            await doSaveAdj(empId, catId, delta, reason, periodLabel);
-        }
-    };
-
-    async function doSaveAdj(empId, catId, delta, reason, periodLabel) {
-        try {
-            const r = await fetch(`/api/employees/${empId}/absence-adjustments`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({category_id: catId, delta_value: delta,
-                                      reason, period_label: periodLabel}),
-            });
-            const d = await r.json();
-            if (d.success) {
-                closeNewAdjModal();
-                if (typeof Notifications !== 'undefined') Notifications.success('Korekta zapisana');
-                await loadSummary();
-            } else {
-                if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd zapisu');
-            }
-        } catch (e) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
-        }
-    }
-
-    // ── Limit modal (inline) ─────────────────────────────────────────────────
-
-    window.openLimitModal = function (empId, empName, catId, catName, currentLimit) {
-        Modals.show({
-            title: 'Ustaw limit nieobecności',
-            size: 'small',
-            content: `
-                <p style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-bottom:1rem;">
-                    <strong style="color:var(--color-ink);">${empName}</strong> — ${catName}
-                </p>
-                <div style="margin-bottom:1rem;">
-                    <label style="font-size:0.8125rem;font-weight:500;display:block;margin-bottom:0.375rem;">
-                        Nowy limit <span style="color:var(--color-ink-subtle);font-weight:400;">(0 = bez limitu)</span>
-                    </label>
-                    <input id="limit-value-input" type="number" step="1" min="0"
-                           value="${Math.round(currentLimit)}"
-                           style="width:100%;font-family:var(--font-body);font-size:0.9375rem;padding:0.5rem 0.75rem;
-                                  border:1px solid var(--color-border);border-radius:2px;outline:none;box-sizing:border-box;"
-                           oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                           autofocus>
-                </div>`,
-            buttons: [
-                {
-                    text: 'Anuluj',
-                    type: 'secondary',
-                    onClick: (e, overlay) => Modals.close(overlay),
-                },
-                {
-                    text: 'Ustaw limit',
-                    type: 'primary',
-                    onClick: (e, overlay) => {
-                        const input = overlay.querySelector('#limit-value-input');
-                        const val = parseInt(input ? input.value : '', 10);
-                        if (isNaN(val) || val < 0) {
-                            input.style.borderColor = 'var(--color-error, #b91c1c)';
-                            input.focus();
-                            return;
-                        }
-                        Modals.close(overlay);
-                        doSetLimit(empId, catId, val);
-                    },
-                },
-            ],
-        });
-    };
-
-    async function doSetLimit(empId, catId, val) {
-        try {
-            const r = await fetch(`/api/employees/${empId}/absence-limits`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({category_id: catId, max_value: val}),
-            });
-            const d = await r.json();
-            if (d.success) {
-                if (typeof Notifications !== 'undefined') Notifications.success('Limit zaktualizowany');
-                await loadSummary();
-            } else {
-                if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd zapisu');
-            }
-        } catch (e) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
-        }
-    }
-
-    // ── ESC key ──────────────────────────────────────────────────────────────
+    // ── ESC ───────────────────────────────────────────────────────────────────
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            const modal = document.getElementById('new-adj-modal');
-            if (modal && modal.style.display !== 'none') {
-                closeNewAdjModal();
-                return;
-            }
-            if (!document.querySelector('.modal-overlay[style*="flex"]')) {
-                window.location.href = '/absences';
-            }
+            const cm = document.getElementById('confirm-modal');
+            if (cm && !cm.classList.contains('hidden')) return;
+            window.location.href = '/absences';
         }
     });
 
