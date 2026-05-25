@@ -47,7 +47,7 @@
 
     /* Status badge */
     .status-badge { display: inline-block; padding: 0.1875rem 0.5rem; border-radius: 2px; font-size: 0.6875rem; font-weight:
-    600; text-transform: uppercase; letter-spacing: 0.04em; width: 11rem; text-align: center; }
+    600; text-transform: uppercase; letter-spacing: 0.04em; width: 9rem; text-align: center; }
     .badge-ok       { background: rgba(22,163,74,.1);   color: #15803d; }
     .badge-warning  { background: rgba(194,65,12,.1);   color: #c2410c; }
     .badge-exceeded { background: rgba(185,28,28,.1);   color: #b91c1c; }
@@ -149,7 +149,7 @@
                         <th style="width:6rem;">Okres</th>
                         <th>Wykorzystano</th>
                         <th style="width:7rem;text-align:right;">Limit</th>
-                        <th style="width:13rem;text-align:center">%</th>
+                        <th style="width:13rem;text-align:center">% wykorzystania</th>
                         <th style="width:13rem;text-align:center">Status</th>
                         <th style="width:6rem;">Akcje</th>
                     </tr>
@@ -323,7 +323,7 @@
         const origLimit    = row.status === 'unlimited' ? 0 : row.limit;
         const limitVal     = String(origLimit);
         const statusLabel  = row.status === 'ok'
-            ? `Pozostało ${(row.limit - row.used).toFixed(step === 1 ? 0 : 1)} ${unitL}`
+            ? `Zostało: ${(row.limit - row.used).toFixed(step === 1 ? 0 : 1)} ${unitL}`
             : badgeLabel(row.status);
 
         // Employee name only in first row of each group
@@ -527,7 +527,7 @@
         badgeEl.className = `status-badge row-badge ${badgeClass(status)}`;
 
         if (status === 'ok') {
-            badgeEl.textContent = `Pozostało ${(limit - used).toFixed(step === 1 ? 0 : 1)} ${unitL}`;
+            badgeEl.textContent = `Zostało: ${(limit - used).toFixed(step === 1 ? 0 : 1)} ${unitL}`;
         } else {
             badgeEl.textContent = badgeLabel(status);
         }
