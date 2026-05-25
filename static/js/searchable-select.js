@@ -12,6 +12,9 @@
 const SearchableSelect = (() => {
     const WRAP_ATTR = 'data-ss-enhanced';
 
+    // Panel lives in <body> — immune to any ancestor transform / overflow / filter
+    const panelMap = new WeakMap();
+
     // ── Utility ───────────────────────────────────────────────────────────────
 
     function resolve(el) {
@@ -20,6 +23,10 @@ const SearchableSelect = (() => {
 
     function getWrapper(selectEl) {
         return selectEl.closest('.ss-wrap');
+    }
+
+    function getPanel(wrap) {
+        return panelMap.get(wrap);
     }
 
     function getOptions(selectEl) {
@@ -74,12 +81,16 @@ const SearchableSelect = (() => {
         });
 
         wrap.classList.add('ss-open');
-        const triggerEl = wrap.querySelector('.ss-trigger');
-        const searchEl  = wrap.querySelector('.ss-search');
-        const listEl    = wrap.querySelector('.ss-list');
-        const panel     = wrap.querySelector('.ss-panel');
 
-        // Position using viewport coords — works even inside overflow:hidden containers
+        const panel    = getPanel(wrap);
+        const triggerEl = wrap.querySelector('.ss-trigger');
+        const searchEl  = panel.querySelector('.ss-search');
+        const listEl    = panel.querySelector('.ss-list');
+
+        // Show panel, then position it using fresh viewport coords.
+        // Panel lives in <body> so position:fixed always anchors to the viewport,
+        // regardless of transforms / overflow on the page.
+        panel.style.display = 'block';
         const rect = triggerEl.getBoundingClientRect();
         panel.style.top   = (rect.bottom + 3) + 'px';
         panel.style.left  = rect.left + 'px';
@@ -95,6 +106,8 @@ const SearchableSelect = (() => {
         wrap.classList.remove('ss-open');
         const trigger = wrap.querySelector('.ss-trigger');
         if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        const panel = getPanel(wrap);
+        if (panel) panel.style.display = 'none';
     }
 
     // ── Select a value ────────────────────────────────────────────────────────
@@ -119,7 +132,8 @@ const SearchableSelect = (() => {
     // ── Keyboard navigation ───────────────────────────────────────────────────
 
     function handleKeydown(e, wrap, selectEl) {
-        const listEl = wrap.querySelector('.ss-list');
+        const panel  = getPanel(wrap);
+        const listEl = panel?.querySelector('.ss-list');
         const isOpen = wrap.classList.contains('ss-open');
 
         if (e.key === 'Escape') {
@@ -148,7 +162,7 @@ const SearchableSelect = (() => {
         }
         if (e.key === 'Enter') {
             e.preventDefault();
-            const focused = listEl.querySelector('.ss-item--focused');
+            const focused = listEl?.querySelector('.ss-item--focused');
             if (focused) { selectValue(selectEl, focused.dataset.value); close(wrap); }
         }
     }
@@ -164,7 +178,7 @@ const SearchableSelect = (() => {
 
         const placeholder = selectEl.querySelector('option[value=""]')?.textContent.trim() || 'Wybierz...';
 
-        // Build wrapper
+        // Build wrapper (stays in document flow — holds trigger + hidden select)
         const wrap = document.createElement('div');
         wrap.className = 'ss-wrap';
         wrap.dataset.placeholder = placeholder;
@@ -183,7 +197,7 @@ const SearchableSelect = (() => {
         chevron.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
         trigger.appendChild(chevron);
 
-        // Panel
+        // Panel — appended to <body> so position:fixed is always viewport-relative
         const panel = document.createElement('div');
         panel.className = 'ss-panel';
         panel.setAttribute('role', 'listbox');
@@ -201,8 +215,11 @@ const SearchableSelect = (() => {
 
         panel.appendChild(search);
         panel.appendChild(list);
+
         wrap.appendChild(trigger);
-        wrap.appendChild(panel);
+        // Panel goes to body, NOT wrap — breaking the ancestor chain
+        document.body.appendChild(panel);
+        panelMap.set(wrap, panel);
 
         // Insert wrap before select, move select inside wrap (hidden)
         selectEl.parentNode.insertBefore(wrap, selectEl);
@@ -225,9 +242,9 @@ const SearchableSelect = (() => {
 
         wrap.addEventListener('keydown', e => handleKeydown(e, wrap, selectEl));
 
-        // Close on outside click
+        // Close on outside click — must check both wrap and panel (panel is in body)
         document.addEventListener('click', e => {
-            if (!wrap.contains(e.target)) close(wrap);
+            if (!wrap.contains(e.target) && !panel.contains(e.target)) close(wrap);
         }, true);
 
         // Sync label when native select changes from outside code
@@ -243,9 +260,10 @@ const SearchableSelect = (() => {
         updateTriggerLabel(selectEl);
         const wrap = getWrapper(selectEl);
         if (wrap && wrap.classList.contains('ss-open')) {
-            const list   = wrap.querySelector('.ss-list');
-            const search = wrap.querySelector('.ss-search');
-            renderItems(list, getOptions(selectEl), search?.value || '', selectEl);
+            const panel  = getPanel(wrap);
+            const list   = panel?.querySelector('.ss-list');
+            const search = panel?.querySelector('.ss-search');
+            if (list) renderItems(list, getOptions(selectEl), search?.value || '', selectEl);
         }
     }
 
