@@ -311,24 +311,9 @@
 
     .material-icons { font-size: 1rem; }
 
-    /* Balance inline editor */
-    .balance-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.375rem; flex-wrap: wrap; gap: 0.375rem; }
+    /* Balance rows */
+    .balance-row-top { display: flex; align-items: center; margin-bottom: 0.375rem; }
     .balance-cat-name { font-size: 0.8125rem; font-weight: 500; }
-    .balance-edit-area { display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0; }
-    .balance-reason-input { display: none; width: 9rem; padding: 0.2rem 0.5rem; font-family: var(--font-body); font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; outline: none; }
-    .balance-reason-input:focus { border-color: var(--color-ink-muted); }
-    .balance-spinbox { position: relative; display: inline-flex; align-items: center; }
-    .balance-used-input { width: 4.5rem; padding: 0.2rem 1.25rem 0.2rem 0.4rem; font-family: var(--font-body); font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; text-align: right; -moz-appearance: textfield; outline: none; }
-    .balance-used-input:focus { border-color: var(--color-ink-muted); }
-    .balance-used-input::-webkit-outer-spin-button, .balance-used-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-    .balance-spinbox-arrows { position: absolute; right: 1px; top: 1px; bottom: 1px; display: flex; flex-direction: column; width: 1rem; border-left: 1px solid var(--color-border-subtle); }
-    .balance-arrow { flex: 1; border: none; background: transparent; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 0.45rem; color: var(--color-ink-subtle); line-height: 1; }
-    .balance-arrow:hover { color: var(--color-ink); background: var(--color-surface); }
-    .balance-sep { font-size: 0.8125rem; color: var(--color-ink-subtle); white-space: nowrap; }
-    .balance-action-btn { display: none; padding: 0.125rem; border: none; background: none; cursor: pointer; border-radius: 2px; }
-    .balance-action-btn:hover { background: var(--color-surface); }
-    .balance-save-btn .material-icons { font-size: 1rem; color: var(--color-success); vertical-align: middle; }
-    .balance-cancel-btn .material-icons { font-size: 1rem; color: var(--color-error); vertical-align: middle; }
 
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn {
@@ -1144,33 +1129,22 @@ function confirmDelete() {
             const limitStr = b.has_limit ? b.limit : '∞';
             const step = b.unit === 'hours' ? 0.5 : 1;
             const color = barColor(b);
+            const usedStr = b.net_used.toFixed(step === 1 ? 0 : 1);
             return `
-            <div class="balance-row" data-cat-id="${b.category_id}" data-original="${b.net_used.toFixed(1)}" data-unit="${b.unit}" style="margin-bottom:1rem;">
+            <div class="balance-row" data-cat-id="${b.category_id}" data-unit="${b.unit}" style="margin-bottom:1rem;">
                 <div class="balance-row-top">
                     <span class="balance-cat-name">${b.category_name}</span>
-                    <div class="balance-edit-area">
-                        <input type="text" class="balance-reason-input" placeholder="Powód korekty…" oninput="balanceReasonChange(this)">
-                        <div class="balance-spinbox">
-                            <input type="number" class="balance-used-input" value="${b.net_used.toFixed(1)}" step="${step}" min="0" oninput="balanceValueChange(this)">
-                            <div class="balance-spinbox-arrows">
-                                <button type="button" class="balance-arrow" onclick="stepBalance(this,1)" tabindex="-1">&#9650;</button>
-                                <button type="button" class="balance-arrow" onclick="stepBalance(this,-1)" tabindex="-1">&#9660;</button>
-                            </div>
-                        </div>
-                        <span class="balance-sep">/ ${limitStr} ${unitL}</span>
-                        <button type="button" class="balance-action-btn balance-save-btn" onclick="saveBalanceRow(this)" title="Zapisz korektę">
-                            <span class="material-icons">save</span>
-                        </button>
-                        <button type="button" class="balance-action-btn balance-cancel-btn" onclick="cancelBalanceRow(this)" title="Anuluj">
-                            <span class="material-icons">close</span>
-                        </button>
-                    </div>
                 </div>
-                <div style="height:8px;background:var(--color-border);border-radius:2px;overflow:hidden;margin-top:0.25rem;">
+                <div style="height:20px;background:var(--color-border);border-radius:2px;overflow:hidden;">
                     <div style="height:100%;width:${pct}%;background:${color};transition:width 0.4s ease;border-radius:2px;"></div>
                 </div>
-                <div style="font-size:0.75rem;color:var(--color-ink-subtle);margin-top:0.25rem;">
-                    ${b.has_limit ? b.pct.toFixed(1) + '%' : 'Brak limitu'} — okres od ${b.period_start || ''}
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:0.25rem;">
+                    <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
+                        ${b.has_limit ? b.pct.toFixed(1) + '%' : 'Brak limitu'} — okres od ${b.period_start || ''}
+                    </span>
+                    <span style="font-size:0.8125rem;color:var(--color-ink-subtle);font-variant-numeric:tabular-nums;">
+                        ${usedStr} / ${limitStr} ${unitL}
+                    </span>
                 </div>
             </div>`;
         }).join('');
@@ -1199,102 +1173,6 @@ function confirmDelete() {
                     </tr>`).join('');
             } catch (e) { console.error('toggleAdjHistory', e); }
         }
-    };
-
-    function getBalanceRow(el) { return el.closest('.balance-row'); }
-
-    function updateSaveVisibility(row) {
-        const usedInput = row.querySelector('.balance-used-input');
-        const reasonInput = row.querySelector('.balance-reason-input');
-        const saveBtn = row.querySelector('.balance-save-btn');
-        const cancelBtn = row.querySelector('.balance-cancel-btn');
-        const original = parseFloat(row.dataset.original);
-        const current = parseFloat(usedInput.value);
-        const isDirty = !isNaN(current) && Math.abs(current - original) >= 0.001;
-        const hasReason = reasonInput.value.trim().length > 0;
-        reasonInput.style.display = isDirty ? '' : 'none';
-        if (!isDirty) reasonInput.value = '';
-        cancelBtn.style.display = isDirty ? '' : 'none';
-        saveBtn.style.display = (isDirty && hasReason) ? '' : 'none';
-    }
-
-    window.balanceValueChange = function(inputEl) {
-        updateSaveVisibility(getBalanceRow(inputEl));
-    };
-
-    window.balanceReasonChange = function(inputEl) {
-        updateSaveVisibility(getBalanceRow(inputEl));
-    };
-
-    window.stepBalance = function(btnEl, dir) {
-        const row = getBalanceRow(btnEl);
-        const inputEl = row.querySelector('.balance-used-input');
-        const step = parseFloat(inputEl.step) || 1;
-        const val = parseFloat(inputEl.value) || 0;
-        const newVal = Math.max(0, val + dir * step);
-        inputEl.value = newVal.toFixed(step === 1 ? 0 : 1);
-        window.balanceValueChange(inputEl);
-    };
-
-    window.saveBalanceRow = async function(btnEl) {
-        const row = getBalanceRow(btnEl);
-        const catId = parseInt(row.dataset.catId);
-        const original = parseFloat(row.dataset.original);
-        const usedInput = row.querySelector('.balance-used-input');
-        const reasonInput = row.querySelector('.balance-reason-input');
-        const newVal = parseFloat(usedInput.value);
-        const reason = reasonInput.value.trim();
-        const delta = parseFloat((newVal - original).toFixed(1));
-
-        if (!reason) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Podaj powód korekty');
-            return;
-        }
-        if (Math.abs(delta) < 0.001) {
-            if (typeof Notifications !== 'undefined') Notifications.warning('Wartość nie została zmieniona');
-            return;
-        }
-
-        const doSave = async () => {
-            try {
-                const r = await fetch(`/api/employees/${EMP_ID}/absence-adjustments`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({category_id: catId, delta_value: delta, reason, period_label: null}),
-                });
-                const d = await r.json();
-                if (d.success) {
-                    if (typeof Notifications !== 'undefined') Notifications.success('Korekta zapisana');
-                    await loadBalances();
-                } else {
-                    if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd zapisu');
-                }
-            } catch (e) {
-                if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
-            }
-        };
-
-        if (typeof Modals !== 'undefined') {
-            Modals.confirm({
-                title: 'Potwierdź korektę',
-                message: `Zapisać korektę ${delta > 0 ? '+' : ''}${delta.toFixed(1)} dla tej kategorii?`,
-                confirmText: 'Zapisz',
-                onConfirm: doSave,
-            });
-        } else {
-            await doSave();
-        }
-    };
-
-    window.cancelBalanceRow = function(btnEl) {
-        const row = getBalanceRow(btnEl);
-        const usedInput = row.querySelector('.balance-used-input');
-        const reasonInput = row.querySelector('.balance-reason-input');
-        usedInput.value = row.dataset.original;
-        reasonInput.value = '';
-        reasonInput.style.display = 'none';
-        row.querySelector('.balance-save-btn').style.display = 'none';
-        row.querySelector('.balance-cancel-btn').style.display = 'none';
     };
 
     document.addEventListener('DOMContentLoaded', loadBalances);
