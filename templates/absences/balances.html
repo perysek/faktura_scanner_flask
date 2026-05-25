@@ -374,11 +374,11 @@
             </td>
             <td>
                 <div style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;">
+                    ${spinbox('used-input', usedVal)}
+                    <span style="font-size:0.75rem;color:var(--color-ink-subtle);">${unitL}</span>
                     <input type="text" class="row-reason"
                            placeholder="Powód zmiany…"
                            oninput="onReasonChange(this.closest('tr'))">
-                    ${spinbox('used-input', usedVal)}
-                    <span style="font-size:0.75rem;color:var(--color-ink-subtle);">${unitL}</span>
                 </div>
             </td>
             ${limitCell}
