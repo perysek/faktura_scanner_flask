@@ -46,8 +46,8 @@
     .bar-exceeded { background: var(--color-error, #b91c1c); }
 
     /* Status badge */
-    .status-badge { display: inline-block; padding: 0.1875rem 0.5rem; border-radius: 2px;
-        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .status-badge { display: inline-block; padding: 0.1875rem 0.5rem; border-radius: 2px; font-size: 0.6875rem; font-weight:
+    600; text-transform: uppercase; letter-spacing: 0.04em; width: 11rem; text-align: center; }
     .badge-ok       { background: rgba(22,163,74,.1);   color: #15803d; }
     .badge-warning  { background: rgba(194,65,12,.1);   color: #c2410c; }
     .badge-exceeded { background: rgba(185,28,28,.1);   color: #b91c1c; }
@@ -69,7 +69,7 @@
         display: flex; align-items: center; justify-content: center;
         font-size: 0.4rem; color: var(--color-ink-subtle); }
     .row-arrow:hover { color: var(--color-ink); background: var(--color-surface); }
-    .row-period-input { width: 4rem; padding: 0.2rem 0.4rem; font-family: var(--font-body);
+    .row-period-input { width: 6rem; padding: 0.2rem 0.4rem; font-family: var(--font-body);
         font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; outline: none; }
     .row-period-input:focus { border-color: var(--color-ink-muted); }
 
@@ -87,7 +87,7 @@
     .icon-btn.undo-btn   { color: var(--color-ink-muted); }
 
     /* Inline reason input — sits BEFORE the spinbox in the Wykorzystano cell */
-    .row-reason { display: none; width: 7rem; flex-shrink: 0; padding: 0.2rem 0.4rem;
+    .row-reason { display: none; width: 11rem; flex-shrink: 0; padding: 0.2rem 0.4rem;
         font-family: var(--font-body); font-size: 0.75rem;
         border: 1px solid var(--color-border); border-radius: 2px; outline: none; }
     .row-reason:focus { border-color: var(--color-ink-muted); }
@@ -148,9 +148,9 @@
                         <th style="width:9rem;">Kategoria</th>
                         <th style="width:6rem;">Okres</th>
                         <th>Wykorzystano</th>
-                        <th style="width:7rem;">Limit</th>
-                        <th style="width:12rem;">%</th>
-                        <th style="width:13rem;">Status</th>
+                        <th style="width:7rem;text-align:right;">Limit</th>
+                        <th style="width:13rem;text-align:center">%</th>
+                        <th style="width:13rem;text-align:center">Status</th>
                         <th style="width:6rem;">Akcje</th>
                     </tr>
                 </thead>
