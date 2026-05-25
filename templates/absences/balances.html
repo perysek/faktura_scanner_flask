@@ -473,7 +473,7 @@
         const saveBtn    = tr.querySelector('.save-btn');
 
         // Reason field only required when 'used' value is edited (API mandate)
-        reasonEl.style.display = (dirty && usedDirty) ? '' : 'none';
+        reasonEl.style.display = (dirty && usedDirty) ? 'block' : 'none';
         if (!usedDirty) reasonEl.value = '';
 
         const reasonOk = !usedDirty || reasonEl.value.trim().length > 0;
@@ -510,7 +510,7 @@
         const unit   = tr.dataset.unit;
         const unitL  = unitLabel(unit);
         const step   = unit === 'hours' ? 0.5 : 1;
-        const wThresh = parseFloat(tr.dataset.warningThreshold) || 80;
+        const wThresh = parseFloat(tr.dataset.warningThreshold) || 0.8; // decimal fraction, e.g. 0.8 = 80%
 
         if (!limitInput || limit <= 0) {
             barEl.className = 'progress-bar row-bar bar-ok';
@@ -522,7 +522,8 @@
         }
 
         const pct    = (used / limit) * 100;
-        const status = pct >= 100 ? 'exceeded' : pct >= wThresh ? 'warning' : 'ok';
+        // Mirror server logic: net_used >= limit * warning_pct (wThresh is decimal 0.0-1.0)
+        const status = used > limit ? 'exceeded' : used >= limit * wThresh ? 'warning' : 'ok';
 
         barEl.className   = `progress-bar row-bar ${barClass(status)}`;
         barEl.style.width = Math.min(pct, 100) + '%';
