@@ -70,6 +70,7 @@ static/css/output.css
 
 # Data exports (PII)
 *.xlsx
+!tests/fixtures/**/*.xlsx
 rezerwacje_2026.xlsx
 
 # Scratch/temp text files
@@ -89,3 +90,5 @@ entities.json
 
 # Claude Code worktrees
 .claude/worktrees/
+plans/260522-entity-import-step0/*-Klienci.xlsx
+plans/260522-entity-import-step0/*_raw.xlsx
