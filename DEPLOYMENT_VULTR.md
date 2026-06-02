@@ -10,12 +10,12 @@ including PostgreSQL setup and migration of existing data from a SQLite database
 ```
 Your Local Machine                    Vultr VPS (Ubuntu 22.04)
 ──────────────────                    ─────────────────────────
-GitHub repo         ──── git clone ──► /opt/faktura-scanner/
+GitHub repo         ──── git clone ──► /opt/my-way-beauty-salon/
 faktury.db (SQLite) ──── scp      ──► /root/faktury_backup.db
                                             │
                                             ▼
                                       PostgreSQL
-                                      /opt/faktura-scanner/
+                                      /opt/my-way-beauty-salon/
                                       ├── .venv/
                                       ├── .env          (secrets)
                                       ├── data/
@@ -49,7 +49,7 @@ faktury.db (SQLite) ──── scp      ──► /root/faktury_backup.db
    - **Plan:** 2 vCPU / 4 GB RAM (~$24/mo) — recommended for OCR workloads.
      Minimum viable: 1 vCPU / 2 GB RAM (~$12/mo)
    - **SSH Keys:** Add your public key (`~/.ssh/id_ed25519.pub`)
-   - **Server Hostname:** `faktura-scanner`
+   - **Server Hostname:** `my-way-beauty-salon`
 3. Click **Deploy Now** — wait ~60 seconds for provisioning
 4. Note your server's **IP address** from the Vultr dashboard
 
@@ -152,13 +152,13 @@ psql -U faktura_user -h localhost -d faktura_db -c "SELECT version();"
 
 ```bash
 # Create application directory
-sudo mkdir -p /opt/faktura-scanner
-sudo chown deploy:deploy /opt/faktura-scanner
+sudo mkdir -p /opt/my-way-beauty-salon
+sudo chown deploy:deploy /opt/my-way-beauty-salon
 
 # Clone the repository (PostgreSQL branch)
-git clone https://github.com/perysek/faktura_scanner_flask.git /opt/faktura-scanner
+git clone https://github.com/perysek/faktura_scanner_flask.git /opt/my-way-beauty-salon
 
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 
 # Checkout the branch with the PostgreSQL migration
 git checkout feat/ui-improvements-todos
@@ -177,7 +177,7 @@ git log --oneline -4
 ## Step 7 — Set Up Python Virtual Environment
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 
 # Create virtualenv
 python3.11 -m venv .venv
@@ -195,7 +195,7 @@ pip install -r requirements.txt
 ## Step 8 — Build TailwindCSS
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 
 # Install Node.js dependencies
 npm install
@@ -212,13 +212,13 @@ ls -lh static/css/output.css
 ## Step 9 — Create Data Directories
 
 ```bash
-mkdir -p /opt/faktura-scanner/data/uploads
-mkdir -p /opt/faktura-scanner/data/pdfs
-mkdir -p /opt/faktura-scanner/data/temp
+mkdir -p /opt/my-way-beauty-salon/data/uploads
+mkdir -p /opt/my-way-beauty-salon/data/pdfs
+mkdir -p /opt/my-way-beauty-salon/data/temp
 
 # Log directory for Gunicorn
-sudo mkdir -p /var/log/faktura-scanner
-sudo chown deploy:deploy /var/log/faktura-scanner
+sudo mkdir -p /var/log/my-way-beauty-salon
+sudo chown deploy:deploy /var/log/my-way-beauty-salon
 ```
 
 ---
@@ -226,7 +226,7 @@ sudo chown deploy:deploy /var/log/faktura-scanner
 ## Step 10 — Configure Environment Variables
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 
 # Copy the template
 cp .env.example .env
@@ -254,9 +254,9 @@ DATABASE_URL=postgresql://faktura_user:choose_a_strong_password_here@localhost:5
 TESSERACT_CMD=/usr/bin/tesseract
 POPPLER_PATH=/usr/bin
 
-UPLOAD_FOLDER=/opt/faktura-scanner/data/uploads
-PDF_FOLDER=/opt/faktura-scanner/data/pdfs
-TEMP_DIR=/opt/faktura-scanner/data/temp
+UPLOAD_FOLDER=/opt/my-way-beauty-salon/data/uploads
+PDF_FOLDER=/opt/my-way-beauty-salon/data/pdfs
+TEMP_DIR=/opt/my-way-beauty-salon/data/temp
 ```
 
 > **Security:** `.env` contains credentials. It is already in `.gitignore` and
@@ -278,7 +278,7 @@ TEMP_DIR=/opt/faktura-scanner/data/temp
 This creates all tables in PostgreSQL.
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 
 # Load environment variables from .env
 export $(grep -v '^#' .env | xargs)
@@ -336,7 +336,7 @@ scp ./faktury_backup.db deploy@NEW_SERVER_IP:/root/faktury_backup.db
 Back on the **new server**:
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 source .venv/bin/activate
 export $(grep -v '^#' .env | xargs)
 
@@ -374,7 +374,7 @@ Numbers should match what was in your old app.
 This makes the app start automatically on boot and restart on crashes.
 
 ```bash
-sudo nano /etc/systemd/system/faktura-scanner.service
+sudo nano /etc/systemd/system/my-way-beauty-salon.service
 ```
 
 Paste the following:
@@ -387,9 +387,9 @@ After=network.target postgresql.service
 [Service]
 User=deploy
 Group=deploy
-WorkingDirectory=/opt/faktura-scanner
-EnvironmentFile=/opt/faktura-scanner/.env
-ExecStart=/opt/faktura-scanner/.venv/bin/gunicorn \
+WorkingDirectory=/opt/my-way-beauty-salon
+EnvironmentFile=/opt/my-way-beauty-salon/.env
+ExecStart=/opt/my-way-beauty-salon/.venv/bin/gunicorn \
     -c gunicorn.conf.py \
     "app:create_app()"
 Restart=always
@@ -403,24 +403,24 @@ Enable and start the service:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable faktura-scanner    # start on boot
-sudo systemctl start faktura-scanner
+sudo systemctl enable my-way-beauty-salon    # start on boot
+sudo systemctl start my-way-beauty-salon
 
 # Verify it started correctly
-sudo systemctl status faktura-scanner
+sudo systemctl status my-way-beauty-salon
 ```
 
 Expected status output:
 ```
-● faktura-scanner.service - MyWay Faktura Scanner — Flask Application
-     Loaded: loaded (/etc/systemd/system/faktura-scanner.service; enabled)
+● my-way-beauty-salon.service - MyWay Faktura Scanner — Flask Application
+     Loaded: loaded (/etc/systemd/system/my-way-beauty-salon.service; enabled)
      Active: active (running) since ...
 ```
 
 Check for startup errors:
 
 ```bash
-journalctl -u faktura-scanner -n 50
+journalctl -u my-way-beauty-salon -n 50
 # Look for: [INFO] Listening at: http://127.0.0.1:8083
 ```
 
@@ -432,7 +432,7 @@ Nginx sits in front of Gunicorn — it handles HTTPS, serves static files faster
 and protects Gunicorn from direct internet exposure.
 
 ```bash
-sudo nano /etc/nginx/sites-available/faktura-scanner
+sudo nano /etc/nginx/sites-available/my-way-beauty-salon
 ```
 
 **Option A — Access via domain name (recommended):**
@@ -446,7 +446,7 @@ server {
 
     # Serve compiled CSS/JS/images directly — bypasses Python entirely
     location /static {
-        alias /opt/faktura-scanner/static;
+        alias /opt/my-way-beauty-salon/static;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -472,7 +472,7 @@ server {
     client_max_body_size 16M;
 
     location /static {
-        alias /opt/faktura-scanner/static;
+        alias /opt/my-way-beauty-salon/static;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -492,7 +492,7 @@ Enable and test:
 
 ```bash
 # Enable the site
-sudo ln -s /etc/nginx/sites-available/faktura-scanner /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/my-way-beauty-salon /etc/nginx/sites-enabled/
 
 # Remove default nginx site to avoid conflicts
 sudo rm /etc/nginx/sites-enabled/default
@@ -536,7 +536,7 @@ Nginx Full                 ALLOW       Anywhere
 
 ```bash
 # 1. Check service is running
-sudo systemctl status faktura-scanner
+sudo systemctl status my-way-beauty-salon
 sudo systemctl status nginx
 sudo systemctl status postgresql
 
@@ -545,10 +545,10 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost/
 # Expected: HTTP 200
 
 # 3. Check Gunicorn logs
-tail -f /var/log/faktura-scanner/access.log
+tail -f /var/log/my-way-beauty-salon/access.log
 
 # 4. Check application logs
-journalctl -u faktura-scanner -f
+journalctl -u my-way-beauty-salon -f
 ```
 
 Open in your browser: **http://YOUR_SERVER_IP/** (or your domain)
@@ -579,7 +579,7 @@ After this, the app is accessible at `https://your-domain.com`.
 ### Restart the app after code changes
 
 ```bash
-sudo systemctl restart faktura-scanner
+sudo systemctl restart my-way-beauty-salon
 ```
 
 ### Rotate the SECRET_KEY (after any suspected exposure)
@@ -588,16 +588,16 @@ Rotating the key invalidates every active session — all users are logged out.
 That is the intended effect: it instantly revokes any forged or stolen cookie.
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 NEW=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 sudo sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$NEW|" .env
-sudo systemctl restart faktura-scanner
+sudo systemctl restart my-way-beauty-salon
 ```
 
 ### Pull latest code from GitHub
 
 ```bash
-cd /opt/faktura-scanner
+cd /opt/my-way-beauty-salon
 source .venv/bin/activate
 export $(grep -v '^#' .env | xargs)
 
@@ -614,23 +614,23 @@ npm run build:css
 alembic upgrade head
 
 # Restart the service
-sudo systemctl restart faktura-scanner
+sudo systemctl restart my-way-beauty-salon
 
 # Verify
-sudo systemctl status faktura-scanner
+sudo systemctl status my-way-beauty-salon
 ```
 
 ### View live application logs
 
 ```bash
 # Systemd journal (application stdout/stderr)
-journalctl -u faktura-scanner -f
+journalctl -u my-way-beauty-salon -f
 
 # Gunicorn request log
-tail -f /var/log/faktura-scanner/access.log
+tail -f /var/log/my-way-beauty-salon/access.log
 
 # Gunicorn error log
-tail -f /var/log/faktura-scanner/error.log
+tail -f /var/log/my-way-beauty-salon/error.log
 
 # Nginx access log
 tail -f /var/log/nginx/access.log
@@ -666,18 +666,18 @@ psql -U faktura_user -h localhost -d faktura_db
 
 ```bash
 # Check .env exists and has DATABASE_URL
-cat /opt/faktura-scanner/.env | grep DATABASE_URL
+cat /opt/my-way-beauty-salon/.env | grep DATABASE_URL
 
 # Check the systemd service has EnvironmentFile pointing to .env
-sudo systemctl cat faktura-scanner | grep EnvironmentFile
+sudo systemctl cat my-way-beauty-salon | grep EnvironmentFile
 ```
 
 ### App starts but shows 502 Bad Gateway
 
 ```bash
 # Gunicorn not running or crashed
-sudo systemctl status faktura-scanner
-journalctl -u faktura-scanner -n 30
+sudo systemctl status my-way-beauty-salon
+journalctl -u my-way-beauty-salon -n 30
 
 # Check Gunicorn is actually listening
 ss -tlnp | grep 8083
@@ -691,7 +691,7 @@ which tesseract
 # Should be: /usr/bin/tesseract
 
 # Check .env TESSERACT_CMD matches
-grep TESSERACT_CMD /opt/faktura-scanner/.env
+grep TESSERACT_CMD /opt/my-way-beauty-salon/.env
 # Should be: TESSERACT_CMD=/usr/bin/tesseract
 
 # Verify Polish language installed
@@ -707,8 +707,8 @@ The migration skips rows that already exist (by unique key). If you see
 
 ```bash
 # Fix ownership — must match the User= in the systemd service
-sudo chown -R deploy:deploy /opt/faktura-scanner/data
-sudo chown -R deploy:deploy /var/log/faktura-scanner
+sudo chown -R deploy:deploy /opt/my-way-beauty-salon/data
+sudo chown -R deploy:deploy /var/log/my-way-beauty-salon
 ```
 
 ---
@@ -735,7 +735,7 @@ PostgreSQL :5432 (localhost only)
     │  database: faktura_db
     │  user: faktura_user
     ▼
-/opt/faktura-scanner/data/   (PDFs, uploads, temp OCR files)
+/opt/my-way-beauty-salon/data/   (PDFs, uploads, temp OCR files)
 ```
 
 ---
