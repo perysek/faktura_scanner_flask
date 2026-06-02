@@ -245,6 +245,10 @@ Fill in your `.env` with actual values:
 SECRET_KEY=paste_the_generated_32_byte_hex_key_here
 FLASK_ENV=production
 
+# Set to 'true' ONLY when the site is served over HTTPS end-to-end (after Step 17).
+# Over plain HTTP a Secure cookie is dropped by the browser and login breaks.
+SESSION_COOKIE_SECURE=false
+
 DATABASE_URL=postgresql://faktura_user:choose_a_strong_password_here@localhost:5432/faktura_db
 
 TESSERACT_CMD=/usr/bin/tesseract
@@ -257,6 +261,15 @@ TEMP_DIR=/opt/faktura-scanner/data/temp
 
 > **Security:** `.env` contains credentials. It is already in `.gitignore` and
 > must never be committed. Check with `git status` — it should not appear.
+>
+> **`SECRET_KEY` is validated at boot.** The app refuses to start if it is unset,
+> shorter than 32 characters, or a known placeholder (e.g. the `.env.example`
+> default). It signs both session cookies and CSRF tokens — a weak or shared key
+> lets anyone forge a superuser session. Always paste a freshly generated value.
+>
+> **Enable `SESSION_COOKIE_SECURE=true` once HTTPS is live** (Step 17). Until then
+> leave it `false`, or the browser will drop the session cookie over HTTP and
+> nobody can log in.
 
 ---
 
@@ -566,6 +579,18 @@ After this, the app is accessible at `https://your-domain.com`.
 ### Restart the app after code changes
 
 ```bash
+sudo systemctl restart faktura-scanner
+```
+
+### Rotate the SECRET_KEY (after any suspected exposure)
+
+Rotating the key invalidates every active session — all users are logged out.
+That is the intended effect: it instantly revokes any forged or stolen cookie.
+
+```bash
+cd /opt/faktura-scanner
+NEW=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+sudo sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$NEW|" .env
 sudo systemctl restart faktura-scanner
 ```
 

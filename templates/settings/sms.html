@@ -260,6 +260,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
     <div class="form-card">
         <h2 style="font-size:0.9375rem;font-weight:600;margin-bottom:1.25rem;">Dane dostępowe Twilio</h2>
         <form method="POST" action="{{ url_for('sms.sms_credentials_save') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-field">
                 <label class="form-label">Account SID</label>
                 <input type="text" name="account_sid" class="form-input"
@@ -337,6 +338,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
         </summary>
 
         <form method="POST" action="{{ url_for('sms.sms_message_type_save', type_id=mt.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-field">
                 <label class="form-label">Nazwa</label>
                 <input type="text" name="name" class="form-input"
@@ -411,6 +413,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
     <details class="form-card" id="add-custom-type" style="margin-top:1rem;">
         <summary>+ Dodaj własny typ wiadomości</summary>
         <form method="POST" action="{{ url_for('sms.sms_message_type_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-field">
                 <label class="form-label">Nazwa <span style="color:#dc2626">*</span></label>
                 <input type="text" name="name" class="form-input" placeholder="np. Przypomnienie 3 dni" required>

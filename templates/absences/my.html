@@ -180,6 +180,7 @@
             </div>
             {% else %}
             <form method="POST" action="{{ url_for('absence.submit_request') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-grid">
                     <!-- Category -->
                     <div class="form-col-full">
@@ -353,6 +354,7 @@
                                   action="{{ url_for('absence.cancel_own_request', absence_id=ab['id']) }}"
                                   style="display:inline;"
                                   onsubmit="return confirm('Anulować ten wniosek?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="action-icon-btn"
                                         title="Anuluj wniosek" aria-label="Anuluj wniosek"
                                         style="color:#c2410c;">

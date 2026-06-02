@@ -185,6 +185,7 @@
 
             <!-- Login Form -->
             <form method="POST" action="{{ url_for('auth.login') }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <!-- Email -->
                 <div>
                     <label for="email" class="refined-label">

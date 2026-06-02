@@ -5,6 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
 
+    <!-- CSRF token + auto-injection shim.
+         Patches fetch() and XMLHttpRequest so every same-origin mutating request
+         (POST/PUT/PATCH/DELETE) carries the X-CSRFToken header automatically — no
+         per-call-site changes needed. Inline in <head> so it runs before any
+         body script (api.js, upload XHR, inline handlers) issues a request. -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+    (function () {
+        'use strict';
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var token = meta && meta.getAttribute('content');
+        if (!token) return;
+        var MUTATING = /^(POST|PUT|PATCH|DELETE)$/i;
+
+        function sameOrigin(url) {
+            if (!url) return true;                       // relative URL → same origin
+            if (/^https?:\/\//i.test(url)) {
+                return url.indexOf(window.location.origin) === 0;
+            }
+            return true;                                 // "/api/...", "foo" → same origin
+        }
+
+        // --- patch fetch ---
+        var _fetch = window.fetch;
+        if (_fetch) {
+            window.fetch = function (input, init) {
+                init = init || {};
+                var url = (typeof input === 'string') ? input : (input && input.url) || '';
+                var method = init.method ||
+                             (typeof input === 'object' && input && input.method) || 'GET';
+                if (MUTATING.test(method) && sameOrigin(url)) {
+                    var headers = new Headers(
+                        init.headers ||
+                        (typeof input === 'object' && input && input.headers) || {}
+                    );
+                    if (!headers.has('X-CSRFToken')) headers.set('X-CSRFToken', token);
+                    init.headers = headers;
+                }
+                return _fetch.call(this, input, init);
+            };
+        }
+
+        // --- patch XMLHttpRequest (covers the upload XHR in api.js) ---
+        var _open = XMLHttpRequest.prototype.open;
+        var _send = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this.__csrfMutating = MUTATING.test(method) && sameOrigin(url);
+            return _open.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function () {
+            if (this.__csrfMutating) {
+                try { this.setRequestHeader('X-CSRFToken', token); } catch (e) {}
+            }
+            return _send.apply(this, arguments);
+        };
+    })();
+    </script>
+
     <!-- TailwindCSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
 

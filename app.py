@@ -15,6 +15,8 @@ load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
 
 from flask import Flask, render_template
 from flask_login import LoginManager
+from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError
 
 # Configure logging — DEBUG level only when DEBUG=true is explicitly set
 _log_level = logging.DEBUG if os.environ.get('DEBUG', '').lower() == 'true' else logging.INFO
@@ -80,17 +82,46 @@ def create_app():
     app.json = PostgreSQLJSONProvider(app)
 
     # Configuration
-    # SECRET_KEY: required at all times — no fallback, no dev exception
+    # SECRET_KEY: required, and must be a unique high-entropy value.
+    # It signs session cookies AND CSRF tokens — a known/placeholder/short key
+    # lets anyone forge a superuser session, so we reject those at boot.
+    _SECRET_KEY_PLACEHOLDERS = {
+        'change-this-to-a-long-random-string',
+        'changeme', 'change-me', 'secret', 'dev', 'development', 'test',
+    }
+    _SECRET_KEY_GEN_HINT = (
+        'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
     secret_key = os.environ.get('SECRET_KEY')
     if not secret_key:
         raise RuntimeError(
-            'SECRET_KEY environment variable is not set. '
-            'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+            'SECRET_KEY environment variable is not set. ' + _SECRET_KEY_GEN_HINT
+        )
+    if secret_key.strip().lower() in _SECRET_KEY_PLACEHOLDERS or len(secret_key) < 32:
+        raise RuntimeError(
+            'SECRET_KEY is a placeholder or too short (< 32 characters). '
+            'It must be a unique, high-entropy value — a known key lets anyone '
+            'forge a session cookie for any user. ' + _SECRET_KEY_GEN_HINT
         )
     app.config['SECRET_KEY'] = secret_key
     app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['PDF_FOLDER'] = str(PDF_FOLDER)
+
+    # Session cookie hardening (defense-in-depth against CSRF + cookie theft).
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # blocks cross-site POST cookie send
+    # Secure requires HTTPS end-to-end. The live Vultr box is reached over plain
+    # HTTP (raw IP, no TLS cert), so default OFF — a Secure cookie over HTTP is
+    # silently dropped by the browser and login breaks. Flip on via env once a
+    # domain + cert is in place.
+    app.config['SESSION_COOKIE_SECURE'] = (
+        os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+    )
+
+    # CSRF protection — applies to every POST/PUT/PATCH/DELETE by default.
+    # Public, token-authenticated blueprints are exempted after registration.
+    csrf = CSRFProtect(app)
 
     # Flask-Login initialization
     login_manager = LoginManager()
@@ -199,9 +230,29 @@ def create_app():
     app.register_blueprint(public_bp)
     app.register_blueprint(import_bp, url_prefix='/api')
 
+    # CSRF exemptions — anonymous, non-session endpoints whose security boundary
+    # is NOT a session cookie:
+    #   • public_bp  — confirm/cancel/rate/visit, authenticated by an unguessable
+    #                  URL token; CSRF (which protects ambient session creds) is
+    #                  meaningless here, and its 1h token expiry would break SMS
+    #                  links opened hours later.
+    #   • booking_bp — open public booking API; no privileged session to forge.
+    csrf.exempt(public_bp)
+    csrf.exempt(booking_bp)
+
     # Error handlers
     from exceptions import AppError
-    from flask import jsonify, request
+    from flask import jsonify, request, flash
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        """Return a clean message on CSRF failure (JSON for API, HTML otherwise)."""
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False,
+                            'error': 'Sesja wygasła lub token bezpieczeństwa jest '
+                                     'nieprawidłowy. Odśwież stronę i spróbuj ponownie.'}), 400
+        flash('Sesja wygasła. Odśwież stronę i spróbuj ponownie.', 'error')
+        return render_template('errors/500.html'), 400
 
     @app.errorhandler(AppError)
     def handle_app_error(e):
