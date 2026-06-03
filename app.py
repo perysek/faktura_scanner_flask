@@ -45,6 +45,7 @@ from repositories.seller_password_repository import SellerPasswordRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.services.service_repository import ServiceRepository
 from repositories.services.service_category_repository import ServiceCategoryRepository
+from repositories.services.service_price_history_repository import ServicePriceHistoryRepository
 from repositories.employees.employee_repository import EmployeeRepository
 from repositories.employees.forma_zatrudnienia_repository import FormaZatrudnieniaRepository
 from repositories.absences.absence_category_repository import AbsenceCategoryRepository
@@ -173,6 +174,7 @@ def create_app():
     app.client_repo = ClientRepository()
     app.service_repo = ServiceRepository()
     app.service_category_repo = ServiceCategoryRepository()
+    app.service_price_history_repo = ServicePriceHistoryRepository()
     app.employee_repo = EmployeeRepository()
     app.forma_zatrudnienia_repo = FormaZatrudnieniaRepository()
     app.absence_category_repo = AbsenceCategoryRepository()

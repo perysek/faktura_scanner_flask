@@ -793,12 +793,12 @@ async function loadServiceAnalysis() {
     if (!tbody) return;
 
     if (!data.success) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-500">Błąd ładowania danych</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-slate-500">Błąd ładowania danych</td></tr>';
         return;
     }
 
     if (data.services.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-500">Brak danych</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-slate-500">Brak danych</td></tr>';
         return;
     }
 
@@ -808,11 +808,27 @@ async function loadServiceAnalysis() {
                               discount > 0  ? 'text-amber-600' : 'text-green-600';
         const rowClass = s.bookings === 0 ? 'text-slate-400' : '';
         const hasBookings = s.bookings > 0;
+
+        // last_price_change is a full ISO timestamp → new Date() is safe (no date-only shift)
+        const lastChange = s.last_price_change
+            ? new Date(s.last_price_change).toLocaleDateString('pl-PL')
+            : '—';
+        // Trend over the period: current catalogue price vs price at period start
+        const startPrice = s.price_at_period_start == null ? null : parseFloat(s.price_at_period_start);
+        const catPrice = parseFloat(s.catalogue_price);
+        let trendIcon = '—', trendColor = 'text-slate-400';
+        if (startPrice != null) {
+            if (catPrice > startPrice)      { trendIcon = '↑'; trendColor = 'text-red-600'; }
+            else if (catPrice < startPrice) { trendIcon = '↓'; trendColor = 'text-green-600'; }
+            else                            { trendIcon = '='; trendColor = 'text-slate-400'; }
+        }
         return `
             <tr class="${rowClass}">
                 <td class="${s.bookings === 0 ? 'italic' : 'font-medium'}">${escapeHtml(s.service_name)}</td>
                 <td><span class="text-xs">${escapeHtml(s.category || '')}</span></td>
                 <td class="text-right">${formatCurrency(s.catalogue_price)}</td>
+                <td class="text-right text-xs">${lastChange}</td>
+                <td class="text-right ${trendColor} font-medium">${trendIcon}</td>
                 <td class="text-right">${hasBookings ? formatCurrency(s.avg_charged) : '—'}</td>
                 <td class="text-right ${hasBookings ? discountColor : ''} font-medium">
                     ${hasBookings ? `${discount.toFixed(1)}%` : '—'}

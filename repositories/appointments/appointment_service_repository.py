@@ -78,13 +78,18 @@ class AppointmentServiceRepository:
             return result_id
 
     def get_all_for_appointment(self, appointment_id: int) -> List[Any]:
-        """Pobierz wszystkie usługi (główne + mikrousługi) dla wizyty"""
+        """Pobierz wszystkie usługi (główne + mikrousługi) dla wizyty.
+
+        Zwraca też current_catalogue_price (aktualna cena katalogowa usługi),
+        by widok wizyty mógł pokazać odchylenie od historycznie pobranej ceny.
+        """
         query = """
             SELECT
                 aps.*,
                 s.name as service_name,
                 s.category as service_category,
-                s.service_type
+                s.service_type,
+                s.price as current_catalogue_price
             FROM appointment_services aps
             JOIN services s ON s.id = aps.service_id
             WHERE aps.appointment_id = %s

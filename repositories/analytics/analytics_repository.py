@@ -643,8 +643,22 @@ class AnalyticsRepository:
                 COALESCE(SUM(aps.price_charged), 0)                            AS total_revenue,
                 ROUND(
                     (1 - COALESCE(AVG(aps.price_charged), s.price) / NULLIF(s.price, 0)) * 100
-                , 1)                                                            AS avg_discount_pct
+                , 1)                                                            AS avg_discount_pct,
+                sph_start.price                                                 AS price_at_period_start,
+                sph_last.last_change                                            AS last_price_change
             FROM services s
+            LEFT JOIN LATERAL (
+                SELECT price
+                FROM service_price_history
+                WHERE service_id = s.id AND effective_from <= %s
+                ORDER BY effective_from DESC
+                LIMIT 1
+            ) sph_start ON TRUE
+            LEFT JOIN (
+                SELECT service_id, MAX(effective_from) AS last_change
+                FROM service_price_history
+                GROUP BY service_id
+            ) sph_last ON sph_last.service_id = s.id
             LEFT JOIN (
                 SELECT aps.*
                 FROM appointment_services aps
@@ -653,13 +667,14 @@ class AnalyticsRepository:
                     AND a.appointment_date BETWEEN %s AND %s
             ) aps ON aps.service_id = s.id
             WHERE s.is_active = TRUE
-            GROUP BY s.id, s.name, s.category, s.price
+            GROUP BY s.id, s.name, s.category, s.price, sph_start.price, sph_last.last_change
             ORDER BY total_revenue DESC
         """
 
         conn = DatabaseConnection.get_connection()
         cursor = conn.cursor()
-        cursor.execute(query, (start_date, end_date))
+        # Params in SQL text order: lateral effective_from <= start_date, then BETWEEN start/end
+        cursor.execute(query, (start_date, start_date, end_date))
         rows = cursor.fetchall()
 
         return [dict(row) for row in rows]

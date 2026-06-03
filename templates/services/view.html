@@ -264,6 +264,75 @@
         .addon-item { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
         .addon-info { flex-direction: column; align-items: flex-start; }
     }
+
+    /* Price History collapsible panel */
+    .price-history-panel {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        margin-bottom: 1.5rem;
+    }
+
+    .price-history-panel > summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.5rem 2rem;
+        cursor: pointer;
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--color-ink);
+        user-select: none;
+    }
+
+    .price-history-panel > summary::-webkit-details-marker { display: none; }
+
+    .price-history-panel > summary::after {
+        content: 'expand_more';
+        font-family: 'Material Icons';
+        font-size: 1.25rem;
+        margin-left: auto;
+        color: var(--color-ink-subtle);
+        transition: transform 0.2s ease;
+    }
+
+    .price-history-panel[open] > summary::after { transform: rotate(180deg); }
+
+    .badge-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        padding: 0 0.4rem;
+        font-family: var(--font-body);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        background: var(--color-surface);
+        color: var(--color-ink-muted);
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+    }
+
+    .price-history-body { padding: 0 2rem 1.75rem; }
+    .price-history-chart-wrap { height: 120px; margin-bottom: 1.25rem; }
+
+    .price-current-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.125rem 0.5rem;
+        font-size: 0.625rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: rgba(45, 106, 79, 0.08);
+        color: var(--color-success);
+        border-radius: 1px;
+    }
 </style>
 {% endblock %}
 
@@ -337,6 +406,41 @@
             </p>
         </div>
     </div>
+
+    <!-- Price History (RBAC-guarded; lazy-loaded on expand) -->
+    {% if user_permissions.get('service_prices') %}
+    <details id="price-history-panel" class="price-history-panel">
+        <summary>
+            Historia cen
+            <span class="badge-count" id="price-history-count"></span>
+        </summary>
+        <div class="price-history-body">
+            <div id="price-history-loading" style="padding: 1.5rem 0; color: var(--color-ink-subtle); font-size: 0.8125rem;">
+                Wczytywanie historii…
+            </div>
+            <div id="price-history-empty" class="empty-state" style="display: none; padding: 1.5rem 1rem;">
+                <p class="empty-state-text">Brak zarejestrowanych zmian cen</p>
+            </div>
+            <div id="price-history-content" style="display: none;">
+                <div class="price-history-chart-wrap">
+                    <canvas id="priceSparklineChart"></canvas>
+                </div>
+                <table class="refined-table">
+                    <thead>
+                        <tr>
+                            <th>Data od</th>
+                            <th>Data do</th>
+                            <th style="text-align: right;">Cena</th>
+                            <th>Powód</th>
+                            <th>Zmienił</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-history-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+    {% endif %}
 
     <!-- Compatible Addons (only for main services) -->
     {% if service.service_type == 'main' %}
@@ -658,6 +762,129 @@ document.addEventListener('keydown', function(e) {
         window.location.href = '{{ url_for("main.services_list") }}';
     }
 });
+</script>
+
+<!-- Price History panel: lazy-loaded chart + table (only present when RBAC allows) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const panel = document.getElementById('price-history-panel');
+    if (!panel) return;  // RBAC: panel not rendered for this user
+
+    const PH_SERVICE_ID = {{ service.id }};
+    let loaded = false;
+    let chart = null;
+
+    function phEscape(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : text;
+        return div.innerHTML;
+    }
+
+    function fmtPrice(v, currency) {
+        return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            .format(v) + ' ' + (currency || 'PLN');
+    }
+
+    // Parse the ISO timestamp from the API. effective_to === null → current price.
+    function fmtDate(iso) {
+        if (!iso) return '<span class="price-current-badge">aktualnie</span>';
+        return new Date(iso).toLocaleDateString('pl-PL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    }
+
+    function fmtDateShort(iso) {
+        if (!iso) return '';
+        return new Date(iso).toLocaleDateString('pl-PL', { year: '2-digit', month: '2-digit', day: '2-digit' });
+    }
+
+    function drawSparkline(labels, prices) {
+        const canvas = document.getElementById('priceSparklineChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        if (chart) chart.destroy();
+        chart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: prices,
+                    borderColor: '#b45309',
+                    backgroundColor: 'rgba(180, 83, 9, 0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#b45309'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => fmtPrice(ctx.parsed.y, 'PLN')
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                    y: { beginAtZero: false, ticks: { font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    async function loadHistory() {
+        if (loaded) return;
+        loaded = true;
+
+        const loadingEl = document.getElementById('price-history-loading');
+        const contentEl = document.getElementById('price-history-content');
+        const emptyEl = document.getElementById('price-history-empty');
+        const countEl = document.getElementById('price-history-count');
+
+        try {
+            const res = await fetch(`/api/services/${PH_SERVICE_ID}/price-history`);
+            const data = await res.json();
+            loadingEl.style.display = 'none';
+
+            if (!data.success || !data.history || data.history.length === 0) {
+                emptyEl.style.display = 'block';
+                countEl.textContent = '0';
+                return;
+            }
+
+            const history = data.history;  // newest first
+            countEl.textContent = history.length;
+
+            document.getElementById('price-history-tbody').innerHTML = history.map(h => `
+                <tr>
+                    <td>${fmtDate(h.effective_from)}</td>
+                    <td>${fmtDate(h.effective_to)}</td>
+                    <td style="text-align: right; font-weight: 500;">${fmtPrice(h.price, h.currency)}</td>
+                    <td>${h.change_reason ? phEscape(h.change_reason) : '<span style="color: var(--color-ink-subtle);">—</span>'}</td>
+                    <td>${h.changed_by_name ? phEscape(h.changed_by_name) : '<span style="color: var(--color-ink-subtle);">—</span>'}</td>
+                </tr>
+            `).join('');
+
+            contentEl.style.display = 'block';
+
+            // Sparkline wants chronological order (oldest → newest)
+            const chrono = history.slice().reverse();
+            drawSparkline(chrono.map(h => fmtDateShort(h.effective_from)), chrono.map(h => h.price));
+        } catch (err) {
+            console.error('Error loading price history:', err);
+            loadingEl.style.display = 'block';
+            loadingEl.textContent = 'Błąd wczytywania historii cen';
+        }
+    }
+
+    // Lazy-load: only fetch when the user first expands the panel
+    panel.addEventListener('toggle', function () {
+        if (panel.open) loadHistory();
+    });
+})();
 </script>
 
 <!-- Modal System -->
