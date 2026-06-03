@@ -77,6 +77,82 @@ class TestManagedTransaction:
                 assert not is_in_transaction()
 
 
+class TestInvoiceAuditAtomicity:
+    """Improvement #7 Step 2: in routes/api_routes.py the invoice create/update data
+    write and its audit row(s) now share ONE managed_transaction. A financial change
+    can never commit without its forensic audit record, nor an audit row without the
+    change it describes — 'amount changed but nobody logged who' is structurally
+    impossible.
+
+    These tests use a REAL AuditRepository (not a mock) so the audit write genuinely
+    flows through _execute -> safe_commit(conn), which is the mechanism that defers the
+    audit INSERT into the shared transaction. The connection is mocked.
+    """
+
+    def test_audit_write_is_deferred_then_committed_once(self, app):
+        """Inside the transaction the audit INSERT runs but does NOT commit; the single
+        commit happens at block exit — exactly the route's create/update behaviour."""
+        from repositories.audit_repository import AuditRepository
+
+        with app.app_context():
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = Mock()
+            with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
+                audit = AuditRepository()
+                with managed_transaction():
+                    audit.log_change(
+                        invoice_id=1, field_name='amount',
+                        old_value='12000', new_value='1200', action='UPDATE',
+                    )
+                    # The audit INSERT was issued on the shared connection...
+                    mock_conn.cursor.return_value.execute.assert_called_once()
+                    # ...but safe_commit was suppressed while in the transaction.
+                    mock_conn.commit.assert_not_called()
+                # One atomic commit for the whole unit.
+                mock_conn.commit.assert_called_once()
+                mock_conn.rollback.assert_not_called()
+
+    def test_failure_after_audit_rolls_back_the_audit_write(self, app):
+        """If the surrounding operation fails after the audit INSERT was issued, the
+        whole transaction rolls back — the audit row is undone with the data write."""
+        from repositories.audit_repository import AuditRepository
+
+        with app.app_context():
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = Mock()
+            with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
+                audit = AuditRepository()
+                with pytest.raises(RuntimeError, match="invoice write failed"):
+                    with managed_transaction():
+                        audit.log_change(
+                            invoice_id=42, field_name='amount',
+                            old_value='12000', new_value='1200', action='UPDATE',
+                        )
+                        # Simulate the invoice write blowing up after the audit was queued.
+                        raise RuntimeError("invoice write failed")
+                mock_conn.rollback.assert_called_once()
+                mock_conn.commit.assert_not_called()
+
+    def test_audit_failure_rolls_back_invoice_write(self, app):
+        """The headline guarantee: if the audit write itself raises, the data write that
+        preceded it in the same transaction is rolled back (no commit)."""
+        with app.app_context():
+            mock_conn = Mock()
+            with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
+                invoice_repo = Mock()      # stands in for current_app.invoice_repo
+                audit_repo = Mock()        # stands in for current_app.audit_repo
+                audit_repo.log_change.side_effect = Exception("audit_log INSERT failed")
+
+                with pytest.raises(Exception, match="audit_log INSERT failed"):
+                    with managed_transaction():
+                        invoice_repo.update(42, object())       # the financial write
+                        audit_repo.log_change(invoice_id=42)    # blows up
+
+                invoice_repo.update.assert_called_once()
+                mock_conn.rollback.assert_called_once()
+                mock_conn.commit.assert_not_called()
+
+
 class TestCreateAppointmentTransaction:
     """Verify create_appointment rolls back on service insertion failure."""
 
