@@ -251,3 +251,88 @@ def initialize_database():
         logger.info("Baza danych zainicjalizowana")
     finally:
         pool.putconn(conn)
+
+
+def assert_schema_current() -> None:
+    """Fail fast at boot if a migrated database is behind the latest migration.
+
+    Improvement area #1 (schema dual-track): the schema lives in both
+    ``database/schema.sql`` (run on every boot) and the Alembic migration chain.
+    A database that has been brought under Alembic control but is *behind* head
+    (e.g. someone forgot ``alembic upgrade head`` after a deploy) will boot
+    cleanly and then throw a raw ``UndefinedColumn`` 500 the first time a new
+    column is queried. This guard converts that silent runtime failure into a
+    clear boot-time error.
+
+    Behaviour by database state (deliberately conservative — never bricks a
+    fresh/legacy setup that has only ever used schema.sql):
+
+    - ``alembic_version`` present and == head  -> OK (the production case).
+    - ``alembic_version`` present and != head  -> raise (the dangerous case).
+    - ``alembic_version`` absent               -> warn and continue (the DB is
+      on the schema.sql baseline and not yet under Alembic control).
+
+    Set ``SKIP_SCHEMA_CHECK=true`` to bypass entirely (emergency use only).
+    """
+    if os.environ.get('SKIP_SCHEMA_CHECK', '').lower() == 'true':
+        logger.warning("SKIP_SCHEMA_CHECK=true — skipping schema migration guard")
+        return
+
+    try:
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+        cfg_path = Path(__file__).parent.parent / "alembic.ini"
+        head = ScriptDirectory.from_config(Config(str(cfg_path))).get_current_head()
+    except Exception:
+        # Can't determine head (alembic missing/misconfigured) — don't brick boot
+        # over a check that itself failed; surface it loudly instead.
+        logger.warning("Could not determine Alembic head; skipping schema guard",
+                       exc_info=True)
+        return
+
+    try:
+        pool = get_pool()
+        conn = pool.getconn()
+    except Exception:
+        # Pool not initialized (e.g. under test, or boot ordering issue) — don't
+        # brick boot over the guard itself. The app would fail at first query
+        # anyway if the DB were truly unreachable.
+        logger.warning("Connection pool unavailable; skipping schema guard",
+                       exc_info=True)
+        return
+    try:
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT version_num FROM alembic_version")
+            row = cur.fetchone()
+            if row is None:
+                current = None
+            elif isinstance(row, dict):
+                current = row['version_num']
+            else:
+                current = row[0]
+        except Exception:
+            # alembic_version table does not exist — DB is on schema.sql baseline.
+            conn.rollback()
+            current = None
+        finally:
+            cur.close()
+    finally:
+        pool.putconn(conn)
+
+    if current is None:
+        logger.warning(
+            "alembic_version not found — database is not under Alembic control "
+            "(schema.sql baseline). Skipping head check. Run 'alembic upgrade "
+            "head' to bring it under migration control."
+        )
+        return
+
+    if current != head:
+        raise RuntimeError(
+            f"Database schema is at Alembic revision '{current}', but the code "
+            f"expects '{head}'. Run 'alembic upgrade head' before starting the "
+            f"app. (Set SKIP_SCHEMA_CHECK=true to bypass in an emergency.)"
+        )
+
+    logger.info("Schema guard OK — database at head '%s'", head)
