@@ -34,7 +34,7 @@ if _log_level == logging.DEBUG:
 
 # Import configuration
 from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
-from config.database import initialize_database, initialize_pool, close_pool
+from config.database import initialize_database, initialize_pool, close_pool, assert_schema_current
 
 # Import repositories
 from repositories.invoice_repository import InvoiceRepository
@@ -164,6 +164,9 @@ def create_app():
     initialize_pool()
     atexit.register(close_pool)
     initialize_database()
+    # Schema dual-track guard (improvement #1): refuse to boot a migrated DB that
+    # is behind head, turning silent missing-column 500s into a clear boot error.
+    assert_schema_current()
 
     # Initialize repositories
     app.invoice_repo = InvoiceRepository()

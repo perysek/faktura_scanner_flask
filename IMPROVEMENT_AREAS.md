@@ -11,7 +11,7 @@
 
 ## Table of Contents
 
-1. [Schema Dual-Track (schema.sql + Alembic)](#1-schema-dual-track)
+1. [Schema Dual-Track (schema.sql + Alembic)](#1-schema-dual-track) — 🟡 **PARTIAL 2026-06-03**
 2. [Two Competing Repository Access Patterns](#2-two-competing-repository-access-patterns)
 3. [Single-Worker Scaling Ceiling (SSE + Scheduler + Import Runner)](#3-single-worker-scaling-ceiling)
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
@@ -22,6 +22,19 @@
 ---
 
 ## 1. Schema Dual-Track
+
+> 🟡 **PARTIAL — 2026-06-03.** The low-risk half is shipped: `assert_schema_current()`
+> (`config/database.py`) runs at boot right after `initialize_database()` and **fails
+> loud if a migrated DB is behind head** — turning the silent missing-column 500 into
+> a clear boot error. It is conservative by design: *behind head* → raise; *no
+> `alembic_version` table* (schema.sql baseline) → warn & continue; pool unavailable
+> → skip; `SKIP_SCHEMA_CHECK=true` bypasses. Prod verified at head, so zero boot risk.
+> Guard-test coverage in `tests/test_schema_guard.py`. **Deferred (own change):** the
+> structural half — removing `initialize_database()`/`schema.sql` auto-run, adding a
+> baseline migration, and baking `alembic upgrade head` into deploy — because the
+> migration chain mixes `create_table` and `ALTER`s and must be proven to build a
+> fresh DB from empty (a `create_table`-vs-`schema.sql` conflict risk) before it's
+> safe to remove the bootstrap.
 
 ### What is the weakness
 
@@ -955,7 +968,7 @@ trustworthy forensic record.
 | 4 | No CSRF | **Critical** | Low | ✅ DONE 2026-06-03 — CSRFProtect + shim + form tokens |
 | 5 | Weak SECRET_KEY | **Critical** | Low | ✅ DONE 2026-06-03 — boot-time validation + rotation doc |
 | 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-03 — swallowing fixed (`safe_log_event`); atomic-write + mixin remain |
-| 1 | Schema dual-track | High | Medium | Fresh-vs-migrated drift causes random missing-column 500s |
+| 1 | Schema dual-track | High | Medium | 🟡 PARTIAL 2026-06-03 — boot guard added (`assert_schema_current`); schema.sql removal deferred |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
 | 3 | Single-worker ceiling | Medium | High | Already contained at workers=1; only urgent when you must scale |
@@ -963,5 +976,6 @@ trustworthy forensic record.
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
-**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing fixed; atomic-write + mixin deferred).
-Remaining: 7 (finish) · 1 (schema dual-track) · 2 (repo pattern split) · 3 (single-worker ceiling).
+**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing fixed; atomic-write + mixin deferred) ·
+1 🟡 (boot guard added; schema.sql removal deferred).
+Remaining: 7 (finish) · 1 (finish) · 2 (repo pattern split) · 3 (single-worker ceiling).
