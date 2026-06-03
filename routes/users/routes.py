@@ -158,15 +158,12 @@ def api_create():
             user_repo.link_employee(user_id, int(employee_id))
 
         # Log audit
-        try:
-            current_app.audit_repo.log_event(
-                entity_type='user', action='CREATE',
-                entity_id=user_id, entity_label=email,
-                new_value=role,
-                user_id=current_user.id, user_name=current_user.full_name,
-            )
-        except Exception:
-            pass
+        current_app.audit_repo.safe_log_event(
+            entity_type='user', action='CREATE',
+            entity_id=user_id, entity_label=email,
+            new_value=role,
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
 
         return jsonify({'success': True, 'user_id': user_id}), 201
     except ValueError as e:
@@ -244,14 +241,11 @@ def api_update(user_id):
         if employee_id:
             user_repo.link_employee(user_id, int(employee_id))
 
-        try:
-            current_app.audit_repo.log_event(
-                entity_type='user', action='UPDATE',
-                entity_id=user_id, entity_label=email,
-                user_id=current_user.id, user_name=current_user.full_name,
-            )
-        except Exception:
-            pass
+        current_app.audit_repo.safe_log_event(
+            entity_type='user', action='UPDATE',
+            entity_id=user_id, entity_label=email,
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
 
         return jsonify({'success': True})
     except ValueError as e:
@@ -286,14 +280,11 @@ def api_delete(user_id):
         deleted = user_repo.delete_user(user_id)
         if not deleted:
             raise NotFoundError('Uzytkownik nie znaleziony')
-        try:
-            current_app.audit_repo.log_event(
-                entity_type='user', action='DELETE',
-                entity_id=user_id, entity_label=existing.email,
-                user_id=current_user.id, user_name=current_user.full_name,
-            )
-        except Exception:
-            pass
+        current_app.audit_repo.safe_log_event(
+            entity_type='user', action='DELETE',
+            entity_id=user_id, entity_label=existing.email,
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
         return jsonify({'success': True})
     except AppError:
         raise

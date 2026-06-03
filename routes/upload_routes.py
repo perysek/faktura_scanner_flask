@@ -607,21 +607,18 @@ def finalize_uploads():
                 invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
 
                 # Log import event
-                try:
-                    from repositories.audit_repository import AuditRepository
-                    from flask_login import current_user
-                    uid = current_user.id if current_user.is_authenticated else None
-                    uname = current_user.full_name if current_user.is_authenticated else None
-                    AuditRepository().log_event(
-                        entity_type='import', action='IMPORT',
-                        entity_id=invoice_id,
-                        entity_label=f"{invoice.invoice_number} — {invoice.seller_name}",
-                        new_value=filename,
-                        user_id=uid, user_name=uname,
-                        invoice_id=invoice_id,
-                    )
-                except Exception:
-                    pass
+                from repositories.audit_repository import AuditRepository
+                from flask_login import current_user
+                uid = current_user.id if current_user.is_authenticated else None
+                uname = current_user.full_name if current_user.is_authenticated else None
+                AuditRepository().safe_log_event(
+                    entity_type='import', action='IMPORT',
+                    entity_id=invoice_id,
+                    entity_label=f"{invoice.invoice_number} — {invoice.seller_name}",
+                    new_value=filename,
+                    user_id=uid, user_name=uname,
+                    invoice_id=invoice_id,
+                )
 
                 # Increment seller invoice count if seller was linked
                 if seller_id:

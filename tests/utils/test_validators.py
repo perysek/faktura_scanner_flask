@@ -111,10 +111,19 @@ class TestIBANValidator:
         """IBAN bez prefiksu PL (tylko cyfry)"""
         assert IBANValidator.validate("61109010140000071219812874") is False
 
-    def test_iban_inny_kraj_nie_pl(self):
-        """IBAN z innym kodem kraju niz PL"""
-        # Validator only supports PL format
-        assert IBANValidator.validate("DE89370400440532013000") is False
+    def test_iban_inny_kraj_ue_akceptowany(self):
+        """IBAN z innego kraju UE (DE) — walidator wspiera formaty EU (P2-6)"""
+        # Valid German IBAN, correct length (22) and mod-97 checksum.
+        assert IBANValidator.validate("DE89370400440532013000") is True
+
+    def test_iban_ue_zla_suma_kontrolna(self):
+        """IBAN UE z błędną sumą kontrolną — odrzucony"""
+        assert IBANValidator.validate("DE89370400440532013001") is False
+
+    def test_iban_ue_zla_dlugosc(self):
+        """IBAN UE o nieprawidłowej długości dla danego kraju — odrzucony"""
+        # DE expects 22 chars; this is too short.
+        assert IBANValidator.validate("DE8937040044053201") is False
 
     def test_iban_pusty_string(self):
         """Pusty string"""

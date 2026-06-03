@@ -1,0 +1,33 @@
+# Coverage configuration for the pytest suite.
+#
+# The coverage GATE (--cov-fail-under) deliberately lives in the CI workflow
+# (.github/workflows/ci.yml), NOT here and NOT in pytest.ini addopts. Putting a
+# threshold in the default test invocation punishes local single-file runs
+# (`pytest tests/utils/test_validators.py` would "fail" at ~3% coverage even
+# though the test passed). Measurement config lives here; enforcement lives in CI.
+
+[run]
+# Application source packages whose coverage we care about. Test code, the
+# virtualenv, generated migrations, and one-off scripts are excluded.
+source =
+    config
+    repositories
+    routes
+    services
+    utils
+omit =
+    tests/*
+    .venv/*
+    alembic/*
+    scripts/*
+    */__pycache__/*
+
+[report]
+show_missing = True
+skip_covered = False
+# Lines that should never count against coverage.
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    if TYPE_CHECKING:
