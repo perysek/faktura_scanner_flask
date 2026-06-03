@@ -519,6 +519,13 @@ class DataImportService:
             commission_amount = round(suma_brutto * commission_rate / 100, 2)
             total_price = round(suma_brutto, 2)
 
+            # Future-dated imports are upcoming visits, not historical ones:
+            # mark them 'scheduled' so they appear as active bookings in the
+            # calendar. Past/today appointments keep 'completed'. appointment_date
+            # is an ISO 'YYYY-MM-DD' string, so lexical comparison == chronological.
+            appt_status = 'scheduled' if appointment_date > date.today().isoformat() else 'completed'
+            is_future = appt_status == 'scheduled'
+
             if dry_run:
                 stats['inserted'] += 1
                 _appt('inserted',
@@ -528,15 +535,11 @@ class DataImportService:
                       employee_id=int(employee_id), total_price=total_price)
                 _appt_svc(None, service_id, total_price,
                           duration_minutes, commission_rate, commission_amount)
-                _income(None, client_id, employee_id,
-                        total_price, commission_amount, appointment_date, created_at)
+                # Future visits haven't generated revenue yet — no income record.
+                if not is_future:
+                    _income(None, client_id, employee_id,
+                            total_price, commission_amount, appointment_date, created_at)
                 return
-
-            # Future-dated imports are upcoming visits, not historical ones:
-            # mark them 'scheduled' so they appear as active bookings in the
-            # calendar. Past/today appointments keep 'completed'. appointment_date
-            # is an ISO 'YYYY-MM-DD' string, so lexical comparison == chronological.
-            appt_status = 'scheduled' if appointment_date > date.today().isoformat() else 'completed'
 
             # INSERT appointments
             cursor.execute(
@@ -568,30 +571,35 @@ class DataImportService:
                  commission_rate, commission_amount),
             )
 
-            # INSERT income_records
-            cursor.execute(
-                """
-                INSERT INTO income_records (
-                    appointment_id, client_id, employee_id,
-                    total_amount, discount_amount, net_amount, commission_total,
-                    payment_date, created_at
-                ) VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s)
-                """,
-                (appointment_id, client_id, employee_id,
-                 total_price, total_price, commission_amount,
-                 appointment_date, created_at),
-            )
+            # Income + last-visit are past-tense facts: only record them for
+            # completed (past/today) visits. A future 'scheduled' appointment
+            # hasn't happened yet, so recognizing revenue or stamping
+            # last_visit_date in the future would be wrong.
+            if not is_future:
+                # INSERT income_records
+                cursor.execute(
+                    """
+                    INSERT INTO income_records (
+                        appointment_id, client_id, employee_id,
+                        total_amount, discount_amount, net_amount, commission_total,
+                        payment_date, created_at
+                    ) VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s)
+                    """,
+                    (appointment_id, client_id, employee_id,
+                     total_price, total_price, commission_amount,
+                     appointment_date, created_at),
+                )
 
-            # UPDATE clients.last_visit_date
-            cursor.execute(
-                """
-                UPDATE clients
-                SET last_visit_date = %s
-                WHERE id = %s
-                  AND (last_visit_date IS NULL OR last_visit_date < %s)
-                """,
-                (appointment_date, client_id, appointment_date),
-            )
+                # UPDATE clients.last_visit_date
+                cursor.execute(
+                    """
+                    UPDATE clients
+                    SET last_visit_date = %s
+                    WHERE id = %s
+                      AND (last_visit_date IS NULL OR last_visit_date < %s)
+                    """,
+                    (appointment_date, client_id, appointment_date),
+                )
 
             stats['inserted'] += 1
             _appt('inserted',
@@ -601,8 +609,9 @@ class DataImportService:
                   employee_id=int(employee_id), total_price=total_price)
             _appt_svc(int(appointment_id), service_id, total_price,
                       duration_minutes, commission_rate, commission_amount)
-            _income(int(appointment_id), client_id, employee_id,
-                    total_price, commission_amount, appointment_date, created_at)
+            if not is_future:
+                _income(int(appointment_id), client_id, employee_id,
+                        total_price, commission_amount, appointment_date, created_at)
 
         except Exception:
             logger.exception("Error processing row %d", idx)
