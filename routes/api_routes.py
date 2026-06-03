@@ -14,6 +14,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from config.auth_config import module_permission_required
+from config.database import managed_transaction
 from database.models import Invoice
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.ocr_service import PDFPasswordRequired
@@ -27,19 +28,21 @@ api_bp = Blueprint('api', __name__)
 
 def _audit(entity_type, action, entity_id=None, entity_label=None,
            field_name=None, old_value=None, new_value=None):
-    """Log audit event with current user context. Logs errors to stderr."""
-    try:
-        uid = current_user.id if current_user.is_authenticated else None
-        uname = current_user.full_name if current_user.is_authenticated else None
-        AuditRepository().log_event(
-            entity_type=entity_type, action=action,
-            entity_id=entity_id, entity_label=entity_label,
-            field_name=field_name, old_value=old_value, new_value=new_value,
-            user_id=uid, user_name=uname,
-        )
-    except Exception as e:
-        import sys
-        print(f"[AUDIT ERROR] {entity_type}/{action} id={entity_id}: {e}", file=sys.stderr)
+    """Log a non-critical audit event with current user context.
+
+    Routes through AuditRepository.safe_log_event (improvement #7 Step 1) so a failed
+    audit write is logged at ERROR via the module logger and surfaces in monitoring,
+    instead of being printed to stderr and lost. Non-critical by design — callers are
+    status flips / soft signals where an audit hiccup must not break the operation.
+    """
+    uid = current_user.id if current_user.is_authenticated else None
+    uname = current_user.full_name if current_user.is_authenticated else None
+    AuditRepository().safe_log_event(
+        entity_type=entity_type, action=action,
+        entity_id=entity_id, entity_label=entity_label,
+        field_name=field_name, old_value=old_value, new_value=new_value,
+        user_id=uid, user_name=uname,
+    )
 
 
 def _canonical(value) -> str:
@@ -468,21 +471,24 @@ def create_invoice_manual():
                 invoice.pdf_data = pdf_bytes
                 invoice.pdf_filename = unique_filename
         
-        # Save invoice to database
-        invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
-        
-        # Log creation
-        current_app.audit_repo.log_change(
-            invoice_id=invoice_id,
-            field_name='status',
-            old_value='',
-            new_value=invoice.status,
-            action='CREATE'
-        )
-        
-        if seller_id:
-            # Increment invoice count for seller
-            current_app.seller_repo.increment_invoice_count(seller_id)
+        # Save invoice + creation audit + seller-count bump in ONE transaction (#7):
+        # the financial row and its forensic audit record share a single commit, so a
+        # created invoice can never exist without its audit trail (or vice-versa).
+        with managed_transaction():
+            invoice_id = current_app.invoice_repo.create(invoice, seller_id=seller_id)
+
+            # Log creation (inside the txn — a failure here rolls back the invoice)
+            current_app.audit_repo.log_change(
+                invoice_id=invoice_id,
+                field_name='status',
+                old_value='',
+                new_value=invoice.status,
+                action='CREATE'
+            )
+
+            if seller_id:
+                # Increment invoice count for seller
+                current_app.seller_repo.increment_invoice_count(seller_id)
         
         return jsonify({
             'success': True,
@@ -674,21 +680,25 @@ def update_invoice(invoice_id: int):
                 logging.exception('Unexpected error in seller validation (update_invoice)')
                 validation_warnings.append('Błąd walidacji sprzedawcy')
 
-        # Save invoice
-        if new_seller_id is not None:
-            current_app.invoice_repo.update(invoice_id, invoice, seller_id=new_seller_id)
-        else:
-            current_app.invoice_repo.update(invoice_id, invoice)
-        
-        # Log changes
-        for change in changes_to_log:
-            current_app.audit_repo.log_change(
-                invoice_id=invoice_id,
-                field_name=change['field'],
-                old_value=change['old'],
-                new_value=change['new'],
-                action='UPDATE'
-            )
+        # Save invoice + field-change audits in ONE transaction (#7): the amount/seller
+        # edits and their audit rows commit together, so "amount changed but no audit
+        # record of who changed it" becomes structurally impossible — if any audit write
+        # fails, the invoice edit itself rolls back.
+        with managed_transaction():
+            if new_seller_id is not None:
+                current_app.invoice_repo.update(invoice_id, invoice, seller_id=new_seller_id)
+            else:
+                current_app.invoice_repo.update(invoice_id, invoice)
+
+            # Log changes (inside the txn — a failure here rolls back the edit)
+            for change in changes_to_log:
+                current_app.audit_repo.log_change(
+                    invoice_id=invoice_id,
+                    field_name=change['field'],
+                    old_value=change['old'],
+                    new_value=change['new'],
+                    action='UPDATE'
+                )
 
         response_data = {
             'success': True,

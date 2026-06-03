@@ -17,7 +17,7 @@
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
 5. [Weak SECRET_KEY Lifecycle](#5-weak-secret_key-lifecycle) — ✅ **DONE 2026-06-03**
 6. [Unmeasured Test Coverage](#6-unmeasured-test-coverage) — ✅ **DONE 2026-06-03**
-7. [Opt-In, Failure-Swallowing Audit Log](#7-opt-in-failure-swallowing-audit-log) — 🟡 **PARTIAL 2026-06-03**
+7. [Opt-In, Failure-Swallowing Audit Log](#7-opt-in-failure-swallowing-audit-log) — 🟡 **PARTIAL 2026-06-04**
 
 ---
 
@@ -814,17 +814,42 @@ builds.
 
 ## 7. Opt-In, Failure-Swallowing Audit Log
 
-> 🟡 **PARTIAL — 2026-06-03.** Flaw #2 (silent swallowing) is fixed; flaw #1
-> (opt-in coverage) remains. Added `AuditRepository.safe_log_event(critical=False)`:
+> 🟡 **PARTIAL — 2026-06-04.** Flaws #2 (silent swallowing) **and** the headline of
+> Step 2 (atomic audit on the financial path) are now fixed; only Step 3 (the
+> data-layer mixin) remains.
+>
+> **Step 1 — de-swallow (2026-06-03).** Added `AuditRepository.safe_log_event(critical=False)`:
 > a failed audit write is now logged at ERROR (or re-raised when `critical=True`),
 > never silently dropped. Converted **all 9** `try/except: pass` audit sites
 > (`auth` ×5, `users` ×3, `upload` ×1) to it, plus a guard test
-> (`tests/repositories/test_audit_repository.py`) that locks the contract.
-> **Deferred (own change):** Step 2 (audit *inside* `managed_transaction` with the
-> change, so "changed but not logged" becomes structurally impossible) and Step 3
-> (`AuditableMixin` for automatic data-layer audit) — both touch mutation/
-> transaction semantics across auth & user-management and carry production risk
-> that warrants a focused, separately-reviewed change rather than a bundled one.
+> (`tests/repositories/test_audit_repository.py`). (2026-06-04) Also routed the
+> `api_routes._audit` helper — a 10th swallow site that printed failures to stderr
+> instead of monitoring — through `safe_log_event`, so every audit failure now
+> surfaces through one logger path.
+>
+> **Step 2 — atomic audit (2026-06-04).** The canonical financial mutation — invoice
+> create + update in `routes/api_routes.py` — now wraps its data write **and** its
+> audit row(s) in one `managed_transaction()`. Both share a single commit on the
+> per-request connection, so an invoice amount/seller edit can never commit without
+> its forensic audit record, and an audit failure rolls the edit back. Locked by
+> `TestInvoiceAuditAtomicity` (3 tests, real `AuditRepository` so `safe_commit`
+> suppression is genuinely exercised). **384 green.**
+>
+> **Deferred (own change):** Step 3 (`AuditableMixin` for automatic data-layer audit)
+> — it directly conflicts with the existing route-level `log_change` calls (wiring it
+> into `InvoiceRepository` would double-log every mutation), so it requires a
+> coordinated move of audit *out* of the routes and *into* the repos, which is a
+> larger, separately-reviewed refactor.
+>
+> **Blocked (prerequisite needed):** extending atomic audit to the absence-balance
+> path (`AbsenceBalanceService.set_limit / remove_limit / create_adjustment /
+> delete_adjustment`) — those four methods have the *identical* "data write then
+> separate audit write" flaw, but the absence repos (`repositories/absences/*`) call
+> **raw `conn.commit()`** instead of `safe_commit(conn)` (≈20 sites across 6 files),
+> so they ignore the `managed_transaction` flag. Wrapping them would give *fake*
+> atomicity (the data commits immediately; the audit can't be rolled back with it).
+> The real fix is to first migrate those repos from `conn.commit()` → `safe_commit(conn)`
+> — behaviour-preserving outside a transaction, but a broad, separately-tested change.
 
 ### What is the weakness
 
@@ -967,7 +992,7 @@ trustworthy forensic record.
 |---|------|----------|--------|-------------------|
 | 4 | No CSRF | **Critical** | Low | ✅ DONE 2026-06-03 — CSRFProtect + shim + form tokens |
 | 5 | Weak SECRET_KEY | **Critical** | Low | ✅ DONE 2026-06-03 — boot-time validation + rotation doc |
-| 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-03 — swallowing fixed (`safe_log_event`); atomic-write + mixin remain |
+| 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-04 — swallowing + atomic-write (invoice path) done; only data-layer mixin remains |
 | 1 | Schema dual-track | High | Medium | 🟡 PARTIAL 2026-06-03 — boot guard added (`assert_schema_current`); schema.sql removal deferred |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
@@ -976,6 +1001,7 @@ trustworthy forensic record.
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
-**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing fixed; atomic-write + mixin deferred) ·
-1 🟡 (boot guard added; schema.sql removal deferred).
-Remaining: 7 (finish) · 1 (finish) · 2 (repo pattern split) · 3 (single-worker ceiling).
+**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing + atomic-write on invoice path done;
+data-layer mixin deferred) · 1 🟡 (boot guard added; schema.sql removal deferred).
+Remaining: 7 (mixin only) · 1 (finish) · 2 (repo pattern split — note: 290 call sites,
+not "Low" effort) · 3 (single-worker ceiling).
