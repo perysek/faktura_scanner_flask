@@ -3,7 +3,7 @@ Repository dla hierarchii przełożony↔pracownik (employee_supervisors).
 """
 from typing import Any, List
 
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 
 
 class EmployeeSupervisorRepository:
@@ -70,37 +70,37 @@ class EmployeeSupervisorRepository:
             VALUES (%s, %s)
             ON CONFLICT (employee_id, supervisor_employee_id) DO NOTHING
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (employee_id, supervisor_employee_id))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (employee_id, supervisor_employee_id))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def remove_link(self, employee_id: int, supervisor_employee_id: int) -> bool:
         query = """
             DELETE FROM employee_supervisors
             WHERE employee_id = %s AND supervisor_employee_id = %s
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (employee_id, supervisor_employee_id))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (employee_id, supervisor_employee_id))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def remove_all_supervisors_for(self, employee_id: int) -> int:
         """Usuń wszystkich przełożonych pracownika (przy przebudowie hierarchii)."""
         query = "DELETE FROM employee_supervisors WHERE employee_id = %s"
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (employee_id,))
-            conn.commit()
-            return cursor.rowcount
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (employee_id,))
+        safe_commit(conn)
+        return cursor.rowcount
 
     def remove_all_subordinates_for(self, supervisor_employee_id: int) -> int:
         """Usuń wszystkich podwładnych przełożonego (przy przebudowie hierarchii)."""
         query = "DELETE FROM employee_supervisors WHERE supervisor_employee_id = %s"
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (supervisor_employee_id,))
-            conn.commit()
-            return cursor.rowcount
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (supervisor_employee_id,))
+        safe_commit(conn)
+        return cursor.rowcount

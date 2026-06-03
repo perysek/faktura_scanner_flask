@@ -4,7 +4,7 @@ Repository dla kategorii nieobecności (absence_categories).
 from typing import Any, List, Optional
 from datetime import datetime
 
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import AbsenceCategory
 from repositories.db_utils import parse_dt
 
@@ -101,22 +101,22 @@ class AbsenceCategoryRepository:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                category.name,
-                category.description,
-                category.absence_full_day,
-                category.is_tracked,
-                category.count_period,
-                category.resets_at,
-                category.rolling_days,
-                category.warning_threshold_pct,
-                category.default_max_value,
-            ))
-            new_id = cursor.fetchone()['id']
-            conn.commit()
-            return new_id
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            category.name,
+            category.description,
+            category.absence_full_day,
+            category.is_tracked,
+            category.count_period,
+            category.resets_at,
+            category.rolling_days,
+            category.warning_threshold_pct,
+            category.default_max_value,
+        ))
+        new_id = cursor.fetchone()['id']
+        safe_commit(conn)
+        return new_id
 
     def update(self, category_id: int, category: AbsenceCategory) -> bool:
         query = """
@@ -133,22 +133,22 @@ class AbsenceCategoryRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                category.name,
-                category.description,
-                category.absence_full_day,
-                category.is_tracked,
-                category.count_period,
-                category.resets_at,
-                category.rolling_days,
-                category.warning_threshold_pct,
-                category.default_max_value,
-                category_id,
-            ))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            category.name,
+            category.description,
+            category.absence_full_day,
+            category.is_tracked,
+            category.count_period,
+            category.resets_at,
+            category.rolling_days,
+            category.warning_threshold_pct,
+            category.default_max_value,
+            category_id,
+        ))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def soft_delete(self, category_id: int) -> bool:
         query = """
@@ -158,11 +158,11 @@ class AbsenceCategoryRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (category_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (category_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def restore(self, category_id: int) -> bool:
         query = """
@@ -172,8 +172,8 @@ class AbsenceCategoryRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = TRUE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (category_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (category_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0

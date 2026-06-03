@@ -4,7 +4,7 @@ Repository dla nieobecności pracowników (employee_absences).
 from datetime import date, datetime, time
 from typing import Any, List, Optional
 
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import EmployeeAbsence
 from repositories.db_utils import parse_date, parse_dt, parse_time
 
@@ -291,27 +291,27 @@ class AbsenceRepository:
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                absence.employee_id,
-                absence.category_id,
-                absence.date_from.isoformat() if absence.date_from else None,
-                absence.date_to.isoformat() if absence.date_to else None,
-                absence.time_from.strftime('%H:%M:%S') if absence.time_from else None,
-                absence.time_to.strftime('%H:%M:%S') if absence.time_to else None,
-                absence.approver_id,
-                absence.status,
-                absence.rejection_reason,
-                absence.notes,
-                absence.source,
-                absence.requested_at,
-                absence.responded_at,
-                absence.created_by,
-            ))
-            new_id = cursor.fetchone()['id']
-            conn.commit()
-            return new_id
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            absence.employee_id,
+            absence.category_id,
+            absence.date_from.isoformat() if absence.date_from else None,
+            absence.date_to.isoformat() if absence.date_to else None,
+            absence.time_from.strftime('%H:%M:%S') if absence.time_from else None,
+            absence.time_to.strftime('%H:%M:%S') if absence.time_to else None,
+            absence.approver_id,
+            absence.status,
+            absence.rejection_reason,
+            absence.notes,
+            absence.source,
+            absence.requested_at,
+            absence.responded_at,
+            absence.created_by,
+        ))
+        new_id = cursor.fetchone()['id']
+        safe_commit(conn)
+        return new_id
 
     def update(self, absence_id: int, absence: EmployeeAbsence) -> bool:
         """Aktualizacja danych nieobecności — tylko rekordy source='manual'."""
@@ -326,19 +326,19 @@ class AbsenceRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                absence.category_id,
-                absence.date_from.isoformat() if absence.date_from else None,
-                absence.date_to.isoformat() if absence.date_to else None,
-                absence.time_from.strftime('%H:%M:%S') if absence.time_from else None,
-                absence.time_to.strftime('%H:%M:%S') if absence.time_to else None,
-                absence.notes,
-                absence_id,
-            ))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            absence.category_id,
+            absence.date_from.isoformat() if absence.date_from else None,
+            absence.date_to.isoformat() if absence.date_to else None,
+            absence.time_from.strftime('%H:%M:%S') if absence.time_from else None,
+            absence.time_to.strftime('%H:%M:%S') if absence.time_to else None,
+            absence.notes,
+            absence_id,
+        ))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def respond(self, absence_id: int, status: str,
                 approver_id: int, rejection_reason: Optional[str] = None) -> bool:
@@ -352,11 +352,11 @@ class AbsenceRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (status, approver_id, rejection_reason, absence_id))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (status, approver_id, rejection_reason, absence_id))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def cancel(self, absence_id: int) -> bool:
         """Anuluj własny wniosek (tylko status=pending)."""
@@ -366,11 +366,11 @@ class AbsenceRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND status = 'pending' AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (absence_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (absence_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def cancel_approved(self, absence_id: int) -> bool:
         """Anuluj już zatwierdzoną nieobecność (status approved → cancelled).
@@ -385,11 +385,11 @@ class AbsenceRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND status = 'approved' AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (absence_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (absence_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def soft_delete(self, absence_id: int) -> bool:
         query = """
@@ -399,8 +399,8 @@ class AbsenceRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (absence_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (absence_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0

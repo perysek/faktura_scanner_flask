@@ -855,10 +855,15 @@ builds.
 > `tests/services/test_absence_balance_atomicity.py` (6 tests, real repos + real
 > AuditRepository on a shared mocked connection). **390 green.**
 >
-> **Remaining consistency follow-up:** the sibling absence repos (`absence_repository`,
-> `absence_category_repository`, `employee_supervisor_repository`) still call raw
-> `conn.commit()` — harmless today (no audited transaction wraps them yet), but the
-> same `safe_commit` conversion should be applied for consistency when convenient.
+> **Step 2c — full absence-package consistency (2026-06-04).** Migrated the three
+> sibling absence repos too (`absence_repository`, `absence_category_repository`,
+> `employee_supervisor_repository`) — 14 further write sites converted from raw
+> `conn.commit()` to `safe_commit(conn)`. The **entire `repositories/absences/`
+> package** (19 write sites across 5 repos) now uses the deferral-aware pattern, so any
+> of them can be safely composed inside a `managed_transaction` and behave atomically
+> — the raw-commit trap is gone from absences. Behaviour-preserving outside a
+> transaction; guard tests in `tests/repositories/test_absence_repos_safe_commit.py`.
+> **394 green.**
 
 ### What is the weakness
 
