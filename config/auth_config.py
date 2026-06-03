@@ -221,6 +221,19 @@ def can_edit_service_price_history(role_name: str) -> bool:
         return role_name in ('superuser', 'admin')
 
 
+def can_send_appointment_sms(role_name: str) -> bool:
+    """True if the role may send manual SMS from the appointment view.
+
+    Requires 'appointments' access AND the can_send_sms flag. Falls back
+    to built-in admin roles if the roles table is unavailable.
+    """
+    try:
+        from repositories.roles.role_repository import RoleRepository
+        return RoleRepository().role_can_send_sms(role_name)
+    except Exception:
+        return role_name in ('superuser', 'admin')
+
+
 def get_user_module_permissions(role_name: str) -> dict:
     """
     Pobierz dict {module: bool} dla roli użytkownika.

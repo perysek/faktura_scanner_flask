@@ -4,7 +4,7 @@ SMS settings and reminder routes — admin only.
 import logging
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
-from config.auth_config import module_permission_required
+from config.auth_config import module_permission_required, can_send_appointment_sms
 from services.sms_service import SmsService, SmsError
 from repositories.sms.sms_repository import SmsReminderRepository, SmsMessageTypeRepository
 
@@ -142,6 +142,9 @@ def sms_stats():
 @login_required
 @module_permission_required('appointments')
 def send_sms():
+    if not can_send_appointment_sms(current_user.role):
+        return jsonify({'success': False,
+                        'message': 'Brak uprawnień do wysyłania SMS'}), 403
     data = request.get_json()
     appointment_id = data.get('appointment_id')
     message_type_key = data.get('message_type_key')
@@ -177,6 +180,9 @@ def send_sms():
 @login_required
 @module_permission_required('appointments')
 def bulk_send():
+    if not can_send_appointment_sms(current_user.role):
+        return jsonify({'success': False,
+                        'message': 'Brak uprawnień do wysyłania SMS'}), 403
     data = request.get_json()
     ids = data.get('appointment_ids', [])
     message_type_key = data.get('message_type_key')
