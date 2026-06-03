@@ -35,7 +35,7 @@ import asyncio
 import os
 import sqlite3
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -63,10 +63,59 @@ CALDIS_BOOKING_URL = f"{CALDIS_BASE}/Booking"
 # Session state saved here so subsequent headless runs skip login entirely
 SESSION_FILE = PROJECT_ROOT / "assets" / "temp" / "caldis_session.json"
 
+# Failure screenshots / HTML dumps land here for post-mortem diagnosis.
+DEBUG_DIR = SESSION_FILE.parent
+
+# caldis.pl sometimes renders the booking toolbar slowly; retry the export
+# open/download sequence this many times before declaring failure.
+MAX_EXPORT_ATTEMPTS = 3
+
 
 # ---------------------------------------------------------------------------
 # Playwright download
 # ---------------------------------------------------------------------------
+
+async def _apply_date_range(page, ds: str, de: str) -> None:
+    """Set the hidden DateStart/DateEnd inputs and fire change events.
+
+    DateStart/DateEnd are <input type="hidden"> fields that caldis.pl reads
+    server-side when building the export, so assigning ``.value`` is enough.
+    We still dispatch a ``change`` event in case caldis ever wires client-side
+    listeners to the range. Values are passed as evaluate args (not f-string
+    interpolation) to avoid breaking on quotes.
+    """
+    await page.evaluate(
+        """([ds, de]) => {
+            const dsEl = document.getElementById('DateStart');
+            const deEl = document.getElementById('DateEnd');
+            if (dsEl) { dsEl.value = ds; dsEl.dispatchEvent(new Event('change', {bubbles: true})); }
+            if (deEl) { deEl.value = de; deEl.dispatchEvent(new Event('change', {bubbles: true})); }
+        }""",
+        [ds, de],
+    )
+
+
+async def _capture_failure(page, label: str) -> str:
+    """Persist a screenshot + HTML + final URL so failures are diagnosable.
+
+    Returns a human-readable hint (filenames + URL) to embed in the raised
+    error. Best-effort: never raises, so it is safe to call inside an except
+    handler.
+    """
+    try:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+        png  = DEBUG_DIR / f"caldis_fail_{label}_{ts}.png"
+        html = DEBUG_DIR / f"caldis_fail_{label}_{ts}.html"
+        await page.screenshot(path=str(png), full_page=True)
+        html.write_text(await page.content(), encoding="utf-8")
+        return (
+            f"  Diagnostyka zapisana: {png.name} + {html.name}\n"
+            f"  Adres strony w chwili bledu: {page.url}"
+        )
+    except Exception as cap_exc:  # noqa: BLE001 - diagnostics must never mask the real error
+        return f"  (nie udalo sie zapisac diagnostyki: {cap_exc})"
+
 
 async def fetch_xlsx_playwright(
     email: str,
@@ -139,52 +188,79 @@ async def fetch_xlsx_playwright(
         else:
             print("  Sesja aktywna.")
 
-        # Step 2 — Set date filter via JS (bypasses datepicker widget)
+        # Step 2 — Set the export date range via the hidden DateStart/DateEnd
+        # inputs. caldis.pl now defaults to a calendar (day) view, so the old
+        # "#table-booking-list" never renders — we no longer wait for it.
         print("Krok 2/4: Ustawianie zakresu dat...")
         ds = f"{date_start.strftime('%Y-%m-%d')}T00:00:00.000Z"
         de = f"{date_end.strftime('%Y-%m-%d')}T23:59:59.999Z"
-        await page.evaluate(f"""
-            const dsEl = document.getElementById('DateStart');
-            const deEl = document.getElementById('DateEnd');
-            if (dsEl) dsEl.value = '{ds}';
-            if (deEl) deEl.value = '{de}';
-        """)
-        try:
-            await page.wait_for_selector(
-                "#table-booking-list tbody tr", timeout=15_000
-            )
-        except PwTimeout:
-            print("  [INFO] Tabela nie zaladowala sie w czasie - kontynuuje.")
+        await _apply_date_range(page, ds, de)
         print(f"  Zakres: {date_start} -> {date_end}")
 
-        # Step 3 — Open the "..." actions dropdown
+        # Steps 3+4 — Open the export menu and download the xlsx. The toolbar
+        # occasionally renders slowly, so retry the whole open/download
+        # sequence (reload + re-apply filter) instead of failing on the first
+        # timeout. The button id is unchanged, but a single 10s click was flaky.
         print("Krok 3/4: Otwieranie menu eksportu...")
-        try:
-            await page.click("#dropdownMenuSend", timeout=10_000)
-            await page.wait_for_selector(
-                '[data-export-bookings]', state="visible", timeout=10_000
-            )
-        except PwTimeout:
-            await browser.close()
-            raise RuntimeError(
-                "Nie znaleziono przycisku '#dropdownMenuSend'.\n"
-                "Sprawdz czy strona caldis.pl nie zmienila struktury UI."
-            )
+        last_exc = None
+        for attempt in range(1, MAX_EXPORT_ATTEMPTS + 1):
+            try:
+                # Wait for the button to be actionable (not merely present in
+                # the DOM — .count() lies, .click() needs visible + enabled).
+                await page.wait_for_selector(
+                    "#dropdownMenuSend", state="visible", timeout=20_000
+                )
+                btn = page.locator("#dropdownMenuSend")
+                await btn.scroll_into_view_if_needed()
+                await btn.click(timeout=15_000)
+                await page.wait_for_selector(
+                    '[data-export-bookings]', state="visible", timeout=10_000
+                )
 
-        # Step 4 — Intercept file download
-        print("Krok 4/4: Pobieranie pliku xlsx...")
-        async with page.expect_download(timeout=60_000) as dl_info:
-            await page.click('[data-export-bookings="/BookingExport/ExportToXlsx"]')
+                print("Krok 4/4: Pobieranie pliku xlsx...")
+                async with page.expect_download(timeout=60_000) as dl_info:
+                    await page.click(
+                        '[data-export-bookings="/BookingExport/ExportToXlsx"]'
+                    )
+                download = await dl_info.value
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                await download.save_as(str(output_path))
 
-        download = await dl_info.value
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        await download.save_as(str(output_path))
+                size_kb = output_path.stat().st_size // 1024
+                print(f"  Zapisano: {output_path.name} ({size_kb} KB)")
+                await browser.close()
+                return output_path
 
-        size_kb = output_path.stat().st_size // 1024
-        print(f"  Zapisano: {output_path.name} ({size_kb} KB)")
+            except PwTimeout as exc:
+                last_exc = exc
+                print(
+                    f"  [PROBA {attempt}/{MAX_EXPORT_ATTEMPTS}] "
+                    f"Eksport nie powiodl sie ({type(exc).__name__}) - ponawiam..."
+                )
+                if attempt < MAX_EXPORT_ATTEMPTS:
+                    try:
+                        await page.goto(CALDIS_BOOKING_URL, wait_until="networkidle")
+                        await _apply_date_range(page, ds, de)
+                    except Exception:  # noqa: BLE001 - retry is best-effort
+                        pass
+                    await page.wait_for_timeout(1_500)
+
+        # All retries exhausted — capture evidence and raise an honest error
+        # that distinguishes an expired session from a real UI/loading problem.
+        logged_out = "logowanie" in page.url.lower()
+        hint = await _capture_failure(page, "export")
         await browser.close()
-
-    return output_path
+        cause = (
+            "Sesja caldis.pl wygasla - odswiez sesje na stronie /import."
+            if logged_out else
+            "Przycisk eksportu nie stal sie klikalny w wyznaczonym czasie "
+            "(mozliwa zmiana UI caldis.pl albo chwilowy problem z ladowaniem)."
+        )
+        raise RuntimeError(
+            f"Eksport z caldis.pl nie powiodl sie po {MAX_EXPORT_ATTEMPTS} probach.\n"
+            f"  Powod: {cause}\n"
+            f"{hint}"
+        ) from last_exc
 
 
 # ---------------------------------------------------------------------------
