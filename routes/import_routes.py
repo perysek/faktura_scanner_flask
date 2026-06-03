@@ -19,7 +19,7 @@ import os
 import queue as queue_module
 import sys
 import time as _time_module
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -239,8 +239,9 @@ def start_import():
         if date_start > date_end:
             raise ValidationError('date_start musi byc przed lub rowny date_end')
 
-        if date_end > date.today() + timedelta(days=1):
-            raise ValidationError('Data konca nie moze byc dalej niz jutro')
+        # No upper bound on date_end: importing future appointments is allowed.
+        # Future-dated visits are inserted with status 'scheduled' (see
+        # DataImportService._process_row), so they show up as upcoming bookings.
 
         repo = ImportLogRepository()
         if repo.has_running_import():
