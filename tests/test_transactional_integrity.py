@@ -100,6 +100,14 @@ class TestCreateAppointmentTransaction:
             with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
                 svc = AppointmentBusinessService()
 
+                # Pre-transaction validators added by later features (working-hours
+                # guard, absence-conflict check) are out of scope for this rollback
+                # test and depend on un-mocked repos — stub them so the flow reaches
+                # the managed_transaction block we actually want to exercise.
+                svc._validate_working_hours = Mock(return_value=None)
+                svc.absence_repo = Mock()
+                svc.absence_repo.check_absence_conflicts.return_value = []
+
                 # Setup pricing
                 svc.pricing.calculate_appointment_total.return_value = {
                     'total_price': Decimal('100'),
@@ -208,11 +216,19 @@ class TestUpdateAppointmentTransaction:
             with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
                 svc = AppointmentBusinessService()
 
+                # appointment_date/start_time are read pre-transaction by the
+                # reschedule "timing changed?" guard added in a later feature.
                 svc.appt_repo.get_by_id.return_value = {
                     'status': 'scheduled',
                     'client_id': 1,
                     'employee_id': 1,
+                    'appointment_date': date(2026, 2, 1),
+                    'start_time': time(10, 0),
                 }
+                # Stub later-feature validators (working-hours, absence conflicts).
+                svc._validate_working_hours = Mock(return_value=None)
+                svc.absence_repo = Mock()
+                svc.absence_repo.check_absence_conflicts.return_value = []
                 svc.appt_repo.check_conflicts.return_value = []
                 svc.appt_repo.check_client_conflicts.return_value = []
 

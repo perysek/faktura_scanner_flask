@@ -1,9 +1,12 @@
 """
 Repository dla historii zmian (audit log)
 """
+import logging
 from typing import List, Optional
 
 from repositories.base_repository import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class AuditRepository(BaseRepository):
@@ -36,6 +39,30 @@ class AuditRepository(BaseRepository):
             entity_type, entity_id, entity_label, invoice_id,
             action, field_name, old_value, new_value, user_id, user_name,
         ))
+
+    def safe_log_event(self, *, critical: bool = False, **kwargs) -> bool:
+        """Log an audit event without ever silently losing it.
+
+        The previous call sites used ``try: log_event(...) except Exception: pass``,
+        which made a failed audit write indistinguishable from a successful one —
+        fatal for a system whose audit trail is a financial/PII forensic artifact.
+
+        On failure:
+          - ``critical=False`` (default): log at ERROR so the dropped write surfaces
+            in monitoring, but do NOT disrupt the business operation. Returns False.
+          - ``critical=True``: re-raise, so the caller fails rather than proceeding
+            un-audited (use for sensitive financial/RBAC mutations).
+
+        Returns True on success, False on a swallowed (non-critical) failure.
+        """
+        try:
+            self.log_event(**kwargs)
+            return True
+        except Exception:
+            logger.error("AUDIT WRITE FAILED: %s", kwargs, exc_info=True)
+            if critical:
+                raise
+            return False
 
     def log_change(
         self, invoice_id: int, field_name: str, old_value: str,

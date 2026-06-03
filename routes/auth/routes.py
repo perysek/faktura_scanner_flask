@@ -42,29 +42,23 @@ def login():
             login_user(user, remember=remember)
             flash(f'Witaj, {user.full_name}!', 'success')
 
-            try:
-                AuditRepository().log_event(
-                    entity_type='login', action='LOGIN',
-                    entity_label=user.email,
-                    new_value=request.remote_addr,
-                    user_id=user.id, user_name=user.full_name,
-                )
-            except Exception:
-                pass
+            AuditRepository().safe_log_event(
+                entity_type='login', action='LOGIN',
+                entity_label=user.email,
+                new_value=request.remote_addr,
+                user_id=user.id, user_name=user.full_name,
+            )
 
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)
             return redirect(url_for('auth.profile'))
         else:
-            try:
-                AuditRepository().log_event(
-                    entity_type='login', action='LOGIN_FAILED',
-                    entity_label=email,
-                    new_value=request.remote_addr,
-                )
-            except Exception:
-                pass
+            AuditRepository().safe_log_event(
+                entity_type='login', action='LOGIN_FAILED',
+                entity_label=email,
+                new_value=request.remote_addr,
+            )
             flash(error_message, 'error')
             return render_template('auth/login.html', email=email)
 
@@ -75,14 +69,11 @@ def login():
 @login_required
 def logout():
     """Wylogowanie użytkownika"""
-    try:
-        AuditRepository().log_event(
-            entity_type='login', action='LOGOUT',
-            entity_label=current_user.email,
-            user_id=current_user.id, user_name=current_user.full_name,
-        )
-    except Exception:
-        pass
+    AuditRepository().safe_log_event(
+        entity_type='login', action='LOGOUT',
+        entity_label=current_user.email,
+        user_id=current_user.id, user_name=current_user.full_name,
+    )
     logout_user()
     flash('Zostałeś wylogowany', 'info')
     return redirect(url_for('auth.login'))
@@ -171,13 +162,10 @@ def forgot_password():
 
                 reset_url = url_for('auth.reset_password', token=token, _external=True)
 
-                try:
-                    AuditRepository().log_event(
-                        entity_type='user', action='PASSWORD_RESET_REQUESTED',
-                        entity_id=user.id, entity_label=user.email,
-                    )
-                except Exception:
-                    pass
+                AuditRepository().safe_log_event(
+                    entity_type='user', action='PASSWORD_RESET_REQUESTED',
+                    entity_id=user.id, entity_label=user.email,
+                )
 
             # Always show the same neutral message (prevents email enumeration)
             # reset_url is only set when user was found
@@ -222,14 +210,11 @@ def reset_password(token: str):
         )
         conn.commit()
 
-        try:
-            AuditRepository().log_event(
-                entity_type='user', action='PASSWORD_RESET',
-                entity_id=token_row['user_id'],
-                new_value=request.remote_addr,
-            )
-        except Exception:
-            pass
+        AuditRepository().safe_log_event(
+            entity_type='user', action='PASSWORD_RESET',
+            entity_id=token_row['user_id'],
+            new_value=request.remote_addr,
+        )
 
         flash('Hasło zostało zmienione. Możesz się teraz zalogować.', 'success')
         return redirect(url_for('auth.login'))

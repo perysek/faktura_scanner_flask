@@ -826,7 +826,7 @@ class AppointmentRepository:
 
     def get_today_for_employee(self, employee_id: int) -> List[Any]:
         """Today's appointments for an employee, ordered by start time."""
-        sql = """
+        sql = f"""
             SELECT a.id, a.appointment_date, a.start_time, a.end_time,
                    a.status, a.employee_token,
                    c.first_name || ' ' || c.last_name AS client_name,
@@ -838,7 +838,7 @@ class AppointmentRepository:
             WHERE a.employee_id = %s
               AND a.appointment_date = CURRENT_DATE
               AND a.is_deleted = FALSE
-              AND a.status NOT IN ('cancelled', 'no_show')
+              AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
             GROUP BY a.id, a.appointment_date, a.start_time, a.end_time,
                      a.status, a.employee_token,
                      c.first_name, c.last_name

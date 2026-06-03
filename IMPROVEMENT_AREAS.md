@@ -16,8 +16,8 @@
 3. [Single-Worker Scaling Ceiling (SSE + Scheduler + Import Runner)](#3-single-worker-scaling-ceiling)
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
 5. [Weak SECRET_KEY Lifecycle](#5-weak-secret_key-lifecycle) — ✅ **DONE 2026-06-03**
-6. [Unmeasured Test Coverage](#6-unmeasured-test-coverage)
-7. [Opt-In, Failure-Swallowing Audit Log](#7-opt-in-failure-swallowing-audit-log)
+6. [Unmeasured Test Coverage](#6-unmeasured-test-coverage) — ✅ **DONE 2026-06-03**
+7. [Opt-In, Failure-Swallowing Audit Log](#7-opt-in-failure-swallowing-audit-log) — 🟡 **PARTIAL 2026-06-03**
 
 ---
 
@@ -661,6 +661,23 @@ unusable; and there is a one-command rotation play for incident response.
 
 ## 6. Unmeasured Test Coverage
 
+> ✅ **COMPLETED — 2026-06-03.** Coverage is now measured and gated. Reality
+> differed from this section's assumptions: a real pytest suite already existed
+> (~375 tests across `repositories/`, `routes/`, `services/`, `utils/`, including
+> the exact `managed_transaction` invariant test Step 3 proposes) — but it was
+> **silently broken**. Improvement #5's `SECRET_KEY` boot check rejected
+> `conftest.py`'s 15-char test key, erroring 16 tests; two transaction-rollback
+> tests had rotted against later appointment features (missing `appointment_date`
+> mock + un-stubbed working-hours/absence validators); one IBAN test was stale
+> (validator was broadened to all EU IBANs in P2-6). All fixed → **375 green**.
+> Added `.coveragerc` (the gate lives in CI, *not* in `pytest.ini addopts`, so
+> single-file local runs aren't punished with a threshold) and a real
+> **`.github/workflows/ci.yml`** that runs the suite with `--cov-fail-under=25`
+> (today's baseline: 28%). No Postgres service needed — the suite is fully
+> mock-based (`conftest.py` patches the pool; the `integration` marker is unused).
+> Cleaned up the stale root scripts: deleted the SQLite-era `test_db_schema.py`
+> and moved the two live-server smoke scripts to `scripts/manual/`.
+
 ### What is the weakness
 
 Tests exist (`tests/`, plus root-level `test_api_endpoints.py`, `test_db_schema.py`,
@@ -783,6 +800,18 @@ builds.
 ---
 
 ## 7. Opt-In, Failure-Swallowing Audit Log
+
+> 🟡 **PARTIAL — 2026-06-03.** Flaw #2 (silent swallowing) is fixed; flaw #1
+> (opt-in coverage) remains. Added `AuditRepository.safe_log_event(critical=False)`:
+> a failed audit write is now logged at ERROR (or re-raised when `critical=True`),
+> never silently dropped. Converted **all 9** `try/except: pass` audit sites
+> (`auth` ×5, `users` ×3, `upload` ×1) to it, plus a guard test
+> (`tests/repositories/test_audit_repository.py`) that locks the contract.
+> **Deferred (own change):** Step 2 (audit *inside* `managed_transaction` with the
+> change, so "changed but not logged" becomes structurally impossible) and Step 3
+> (`AuditableMixin` for automatic data-layer audit) — both touch mutation/
+> transaction semantics across auth & user-management and carry production risk
+> that warrants a focused, separately-reviewed change rather than a bundled one.
 
 ### What is the weakness
 
@@ -925,11 +954,14 @@ trustworthy forensic record.
 |---|------|----------|--------|-------------------|
 | 4 | No CSRF | **Critical** | Low | ✅ DONE 2026-06-03 — CSRFProtect + shim + form tokens |
 | 5 | Weak SECRET_KEY | **Critical** | Low | ✅ DONE 2026-06-03 — boot-time validation + rotation doc |
-| 7 | Audit swallows failures | High | Medium | Financial/PII forensics depend on it; atomic-with-change is the key move |
+| 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-03 — swallowing fixed (`safe_log_event`); atomic-write + mixin remain |
 | 1 | Schema dual-track | High | Medium | Fresh-vs-migrated drift causes random missing-column 500s |
-| 6 | Unmeasured tests | High | Medium | Guards every other fix from silent regression |
+| 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
 | 3 | Single-worker ceiling | Medium | High | Already contained at workers=1; only urgent when you must scale |
 
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
+
+**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing fixed; atomic-write + mixin deferred).
+Remaining: 7 (finish) · 1 (schema dual-track) · 2 (repo pattern split) · 3 (single-worker ceiling).

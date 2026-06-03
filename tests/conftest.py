@@ -18,7 +18,9 @@ def app():
     """
     import os
     os.environ['FLASK_ENV'] = 'development'
-    os.environ['SECRET_KEY'] = 'test-secret-key'
+    # Must be >= 32 chars and not a known placeholder — app.py validates SECRET_KEY
+    # entropy at boot (improvement #5). A short/placeholder key is rejected.
+    os.environ['SECRET_KEY'] = 'b1946ac92492d2347c6235b4d2611184b1946ac92492d2347c6235b4d2611184'
     os.environ.setdefault('DATABASE_URL', 'postgresql://test:test@localhost/test')
 
     # Patch pool + DB initialization before importing app to prevent real connection

@@ -34,6 +34,13 @@ Thumbs.db
 # Logs
 *.log
 
+# Test coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.pytest_cache/
+
 # Environment
 .env
 .env.local
