@@ -372,6 +372,25 @@ class AbsenceRepository:
             conn.commit()
             return cursor.rowcount > 0
 
+    def cancel_approved(self, absence_id: int) -> bool:
+        """Anuluj już zatwierdzoną nieobecność (status approved → cancelled).
+
+        Zwalnia sloty w kalendarzu: wszystkie widoki kalendarza czytają wyłącznie
+        rekordy ze status='approved', więc po przejściu na 'cancelled' nieobecność
+        znika z kalendarza, a sloty pracownika stają się znów dostępne do rezerwacji.
+        """
+        query = """
+            UPDATE employee_absences
+            SET status = 'cancelled',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND status = 'approved' AND is_deleted = FALSE
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (absence_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
     def soft_delete(self, absence_id: int) -> bool:
         query = """
             UPDATE employee_absences

@@ -289,6 +289,33 @@ const Absences = {
         });
     },
 
+    // ── Cancel an already-approved absence (superuser only) ───────────────────
+
+    cancelApproved(absenceId) {
+        Modals.confirm({
+            title: 'Anuluj zatwierdzoną nieobecność',
+            message: 'Anulować tę nieobecność? Sloty pracownika zostaną zwolnione w kalendarzu, ' +
+                     'a wpis otrzyma status „Anulowany”.',
+            confirmText: 'Anuluj nieobecność',
+            onConfirm: () => {
+                fetch(`/absences/${absenceId}/cancel-approved`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        Notifications.success('Nieobecność anulowana — sloty zwolnione');
+                        setTimeout(() => location.reload(), 700);
+                    } else {
+                        Notifications.error(res.error || 'Błąd anulowania');
+                    }
+                })
+                .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+            },
+        });
+    },
+
     // ── Category management ───────────────────────────────────────────────────
 
     openCategoryForm(id, name, desc, fullDay, isTracked, countPeriod, resetsAt, defaultMax, warnPct) {

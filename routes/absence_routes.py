@@ -3,12 +3,14 @@ Routes zarządzania nieobecnościami pracowników.
 
 GET  /my-absences                    — pracownik: własna lista + formularz wniosku
 POST /my-absences/submit             — złóż wniosek
-POST /my-absences/<id>/cancel        — anuluj własny wniosek
+POST /my-absences/<id>/cancel        — anuluj własny wniosek (pending)
+POST /my-absences/<id>/cancel-approved — anuluj własną zatwierdzoną nieobecność (zwalnia sloty)
 
 GET  /absences                       — przełożony: 3-tabowy widok zarządzania
 POST /absences/<id>/approve          — zatwierdź (JSON; może zwrócić conflict)
 POST /absences/<id>/approve/force    — zatwierdź z pominięciem konfliktów
 POST /absences/<id>/reject           — odrzuć (JSON, wymaga rejection_reason)
+POST /absences/<id>/cancel-approved  — anuluj zatwierdzoną nieobecność (superuser; zwalnia sloty)
 POST /absences/manual                — ręczna rejestracja nieobecności (L4)
 PUT  /absences/<id>                  — edytuj manualną nieobecność
 DELETE /absences/<id>               — soft delete
@@ -147,6 +149,25 @@ def cancel_own_request(absence_id: int):
     return redirect(url_for('absence.my_absences'))
 
 
+@absence_bp.route('/my-absences/<int:absence_id>/cancel-approved', methods=['POST'])
+@login_required
+def cancel_own_approved_request(absence_id: int):
+    """Pracownik anuluje własną już zatwierdzoną nieobecność.
+
+    Ownership wymuszany w serwisie. Zwalnia sloty pracownika w kalendarzu
+    (status approved → cancelled).
+    """
+    emp = _get_employee_or_403()
+    if not emp:
+        return redirect(url_for('main.dashboard'))
+    try:
+        _svc().cancel_own_approved(absence_id, emp['id'], cancelled_by=current_user.id)
+        flash('Nieobecność została anulowana — sloty w kalendarzu zostały zwolnione.', 'success')
+    except (AbsenceError, AppError) as e:
+        flash(str(e), 'error')
+    return redirect(url_for('absence.my_absences'))
+
+
 # ── supervisor management ─────────────────────────────────────────────────────
 
 @absence_bp.route('/absences')
@@ -222,6 +243,27 @@ def reject_request(absence_id: int):
     try:
         _svc().reject(absence_id, emp_id, rejection_reason)
         return jsonify({'success': True, 'status': 'rejected'})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@absence_bp.route('/absences/<int:absence_id>/cancel-approved', methods=['POST'])
+@absence_management_required
+def cancel_approved_absence(absence_id: int):
+    """Anuluj już zatwierdzoną nieobecność — wyłącznie superuser.
+
+    Zwalnia sloty pracownika w kalendarzu (status approved → cancelled).
+    `absence_management_required` wpuszcza też admina/przełożonych, więc
+    zawężamy uprawnienie do superusera na poziomie serwera (a nie tylko UI).
+    """
+    if current_user.role != 'superuser':
+        return jsonify({
+            'success': False,
+            'error': 'Tylko superuser może anulować zatwierdzone nieobecności',
+        }), 403
+    try:
+        _svc().cancel_approved(absence_id, cancelled_by=current_user.id)
+        return jsonify({'success': True, 'status': 'cancelled'})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
