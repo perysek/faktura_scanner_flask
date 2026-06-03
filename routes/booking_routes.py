@@ -15,15 +15,22 @@ from repositories.clients.client_repository import ClientRepository
 from repositories.audit_repository import AuditRepository
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from database.models import Client
+from utils.work_schedule import (
+    WEEKDAY_KEYS as _WEEKDAY_KEYS,
+    DEFAULT_WORK_START as _DEFAULT_WORK_START,
+    DEFAULT_WORK_END as _DEFAULT_WORK_END,
+    parse_day_hours as _parse_day_hours,
+    work_hours_for_day as _work_hours_for_day,
+)
 
 logger = logging.getLogger(__name__)
 
 booking_bp = Blueprint('booking', __name__)
 
 # ─── Constants ───────────────────────────────────────────────────────────────
-_WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-_DEFAULT_WORK_START = time(9, 0)
-_DEFAULT_WORK_END   = time(18, 0)
+# Schedule parsing (WEEKDAY_KEYS, defaults, parse_day_hours, work_hours_for_day)
+# now lives in utils.work_schedule and is imported at the top of this module so
+# the public booking flow and the internal appointment service stay in sync.
 
 _DAY_PL = {
     'mon': 'pon', 'tue': 'wt', 'wed': 'śr',
@@ -32,31 +39,6 @@ _DAY_PL = {
 
 
 # ─── Schedule Helpers ─────────────────────────────────────────────────────────
-
-def _parse_schedule_time_part(t_str: str) -> time:
-    """Parse "H", "HH", or "HH:MM" to a time object."""
-    t_str = t_str.strip()
-    if ':' in t_str:
-        return datetime.strptime(t_str, '%H:%M').time()
-    return time(int(t_str), 0)
-
-
-def _parse_day_hours(schedule_dict: dict, day_key: str):
-    """Return (start_time, end_time) for a day, or None if off.
-
-    Accepts schedule values like "9-17", "9:30-18:30", "0", "".
-    """
-    val = schedule_dict.get(day_key, '').strip()
-    if not val or val == '0':
-        return None
-    parts = val.split('-')
-    if len(parts) != 2:
-        return None
-    try:
-        return _parse_schedule_time_part(parts[0]), _parse_schedule_time_part(parts[1])
-    except (ValueError, AttributeError):
-        return None
-
 
 def _schedule_info(work_schedule_json) -> dict:
     """Parse work_schedule JSON string into booking-friendly data.
@@ -100,24 +82,6 @@ def _schedule_info(work_schedule_json) -> dict:
         hours_display = 'Godziny zmienne'
 
     return {'available_days': available_days, 'hours_display': hours_display}
-
-
-def _work_hours_for_day(work_schedule_json, day_key: str):
-    """Return (start_time, end_time) for a specific day, or default if no schedule."""
-    sched: dict = {}
-    if work_schedule_json:
-        try:
-            sched = json.loads(work_schedule_json) if isinstance(work_schedule_json, str) else work_schedule_json
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    if not sched:
-        return _DEFAULT_WORK_START, _DEFAULT_WORK_END
-
-    hours = _parse_day_hours(sched, day_key)
-    if hours is None:
-        return None  # Employee is off on this day
-    return hours
 
 
 # ─── Routing Helpers ──────────────────────────────────────────────────────────

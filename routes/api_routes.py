@@ -3919,6 +3919,14 @@ def create_employee_endpoint():
             if existing:
                 return jsonify({'success': False, 'error': 'Pracownik z tym adresem email już istnieje'}), 400
 
+        # A user account can link to only one employee (UNIQUE constraint on employees.user_id)
+        if data.get('user_id'):
+            linked = current_app.employee_repo.get_by_user_id(data.get('user_id'))
+            if linked:
+                return jsonify({'success': False, 'error':
+                    f"To konto użytkownika jest już przypisane do pracownika "
+                    f"{linked['first_name']} {linked['last_name']}"}), 400
+
         from database.models import Employee
         import json
 
@@ -3981,6 +3989,14 @@ def update_employee(employee_id):
             if email_check and email_check['id'] != employee_id:
                 return jsonify({'success': False, 'error': 'Pracownik z tym adresem email już istnieje'}), 400
 
+        # A user account can link to only one employee (UNIQUE constraint on employees.user_id)
+        if data.get('user_id'):
+            linked = current_app.employee_repo.get_by_user_id(data.get('user_id'))
+            if linked and linked['id'] != employee_id:
+                return jsonify({'success': False, 'error':
+                    f"To konto użytkownika jest już przypisane do pracownika "
+                    f"{linked['first_name']} {linked['last_name']}"}), 400
+
         from database.models import Employee
         import json
 
@@ -4017,7 +4033,7 @@ def update_employee(employee_id):
                            ['first_name', 'last_name', 'phone', 'email',
                             'position', 'employment_status', 'hire_date',
                             'termination_date', 'base_salary', 'commission_rate',
-                            'employer_cost_rate', 'forma_zatrudnienia_id',
+                            'employer_cost_rate', 'forma_zatrudnienia_id', 'user_id',
                             'max_appointments_per_day', 'notes', 'is_active'])
             return jsonify({
                 'success': True,

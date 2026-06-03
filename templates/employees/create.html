@@ -455,6 +455,7 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         hire_date: document.getElementById('hire_date').value || null,
         employment_status: document.getElementById('employment_status').value,
         forma_zatrudnienia_id: formaVal ? parseInt(formaVal) : null,
+        user_id: document.getElementById('user_id').value ? parseInt(document.getElementById('user_id').value) : null,
         photo_path: document.getElementById('photo_path').value.trim() || null,
         base_salary: document.getElementById('base_salary').value ? parseFloat(document.getElementById('base_salary').value) : null,
         commission_rate: document.getElementById('commission_rate').value ? parseFloat(document.getElementById('commission_rate').value) : null,

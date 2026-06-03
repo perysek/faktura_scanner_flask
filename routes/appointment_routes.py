@@ -59,6 +59,22 @@ def _schedule_employee_reminder_sms(appointment_id: int,
         logging.error('_schedule_employee_reminder_sms failed appt_id=%s: %s', appointment_id, exc)
 
 
+def _send_confirmation_request_sms(appointment_id: int) -> None:
+    """Send a confirmation-request SMS immediately. Used when the salon reschedules
+    a previously client-confirmed visit, so the client can re-confirm the new time.
+    Swallows errors (incl. SMS disabled/unconfigured) so the save still succeeds."""
+    try:
+        from services.sms_service import SmsService
+        from flask import current_app
+        base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
+        uid = current_user.id if current_user.is_authenticated else None
+        uname = current_user.full_name if current_user.is_authenticated else None
+        SmsService().send(appointment_id, 'confirmation_request',
+                          sender_user_id=uid, sender_name=uname, base_url=base_url)
+    except Exception as exc:
+        logging.error('_send_confirmation_request_sms failed appt_id=%s: %s', appointment_id, exc)
+
+
 def _audit(entity_type, action, entity_id=None, entity_label=None,
            field_name=None, old_value=None, new_value=None):
     """Helper: log audit event with current user context. Logs errors to stderr."""
@@ -493,6 +509,32 @@ def update_appointment(appointment_id):
                        field_name=field,
                        old_value=old_val or None,
                        new_value=new_val or None)
+
+        # ── Bug #2: re-confirmation when a client-confirmed visit is rescheduled ──
+        # If the date/start-time changed AND the client had already confirmed via SMS,
+        # the frontend asks who requested the change and sends timing_change_by:
+        #   'client' → keep the confirmation (client already agreed to the new time)
+        #   'salon'  → reset status to 'scheduled', clear confirmation, re-send the
+        #              confirmation-request SMS so the client confirms the new time.
+        from datetime import timedelta as _timedelta
+        old_start_val = row['start_time']
+        if isinstance(old_start_val, _timedelta):
+            old_start_val = (datetime.min + old_start_val).time()
+        old_start_str = old_start_val.strftime('%H:%M') if hasattr(old_start_val, 'strftime') else str(old_start_val)[:5]
+        old_date_obj = row['appointment_date']
+        old_date_str = old_date_obj.isoformat() if hasattr(old_date_obj, 'isoformat') else str(old_date_obj)
+        timing_changed = (old_date_str != appointment_date.isoformat()) or \
+                         (old_start_str != start_time.strftime('%H:%M'))
+
+        if (timing_changed and row.get('confirmation_status') == 'confirmed'
+                and data.get('timing_change_by') == 'salon'):
+            repo.reset_confirmation(appointment_id)
+            repo.update_status(appointment_id, AppointmentStatus.SCHEDULED)
+            _audit('appointment', 'STATUS_CHANGE', entity_id=appointment_id,
+                   entity_label=entity_label, field_name='status',
+                   old_value='confirmed',
+                   new_value='scheduled (zmiana terminu przez salon)')
+            _send_confirmation_request_sms(appointment_id)
 
         # Reschedule employee reminder whenever date/time/employee changes
         _schedule_employee_reminder_sms(
