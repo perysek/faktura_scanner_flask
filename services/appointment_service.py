@@ -39,6 +39,24 @@ class AppointmentBusinessService:
         from repositories.absences.absence_repository import AbsenceRepository
         self.absence_repo = AbsenceRepository()
 
+    def _validate_working_hours(self, employee_id: int, appt_date: date,
+                                start_time: time, end_time: time = None) -> None:
+        """Raise AppointmentError if the appointment falls outside the employee's
+        defined working hours for that weekday (or the day is a day off).
+
+        Single source of truth for the schedule lives in utils.work_schedule.
+        """
+        from repositories.employees.employee_repository import EmployeeRepository
+        from utils.work_schedule import validate_within_working_hours
+
+        emp = EmployeeRepository().get_by_id(employee_id)
+        work_schedule = emp['work_schedule'] if emp else None
+        error = validate_within_working_hours(
+            work_schedule, appt_date, start_time, end_time
+        )
+        if error:
+            raise AppointmentError(error)
+
     def create_appointment(self, client_id: int, employee_id: int,
                             service_ids: List[int], appt_date: date,
                             start_time: time, notes: Optional[str] = None,
@@ -66,6 +84,9 @@ class AppointmentBusinessService:
         start_dt = datetime.combine(appt_date, start_time)
         end_dt = start_dt + timedelta(minutes=total_duration)
         end_time = end_dt.time()
+
+        # 2b. Waliduj godziny pracy pracownika (blokuje zapis poza grafikiem)
+        self._validate_working_hours(employee_id, appt_date, start_time, end_time)
 
         # 3. Sprawdź konflikty pracownika
         employee_conflicts = self.appt_repo.check_conflicts(
@@ -602,6 +623,24 @@ class AppointmentBusinessService:
 
         # 2b. Sprawdź konflikty pracownika (pomijane gdy force_save=True)
         if not force_save:
+            # Waliduj godziny pracy tylko gdy zmienił się termin lub pracownik —
+            # nie blokujemy edycji notatek/statusu istniejącej wizyty.
+            old_date = appt_row['appointment_date']
+            if isinstance(old_date, str):
+                old_date = datetime.strptime(old_date, '%Y-%m-%d').date()
+            old_start = appt_row['start_time']
+            if isinstance(old_start, timedelta):
+                old_start = (datetime.min + old_start).time()
+            elif isinstance(old_start, str):
+                old_start = datetime.strptime(old_start, '%H:%M:%S').time()
+            timing_changed = (
+                old_date != appointment_date
+                or (old_start.hour, old_start.minute) != (start_time.hour, start_time.minute)
+                or appt_row['employee_id'] != employee_id
+            )
+            if timing_changed:
+                self._validate_working_hours(employee_id, appointment_date, start_time, end_time)
+
             employee_conflicts = self.appt_repo.check_conflicts(
                 employee_id, appointment_date, start_time, end_time,
                 exclude_appointment_id=appointment_id

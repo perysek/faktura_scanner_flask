@@ -237,11 +237,25 @@ async function saveAppointment() {
         if (data.success) {
             window.location.href = `/appointment/${data.appointment_id}`;
         } else {
-            Modals.alert({
-                title: 'Błąd rezerwacji',
-                message: data.error,
-                type: 'error'
-            });
+            const errLower = (data.error || '').toLowerCase();
+            // Bug #1: working-hours violation → toast warning + reset offending input
+            if (errLower.includes('nie pracuje') || errLower.includes('poza godzinami')) {
+                if (window.Notifications) Notifications.warning(data.error);
+                if (errLower.includes('poza godzinami')) {
+                    const timeInput = document.getElementById('appt-time');
+                    timeInput.value = '';
+                    timeInput.focus();
+                } else {
+                    document.getElementById('appt-date').focus();
+                }
+                updateSaveBtn();
+            } else {
+                Modals.alert({
+                    title: 'Błąd rezerwacji',
+                    message: data.error,
+                    type: 'error'
+                });
+            }
             btn.disabled = false;
             btn.innerHTML = '<span class="material-icons">check</span> Zarezerwuj wizytę';
         }

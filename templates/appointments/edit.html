@@ -563,6 +563,26 @@ async function saveChanges() {
         }))
     };
 
+    // ── Bug #2: re-confirmation on timing change ─────────────────────────────
+    // If the client already confirmed via SMS AND the date/start-time changed,
+    // ask whether the client or the salon requested the change before saving.
+    const origDate  = originalData ? originalData.appointment_date : null;
+    const origStart = originalData && originalData.start_time
+        ? originalData.start_time.substring(0, 5) : null;
+    const timingChanged = origDate !== null && (date !== origDate || startTime !== origStart);
+    const wasConfirmed  = originalData && originalData.confirmation_status === 'confirmed';
+
+    if (timingChanged && wasConfirmed) {
+        showTimingChangeModal(payload);
+        return;
+    }
+
+    await performSave(payload, null);
+}
+
+async function performSave(payload, timingChangeBy) {
+    if (timingChangeBy) payload.timing_change_by = timingChangeBy;
+
     const resp = await fetch(`/api/appointments/${APPT_ID}`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
@@ -578,7 +598,18 @@ async function saveChanges() {
 
         // Try to identify which field has the error
         const errLower = errorMsg.toLowerCase();
-        if (errLower.includes('wcześnie') || errLower.includes('zakończenie wizyty')
+        // Bug #1: working-hours violation → toast + field error + reset. Checked
+        // first because these messages also contain 'pracownik'/'godzin'.
+        if (errLower.includes('nie pracuje')) {
+            if (window.Notifications) Notifications.warning(errorMsg);
+            showFieldError('appt-date', errorMsg);
+            resetFieldToOriginal('appt-date');
+            resetFieldToOriginal('appt-time');
+        } else if (errLower.includes('poza godzinami')) {
+            if (window.Notifications) Notifications.warning(errorMsg);
+            showFieldError('appt-time', errorMsg);
+            resetFieldToOriginal('appt-time');
+        } else if (errLower.includes('wcześnie') || errLower.includes('zakończenie wizyty')
                 || errLower.includes('status') || errLower.includes('zakończona')) {
             showFieldError('status-select', errorMsg);
             resetFieldToOriginal('status-select');
@@ -599,6 +630,38 @@ async function saveChanges() {
             showFieldError('status-select', errorMsg);
         }
     }
+}
+
+// Bug #2: ask who requested the timing change of a client-confirmed visit
+function showTimingChangeModal(payload) {
+    Modals.show({
+        title: 'Zmiana terminu potwierdzonej wizyty',
+        size: 'small',
+        closeOnOverlay: false,
+        content: `
+            <p style="font-size:0.875rem;color:var(--color-ink);margin-bottom:0.75rem;">
+                Klient potwierdził tę wizytę przez SMS. Zmieniasz termin na
+                <strong>${esc(payload.appointment_date)} ${esc(payload.start_time)}</strong>.
+            </p>
+            <p style="font-size:0.8125rem;color:var(--color-ink-subtle);">
+                Kto zażądał zmiany terminu?
+            </p>
+        `,
+        buttons: [
+            {
+                text: 'Zmianę zgłosił klient',
+                type: 'secondary',
+                icon: 'person',
+                onClick: (e, overlay) => { Modals.close(overlay); performSave(payload, 'client'); }
+            },
+            {
+                text: 'Salon zmienił termin (wyślij SMS)',
+                type: 'primary',
+                icon: 'sms',
+                onClick: (e, overlay) => { Modals.close(overlay); performSave(payload, 'salon'); }
+            },
+        ],
+    });
 }
 
 // ── Client confirmation badge (SSE) ─────────────────────────────────────────
