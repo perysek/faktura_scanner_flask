@@ -91,7 +91,8 @@ class RoleRepository:
         Zwraca słownik modułów z pełnymi flagami dostępu dla danej roli.
         Przykład: {'invoices': {'has_access': True, 'read_only': False, 'own_data': False}, ...}
         """
-        query = "SELECT module_name, has_access, read_only, own_data FROM role_permissions WHERE role_id = %s"
+        query = ("SELECT module_name, has_access, read_only, own_data, can_edit_price_history "
+                 "FROM role_permissions WHERE role_id = %s")
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (role_id,))
@@ -102,10 +103,12 @@ class RoleRepository:
                 'has_access': bool(row['has_access']),
                 'read_only': bool(row['read_only']),
                 'own_data': bool(row['own_data']),
+                'can_edit_price_history': bool(row['can_edit_price_history']),
             }
             for row in rows
         }
-        default = {'has_access': False, 'read_only': False, 'own_data': False}
+        default = {'has_access': False, 'read_only': False, 'own_data': False,
+                   'can_edit_price_history': False}
         return {m: db_perms.get(m, dict(default)) for m in ALL_MODULES}
 
     def set_permissions(self, role_id: int, permissions: dict):
@@ -118,12 +121,14 @@ class RoleRepository:
         Akceptuje też stary format {'invoices': True} dla kompatybilności wstecznej.
         """
         query = """
-            INSERT INTO role_permissions (role_id, module_name, has_access, read_only, own_data)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO role_permissions
+                (role_id, module_name, has_access, read_only, own_data, can_edit_price_history)
+            VALUES (%s, %s, %s, %s, %s, %s)
             ON CONFLICT (role_id, module_name) DO UPDATE
                 SET has_access = EXCLUDED.has_access,
                     read_only  = EXCLUDED.read_only,
-                    own_data   = EXCLUDED.own_data
+                    own_data   = EXCLUDED.own_data,
+                    can_edit_price_history = EXCLUDED.can_edit_price_history
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -133,11 +138,14 @@ class RoleRepository:
                     has_access = bool(val.get('has_access', False))
                     read_only = bool(val.get('read_only', False))
                     own_data = bool(val.get('own_data', False))
+                    can_edit_price_history = bool(val.get('can_edit_price_history', False))
                 else:
                     has_access = bool(val)
                     read_only = False
                     own_data = False
-                cursor.execute(query, (role_id, module, has_access, read_only, own_data))
+                    can_edit_price_history = False
+                cursor.execute(query, (role_id, module, has_access, read_only,
+                                       own_data, can_edit_price_history))
             conn.commit()
 
     def get_permission_flags(self, role_name: str, module_name: str) -> dict:
@@ -185,6 +193,27 @@ class RoleRepository:
             from config.auth_config import MODULE_PERMISSIONS
             return role_name in MODULE_PERMISSIONS.get(module_name, [])
         return bool(row['has_access'])
+
+    def role_can_edit_price_history(self, role_name: str) -> bool:
+        """True if the role may delete/edit service price-history entries.
+
+        Requires BOTH 'services' module access AND the can_edit_price_history
+        sub-flag. Used to gate the price-history delete endpoint and UI.
+        """
+        query = """
+            SELECT rp.has_access, rp.can_edit_price_history
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            WHERE r.name = %s AND rp.module_name = 'services'
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (role_name,))
+            row = cursor.fetchone()
+        if row is None:
+            # No DB row yet → only built-in admins get it (matches migration seed)
+            return role_name in ('superuser', 'admin')
+        return bool(row['has_access']) and bool(row['can_edit_price_history'])
 
     def get_user_module_permissions(self, role_name: str) -> dict:
         """

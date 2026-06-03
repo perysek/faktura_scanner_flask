@@ -208,6 +208,19 @@ def is_own_data_only(role_name: str, module_name: str) -> bool:
     return flags['has_access'] and flags['own_data']
 
 
+def can_edit_service_price_history(role_name: str) -> bool:
+    """True if the role may delete/edit service price-history entries.
+
+    Requires 'services' access AND the can_edit_price_history flag. Falls back
+    to built-in admin roles if the roles table is unavailable.
+    """
+    try:
+        from repositories.roles.role_repository import RoleRepository
+        return RoleRepository().role_can_edit_price_history(role_name)
+    except Exception:
+        return role_name in ('superuser', 'admin')
+
+
 def get_user_module_permissions(role_name: str) -> dict:
     """
     Pobierz dict {module: bool} dla roli użytkownika.
