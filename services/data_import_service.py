@@ -368,7 +368,9 @@ class DataImportService:
                 # ── appointments table columns ───────────────────────────────
                 'client_id':        extra.get('client_id'),     # INTEGER FK → clients.id
                 'employee_id':      extra.get('employee_id'),   # INTEGER FK → employees.id
-                'status':           'completed' if action == 'inserted' else None,
+                # Mirror the real INSERT: future visits → 'scheduled', else 'completed'.
+                'status':           (('scheduled' if (extra.get('appointment_date') or '') > date.today().isoformat()
+                                       else 'completed') if action == 'inserted' else None),
                 'appointment_date': appt_dt,                    # DATE → YYYY-MM-DD
                 'start_time':       extra.get('start_time'),    # TIME → HH:MM:SS string
                 'end_time':         extra.get('end_time'),      # TIME → HH:MM:SS string
@@ -530,6 +532,12 @@ class DataImportService:
                         total_price, commission_amount, appointment_date, created_at)
                 return
 
+            # Future-dated imports are upcoming visits, not historical ones:
+            # mark them 'scheduled' so they appear as active bookings in the
+            # calendar. Past/today appointments keep 'completed'. appointment_date
+            # is an ISO 'YYYY-MM-DD' string, so lexical comparison == chronological.
+            appt_status = 'scheduled' if appointment_date > date.today().isoformat() else 'completed'
+
             # INSERT appointments
             cursor.execute(
                 """
@@ -538,10 +546,10 @@ class DataImportService:
                     appointment_date, start_time, end_time,
                     total_price, total_duration, discount_amount,
                     created_at, updated_at
-                ) VALUES (%s, %s, 'completed', %s, %s, %s, %s, %s, 0, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s)
                 RETURNING id
                 """,
-                (client_id, employee_id,
+                (client_id, employee_id, appt_status,
                  appointment_date, start_time, end_time,
                  total_price, duration_minutes,
                  created_at, created_at),
