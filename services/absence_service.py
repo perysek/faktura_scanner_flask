@@ -222,6 +222,60 @@ class AbsenceService:
             user_id=employee_id,
         )
 
+    def cancel_approved(self, absence_id: int, cancelled_by: Optional[int] = None) -> None:
+        """Anuluj już zatwierdzoną nieobecność (akcja superuser).
+
+        Przejście approved → cancelled zwalnia sloty pracownika w kalendarzu
+        (kalendarz pokazuje tylko status='approved'). Rekord pozostaje widoczny
+        w tabeli wniosków ze statusem 'Anulowany' — zachowujemy ślad audytowy
+        zamiast twardego usuwania.
+        """
+        row = self.absence_repo.get_by_id(absence_id)
+        if not row:
+            raise AbsenceError("Nieobecność nie istnieje")
+        if row['status'] != 'approved':
+            raise AbsenceError("Można anulować tylko zatwierdzone nieobecności")
+        if not self.absence_repo.cancel_approved(absence_id):
+            raise AbsenceError("Nie udało się anulować nieobecności")
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='CANCEL_APPROVED',
+            entity_id=absence_id,
+            entity_label=self._employee_label(row['employee_id']),
+            field_name='status',
+            old_value='approved',
+            new_value='cancelled',
+            user_id=cancelled_by,
+        )
+
+    def cancel_own_approved(self, absence_id: int, employee_id: int,
+                            cancelled_by: Optional[int] = None) -> None:
+        """Pracownik anuluje WŁASNĄ zatwierdzoną nieobecność.
+
+        Jak cancel_approved, ale dodatkowo wymusza własność — pracownik może
+        anulować wyłącznie swoje nieobecności. Zwalnia sloty w kalendarzu
+        (approved → cancelled).
+        """
+        row = self.absence_repo.get_by_id(absence_id)
+        if not row:
+            raise AbsenceError("Nieobecność nie istnieje")
+        if row['employee_id'] != employee_id:
+            raise AbsenceError("Brak uprawnień do anulowania tej nieobecności")
+        if row['status'] != 'approved':
+            raise AbsenceError("Można anulować tylko zatwierdzone nieobecności")
+        if not self.absence_repo.cancel_approved(absence_id):
+            raise AbsenceError("Nie udało się anulować nieobecności")
+        self.audit_repo.log_event(
+            entity_type='absence',
+            action='CANCEL_APPROVED_OWN',
+            entity_id=absence_id,
+            entity_label=self._employee_label(employee_id),
+            field_name='status',
+            old_value='approved',
+            new_value='cancelled',
+            user_id=cancelled_by,
+        )
+
     # ── manual creation (supervisor) ──────────────────────────────────────────
 
     def create_manual(self, employee_id: int, category_id: int,
