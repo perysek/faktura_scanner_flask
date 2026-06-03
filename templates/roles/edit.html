@@ -88,6 +88,16 @@
                             </label>
                             <span>Tylko własne dane</span>
                         </div>
+                        {% if module == 'services' %}
+                        <div class="flag-item">
+                            <label class="toggle toggle-sm">
+                                <input type="checkbox" class="perm-editpricehistory" id="eph_{{ module }}"
+                                       {% if perm.can_edit_price_history %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span>Edycja historii zmian ceny</span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -130,6 +140,9 @@
                 read_only:  document.getElementById('ro_' + m).checked,
                 own_data:   document.getElementById('od_' + m).checked,
             };
+            // Services-only sub-flag — its toggle is rendered only for that module
+            const eph = document.getElementById('eph_' + m);
+            if (eph) permissions[m].can_edit_price_history = eph.checked;
         });
 
         const payload = {

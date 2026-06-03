@@ -96,6 +96,96 @@ class ServicePriceHistoryRepository:
         row = cursor.fetchone()
         return float(row['price']) if row else None
 
+    def delete_entry(self, service_id: int, entry_id: int) -> dict:
+        """Delete one price-history row while keeping the effective-dated chain valid.
+
+        Behaviour:
+          * Row must belong to ``service_id`` → otherwise ``{'status': 'not_found'}``.
+          * The only remaining row cannot be deleted → ``{'status': 'last_row'}``
+            (a service must always keep at least one — its current — price).
+          * Let P = the immediately-previous row (largest ``effective_from`` below
+            the target's). The target is DELETED FIRST, then P.effective_to is set
+            to the target's effective_to. Deleting first avoids a transient second
+            open row that would violate the partial UNIQUE index.
+              - If the target was the open (current) row, P.effective_to becomes
+                NULL → P is REOPENED as the new current price, and the catalogue
+                ``services.price``/``currency`` are synced to P so the live price
+                matches. P keeps its original effective_from (its "changed on" date).
+              - If the target was a closed row, extending P heals the gap so the
+                chain stays contiguous.
+
+        Returns a dict with ``status='ok'`` plus ``was_open``, ``reopened``,
+        ``new_price``, ``currency`` and ``old_price``.
+        """
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 1. Target must exist and belong to this service
+        cursor.execute(
+            "SELECT id, price, currency, effective_from, effective_to "
+            "FROM service_price_history WHERE id = %s AND service_id = %s",
+            (entry_id, service_id),
+        )
+        target = cursor.fetchone()
+        if not target:
+            return {'status': 'not_found'}
+
+        # 2. Never delete the last remaining row
+        cursor.execute(
+            "SELECT COUNT(*) AS n FROM service_price_history WHERE service_id = %s",
+            (service_id,),
+        )
+        if cursor.fetchone()['n'] <= 1:
+            return {'status': 'last_row'}
+
+        was_open = target['effective_to'] is None
+
+        # 3. Locate the immediately-previous row (read before any write)
+        cursor.execute(
+            "SELECT id, price, currency FROM service_price_history "
+            "WHERE service_id = %s AND effective_from < %s "
+            "ORDER BY effective_from DESC, id DESC LIMIT 1",
+            (service_id, target['effective_from']),
+        )
+        prev = cursor.fetchone()
+
+        # 4. Delete the target FIRST (so reopening prev can't collide on the
+        #    partial unique index of open rows)
+        cursor.execute("DELETE FROM service_price_history WHERE id = %s", (entry_id,))
+
+        reopened = False
+        new_price = None
+        new_currency = None
+
+        # 5. Extend / reopen the previous row to cover the deleted range
+        if prev:
+            cursor.execute(
+                "UPDATE service_price_history SET effective_to = %s WHERE id = %s",
+                (target['effective_to'], prev['id']),
+            )
+            if was_open:
+                reopened = True
+                new_price = float(prev['price'])
+                new_currency = prev['currency']
+
+        # 6. Sync the catalogue's live price to the reopened row
+        if reopened:
+            cursor.execute(
+                "UPDATE services SET price = %s, currency = %s, "
+                "updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+                (new_price, new_currency, service_id),
+            )
+
+        safe_commit(conn)
+        return {
+            'status': 'ok',
+            'was_open': was_open,
+            'reopened': reopened,
+            'new_price': new_price,
+            'currency': new_currency,
+            'old_price': float(target['price']),
+        }
+
     def get_last_change_dates(self, service_ids: list[int]) -> dict[int, datetime]:
         """Batch fetch: {service_id: najnowsze effective_from} dla listy usług.
 

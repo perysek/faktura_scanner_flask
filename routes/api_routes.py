@@ -3157,6 +3157,57 @@ def get_service_price_history(service_id):
         raise AppError('Wystapil blad serwera')
 
 
+@api_bp.route('/services/<int:service_id>/price-history/<int:entry_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('services')
+def delete_service_price_history(service_id, entry_id):
+    """Delete a single price-history entry.
+
+    Requires 'services' access (decorator) AND the can_edit_price_history flag.
+    Deleting the current (open) entry reopens the previous one and syncs the
+    service's catalogue price to it — see ServicePriceHistoryRepository.delete_entry.
+    """
+    try:
+        from config.auth_config import can_edit_service_price_history
+        if not can_edit_service_price_history(current_user.role):
+            return jsonify({'success': False,
+                            'error': 'Brak uprawnień do edycji historii cen'}), 403
+
+        existing = current_app.service_repo.get_by_id(service_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Usługa nie znaleziona'}), 404
+
+        result = current_app.service_price_history_repo.delete_entry(service_id, entry_id)
+        status = result.get('status')
+        if status == 'not_found':
+            return jsonify({'success': False, 'error': 'Wpis historii nie znaleziony'}), 404
+        if status == 'last_row':
+            return jsonify({'success': False,
+                            'error': 'Nie można usunąć jedynego wpisu historii cen'}), 400
+
+        _audit('service', 'DELETE', entity_id=service_id,
+               entity_label=existing['name'], field_name='price_history',
+               old_value=f"{result['old_price']:.2f}")
+
+        msg = 'Wpis historii cen został usunięty'
+        if result.get('reopened'):
+            msg += (f". Przywrócono poprzednią cenę usługi: "
+                    f"{result['new_price']:.2f} {result['currency']}")
+
+        return jsonify({
+            'success': True,
+            'message': msg,
+            'reopened': result.get('reopened', False),
+            'new_price': result.get('new_price'),
+            'currency': result.get('currency'),
+        })
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in delete_service_price_history')
+        raise AppError('Wystapil blad serwera')
+
+
 @api_bp.route('/services', methods=['POST'])
 @login_required
 @module_permission_required('services')

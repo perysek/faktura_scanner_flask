@@ -284,16 +284,22 @@ def create_app():
     def inject_globals():
         from flask_login import current_user
         from config.auth_config import (
-            get_user_module_permissions, is_supervisor, get_linked_employee
+            get_user_module_permissions, is_supervisor, get_linked_employee,
+            can_edit_service_price_history
         )
 
         user_permissions = {}
         _is_supervisor = False
         _has_linked_employee = False
+        _can_edit_price_history = False
 
         if current_user.is_authenticated:
             try:
                 user_permissions = get_user_module_permissions(current_user.role)
+            except Exception:
+                pass
+            try:
+                _can_edit_price_history = can_edit_service_price_history(current_user.role)
             except Exception:
                 pass
             try:
@@ -313,6 +319,7 @@ def create_app():
             'user_permissions': user_permissions,
             'is_supervisor': _is_supervisor,
             'has_linked_employee': _has_linked_employee,
+            'can_edit_price_history': _can_edit_price_history,
         }
 
     # P4-3/P4-4: Clean up stale upload temp files on startup

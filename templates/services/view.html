@@ -333,6 +333,21 @@
         color: var(--color-success);
         border-radius: 1px;
     }
+
+    .ph-del-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem;
+        background: transparent;
+        color: var(--color-ink-subtle);
+        border: 1px solid transparent;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .ph-del-btn:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.06); }
+    .ph-del-btn .material-icons { font-size: 1rem; }
 </style>
 {% endblock %}
 
@@ -407,7 +422,7 @@
         </div>
     </div>
 
-    <!-- Price History (RBAC-guarded; lazy-loaded on expand) -->
+    <!-- Price History (RBAC-guarded; count eager on load, chart drawn on expand) -->
     {% if user_permissions.get('service_prices') %}
     <details id="price-history-panel" class="price-history-panel">
         <summary>
@@ -433,6 +448,7 @@
                             <th style="text-align: right;">Cena</th>
                             <th>Powód</th>
                             <th>Zmienił</th>
+                            {% if can_edit_price_history %}<th style="text-align: right;">Akcje</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody id="price-history-tbody"></tbody>
@@ -764,7 +780,7 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
-<!-- Price History panel: lazy-loaded chart + table (only present when RBAC allows) -->
+<!-- Price History panel: count loads eagerly; chart drawn on first expand (only present when RBAC allows) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function () {
@@ -772,8 +788,11 @@ document.addEventListener('keydown', function(e) {
     if (!panel) return;  // RBAC: panel not rendered for this user
 
     const PH_SERVICE_ID = {{ service.id }};
-    let loaded = false;
+    const PH_CAN_EDIT = {{ 'true' if can_edit_price_history else 'false' }};
+    let dataLoaded = false;   // fetch+count+table done
+    let chartDrawn = false;   // sparkline rendered (needs a visible canvas)
     let chart = null;
+    let phHistory = [];       // newest-first rows from the API
 
     function phEscape(text) {
         const div = document.createElement('div');
@@ -797,16 +816,40 @@ document.addEventListener('keydown', function(e) {
         return new Date(iso).toLocaleDateString('pl-PL', { year: '2-digit', month: '2-digit', day: '2-digit' });
     }
 
-    function drawSparkline(labels, prices) {
+    function renderTable() {
+        document.getElementById('price-history-tbody').innerHTML = phHistory.map(h => {
+            const isOpen = !h.effective_to;
+            const actionCell = PH_CAN_EDIT
+                ? `<td style="text-align: right;">
+                       <button class="ph-del-btn" data-id="${h.id}" data-open="${isOpen ? '1' : '0'}" title="Usuń wpis">
+                           <span class="material-icons">delete</span>
+                       </button>
+                   </td>`
+                : '';
+            return `
+                <tr>
+                    <td>${fmtDate(h.effective_from)}</td>
+                    <td>${fmtDate(h.effective_to)}</td>
+                    <td style="text-align: right; font-weight: 500;">${fmtPrice(h.price, h.currency)}</td>
+                    <td>${h.change_reason ? phEscape(h.change_reason) : '<span style="color: var(--color-ink-subtle);">—</span>'}</td>
+                    <td>${h.changed_by_name ? phEscape(h.changed_by_name) : '<span style="color: var(--color-ink-subtle);">—</span>'}</td>
+                    ${actionCell}
+                </tr>`;
+        }).join('');
+    }
+
+    function drawSparkline() {
         const canvas = document.getElementById('priceSparklineChart');
-        if (!canvas || typeof Chart === 'undefined') return;
+        if (!canvas || typeof Chart === 'undefined' || !phHistory.length) return;
         if (chart) chart.destroy();
+        // Sparkline wants chronological order (oldest → newest)
+        const chrono = phHistory.slice().reverse();
         chart = new Chart(canvas, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: chrono.map(h => fmtDateShort(h.effective_from)),
                 datasets: [{
-                    data: prices,
+                    data: chrono.map(h => h.price),
                     borderColor: '#b45309',
                     backgroundColor: 'rgba(180, 83, 9, 0.08)',
                     borderWidth: 2,
@@ -821,11 +864,7 @@ document.addEventListener('keydown', function(e) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => fmtPrice(ctx.parsed.y, 'PLN')
-                        }
-                    }
+                    tooltip: { callbacks: { label: (ctx) => fmtPrice(ctx.parsed.y, 'PLN') } }
                 },
                 scales: {
                     x: { grid: { display: false }, ticks: { font: { size: 10 } } },
@@ -835,10 +874,9 @@ document.addEventListener('keydown', function(e) {
         });
     }
 
-    async function loadHistory() {
-        if (loaded) return;
-        loaded = true;
-
+    // Eagerly fetch so the count badge shows on page load. Does NOT draw the
+    // chart — Chart.js sizes to 0 in a collapsed (hidden) <details> body.
+    async function fetchHistory() {
         const loadingEl = document.getElementById('price-history-loading');
         const contentEl = document.getElementById('price-history-content');
         const emptyEl = document.getElementById('price-history-empty');
@@ -850,29 +888,20 @@ document.addEventListener('keydown', function(e) {
             loadingEl.style.display = 'none';
 
             if (!data.success || !data.history || data.history.length === 0) {
+                phHistory = [];
                 emptyEl.style.display = 'block';
+                contentEl.style.display = 'none';
                 countEl.textContent = '0';
+                dataLoaded = true;
                 return;
             }
 
-            const history = data.history;  // newest first
-            countEl.textContent = history.length;
-
-            document.getElementById('price-history-tbody').innerHTML = history.map(h => `
-                <tr>
-                    <td>${fmtDate(h.effective_from)}</td>
-                    <td>${fmtDate(h.effective_to)}</td>
-                    <td style="text-align: right; font-weight: 500;">${fmtPrice(h.price, h.currency)}</td>
-                    <td>${h.change_reason ? phEscape(h.change_reason) : '<span style="color: var(--color-ink-subtle);">—</span>'}</td>
-                    <td>${h.changed_by_name ? phEscape(h.changed_by_name) : '<span style="color: var(--color-ink-subtle);">—</span>'}</td>
-                </tr>
-            `).join('');
-
+            phHistory = data.history;  // newest first
+            countEl.textContent = phHistory.length;
+            renderTable();
+            emptyEl.style.display = 'none';
             contentEl.style.display = 'block';
-
-            // Sparkline wants chronological order (oldest → newest)
-            const chrono = history.slice().reverse();
-            drawSparkline(chrono.map(h => fmtDateShort(h.effective_from)), chrono.map(h => h.price));
+            dataLoaded = true;
         } catch (err) {
             console.error('Error loading price history:', err);
             loadingEl.style.display = 'block';
@@ -880,9 +909,77 @@ document.addEventListener('keydown', function(e) {
         }
     }
 
-    // Lazy-load: only fetch when the user first expands the panel
+    function maybeDrawChart() {
+        if (!chartDrawn && phHistory.length) {
+            drawSparkline();
+            chartDrawn = true;
+        }
+    }
+
+    async function reloadPanel() {
+        dataLoaded = false;
+        chartDrawn = false;
+        if (chart) { chart.destroy(); chart = null; }
+        document.getElementById('price-history-loading').style.display = 'block';
+        document.getElementById('price-history-content').style.display = 'none';
+        document.getElementById('price-history-empty').style.display = 'none';
+        await fetchHistory();
+        if (panel.open) maybeDrawChart();
+    }
+
+    async function deleteEntry(entryId) {
+        try {
+            const res = await fetch(`/api/services/${PH_SERVICE_ID}/price-history/${entryId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                if (data.reopened) {
+                    // The service's live catalogue price changed — reload the whole
+                    // page so the "Cena" card reflects the restored price.
+                    Modals.alert({
+                        title: 'Usunięto', message: data.message, type: 'success',
+                        onClose: () => window.location.reload()
+                    });
+                } else {
+                    Modals.alert({ title: 'Usunięto', message: data.message, type: 'success' });
+                    await reloadPanel();
+                }
+            } else {
+                Modals.alert({ title: 'Błąd', message: data.error || 'Nie udało się usunąć wpisu', type: 'error' });
+            }
+        } catch (err) {
+            console.error('Error deleting price-history entry:', err);
+            Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
+        }
+    }
+
+    // Delegated delete handler (rows are re-rendered, so bind once on the tbody)
+    if (PH_CAN_EDIT) {
+        document.getElementById('price-history-tbody').addEventListener('click', function (e) {
+            const btn = e.target.closest('.ph-del-btn');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            const isOpen = btn.dataset.open === '1';
+            const msg = isOpen
+                ? 'To jest aktualna cena usługi. Po usunięciu poprzednia cena z historii zostanie przywrócona jako bieżąca cena usługi. Kontynuować?'
+                : 'Czy na pewno usunąć ten wpis z historii cen?';
+            Modals.confirm({
+                title: 'Usuń wpis historii cen',
+                message: msg,
+                confirmText: 'Usuń',
+                onConfirm: () => deleteEntry(id)
+            });
+        });
+    }
+
+    // Init: populate the count badge immediately on page load
+    fetchHistory();
+
+    // Draw the sparkline only once the panel is expanded (canvas now visible)
     panel.addEventListener('toggle', function () {
-        if (panel.open) loadHistory();
+        if (panel.open) {
+            if (!dataLoaded) { fetchHistory().then(maybeDrawChart); }
+            else { maybeDrawChart(); }
+        }
     });
 })();
 </script>
