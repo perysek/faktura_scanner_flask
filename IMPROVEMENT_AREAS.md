@@ -841,15 +841,24 @@ builds.
 > coordinated move of audit *out* of the routes and *into* the repos, which is a
 > larger, separately-reviewed refactor.
 >
-> **Blocked (prerequisite needed):** extending atomic audit to the absence-balance
-> path (`AbsenceBalanceService.set_limit / remove_limit / create_adjustment /
-> delete_adjustment`) — those four methods have the *identical* "data write then
-> separate audit write" flaw, but the absence repos (`repositories/absences/*`) call
-> **raw `conn.commit()`** instead of `safe_commit(conn)` (≈20 sites across 6 files),
-> so they ignore the `managed_transaction` flag. Wrapping them would give *fake*
-> atomicity (the data commits immediately; the audit can't be rolled back with it).
-> The real fix is to first migrate those repos from `conn.commit()` → `safe_commit(conn)`
-> — behaviour-preserving outside a transaction, but a broad, separately-tested change.
+> **Step 2b — absence-balance atomic audit (2026-06-04).** Extended the same atomic
+> pattern to HR/payroll: `AbsenceBalanceService.set_limit / remove_limit /
+> create_adjustment / delete_adjustment` now wrap their data write + audit row in one
+> `managed_transaction`, so a leave-balance change (a payroll liability) can never move
+> without a forensic record of who moved it. This needed a prerequisite migration:
+> `absence_limit_repository` and `absence_adjustment_repository` were converted from
+> `with get_db_connection() as conn: ... conn.commit()` — which committed immediately
+> *and* (via psycopg2's connection context-manager) auto-committed on block exit,
+> ignoring the transaction flag — to the `BaseRepository` pattern
+> (`conn = get_db_connection(); ...; safe_commit(conn)`). Behaviour-preserving outside
+> a transaction; correct deferral inside. Locked by
+> `tests/services/test_absence_balance_atomicity.py` (6 tests, real repos + real
+> AuditRepository on a shared mocked connection). **390 green.**
+>
+> **Remaining consistency follow-up:** the sibling absence repos (`absence_repository`,
+> `absence_category_repository`, `employee_supervisor_repository`) still call raw
+> `conn.commit()` — harmless today (no audited transaction wraps them yet), but the
+> same `safe_commit` conversion should be applied for consistency when convenient.
 
 ### What is the weakness
 
@@ -992,7 +1001,7 @@ trustworthy forensic record.
 |---|------|----------|--------|-------------------|
 | 4 | No CSRF | **Critical** | Low | ✅ DONE 2026-06-03 — CSRFProtect + shim + form tokens |
 | 5 | Weak SECRET_KEY | **Critical** | Low | ✅ DONE 2026-06-03 — boot-time validation + rotation doc |
-| 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-04 — swallowing + atomic-write (invoice path) done; only data-layer mixin remains |
+| 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-04 — swallowing + atomic-write (invoice **and** absence-balance paths) done; only data-layer mixin remains |
 | 1 | Schema dual-track | High | Medium | 🟡 PARTIAL 2026-06-03 — boot guard added (`assert_schema_current`); schema.sql removal deferred |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
@@ -1001,7 +1010,8 @@ trustworthy forensic record.
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
-**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing + atomic-write on invoice path done;
-data-layer mixin deferred) · 1 🟡 (boot guard added; schema.sql removal deferred).
+**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing + atomic-write on invoice **and**
+absence-balance paths done; data-layer mixin deferred) · 1 🟡 (boot guard added;
+schema.sql removal deferred).
 Remaining: 7 (mixin only) · 1 (finish) · 2 (repo pattern split — note: 290 call sites,
 not "Low" effort) · 3 (single-worker ceiling).

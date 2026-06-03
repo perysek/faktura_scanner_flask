@@ -3,7 +3,7 @@ Repository dla indywidualnych limitów nieobecności pracowników (employee_abse
 """
 from typing import Any, List, Optional
 
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import EmployeeAbsenceLimit
 from repositories.db_utils import parse_dt
 
@@ -85,18 +85,22 @@ class AbsenceLimitRepository:
                 updated_at = CURRENT_TIMESTAMP
             RETURNING id
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                limit.employee_id,
-                limit.category_id,
-                limit.max_value,
-                limit.notes,
-                limit.created_by,
-            ))
-            row = cursor.fetchone()
-            conn.commit()
-            return row['id']
+        # safe_commit (not conn.commit) so this write defers to an enclosing
+        # managed_transaction — letting the balance service commit it atomically
+        # with its audit_log row. Outside a transaction it commits immediately,
+        # identical to the previous behaviour.
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            limit.employee_id,
+            limit.category_id,
+            limit.max_value,
+            limit.notes,
+            limit.created_by,
+        ))
+        row = cursor.fetchone()
+        safe_commit(conn)
+        return row['id']
 
     def soft_delete(self, limit_id: int) -> bool:
         query = """
@@ -106,11 +110,11 @@ class AbsenceLimitRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (limit_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (limit_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0
 
     def soft_delete_for_employee_category(self, employee_id: int,
                                            category_id: int) -> bool:
@@ -121,8 +125,8 @@ class AbsenceLimitRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE employee_id = %s AND category_id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (employee_id, category_id))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (employee_id, category_id))
+        safe_commit(conn)
+        return cursor.rowcount > 0

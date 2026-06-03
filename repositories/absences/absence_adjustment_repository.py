@@ -3,7 +3,7 @@ Repository dla manualnych korekt bilansu nieobecności (absence_balance_adjustme
 """
 from typing import Any, List
 
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import AbsenceBalanceAdjustment
 from repositories.db_utils import parse_dt
 
@@ -76,19 +76,22 @@ class AbsenceAdjustmentRepository:
             VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                adj.employee_id,
-                adj.category_id,
-                adj.delta_value,
-                adj.reason,
-                adj.period_label,
-                adj.created_by,
-            ))
-            new_id = cursor.fetchone()['id']
-            conn.commit()
-            return new_id
+        # safe_commit (not conn.commit) so this insert defers to an enclosing
+        # managed_transaction — the balance service commits it atomically with the
+        # audit_log row. Outside a transaction it commits immediately, as before.
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            adj.employee_id,
+            adj.category_id,
+            adj.delta_value,
+            adj.reason,
+            adj.period_label,
+            adj.created_by,
+        ))
+        new_id = cursor.fetchone()['id']
+        safe_commit(conn)
+        return new_id
 
     def soft_delete(self, adj_id: int) -> bool:
         query = """
@@ -98,8 +101,8 @@ class AbsenceAdjustmentRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND is_deleted = FALSE
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (adj_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (adj_id,))
+        safe_commit(conn)
+        return cursor.rowcount > 0

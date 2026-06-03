@@ -10,6 +10,7 @@ Odpowiada za:
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 
+from config.database import managed_transaction
 from database.models import AbsenceBalanceAdjustment, EmployeeAbsenceLimit
 from repositories.absences.absence_balance_repository import AbsenceBalanceRepository
 from repositories.absences.absence_limit_repository import AbsenceLimitRepository
@@ -206,34 +207,38 @@ class AbsenceBalanceService:
             notes=notes,
             created_by=created_by,
         )
-        limit_id = self.limit_repo.upsert(limit)
-
-        self.audit_repo.log_event(
-            entity_type='absence_limit',
-            action='UPDATE' if old_row else 'CREATE',
-            entity_id=limit_id,
-            entity_label=f"{employee_name} — {category_name}",
-            field_name='max_value',
-            old_value=old_value,
-            new_value=str(max_value),
-            user_id=created_by,
-        )
+        # Atomic: the limit upsert and its audit row commit together (#7). A failed
+        # audit write rolls back the limit change — no silent "limit changed, no record".
+        with managed_transaction():
+            limit_id = self.limit_repo.upsert(limit)
+            self.audit_repo.log_event(
+                entity_type='absence_limit',
+                action='UPDATE' if old_row else 'CREATE',
+                entity_id=limit_id,
+                entity_label=f"{employee_name} — {category_name}",
+                field_name='max_value',
+                old_value=old_value,
+                new_value=str(max_value),
+                user_id=created_by,
+            )
         return limit_id
 
     def remove_limit(self, limit_id: int, user_id: int,
                      user_name: str = '') -> None:
         """Soft-delete limitu. Loguje do audit_log."""
-        self.limit_repo.soft_delete(limit_id)
-        self.audit_repo.log_event(
-            entity_type='absence_limit',
-            action='DELETE',
-            entity_id=limit_id,
-            entity_label=user_name,
-            field_name='is_deleted',
-            old_value='false',
-            new_value='true',
-            user_id=user_id,
-        )
+        # Atomic: the soft-delete and its audit row commit together (#7).
+        with managed_transaction():
+            self.limit_repo.soft_delete(limit_id)
+            self.audit_repo.log_event(
+                entity_type='absence_limit',
+                action='DELETE',
+                entity_id=limit_id,
+                entity_label=user_name,
+                field_name='is_deleted',
+                old_value='false',
+                new_value='true',
+                user_id=user_id,
+            )
 
     # ── adjustments ───────────────────────────────────────────────────────────
 
@@ -255,34 +260,38 @@ class AbsenceBalanceService:
             period_label=period_label,
             created_by=created_by,
         )
-        adj_id = self.adjustment_repo.create(adj)
-
-        self.audit_repo.log_event(
-            entity_type='absence_adjustment',
-            action='CREATE',
-            entity_id=adj_id,
-            entity_label=f"{employee_name} — {category_name}: {delta_value:+.1f}",
-            field_name='delta_value',
-            old_value=None,
-            new_value=str(delta_value),
-            user_id=created_by,
-        )
+        # Atomic: the adjustment insert and its audit row commit together (#7). A leave
+        # balance can never move without a forensic record of who moved it and why.
+        with managed_transaction():
+            adj_id = self.adjustment_repo.create(adj)
+            self.audit_repo.log_event(
+                entity_type='absence_adjustment',
+                action='CREATE',
+                entity_id=adj_id,
+                entity_label=f"{employee_name} — {category_name}: {delta_value:+.1f}",
+                field_name='delta_value',
+                old_value=None,
+                new_value=str(delta_value),
+                user_id=created_by,
+            )
         return adj_id
 
     def delete_adjustment(self, adj_id: int, user_id: int,
                            user_name: str = '') -> None:
         """Soft-delete korekty. Loguje do audit_log."""
-        self.adjustment_repo.soft_delete(adj_id)
-        self.audit_repo.log_event(
-            entity_type='absence_adjustment',
-            action='DELETE',
-            entity_id=adj_id,
-            entity_label=user_name,
-            field_name='is_deleted',
-            old_value='false',
-            new_value='true',
-            user_id=user_id,
-        )
+        # Atomic: the soft-delete and its audit row commit together (#7).
+        with managed_transaction():
+            self.adjustment_repo.soft_delete(adj_id)
+            self.audit_repo.log_event(
+                entity_type='absence_adjustment',
+                action='DELETE',
+                entity_id=adj_id,
+                entity_label=user_name,
+                field_name='is_deleted',
+                old_value='false',
+                new_value='true',
+                user_id=user_id,
+            )
 
     # ── pre-submission check ──────────────────────────────────────────────────
 
