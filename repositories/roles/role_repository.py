@@ -91,7 +91,8 @@ class RoleRepository:
         Zwraca słownik modułów z pełnymi flagami dostępu dla danej roli.
         Przykład: {'invoices': {'has_access': True, 'read_only': False, 'own_data': False}, ...}
         """
-        query = ("SELECT module_name, has_access, read_only, own_data, can_edit_price_history "
+        query = ("SELECT module_name, has_access, read_only, own_data, "
+                 "can_edit_price_history, can_send_sms "
                  "FROM role_permissions WHERE role_id = %s")
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -104,11 +105,12 @@ class RoleRepository:
                 'read_only': bool(row['read_only']),
                 'own_data': bool(row['own_data']),
                 'can_edit_price_history': bool(row['can_edit_price_history']),
+                'can_send_sms': bool(row['can_send_sms']),
             }
             for row in rows
         }
         default = {'has_access': False, 'read_only': False, 'own_data': False,
-                   'can_edit_price_history': False}
+                   'can_edit_price_history': False, 'can_send_sms': False}
         return {m: db_perms.get(m, dict(default)) for m in ALL_MODULES}
 
     def set_permissions(self, role_id: int, permissions: dict):
@@ -122,13 +124,15 @@ class RoleRepository:
         """
         query = """
             INSERT INTO role_permissions
-                (role_id, module_name, has_access, read_only, own_data, can_edit_price_history)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                (role_id, module_name, has_access, read_only, own_data,
+                 can_edit_price_history, can_send_sms)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (role_id, module_name) DO UPDATE
                 SET has_access = EXCLUDED.has_access,
                     read_only  = EXCLUDED.read_only,
                     own_data   = EXCLUDED.own_data,
-                    can_edit_price_history = EXCLUDED.can_edit_price_history
+                    can_edit_price_history = EXCLUDED.can_edit_price_history,
+                    can_send_sms = EXCLUDED.can_send_sms
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -139,13 +143,15 @@ class RoleRepository:
                     read_only = bool(val.get('read_only', False))
                     own_data = bool(val.get('own_data', False))
                     can_edit_price_history = bool(val.get('can_edit_price_history', False))
+                    can_send_sms = bool(val.get('can_send_sms', False))
                 else:
                     has_access = bool(val)
                     read_only = False
                     own_data = False
                     can_edit_price_history = False
+                    can_send_sms = False
                 cursor.execute(query, (role_id, module, has_access, read_only,
-                                       own_data, can_edit_price_history))
+                                       own_data, can_edit_price_history, can_send_sms))
             conn.commit()
 
     def get_permission_flags(self, role_name: str, module_name: str) -> dict:
@@ -214,6 +220,28 @@ class RoleRepository:
             # No DB row yet → only built-in admins get it (matches migration seed)
             return role_name in ('superuser', 'admin')
         return bool(row['has_access']) and bool(row['can_edit_price_history'])
+
+    def role_can_send_sms(self, role_name: str) -> bool:
+        """True if the role may send manual SMS from the appointment view.
+
+        Requires BOTH 'appointments' module access AND the can_send_sms
+        sub-flag. Used to gate the manual/bulk SMS send endpoints and the
+        "Wyślij SMS" button in the appointment details UI.
+        """
+        query = """
+            SELECT rp.has_access, rp.can_send_sms
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            WHERE r.name = %s AND rp.module_name = 'appointments'
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (role_name,))
+            row = cursor.fetchone()
+        if row is None:
+            # No DB row yet → only built-in admins get it (matches migration seed)
+            return role_name in ('superuser', 'admin')
+        return bool(row['has_access']) and bool(row['can_send_sms'])
 
     def get_user_module_permissions(self, role_name: str) -> dict:
         """

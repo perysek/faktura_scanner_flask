@@ -285,13 +285,14 @@ def create_app():
         from flask_login import current_user
         from config.auth_config import (
             get_user_module_permissions, is_supervisor, get_linked_employee,
-            can_edit_service_price_history
+            can_edit_service_price_history, can_send_appointment_sms
         )
 
         user_permissions = {}
         _is_supervisor = False
         _has_linked_employee = False
         _can_edit_price_history = False
+        _can_send_sms = False
 
         if current_user.is_authenticated:
             try:
@@ -300,6 +301,10 @@ def create_app():
                 pass
             try:
                 _can_edit_price_history = can_edit_service_price_history(current_user.role)
+            except Exception:
+                pass
+            try:
+                _can_send_sms = can_send_appointment_sms(current_user.role)
             except Exception:
                 pass
             try:
@@ -320,6 +325,7 @@ def create_app():
             'is_supervisor': _is_supervisor,
             'has_linked_employee': _has_linked_employee,
             'can_edit_price_history': _can_edit_price_history,
+            'can_send_sms': _can_send_sms,
         }
 
     # P4-3/P4-4: Clean up stale upload temp files on startup

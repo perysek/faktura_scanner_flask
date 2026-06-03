@@ -211,6 +211,8 @@ const APPT_ID = {{ appointment_id }};
 const SMS_ACTIVE = {{ settings_sms_active | tojson }};
 const SMS_TYPES = {{ sms_message_types | tojson }};
 const SMS_SENT_KEYS = new Set({{ sms_sent_type_keys | tojson }});
+// RBAC sub-permission: only roles with the "Wysyłanie SMS" flag see the send button
+const CAN_SEND_SMS = {{ can_send_sms | tojson }};
 const STATUS_LABELS = {
     'scheduled':'Zaplanowana','confirmed':'Potwierdzona','in_progress':'W trakcie',
     'completed':'Zakończona','cancelled':'Anulowana','no_show':'Nieobecność'
@@ -362,8 +364,8 @@ async function loadAppointment() {
 
     bar.innerHTML = actionsHTML;
 
-    // SMS dropdown — inject after status actions
-    if (SMS_ACTIVE && SMS_TYPES.length > 0) {
+    // SMS dropdown — inject after status actions (gated by RBAC send-SMS sub-permission)
+    if (CAN_SEND_SMS && SMS_ACTIVE && SMS_TYPES.length > 0) {
         const items = SMS_TYPES.map(mt => {
             const alreadySent = SMS_SENT_KEYS.has(mt.type_key);
             return `<li><button type="button" class="dropdown-item sms-type-btn"
@@ -381,8 +383,11 @@ async function loadAppointment() {
                 <ul class="dropdown-menu">${items}</ul>
             </div>
         `);
+    }
 
-        // Confirmation status badge
+    // Confirmation status badge — read-only client info, shown regardless of
+    // send-SMS permission (it reflects whether the client confirmed, not who can text)
+    if (SMS_ACTIVE && SMS_TYPES.length > 0) {
         const confirmStatus = a.confirmation_status;
         if (confirmStatus === 'confirmed') {
             bar.insertAdjacentHTML('beforeend', '<span style="margin-left:0.5rem;padding:0.25rem 0.625rem;background:#dcfce7;color:#166534;border-radius:9999px;font-size:0.75rem;">✓ Potwierdzona przez klienta</span>');

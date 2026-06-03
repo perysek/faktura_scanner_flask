@@ -98,6 +98,16 @@
                             <span>Edycja historii zmian ceny</span>
                         </div>
                         {% endif %}
+                        {% if module == 'appointments' %}
+                        <div class="flag-item">
+                            <label class="toggle toggle-sm">
+                                <input type="checkbox" class="perm-sendsms" id="sms_{{ module }}"
+                                       {% if perm.can_send_sms %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span>Wysyłanie SMS</span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -143,6 +153,9 @@
             // Services-only sub-flag — its toggle is rendered only for that module
             const eph = document.getElementById('eph_' + m);
             if (eph) permissions[m].can_edit_price_history = eph.checked;
+            // Appointments-only sub-flag — gates the manual "Wyślij SMS" button
+            const sms = document.getElementById('sms_' + m);
+            if (sms) permissions[m].can_send_sms = sms.checked;
         });
 
         const payload = {
