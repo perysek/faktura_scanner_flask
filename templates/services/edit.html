@@ -237,6 +237,15 @@
                     <div>
                         <label for="price" class="refined-label">Cena <span class="required-mark">*</span></label>
                         <input type="number" id="price" name="price" required step="0.01" min="0" class="refined-input" value="{{ service.price }}">
+                        {% if user_permissions.get('service_prices') %}
+                        <div id="price-change-reason-wrapper" style="display: none; margin-top: 0.75rem;">
+                            <label for="change_reason" class="refined-label">Powód zmiany ceny</label>
+                            <input type="text" id="change_reason" name="change_reason"
+                                   class="refined-input" maxlength="255"
+                                   placeholder="np. Podwyżka inflacyjna, nowy cennik 2026…">
+                            <p class="input-hint">Opcjonalnie — pojawi się w historii cen</p>
+                        </div>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="duration_minutes" class="refined-label">Czas trwania (min) <span class="required-mark">*</span></label>
@@ -369,6 +378,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (checkedRadio) {
         handleServiceTypeChange({ target: checkedRadio });
     }
+
+    // Reveal the "powód zmiany ceny" field only when the price actually changes.
+    // (Field is RBAC-guarded, so it may not exist for some roles.)
+    const priceInput = document.getElementById('price');
+    const reasonWrapper = document.getElementById('price-change-reason-wrapper');
+    if (priceInput && reasonWrapper) {
+        const originalPrice = parseFloat(priceInput.value);
+        priceInput.addEventListener('input', function () {
+            const changed = parseFloat(this.value) !== originalPrice;
+            reasonWrapper.style.display = changed ? 'block' : 'none';
+        });
+    }
 });
 
 document.getElementById('service-form').addEventListener('submit', async (e) => {
@@ -387,6 +408,13 @@ document.getElementById('service-form').addEventListener('submit', async (e) => 
     // Dodaj kategorię TYLKO jeśli typ = 'main'
     if (serviceType === 'main') {
         formData.category = document.getElementById('category').value;
+    }
+
+    // Include the price-change reason if the field is present (RBAC-guarded).
+    // Backend ignores a missing/empty key, so non-privileged roles are unaffected.
+    const reasonField = document.getElementById('change_reason');
+    if (reasonField) {
+        formData.change_reason = reasonField.value.trim() || null;
     }
 
     try {

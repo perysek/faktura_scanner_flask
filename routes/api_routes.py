@@ -3051,9 +3051,15 @@ def get_services():
 
         # Convert Row objects to Service objects
         services = [current_app.service_repo.row_to_service(row) for row in rows]
+
+        # Batch-fetch last price-change date for the list trend indicator (no N+1)
+        last_changes = current_app.service_price_history_repo.get_last_change_dates(
+            [s.id for s in services]
+        )
         services_data = []
 
         for service in services:
+            last_change = last_changes.get(service.id)
             service_dict = {
                 'id': service.id,
                 'name': service.name,
@@ -3067,7 +3073,8 @@ def get_services():
                 'service_type': service.service_type,
                 'is_active': service.is_active,
                 'created_at': service.created_at.isoformat() if service.created_at else None,
-                'updated_at': service.updated_at.isoformat() if service.updated_at else None
+                'updated_at': service.updated_at.isoformat() if service.updated_at else None,
+                'last_price_change_date': last_change.isoformat() if last_change else None
             }
             services_data.append(service_dict)
 
@@ -3121,6 +3128,35 @@ def get_service(service_id):
         raise AppError('Wystapil blad serwera')
 
 
+@api_bp.route('/services/<int:service_id>/price-history', methods=['GET'])
+@login_required
+@module_permission_required('service_prices')
+def get_service_price_history(service_id):
+    """Get the full price history for a service (newest first)."""
+    try:
+        existing = current_app.service_repo.get_by_id(service_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Usługa nie znaleziona'}), 404
+
+        rows = current_app.service_price_history_repo.get_history(service_id)
+        history = [{
+            'id': r['id'],
+            'price': float(r['price']),
+            'currency': r['currency'],
+            'effective_from': r['effective_from'].isoformat() if r['effective_from'] else None,
+            'effective_to': r['effective_to'].isoformat() if r['effective_to'] else None,
+            'changed_by_name': r['changed_by_name'],
+            'change_reason': r['change_reason'],
+        } for r in rows]
+
+        return jsonify({'success': True, 'history': history})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in get_service_price_history')
+        raise AppError('Wystapil blad serwera')
+
+
 @api_bp.route('/services', methods=['POST'])
 @login_required
 @module_permission_required('services')
@@ -3169,6 +3205,19 @@ def create_service_endpoint():
         _audit('service', 'CREATE', entity_id=service_id,
                entity_label=service.name,
                new_value=f"{service.price} {service.currency} / {service.duration_minutes}min")
+
+        # Seed the first price-history entry with the initial catalogue price.
+        # Best-effort: a history glitch must not fail service creation.
+        try:
+            current_app.service_price_history_repo.record_price_change(
+                service_id=service_id,
+                new_price=service.price,
+                currency=service.currency,
+                changed_by=current_user.id if current_user.is_authenticated else None,
+                change_reason='Cena początkowa',
+            )
+        except Exception:
+            logging.exception('Failed to record initial price history for service %s', service_id)
 
         return jsonify({
             'success': True,
@@ -3223,10 +3272,31 @@ def update_service(service_id):
         success = current_app.service_repo.update(service_id, service)
 
         if success:
+            # Price changes get a distinct PRICE_CHANGE audit + full history row.
+            # 'price' is therefore omitted from the generic _audit_changes list
+            # below, so a single price change produces exactly one audit entry.
+            old_price = float(existing['price'])
+            if old_price != service.price:
+                change_reason = (data.get('change_reason') or '').strip() or None
+                # Best-effort: a history glitch must not fail the service update.
+                try:
+                    current_app.service_price_history_repo.record_price_change(
+                        service_id=service_id,
+                        new_price=service.price,
+                        currency=service.currency,
+                        changed_by=current_user.id if current_user.is_authenticated else None,
+                        change_reason=change_reason,
+                    )
+                    _audit('service', 'PRICE_CHANGE', entity_id=service_id,
+                           entity_label=service.name, field_name='price',
+                           old_value=f"{old_price:.2f}", new_value=f"{service.price:.2f}")
+                except Exception:
+                    logging.exception('Failed to record price history for service %s', service_id)
+
             _audit_changes('service', service_id, service.name,
                            existing, data,
                            ['name', 'description', 'category', 'duration_minutes',
-                            'price', 'currency', 'service_type', 'is_active'])
+                            'currency', 'service_type', 'is_active'])
             return jsonify({
                 'success': True,
                 'message': 'Usługa została zaktualizowana pomyślnie'

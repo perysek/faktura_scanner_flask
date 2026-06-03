@@ -38,6 +38,17 @@
         justify-content: space-between;
     }
 
+    /* Recent price-change indicator next to the price cell */
+    .price-trend-chip {
+        display: inline-block;
+        margin-left: 0.375rem;
+        font-size: 0.625rem;
+        line-height: 1;
+        color: var(--color-ink-muted);
+        cursor: default;
+        vertical-align: middle;
+    }
+
     .stat-icon {
         width: 3rem;
         height: 3rem;
@@ -425,6 +436,12 @@ async function loadStatistics() {
     }
 }
 
+// Whole days since an ISO timestamp (used in the price-change chip tooltip).
+function formatDaysSince(isoTimestamp) {
+    const diffMs = Date.now() - new Date(isoTimestamp).getTime();
+    return Math.max(0, Math.floor(diffMs / 86400000));
+}
+
 async function loadServices() {
     saveFilterState('services', ['search-input', 'filter-type']);
     const searchQuery = document.getElementById('search-input').value.trim();
@@ -460,6 +477,12 @@ async function loadServices() {
                 const description = service.description ? escapeHtml(service.description) : '';
                 const duration = escapeHtml(service.formatted_duration);
                 const price = escapeHtml(service.formatted_price);
+                // Flag services whose catalogue price changed within the last 90 days.
+                const recentChange = service.last_price_change_date
+                    && (Date.now() - new Date(service.last_price_change_date).getTime()) < 90 * 86400000;
+                const changeTip = recentChange
+                    ? `<span class="price-trend-chip" title="Cenę zmieniono ${formatDaysSince(service.last_price_change_date)} dni temu">↕</span>`
+                    : '';
                 const statusBadge = service.is_active
                     ? '<span class="status-badge active">Aktywna</span>'
                     : '<span class="status-badge inactive">Nieaktywna</span>';
@@ -478,7 +501,7 @@ async function loadServices() {
                         <td>${typeBadge}</td>
                         <td>${category}</td>
                         <td>${duration}</td>
-                        <td style="font-weight: 500;">${price}</td>
+                        <td style="font-weight: 500;">${price}${changeTip}</td>
                         <td>${statusBadge}</td>
                         <td style="text-align: right;">
                             <a href="/service/${service.id}" class="action-link">Zobacz</a>

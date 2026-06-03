@@ -27,6 +27,7 @@ MODULE_PERMISSIONS = {
     'data_correction': ['superuser'],
     'data_import': ['superuser', 'admin'],
     'absences': ['superuser', 'admin'],  # full management (categories CRUD + global list)
+    'service_prices': ['superuser', 'admin', 'accountant'],  # accountant = read-only (view history)
 }
 
 def role_required(*roles):

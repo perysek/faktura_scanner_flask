@@ -32,6 +32,7 @@
     .svc-item .svc-type.addon { background: rgba(245,158,11,0.08); color: var(--color-status-in-progress); }
     .svc-item .svc-price { font-size: 0.8125rem; color: var(--color-ink-muted); }
     .svc-item .svc-time { font-size: 0.75rem; color: var(--color-ink-subtle); }
+    .svc-item .svc-cat-note { font-size: 0.6875rem; color: var(--color-ink-subtle); margin-left: 0.5rem; cursor: help; }
 
     .totals-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; margin-top: 1rem; }
     .totals-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
@@ -304,16 +305,25 @@ async function loadAppointment() {
 
     // Services
     const svcs = [...data.main_services, ...data.addon_services];
-    document.getElementById('services-list').innerHTML = svcs.map(s => `
+    document.getElementById('services-list').innerHTML = svcs.map(s => {
+        // Show the current catalogue price only when it deviates from the
+        // historically charged price (e.g. booked at 80 zł, now costs 100 zł).
+        const cat = s.current_catalogue_price;
+        const deviates = cat != null && s.price_charged != null
+            && Math.abs(parseFloat(cat) - parseFloat(s.price_charged)) > 0.005;
+        const catNote = deviates
+            ? `<span class="svc-cat-note" title="Aktualna cena katalogowa: ${fmtPrice(cat)}">(kat. ${fmtPrice(cat)})</span>`
+            : '';
+        return `
         <li class="svc-item">
             <div>
                 <span class="svc-name">${esc(s.service_name)}</span>
                 <span class="svc-type ${s.is_addon?'addon':'main'}">${s.is_addon?'Dodatkowa':'Główna'}</span>
                 ${s.added_at?`<span class="svc-time">dodano ${fmtTime(s.added_at)}</span>`:''}
             </div>
-            <span class="svc-price">${fmtPrice(s.price_charged)}</span>
-        </li>
-    `).join('');
+            <span class="svc-price">${fmtPrice(s.price_charged)}${catNote}</span>
+        </li>`;
+    }).join('');
 
     // Totals
     const t = data.totals;
