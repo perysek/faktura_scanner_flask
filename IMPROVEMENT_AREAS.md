@@ -858,9 +858,16 @@ builds.
 > `tests/repositories/test_auditable_mixin.py` (11 tests: mixin contract +
 > transaction-awareness + SellerRepository wiring). **405 green.**
 >
-> **Incremental follow-up (not a structural gap):** apply the mixin to other unaudited
-> staff-only repos as needed (employees/salaries, services). The invoice and absence
-> paths intentionally keep their richer route/service-level audit.
+> **Rollout — employees (2026-06-04).** Also applied the mixin to **`EmployeeRepository`**
+> (salary data — `base_salary` / `employer_cost_rate` — previously unaudited). That repo
+> was standalone with raw `conn.commit()`, so the rollout migrated its five writes first
+> (create / update / deactivate / activate / terminate_employee) to `safe_commit`, then
+> audited them — making the employee audit atomic-capable and killing the raw-commit trap
+> there too. Tests in `tests/repositories/test_employee_repo_audit.py`. **412 green.**
+>
+> **Incremental follow-up (not a structural gap):** further unaudited staff-only repos
+> (services, admin-side clients) can adopt the mixin the same way as needed. The invoice
+> and absence paths intentionally keep their richer route/service-level audit.
 >
 > **Step 2b — absence-balance atomic audit (2026-06-04).** Extended the same atomic
 > pattern to HR/payroll: `AbsenceBalanceService.set_limit / remove_limit /
