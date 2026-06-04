@@ -4,12 +4,22 @@ Repository dla operacji na pracownikach (employees)
 from typing import Any, List, Optional
 from datetime import datetime, date
 from repositories.db_utils import parse_dt, parse_date
-from config.database import get_db_connection
+from config.database import get_db_connection, safe_commit
 from database.models import Employee
+from repositories.auditable import AuditableMixin
 
 
-class EmployeeRepository:
-    """Repository do zarządzania pracownikami salonu"""
+class EmployeeRepository(AuditableMixin):
+    """Repository do zarządzania pracownikami salonu.
+
+    Audytowane (improvement #7 Step 3 via AuditableMixin): create / update /
+    deactivate / activate / terminate_employee — zmiany danych pracownika, w tym
+    wynagrodzeń (base_salary, employer_cost_rate). Writes używają safe_commit zamiast
+    surowego conn.commit(), więc audyt jest atomowy z zapisem wewnątrz
+    managed_transaction (a poza nią commituje natychmiast — bez zmiany zachowania).
+    """
+
+    audit_entity_type = 'employee'
 
     def row_to_employee(self, row: Any) -> Employee:
         """Konwertuj Row na obiekt Employee"""
@@ -53,33 +63,35 @@ class EmployeeRepository:
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                employee.user_id,
-                employee.forma_zatrudnienia_id,
-                employee.first_name,
-                employee.last_name,
-                employee.phone,
-                employee.email,
-                employee.position,
-                employee.employment_status,
-                employee.hire_date.isoformat() if employee.hire_date else None,
-                employee.termination_date.isoformat() if employee.termination_date else None,
-                employee.base_salary,
-                employee.commission_rate,
-                employee.employer_cost_rate,
-                employee.skills,
-                employee.specializations,
-                employee.work_schedule,
-                employee.max_appointments_per_day,
-                employee.notes,
-                employee.photo_path,
-                employee.is_active
-            ))
-            result_id = cursor.fetchone()["id"]
-            conn.commit()
-            return result_id
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            employee.user_id,
+            employee.forma_zatrudnienia_id,
+            employee.first_name,
+            employee.last_name,
+            employee.phone,
+            employee.email,
+            employee.position,
+            employee.employment_status,
+            employee.hire_date.isoformat() if employee.hire_date else None,
+            employee.termination_date.isoformat() if employee.termination_date else None,
+            employee.base_salary,
+            employee.commission_rate,
+            employee.employer_cost_rate,
+            employee.skills,
+            employee.specializations,
+            employee.work_schedule,
+            employee.max_appointments_per_day,
+            employee.notes,
+            employee.photo_path,
+            employee.is_active
+        ))
+        result_id = cursor.fetchone()["id"]
+        safe_commit(conn)
+        self._audit('CREATE', result_id,
+                    label=f"{employee.first_name} {employee.last_name}".strip())
+        return result_id
 
     _COLUMNS = (
         'id, user_id, forma_zatrudnienia_id, first_name, last_name, phone, email, '
@@ -186,33 +198,37 @@ class EmployeeRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (
-                employee.user_id,
-                employee.forma_zatrudnienia_id,
-                employee.first_name,
-                employee.last_name,
-                employee.phone,
-                employee.email,
-                employee.position,
-                employee.employment_status,
-                employee.hire_date.isoformat() if employee.hire_date else None,
-                employee.termination_date.isoformat() if employee.termination_date else None,
-                employee.base_salary,
-                employee.commission_rate,
-                employee.employer_cost_rate,
-                employee.skills,
-                employee.specializations,
-                employee.work_schedule,
-                employee.max_appointments_per_day,
-                employee.notes,
-                employee.photo_path,
-                employee.is_active,
-                employee_id
-            ))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (
+            employee.user_id,
+            employee.forma_zatrudnienia_id,
+            employee.first_name,
+            employee.last_name,
+            employee.phone,
+            employee.email,
+            employee.position,
+            employee.employment_status,
+            employee.hire_date.isoformat() if employee.hire_date else None,
+            employee.termination_date.isoformat() if employee.termination_date else None,
+            employee.base_salary,
+            employee.commission_rate,
+            employee.employer_cost_rate,
+            employee.skills,
+            employee.specializations,
+            employee.work_schedule,
+            employee.max_appointments_per_day,
+            employee.notes,
+            employee.photo_path,
+            employee.is_active,
+            employee_id
+        ))
+        changed = cursor.rowcount > 0
+        safe_commit(conn)
+        if changed:
+            self._audit('UPDATE', employee_id,
+                        label=f"{employee.first_name} {employee.last_name}".strip())
+        return changed
 
     def delete(self, employee_id: int) -> bool:
         """Usuń pracownika (soft delete - ustawia is_active na False)"""
@@ -221,20 +237,28 @@ class EmployeeRepository:
     def deactivate(self, employee_id: int) -> bool:
         """Dezaktywuj pracownika"""
         query = "UPDATE employees SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (employee_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (employee_id,))
+        changed = cursor.rowcount > 0
+        safe_commit(conn)
+        if changed:
+            self._audit('UPDATE', employee_id,
+                        field_name='is_active', old='true', new='false')
+        return changed
 
     def activate(self, employee_id: int) -> bool:
         """Aktywuj pracownika"""
         query = "UPDATE employees SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (employee_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (employee_id,))
+        changed = cursor.rowcount > 0
+        safe_commit(conn)
+        if changed:
+            self._audit('UPDATE', employee_id,
+                        field_name='is_active', old='false', new='true')
+        return changed
 
     def get_positions(self) -> List[str]:
         """Pobierz listę wszystkich pozycji"""
@@ -306,8 +330,12 @@ class EmployeeRepository:
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (termination_date.isoformat(), employee_id))
-            conn.commit()
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (termination_date.isoformat(), employee_id))
+        changed = cursor.rowcount > 0
+        safe_commit(conn)
+        if changed:
+            self._audit('UPDATE', employee_id, field_name='employment_status',
+                        new='terminated')
+        return changed
