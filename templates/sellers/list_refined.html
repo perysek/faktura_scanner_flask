@@ -167,6 +167,12 @@
     .refined-table th.sortable { cursor: pointer; user-select: none; }
     .refined-table th.sortable:hover { color: var(--color-ink); }
 
+    /* Sortable column headers (matches appointments list) */
+    .th-sortable { cursor: pointer; user-select: none; }
+    .th-sortable:hover { color: var(--color-ink); }
+    .sort-icon { display: inline-block; margin-left: 0.25rem; opacity: 0.35; font-size: 0.75em; }
+    .th-sortable.sort-asc .sort-icon, .th-sortable.sort-desc .sort-icon { opacity: 1; }
+
     .refined-table td {
         padding: 0.5rem 1rem;
         font-size: 0.8125rem;
@@ -498,12 +504,12 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th class="sortable">NIP</th>
-                        <th class="sortable">Nazwa</th>
-                        <th style="text-align: center;">Faktury</th>
-                        <th style="text-align: right;">Opłacone</th>
-                        <th style="text-align: right;">Nieopłacone</th>
-                        <th class="col-updated">Aktualizacja</th>
+                        <th class="th-sortable" onclick="sortBy('seller_nip')" id="th-seller_nip">NIP <span class="sort-icon">↕</span></th>
+                        <th class="th-sortable" onclick="sortBy('seller_name')" id="th-seller_name">Nazwa <span class="sort-icon">↕</span></th>
+                        <th class="th-sortable" style="text-align: center;" onclick="sortBy('invoices')" id="th-invoices">Faktury <span class="sort-icon">↕</span></th>
+                        <th class="th-sortable" style="text-align: right;" onclick="sortBy('total_paid')" id="th-total_paid">Opłacone <span class="sort-icon">↕</span></th>
+                        <th class="th-sortable" style="text-align: right;" onclick="sortBy('total_unpaid')" id="th-total_unpaid">Nieopłacone <span class="sort-icon">↕</span></th>
+                        <th class="th-sortable col-updated" onclick="sortBy('last_updated')" id="th-last_updated">Aktualizacja <span class="sort-icon">↕</span></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -637,6 +643,57 @@
 let sellersData = [];
 let globalStats = null;
 let searchQuery = '';
+let sortState = { column: null, direction: 'asc' };
+
+// ── Sorting (matches appointments list behaviour) ───────────────────────────────
+function sortBy(column) {
+    if (sortState.column === column) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortState.column = column;
+        sortState.direction = 'asc';
+    }
+    updateSortHeaders();
+    renderTable();
+}
+
+function updateSortHeaders() {
+    document.querySelectorAll('.th-sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
+    });
+    if (!sortState.column) return;
+    const th = document.getElementById('th-' + sortState.column);
+    if (!th) return;
+    th.classList.add('sort-' + sortState.direction);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getSortValue(s, column) {
+    if (column === 'invoices') return Number(s.actual_invoice_count || s.invoice_count || 0);
+    if (column === 'last_updated') return s.last_updated ? new Date(s.last_updated).getTime() : 0;
+    const v = s[column];
+    if (v == null) return '';
+    if (column === 'total_paid' || column === 'total_unpaid') return parseFloat(v) || 0;
+    return String(v).toLowerCase();
+}
+
+function getSortedSellers(list) {
+    if (!sortState.column) return list;
+    return [...list].sort((a, b) => {
+        const va = getSortValue(a, sortState.column);
+        const vb = getSortValue(b, sortState.column);
+        let cmp = 0;
+        if (typeof va === 'number' && typeof vb === 'number') {
+            cmp = va - vb;
+        } else {
+            cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        }
+        return sortState.direction === 'asc' ? cmp : -cmp;
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSellers();
@@ -701,6 +758,8 @@ function renderTable() {
             return searchable.includes(searchQuery);
         });
     }
+
+    filtered = getSortedSellers(filtered);
 
     document.getElementById('visible-count').textContent = filtered.length;
     document.getElementById('total-count').textContent = sellersData.length;

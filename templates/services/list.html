@@ -176,6 +176,12 @@
         text-align: right;
     }
 
+    /* Sortable column headers (matches appointments list) */
+    .th-sortable { cursor: pointer; user-select: none; }
+    .th-sortable:hover { color: var(--color-ink); }
+    .sort-icon { display: inline-block; margin-left: 0.25rem; opacity: 0.35; font-size: 0.75em; }
+    .th-sortable.sort-asc .sort-icon, .th-sortable.sort-desc .sort-icon { opacity: 1; }
+
     .refined-table tbody tr {
         transition: background-color 0.2s ease;
     }
@@ -385,12 +391,12 @@
         <table class="refined-table">
             <thead>
                 <tr>
-                    <th>Nazwa usługi</th>
-                    <th>Typ</th>
-                    <th>Kategoria</th>
-                    <th>Czas trwania</th>
-                    <th>Cena</th>
-                    <th>Status</th>
+                    <th class="th-sortable" onclick="sortBy('name')" id="th-name">Nazwa usługi <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('service_type')" id="th-service_type">Typ <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('category')" id="th-category">Kategoria <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('duration_minutes')" id="th-duration_minutes">Czas trwania <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('price')" id="th-price">Cena <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('is_active')" id="th-is_active">Status <span class="sort-icon">↕</span></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -442,6 +448,116 @@ function formatDaysSince(isoTimestamp) {
     return Math.max(0, Math.floor(diffMs / 86400000));
 }
 
+// ── Sorting (matches appointments list behaviour) ───────────────────────────────
+let allServices = [];
+let sortState = { column: null, direction: 'asc' };
+
+function sortBy(column) {
+    if (sortState.column === column) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortState.column = column;
+        sortState.direction = 'asc';
+    }
+    updateSortHeaders();
+    renderServices();
+}
+
+function updateSortHeaders() {
+    document.querySelectorAll('.th-sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
+    });
+    if (!sortState.column) return;
+    const th = document.getElementById('th-' + sortState.column);
+    if (!th) return;
+    th.classList.add('sort-' + sortState.direction);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getSortValue(s, column) {
+    const v = s[column];
+    if (v == null) return '';
+    if (column === 'price' || column === 'duration_minutes') return parseFloat(v) || 0;
+    if (column === 'is_active') return v ? 1 : 0;
+    return String(v).toLowerCase();
+}
+
+function getSortedServices(services) {
+    if (!sortState.column) return services;
+    return [...services].sort((a, b) => {
+        const va = getSortValue(a, sortState.column);
+        const vb = getSortValue(b, sortState.column);
+        let cmp = 0;
+        if (typeof va === 'number' && typeof vb === 'number') {
+            cmp = va - vb;
+        } else {
+            cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        }
+        return sortState.direction === 'asc' ? cmp : -cmp;
+    });
+}
+
+function renderServices() {
+    const tbody = document.getElementById('services-tbody');
+    const services = getSortedServices(allServices);
+
+    if (services.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <span class="material-icons empty-icon">search_off</span>
+                    <p class="empty-text">Nie znaleziono usług</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = services.map(service => {
+        const name = escapeHtml(service.name);
+        const category = escapeHtml(service.category);
+        const description = service.description ? escapeHtml(service.description) : '';
+        const duration = escapeHtml(service.formatted_duration);
+        const price = escapeHtml(service.formatted_price);
+        // Flag services whose catalogue price changed within the last 90 days.
+        const recentChange = service.last_price_change_date
+            && (Date.now() - new Date(service.last_price_change_date).getTime()) < 90 * 86400000;
+        const changeTip = recentChange
+            ? `<span class="price-trend-chip" title="Cenę zmieniono ${formatDaysSince(service.last_price_change_date)} dni temu">↕</span>`
+            : '';
+        const statusBadge = service.is_active
+            ? '<span class="status-badge active">Aktywna</span>'
+            : '<span class="status-badge inactive">Nieaktywna</span>';
+        const typeBadge = service.service_type === 'addon'
+            ? '<span class="type-badge addon">Dodatkowa</span>'
+            : '<span class="type-badge main">Główna</span>';
+
+        return `
+            <tr>
+                <td>
+                    <div>
+                        <div style="font-weight: 500; color: var(--color-ink);">${name}</div>
+                        ${description ? `<div style="font-size: 0.75rem; color: var(--color-ink-subtle); margin-top: 0.25rem;">${description}</div>` : ''}
+                    </div>
+                </td>
+                <td>${typeBadge}</td>
+                <td>${category}</td>
+                <td>${duration}</td>
+                <td style="font-weight: 500;">${price}${changeTip}</td>
+                <td>${statusBadge}</td>
+                <td style="text-align: right;">
+                    <a href="/service/${service.id}" class="action-link">Zobacz</a>
+                    <span style="margin: 0 0.5rem; color: var(--color-border);">|</span>
+                    <a href="/service/${service.id}/edit" class="action-link secondary">Edytuj</a>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
 async function loadServices() {
     saveFilterState('services', ['search-input', 'filter-type']);
     const searchQuery = document.getElementById('search-input').value.trim();
@@ -459,58 +575,8 @@ async function loadServices() {
         const data = await response.json();
 
         if (data.success) {
-            if (data.services.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="empty-state">
-                            <span class="material-icons empty-icon">search_off</span>
-                            <p class="empty-text">Nie znaleziono usług</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = data.services.map(service => {
-                const name = escapeHtml(service.name);
-                const category = escapeHtml(service.category);
-                const description = service.description ? escapeHtml(service.description) : '';
-                const duration = escapeHtml(service.formatted_duration);
-                const price = escapeHtml(service.formatted_price);
-                // Flag services whose catalogue price changed within the last 90 days.
-                const recentChange = service.last_price_change_date
-                    && (Date.now() - new Date(service.last_price_change_date).getTime()) < 90 * 86400000;
-                const changeTip = recentChange
-                    ? `<span class="price-trend-chip" title="Cenę zmieniono ${formatDaysSince(service.last_price_change_date)} dni temu">↕</span>`
-                    : '';
-                const statusBadge = service.is_active
-                    ? '<span class="status-badge active">Aktywna</span>'
-                    : '<span class="status-badge inactive">Nieaktywna</span>';
-                const typeBadge = service.service_type === 'addon'
-                    ? '<span class="type-badge addon">Dodatkowa</span>'
-                    : '<span class="type-badge main">Główna</span>';
-
-                return `
-                    <tr>
-                        <td>
-                            <div>
-                                <div style="font-weight: 500; color: var(--color-ink);">${name}</div>
-                                ${description ? `<div style="font-size: 0.75rem; color: var(--color-ink-subtle); margin-top: 0.25rem;">${description}</div>` : ''}
-                            </div>
-                        </td>
-                        <td>${typeBadge}</td>
-                        <td>${category}</td>
-                        <td>${duration}</td>
-                        <td style="font-weight: 500;">${price}${changeTip}</td>
-                        <td>${statusBadge}</td>
-                        <td style="text-align: right;">
-                            <a href="/service/${service.id}" class="action-link">Zobacz</a>
-                            <span style="margin: 0 0.5rem; color: var(--color-border);">|</span>
-                            <a href="/service/${service.id}/edit" class="action-link secondary">Edytuj</a>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            allServices = data.services;
+            renderServices();
         } else {
             tbody.innerHTML = `
                 <tr>
