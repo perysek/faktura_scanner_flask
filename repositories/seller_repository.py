@@ -4,13 +4,22 @@ Repository dla sprzedawców
 from typing import Any, List, Optional
 
 from database.models import Seller
+from repositories.auditable import AuditableMixin
 from repositories.base_repository import BaseRepository
 from repositories.db_utils import parse_dt
 
 
-class SellerRepository(BaseRepository):
-    """Repository dla operacji na sprzedawcach"""
-    
+class SellerRepository(AuditableMixin, BaseRepository):
+    """Repository dla operacji na sprzedawcach.
+
+    Audytowane (improvement #7 Step 3 via AuditableMixin): create / update /
+    update_name / update_address / delete — czyli rzeczywiste zmiany danych
+    kontrahenta. Liczniki faktur (increment/decrement/sync_invoice_counts) są
+    systemowe, wysokoczęstotliwościowe i NIE są audytowane.
+    """
+
+    audit_entity_type = 'seller'
+
     def __init__(self):
         super().__init__("sellers")
     
@@ -30,8 +39,10 @@ class SellerRepository(BaseRepository):
             seller.address,
             seller.invoice_count
         )
-        
-        return self._execute_insert(query, params)
+
+        new_id = self._execute_insert(query, params)
+        self._audit('CREATE', new_id, label=seller.seller_name)
+        return new_id
     
     def update(self, seller_id: int, seller: Seller) -> bool:
         """Zaktualizuj sprzedawcę"""
@@ -51,10 +62,21 @@ class SellerRepository(BaseRepository):
             seller.invoice_count,
             seller_id
         )
-        
+
         cursor = self._execute(query, params)
-        return cursor.rowcount > 0
-    
+        changed = cursor.rowcount > 0
+        if changed:
+            self._audit('UPDATE', seller_id, label=seller.seller_name)
+        return changed
+
+    def delete(self, seller_id: int) -> bool:
+        """Usuń sprzedawcę (hard delete — sellers nie mają soft-delete, więc wiersz
+        audit_log jest jedynym śladem usuniętego kontrahenta)."""
+        deleted = super().delete(seller_id)
+        if deleted:
+            self._audit('DELETE', seller_id)
+        return deleted
+
     def find_by_nip(self, nip: str) -> Optional[Any]:
         """Znajdź sprzedawcę po numerze NIP"""
         query = "SELECT * FROM sellers WHERE seller_nip = %s"
@@ -194,8 +216,11 @@ class SellerRepository(BaseRepository):
             WHERE id = %s
         """
         cursor = self._execute(query, (new_name, seller_id))
-        return cursor.rowcount > 0
-    
+        changed = cursor.rowcount > 0
+        if changed:
+            self._audit('UPDATE', seller_id, field_name='seller_name', new=new_name)
+        return changed
+
     def update_address(self, seller_id: int, new_address: str) -> bool:
         """Zaktualizuj tylko adres sprzedawcy"""
         query = """
@@ -205,8 +230,11 @@ class SellerRepository(BaseRepository):
             WHERE id = %s
         """
         cursor = self._execute(query, (new_address, seller_id))
-        return cursor.rowcount > 0
-    
+        changed = cursor.rowcount > 0
+        if changed:
+            self._audit('UPDATE', seller_id, field_name='address', new=new_address)
+        return changed
+
     def sync_invoice_counts(self) -> int:
         """
         Zsynchronizuj liczniki faktur ze stanem faktycznym w bazie.

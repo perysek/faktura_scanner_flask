@@ -17,7 +17,7 @@
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
 5. [Weak SECRET_KEY Lifecycle](#5-weak-secret_key-lifecycle) — ✅ **DONE 2026-06-03**
 6. [Unmeasured Test Coverage](#6-unmeasured-test-coverage) — ✅ **DONE 2026-06-03**
-7. [Opt-In, Failure-Swallowing Audit Log](#7-opt-in-failure-swallowing-audit-log) — 🟡 **PARTIAL 2026-06-04**
+7. [Opt-In, Failure-Swallowing Audit Log](#7-opt-in-failure-swallowing-audit-log) — ✅ **DONE 2026-06-04**
 
 ---
 
@@ -814,9 +814,12 @@ builds.
 
 ## 7. Opt-In, Failure-Swallowing Audit Log
 
-> 🟡 **PARTIAL — 2026-06-04.** Flaws #2 (silent swallowing) **and** the headline of
-> Step 2 (atomic audit on the financial path) are now fixed; only Step 3 (the
-> data-layer mixin) remains.
+> ✅ **COMPLETED — 2026-06-04.** All three structural fixes are delivered: audit
+> failures are no longer swallowed (Step 1), the audit row is atomic with the change it
+> describes on the financial + HR paths (Step 2 / 2b / 2c), and a data-layer
+> `AuditableMixin` ends the opt-in coverage gap (Step 3). The mixin is wired into
+> `SellerRepository` as the reference implementation; rolling it out to further repos is
+> now routine application, not a structural weakness.
 >
 > **Step 1 — de-swallow (2026-06-03).** Added `AuditRepository.safe_log_event(critical=False)`:
 > a failed audit write is now logged at ERROR (or re-raised when `critical=True`),
@@ -835,11 +838,29 @@ builds.
 > `TestInvoiceAuditAtomicity` (3 tests, real `AuditRepository` so `safe_commit`
 > suppression is genuinely exercised). **384 green.**
 >
-> **Deferred (own change):** Step 3 (`AuditableMixin` for automatic data-layer audit)
-> — it directly conflicts with the existing route-level `log_change` calls (wiring it
-> into `InvoiceRepository` would double-log every mutation), so it requires a
-> coordinated move of audit *out* of the routes and *into* the repos, which is a
-> larger, separately-reviewed refactor.
+> **Step 3 — AuditableMixin (2026-06-04).** Added `repositories/auditable.py`: a repo
+> that mixes it in and sets `audit_entity_type` can call `self._audit(action, id, ...)`
+> from its own mutation methods, so "the mutation happened" and "it was audited" live in
+> one place and can't drift apart. The mixin is **transaction-aware** (forces
+> `critical=True` inside a `managed_transaction` so a failed audit rolls the unit back;
+> stays non-critical outside, per Step 1) and **context-safe** (reads `current_user`
+> defensively — no crash in background threads / public flows).
+>
+> *Target choice mattered.* The doc proposed wiring it into `InvoiceRepository`, but that
+> path already audits **per-field** at the route level — a repo mixin there would either
+> double-log or *regress* granularity. Data-layer audit also can't distinguish actor
+> context (e.g. a `ClientRepository.create` called by staff vs. anonymous public
+> booking, which logs `user_name='Rezerwacja online'`). So the reference wiring went to
+> **`SellerRepository`** — a staff-only, previously *unaudited* financial counterparty
+> (NIP, address, bank-relevant) — auditing `create / update / update_name /
+> update_address / delete` (the hard-delete audit is the only trace of a removed seller),
+> while skipping the high-frequency counter methods. Locked by
+> `tests/repositories/test_auditable_mixin.py` (11 tests: mixin contract +
+> transaction-awareness + SellerRepository wiring). **405 green.**
+>
+> **Incremental follow-up (not a structural gap):** apply the mixin to other unaudited
+> staff-only repos as needed (employees/salaries, services). The invoice and absence
+> paths intentionally keep their richer route/service-level audit.
 >
 > **Step 2b — absence-balance atomic audit (2026-06-04).** Extended the same atomic
 > pattern to HR/payroll: `AbsenceBalanceService.set_limit / remove_limit /
@@ -1006,7 +1027,7 @@ trustworthy forensic record.
 |---|------|----------|--------|-------------------|
 | 4 | No CSRF | **Critical** | Low | ✅ DONE 2026-06-03 — CSRFProtect + shim + form tokens |
 | 5 | Weak SECRET_KEY | **Critical** | Low | ✅ DONE 2026-06-03 — boot-time validation + rotation doc |
-| 7 | Audit swallows failures | High | Medium | 🟡 PARTIAL 2026-06-04 — swallowing + atomic-write (invoice **and** absence-balance paths) done; only data-layer mixin remains |
+| 7 | Audit swallows failures | High | Medium | ✅ DONE 2026-06-04 — de-swallow + atomic-write (invoice + absence) + AuditableMixin (wired into sellers) |
 | 1 | Schema dual-track | High | Medium | 🟡 PARTIAL 2026-06-03 — boot guard added (`assert_schema_current`); schema.sql removal deferred |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
@@ -1015,8 +1036,7 @@ trustworthy forensic record.
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
-**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 🟡 (swallowing + atomic-write on invoice **and**
-absence-balance paths done; data-layer mixin deferred) · 1 🟡 (boot guard added;
-schema.sql removal deferred).
-Remaining: 7 (mixin only) · 1 (finish) · 2 (repo pattern split — note: 290 call sites,
-not "Low" effort) · 3 (single-worker ceiling).
+**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 ✅ (de-swallow + atomic-write + AuditableMixin) ·
+1 🟡 (boot guard added; schema.sql removal deferred).
+Remaining: 1 (finish) · 2 (repo pattern split — note: 290 call sites, not "Low" effort) ·
+3 (single-worker ceiling).
