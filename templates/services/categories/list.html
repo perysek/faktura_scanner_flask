@@ -131,6 +131,13 @@
         white-space: nowrap;
     }
     .refined-table th:last-child { text-align: right; }
+
+    /* Sortable column headers (matches appointments list) */
+    .th-sortable { cursor: pointer; user-select: none; }
+    .th-sortable:hover { color: var(--color-ink); }
+    .sort-icon { display: inline-block; margin-left: 0.25rem; opacity: 0.35; font-size: 0.75em; }
+    .th-sortable.sort-asc .sort-icon, .th-sortable.sort-desc .sort-icon { opacity: 1; }
+
     .refined-table tbody tr { border-bottom: 1px solid var(--color-border-subtle); transition: background 0.1s; }
     .refined-table tbody tr:hover { background: var(--color-surface-warm); }
     .refined-table td {
@@ -410,9 +417,9 @@
         <table class="refined-table">
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Dodatkowy opis</th>
-                    <th style="text-align:center">Usługi</th>
+                    <th class="th-sortable" onclick="sortBy('name')" id="th-name">Nazwa <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" onclick="sortBy('additional_description')" id="th-additional_description">Dodatkowy opis <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" style="text-align:center" onclick="sortBy('service_count')" id="th-service_count">Usługi <span class="sort-icon">↕</span></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -488,9 +495,66 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// ── Sorting (matches appointments list behaviour) ───────────────────────────────
+let allCategories = [];
+let sortState = { column: null, direction: 'asc' };
+
+function sortBy(column) {
+    if (sortState.column === column) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortState.column = column;
+        sortState.direction = 'asc';
+    }
+    updateSortHeaders();
+    renderCategoriesRows();
+}
+
+function updateSortHeaders() {
+    document.querySelectorAll('.th-sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
+    });
+    if (!sortState.column) return;
+    const th = document.getElementById('th-' + sortState.column);
+    if (!th) return;
+    th.classList.add('sort-' + sortState.direction);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getSortValue(c, column) {
+    const v = c[column];
+    if (v == null) return '';
+    if (column === 'service_count') return parseFloat(v) || 0;
+    return String(v).toLowerCase();
+}
+
+function getSortedCategories(list) {
+    if (!sortState.column) return list;
+    return [...list].sort((a, b) => {
+        const va = getSortValue(a, sortState.column);
+        const vb = getSortValue(b, sortState.column);
+        let cmp = 0;
+        if (typeof va === 'number' && typeof vb === 'number') {
+            cmp = va - vb;
+        } else {
+            cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        }
+        return sortState.direction === 'asc' ? cmp : -cmp;
+    });
+}
+
 function renderTable(categories) {
+    allCategories = categories;
+    renderCategoriesRows();
+}
+
+function renderCategoriesRows() {
     const tbody = document.getElementById('categories-tbody');
     const countEl = document.getElementById('table-count');
+    const categories = getSortedCategories(allCategories);
     countEl.textContent = `Kategorie usług (${categories.length})`;
 
     if (categories.length === 0) {

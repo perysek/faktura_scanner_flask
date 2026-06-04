@@ -113,6 +113,13 @@
         text-align: left; border-bottom: 1px solid var(--color-border);
     }
     .refined-table th:last-child { text-align: right; }
+
+    /* Sortable column headers (matches appointments list) */
+    .th-sortable { cursor: pointer; user-select: none; }
+    .th-sortable:hover { color: var(--color-ink); }
+    .sort-icon { display: inline-block; margin-left: 0.25rem; opacity: 0.35; font-size: 0.75em; }
+    .th-sortable.sort-asc .sort-icon, .th-sortable.sort-desc .sort-icon { opacity: 1; }
+
     .refined-table td {
         padding: 0.75rem 1rem; font-size: 0.8125rem; color: var(--color-ink);
         border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle;
@@ -211,21 +218,27 @@
             </div>
             <div class="table-container">
                 {% if requests_list %}
-                <table class="refined-table">
+                <table class="refined-table" id="requests-table">
                     <thead>
                         <tr>
-                            <th>Pracownik</th>
-                            <th>Kategoria</th>
-                            <th>Okres</th>
-                            <th>Status</th>
-                            <th>Złożono</th>
-                            <th>Odpowiedź</th>
+                            <th class="th-sortable" data-sort-key="employee">Pracownik <span class="sort-icon">↕</span></th>
+                            <th class="th-sortable" data-sort-key="category">Kategoria <span class="sort-icon">↕</span></th>
+                            <th class="th-sortable" data-sort-key="period">Okres <span class="sort-icon">↕</span></th>
+                            <th class="th-sortable" data-sort-key="status">Status <span class="sort-icon">↕</span></th>
+                            <th class="th-sortable" data-sort-key="requested">Złożono <span class="sort-icon">↕</span></th>
+                            <th class="th-sortable" data-sort-key="responded">Odpowiedź <span class="sort-icon">↕</span></th>
                             <th style="text-align:right;">Akcje</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ab in requests_list %}
-                        <tr id="ab-row-{{ ab['id'] }}">
+                        <tr id="ab-row-{{ ab['id'] }}"
+                            data-sort-employee="{{ ab.get('employee_name', '') }}"
+                            data-sort-category="{{ ab.get('category_name', '') }}"
+                            data-sort-period="{{ ab['date_from'] }}"
+                            data-sort-status="{{ ab['status'] }}"
+                            data-sort-requested="{{ ab['requested_at'].isoformat() if ab['requested_at'] else '' }}"
+                            data-sort-responded="{{ ab['responded_at'].isoformat() if ab['responded_at'] else '' }}">
                             <td style="font-weight:500;">
                                 {{ ab.get('employee_name', '—') }}
                                 <span class="balance-hint"
@@ -871,5 +884,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// ── Requests tab: sortable column headers (matches appointments list) ─────────
+// Server-rendered table, so we reorder the <tr> nodes by their data-sort-* attrs.
+(function () {
+    const table = document.getElementById('requests-table');
+    if (!table) return;  // no pending requests → no table to sort
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('th.th-sortable');
+    let sortKey = null;
+    let sortDir = 'asc';
+
+    function updateSortHeaders() {
+        headers.forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) icon.textContent = '↕';
+        });
+        if (!sortKey) return;
+        const active = table.querySelector('th.th-sortable[data-sort-key="' + sortKey + '"]');
+        if (!active) return;
+        active.classList.add('sort-' + sortDir);
+        const icon = active.querySelector('.sort-icon');
+        if (icon) icon.textContent = sortDir === 'asc' ? '↑' : '↓';
+    }
+
+    function sortRows() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+            const va = (a.getAttribute('data-sort-' + sortKey) || '').toLowerCase();
+            const vb = (b.getAttribute('data-sort-' + sortKey) || '').toLowerCase();
+            const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+            return sortDir === 'asc' ? cmp : -cmp;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    headers.forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.getAttribute('data-sort-key');
+            if (sortKey === key) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortKey = key;
+                sortDir = 'asc';
+            }
+            updateSortHeaders();
+            sortRows();
+        });
+    });
+}());
 </script>
 {% endblock %}
