@@ -13,7 +13,7 @@
 
 1. [Schema Dual-Track (schema.sql + Alembic)](#1-schema-dual-track) — ✅ **DONE 2026-06-06**
 2. [Two Competing Repository Access Patterns](#2-two-competing-repository-access-patterns) — ✅ **DONE 2026-06-06**
-3. [Single-Worker Scaling Ceiling (SSE + Scheduler + Import Runner)](#3-single-worker-scaling-ceiling)
+3. [Single-Worker Scaling Ceiling (SSE + Scheduler + Import Runner)](#3-single-worker-scaling-ceiling) — ✅ **DONE 2026-06-06**
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
 5. [Weak SECRET_KEY Lifecycle](#5-weak-secret_key-lifecycle) — ✅ **DONE 2026-06-03**
 6. [Unmeasured Test Coverage](#6-unmeasured-test-coverage) — ✅ **DONE 2026-06-03**
@@ -345,6 +345,37 @@ no shared mutable objects across threads, and ~16 lines of dead wiring removed f
 ---
 
 ## 3. Single-Worker Scaling Ceiling
+
+> ✅ **DONE — 2026-06-06.** The weakness here is not "we can't scale" (that's a
+> product/infra decision) — it is that **correctness silently depended on
+> `workers == 1`, enforced only by a comment**, and a worker bump would multiply
+> SMS and silently break import progress. Both are now closed:
+>
+> - **Scheduler is advisory-lock guarded (Fix 3a).** `scheduler.start_scheduler`
+>   acquires a Postgres *session-level advisory lock*
+>   (`pg_try_advisory_lock`) on a dedicated long-lived connection; only the
+>   winning process runs APScheduler. So SMS fires **exactly once regardless of
+>   worker count** — the triple-reminder scenario is impossible even if someone
+>   bumps workers. No new infrastructure (uses the existing Postgres); fails open
+>   so a DB hiccup at boot never silently disables reminders at workers=1. Lock
+>   is released on graceful shutdown and automatically by Postgres on crash.
+> - **Hard boot guard.** `config/runtime_guards.assert_single_worker()` is called
+>   from `gunicorn.conf.py` at config-load time (in the master, before forking).
+>   Setting `workers > 1` or `WEB_CONCURRENCY > 1` now **aborts startup with an
+>   actionable message** instead of failing mysteriously at runtime. The
+>   invariant is enforced in code, not trusted to a comment — exactly the doc's
+>   stated Outcome.
+> - Locked by `tests/test_scheduler.py` (advisory-lock acquire/skip/fail-open +
+>   start/stop) and `tests/test_runtime_guards.py` (single-worker enforcement).
+>   **438 green.**
+>
+> **Deliberately deferred (premature infra, not a defect): full externalization
+> (Fix 3b/3c).** Moving import progress to DB-polling/Redis pub/sub and long
+> imports to a task queue (Celery/RQ/Dramatiq) is what *enables* `workers > 1`.
+> The doc itself says *"you don't need this until you outgrow one process."* For
+> a single-salon app it would add Redis + a worker process (operational burden +
+> deploy risk) for no current benefit. The migration path is documented below;
+> until then the guard keeps the system correct and honest at `workers = 1`.
 
 ### What is the weakness
 
@@ -1099,12 +1130,17 @@ trustworthy forensic record.
 | 1 | Schema dual-track | High | Medium | ✅ DONE 2026-06-06 — baseline migration is the root; `initialize_database()` removed from boot; proven to build fresh; Alembic is the single source of truth |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | ✅ DONE 2026-06-06 — singletons frozen at attachment (statelessness enforced); single access rule documented; ~480-site rewrite deliberately skipped (no linter, high risk, zero benefit) |
-| 3 | Single-worker ceiling | Medium | High | Already contained at workers=1; only urgent when you must scale |
+| 3 | Single-worker ceiling | Medium | High | ✅ DONE 2026-06-06 — scheduler advisory-locked (SMS fires once at any worker count) + hard boot guard refuses multi-worker; full externalization (Redis/Celery) deferred as premature infra |
 
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
-**Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 ✅ (de-swallow + atomic-write + AuditableMixin) ·
+**Progress:** ALL 7 areas resolved. 4 ✅ · 5 ✅ · 6 ✅ ·
+7 ✅ (de-swallow + atomic-write + AuditableMixin) ·
 1 ✅ (baseline migration + boot bootstrap removed; Alembic is the single source of truth) ·
-2 ✅ (singletons frozen → statelessness enforced; single access rule documented).
-Remaining: 3 (single-worker ceiling).
+2 ✅ (singletons frozen → statelessness enforced; single access rule documented) ·
+3 ✅ (scheduler advisory-locked + hard multi-worker boot guard; horizontal-scaling
+externalization deferred as premature infra).
+Remaining: none. (Optional future work: migrate the 12 standalone repos onto
+BaseRepository for implementation-pattern unification; externalize import progress
++ task queue when horizontal scaling is actually required.)

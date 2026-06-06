@@ -23,9 +23,12 @@ def app():
     os.environ['SECRET_KEY'] = 'b1946ac92492d2347c6235b4d2611184b1946ac92492d2347c6235b4d2611184'
     os.environ.setdefault('DATABASE_URL', 'postgresql://test:test@localhost/test')
 
-    # Patch pool + DB initialization before importing app to prevent real connection
+    # Patch pool + DB initialization before importing app to prevent real
+    # connections. Also stub the SMS scheduler so the app factory never opens a
+    # real advisory-lock connection or spins up a background thread under test.
     with patch('config.database.initialize_pool', return_value=None), \
-         patch('config.database.initialize_database', return_value=None):
+         patch('config.database.initialize_database', return_value=None), \
+         patch('scheduler.start_scheduler', return_value=None):
         from app import create_app
         app = create_app()
         app.config['TESTING'] = True
