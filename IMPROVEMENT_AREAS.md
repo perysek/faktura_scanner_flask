@@ -11,7 +11,7 @@
 
 ## Table of Contents
 
-1. [Schema Dual-Track (schema.sql + Alembic)](#1-schema-dual-track) — 🟡 **PARTIAL 2026-06-03**
+1. [Schema Dual-Track (schema.sql + Alembic)](#1-schema-dual-track) — ✅ **DONE 2026-06-06**
 2. [Two Competing Repository Access Patterns](#2-two-competing-repository-access-patterns)
 3. [Single-Worker Scaling Ceiling (SSE + Scheduler + Import Runner)](#3-single-worker-scaling-ceiling)
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
@@ -23,18 +23,33 @@
 
 ## 1. Schema Dual-Track
 
-> 🟡 **PARTIAL — 2026-06-03.** The low-risk half is shipped: `assert_schema_current()`
-> (`config/database.py`) runs at boot right after `initialize_database()` and **fails
-> loud if a migrated DB is behind head** — turning the silent missing-column 500 into
-> a clear boot error. It is conservative by design: *behind head* → raise; *no
-> `alembic_version` table* (schema.sql baseline) → warn & continue; pool unavailable
-> → skip; `SKIP_SCHEMA_CHECK=true` bypasses. Prod verified at head, so zero boot risk.
-> Guard-test coverage in `tests/test_schema_guard.py`. **Deferred (own change):** the
-> structural half — removing `initialize_database()`/`schema.sql` auto-run, adding a
-> baseline migration, and baking `alembic upgrade head` into deploy — because the
-> migration chain mixes `create_table` and `ALTER`s and must be proven to build a
-> fresh DB from empty (a `create_table`-vs-`schema.sql` conflict risk) before it's
-> safe to remove the bootstrap.
+> ✅ **DONE — 2026-06-06.** Alembic is now the **single source of truth**. The
+> structural half is shipped on top of the earlier boot guard:
+>
+> - **Baseline migration** `alembic/versions/000_baseline_invoice_domain.py` is the
+>   new **root** of the chain. Its `upgrade()` executes `database/schema.sql` (the
+>   invoice domain + roles), so a fresh `alembic upgrade head` builds the invoice
+>   tables *before* the downstream `ALTER invoices` migrations that always assumed
+>   them. `001` was rewired (`down_revision = '000_baseline'`).
+> - **`initialize_database()` removed from `create_app()`.** Schema creation is no
+>   longer a boot side effect — it's an explicit `alembic upgrade head` deploy step.
+>   The boot guard `assert_schema_current()` stays (refuses to boot a migrated DB
+>   behind head).
+> - **`database/schema.sql` reclassified** to "baseline-migration source, not boot-
+>   executed" via a header; it is no longer a parallel schema authority.
+> - **Proven to build from empty.** The offline full-chain walk
+>   (`alembic upgrade base:head --sql`) emits `CREATE TABLE invoices` at the top and
+>   the `ALTER invoices` statements far below it (correct order), exiting 0 through
+>   all 38 migrations. End-to-end verified on the Vultr Postgres against a throwaway
+>   database (`alembic upgrade head` from empty → full table set → dropped), the
+>   exact fresh-build proof the deferral required.
+> - **Regression-guarded** by `tests/test_migration_chain.py` (single head, single
+>   root == `000_baseline`, `001` chains off it, chain walkable).
+>
+> Earlier half (2026-06-03): `assert_schema_current()` boot guard +
+> `tests/test_schema_guard.py`; conservative by design (*behind head* → raise; no
+> `alembic_version` → warn; pool unavailable → skip; `SKIP_SCHEMA_CHECK=true`
+> bypasses).
 
 ### What is the weakness
 
@@ -1035,7 +1050,7 @@ trustworthy forensic record.
 | 4 | No CSRF | **Critical** | Low | ✅ DONE 2026-06-03 — CSRFProtect + shim + form tokens |
 | 5 | Weak SECRET_KEY | **Critical** | Low | ✅ DONE 2026-06-03 — boot-time validation + rotation doc |
 | 7 | Audit swallows failures | High | Medium | ✅ DONE 2026-06-04 — de-swallow + atomic-write (invoice + absence) + AuditableMixin (wired into sellers) |
-| 1 | Schema dual-track | High | Medium | 🟡 PARTIAL 2026-06-03 — boot guard added (`assert_schema_current`); schema.sql removal deferred |
+| 1 | Schema dual-track | High | Medium | ✅ DONE 2026-06-06 — baseline migration is the root; `initialize_database()` removed from boot; proven to build fresh; Alembic is the single source of truth |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
 | 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
 | 3 | Single-worker ceiling | Medium | High | Already contained at workers=1; only urgent when you must scale |
@@ -1044,6 +1059,6 @@ trustworthy forensic record.
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
 **Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 ✅ (de-swallow + atomic-write + AuditableMixin) ·
-1 🟡 (boot guard added; schema.sql removal deferred).
-Remaining: 1 (finish) · 2 (repo pattern split — note: 290 call sites, not "Low" effort) ·
-3 (single-worker ceiling).
+1 ✅ (baseline migration + boot bootstrap removed; Alembic is the single source of truth).
+Remaining: 2 (repo pattern split — note: ~344 `current_app.*_repo`/`_service` call sites,
+not "Low" effort) · 3 (single-worker ceiling).

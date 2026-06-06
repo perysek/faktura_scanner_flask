@@ -34,7 +34,7 @@ if _log_level == logging.DEBUG:
 
 # Import configuration
 from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
-from config.database import initialize_database, initialize_pool, close_pool, assert_schema_current
+from config.database import initialize_pool, close_pool, assert_schema_current
 
 # Import repositories
 from repositories.invoice_repository import InvoiceRepository
@@ -160,12 +160,17 @@ def create_app():
     UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
     PDF_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    # Initialize connection pool and database schema
+    # Initialize the connection pool. Schema creation is NO LONGER a boot side
+    # effect (improvement #1): the schema is owned solely by the Alembic chain
+    # and applied by an explicit `alembic upgrade head` deploy step. The old
+    # initialize_database() call — which re-ran database/schema.sql on every
+    # boot as a second, parallel schema authority — is gone. schema.sql is now
+    # the baseline migration's source (alembic/versions/000_baseline_*), not a
+    # competing definition.
     initialize_pool()
     atexit.register(close_pool)
-    initialize_database()
-    # Schema dual-track guard (improvement #1): refuse to boot a migrated DB that
-    # is behind head, turning silent missing-column 500s into a clear boot error.
+    # Schema guard: refuse to boot a migrated DB that is behind head, turning a
+    # silent missing-column 500 into a clear boot-time error that names the fix.
     assert_schema_current()
 
     # Initialize repositories

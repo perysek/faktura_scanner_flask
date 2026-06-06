@@ -351,16 +351,17 @@ Get-Content .env | Where-Object { $_ -notmatch "^#" -and $_ -match "=" } | ForEa
     [System.Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), "Process")
 }
 
-# Create base tables (if app has initialize_database)
-python -c "from config.database import initialize_database; initialize_database()"
-
-# Run all Alembic migrations
+# Build the entire schema from empty. Alembic is the single source of truth
+# (improvement #1): the baseline migration creates the invoice domain + roles,
+# then the rest of the chain adds everything else. The app no longer creates
+# the schema at boot, so this step is required on a fresh database.
 .venv\Scripts\alembic.exe upgrade head
 ```
 
-Expected:
+Expected (baseline runs first):
 ```
-INFO  [alembic.runtime.migration] Running upgrade -> 001, Create users...
+INFO  [alembic.runtime.migration] Running upgrade -> 000_baseline, Baseline: invoice-domain + roles tables
+INFO  [alembic.runtime.migration] Running upgrade 000_baseline -> 001, Create users...
 INFO  [alembic.runtime.migration] Running upgrade 001 -> ..., Create clients...
 ...
 ```

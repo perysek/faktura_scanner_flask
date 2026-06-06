@@ -275,7 +275,15 @@ TEMP_DIR=/opt/my-way-beauty-salon/data/temp
 
 ## Step 11 — Initialize the Database Schema
 
-This creates all tables in PostgreSQL.
+This creates **all** tables in PostgreSQL. Alembic is the single source of
+truth (improvement #1): the chain's baseline migration creates the invoice
+domain (invoices, sellers, audit_log, …) and roles, then the rest of the chain
+adds users, employees, clients, appointments, services, absences, etc.
+
+> **The app no longer creates the schema at boot.** `initialize_database()` is
+> gone from `create_app()`. Running `alembic upgrade head` is now a *required*
+> deploy step on a fresh database — without it the app will warn at boot and
+> 500 on the first query.
 
 ```bash
 cd /opt/my-way-beauty-salon
@@ -283,20 +291,15 @@ cd /opt/my-way-beauty-salon
 # Load environment variables from .env
 export $(grep -v '^#' .env | xargs)
 
-# Create the core invoice tables (invoices, sellers, audit_log, etc.)
-python -c "from config.database import initialize_database; initialize_database()"
-# Expected: Baza danych zainicjalizowana
-
-# Run Alembic migrations — creates users, employees, clients,
-# appointments, services, and all related tables
+# Build the entire schema from empty — the ONLY way schema is applied
 alembic upgrade head
 ```
 
-Expected Alembic output:
+Expected Alembic output (note the baseline runs first):
 ```
-INFO  [alembic.runtime.migration] Running upgrade  -> 001, Create users and employees tables
+INFO  [alembic.runtime.migration] Running upgrade  -> 000_baseline, Baseline: invoice-domain + roles tables
+INFO  [alembic.runtime.migration] Running upgrade 000_baseline -> 001, Create users and employees tables
 INFO  [alembic.runtime.migration] Running upgrade 001 -> ee7039bc78b2, Create clients table
-INFO  [alembic.runtime.migration] Running upgrade ee7039bc78b2 -> 144e98f4eeec, Create services table
 ...
 ```
 
