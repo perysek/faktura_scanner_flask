@@ -1,5 +1,27 @@
 """
 Bazowa klasa repository z CRUD operations
+
+Repository access pattern (improvement #2)
+==========================================
+Repositories are **stateless connection-borrowers**: every method pulls its
+connection from Flask ``g`` (via ``DatabaseConnection.get_connection()``), so an
+instance carries no per-request data. Two ways to obtain one coexist and are
+BOTH safe:
+
+  * ``current_app.<x>_repo`` — the shared singletons attached in ``create_app()``.
+    Convenient inside a request. These are **frozen at attachment** (see
+    ``freeze_repository_singleton`` below) so they can never acquire mutable
+    instance state that would leak across ``gthread`` worker threads.
+  * ``XRepository()`` — direct instantiation. The ONLY option outside a request
+    context (background threads, the AuditableMixin, boot code) and for repos
+    that have no singleton. Always safe because a fresh instance is private to
+    the caller.
+
+The one rule: **a repository must never hold mutable instance state** (caches,
+per-user filters, memoized lookups). The singleton freeze enforces this for the
+shared instances; new repos should follow it too. A genuinely per-call,
+stateful helper (e.g. EmployeeAnalyticsRepository, scoped to one employee_id)
+is fine — just never attach it as an ``app.*`` singleton.
 """
 from contextlib import contextmanager
 from typing import Any, List, Optional
@@ -9,6 +31,50 @@ import psycopg2.extensions
 
 from config.database import DatabaseConnection, safe_commit
 from exceptions import DatabaseConnectionError
+
+
+def freeze_repository_singleton(repo: Any) -> Any:
+    """Make a repository instance reject all post-construction attribute writes.
+
+    A repository attached to the Flask app (``app.invoice_repo`` …) is a SINGLE
+    object shared by every ``gthread`` worker thread. It is safe today only
+    because it is stateless. The latent trap (improvement #2): the day a method
+    or a well-meaning "optimization" runs ``self._cache = {}`` on that shared
+    instance, the state leaks across requests and threads — and a plain ``dict``
+    is not thread-safe, so concurrent writes can corrupt it or raise
+    ``RuntimeError: dictionary changed size during iteration``. The bug is
+    intermittent and nearly impossible to reproduce with one user.
+
+    Freezing the instance at attachment time makes that structurally impossible:
+    any later ``self.x = ...`` raises immediately (caught in dev/test the first
+    time it runs) instead of silently corrupting production data.
+
+    Mechanism: swap the instance to a frozen subclass whose ``__setattr__``
+    raises. ``isinstance`` and method resolution are unaffected (the frozen
+    class IS-A the original, and keeps its name). The instance is already fully
+    constructed, so legitimate construction-time state (e.g. ``table_name``) is
+    preserved. Works for every repo regardless of base class. Idempotent.
+    """
+    cls = type(repo)
+    if getattr(cls, '_is_frozen_singleton', False):
+        return repo  # already frozen — idempotent
+
+    def _frozen_setattr(self, name, value):  # noqa: ANN001
+        raise AttributeError(
+            f"{cls.__name__} is a frozen shared singleton (improvement #2): "
+            f"cannot set instance attribute {name!r}. A repository attached to "
+            f"the Flask app is shared across worker threads and MUST stay "
+            f"stateless. Use a local variable or per-request state, never "
+            f"instance state. (If you truly need per-instance state, build the "
+            f"repo locally with XRepository() and do not attach it as a singleton.)"
+        )
+
+    frozen_cls = type(cls.__name__, (cls,), {
+        '__setattr__': _frozen_setattr,
+        '_is_frozen_singleton': True,
+    })
+    repo.__class__ = frozen_cls  # original __setattr__ is plain object's — allowed
+    return repo
 
 
 class BaseRepository:

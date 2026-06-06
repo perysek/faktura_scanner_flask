@@ -37,6 +37,7 @@ from config.settings import APP_NAME, VERSION, UPLOAD_FOLDER, PDF_FOLDER
 from config.database import initialize_pool, close_pool, assert_schema_current
 
 # Import repositories
+from repositories.base_repository import freeze_repository_singleton as _frozen
 from repositories.invoice_repository import InvoiceRepository
 from repositories.audit_repository import AuditRepository
 from repositories.upload_staging_repository import UploadStagingRepository
@@ -173,24 +174,31 @@ def create_app():
     # silent missing-column 500 into a clear boot-time error that names the fix.
     assert_schema_current()
 
-    # Initialize repositories
-    app.invoice_repo = InvoiceRepository()
-    app.audit_repo = AuditRepository()
-    app.staging_repo = UploadStagingRepository()
-    app.seller_repo = SellerRepository()
-    app.seller_password_repo = SellerPasswordRepository()
-    app.client_repo = ClientRepository()
-    app.service_repo = ServiceRepository()
-    app.service_category_repo = ServiceCategoryRepository()
-    app.service_price_history_repo = ServicePriceHistoryRepository()
-    app.employee_repo = EmployeeRepository()
-    app.forma_zatrudnienia_repo = FormaZatrudnieniaRepository()
-    app.absence_category_repo = AbsenceCategoryRepository()
-    app.absence_repo = AbsenceRepository()
-    app.supervisor_repo = EmployeeSupervisorRepository()
-    app.absence_limit_repo = AbsenceLimitRepository()
-    app.absence_adjustment_repo = AbsenceAdjustmentRepository()
-    app.absence_balance_repo = AbsenceBalanceRepository()
+    # Initialize repositories (improvement #2).
+    # These are SHARED singletons served by all gthread worker threads, so each
+    # is frozen via freeze_repository_singleton(): stateless today, and the
+    # freeze makes it impossible for any future method to add per-instance state
+    # that would leak across threads/requests. Repos remain obtainable two ways
+    # — current_app.<x>_repo here, or XRepository() in thread/mixin/boot contexts
+    # — and both are safe because repositories never hold mutable instance state.
+    # Any NEW app.*_repo singleton MUST be wrapped in _frozen() too.
+    app.invoice_repo = _frozen(InvoiceRepository())
+    app.audit_repo = _frozen(AuditRepository())
+    app.staging_repo = _frozen(UploadStagingRepository())
+    app.seller_repo = _frozen(SellerRepository())
+    app.seller_password_repo = _frozen(SellerPasswordRepository())
+    app.client_repo = _frozen(ClientRepository())
+    app.service_repo = _frozen(ServiceRepository())
+    app.service_category_repo = _frozen(ServiceCategoryRepository())
+    app.service_price_history_repo = _frozen(ServicePriceHistoryRepository())
+    app.employee_repo = _frozen(EmployeeRepository())
+    app.forma_zatrudnienia_repo = _frozen(FormaZatrudnieniaRepository())
+    app.absence_category_repo = _frozen(AbsenceCategoryRepository())
+    app.absence_repo = _frozen(AbsenceRepository())
+    app.supervisor_repo = _frozen(EmployeeSupervisorRepository())
+    app.absence_limit_repo = _frozen(AbsenceLimitRepository())
+    app.absence_adjustment_repo = _frozen(AbsenceAdjustmentRepository())
+    app.absence_balance_repo = _frozen(AbsenceBalanceRepository())
 
     # Initialize services
     app.ocr_service = OCRService()
