@@ -4,7 +4,7 @@
 -- improvement #1 (schema dual-track): this file is NO LONGER executed on app
 -- boot. It is the source consumed ONCE by the baseline Alembic migration
 -- (alembic/versions/000_baseline_invoice_domain.py) when building a fresh
--- database. The single source of truth for the schema is the Alembic chain;
+-- database. The single source of truth for the schema is the Alembic chain --
 -- run `alembic upgrade head` to create/upgrade a database.
 --
 -- Keep this fully idempotent (CREATE ... IF NOT EXISTS, ON CONFLICT DO NOTHING).
