@@ -54,23 +54,55 @@ depends_on: Union[str, Sequence[str], None] = None
 _SCHEMA_SQL = Path(__file__).resolve().parents[2] / "database" / "schema.sql"
 
 
-def _split_sql_statements(sql: str) -> list[str]:
-    """Split SQL into individual statements, respecting dollar-quoted blocks.
+def _is_blank_or_comment_only(stmt: str) -> bool:
+    """True if a chunk has no executable SQL (only blank lines / -- comments).
 
-    A naive ``split(';')`` breaks PostgreSQL ``DO $$ BEGIN ... END $$`` blocks
-    because they contain internal semicolons that are NOT statement
-    terminators. This parser tracks dollar-quote depth so it splits only at
-    real boundaries. (Frozen copy of ``config.database._split_sql_statements``
-    so this migration stays self-contained and immutable.)
+    SQLAlchemy 2.0 raises ObjectNotExecutableError for a comment-only string,
+    so these chunks must be skipped rather than executed.
+    """
+    for line in stmt.splitlines():
+        s = line.strip()
+        if s and not s.startswith('--'):
+            return False
+    return True
+
+
+def _split_sql_statements(sql: str) -> list[str]:
+    """Split SQL into individual statements, respecting dollar-quotes AND comments.
+
+    A naive ``split(';')`` breaks two things:
+      * PostgreSQL ``DO $$ BEGIN ... END $$`` blocks (internal semicolons that
+        are NOT terminators) — handled by tracking dollar-quote depth.
+      * a ``;`` that appears inside a ``-- line comment`` — handled by skipping
+        to end-of-line when a ``--`` comment starts outside a dollar-quote.
+
+    The second case is the bug that motivated this hardened copy: the previous
+    parser was comment-blind, so any semicolon inside a ``--`` comment produced
+    a bogus comment-only statement.
     """
     statements: list[str] = []
     current: list[str] = []
     in_dollar_quote = False
     dollar_tag = ''
     i = 0
+    n = len(sql)
 
-    while i < len(sql):
+    while i < n:
         ch = sql[i]
+
+        # Line comment outside a dollar-quote: copy verbatim to end-of-line so
+        # any ';' inside it is NOT treated as a statement terminator.
+        if not in_dollar_quote and ch == '-' and i + 1 < n and sql[i + 1] == '-':
+            eol = sql.find('\n', i)
+            if eol == -1:
+                current.append(sql[i:])
+                i = n
+            else:
+                current.append(sql[i:eol + 1])
+                i = eol + 1
+            continue
+
+        # Dollar-quote open/close (e.g. $$ or $body$).
         if ch == '$':
             j = sql.find('$', i + 1)
             if j != -1:
@@ -86,9 +118,10 @@ def _split_sql_statements(sql: str) -> list[str]:
                     current.append(tag)
                     i = j + 1
                     continue
+
         if ch == ';' and not in_dollar_quote:
             stmt = ''.join(current).strip()
-            if stmt:
+            if stmt and not _is_blank_or_comment_only(stmt):
                 statements.append(stmt)
             current = []
         else:
@@ -96,16 +129,22 @@ def _split_sql_statements(sql: str) -> list[str]:
         i += 1
 
     stmt = ''.join(current).strip()
-    if stmt:
+    if stmt and not _is_blank_or_comment_only(stmt):
         statements.append(stmt)
     return statements
 
 
 def upgrade() -> None:
-    """Create the invoice-domain + roles baseline from database/schema.sql."""
+    """Create the invoice-domain + roles baseline from database/schema.sql.
+
+    Executes each statement via ``exec_driver_sql`` (raw psycopg2, the same
+    engine ``initialize_database`` always used) rather than ``op.execute`` —
+    this tolerates leading comments and runs inside Alembic's transaction.
+    """
     schema = _SCHEMA_SQL.read_text(encoding="utf-8")
+    bind = op.get_bind()
     for statement in _split_sql_statements(schema):
-        op.execute(statement)
+        bind.exec_driver_sql(statement)
 
 
 def downgrade() -> None:
