@@ -13,7 +13,10 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '001'
-down_revision: Union[str, None] = None
+# Chained off the invoice-domain baseline (improvement #1). Was None (root);
+# the baseline now creates invoices/sellers/audit_log/roles before the user/
+# employee tables, so a fresh `alembic upgrade head` builds the whole schema.
+down_revision: Union[str, None] = '000_baseline'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
