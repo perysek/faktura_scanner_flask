@@ -12,7 +12,7 @@
 ## Table of Contents
 
 1. [Schema Dual-Track (schema.sql + Alembic)](#1-schema-dual-track) — ✅ **DONE 2026-06-06**
-2. [Two Competing Repository Access Patterns](#2-two-competing-repository-access-patterns)
+2. [Two Competing Repository Access Patterns](#2-two-competing-repository-access-patterns) — ✅ **DONE 2026-06-06**
 3. [Single-Worker Scaling Ceiling (SSE + Scheduler + Import Runner)](#3-single-worker-scaling-ceiling)
 4. [No CSRF Protection](#4-no-csrf-protection) — ✅ **DONE 2026-06-03**
 5. [Weak SECRET_KEY Lifecycle](#5-weak-secret_key-lifecycle) — ✅ **DONE 2026-06-03**
@@ -181,6 +181,52 @@ exactly `head`, or the app refuses to start and tells you why.
 ---
 
 ## 2. Two Competing Repository Access Patterns
+
+> ✅ **DONE — 2026-06-06.** The *dangerous* facet — a shared singleton silently
+> acquiring mutable state that leaks across `gthread` worker threads — is now
+> structurally impossible, and the access rule is documented and enforced.
+>
+> **What the codebase actually looked like (vs. the doc's assumptions).** The
+> split is bigger and more entangled than "Low effort": ~**344** `current_app.*_repo`
+> reads (268 in the 4382-line `api_routes.py` alone) **and** ~**140** direct
+> `XRepository()` instantiations across 24 route/service files. Crucially, direct
+> instantiation is **mandatory** in three contexts where `current_app` doesn't
+> exist — background threads (`data_import_runner`), the data-layer
+> `AuditableMixin`, and boot code — so "all singletons" is impossible, and
+> "all local" would mean rewriting ~480 working call sites. Of the 17 app
+> singletons, **12 are standalone `class X:` repos** (only 5 extend
+> `BaseRepository`), so a `__slots__`/`__setattr__` guard on `BaseRepository`
+> (the doc's idea) would have covered barely a third of the trap surface.
+>
+> **The fix — freeze the singletons at the source.** `create_app()` now wraps
+> every `app.*_repo` in `freeze_repository_singleton()`
+> (`repositories/base_repository.py`): it swaps the instance to a frozen subclass
+> whose `__setattr__` raises, so any future `self._cache = {}` on a shared repo
+> fails immediately in dev/test instead of corrupting production. It covers all
+> 17 singletons regardless of base class, preserves `isinstance`/type-name, and
+> leaves locally-instantiated per-call repos (e.g. `EmployeeAnalyticsRepository`,
+> scoped to one `employee_id`) free to hold state. Verified: nothing in
+> `repositories/` mutates instance state in a method or via `setattr` (only that
+> one per-call repo sets state, in `__init__`). Locked by
+> `tests/repositories/test_stateless_singletons.py` (9 tests). **426 green.**
+>
+> **The one rule (documented in `base_repository.py`).** Repos are stateless
+> connection-borrowers. Use `current_app.<x>_repo` inside a request; use
+> `XRepository()` outside an app context (threads/mixin/boot) and for repos with
+> no singleton. Both are safe because instance state is forbidden — enforced for
+> the shared instances by the freeze. Any NEW `app.*_repo` must be wrapped in
+> `_frozen()`.
+>
+> **Deliberately NOT done: the ~480-site mechanical rewrite.** Converting every
+> `current_app.*_repo` to `XRepository()` (or vice-versa) on a live financial app
+> carries real, *un-catchable* risk here: a missing import surfaces as a
+> `NameError` only when that route is hit at runtime, the project has **no
+> linter** (no pyflakes/ruff/flake8) to catch undefined names statically, and the
+> test suite is mock-based (won't exercise every route). With statelessness now
+> enforced, that churn delivers **zero** functional benefit at high regression
+> risk — so the weakness is closed by enforcement + a documented rule rather than
+> by mass edits. Migrating the 12 standalone repos onto `BaseRepository` (true
+> implementation-pattern unification) remains an optional, larger refactor.
 
 ### What is the weakness
 
@@ -1052,13 +1098,13 @@ trustworthy forensic record.
 | 7 | Audit swallows failures | High | Medium | ✅ DONE 2026-06-04 — de-swallow + atomic-write (invoice + absence) + AuditableMixin (wired into sellers) |
 | 1 | Schema dual-track | High | Medium | ✅ DONE 2026-06-06 — baseline migration is the root; `initialize_database()` removed from boot; proven to build fresh; Alembic is the single source of truth |
 | 6 | Unmeasured tests | High | Medium | ✅ DONE 2026-06-03 — suite repaired (375 green), `.coveragerc` + CI gate |
-| 2 | Repo pattern split | Medium | Low | Latent thread-safety trap; cheap to standardize now |
+| 2 | Repo pattern split | Medium | Low | ✅ DONE 2026-06-06 — singletons frozen at attachment (statelessness enforced); single access rule documented; ~480-site rewrite deliberately skipped (no linter, high risk, zero benefit) |
 | 3 | Single-worker ceiling | Medium | High | Already contained at workers=1; only urgent when you must scale |
 
 **Suggested order:** 4 → 5 (a day, closes the two critical security holes) → 6 (so the rest is
 regression-guarded) → 7 → 1 → 2 → 3 (when scaling demands it).
 
 **Progress:** 4 ✅ · 5 ✅ · 6 ✅ · 7 ✅ (de-swallow + atomic-write + AuditableMixin) ·
-1 ✅ (baseline migration + boot bootstrap removed; Alembic is the single source of truth).
-Remaining: 2 (repo pattern split — note: ~344 `current_app.*_repo`/`_service` call sites,
-not "Low" effort) · 3 (single-worker ceiling).
+1 ✅ (baseline migration + boot bootstrap removed; Alembic is the single source of truth) ·
+2 ✅ (singletons frozen → statelessness enforced; single access rule documented).
+Remaining: 3 (single-worker ceiling).
