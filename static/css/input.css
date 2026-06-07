@@ -7,7 +7,11 @@
       /* Text Colors */
       --color-ink: #1a1a1a;
       --color-ink-muted: #525252;
-      --color-ink-subtle: #8a8a8a;
+      /* Darkened from #8a8a8a (3.45:1, failed WCAG AA) to #6b6b6b (~5.1:1 on
+         white, ~4.9:1 on warm surface) so KPI labels, helper text and
+         placeholders meet AA for small text. Stays lighter than ink-muted,
+         preserving the 3-tier ink hierarchy. */
+      --color-ink-subtle: #6b6b6b;
 
       /* Surface Colors */
       --color-surface: #fafafa;
