@@ -192,8 +192,13 @@
     .refined-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 900px;
-        table-layout: fixed;
+        /* Content-sized columns + a comfortable floor. The .table-container
+           wrapper has overflow:auto, so when the natural width exceeds the
+           viewport the table scrolls horizontally instead of crushing columns
+           (which caused the "Pokrycie grafiku / Bilans urlopu" header collision
+           under the old table-layout:fixed + 108%-sum colgroup). */
+        min-width: 1200px;
+        table-layout: auto;
     }
 
     .refined-table thead { background: var(--color-surface); }
@@ -209,6 +214,10 @@
         border-bottom: 1px solid var(--color-border);
         vertical-align: bottom;
         line-height: 1.3;
+        /* Keep header labels on one line so they never wrap mid-word or
+           collide with the next column. Soft hyphens (&shy;) in the markup
+           become inert under nowrap. */
+        white-space: nowrap;
     }
 
     .refined-table th:last-child { text-align: right; }
@@ -230,7 +239,10 @@
         vertical-align: middle;
         white-space: normal;
         overflow-wrap: break-word;
-        word-break: break-word;
+        /* normal (not break-word) so emails/long tokens aren't shattered
+           mid-string; with table-layout:auto the column widens to fit and
+           the container scrolls if needed. */
+        word-break: normal;
     }
 
     .refined-table tbody tr:last-child td { border-bottom: none; }
