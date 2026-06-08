@@ -555,13 +555,12 @@
     <div class="table-container" aria-live="polite" aria-label="Lista klientów">
         <table class="refined-table">
             <colgroup>
-                <col style="width:20%"><!-- Imię i nazwisko -->
-                <col style="width:10%"><!-- Telefon -->
-                <col style="width:13%"><!-- Email -->
-                <col style="width:10%"><!-- Ostatnia wizyta -->
-                <col style="width:6%"> <!-- Wizyt -->
-                <col style="width:7%"> <!-- No-shows -->
-                <col style="width:7%"> <!-- Anulowanych -->
+                <col style="width:22%"><!-- Imię i nazwisko -->
+                <col style="width:12%"><!-- Telefon -->
+                <col style="width:12%"><!-- Ostatnia wizyta -->
+                <col style="width:9%"> <!-- Wizyt -->
+                <col style="width:9%"> <!-- No-shows -->
+                <col style="width:9%"> <!-- Odwołał -->
                 <col style="width:8%"> <!-- Trend -->
                 <col style="width:9%"> <!-- Status -->
                 <col style="width:10%"><!-- Akcje -->
@@ -576,10 +575,6 @@
                         Telefon
                         <span class="th-sort-icon" id="si-phone">▲</span>
                     </th>
-                    <th class="th-sortable" onclick="sortBy('email')" id="th-email">
-                        Email
-                        <span class="th-sort-icon" id="si-email">▲</span>
-                    </th>
                     <th class="th-sortable" onclick="sortBy('last_visit_date')" id="th-last_visit_date">
                         Ostatnia wizyta
                         <span class="th-sort-icon" id="si-last_visit_date">▲</span>
@@ -593,7 +588,7 @@
                         <span class="th-sort-icon" id="si-no_show_count">▲</span>
                     </th>
                     <th class="th-sortable" onclick="sortBy('cancelled_count')" id="th-cancelled_count">
-                        Anulo&shy;wanych
+                        Odwołał
                         <span class="th-sort-icon" id="si-cancelled_count">▲</span>
                     </th>
                     <th>Trend<br><span style="font-size:0.5625rem;font-weight:400;letter-spacing:0;text-transform:none;opacity:0.7;">6 mies.</span></th>
@@ -603,7 +598,7 @@
             </thead>
             <tbody id="clients-tbody">
                 <tr>
-                    <td colspan="10" class="empty-state">
+                    <td colspan="9" class="empty-state">
                         <span class="material-icons empty-icon">people</span>
                         <p class="empty-text">Ładowanie klientów...</p>
                     </td>
@@ -757,7 +752,7 @@ function renderClients(clients) {
     if (sorted.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="empty-state">
+                <td colspan="9" class="empty-state">
                     <span class="material-icons empty-icon">search_off</span>
                     <p class="empty-text">Nie znaleziono klientów</p>
                 </td>
@@ -772,9 +767,6 @@ function renderClients(clients) {
         const fullName = escapeHtml((client.full_name || '').trim());
         const phone = client.phone
             ? escapeHtml(client.phone)
-            : '<span style="color:var(--color-ink-subtle)">—</span>';
-        const email = client.email
-            ? escapeHtml(client.email)
             : '<span style="color:var(--color-ink-subtle)">—</span>';
         const lastVisit = formatDate(client.last_visit_date);
         const ageInfo = client.age
@@ -818,7 +810,6 @@ function renderClients(clients) {
                     </div>
                 </td>
                 <td>${phone}</td>
-                <td>${email}</td>
                 <td>${lastVisit}</td>
                 <td><span class="visit-count">${client.completed_visits || 0}</span></td>
                 <td>${noShowCell}</td>
@@ -892,7 +883,7 @@ async function loadClients() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="empty-state">
+                    <td colspan="9" class="empty-state">
                         <p class="empty-text" style="color:var(--color-error);">
                             Błąd ładowania klientów: ${escapeHtml(clientsResp.error)}
                         </p>
@@ -906,7 +897,7 @@ async function loadClients() {
         console.error('Error loading clients:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="empty-state">
+                <td colspan="9" class="empty-state">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top:0.75rem;">
                         Spróbuj ponownie
