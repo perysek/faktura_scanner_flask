@@ -22,11 +22,19 @@
       --color-border-subtle: #f0eeea;
 
       /* Brand / Accent */
-      --color-accent: #c9a227;
+      --color-accent: #c9a227;            /* DECORATIVE gold — logo flourish, hover marks */
       --color-accent-muted: rgba(201, 162, 39, 0.12);
+      /* FUNCTIONAL accent = blue (Tailwind primary-600): focus rings, links,
+         primary buttons. The gold above is decorative only. Declared so the
+         accent system is unambiguous (F-008). */
+      --color-focus-ring: #2563eb;
 
       /* Semantic Colors */
+      /* Two intentional greens (F-008): forest = text/badges/"paid" states;
+         emerald (--color-success-action) = saturated confirm/save button fills. */
       --color-success: #2d6a4f;
+      --color-success-action: #10b981;
+      --color-success-action-dark: #059669;
       --color-warning: #9a6700;
       --color-error: #9b2c2c;
       --color-info: #1e6091;
@@ -113,6 +121,17 @@
       transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
       transition-duration: 300ms;
+  }
+
+  /* ── Global keyboard focus ring (F-006) ──
+     Fires for keyboard users only — :focus-visible never triggers on a mouse
+     click, so it adds zero visual noise for pointer users. A SAFETY NET for the
+     ~37 elements that did `outline:none` with no replacement. Components with
+     their own focus treatment (.ss-trigger, .form-input, .ss-search) keep
+     theirs; the cascade lets the more specific rule win. */
+  :focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
   }
 }
 
@@ -692,7 +711,8 @@
       font-size: 0.875rem;
       font-weight: 500;
       color: white;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      /* Emerald action-green via tokens (F-008) — same pixels, now intentional. */
+      background: linear-gradient(135deg, var(--color-success-action) 0%, var(--color-success-action-dark) 100%);
       border: none;
       border-radius: 0.625rem;
       cursor: pointer;
