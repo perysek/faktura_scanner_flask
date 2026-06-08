@@ -70,7 +70,7 @@
 
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 0.75rem;
         margin-bottom: 1rem;
         flex-shrink: 0;
@@ -85,9 +85,27 @@
         flex-direction: column;
     }
 
+    .stat-card .stat-value { white-space: nowrap; }
+
+    /* F-004: hero KPI — gross total is THE number; the rest support it. */
+    .stat-card--hero {
+        grid-column: span 2;
+        background: linear-gradient(135deg, var(--color-ink) 0%, #2a2a2a 100%);
+        border-color: var(--color-ink);
+        justify-content: center;
+        gap: 0.25rem;
+    }
+    .stat-card--hero .stat-value { color: #fff; font-size: 1.875rem; }
+    .stat-card--hero .stat-label { color: rgba(255, 255, 255, 0.7); }
+
+    /* Secondary amount cards: smaller value so the full "zł" amount fits one line. */
+    .stat-card--amount .stat-value { font-size: 1.0625rem; }
+
     .panels-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        /* F-012: fixed 2-col so the 4 support panels form a clean 2×2 under the
+           full-width chart — no stranded odd-row void at intermediate widths. */
+        grid-template-columns: repeat(2, 1fr);
         gap: 0.75rem;
         flex: 1;
         min-height: 0;
@@ -334,6 +352,10 @@
     </header>
 
     <div class="stats-grid">
+        <div class="stat-card stat-card--hero">
+            <span class="stat-value" id="stat-amount-gross">—</span>
+            <span class="stat-label">Brutto</span>
+        </div>
         <div class="stat-card">
             <span class="stat-value" id="stat-total">—</span>
             <span class="stat-label">Wszystkie</span>
@@ -346,15 +368,11 @@
             <span class="stat-value" id="stat-unpaid">—</span>
             <span class="stat-label">Nieopłacone</span>
         </div>
-        <div class="stat-card">
-            <span class="stat-value" id="stat-amount-gross">—</span>
-            <span class="stat-label">Brutto</span>
-        </div>
-        <div class="stat-card">
+        <div class="stat-card stat-card--amount">
             <span class="stat-value" id="stat-amount-net">—</span>
             <span class="stat-label">Netto</span>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-card--amount">
             <span class="stat-value" id="stat-amount-vat">—</span>
             <span class="stat-label">VAT</span>
         </div>
@@ -471,7 +489,7 @@ async function refreshDashboard() {
             loadMonthlyChart()
         ]);
 
-        if (label) label.textContent = 'Odświeżono';
+        if (label) label.textContent = 'Aktualne';
         setTimeout(() => { if (label) label.textContent = 'Odśwież'; }, 2000);
     } catch (error) {
         console.error('Error refreshing dashboard:', error);
@@ -494,19 +512,13 @@ async function loadStatistics() {
             const totalNet = totalGross / 1.23;
             const totalVat = totalGross * (23 / 123);
 
-            document.getElementById('stat-amount-gross').textContent = formatAmountShort(totalGross);
-            document.getElementById('stat-amount-net').textContent = formatAmountShort(totalNet);
-            document.getElementById('stat-amount-vat').textContent = formatAmountShort(totalVat);
+            document.getElementById('stat-amount-gross').textContent = formatPLN(totalGross);
+            document.getElementById('stat-amount-net').textContent = formatPLN(totalNet);
+            document.getElementById('stat-amount-vat').textContent = formatPLN(totalVat);
         }
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
-}
-
-function formatAmountShort(amount) {
-    if (amount >= 1000000) return (amount / 1000000).toFixed(1) + ' M';
-    if (amount >= 1000) return (amount / 1000).toFixed(1) + ' K';
-    return amount.toFixed(0);
 }
 
 async function loadRecentInvoices() {
