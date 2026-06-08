@@ -271,6 +271,8 @@
     .col-due { width: 10%; }
     .col-amount { width: 12%; }
     .col-status { width: 10%; }
+    /* F-009: right-align the money column (header + cells) so figures read as a column */
+    th.col-amount, td.col-amount { text-align: right; }
     .col-actions { width: 10%; }
 
     /* Invoice Number - Primary identifier */
@@ -313,6 +315,7 @@
         font-weight: 600;
         color: var(--color-ink);
         white-space: nowrap;
+        font-variant-numeric: tabular-nums;  /* F-009: align decimal points down the column */
     }
 
     .currency-code {
@@ -1289,9 +1292,9 @@ function renderTable() {
                 <td>
                     <span class="date-value">${formatDateShort(invoice.payment_due_date)}</span>
                 </td>
-                <td>
+                <td class="col-amount">
                     <span class="amount-value">${formatAmountDisplay(invoice.amount)}</span>
-                    <span class="currency-code">${invoice.currency || 'PLN'}</span>
+                    <span class="currency-code">${(!invoice.currency || invoice.currency === 'PLN') ? 'zł' : invoice.currency}</span>
                 </td>
                 <td>
                     <span class="status-badge ${statusInfo.class} clickable-status"

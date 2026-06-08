@@ -37,13 +37,32 @@ function formatDate(dateString) {
 }
 
 /**
- * Format currency to Polish format
+ * Format currency to Polish format.
+ * Multi-currency aware — honours the passed currency code. Use this for
+ * per-row values that may not be PLN (e.g. invoice rows). For known-PLN
+ * aggregates (dashboard totals), prefer formatPLN() below.
  */
 function formatCurrency(amount, currency = 'PLN') {
     if (amount === null || amount === undefined) return '';
     return new Intl.NumberFormat('pl-PL', {
         style: 'currency',
         currency: currency
+    }).format(amount);
+}
+
+/**
+ * Canonical PLN money format → "1 234,56 zł" (F-003).
+ * Single source of truth for known-PLN amounts so the app stops mixing
+ * "K"/"M" abbreviations and bare "PLN" with "zł". pl-PL renders the PLN
+ * symbol as "zł" and groups thousands with a thin space.
+ */
+function formatPLN(amount) {
+    if (amount === null || amount === undefined || isNaN(amount)) return '—';
+    return new Intl.NumberFormat('pl-PL', {
+        style: 'currency',
+        currency: 'PLN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     }).format(amount);
 }
 

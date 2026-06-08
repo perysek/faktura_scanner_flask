@@ -542,7 +542,7 @@ async function loadOverduePayments() {
         const response = await API.get('/dashboard/overdue-payments?limit=5');
         if (response.success && response.invoices.length > 0) {
             const total = response.invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-            if (summary) summary.textContent = formatAmountShort(total);
+            if (summary) summary.textContent = formatPLN(total);
 
             container.innerHTML = response.invoices.map(invoice => {
                 const dueDate = invoice.payment_due_date ? new Date(invoice.payment_due_date) : null;
@@ -577,7 +577,7 @@ async function loadUpcomingPayments() {
         const response = await API.get('/dashboard/upcoming-payments?limit=5');
         if (response.success && response.invoices.length > 0) {
             const total = response.invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-            if (summary) summary.textContent = formatAmountShort(total);
+            if (summary) summary.textContent = formatPLN(total);
 
             container.innerHTML = response.invoices.map(invoice => {
                 const dueDate = invoice.payment_due_date ? new Date(invoice.payment_due_date) : null;
@@ -634,7 +634,7 @@ async function loadTopSellers() {
                         </div>
                         <div class="list-item-side">
                             <div class="list-item-amount">${seller.invoice_count || 0} faktur</div>
-                            <div class="list-item-meta">${formatAmountShort(seller.total_amount || 0)}</div>
+                            <div class="list-item-meta">${formatPLN(seller.total_amount || 0)}</div>
                         </div>
                     </div>
                 `;
