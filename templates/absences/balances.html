@@ -80,8 +80,9 @@
     .icon-btn .material-icons { font-size: 0.9375rem; }
     .icon-btn:hover:not(:disabled) { background: var(--color-surface); }
     .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    .icon-btn.delete-btn { border-color: rgba(185,28,28,.3); color: #b91c1c; }
-    .icon-btn.delete-btn:hover:not(:disabled) { background: rgba(185,28,28,.06); }
+    /* F-018: calm by default (neutral), red only on hover — kills the loud red delete column */
+    .icon-btn.delete-btn { border-color: var(--color-border); color: var(--color-ink-subtle); }
+    .icon-btn.delete-btn:hover:not(:disabled) { background: rgba(185,28,28,.06); border-color: rgba(185,28,28,.3); color: #b91c1c; }
     .icon-btn.save-btn   { border-color: rgba(22,163,74,.35); color: #15803d; }
     .icon-btn.save-btn:hover:not(:disabled)  { background: rgba(22,163,74,.06); }
     .icon-btn.undo-btn   { color: var(--color-ink-muted); }

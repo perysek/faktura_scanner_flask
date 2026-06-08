@@ -136,7 +136,7 @@
             {% if user_permissions.settings %}
             {# Settings icon has two paths — use inline instead of macro #}
             <a href="{{ url_for('main.email_settings') }}"
-               class="sidebar-link flex items-center gap-2.5 px-4 py-2 text-sm font-medium transition-all duration-200 group
+               class="sidebar-link flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-sm font-medium transition-all duration-200 group
                {{ 'sidebar-link--active rounded-lg' if request.endpoint == 'main.email_settings' else 'sidebar-link--default rounded-xl' }}"
                {% if request.endpoint == 'main.email_settings' %}aria-current="page"{% endif %}>
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

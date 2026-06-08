@@ -591,6 +591,13 @@ async function loadProfit() {
     if (netEl) {
         netEl.textContent = formatCurrency(data.net_profit);
         netEl.className = `text-2xl font-semibold mb-2 ${data.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        // F-013: the card's accent border must agree with the sign — no green border around a loss.
+        const netCard = netEl.closest('.refined-card');
+        if (netCard) {
+            const loss = data.net_profit < 0;
+            netCard.classList.toggle('border-green-500', !loss);
+            netCard.classList.toggle('border-red-400', loss);
+        }
     }
 
     // Period change badge

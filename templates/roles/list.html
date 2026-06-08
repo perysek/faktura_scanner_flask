@@ -14,9 +14,10 @@
     .refined-table tr:hover td { background: var(--color-surface-warm); }
     .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 2px; font-size: 0.6875rem; font-weight: 500; }
     .badge-protected { background: #fef3c7; color: #92400e; }
-    .module-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; }
-    .module-dot-on { background: var(--color-success); }
-    .module-dot-off { background: var(--color-star-empty); }
+    .module-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; box-sizing: border-box; border: 1px solid transparent; }
+    /* F-017: filled = granted, hollow ring = denied — distinguishable without colour */
+    .module-dot-on { background: var(--color-success); border-color: var(--color-success); }
+    .module-dot-off { background: transparent; border-color: var(--color-ink-subtle); }
     .btn-primary { background: var(--color-ink); color: white; border: none; padding: 0.5rem 1rem; border-radius: 2px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; text-decoration: none; }
     .btn-ghost { background: none; border: 1px solid var(--color-border); color: var(--color-ink-muted); padding: 0.375rem 0.75rem; border-radius: 2px; font-size: 0.75rem; cursor: pointer; text-decoration: none; }
     .btn-ghost:hover { border-color: var(--color-ink); color: var(--color-ink); }
@@ -41,6 +42,10 @@
         </a>
     </div>
     <div class="refined-card">
+        <div class="dot-legend" style="display:flex;gap:1.25rem;align-items:center;margin-bottom:0.75rem;font-size:0.6875rem;color:var(--color-ink-muted);">
+            <span style="display:inline-flex;align-items:center;gap:0.375rem;"><span class="module-dot module-dot-on"></span>dozwolone</span>
+            <span style="display:inline-flex;align-items:center;gap:0.375rem;"><span class="module-dot module-dot-off"></span>brak dostępu</span>
+        </div>
         <div id="loading-state">Ładowanie...</div>
         <table class="refined-table" id="roles-table" style="display:none;">
             <thead>
