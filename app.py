@@ -368,6 +368,20 @@ def create_app():
     except Exception as _sched_err:
         logging.warning("SMS scheduler not started: %s", _sched_err)
 
+    # Static-asset cache busting. nginx serves output.css as immutable,
+    # max-age=1y, so a stable URL would pin returning users to a stale
+    # stylesheet after a deploy. We hash output.css once at startup and append
+    # it as ?v=<hash> on the <link> (see base.html). The URL changes exactly
+    # when the CSS content changes, so browser caches invalidate automatically.
+    # Recomputed on each restart, i.e. on every deploy.
+    try:
+        import hashlib
+        _css_path = os.path.join(app.static_folder, 'css', 'output.css')
+        with open(_css_path, 'rb') as _css_f:
+            app.config['ASSET_VERSION'] = hashlib.sha256(_css_f.read()).hexdigest()[:10]
+    except Exception:
+        app.config['ASSET_VERSION'] = 'dev'
+
     return app
 
 
