@@ -192,12 +192,9 @@
     .refined-table {
         width: 100%;
         border-collapse: collapse;
-        /* Content-sized columns + a comfortable floor. The .table-container
-           wrapper has overflow:auto, so when the natural width exceeds the
-           viewport the table scrolls horizontally instead of crushing columns
-           (which caused the "Pokrycie grafiku / Bilans urlopu" header collision
-           under the old table-layout:fixed + 108%-sum colgroup). */
-        min-width: 1200px;
+        /* Six content-sized columns fit the viewport, so no horizontal scroll
+           on laptop/desktop. Headers use white-space:nowrap (below) to avoid
+           the mid-word wrapping / collision the older 11-column layout had. */
         table-layout: auto;
     }
 
@@ -529,36 +526,26 @@
     <div class="table-container">
         <table class="refined-table">
             <colgroup>
-                <col style="width:22%"><!-- Imię i nazwisko -->
-                <col style="width:9%"> <!-- Stanowisko -->
-                <col style="width:10%"><!-- Telefon -->
-                <col style="width:6%"> <!-- Prowizja -->
-                <col style="width:12%"><!-- Status -->
-                <col style="width:8%"> <!-- Ocena klientów -->
-                <col style="width:10%"><!-- Zaplanowanych wizyt -->
-                <col style="width:10%"><!-- Zakończonych wizyt -->
-                <col style="width:6%"> <!-- Pokrycie grafiku -->
-                <col style="width:8%"> <!-- Bilans urlopu -->
-                <col style="width:7%"> <!-- Akcje -->
+                <col style="width:30%"><!-- Imię i nazwisko -->
+                <col style="width:15%"><!-- Stanowisko -->
+                <col style="width:15%"><!-- Status -->
+                <col style="width:16%"><!-- Ocena klientów -->
+                <col style="width:12%"><!-- Bilans urlopu -->
+                <col style="width:12%"><!-- Akcje -->
             </colgroup>
             <thead>
                 <tr>
                     <th class="th-sortable" onclick="sortBy('full_name')" id="th-full_name">Imię i nazwisko <span class="sort-icon">↕</span></th>
                     <th class="th-sortable" onclick="sortBy('position')" id="th-position">Stanowisko <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('phone')" id="th-phone">Telefon <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('commission_rate')" id="th-commission_rate">Prowizja <span class="sort-icon">↕</span></th>
                     <th class="th-sortable" onclick="sortBy('status')" id="th-status">Status <span class="sort-icon">↕</span></th>
                     <th class="th-sortable" onclick="sortBy('avg_satisfaction')" id="th-avg_satisfaction">Ocena klientów <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" style="text-align:center;" onclick="sortBy('scheduled_this_month')" id="th-scheduled_this_month">Zaplano&shy;wanych wizyt <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" style="text-align:center;" onclick="sortBy('completed_this_month')" id="th-completed_this_month">Zakoń&shy;czonych wizyt <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" style="text-align:center;" onclick="sortBy('schedule_coverage_pct')" id="th-schedule_coverage_pct">Pokrycie grafiku <span class="sort-icon">↕</span></th>
                     <th class="th-sortable" style="text-align:center;" onclick="sortBy('balance')" id="th-balance">Bilans urlopu <span class="sort-icon">↕</span></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="employees-tbody">
                 <tr>
-                    <td colspan="11" class="empty-state">
+                    <td colspan="6" class="empty-state">
                         <span class="material-icons empty-icon">badge</span>
                         <p class="empty-text">Ładowanie pracowników...</p>
                     </td>
@@ -755,7 +742,7 @@ function renderEmployees() {
     if (employees.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="empty-state">
+                <td colspan="6" class="empty-state">
                     <span class="material-icons empty-icon">search_off</span>
                     <p class="empty-text">Nie znaleziono pracowników</p>
                 </td>
@@ -768,12 +755,6 @@ function renderEmployees() {
         const fullName   = escapeHtml(emp.full_name);
         const position   = emp.position
             ? escapeHtml(emp.position)
-            : '<span style="color:var(--color-ink-subtle)">—</span>';
-        const phone      = emp.phone
-            ? escapeHtml(emp.phone)
-            : '<span style="color:var(--color-ink-subtle)">—</span>';
-        const commission = emp.commission_rate != null
-            ? `<span class="commission-value">${emp.commission_rate}%</span>`
             : '<span style="color:var(--color-ink-subtle)">—</span>';
 
         return `
@@ -788,19 +769,8 @@ function renderEmployees() {
                     </div>
                 </td>
                 <td>${position}</td>
-                <td>${phone}</td>
-                <td>${commission}</td>
                 <td>${getStatusBadge(emp)}</td>
                 <td>${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
-                <td class="month-stat" style="text-align:center;">
-                    ${emp.scheduled_this_month ?? 0}
-                </td>
-                <td class="month-stat" style="text-align:center;">
-                    ${emp.completed_this_month ?? 0}
-                </td>
-                <td style="text-align:center;">
-                    ${renderCoverage(emp.schedule_coverage_pct)}
-                </td>
                 <td style="text-align:center;">
                     ${renderBalanceBadge(emp.id)}
                 </td>
