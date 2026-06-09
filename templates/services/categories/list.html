@@ -240,6 +240,8 @@
         position: fixed;
         inset: 0;
         background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         z-index: 1000;
         display: flex;
         align-items: center;
@@ -247,23 +249,23 @@
         padding: 1rem;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.2s;
+        transition: opacity 0.2s var(--ease-out-expo);
     }
     .cat-modal-overlay.open { opacity: 1; pointer-events: all; }
 
     .cat-modal-box {
         background: white;
-        border-radius: 2px;
+        border-radius: 3px;
         width: 100%;
         max-width: 640px;
         max-height: 80vh;
         display: flex;
         flex-direction: column;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-        transform: translateY(8px);
-        transition: transform 0.2s;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        transform: translateY(8px) scale(0.98);
+        transition: transform 0.25s var(--ease-out-expo);
     }
-    .cat-modal-overlay.open .cat-modal-box { transform: translateY(0); }
+    .cat-modal-overlay.open .cat-modal-box { transform: none; }
 
     .cat-modal-header {
         display: flex;
@@ -342,7 +344,9 @@
     .cat-confirm-dialog {
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         z-index: 2000;
         display: flex;
         align-items: center;
@@ -350,17 +354,20 @@
         padding: 1rem;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.15s;
+        transition: opacity 0.2s var(--ease-out-expo);
     }
     .cat-confirm-dialog.open { opacity: 1; pointer-events: all; }
     .cat-confirm-box {
         background: white;
-        border-radius: 2px;
+        border-radius: 3px;
         padding: 1.75rem;
         max-width: 420px;
         width: 100%;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        transform: translateY(8px) scale(0.98);
+        transition: transform 0.25s var(--ease-out-expo);
     }
+    .cat-confirm-dialog.open .cat-confirm-box { transform: none; }
     .cat-confirm-title {
         font-size: 0.9375rem;
         font-weight: 600;

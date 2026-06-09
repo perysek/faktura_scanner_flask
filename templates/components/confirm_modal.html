@@ -1,14 +1,31 @@
 <!-- Confirmation Modal Component -->
+<!-- Modal look + motion driven by id-scoped CSS (not arbitrary Tailwind classes) so it works
+     against the pre-built output.css without a rebuild — matches golden master appointments/list.html -->
+<style>
+    #confirm-modal-backdrop {
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        opacity: 0; transition: opacity 0.25s var(--ease-out-expo);
+    }
+    #confirm-modal-backdrop.is-open { opacity: 1; }
+    #confirm-modal-panel {
+        background: #fff;
+        border: 1px solid var(--color-border);
+        border-radius: 3px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        opacity: 0; transform: translateY(8px) scale(0.98);
+        transition: opacity 0.25s var(--ease-out-expo), transform 0.25s var(--ease-out-expo);
+    }
+    #confirm-modal-panel.is-open { opacity: 1; transform: none; }
+</style>
 <div id="confirm-modal" class="fixed inset-0 z-[9999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <!-- Backdrop with blur -->
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-all duration-200 opacity-0"
-         id="confirm-modal-backdrop" onclick="closeConfirmModal()"></div>
+    <!-- Backdrop with blur — matches golden master (templates/appointments/list.html) -->
+    <div class="absolute inset-0" id="confirm-modal-backdrop" onclick="closeConfirmModal()"></div>
 
     <!-- Modal Panel Container -->
     <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-        <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-200 scale-95 opacity-0 pointer-events-auto"
-             id="confirm-modal-panel"
-             style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);">
+        <div class="relative max-w-md w-full pointer-events-auto"
+             id="confirm-modal-panel">
 
             <!-- Header with Icon -->
             <div class="px-6 pt-6 pb-4">
@@ -35,7 +52,7 @@
             </div>
 
             <!-- Actions Footer -->
-            <div class="px-6 pb-6 pt-2 flex items-center justify-end gap-3 bg-slate-50/80 rounded-b-2xl border-t border-slate-100">
+            <div class="px-6 pb-6 pt-2 flex items-center justify-end gap-3 bg-slate-50/80 rounded-b-[3px] border-t border-slate-100">
                 <button type="button" onclick="closeConfirmModal()"
                         class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-1 active:scale-[0.98]">
                     Anuluj
@@ -118,10 +135,8 @@
 
         // Trigger animations after display change
         requestAnimationFrame(() => {
-            backdrop.classList.remove('opacity-0');
-            backdrop.classList.add('opacity-100');
-            panel.classList.remove('scale-95', 'opacity-0');
-            panel.classList.add('scale-100', 'opacity-100');
+            backdrop.classList.add('is-open');
+            panel.classList.add('is-open');
         });
 
         // Focus the cancel button for accessibility
@@ -147,10 +162,8 @@
         const panel = document.getElementById('confirm-modal-panel');
 
         // Animate out
-        backdrop.classList.remove('opacity-100');
-        backdrop.classList.add('opacity-0');
-        panel.classList.remove('scale-100', 'opacity-100');
-        panel.classList.add('scale-95', 'opacity-0');
+        backdrop.classList.remove('is-open');
+        panel.classList.remove('is-open');
 
         // Hide after animation and restore body scroll
         setTimeout(() => {
@@ -158,7 +171,7 @@
             document.body.style.overflow = '';
             confirmModalTargetForm = null;
             confirmModalCallback = null;
-        }, 200);
+        }, 250);
     }
 
     // Global helper for delete forms

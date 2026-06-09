@@ -841,14 +841,14 @@ function showSellerConflictModal({ nip, existingName, newName }) {
         const overlay = document.createElement('div');
          overlay.style.cssText = `
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 9999; backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.35); display: flex; align-items: center;
+            justify-content: center; z-index: 9999; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         `;
 
         const modal = document.createElement('div');
          modal.style.cssText = `
-            background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 500px; width: 90%; animation: slideIn 0.3s ease-out;
+            background: white; border-radius: 3px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            max-width: 500px; width: 90%; animation: modalIn 0.25s var(--ease-out-expo);
         `;
 
         modal.innerHTML = `
@@ -901,13 +901,13 @@ function showNewSellerModal({ nip, name }) {
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 9999; backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.35); display: flex; align-items: center;
+            justify-content: center; z-index: 9999; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         `;
          const modal = document.createElement('div');
          modal.style.cssText = `
-            background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 500px; width: 90%; animation: slideIn 0.3s ease-out;
+            background: white; border-radius: 3px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            max-width: 500px; width: 90%; animation: modalIn 0.25s var(--ease-out-expo);
         `;
 
         modal.innerHTML = `

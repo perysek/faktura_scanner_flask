@@ -69,14 +69,28 @@
 
 {% if current_user.role == 'superuser' %}
 <!-- Reset Password Modal (superuser only) -->
+<!-- Look + motion via id-scoped CSS (no rebuild-dependent arbitrary Tailwind) — matches golden master appointments/list.html -->
+<style>
+    #reset-pw-backdrop {
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        opacity: 0; transition: opacity 0.25s var(--ease-out-expo);
+    }
+    #reset-pw-backdrop.is-open { opacity: 1; }
+    #reset-pw-panel {
+        background: #fff;
+        border: 1px solid var(--color-border);
+        border-radius: 3px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        opacity: 0; transform: translateY(8px) scale(0.98);
+        transition: opacity 0.25s var(--ease-out-expo), transform 0.25s var(--ease-out-expo);
+    }
+    #reset-pw-panel.is-open { opacity: 1; transform: none; }
+</style>
 <div id="reset-pw-modal" class="fixed inset-0 z-[9999] hidden" role="dialog" aria-modal="true" aria-labelledby="reset-pw-modal-title">
-    <div class="absolute inset-0 transition-all duration-200 opacity-0"
-         id="reset-pw-backdrop" onclick="closeResetPwModal()"
-         style="background: rgba(0,0,0,0.5);"></div>
+    <div class="absolute inset-0" id="reset-pw-backdrop" onclick="closeResetPwModal()"></div>
     <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-        <div class="relative bg-white max-w-md w-full transform transition-all duration-200 scale-95 opacity-0 pointer-events-auto"
-             id="reset-pw-panel"
-             style="border-radius: 2px; border: 1px solid var(--color-border); box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
+        <div class="relative max-w-md w-full pointer-events-auto" id="reset-pw-panel">
 
             <!-- Header -->
             <div style="padding: 1.5rem 1.5rem 1rem;">
@@ -258,10 +272,8 @@
         document.body.style.overflow = 'hidden';
         modal.classList.remove('hidden');
         requestAnimationFrame(() => {
-            backdrop.classList.remove('opacity-0');
-            backdrop.classList.add('opacity-100');
-            panel.classList.remove('scale-95', 'opacity-0');
-            panel.classList.add('scale-100', 'opacity-100');
+            backdrop.classList.add('is-open');
+            panel.classList.add('is-open');
         });
         setTimeout(() => document.getElementById('reset-pw-new').focus(), 100);
     }
@@ -271,15 +283,13 @@
         const backdrop = document.getElementById('reset-pw-backdrop');
         const panel = document.getElementById('reset-pw-panel');
 
-        backdrop.classList.remove('opacity-100');
-        backdrop.classList.add('opacity-0');
-        panel.classList.remove('scale-100', 'opacity-100');
-        panel.classList.add('scale-95', 'opacity-0');
+        backdrop.classList.remove('is-open');
+        panel.classList.remove('is-open');
         setTimeout(() => {
             modal.classList.add('hidden');
             document.body.style.overflow = '';
             resetPwTargetId = null;
-        }, 200);
+        }, 250);
     }
 
     document.getElementById('reset-pw-submit')?.addEventListener('click', async function() {

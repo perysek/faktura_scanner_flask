@@ -234,10 +234,9 @@
     .te-id-link:hover { text-decoration: underline; }
 
     /* ── Services Modal ── */
-    .te-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .te-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; animation: modalBackdropIn 0.2s var(--ease-out-expo); }
     .te-modal-overlay.open { display: flex; }
-    .te-modal { background: white; border-radius: 4px; width: 560px; max-width: 94vw; max-height: 85vh; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; animation: teModalIn 0.18s var(--ease) forwards; }
-    @keyframes teModalIn { from { opacity:0; transform:scale(0.96) translateY(6px); } to { opacity:1; transform:scale(1); } }
+    .te-modal { background: white; border-radius: 3px; width: 560px; max-width: 94vw; max-height: 85vh; box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden; display: flex; flex-direction: column; animation: modalIn 0.25s var(--ease-out-expo); }
     .te-modal-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--pp-border); display: flex; align-items: center; gap: 0.5rem; background: var(--pp-surface-warm); flex-shrink: 0; }
     .te-modal-title { font-family: var(--pp-mono); font-size: 0.82rem; font-weight: 600; flex: 1; }
     .te-modal-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--pp-ink-subtle); padding: 0.2rem; line-height: 1; }

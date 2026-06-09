@@ -86,7 +86,20 @@
 
 <!-- Dashboard Content -->
 <!-- Custom Date Range Modal (hidden by default) -->
-<div id="customRangeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<!-- Backdrop blur + entrance motion to match golden master (templates/appointments/list.html) -->
+<style>
+    #customRangeModal {
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        animation: modalBackdropIn 0.2s var(--ease-out-expo);
+    }
+    #customRangeModal > .refined-card {
+        border-radius: 3px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        animation: modalIn 0.25s var(--ease-out-expo);
+    }
+</style>
+<div id="customRangeModal" class="hidden fixed inset-0 flex items-center justify-center z-50">
     <div class="refined-card max-w-md w-full">
         <h3 class="text-lg font-medium mb-4">Wybierz zakres dat</h3>
         <div class="space-y-4">

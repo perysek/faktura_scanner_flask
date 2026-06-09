@@ -121,6 +121,19 @@
         .ss-list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
     </style>
 
+    <!-- Canonical modal motion primitives (golden master: templates/appointments/list.html) —
+         defined globally so every modal across the app references the same blur/motion curve -->
+    <style>
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to   { opacity: 1; transform: none; }
+        }
+        @keyframes modalBackdropIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+    </style>
+
     <!-- Toast notification styles (inline — independent of Tailwind build) -->
     <style>
         @keyframes toast-slide-up {

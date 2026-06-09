@@ -51,9 +51,9 @@
     .th-sortable.sort-asc .sort-icon, .th-sortable.sort-desc .sort-icon { opacity: 1; }
 
     /* Status modal */
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; animation: modalBackdropIn 0.2s var(--ease-out-expo); }
     .modal-backdrop.hidden { display: none; }
-    .modal-box { background: white; border: 1px solid var(--color-border); border-radius: 3px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); width: 420px; max-width: 95vw; padding: 1.5rem; }
+    .modal-box { background: white; border: 1px solid var(--color-border); border-radius: 3px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); width: 420px; max-width: 95vw; padding: 1.5rem; animation: modalIn 0.25s var(--ease-out-expo); }
     .modal-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.25rem; }
     .modal-meta { font-size: 0.75rem; color: var(--color-ink-muted); margin-bottom: 1rem; }
     .modal-section-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); margin-bottom: 0.5rem; }

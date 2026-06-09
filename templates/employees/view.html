@@ -251,10 +251,10 @@
         border-radius: 2px;
     }
 
-    /* Modal — matches appointments list golden master */
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    /* Modal — matches appointments list golden master (blur + entrance motion) */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; animation: modalBackdropIn 0.2s var(--ease-out-expo); }
     .modal-backdrop.hidden { display: none; }
-    .modal-box { background: white; border: 1px solid var(--color-border); border-radius: 3px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); width: 440px; max-width: 95vw; padding: 1.75rem; }
+    .modal-box { background: white; border: 1px solid var(--color-border); border-radius: 3px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); width: 440px; max-width: 95vw; padding: 1.75rem; animation: modalIn 0.25s var(--ease-out-expo); }
 
     .form-row {
         display: grid;
