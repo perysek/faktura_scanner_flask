@@ -124,8 +124,10 @@ const Modals = {
      */
     close(overlay) {
         if (overlay && overlay.parentElement) {
-            overlay.classList.add('opacity-0', 'transition-opacity', 'duration-600');
-            setTimeout(() => overlay.remove(), 600);
+            // .is-closing drives a 0.2s fade + scale-out (see input.css) — matches
+            // the golden-master modal motion instead of the old instant 600ms stall.
+            overlay.classList.add('is-closing');
+            setTimeout(() => overlay.remove(), 220);
         }
     },
 

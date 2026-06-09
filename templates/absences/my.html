@@ -353,7 +353,7 @@
                             <form method="POST"
                                   action="{{ url_for('absence.cancel_own_request', absence_id=ab['id']) }}"
                                   style="display:inline;"
-                                  onsubmit="return confirm('Anulować ten wniosek?');">
+                                  onsubmit="event.preventDefault(); Modals.confirm({title:'Anuluj wniosek', message:'Anulować ten wniosek?', confirmText:'Tak, anuluj', cancelText:'Nie', onConfirm:() => this.submit()}); return false;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="action-icon-btn"
                                         title="Anuluj wniosek" aria-label="Anuluj wniosek"
@@ -368,7 +368,7 @@
                             <form method="POST"
                                   action="{{ url_for('absence.cancel_own_approved_request', absence_id=ab['id']) }}"
                                   style="display:inline;"
-                                  onsubmit="return confirm('Anulować tę zatwierdzoną nieobecność? Twoje sloty w kalendarzu zostaną zwolnione.');">
+                                  onsubmit="event.preventDefault(); Modals.confirm({title:'Anuluj nieobecność', message:'Anulować tę zatwierdzoną nieobecność? Twoje sloty w kalendarzu zostaną zwolnione.', confirmText:'Tak, anuluj', cancelText:'Nie', onConfirm:() => this.submit()}); return false;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="action-icon-btn"
                                         title="Anuluj nieobecność (zwolnij sloty w kalendarzu)"
