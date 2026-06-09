@@ -2553,10 +2553,16 @@ def get_password_for_seller(seller_id):
 @login_required
 @module_permission_required('clients', 'data_correction')
 def get_clients():
-    """Get all clients with optional search, including visit statistics."""
+    """Get all clients with optional search, including visit statistics.
+
+    ``include_inactive=true`` also returns deactivated clients (is_active=FALSE) so
+    the list's "Wszyscy / Aktywni" toggle can surface them (and make their Edit
+    action reachable for reactivation). Defaults to active-only.
+    """
     try:
         search_query = request.args.get('search', '').strip()
-        rows = current_app.client_repo.get_clients_with_stats(search_query)
+        include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+        rows = current_app.client_repo.get_clients_with_stats(search_query, include_inactive)
 
         clients_data = []
         for row in rows:

@@ -152,8 +152,16 @@ class ClientRepository(BaseRepository):
         """
         return self._fetch_all(query)
 
-    def get_clients_with_stats(self, search_query: str = '') -> List[Any]:
-        """Pobierz aktywnych klientów ze statystykami wizyt (zakończone, no-show, anulowane)."""
+    def get_clients_with_stats(self, search_query: str = '',
+                               include_inactive: bool = False) -> List[Any]:
+        """Pobierz klientów ze statystykami wizyt (zakończone, no-show, anulowane).
+
+        Domyślnie tylko aktywni. ``include_inactive=True`` zwraca również
+        zdezaktywowanych klientów (``is_active = FALSE``) — używane przez przełącznik
+        „Wszyscy / Aktywni" na liście klientów, żeby dało się ich w ogóle zobaczyć
+        i (przez ikonę edycji) ponownie aktywować. Soft-deleted (``is_deleted``)
+        nadal są wykluczeni w obu trybach.
+        """
         params = []
         search_clause = ''
         if search_query:
@@ -163,6 +171,8 @@ class ClientRepository(BaseRepository):
             """
             p = f'%{search_query}%'
             params = [p, p, p, p]
+
+        active_clause = '' if include_inactive else 'AND c.is_active = TRUE'
 
         query = f"""
             SELECT
@@ -181,7 +191,7 @@ class ClientRepository(BaseRepository):
                     AND a.appointment_date >= CURRENT_DATE - INTERVAL '56 days' THEN 1 END), 0) AS visits_last_8w
             FROM clients c
             LEFT JOIN appointments a ON a.client_id = c.id
-            WHERE c.is_deleted = FALSE AND c.is_active = TRUE
+            WHERE c.is_deleted = FALSE {active_clause}
             {search_clause}
             GROUP BY
                 c.id, c.first_name, c.last_name, c.phone, c.email,

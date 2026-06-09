@@ -544,6 +544,12 @@
                 <span class="material-icons">search</span>
                 Szukaj
             </button>
+            <button id="btn-show-all" class="refined-btn-secondary" onclick="toggleShowAll()" title="Pokaż również zdezaktywowanych klientów">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:0.95rem;height:0.95rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.65" />
+                </svg>
+                <span id="btn-show-all-label">Aktywni</span>
+            </button>
             <button id="btn-vip-only" class="refined-btn-secondary" onclick="toggleVip()" title="Minimum 3 wizyty w ostatnich 8 tygodniach">
                 <span class="material-icons" style="font-size:0.9rem;">star</span>
                 Tylko VIP
@@ -592,7 +598,10 @@
                         <span class="th-sort-icon" id="si-cancelled_count">▲</span>
                     </th>
                     <th>Trend<br><span style="font-size:0.5625rem;font-weight:400;letter-spacing:0;text-transform:none;opacity:0.7;">6 mies.</span></th>
-                    <th>Status</th>
+                    <th class="th-sortable" onclick="sortBy('is_active')" id="th-is_active">
+                        Status
+                        <span class="th-sort-icon" id="si-is_active">▲</span>
+                    </th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -620,6 +629,7 @@
 let allClients = [];
 let clientTrends = {};   // {client_id: [week0_count, ..., week25_count]}
 let vipOnly = false;
+let showAll = false;     // false = active only, true = include deactivated clients
 let currentSort = { field: 'last_visit_date', dir: 'desc' };
 
 function parseDateForSort(str) {
@@ -694,6 +704,18 @@ function toggleVip() {
     renderClients(allClients);
 }
 
+// ── Active / All filter ────────────────────────────────────────────────────────
+// Unlike the VIP toggle (a client-side filter), this changes WHICH rows the API
+// returns — deactivated clients are excluded server-side — so it must re-fetch.
+function toggleShowAll() {
+    showAll = !showAll;
+    const btn = document.getElementById('btn-show-all');
+    const label = document.getElementById('btn-show-all-label');
+    if (btn) btn.classList.toggle('btn-active', showAll);
+    if (label) label.textContent = showAll ? 'Wszyscy' : 'Aktywni';
+    loadClients();
+}
+
 function applyVip(clients) {
     if (!vipOnly) return clients;
     return clients.filter(c => (c.visits_last_8w || 0) >= 3);
@@ -731,6 +753,10 @@ function sortedClients(clients) {
         if (field === 'last_visit_date') {
             av = parseDateForSort(av);
             bv = parseDateForSort(bv);
+        } else if (field === 'is_active') {
+            // Boolean status column: inactive (0) before active (1) ascending.
+            av = av ? 1 : 0;
+            bv = bv ? 1 : 0;
         } else if (typeof av === 'number') {
             // numeric — already comparable
         } else {
@@ -860,9 +886,11 @@ async function loadClients() {
     const tbody = document.getElementById('clients-tbody');
 
     try {
-        const clientUrl = searchQuery
-            ? `/api/clients?search=${encodeURIComponent(searchQuery)}`
-            : '/api/clients';
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('search', searchQuery);
+        if (showAll) params.set('include_inactive', 'true');
+        const qs = params.toString();
+        const clientUrl = qs ? `/api/clients?${qs}` : '/api/clients';
 
         const [clientsResp, trendsResp] = await Promise.all([
             fetch(clientUrl).then(r => r.json()),
