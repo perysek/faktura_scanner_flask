@@ -195,15 +195,40 @@ def get_appointments():
 @login_required
 @module_permission_required('data_correction')
 def get_table_data():
-    """Pobierz wizyty z usługami do edytowalnej tabeli"""
+    """Pobierz wizyty z usługami do edytowalnej tabeli.
+
+    Sortowanie (``sort_col`` / ``sort_dir``) i filtry kolumnowe (``f_<kolumna>``) są
+    stosowane po stronie serwera na całym zbiorze danych, a dopiero potem paginacja.
+    Dzięki temu po kliknięciu sortowania lub wpisaniu filtra strona zawiera dokładnie
+    te wiersze, które byłyby widoczne, gdyby całą bazę posortowano i przefiltrowano.
+    Odpowiedź zawiera ``total`` — liczbę wizyt pasujących do filtrów.
+    """
     try:
         status = request.args.get('status')
         limit = min(request.args.get('limit', 100, type=int), 200)
         offset = request.args.get('offset', 0, type=int)
 
+        sort_col = request.args.get('sort_col') or None
+        sort_dir = request.args.get('sort_dir', 'desc')
+
+        # Per-column filters arrive as f_<col>=substr (only non-empty values kept).
+        FILTERABLE = ('id', 'appointment_date', 'start_time', 'client_name',
+                      'employee_name', 'status', 'service_name', 'notes')
+        filters = {}
+        for col in FILTERABLE:
+            val = (request.args.get(f'f_{col}') or '').strip()
+            if val:
+                filters[col] = val
+
         repo = AppointmentRepository()
-        rows = repo.get_latest(limit=limit, offset=offset, status=status)
+        rows = repo.get_latest(limit=limit, offset=offset, status=status,
+                               sort_col=sort_col, sort_dir=sort_dir, filters=filters)
         appointments = [dict(row) for row in rows]
+
+        # COUNT(*) OVER() rides on every row; lift it out and drop the helper column.
+        total = appointments[0].pop('total_count', len(appointments)) if appointments else 0
+        for appt in appointments:
+            appt.pop('total_count', None)
 
         if appointments:
             appt_ids = [a['id'] for a in appointments]
@@ -224,7 +249,8 @@ def get_table_data():
             for appt in appointments:
                 appt['services'] = []
 
-        return jsonify({'success': True, 'appointments': appointments, 'count': len(appointments)})
+        return jsonify({'success': True, 'appointments': appointments,
+                        'count': len(appointments), 'total': total})
     except AppError:
         raise
     except Exception as e:

@@ -481,6 +481,12 @@ let columnFilters = {};
 let loadOffset = 0;
 let loadingMore = false;
 let allLoaded = false;
+let totalCount = 0;        // total rows matching the active server-side filters
+let filterDebounce = null; // debounce timer for filter-input → server reload
+// dirtyEdits[id] = the live edited row object — persists across server reloads
+// (sort/filter re-fetch) so unsaved edits are not lost. Source of truth for
+// "what needs saving"; overlaid back onto freshly-fetched rows in loadTableData.
+let dirtyEdits = {};
 // originalRows[id] stores last-saved state; undo restores from it
 
 // Focus trap state — last element inside tr[data-row] that had focus
@@ -562,28 +568,46 @@ async function loadAllServices() {
 }
 
 async function loadTableData(reset = false) {
-    if (reset) { loadOffset = 0; allRows = []; originalRows = {}; savedSnapshots = {}; allLoaded = false; }
+    if (reset) {
+        loadOffset = 0; allRows = []; allLoaded = false;
+        // Keep baselines ONLY for rows with pending unsaved edits so their dirty
+        // state stays correct even when the new sort/filter pushes them off-page.
+        const keep = new Set(Object.keys(dirtyEdits));
+        for (const id of Object.keys(originalRows)) if (!keep.has(id)) delete originalRows[id];
+        for (const id of Object.keys(savedSnapshots)) if (!keep.has(id)) delete savedSnapshots[id];
+    }
     if (allLoaded || loadingMore) return;
     loadingMore = true;
 
     const status = document.getElementById('global-status-filter').value;
     const params = new URLSearchParams({ limit: '100', offset: String(loadOffset) });
     if (status) params.set('status', status);
+    // Server-side sort + per-column filters: the page is a slice of the fully
+    // sorted+filtered result set, so what you see matches the whole DB, not just
+    // the rows already loaded.
+    if (sortCol) { params.set('sort_col', sortCol); params.set('sort_dir', sortDir); }
+    for (const [col, val] of Object.entries(columnFilters)) params.set('f_' + col, val);
 
     try {
         const data = await fetch(`/api/appointments/table-data?${params}`).then(r => r.json());
         if (!data.success) { showToast(data.error || 'Blad ladowania', 'error'); return; }
 
+        totalCount = (data.total != null) ? data.total : data.appointments.length;
         if (data.appointments.length < 100) allLoaded = true;
         loadOffset += data.appointments.length;
 
+        const present = new Set(allRows.map(r => r.id));
         for (const appt of data.appointments) {
-            if (!originalRows[appt.id]) {
-                allRows.push(appt);
+            if (present.has(appt.id)) continue;     // dedupe across pages
+            present.add(appt.id);
+            if (!(appt.id in originalRows)) {        // fresh baseline (not a kept pending one)
                 originalRows[appt.id] = deepClone(appt);
                 savedSnapshots[appt.id] = deepClone(appt);
             }
+            // Overlay the live edited object if this row has unsaved edits.
+            allRows.push(dirtyEdits[appt.id] || appt);
         }
+        if (allRows.length >= totalCount) allLoaded = true;
         renderTable();
         updateInfo();
     } catch(e) {
@@ -595,8 +619,11 @@ async function loadTableData(reset = false) {
 }
 
 function updateInfo() {
-    const visible = getFilteredRows().length;
-    document.getElementById('table-info').textContent = `${visible} / ${allRows.length} wizyt`;
+    // allRows is already the server-filtered set; totalCount is the full match count.
+    const dirtyN = Object.keys(dirtyEdits).length;
+    let txt = `${allRows.length} / ${totalCount} wizyt`;
+    if (dirtyN) txt += ` • ${dirtyN} niezapisane`;
+    document.getElementById('table-info').textContent = txt;
     updateSaveAllState();
 }
 
@@ -620,27 +647,12 @@ function toggleSort(col) {
         icon.classList.add('active');
         icon.textContent = sortDir === 'asc' ? '\u2191' : '\u2193';
     }
-    renderTable();
-}
-
-function sortRows(rows) {
-    if (!sortCol) return rows;
-    return [...rows].sort((a, b) => {
-        let va = a[sortCol], vb = b[sortCol];
-        if (va == null) va = '';
-        if (vb == null) vb = '';
-        if (typeof va === 'number' && typeof vb === 'number') {
-            return sortDir === 'asc' ? va - vb : vb - va;
-        }
-        va = String(va).toLowerCase();
-        vb = String(vb).toLowerCase();
-        const cmp = va.localeCompare(vb, 'pl');
-        return sortDir === 'asc' ? cmp : -cmp;
-    });
+    // Sort server-side across the whole dataset, then re-page from offset 0.
+    loadTableData(true);
 }
 
 // ══════════════════════════════════════════════════════
-//  FILTERING
+//  FILTERING  (server-side — see loadTableData; no client-side filter pass)
 // ══════════════════════════════════════════════════════
 function onFilterInput(input) {
     const col = input.dataset.filter;
@@ -653,8 +665,9 @@ function onFilterInput(input) {
         delete columnFilters[col];
         wrap.classList.remove('has-value');
     }
-    renderTable();
-    updateInfo();
+    // Debounce so we filter server-side once typing settles (not every keystroke).
+    clearTimeout(filterDebounce);
+    filterDebounce = setTimeout(() => loadTableData(true), 350);
 }
 
 function clearFilter(btn) {
@@ -669,30 +682,8 @@ function resetAllFilters() {
         inp.value = '';
         inp.parentElement.classList.remove('has-value');
     });
-    renderTable();
-    updateInfo();
-}
-
-function getFilteredRows() {
-    let rows = allRows;
-    const keys = Object.keys(columnFilters);
-    if (keys.length === 0) return rows;
-    return rows.filter(r => {
-        return keys.every(col => {
-            const filter = columnFilters[col];
-            let val;
-            if (col === 'service_name') {
-                val = (r.services || []).map(s => s.service_name || '').join(' ').toLowerCase();
-            } else {
-                val = String(r[col] || '').toLowerCase();
-            }
-            // Map status labels for filtering
-            if (col === 'status' && STATUS_LABELS[r.status]) {
-                val += ' ' + STATUS_LABELS[r.status].toLowerCase();
-            }
-            return val.includes(filter);
-        });
-    });
+    clearTimeout(filterDebounce);
+    loadTableData(true);   // re-fetch the unfiltered set from the server
 }
 
 // ══════════════════════════════════════════════════════
@@ -723,24 +714,24 @@ function hasRowChanged(row, ref) {
 //  RENDER TABLE
 // ══════════════════════════════════════════════════════
 function renderTable() {
-    const filtered = getFilteredRows();
-    const sorted = sortRows(filtered);
+    // Sorting + filtering are done server-side (loadTableData sends sort_col/sort_dir
+    // and f_<col>), so allRows is already the correct, ordered, filtered page set —
+    // render it as-is.
     const tbody = document.getElementById('table-body');
 
-    if (sorted.length === 0) {
+    if (allRows.length === 0) {
         tbody.innerHTML = '<tr><td colspan="11" class="te-loading">Brak wizyt do wyswietlenia</td></tr>';
         return;
     }
 
-    tbody.innerHTML = sorted.map((row, displayIdx) => {
-        const rowIdx = allRows.indexOf(row);
+    tbody.innerHTML = allRows.map((row, rowIdx) => {
         const dirty = isRowDirty(row);
         const undoable = isRowUndoable(row);
         const svcText = (row.services || []).map(s => s.service_name).join(', ') || 'Brak';
         const notesText = row.notes || '';
         const timeVal = fmtTime(row.start_time);
 
-        return `<tr data-row="${rowIdx}" class="${dirty ? 'dirty' : ''}">
+        return `<tr data-row="${rowIdx}" data-id="${row.id}" class="${dirty ? 'dirty' : ''}">
             <td><a class="te-id-link" href="/superadmin/visits/${row.id}" title="Otworz edytor">#${row.id}</a></td>
             <td><input type="date" class="te-cell-input" value="${row.appointment_date || ''}" onchange="onCellChange(${rowIdx},'appointment_date',this.value)" oninput="onCellChange(${rowIdx},'appointment_date',this.value)" data-nav="date"></td>
             <td><input type="time" class="te-cell-input" value="${timeVal}" step="900" onchange="onCellChange(${rowIdx},'start_time',this.value)" oninput="onCellChange(${rowIdx},'start_time',this.value)" data-nav="time"></td>
@@ -793,7 +784,11 @@ function deleteVisit(appointmentId) {
                 if (data.success) {
                     allRows = allRows.filter(r => r.id !== appointmentId);
                     delete originalRows[appointmentId];
+                    delete savedSnapshots[appointmentId];
+                    delete dirtyEdits[appointmentId];
+                    if (totalCount > 0) totalCount--;
                     renderTable();
+                    updateInfo();
                     Notifications.success(`Wizyta #${appointmentId} usunięta`);
                 } else {
                     Notifications.error(data.error || 'Błąd usuwania wizyty');
@@ -1082,6 +1077,10 @@ function markRowDirty(rowIdx) {
     const row = allRows[rowIdx];
     const dirty = isRowDirty(row);
     const undoable = isRowUndoable(row);
+    // Keep the persistent dirty-edits map in sync so edits survive server reloads
+    // (sort/filter) and "Save all" can find rows even when scrolled off-page.
+    if (dirty) dirtyEdits[row.id] = row;
+    else delete dirtyEdits[row.id];
     const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
     if (tr) {
         tr.classList.toggle('dirty', dirty);
@@ -1090,38 +1089,35 @@ function markRowDirty(rowIdx) {
         const undoBtn = tr.querySelector('.undo-btn');
         if (undoBtn) undoBtn.disabled = !undoable;
     }
-    updateSaveAllState();
+    updateInfo();
 }
 
 function updateSaveAllState() {
     const btn = document.getElementById('btn-save-all');
     if (!btn) return;
-    const hasDirty = allRows.some(r => isRowDirty(r));
-    btn.disabled = !hasDirty;
+    btn.disabled = Object.keys(dirtyEdits).length === 0;
 }
 
 async function saveAllDirtyRows() {
-    const dirtyIndices = [];
-    for (let i = 0; i < allRows.length; i++) {
-        if (isRowDirty(allRows[i])) dirtyIndices.push(i);
-    }
-    if (dirtyIndices.length === 0) return;
+    // Save from the persistent map, not just visible rows — a dirty row may be
+    // scrolled off-page or filtered out yet still needs saving.
+    const rows = Object.values(dirtyEdits);
+    if (rows.length === 0) return;
 
     const btn = document.getElementById('btn-save-all');
     const origHTML = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Zapisywanie...'; }
 
     let saved = 0, failed = 0;
-    for (const idx of dirtyIndices) {
+    for (const row of rows) {
         try {
-            // Use _doSaveRow with force=true to skip conflict modal in bulk mode
-            await _doSaveRow(idx, true);
-            if (!isRowDirty(allRows[idx])) saved++;
-            else failed++;
+            // force=true skips the conflict modal in bulk mode
+            const ok = await _persistRow(row, true);
+            ok ? saved++ : failed++;
         } catch(e) {
             failed++;
         }
-        if (btn) btn.textContent = `Zapisywanie ${saved + failed}/${dirtyIndices.length}...`;
+        if (btn) btn.textContent = `Zapisywanie ${saved + failed}/${rows.length}...`;
     }
 
     if (btn) btn.innerHTML = origHTML;
@@ -1131,7 +1127,7 @@ async function saveAllDirtyRows() {
     } else {
         showToast(`Zapisano ${saved} wizyt`, 'success');
     }
-    updateSaveAllState();
+    updateInfo();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1286,13 +1282,14 @@ function closeNotesModal() {
 // ══════════════════════════════════════════════════════
 //  SAVE ROW
 // ══════════════════════════════════════════════════════
-async function saveRow(rowIdx, force = false) {
-    const row = allRows[rowIdx];
+// Core save — operates on a row OBJECT (not an index) so it can persist rows that
+// are scrolled off-page or filtered out (no DOM row). Returns true on success.
+async function _persistRow(row, force = false) {
     if (!row.employee_id || !row.client_id || !row.appointment_date || !row.start_time) {
-        showToast('Wypelnij wszystkie wymagane pola', 'error'); return;
+        showToast('Wypelnij wszystkie wymagane pola', 'error'); return false;
     }
     if (!row.services || row.services.length === 0) {
-        showToast('Dodaj przynajmniej jedna usluge', 'error'); return;
+        showToast('Dodaj przynajmniej jedna usluge', 'error'); return false;
     }
 
     const payload = {
@@ -1313,8 +1310,8 @@ async function saveRow(rowIdx, force = false) {
         }))
     };
 
-    // Mark row as saving
-    const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
+    // Mark row as saving — look up by id so off-page rows (no tr) are simply skipped.
+    const tr = document.querySelector(`tr[data-id="${row.id}"]`);
     if (tr) tr.classList.add('saving');
 
     try {
@@ -1325,18 +1322,32 @@ async function saveRow(rowIdx, force = false) {
         }).then(r => r.json());
 
         if (data.success) {
-            // Update original data
+            // New saved state becomes the baseline; row is no longer pending.
             originalRows[row.id] = deepClone(row);
+            delete dirtyEdits[row.id];
             showToast(`Wizyta #${row.id} zapisana`, 'success');
             renderTable();
+            updateInfo();
+            return true;
         } else {
             showToast(data.error || 'Blad zapisu', 'error', 3500);
+            return false;
         }
     } catch(e) {
         showToast('Blad polaczenia', 'error');
+        return false;
     } finally {
         if (tr) tr.classList.remove('saving');
     }
+}
+
+// Interactive save by row index (from a row's save button / Ctrl+S).
+async function saveRow(rowIdx, force = false) {
+    const row = allRows[rowIdx];
+    if (!row) return;
+    if (force) { await _persistRow(row, true); return; }
+    const canSave = await checkConflictBeforeSave(rowIdx);
+    if (canSave) await _persistRow(row, false);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1350,51 +1361,21 @@ async function undoRow(rowIdx) {
     // Check if DB was changed (row was saved after editing)
     const wasSaved = hasRowChanged(originalRows[row.id], snap);
 
-    // Restore row data from initial server state
+    // Restore row data from initial server state. Row now matches its baseline,
+    // so it is no longer a pending edit.
     Object.assign(row, deepClone(snap));
     originalRows[row.id] = deepClone(snap);
+    delete dirtyEdits[row.id];
 
     if (wasSaved) {
-        // Row was saved to DB with different data — save snapshot back to DB
-        const tr = document.querySelector(`tr[data-row="${rowIdx}"]`);
-        if (tr) tr.classList.add('saving');
-        try {
-            const payload = {
-                employee_id: parseInt(row.employee_id),
-                client_id: parseInt(row.client_id),
-                status: row.status,
-                appointment_date: row.appointment_date,
-                start_time: row.start_time,
-                notes: row.notes || null,
-                satisfaction_score: row.satisfaction_score || null,
-                discount_amount: parseFloat(row.discount_amount) || 0,
-                force: true,
-                services: row.services.map(s => ({
-                    service_id: s.service_id,
-                    price_charged: parseFloat(s.price_charged),
-                    duration_minutes: parseInt(s.duration_minutes),
-                    is_addon: s.is_addon || false
-                }))
-            };
-            const data = await fetch(`/api/appointments/${row.id}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            }).then(r => r.json());
-
-            if (data.success) {
-                showToast(`Wizyta #${row.id} przywrócona`, 'success');
-            } else {
-                showToast(data.error || 'Błąd cofania', 'error', 3500);
-            }
-        } catch(e) {
-            showToast('Błąd połączenia', 'error');
-        } finally {
-            if (tr) tr.classList.remove('saving');
-        }
+        // Row had been saved to DB with different data — push the snapshot back.
+        // _persistRow sets originalRows from the (restored) row and re-renders.
+        const ok = await _persistRow(row, true);
+        if (ok) showToast(`Wizyta #${row.id} przywrócona`, 'success');
+    } else {
+        renderTable();
     }
-
-    renderTable();
+    updateInfo();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1443,18 +1424,7 @@ async function checkConflictBeforeSave(rowIdx) {
     return true; // no conflict
 }
 
-// Wrap saveRow to check conflicts first
-const _doSaveRow = saveRow;
-saveRow = async function(rowIdx, force) {
-    if (force) {
-        await _doSaveRow(rowIdx, true);
-        return;
-    }
-    const canSave = await checkConflictBeforeSave(rowIdx);
-    if (canSave) {
-        await _doSaveRow(rowIdx, false);
-    }
-};
+// (saveRow already runs checkConflictBeforeSave before persisting; no wrapper needed.)
 
 function closeConflictModal() {
     document.getElementById('conflict-modal').classList.remove('open');
@@ -1465,7 +1435,7 @@ function forceSaveRow() {
     if (conflictSaveRowIdx !== null) {
         const idx = conflictSaveRowIdx;
         closeConflictModal();
-        _doSaveRow(idx, true);
+        saveRow(idx, true);   // force=true → skip conflict check, persist directly
     }
 }
 

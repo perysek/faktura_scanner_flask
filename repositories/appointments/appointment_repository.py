@@ -134,21 +134,113 @@ class AppointmentRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
+    # Whitelist of columns the table editor may sort by → safe SQL expression.
+    # Keys are the frontend `data-col` values; never interpolate raw user input.
+    _TABLE_SORT_EXPR = {
+        'id': 'a.id',
+        'appointment_date': 'a.appointment_date',
+        'start_time': 'a.start_time',
+        'client_name': "(c.first_name || ' ' || c.last_name)",
+        'employee_name': "(e.first_name || ' ' || e.last_name)",
+        'status': 'a.status',
+        'total_price': 'a.total_price',
+        'satisfaction_score': 'a.satisfaction_score',
+    }
+    # Per-column substring filters that map to a single scalar expression.
+    # `status` and `service_name` are handled specially (label mapping / aggregate).
+    _TABLE_FILTER_EXPR = {
+        'id': 'CAST(a.id AS TEXT)',
+        'appointment_date': 'CAST(a.appointment_date AS TEXT)',
+        'start_time': 'CAST(a.start_time AS TEXT)',
+        'client_name': "(c.first_name || ' ' || c.last_name)",
+        'employee_name': "(e.first_name || ' ' || e.last_name)",
+        'notes': "COALESCE(a.notes, '')",
+    }
+
     def get_latest(self, limit: int = 100, offset: int = 0,
                    employee_id: Optional[int] = None,
-                   status: Optional[str] = None) -> List[Any]:
-        """Pobierz ostatnie wizyty posortowane malejąco po dacie i godzinie"""
-        params = []
-        filters = ["a.is_deleted = FALSE"]
+                   status: Optional[str] = None,
+                   sort_col: Optional[str] = None,
+                   sort_dir: str = 'desc',
+                   filters: Optional[dict] = None) -> List[Any]:
+        """Pobierz wizyty do edytowalnej tabeli — z paginacją, sortowaniem i filtrami.
+
+        Sortowanie i filtrowanie po kolumnach są realizowane PO STRONIE SERWERA, na
+        całym zbiorze danych, a dopiero potem stosowana jest paginacja (LIMIT/OFFSET).
+        Dzięki temu kolejne strony to wycinki tego samego, w pełni posortowanego i
+        przefiltrowanego wyniku — kliknięcie sortowania lub wpisanie filtra zwraca
+        „dokładnie te wiersze, które byłyby widoczne, gdyby całą bazę posortowano i
+        przefiltrowano", a nie tylko już załadowaną stronę.
+
+        Args:
+            sort_col: nazwa kolumny z ``_TABLE_SORT_EXPR`` (spoza whitelisty → ignorowana,
+                użyta domyślna kolejność malejąco po dacie i godzinie).
+            sort_dir: 'asc' albo 'desc'.
+            filters: dict ``{kolumna: podciąg}`` — dozwolone klucze to klucze
+                ``_TABLE_FILTER_EXPR`` plus ``status`` i ``service_name``.
+
+        Każdy wiersz zawiera dodatkowo ``total_count`` — łączną liczbę wizyt pasujących
+        do filtrów (przez ``COUNT(*) OVER()``), żeby UI mógł pokazać „N / total".
+        Domyślne wywołanie (bez sort_col/filters) zachowuje dotychczasowe zachowanie.
+        """
+        params: list = []
+        where = ["a.is_deleted = FALSE"]
 
         if employee_id:
-            filters.append("a.employee_id = %s")
+            where.append("a.employee_id = %s")
             params.append(employee_id)
         if status:
-            filters.append("a.status = %s")
+            where.append("a.status = %s")
             params.append(status)
 
-        where_clause = "WHERE " + " AND ".join(filters)
+        # ── per-column filters (server-side, across the whole dataset) ──────────
+        filters = filters or {}
+        for col, expr in self._TABLE_FILTER_EXPR.items():
+            val = filters.get(col)
+            if val:
+                where.append(f"{expr} ILIKE %s")
+                params.append(f"%{val}%")
+
+        # status: match raw value OR the Polish label (mirrors the client filter)
+        if filters.get('status'):
+            sval = f"%{filters['status']}%"
+            where.append(
+                "(a.status ILIKE %s OR CASE a.status "
+                "WHEN 'scheduled' THEN 'zaplanowana' "
+                "WHEN 'confirmed' THEN 'potwierdzona' "
+                "WHEN 'in_progress' THEN 'w trakcie' "
+                "WHEN 'completed' THEN 'zakonczona' "
+                "WHEN 'cancelled' THEN 'anulowana' "
+                "WHEN 'no_show' THEN 'nieobecnosc' "
+                "ELSE a.status END ILIKE %s)"
+            )
+            params.extend([sval, sval])
+
+        # service_name is an aggregate (STRING_AGG) — filter via EXISTS, matching any
+        # main-or-addon service name (same as the client which joins all services).
+        if filters.get('service_name'):
+            where.append(
+                "EXISTS (SELECT 1 FROM appointment_services aps2 "
+                "JOIN services s2 ON s2.id = aps2.service_id "
+                "WHERE aps2.appointment_id = a.id AND s2.name ILIKE %s)"
+            )
+            params.append(f"%{filters['service_name']}%")
+
+        where_clause = "WHERE " + " AND ".join(where)
+
+        # ── deterministic ORDER BY (id tiebreaker → stable offset pagination) ───
+        direction = 'ASC' if str(sort_dir).lower() == 'asc' else 'DESC'
+        if not sort_col:
+            order_by = "ORDER BY a.appointment_date DESC, a.start_time DESC, a.id DESC"
+        elif sort_col == 'appointment_date':
+            order_by = (f"ORDER BY a.appointment_date {direction}, "
+                        f"a.start_time {direction}, a.id DESC")
+        elif sort_col in self._TABLE_SORT_EXPR:
+            order_by = (f"ORDER BY {self._TABLE_SORT_EXPR[sort_col]} {direction} "
+                        f"NULLS LAST, a.id DESC")
+        else:
+            order_by = "ORDER BY a.appointment_date DESC, a.start_time DESC, a.id DESC"
+
         params.extend([limit, offset])
         query = f"""
             SELECT
@@ -160,7 +252,8 @@ class AppointmentRepository:
                 ) as service_name,
                 STRING_AGG(
                     CASE WHEN aps.is_addon = TRUE THEN s.name ELSE NULL END, ', '
-                ) as addon_services
+                ) as addon_services,
+                COUNT(*) OVER() AS total_count
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             JOIN employees e ON e.id = a.employee_id
@@ -168,7 +261,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             {where_clause}
             GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
-            ORDER BY a.appointment_date DESC, a.start_time DESC
+            {order_by}
             LIMIT %s OFFSET %s
         """
         with get_db_connection() as conn:
