@@ -13,7 +13,7 @@ from flask.json.provider import DefaultJSONProvider
 from dotenv import load_dotenv
 load_dotenv()  # Loads .env file from project root (Vultr/local deployment)
 
-from flask import Flask, render_template
+from flask import Flask, render_template, url_for
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
@@ -368,19 +368,34 @@ def create_app():
     except Exception as _sched_err:
         logging.warning("SMS scheduler not started: %s", _sched_err)
 
-    # Static-asset cache busting. nginx serves output.css as immutable,
-    # max-age=1y, so a stable URL would pin returning users to a stale
-    # stylesheet after a deploy. We hash output.css once at startup and append
-    # it as ?v=<hash> on the <link> (see base.html). The URL changes exactly
-    # when the CSS content changes, so browser caches invalidate automatically.
-    # Recomputed on each restart, i.e. on every deploy.
-    try:
-        import hashlib
-        _css_path = os.path.join(app.static_folder, 'css', 'output.css')
-        with open(_css_path, 'rb') as _css_f:
-            app.config['ASSET_VERSION'] = hashlib.sha256(_css_f.read()).hexdigest()[:10]
-    except Exception:
-        app.config['ASSET_VERSION'] = 'dev'
+    # Static-asset cache busting. nginx serves /static as immutable, max-age=1y,
+    # so a stable URL pins returning browsers to a stale file after a deploy —
+    # e.g. adding a method to an existing JS file makes the cached copy throw
+    # "X is not a function" until a manual hard-refresh. asset_url() appends
+    # ?v=<content-hash> per file, so each asset's URL changes exactly when that
+    # file's bytes change. Use it for every <script>/<link> in templates instead
+    # of url_for('static', ...). The hash is cached per (filename, mtime): one
+    # stat per render, re-hash only when the file changes (picks up dev edits
+    # with no restart). Invalidates naturally on each deploy.
+    import hashlib as _hashlib
+    _asset_hash_cache = {}
+
+    @app.template_global()
+    def asset_url(filename):
+        try:
+            path = os.path.join(app.static_folder, filename)
+            mtime = os.path.getmtime(path)
+            cached = _asset_hash_cache.get(filename)
+            if cached is None or cached[0] != mtime:
+                with open(path, 'rb') as _f:
+                    digest = _hashlib.sha256(_f.read()).hexdigest()[:10]
+                cached = (mtime, digest)
+                _asset_hash_cache[filename] = cached
+            return url_for('static', filename=filename, v=cached[1])
+        except OSError:
+            # File missing/unreadable — fall back to an un-versioned URL rather
+            # than 500 the whole page over a cache-busting nicety.
+            return url_for('static', filename=filename)
 
     return app
 

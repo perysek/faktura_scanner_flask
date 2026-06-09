@@ -588,7 +588,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+<script src="{{ asset_url('js/notifications.js') }}"></script>
 <script>
 const CLIENT_ID = {{ client.id }};
 

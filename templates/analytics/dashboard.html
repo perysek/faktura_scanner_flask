@@ -417,7 +417,7 @@
 {% block extra_scripts %}
 <!-- Chart.js from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="{{ url_for('static', filename='js/analytics/dashboard.js') }}"></script>
+<script src="{{ asset_url('js/analytics/dashboard.js') }}"></script>
 <script>
 // The scrollable container is <main id="main-content">, not window
 const _scrollEl = document.getElementById('main-content');
