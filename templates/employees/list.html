@@ -368,6 +368,31 @@
         height: 1.125rem;
     }
 
+    /* Destructive row action (superuser only) — hidden until the row is hovered.
+       Fades + slides in over 0.35s so it stays out of the way during normal use
+       and only surfaces when the operator is acting on a specific row. */
+    .action-icon-btn.danger-reveal {
+        color: var(--color-error);
+        opacity: 0;
+        transform: translateX(6px);
+        pointer-events: none;
+        transition: opacity 0.35s var(--ease-out-expo),
+                    transform 0.35s var(--ease-out-expo),
+                    background 0.2s ease;
+    }
+
+    .refined-table tbody tr:hover .action-icon-btn.danger-reveal,
+    .refined-table tbody tr:focus-within .action-icon-btn.danger-reveal {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    .action-icon-btn.danger-reveal:hover {
+        color: var(--color-error);
+        background: rgba(155, 44, 44, 0.1);
+    }
+
     /* Empty State */
     .empty-state {
         padding: 3rem 2rem;
@@ -564,6 +589,10 @@
 
 {% block extra_scripts %}
 <script>
+// Permanent-delete is superuser-only. The flag gates the row button client-side;
+// the API enforces @role_required('superuser') regardless (defense in depth).
+const IS_SUPERUSER = {{ (current_user.role == 'superuser') | tojson }};
+
 function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return String(text).replace(/[&<>"']/g, m => map[m]);
@@ -757,6 +786,18 @@ function renderEmployees() {
             ? escapeHtml(emp.position)
             : '<span style="color:var(--color-ink-subtle)">—</span>';
 
+        // Superuser-only permanent delete. Reveals on row hover (see .danger-reveal).
+        // Encodes the linked-user flag so the modal can warn that the user account
+        // will be removed too.
+        const deleteBtn = IS_SUPERUSER ? `
+                        <button type="button" class="action-icon-btn danger-reveal"
+                                title="Usuń trwale" aria-label="Usuń trwale"
+                                onclick="confirmHardDelete(${emp.id}, '${escapeJsString(emp.full_name)}', ${emp.user_id != null})">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>` : '';
+
         return `
             <tr>
                 <td>
@@ -787,11 +828,91 @@ function renderEmployees() {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </a>
+                        ${deleteBtn}
                     </div>
                 </td>
             </tr>
         `;
     }).join('');
+}
+
+// ── Permanent delete (superuser only) ───────────────────────────────────────────
+
+function escapeJsString(text) {
+    // Safe to embed inside a single-quoted JS string that itself lives in a
+    // double-quoted HTML attribute (onclick="..."). Escapes JS string-breakers
+    // (\\ and ') then HTML attribute-breakers so the round-trip is lossless.
+    return String(text)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function confirmHardDelete(empId, empName, hasUser) {
+    const safeName = escapeHtml(empName);
+    const userWarning = hasUser ? `
+        <div style="margin-top:0.875rem;padding:0.75rem 0.875rem;background:rgba(155,44,44,0.06);
+                    border:1px solid rgba(155,44,44,0.25);border-radius:2px;display:flex;gap:0.5rem;align-items:flex-start;">
+            <span class="material-icons" style="color:var(--color-error);font-size:1.125rem;">person_off</span>
+            <span style="font-size:0.8125rem;color:var(--color-ink);">
+                Ten pracownik ma <strong>przypisane konto użytkownika</strong> — zostanie ono również
+                trwale usunięte wraz z dostępem do aplikacji.
+            </span>
+        </div>` : '';
+
+    const content = `
+        <div style="font-size:0.875rem;color:var(--color-ink);line-height:1.55;">
+            <p style="margin-bottom:0.75rem;">
+                Trwale usunąć pracownika <strong>${safeName}</strong>? Tej operacji
+                <strong>nie można cofnąć</strong>.
+            </p>
+            <p style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-bottom:0.25rem;">Zostaną usunięte:</p>
+            <ul style="font-size:0.8125rem;color:var(--color-ink-subtle);margin:0 0 0 1.1rem;padding:0;list-style:disc;">
+                <li>rekord pracownika oraz przypisane usługi i dostępność,</li>
+                <li>nieobecności i bilanse urlopowe (wraz z historią korekt).</li>
+            </ul>
+            <p style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-top:0.625rem;">
+                Wizyty i wpisy przychodu <strong>pozostaną nienaruszone</strong> — jeśli istnieją,
+                usunięcie zostanie zablokowane.
+            </p>
+            ${userWarning}
+        </div>`;
+
+    Modals.show({
+        title: 'Trwałe usunięcie pracownika',
+        content,
+        size: 'small',
+        closeOnOverlay: true,
+        buttons: [
+            { text: 'Anuluj', type: 'secondary', onClick: (e, overlay) => Modals.close(overlay) },
+            {
+                text: 'Usuń trwale', type: 'danger',
+                onClick: async (e, overlay) => {
+                    const btn = e.currentTarget;
+                    btn.disabled = true;
+                    btn.textContent = 'Usuwanie...';
+                    try {
+                        const resp = await fetch(`/api/employees/${empId}/permanent`, { method: 'DELETE' });
+                        const data = await resp.json();
+                        Modals.close(overlay);
+                        if (resp.ok && data.success) {
+                            showToast('success', data.message || 'Pracownik został trwale usunięty');
+                            loadEmployees();
+                            loadStatistics();
+                        } else {
+                            showToast('error', data.error || 'Nie udało się usunąć pracownika');
+                        }
+                    } catch (err) {
+                        Modals.close(overlay);
+                        showToast('error', 'Błąd połączenia z serwerem');
+                    }
+                }
+            }
+        ]
+    });
 }
 
 async function loadEmployees() {

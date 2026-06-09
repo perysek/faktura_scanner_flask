@@ -242,6 +242,22 @@ class UserRepository(BaseRepository):
             cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
             return cursor.rowcount > 0
 
+    def hard_delete(self, user_id: int) -> bool:
+        """Delete a user row while cooperating with an outer ``managed_transaction``.
+
+        Unlike :meth:`delete_user`, this does NOT open its own ``self.transaction()``
+        (which would ``commit()`` immediately and prematurely flush a caller's
+        managed transaction). It routes through ``_execute`` → ``safe_commit``, so
+        when wrapped in ``managed_transaction()`` the delete defers and commits
+        atomically with the caller's other writes.
+
+        Assumes any linked employee has already been removed (employee hard-delete)
+        or will be ``SET NULL`` by the ``employees.user_id`` foreign key, so no
+        explicit unlink is performed here. Returns True when a row was removed.
+        """
+        cursor = self._execute("DELETE FROM users WHERE id = %s", (user_id,))
+        return cursor.rowcount > 0
+
     def get_linked_employee(self, user_id: int):
         """Pobierz pracownika powiązanego z użytkownikiem (lub None)"""
         query = "SELECT id, first_name, last_name FROM employees WHERE user_id = %s"

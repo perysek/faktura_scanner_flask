@@ -7,6 +7,7 @@ from repositories.db_utils import parse_dt, parse_date
 from config.database import get_db_connection, safe_commit
 from database.models import Employee
 from repositories.auditable import AuditableMixin
+from repositories.audit_repository import AuditRepository
 
 
 class EmployeeRepository(AuditableMixin):
@@ -339,3 +340,72 @@ class EmployeeRepository(AuditableMixin):
             self._audit('UPDATE', employee_id, field_name='employment_status',
                         new='terminated')
         return changed
+
+    def count_blocking_references(self, employee_id: int) -> dict:
+        """Count RESTRICT-protected rows that would block a hard delete.
+
+        ``appointments.employee_id`` and ``income_records.employee_id`` are
+        ``ON DELETE RESTRICT`` and hold operational / financial history that must
+        stay intact. A hard delete has to be refused while any such rows exist —
+        otherwise PostgreSQL raises ForeignKeyViolation and the whole transaction
+        aborts. The route uses this to give a clear message instead of a 500.
+
+        Returns ``{'appointments': int, 'income_records': int}``.
+        """
+        query = """
+            SELECT
+                (SELECT COUNT(*) FROM appointments   WHERE employee_id = %s) AS appointments,
+                (SELECT COUNT(*) FROM income_records WHERE employee_id = %s) AS income_records
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (employee_id, employee_id))
+            row = cursor.fetchone()
+        return {
+            'appointments': int(row['appointments']),
+            'income_records': int(row['income_records']),
+        }
+
+    def hard_delete(self, employee_id: int) -> bool:
+        """Permanently delete an employee row plus its absence / balance data.
+
+        DESTRUCTIVE — superuser-only, intended for cleaning up production-test
+        records. MUST run inside ``managed_transaction()`` so the absence wipe, the
+        row delete and the DELETE audit entry commit atomically (and any linked
+        user deletion the caller performs joins the same unit of work).
+
+        Removes, in order:
+          1. balance-adjustment / limit audit-log history (joined on the limit and
+             adjustment rows, so it must run *before* the CASCADE drops them);
+          2. ``employee_absences`` rows (``ON DELETE RESTRICT`` — would otherwise
+             block step 3);
+          3. the ``employees`` row itself, whose CASCADE foreign keys clear the
+             dependent junction data: ``employee_services``,
+             ``employee_availability``, ``employee_supervisors``,
+             ``client_preferences``, ``employee_absence_limits`` and
+             ``absence_balance_adjustments``.
+
+        It deliberately does NOT touch ``appointments`` / ``income_records`` (those
+        are RESTRICT and must stay intact — caller pre-checks via
+        :meth:`count_blocking_references`). Writes a ``DELETE`` audit entry for the
+        employee. Returns True when a row was removed.
+        """
+        emp = self.get_by_id(employee_id)
+        if not emp:
+            return False
+        label = f"{emp['first_name']} {emp['last_name']}".strip()
+
+        # 1) balance audit history — while limit/adjustment rows still exist
+        AuditRepository().delete_for_employee_balance(employee_id)
+        # 2) absence records (RESTRICT — explicit delete required) + the employee row
+        #    (CASCADE clears the junction tables + balance rows). Same connection so
+        #    safe_commit defers inside the caller's managed_transaction.
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM employee_absences WHERE employee_id = %s", (employee_id,))
+        cursor.execute("DELETE FROM employees WHERE id = %s", (employee_id,))
+        deleted = cursor.rowcount > 0
+        safe_commit(conn)
+        if deleted:
+            self._audit('DELETE', employee_id, label=label)
+        return deleted

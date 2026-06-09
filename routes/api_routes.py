@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request, current_app, send_file, session
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
-from config.auth_config import module_permission_required
+from config.auth_config import module_permission_required, role_required
 from config.database import managed_transaction
 from database.models import Invoice
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
@@ -4080,6 +4080,86 @@ def delete_employee(employee_id):
         raise
     except Exception as e:
         logging.exception('Unexpected error in delete_employee')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/employees/<int:employee_id>/permanent', methods=['DELETE'])
+@login_required
+@role_required('superuser')
+def hard_delete_employee(employee_id):
+    """Permanently delete an employee — SUPERUSER ONLY (destructive test cleanup).
+
+    Stricter than the soft-delete endpoint above (which only deactivates and is
+    open to admins): this physically removes the row. Behaviour:
+
+      * Refuses (409) when the employee has appointments or income records — those
+        FKs are ``ON DELETE RESTRICT`` and represent operational / financial
+        history that must stay intact.
+      * Deletes the employee's absence + balance data (``employee_absences`` plus
+        the CASCADE-linked limits / adjustments and their audit history).
+      * Deletes the linked user account, if any (the modal warns the operator
+        first). All other user references are ``SET NULL`` / ``CASCADE``.
+      * CASCADE foreign keys clear the remaining junction rows
+        (employee_services, availability, supervisors, client_preferences).
+      * Registers ``DELETE`` audit-log entries for the employee and the user.
+
+    The whole operation runs in one ``managed_transaction`` so it is all-or-nothing.
+    """
+    from repositories.users.user_repository import UserRepository
+
+    try:
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        if not existing:
+            raise NotFoundError('Pracownik nie istnieje')
+
+        emp_name = f"{existing['first_name']} {existing['last_name']}".strip()
+        linked_user_id = existing['user_id']
+
+        # Pre-flight: RESTRICT-protected business history must stay intact.
+        blocking = current_app.employee_repo.count_blocking_references(employee_id)
+        if blocking['appointments'] or blocking['income_records']:
+            parts = []
+            if blocking['appointments']:
+                parts.append(f"{blocking['appointments']} wizyt")
+            if blocking['income_records']:
+                parts.append(f"{blocking['income_records']} wpisów przychodu")
+            return jsonify({
+                'success': False,
+                'error': (
+                    'Nie można trwale usunąć pracownika — ma powiązane '
+                    + ' i '.join(parts)
+                    + '. Te dane muszą pozostać nienaruszone.'
+                ),
+            }), 409
+
+        # Capture the user label for the audit entry before the row disappears.
+        user_repo = UserRepository()
+        user_label = None
+        if linked_user_id:
+            urow = user_repo.get_by_id(linked_user_id)
+            if urow:
+                user_label = urow['email']
+
+        with managed_transaction():
+            current_app.employee_repo.hard_delete(employee_id)  # writes employee DELETE audit
+            if linked_user_id:
+                if user_repo.hard_delete(linked_user_id):
+                    _audit('user', 'DELETE', entity_id=linked_user_id,
+                           entity_label=user_label or str(linked_user_id))
+
+        return jsonify({
+            'success': True,
+            'user_deleted': bool(linked_user_id),
+            'message': (
+                'Pracownik został trwale usunięty wraz z kontem użytkownika'
+                if linked_user_id else
+                'Pracownik został trwale usunięty'
+            ),
+        })
+    except AppError:
+        raise
+    except Exception as e:
+        logging.exception('Unexpected error in hard_delete_employee')
         raise AppError('Wystapil blad serwera')
 
 
