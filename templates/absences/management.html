@@ -692,7 +692,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ asset_url('js/absences.js') }}"></script>
+<script src="{{ url_for('static', filename='js/absences.js') }}"></script>
 <script>
 // ── Load employees for manual form via API ────────────────────────────────
 (async function loadEmployeesForManual() {
