@@ -332,6 +332,28 @@ def delete_absence(absence_id: int):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 
+@absence_bp.route('/absences/<int:absence_id>/permanent', methods=['DELETE'])
+@absence_management_required
+def hard_delete_absence(absence_id: int):
+    """Trwale usuń nieobecność — wyłącznie superuser (czyszczenie danych testowych).
+
+    Fizycznie usuwa rekord employee_absences (nie soft-delete) niezależnie od
+    statusu. Dla zatwierdzonej nieobecności zwalnia sloty w kalendarzu (kalendarz
+    czyta tylko status='approved'). `absence_management_required` wpuszcza też
+    admina/przełożonych, więc zawężamy do superusera na poziomie serwera.
+    """
+    if current_user.role != 'superuser':
+        return jsonify({
+            'success': False,
+            'error': 'Tylko superuser może trwale usuwać nieobecności',
+        }), 403
+    try:
+        result = _svc().hard_delete(absence_id, deleted_by=current_user.id)
+        return jsonify({'success': True, **result})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
 # ── categories (admin only) ───────────────────────────────────────────────────
 
 def _parse_category_balance_fields(data: dict) -> dict:
@@ -443,3 +465,25 @@ def delete_category(category_id: int):
         user_name=current_user.full_name,
     )
     return jsonify({'success': True})
+
+
+@absence_bp.route('/absences/categories/<int:category_id>/permanent', methods=['DELETE'])
+@module_permission_required('absences')
+def hard_delete_category(category_id: int):
+    """Trwale usuń (wyczyść) kategorię nieobecności — wyłącznie superuser.
+
+    Dozwolone tylko dla kategorii już oznaczonej jako usunięta i niepowiązanej z
+    żadną nieobecnością (FK RESTRICT z employee_absences). Konfiguracja i historia
+    bilansu są kasowane kaskadowo. `module_permission_required('absences')` wpuszcza
+    też admina, więc zawężamy do superusera na poziomie serwera.
+    """
+    if current_user.role != 'superuser':
+        return jsonify({
+            'success': False,
+            'error': 'Tylko superuser może trwale usuwać kategorie',
+        }), 403
+    try:
+        _svc().hard_delete_category(category_id, deleted_by=current_user.id)
+        return jsonify({'success': True})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400

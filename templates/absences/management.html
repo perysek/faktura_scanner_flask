@@ -155,6 +155,28 @@
     .action-icon-btn.delete:hover  { color: var(--color-error); }
     .action-icon-btn svg { width: 1rem; height: 1rem; }
 
+    /* Destructive permanent-delete (superuser only) — hidden until the row is
+       hovered. Fades + slides in over 0.35s, matching the employees list. */
+    .action-icon-btn.danger-reveal {
+        color: var(--color-error);
+        opacity: 0;
+        transform: translateX(6px);
+        pointer-events: none;
+        transition: opacity 0.35s var(--ease-out-expo),
+                    transform 0.35s var(--ease-out-expo),
+                    background 0.2s ease;
+    }
+    .refined-table tbody tr:hover .action-icon-btn.danger-reveal,
+    .refined-table tbody tr:focus-within .action-icon-btn.danger-reveal {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+    .action-icon-btn.danger-reveal:hover {
+        color: var(--color-error);
+        background: rgba(155, 44, 44, 0.1);
+    }
+
     /* ── Empty state ─────────────────────────────────────────────────────── */
     .empty-state { padding: 3rem 2rem; text-align: center; }
     .empty-text  { font-size: 0.875rem; color: var(--color-ink-subtle); font-weight: 300; }
@@ -316,7 +338,20 @@
                                                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
                                     </button>
-                                    {% else %}
+                                    {% endif %}
+                                    {# Superuser-only permanent delete on every row (hover-reveal). #}
+                                    {% if current_user.role == 'superuser' %}
+                                    <button class="action-icon-btn danger-reveal js-ab-harddelete"
+                                            data-ab-id="{{ ab['id'] }}"
+                                            data-ab-status="{{ ab['status'] }}"
+                                            data-ab-label="{{ ab.get('employee_name', '') }} — {{ ab.get('category_name', '') }} ({{ ab['date_from'] }})"
+                                            title="Usuń trwale" aria-label="Usuń nieobecność trwale">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                    {% elif ab['status'] != 'pending' %}
                                     <span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>
                                     {% endif %}
                                 </div>
@@ -623,6 +658,17 @@
                                                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
                                     </button>
+                                    {% elif current_user.role == 'superuser' %}
+                                    {# Already soft-deleted → superuser can permanently purge it (hover-reveal). #}
+                                    <button class="action-icon-btn danger-reveal js-cat-harddelete"
+                                            data-cat-id="{{ cat['id'] }}"
+                                            data-cat-name="{{ cat['name'] }}"
+                                            title="Usuń trwale (wyczyść)" aria-label="Usuń kategorię trwale">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
                                     {% else %}
                                     <span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>
                                     {% endif %}
@@ -646,7 +692,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ url_for('static', filename='js/absences.js') }}"></script>
+<script src="{{ asset_url('js/absences.js') }}"></script>
 <script>
 // ── Load employees for manual form via API ────────────────────────────────
 (async function loadEmployeesForManual() {
@@ -860,6 +906,83 @@ Absences.submitManual = function() {
     });
 }());
 
+// ── Permanent delete (superuser only) ─────────────────────────────────────
+// Shared danger-confirmation modal: red "Usuń trwale" button + DELETE request.
+function _absDangerModal(opts) {
+    Modals.show({
+        title: opts.title,
+        content: opts.content,
+        size: 'small',
+        closeOnOverlay: true,
+        buttons: [
+            { text: 'Anuluj', type: 'secondary', onClick: (e, o) => Modals.close(o) },
+            {
+                text: 'Usuń trwale', type: 'danger',
+                onClick: async (e, o) => {
+                    const btn = e.currentTarget;
+                    btn.disabled = true;
+                    btn.textContent = 'Usuwanie...';
+                    try {
+                        const r = await fetch(opts.url, {
+                            method: 'DELETE',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        });
+                        const d = await r.json();
+                        Modals.close(o);
+                        if (r.ok && d.success) {
+                            Notifications.success(opts.successMsg(d));
+                            setTimeout(() => location.reload(), 700);
+                        } else {
+                            Notifications.error(d.error || 'Nie udało się usunąć');
+                        }
+                    } catch (_) {
+                        Modals.close(o);
+                        Notifications.error('Błąd połączenia z serwerem');
+                    }
+                },
+            },
+        ],
+    });
+}
+
+Absences.hardDelete = function (id, label, status) {
+    const isApproved = status === 'approved';
+    const slotNote = isApproved ? `
+        <div style="margin-top:0.75rem;padding:0.625rem 0.75rem;background:rgba(155,44,44,.06);
+                    border:1px solid rgba(155,44,44,.25);border-radius:2px;font-size:0.8125rem;">
+            Ta nieobecność jest <strong>zatwierdzona</strong> — jej trwałe usunięcie
+            zwolni zajęte sloty w kalendarzu.
+        </div>` : '';
+    _absDangerModal({
+        title: 'Trwałe usunięcie nieobecności',
+        content: `<div style="font-size:0.875rem;line-height:1.55;">
+            <p>Trwale usunąć nieobecność <strong>${escapeHtml(label)}</strong>?
+               Tej operacji <strong>nie można cofnąć</strong> — wpis zniknie z historii.</p>
+            ${slotNote}
+        </div>`,
+        url: `/absences/${id}/permanent`,
+        successMsg: (d) => d.slots_freed
+            ? 'Nieobecność trwale usunięta — sloty zwolnione'
+            : 'Nieobecność trwale usunięta',
+    });
+};
+
+Absences.hardDeleteCategory = function (id, name) {
+    _absDangerModal({
+        title: 'Trwałe usunięcie kategorii',
+        content: `<div style="font-size:0.875rem;line-height:1.55;">
+            <p>Trwale wyczyścić usuniętą kategorię <strong>${escapeHtml(name)}</strong>?
+               Tej operacji <strong>nie można cofnąć</strong>.</p>
+            <p style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-top:0.5rem;">
+                Usunięcie zostanie zablokowane, jeśli kategoria jest powiązana z jakąkolwiek
+                nieobecnością. Powiązana konfiguracja i historia bilansu zostaną skasowane.
+            </p>
+        </div>`,
+        url: `/absences/categories/${id}/permanent`,
+        successMsg: () => 'Kategoria trwale usunięta',
+    });
+};
+
 // ── Category button wiring via data-* attributes ──────────────────────────
 // (avoids tojson double-quote conflicts inside onclick="..." attributes)
 document.addEventListener('DOMContentLoaded', () => {
@@ -881,6 +1004,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.js-cat-delete').forEach(btn => {
         btn.addEventListener('click', () => {
             Absences.deleteCategory(parseInt(btn.dataset.catId), btn.dataset.catName);
+        });
+    });
+    document.querySelectorAll('.js-ab-harddelete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            Absences.hardDelete(parseInt(btn.dataset.abId), btn.dataset.abLabel, btn.dataset.abStatus);
+        });
+    });
+    document.querySelectorAll('.js-cat-harddelete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            Absences.hardDeleteCategory(parseInt(btn.dataset.catId), btn.dataset.catName);
         });
     });
 });

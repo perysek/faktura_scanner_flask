@@ -8,6 +8,7 @@ i zatwierdzanie/odrzucanie wniosków.
 from datetime import datetime, date, time
 from typing import List, Optional
 
+from config.database import managed_transaction
 from database.models import EmployeeAbsence
 from exceptions import AppError
 from repositories.absences.absence_category_repository import AbsenceCategoryRepository
@@ -417,6 +418,82 @@ class AbsenceService:
             new_value='true',
             user_id=deleted_by,
         )
+
+    def hard_delete(self, absence_id: int, deleted_by: Optional[int] = None) -> dict:
+        """Permanently delete an absence row (superuser cleanup, all statuses).
+
+        Removes the ``employee_absences`` row outright instead of flipping
+        ``is_deleted``. For an *approved* absence this frees the employee's calendar
+        slots (calendar views read only ``status='approved'`` rows). The delete and
+        the ``DELETE_PERMANENT`` audit entry run in one ``managed_transaction`` so
+        they are atomic.
+
+        Returns ``{'status': <prior status>, 'slots_freed': bool}``.
+        Raises ``AbsenceError`` if the absence does not exist.
+        """
+        row = self.absence_repo.get_by_id(absence_id)
+        if not row:
+            raise AbsenceError("Nieobecność nie istnieje")
+        prior_status = row['status']
+        cat_name = row['category_name'] if 'category_name' in row.keys() else ''
+        label = f"{self._employee_label(row['employee_id'])} — {cat_name} ({row['date_from']}→{row['date_to']})"
+
+        with managed_transaction():
+            if not self.absence_repo.hard_delete(absence_id):
+                raise AbsenceError("Nie udało się usunąć nieobecności")
+            self.audit_repo.log_event(
+                entity_type='absence',
+                action='DELETE_PERMANENT',
+                entity_id=absence_id,
+                entity_label=label,
+                field_name='status',
+                old_value=prior_status,
+                new_value='deleted',
+                user_id=deleted_by,
+            )
+        return {'status': prior_status, 'slots_freed': prior_status == 'approved'}
+
+    def hard_delete_category(self, category_id: int,
+                             deleted_by: Optional[int] = None) -> None:
+        """Permanently purge a soft-deleted category (superuser only).
+
+        Only categories that are already soft-deleted may be purged, and only when
+        no absence references them (FK RESTRICT). The CASCADE foreign keys clear the
+        category's balance config / adjustment history. The delete and its
+        ``DELETE_PERMANENT`` audit entry run atomically in one transaction.
+
+        Raises ``AbsenceError`` when the category is missing, still active, or still
+        referenced by absences.
+        """
+        cat = self.category_repo.get_by_id(category_id)
+        if not cat:
+            raise AbsenceError("Kategoria nie istnieje")
+        if not bool(cat['is_deleted']):
+            raise AbsenceError(
+                "Najpierw usuń kategorię (soft delete) — trwale usuwać można tylko "
+                "kategorie już oznaczone jako usunięte"
+            )
+
+        ref_count = self.category_repo.count_absence_references(category_id)
+        if ref_count > 0:
+            raise AbsenceError(
+                f"Nie można trwale usunąć kategorii — jest powiązana z {ref_count} "
+                f"nieobecnościami. Te dane muszą pozostać nienaruszone."
+            )
+
+        with managed_transaction():
+            if not self.category_repo.hard_delete(category_id):
+                raise AbsenceError("Nie udało się usunąć kategorii")
+            self.audit_repo.log_event(
+                entity_type='absence_category',
+                action='DELETE_PERMANENT',
+                entity_id=category_id,
+                entity_label=cat['name'],
+                field_name='is_deleted',
+                old_value='true',
+                new_value='purged',
+                user_id=deleted_by,
+            )
 
     # ── list helpers ──────────────────────────────────────────────────────────
 

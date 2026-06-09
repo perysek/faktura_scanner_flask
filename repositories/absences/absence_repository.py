@@ -404,3 +404,21 @@ class AbsenceRepository:
         cursor.execute(query, (absence_id,))
         safe_commit(conn)
         return cursor.rowcount > 0
+
+    def hard_delete(self, absence_id: int) -> bool:
+        """Permanently remove an absence row (no soft-delete flag, superuser cleanup).
+
+        ``employee_absences`` is a leaf table — nothing FK-references it — so the
+        row can be deleted unconditionally regardless of status. For an *approved*
+        absence this also frees the employee's calendar slots: every calendar view
+        reads only ``status='approved'`` rows, so once the row is gone it no longer
+        blocks anything (this is exactly what :meth:`cancel_approved` achieves via a
+        status flip, but here the record is removed entirely). Cooperates with a
+        caller's ``managed_transaction`` via ``safe_commit``.
+        """
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM employee_absences WHERE id = %s", (absence_id,))
+        deleted = cursor.rowcount > 0
+        safe_commit(conn)
+        return deleted
