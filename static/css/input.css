@@ -21,6 +21,10 @@
       --color-border: #e8e6e1;
       --color-border-subtle: #f0eeea;
 
+      /* Radii — canonical (flat, minimal). Consume instead of hardcoding. */
+      --radius-sm: 2px;   /* inputs, buttons, badges */
+      --radius-md: 3px;   /* cards, modals */
+
       /* Brand / Accent */
       --color-accent: #c9a227;            /* DECORATIVE gold — logo flourish, hover marks */
       --color-accent-muted: rgba(201, 162, 39, 0.12);
@@ -132,6 +136,24 @@
   :focus-visible {
       outline: 2px solid var(--color-focus-ring);
       outline-offset: 2px;
+  }
+
+  /* ── iOS Safari input-zoom guard (Issue 2) ──
+     Any form control under 16px makes mobile Safari zoom the viewport on focus
+     and never zoom back. Force ≥16px at mobile widths; desktop keeps its denser
+     14px/13px. Covers BOTH design systems + the custom SearchableSelect controls.
+     !important is required: page-local <style> blocks (e.g. clients/list.html
+     .refined-input { font-size: 0.8125rem }) are UNLAYERED author CSS, which
+     always beats layered rules — only an important layered declaration wins. */
+  @media (max-width: 1023px) {
+      input,
+      select,
+      textarea,
+      .ss-trigger,
+      .ss-search,
+      .refined-input {
+          font-size: 16px !important;
+      }
   }
 }
 
@@ -522,6 +544,26 @@
   .refined-table tbody tr:last-child td {
       @apply border-b-0;
   }
+
+  /* Canonical sortable-header glyph icon (S3) — shared by clients list + table
+     macro. Glyphs: ▲ asc / ▼ desc / dimmed ▲ unsorted. */
+  .th-sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s ease;
+  }
+  .th-sortable:hover { color: var(--color-ink); }
+  .th-sort-icon {
+      display: inline-block;
+      margin-left: 0.25rem;
+      opacity: 0.35;
+      font-size: 0.625rem;
+      vertical-align: middle;
+      transition: opacity 0.2s ease;
+  }
+  .th-sortable:hover .th-sort-icon { opacity: 0.7; }
+  .th-sortable.sort-active { color: var(--color-ink); }
+  .th-sortable.sort-active .th-sort-icon { opacity: 1; }
 
   /* ============================================
      MODAL DIALOG SYSTEM
