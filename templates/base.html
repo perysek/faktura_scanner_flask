@@ -222,6 +222,16 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
+                <!-- Mobile page context (Issue 7): logo + current page title, < lg only.
+                     Logo is decorative (aria-hidden) — the adjacent text names the page. -->
+                <div class="lg:hidden flex items-center gap-2 min-w-0">
+                    {% if logo_data_uri %}
+                    <img src="{{ logo_data_uri }}" alt="" class="h-6 w-auto object-contain" aria-hidden="true">
+                    {% endif %}
+                    <span class="truncate text-sm font-semibold" style="color: var(--color-ink);">
+                        {%- block mobile_title %}{% endblock -%}
+                    </span>
+                </div>
                 <!-- Right Header Actions (e.g. User Profile or Global Actions) -->
                 <div class="flex items-center gap-4 ml-auto">
                     {% block page_actions %}{% endblock %}
