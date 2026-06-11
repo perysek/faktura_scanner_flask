@@ -102,6 +102,22 @@ unlayered CSS and would otherwise beat the layered rule. Desktop (≥1024px)
 keeps dense 13–14px type. Do not set form-control font sizes below 16px in
 page styles expecting them to apply on mobile — they won't.
 
+## Canonical form components (added Phase 05)
+
+`input.css @layer components` — used by all `form_fields.html` macros:
+
+| Class | Role |
+|---|---|
+| `.form-label` | Field label (0.8125rem, ink-muted) |
+| `.form-input` / `.form-select` / `.form-textarea` | Flat controls: token border, `--radius-sm`, refined focus ring |
+| `.form-card` | Section card: `--radius-md`, token border, subtle shadow |
+| `.form-btn-primary` | Flat ink fill, hover ink-muted + lift |
+| `.form-btn-secondary` | White, token border; **Cancel renders as `<a href>` with this class** (Issue 8) |
+| `.form-paste-btn` | OCR paste affordance |
+
+Notes: readonly/disabled styling lives on `.form-input[readonly]`/`:disabled` — do not
+re-add `bg-slate-50` conditionals. Checkboxes use `accent-color: var(--color-ink)`.
+
 ## Build pipeline
 
 ```

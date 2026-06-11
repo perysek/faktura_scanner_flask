@@ -568,6 +568,52 @@
   .th-sortable.sort-active { color: var(--color-ink); }
   .th-sortable.sort-active .th-sort-icon { opacity: 1; }
 
+  /* ── Canonical form controls (token-based; P05 migration of form_fields macros) ── */
+  .form-label {
+      display: block; font-size: 0.8125rem; font-weight: 500;
+      color: var(--color-ink-muted); margin-bottom: 0.375rem;
+  }
+  .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 0.5rem 0.75rem;
+      font-family: var(--font-body); font-size: 0.875rem; font-weight: 400;
+      color: var(--color-ink); background: white;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease; outline: none;
+  }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--color-ink-subtle); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,.04);
+  }
+  .form-input:disabled, .form-input[readonly] { background: var(--color-surface); cursor: not-allowed; }
+  .form-select { appearance: none; cursor: pointer; padding-right: 2.5rem; }
+  .form-card {
+      background: white; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .form-btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;
+      color: white; background: var(--color-ink); border: none; border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.25s var(--ease-out-expo); text-decoration: none;
+  }
+  .form-btn-primary:hover { background: var(--color-ink-muted); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .form-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .form-btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;
+      color: var(--color-ink-muted); background: white;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.2s ease; text-decoration: none;
+  }
+  .form-btn-secondary:hover { border-color: var(--color-ink-muted); background: var(--color-surface); color: var(--color-ink); }
+  .form-paste-btn {
+      display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem;
+      color: var(--color-ink-subtle); background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      cursor: pointer; flex-shrink: 0; transition: color 0.2s ease, background 0.2s ease;
+  }
+  .form-paste-btn:hover { color: var(--color-ink); background: white; }
+
   /* ============================================
      MODAL DIALOG SYSTEM
      Dynamic modals created by Modals.show()
