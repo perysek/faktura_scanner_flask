@@ -2,7 +2,7 @@
 title: "Phase 07: Page-Sweep Migration & Consistency Verification"
 description: "Sweep all macro-consuming pages to the canonical look, reconcile the global .refined-btn-* gradient/flat duplication, and prove one consistent design language (Issue 5-pages)."
 skill: "web-design-guidelines"
-status: pending
+status: done
 group: "design-system-migration"
 dependencies: [P05, P06]
 tags: [phase, design-system, verification, css]
@@ -183,14 +183,21 @@ For each area, in order (forms → list/refined → dashboards → settings/abse
 
 ## Quality Assurance
 
-### Sweep Checklist (fill during implementation)
+### Sweep Checklist (completed 2026-06-11)
 
 | Area | Pages | Status |
 |------|-------|--------|
-| Forms | clients/sellers/employees/services/invoices/appointments/users/roles create+edit | ☐ |
-| List/refined | invoices/sellers/history `list_refined`, services/employees/users/roles `list` | ☐ |
-| Dashboards | dashboard/index, analytics/dashboard, income/dashboard | ☐ |
-| Settings/absences | settings/*, absences/* | ☐ |
+| Global buttons | input.css `.refined-btn-*` gradient→flat (ADR-07-01); analytics = only global consumer | ✅ |
+| Local dupes | 57 blocks removed from 12 templates (clients/employees/services); variants + standalone auth kept | ✅ |
+| Components | confirm_modal (flat cm-btn-* id-scoped), flash_messages, sidebar links/avatar, data_import cards | ✅ |
+| Sort a11y | 40 `<th onclick>` → `.th-sort-btn` + `aria-sort` on 7 pages; per-page JS synced | ✅ (clients → P08) |
+| Grep gate | `rounded-xl\|rounded-2xl\|from-primary-\|to-primary-` → 0 hits in authenticated app | ✅ |
+
+**Notes:** Forms/dashboards needed no card/button sweep beyond the above — the inventory
+grep found System-A utilities only in the 5 component/data_import files. Page-local
+"VARIANT" button styles (appointments compact, absences, calendars, profile,
+formy_zatrudnienia, services/categories) intentionally kept: unlayered page CSS
+overrides the global, so they are deliberate per-page densities, not forks.
 
 ### Test Plan
 

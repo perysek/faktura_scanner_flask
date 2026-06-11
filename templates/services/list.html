@@ -347,12 +347,12 @@
         <table class="refined-table">
             <thead>
                 <tr>
-                    <th class="th-sortable" onclick="sortBy('name')" id="th-name">Nazwa usługi <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('service_type')" id="th-service_type">Typ <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('category')" id="th-category">Kategoria <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('duration_minutes')" id="th-duration_minutes">Czas trwania <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('price')" id="th-price">Cena <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('is_active')" id="th-is_active">Status <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" id="th-name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('name')">Nazwa usługi <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-service_type" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('service_type')">Typ <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-category" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('category')">Kategoria <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-duration_minutes" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('duration_minutes')">Czas trwania <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-price" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('price')">Cena <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-is_active" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('is_active')">Status <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -422,6 +422,7 @@ function sortBy(column) {
 function updateSortHeaders() {
     document.querySelectorAll('.th-sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
+        th.setAttribute('aria-sort', 'none');
         const icon = th.querySelector('.sort-icon');
         if (icon) icon.textContent = '↕';
     });
@@ -429,6 +430,7 @@ function updateSortHeaders() {
     const th = document.getElementById('th-' + sortState.column);
     if (!th) return;
     th.classList.add('sort-' + sortState.direction);
+    th.setAttribute('aria-sort', sortState.direction === 'asc' ? 'ascending' : 'descending');
     const icon = th.querySelector('.sort-icon');
     if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
 }

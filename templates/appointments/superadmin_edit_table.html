@@ -370,15 +370,15 @@
             </colgroup>
             <thead>
                 <tr class="te-hdr-labels">
-                    <th data-col="id" onclick="toggleSort('id')">ID <span class="te-sort-icon" id="sort-id">&varr;</span></th>
-                    <th data-col="appointment_date" onclick="toggleSort('appointment_date')">Data <span class="te-sort-icon active" id="sort-appointment_date">&darr;</span></th>
-                    <th data-col="start_time" onclick="toggleSort('start_time')">Godz <span class="te-sort-icon" id="sort-start_time">&varr;</span></th>
-                    <th data-col="client_name" onclick="toggleSort('client_name')">Klient <span class="te-sort-icon" id="sort-client_name">&varr;</span></th>
-                    <th data-col="employee_name" onclick="toggleSort('employee_name')">Pracownik <span class="te-sort-icon" id="sort-employee_name">&varr;</span></th>
-                    <th data-col="status" onclick="toggleSort('status')">Status <span class="te-sort-icon" id="sort-status">&varr;</span></th>
+                    <th data-col="id" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('id')">ID <span class="te-sort-icon" id="sort-id" aria-hidden="true">&varr;</span></button></th>
+                    <th data-col="appointment_date" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('appointment_date')">Data <span class="te-sort-icon active" id="sort-appointment_date" aria-hidden="true">&darr;</span></button></th>
+                    <th data-col="start_time" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('start_time')">Godz <span class="te-sort-icon" id="sort-start_time" aria-hidden="true">&varr;</span></button></th>
+                    <th data-col="client_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('client_name')">Klient <span class="te-sort-icon" id="sort-client_name" aria-hidden="true">&varr;</span></button></th>
+                    <th data-col="employee_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('employee_name')">Pracownik <span class="te-sort-icon" id="sort-employee_name" aria-hidden="true">&varr;</span></button></th>
+                    <th data-col="status" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('status')">Status <span class="te-sort-icon" id="sort-status" aria-hidden="true">&varr;</span></button></th>
                     <th>Uslugi</th>
-                    <th data-col="total_price" onclick="toggleSort('total_price')">Kwota <span class="te-sort-icon" id="sort-total_price">&varr;</span></th>
-                    <th data-col="satisfaction_score" onclick="toggleSort('satisfaction_score')">Ocena <span class="te-sort-icon" id="sort-satisfaction_score">&varr;</span></th>
+                    <th data-col="total_price" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('total_price')">Kwota <span class="te-sort-icon" id="sort-total_price" aria-hidden="true">&varr;</span></button></th>
+                    <th data-col="satisfaction_score" aria-sort="none"><button type="button" class="th-sort-btn" onclick="toggleSort('satisfaction_score')">Ocena <span class="te-sort-icon" id="sort-satisfaction_score" aria-hidden="true">&varr;</span></button></th>
                     <th>Notatki</th>
                     <th>Akcje</th>
                 </tr>
@@ -641,7 +641,10 @@ function toggleSort(col) {
         el.classList.remove('active');
         el.textContent = '\u21C5';
     });
-    const icon = document.getElementById('sort-' + col);
+    document.querySelectorAll('th[data-col]').forEach(th => th.setAttribute('aria-sort', 'none'));
+    const sortedTh = document.querySelector('th[data-col="' + col + '"]');
+    if (sortedTh) sortedTh.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+    
     if (icon) {
         icon.classList.add('active');
         icon.textContent = sortDir === 'asc' ? '\u2191' : '\u2193';

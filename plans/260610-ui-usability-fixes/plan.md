@@ -85,7 +85,7 @@ We follow a **shared-foundation-first** strategy: fixes that live in shared code
 | **04** | [Mobile header page-title](./phase-04-mobile-header-title.md) | shared-behavior | Issue 7 | **DONE** |
 | **05** | [Migrate form_fields macros to tokens + Cancel link](./phase-05-migrate-form-fields.md) | design-system-migration | Issue 5 (forms) + Issue 8 | **DONE** |
 | **06** | [Migrate table macros + accessible sortable header](./phase-06-migrate-table-macros.md) | design-system-migration | Issue 5 (tables) + Issue 1 (macro) + S3 | **DONE** |
-| **07** | [Page-sweep migration & consistency verification](./phase-07-page-sweep-consistency.md) | design-system-migration | Issue 5 (pages) | Pending |
+| **07** | [Page-sweep migration & consistency verification](./phase-07-page-sweep-consistency.md) | design-system-migration | Issue 5 (pages) | **DONE** |
 | **08** | [Clients table a11y & polish](./phase-08-clients-table-a11y.md) | clients-table | Issues 1(clients), 9, 11, 12 | Pending |
 | **09** | [Clients mobile stacked-card layout](./phase-09-clients-mobile-cards.md) | clients-table | Issue 4 | Pending |
 | **10** | [Accessible read-only star rating](./phase-10-rating-stars-a11y.md) | public-a11y | Issue 10 | Pending |

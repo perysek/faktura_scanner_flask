@@ -505,12 +505,12 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th class="th-sortable" onclick="sortBy('seller_nip')" id="th-seller_nip">NIP <span class="sort-icon">↕</span></th>
-                        <th class="th-sortable" onclick="sortBy('seller_name')" id="th-seller_name">Nazwa <span class="sort-icon">↕</span></th>
-                        <th class="th-sortable" style="text-align: center;" onclick="sortBy('invoices')" id="th-invoices">Faktury <span class="sort-icon">↕</span></th>
-                        <th class="th-sortable" style="text-align: right;" onclick="sortBy('total_paid')" id="th-total_paid">Opłacone <span class="sort-icon">↕</span></th>
-                        <th class="th-sortable" style="text-align: right;" onclick="sortBy('total_unpaid')" id="th-total_unpaid">Nieopłacone <span class="sort-icon">↕</span></th>
-                        <th class="th-sortable col-updated" onclick="sortBy('last_updated')" id="th-last_updated">Aktualizacja <span class="sort-icon">↕</span></th>
+                        <th class="th-sortable" id="th-seller_nip" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('seller_nip')">NIP <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                        <th class="th-sortable" id="th-seller_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('seller_name')">Nazwa <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                        <th class="th-sortable" style="text-align: center;" id="th-invoices" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('invoices')">Faktury <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                        <th class="th-sortable" style="text-align: right;" id="th-total_paid" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_paid')">Opłacone <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                        <th class="th-sortable" style="text-align: right;" id="th-total_unpaid" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_unpaid')">Nieopłacone <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                        <th class="th-sortable col-updated" id="th-last_updated" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('last_updated')">Aktualizacja <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -661,6 +661,7 @@ function sortBy(column) {
 function updateSortHeaders() {
     document.querySelectorAll('.th-sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
+        th.setAttribute('aria-sort', 'none');
         const icon = th.querySelector('.sort-icon');
         if (icon) icon.textContent = '↕';
     });
@@ -668,6 +669,7 @@ function updateSortHeaders() {
     const th = document.getElementById('th-' + sortState.column);
     if (!th) return;
     th.classList.add('sort-' + sortState.direction);
+    th.setAttribute('aria-sort', sortState.direction === 'asc' ? 'ascending' : 'descending');
     const icon = th.querySelector('.sort-icon');
     if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
 }

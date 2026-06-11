@@ -424,9 +424,9 @@
         <table class="refined-table">
             <thead>
                 <tr>
-                    <th class="th-sortable" onclick="sortBy('name')" id="th-name">Nazwa <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('additional_description')" id="th-additional_description">Dodatkowy opis <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" style="text-align:center" onclick="sortBy('service_count')" id="th-service_count">Usługi <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" id="th-name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('name')">Nazwa <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-additional_description" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('additional_description')">Dodatkowy opis <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" style="text-align:center" id="th-service_count" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('service_count')">Usługi <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -520,6 +520,7 @@ function sortBy(column) {
 function updateSortHeaders() {
     document.querySelectorAll('.th-sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
+        th.setAttribute('aria-sort', 'none');
         const icon = th.querySelector('.sort-icon');
         if (icon) icon.textContent = '↕';
     });
@@ -527,6 +528,7 @@ function updateSortHeaders() {
     const th = document.getElementById('th-' + sortState.column);
     if (!th) return;
     th.classList.add('sort-' + sortState.direction);
+    th.setAttribute('aria-sort', sortState.direction === 'asc' ? 'ascending' : 'descending');
     const icon = th.querySelector('.sort-icon');
     if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
 }

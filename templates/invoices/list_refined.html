@@ -879,32 +879,24 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th class="col-number sortable" onclick="sortTable('invoice_number')">
-                            Nr faktury
-                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                        <th class="col-number sortable" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortTable('invoice_number')">Nr faktury
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                        </th>
-                        <th class="col-seller sortable" onclick="sortTable('seller_name')">
-                            Sprzedawca
-                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                            </svg></button></th>
+                        <th class="col-seller sortable" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortTable('seller_name')">Sprzedawca
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                        </th>
+                            </svg></button></th>
                         <th class="col-nip">NIP</th>
-                        <th class="col-date sortable" onclick="sortTable('invoice_date')">
-                            Data wyst.
-                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                        <th class="col-date sortable" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortTable('invoice_date')">Data wyst.
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                        </th>
+                            </svg></button></th>
                         <th class="col-due">Termin</th>
-                        <th class="col-amount sortable" onclick="sortTable('amount')">
-                            Kwota
-                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;">
+                        <th class="col-amount sortable" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortTable('amount')">Kwota
+                            <svg class="sort-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle;" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                        </th>
+                            </svg></button></th>
                         <th class="col-status">Status</th>
                         <th class="col-actions"></th>
                     </tr>
@@ -1238,8 +1230,13 @@ function sortTable(field) {
     }
 
     // Update sort indicators
-    document.querySelectorAll('.refined-table th').forEach(th => th.classList.remove('sorted'));
-    event.target.closest('th').classList.add('sorted');
+    document.querySelectorAll('.refined-table th').forEach(th => {
+        th.classList.remove('sorted');
+        if (th.classList.contains('sortable')) th.setAttribute('aria-sort', 'none');
+    });
+const sortedTh = event.target.closest('th');
+sortedTh.classList.add('sorted');
+sortedTh.setAttribute('aria-sort', currentSort.direction === 'asc' ? 'ascending' : 'descending');
 
     applyFiltersAndRender();
 }

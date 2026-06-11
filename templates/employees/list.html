@@ -503,11 +503,11 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th class="th-sortable" onclick="sortBy('full_name')" id="th-full_name">Imię i nazwisko <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('position')" id="th-position">Stanowisko <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('status')" id="th-status">Status <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" onclick="sortBy('avg_satisfaction')" id="th-avg_satisfaction">Ocena klientów <span class="sort-icon">↕</span></th>
-                    <th class="th-sortable" style="text-align:center;" onclick="sortBy('balance')" id="th-balance">Bilans urlopu <span class="sort-icon">↕</span></th>
+                    <th class="th-sortable" id="th-full_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('full_name')">Imię i nazwisko <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-position" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('position')">Stanowisko <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-status" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('status')">Status <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-avg_satisfaction" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('avg_satisfaction')">Ocena klientów <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" style="text-align:center;" id="th-balance" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('balance')">Bilans urlopu <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -662,6 +662,7 @@ function sortBy(column) {
 function updateSortHeaders() {
     document.querySelectorAll('.th-sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
+        th.setAttribute('aria-sort', 'none');
         const icon = th.querySelector('.sort-icon');
         if (icon) icon.textContent = '↕';
     });
@@ -669,6 +670,7 @@ function updateSortHeaders() {
     const th = document.getElementById('th-' + sortState.column);
     if (!th) return;
     th.classList.add('sort-' + sortState.direction);
+    th.setAttribute('aria-sort', sortState.direction === 'asc' ? 'ascending' : 'descending');
     const icon = th.querySelector('.sort-icon');
     if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
 }
