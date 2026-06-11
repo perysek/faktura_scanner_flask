@@ -2,7 +2,7 @@
 title: "Phase 11: App-Wide A11y/Responsive Verification + Docs"
 description: "Cross-cutting axe/Playwright + /design-review + /qa regression pass confirming all 15 issues are closed and no 'Positive Observations' regressed, then update the docs."
 skill: "playwright-e2e"
-status: pending
+status: done
 group: "verification"
 dependencies: [P01, P02, P03, P04, P05, P06, P07, P08, P09, P10]
 tags: [phase, verification, accessibility, documentation]
@@ -237,6 +237,28 @@ npm run build:css   # ensure latest CSS
 - [ ] (Optional) Deployed to Vultr + smoke-checked
 
 ---
+
+## Sign-off Record (2026-06-11)
+
+**axe matrix (prod, 70.34.252.120):** clients ✅ 0 / dashboard ✅ 0 / services ✅ 0 /
+invoices (minor only) / appointments (moderate only) — **0 critical/serious everywhere**.
+Fixed during the gate: sidebar heading contrast token, seller-chip palette, 3 dashboard
+scroll regions (tabindex+region), filter label associations, status-dropdown aria-labels,
+"6 mies." opacity.
+
+**Keyboard:** sort verified on services/appointments/invoices/employees/sellers/
+superadmin/clients (Enter + aria-sort flip); drawer trap + Esc + focus return; rating
+radiogroup arrows; error-retry focus. All on production.
+
+**Responsive:** 16px inputs ≤1023px (login + clients verified); clients stacked cards
+at 375px with zero horizontal overflow; desktop table intact at 1440px.
+
+**Positive observations intact:** skip-link ("Przejdź do treści" → #main-content),
+CSRF meta+patched fetch, prefers-reduced-motion rule in served CSS, action-icon
+aria-labels, renderSkeleton present.
+
+**Issue closure:** all 15 review issues closed (Issues 1–12 + S1–S3) across P01–P10;
+deferred follow-ups recorded in DESIGN-TOKENS.md "Deferred items".
 
 ## Notes
 

@@ -89,7 +89,7 @@ We follow a **shared-foundation-first** strategy: fixes that live in shared code
 | **08** | [Clients table a11y & polish](./phase-08-clients-table-a11y.md) | clients-table | Issues 1(clients), 9, 11, 12 | **DONE** |
 | **09** | [Clients mobile stacked-card layout](./phase-09-clients-mobile-cards.md) | clients-table | Issue 4 | **DONE** |
 | **10** | [Accessible read-only star rating](./phase-10-rating-stars-a11y.md) | public-a11y | Issue 10 | **DONE** |
-| **11** | [App-wide a11y/responsive verification + docs](./phase-11-verification-docs.md) | verification | Regression + sign-off | Pending |
+| **11** | [App-wide a11y/responsive verification + docs](./phase-11-verification-docs.md) | verification | Regression + sign-off | **DONE** |
 
 ### Group Summary
 
