@@ -280,12 +280,36 @@ document.addEventListener('DOMContentLoaded', function () {
     var overlay = document.getElementById('sidebar-overlay');
     var toggleBtn = document.getElementById('sidebar-toggle');
 
+    function getFocusable() {
+        // offsetParent is null for elements hidden by permission gating etc.
+        return Array.prototype.slice.call(
+            sidebar.querySelectorAll('a[href], button:not([disabled])')
+        ).filter(function (el) { return el.offsetParent !== null; });
+    }
+
+    // Trap Tab inside the open drawer — without this, Tab escapes to the
+    // page content hidden behind the overlay.
+    function trapTab(e) {
+        if (e.key !== 'Tab') return;
+        var f = getFocusable();
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault(); first.focus();
+        }
+    }
+
     function openMobileSidebar() {
         if (!sidebar || !overlay) return;
         sidebar.classList.remove('hidden');
         sidebar.classList.add('fixed', 'inset-y-0', 'left-0', 'z-40');
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
+        if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('scroll-lock');
+        document.addEventListener('keydown', trapTab);
         // Focus first link in sidebar
         var firstLink = sidebar.querySelector('a[href]');
         if (firstLink) firstLink.focus();
@@ -299,6 +323,9 @@ document.addEventListener('DOMContentLoaded', function () {
         sidebar.classList.remove('fixed', 'inset-y-0', 'left-0', 'z-40');
         overlay.classList.add('hidden');
         overlay.setAttribute('aria-hidden', 'true');
+        if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('scroll-lock');
+        document.removeEventListener('keydown', trapTab);
         if (toggleBtn) toggleBtn.focus();
     }
 
@@ -320,8 +347,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // Close on Escape key
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && sidebar && !sidebar.classList.contains('hidden') && window.innerWidth < 1024) {
+            // Esc consumes one layer at a time: closing the drawer must not
+            // also trigger keyboard-shortcuts.js's generic Esc handler, which
+            // blurs activeElement and would undo the focus return to the toggle.
+            e.stopImmediatePropagation();
             closeMobileSidebar();
         }
+    });
+
+    // Accordion sections pin max-height to a px snapshot of scrollHeight;
+    // a viewport/font reflow can change the real height and clip items.
+    // Recompute for expanded sections after resize settles.
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            sections.forEach(function (section) {
+                var items = getItems(section);
+                if (items && items.style.maxHeight && items.style.maxHeight !== '0px') {
+                    items.style.maxHeight = items.scrollHeight + 'px';
+                }
+            });
+        }, 120);
     });
 });
 </script>

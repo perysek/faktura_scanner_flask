@@ -186,6 +186,9 @@
       white-space: nowrap;
       border-width: 0;
   }
+  /* Body scroll-lock behind overlays (sidebar drawer, modals) */
+  .scroll-lock { overflow: hidden; }
+
   .sr-only-focusable:focus {
       position: static;
       width: auto;
