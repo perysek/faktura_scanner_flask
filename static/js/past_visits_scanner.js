@@ -144,6 +144,7 @@ const PastVisitsScanner = {
                     <select
                         class="status-dropdown"
                         data-appointment-id="${appointment.id}"
+                        aria-label="Nowy status wizyty: ${this.escapeHtml(appointment.client_name)}, ${formattedDate}"
                         style="padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); width: 100%; max-width: 180px; cursor: pointer;"
                     >
                         <option value="">-- Wybierz --</option>

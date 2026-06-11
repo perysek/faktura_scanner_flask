@@ -102,7 +102,9 @@
       --sidebar-text: #94a3b8;
       --sidebar-text-hover: #ffffff;
       --sidebar-text-active: #60a5fa;
-      --sidebar-heading: #64748b;
+      /* Lightened from #64748b (3.4:1 on #0f172a, failed WCAG AA) so section
+         headings meet 4.5:1; hierarchy vs links is kept by size/uppercase. */
+      --sidebar-heading: #8b9cb3;
       --sidebar-border: rgba(51, 65, 85, 0.5);
       --sidebar-hover-bg: #1e293b;
       --sidebar-active-bg: rgba(37, 99, 235, 0.2);
