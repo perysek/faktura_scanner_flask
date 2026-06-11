@@ -9,7 +9,7 @@
 {% macro sidebar_link(url, label, icon_path, is_active=false) %}
 <a href="{{ url }}"
    class="sidebar-link flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-sm font-medium transition-all duration-200 group
-   {{ 'sidebar-link--active rounded-lg' if is_active else 'sidebar-link--default rounded-xl' }}"
+   {{ 'sidebar-link--active rounded-lg' if is_active else 'sidebar-link--default rounded-lg' }}"
    {% if is_active %}aria-current="page"{% endif %}>
     <svg class="w-5 h-5 shrink-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}" />

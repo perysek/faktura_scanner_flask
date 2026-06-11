@@ -2,11 +2,11 @@
     {% if messages %}
     <div class="px-6 pt-4 space-y-2">
         {% for category, message in messages %}
-        <div class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-sm border
-            {% if category == 'success' %}bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-emerald-200 text-emerald-800
-            {% elif category == 'error' %}bg-gradient-to-r from-red-50 to-red-100/50 border-red-200 text-red-800
-            {% elif category == 'warning' %}bg-gradient-to-r from-amber-50 to-amber-100/50 border-amber-200 text-amber-800
-            {% else %}bg-gradient-to-r from-blue-50 to-blue-100/50 border-blue-200 text-blue-800{% endif %}" role="alert">
+        <div class="flex items-center gap-3 px-4 py-3 rounded-[3px] shadow-sm border
+            {% if category == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800
+            {% elif category == 'error' %}bg-red-50 border-red-200 text-red-800
+            {% elif category == 'warning' %}bg-amber-50 border-amber-200 text-amber-800
+            {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}" role="alert">
             
             {% if category == 'success' %}
             <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

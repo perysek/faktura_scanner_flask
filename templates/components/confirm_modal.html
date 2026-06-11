@@ -17,6 +17,30 @@
         transition: opacity 0.25s var(--ease-out-expo), transform 0.25s var(--ease-out-expo);
     }
     #confirm-modal-panel.is-open { opacity: 1; transform: none; }
+
+    /* Flat token buttons (P07: canonical language, no gradients/rounded-xl).
+       Id-scoped so no Tailwind rebuild is needed. */
+    #confirm-modal-icon { border-radius: 3px; }
+    #confirm-modal .cm-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;
+        border-radius: 2px; cursor: pointer; border: none;
+        transition: all 0.2s ease;
+    }
+    #confirm-modal .cm-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+    #confirm-modal .cm-btn-cancel {
+        background: white; color: var(--color-ink-muted);
+        border: 1px solid var(--color-border);
+    }
+    #confirm-modal .cm-btn-cancel:hover { border-color: var(--color-ink-muted); background: var(--color-surface); color: var(--color-ink); }
+    #confirm-modal .cm-btn-confirm { color: white; }
+    #confirm-modal .cm-btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    #confirm-modal .cm-btn-confirm.cm-danger { background: var(--color-status-cancelled); }
+    #confirm-modal .cm-btn-confirm.cm-danger:hover { background: var(--color-status-cancelled-dark); }
+    #confirm-modal .cm-btn-confirm.cm-warning { background: var(--color-status-in-progress); }
+    #confirm-modal .cm-btn-confirm.cm-warning:hover { background: #b45309; }
+    #confirm-modal .cm-btn-confirm.cm-info { background: var(--color-focus-ring); }
+    #confirm-modal .cm-btn-confirm.cm-info:hover { background: var(--color-chart-blue-dark); }
 </style>
 <div id="confirm-modal" class="fixed inset-0 z-[9999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <!-- Backdrop with blur — matches golden master (templates/appointments/list.html) -->
@@ -31,7 +55,7 @@
             <div class="px-6 pt-6 pb-4">
                 <div class="flex items-start gap-4">
                     <!-- Dynamic Icon Container -->
-                    <div id="confirm-modal-icon" class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100">
+                    <div id="confirm-modal-icon" class="w-12 h-12 flex items-center justify-center flex-shrink-0 bg-red-100">
                         <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
@@ -54,11 +78,11 @@
             <!-- Actions Footer -->
             <div class="px-6 pb-6 pt-2 flex items-center justify-end gap-3 bg-slate-50/80 rounded-b-[3px] border-t border-slate-100">
                 <button type="button" onclick="closeConfirmModal()"
-                        class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-1 active:scale-[0.98]">
+                        class="cm-btn cm-btn-cancel active:scale-[0.98]">
                     Anuluj
                 </button>
                 <button type="button" id="confirm-modal-submit-btn"
-                        class="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl shadow-md shadow-red-500/25 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 active:scale-[0.98]">
+                        class="cm-btn cm-btn-confirm cm-danger active:scale-[0.98]">
                     Potwierdź
                 </button>
             </div>
@@ -96,24 +120,25 @@
         if (message) messageEl.textContent = message;
         if (confirmBtnText) submitBtn.textContent = confirmBtnText;
 
-        // Update styling based on type
+        // Update styling based on type — flat token classes from the id-scoped
+        // <style> block above (cm-danger / cm-warning / cm-info)
         const typeStyles = {
             danger: {
                 iconBg: 'bg-red-100',
                 iconColor: 'text-red-600',
-                btnClass: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/25 focus:ring-red-500',
+                btnClass: 'cm-danger',
                 icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />'
             },
             warning: {
                 iconBg: 'bg-amber-100',
                 iconColor: 'text-amber-600',
-                btnClass: 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-amber-500/25 focus:ring-amber-500',
+                btnClass: 'cm-warning',
                 icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />'
             },
             info: {
                 iconBg: 'bg-blue-100',
                 iconColor: 'text-blue-600',
-                btnClass: 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-500/25 focus:ring-blue-500',
+                btnClass: 'cm-info',
                 icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
             }
         };
@@ -121,11 +146,11 @@
         const style = typeStyles[type] || typeStyles.danger;
 
         // Update icon container
-        iconContainer.className = `w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${style.iconBg}`;
+        iconContainer.className = `w-12 h-12 flex items-center justify-center flex-shrink-0 ${style.iconBg}`;
         iconContainer.innerHTML = `<svg class="w-6 h-6 ${style.iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">${style.icon}</svg>`;
 
         // Update button styling
-        submitBtn.className = `px-5 py-2.5 text-sm font-medium text-white ${style.btnClass} rounded-xl shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 active:scale-[0.98]`;
+        submitBtn.className = `cm-btn cm-btn-confirm ${style.btnClass} active:scale-[0.98]`;
 
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
