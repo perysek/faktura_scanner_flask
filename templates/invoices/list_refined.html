@@ -1234,9 +1234,9 @@ function sortTable(field) {
         th.classList.remove('sorted');
         if (th.classList.contains('sortable')) th.setAttribute('aria-sort', 'none');
     });
-const sortedTh = event.target.closest('th');
-sortedTh.classList.add('sorted');
-sortedTh.setAttribute('aria-sort', currentSort.direction === 'asc' ? 'ascending' : 'descending');
+    const sortedTh = event.target.closest('th');
+    sortedTh.classList.add('sorted');
+    sortedTh.setAttribute('aria-sort', currentSort.direction === 'asc' ? 'ascending' : 'descending');
 
     applyFiltersAndRender();
 }

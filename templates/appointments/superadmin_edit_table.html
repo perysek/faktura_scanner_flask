@@ -644,7 +644,7 @@ function toggleSort(col) {
     document.querySelectorAll('th[data-col]').forEach(th => th.setAttribute('aria-sort', 'none'));
     const sortedTh = document.querySelector('th[data-col="' + col + '"]');
     if (sortedTh) sortedTh.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
-    
+    const icon = document.getElementById('sort-' + col);
     if (icon) {
         icon.classList.add('active');
         icon.textContent = sortDir === 'asc' ? '\u2191' : '\u2193';
