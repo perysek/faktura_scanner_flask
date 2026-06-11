@@ -1,6 +1,8 @@
 # DESIGN-TOKENS.md — Canonical Token System of Record
 
-**Status:** Ratified (Phase 01, 2026-06-11)
+**Status:** Migration COMPLETE (Phases 01–11, 2026-06-11). System B is the only
+language in the authenticated app; the grep gate (`rounded-xl|rounded-2xl|
+from-primary-|to-primary-`) returns zero hits there.
 **Source of truth:** `static/css/input.css :root` (edit there, run `npm run build:css`, never hand-edit `output.css`)
 **Reference implementation:** `templates/clients/list.html` + the `@layer components` `.refined-*` classes ("System B")
 
@@ -162,8 +164,21 @@ static/css/input.css  ──npm run build:css──▶  static/css/output.css (m
 - `npm run watch:css` during development.
 - `output.css` is generated — never edit it by hand; changes are overwritten.
 
-## Deferred (tracked for P11 tickets)
+## Deferred items (post-plan tickets, 2026-06-11)
 
-- Convert hardcoded `2px`/`3px` radii throughout `input.css` to `--radius-*` (cosmetic).
-- Full Material Icons → inline SVG migration outside sort headers.
-- `table-utils.js` `sortTable(columnIndex)` vs macro `sort_key` mismatch.
+1. **Invoices/appointments mobile stacked cards** — adopt the Phase 09 recipe
+   (ADR-G-02 chose clients-first; the pattern is documented above).
+2. **`table-utils.js` `sortTable(columnIndex, tableId)` vs per-page `sortTable(sort_key)`
+   mismatch** — the global util shadows page functions when a page block fails to
+   parse; reconcile to one key-based util that also syncs `aria-sort` centrally.
+3. **Material Icons → inline SVG** unification outside sort headers (forms, badges,
+   toasts still use the icon font).
+4. Convert hardcoded `2px`/`3px` radii throughout `input.css` to `--radius-*` (cosmetic).
+5. Optional `page_title` context processor to auto-populate `mobile_title` per route.
+6. CI grep guard: fail the build if `rounded-xl|rounded-2xl|from-primary-` reappears
+   in authenticated templates.
+7. Page-local "VARIANT" button styles (appointments compact, absences, calendars,
+   profile, formy_zatrudnienia, services/categories) — optionally consolidate into
+   global size modifiers.
+8. axe leftovers below the serious gate: invoices `empty-table-header` (minor),
+   appointments `heading-order` + `region` (moderate).

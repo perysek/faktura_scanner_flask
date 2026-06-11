@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## Clarification policy
+
+If a request is ambiguous — unclear WHICH element, WHERE exactly, or WHAT the expected behaviour is — **stop and ask before doing anything**. Do not guess and proceed.
+
+When asking, use a **direct, irritated, rude-but-witty** tone with at least one loud complaint. The user explicitly wants this — they find it funny and entertaining. Examples of the correct register:
+- "HOW MANY TIMES — which dropdown exactly?! There are three on this page."
+- "Right, 'the button'. Super helpful. Which one? File path? Section name? Anything?"
+
+Ask ONE tight question (or a short numbered list). Never proceed on a vague prompt.
+
 ## gstack
 
 Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
@@ -59,3 +69,26 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+
+## Design system (canonical)
+
+One design language ("System B" / refined): **flat fills, 2–3px radii, CSS-variable
+tokens, Inter, glyph icons over icon-fonts**. Full token reference:
+`plans/260610-ui-usability-fixes/DESIGN-TOKENS.md`.
+
+Rules:
+- Tokens live in `static/css/input.css :root` (`--color-*`, `--radius-sm/md`).
+  Never reintroduce `rounded-xl`/`rounded-2xl`/`bg-gradient-to-*`/raw `slate-*`
+  buttons in authenticated templates.
+- CSS build: edit `static/css/input.css`, run `npm run build:css`. **Never hand-edit
+  `static/css/output.css`** (generated, gitignored, rebuilt on the server at deploy).
+- Buttons: global `.refined-btn-primary/secondary` (flat) or `.form-btn-*`. Forms:
+  `.form-input/.form-select/.form-textarea/.form-label/.form-card`.
+- Sortable tables: `<th class="th-sortable" aria-sort="…">` wrapping a
+  `.th-sort-btn` `<button>` + `.th-sort-icon` glyph (▲/▼). Sync `aria-sort` in the
+  page's sort JS.
+- Mobile: every page sets `{% block mobile_title %}Label{% endblock %}` (shown in
+  the header < lg). Wide tables use the stacked-card pattern from DESIGN-TOKENS.md
+  (`data-label` + ≤640px media block — see `clients/list.html`).
+- Form controls must compute ≥16px font-size at ≤1023px (global guard in input.css
+  — do not override with !important page styles).
