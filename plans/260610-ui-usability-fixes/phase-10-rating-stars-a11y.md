@@ -2,7 +2,7 @@
 title: "Phase 10: Accessible Read-Only Star Rating"
 description: "Give the already-rated star display an accessible value on appointment_rate.html and add radiogroup/arrow-key semantics to the interactive stars (Issue 10)."
 skill: "none"
-status: pending
+status: done
 group: "public-a11y"
 dependencies: []
 tags: [phase, accessibility, public]
