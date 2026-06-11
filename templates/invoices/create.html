@@ -357,12 +357,12 @@
     <header class="page-header">
         <h1 class="page-title">Wprowadź dane nowej faktury</h1>
         <div class="header-actions">
-            <button onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-refined btn-refined-secondary">
+            <a href="{{ url_for('main.invoices_list') }}" class="btn-refined btn-refined-secondary">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 Powrót
-            </button>
+            </a>
         </div>
     </header>
 
@@ -570,9 +570,9 @@
                         </svg>
                         Zapisz fakturę
                     </button>
-                    <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-refined btn-refined-secondary">
+                    <a href="{{ url_for('main.invoices_list') }}" class="btn-refined btn-refined-secondary">
                         Anuluj
-                    </button>
+                    </a>
                 </div>
             </form>
         </div>

@@ -306,6 +306,23 @@ git grep -n "rounded-xl\|rounded-2xl\|from-primary-" templates/components/form_f
 
 ## Notes
 
+### Implementation Deviation (2026-06-11)
+
+**Discovery:** `form_fields.html` has ZERO consumers — no template imports it. The
+macro file was dead code styled System A. Consequences:
+
+1. The macro migration landed as planned (canonical reference for future forms;
+   `.form-*` classes live in `output.css`) but changed nothing visually today.
+2. The REAL Issue 8 instances were hand-rolled: `invoices/create.html` (Powrót +
+   Anuluj) and `invoices/edit.html` (Anuluj) used `<button onclick="window.location
+   .href=…">`. All three converted to `<a href>` with the same `.btn-refined
+   .btn-refined-secondary` classes (anchor-safe: `inline-flex` + `text-decoration:
+   none` already present).
+3. **P07 impact:** the page sweep is now the primary vehicle for Issue 5-forms —
+   every form page is hand-rolled, so consistency must be verified page-by-page,
+   not assumed via macros. Verified: no `onclick="window.location.href"` patterns
+   remain anywhere in templates/.
+
 ### Technical Considerations
 - Keep `btn-press` (already in `input.css`) on buttons for the tactile press feedback the app uses everywhere.
 - The global `:focus-visible` ring (input.css) covers keyboard focus; component focus styles cover all focus — both coexist by cascade.

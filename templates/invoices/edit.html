@@ -476,12 +476,12 @@
                 </svg>
                 Zapisz zmiany
             </button>
-            <button type="button" onclick="window.location.href='{{ url_for('main.invoices_list') }}'" class="btn-refined btn-refined-secondary">
+            <a href="{{ url_for('main.invoices_list') }}" class="btn-refined btn-refined-secondary">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 Anuluj
-            </button>
+            </a>
         </div>
     </header>
 
