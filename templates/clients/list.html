@@ -500,45 +500,54 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th class="th-sortable" onclick="sortBy('full_name')" id="th-full_name">
-                        Imię i&nbsp;nazwisko
-                        <span class="th-sort-icon" id="si-full_name">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-full_name">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('full_name')">
+                            Imię i&nbsp;nazwisko
+                            <span class="th-sort-icon" id="si-full_name" aria-hidden="true">▲</span>
+                        </button>
                     </th>
-                    <th class="th-sortable" onclick="sortBy('phone')" id="th-phone">
-                        Telefon
-                        <span class="th-sort-icon" id="si-phone">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-phone">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('phone')">
+                            Telefon
+                            <span class="th-sort-icon" id="si-phone" aria-hidden="true">▲</span>
+                        </button>
                     </th>
-                    <th class="th-sortable" onclick="sortBy('last_visit_date')" id="th-last_visit_date">
-                        Ostatnia wizyta
-                        <span class="th-sort-icon" id="si-last_visit_date">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-last_visit_date">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('last_visit_date')">
+                            Ostatnia wizyta
+                            <span class="th-sort-icon" id="si-last_visit_date" aria-hidden="true">▲</span>
+                        </button>
                     </th>
-                    <th class="th-sortable" onclick="sortBy('completed_visits')" id="th-completed_visits">
-                        Wizyt
-                        <span class="th-sort-icon" id="si-completed_visits">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-completed_visits">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('completed_visits')">
+                            Wizyt
+                            <span class="th-sort-icon" id="si-completed_visits" aria-hidden="true">▲</span>
+                        </button>
                     </th>
-                    <th class="th-sortable" onclick="sortBy('no_show_count')" id="th-no_show_count">
-                        No&#8209;shows
-                        <span class="th-sort-icon" id="si-no_show_count">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-no_show_count">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('no_show_count')">
+                            No&#8209;shows
+                            <span class="th-sort-icon" id="si-no_show_count" aria-hidden="true">▲</span>
+                        </button>
                     </th>
-                    <th class="th-sortable" onclick="sortBy('cancelled_count')" id="th-cancelled_count">
-                        Odwołał
-                        <span class="th-sort-icon" id="si-cancelled_count">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-cancelled_count">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('cancelled_count')">
+                            Odwołał
+                            <span class="th-sort-icon" id="si-cancelled_count" aria-hidden="true">▲</span>
+                        </button>
                     </th>
                     <th>Trend<br><span style="font-size:0.5625rem;font-weight:400;letter-spacing:0;text-transform:none;opacity:0.7;">6 mies.</span></th>
-                    <th class="th-sortable" onclick="sortBy('is_active')" id="th-is_active">
-                        Status
-                        <span class="th-sort-icon" id="si-is_active">▲</span>
+                    <th class="th-sortable" aria-sort="none" id="th-is_active">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('is_active')">
+                            Status
+                            <span class="th-sort-icon" id="si-is_active" aria-hidden="true">▲</span>
+                        </button>
                     </th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="clients-tbody">
-                <tr>
-                    <td colspan="9" class="empty-state">
-                        <span class="material-icons empty-icon">people</span>
-                        <p class="empty-text">Ładowanie klientów...</p>
-                    </td>
-                </tr>
+                <!-- skeleton rows injected by renderSkeleton() before data arrives (Issue 9) -->
             </tbody>
         </table>
     </div>
@@ -590,15 +599,23 @@ function escapeHtml(text) {
 
 // ── Sparkline helpers ─────────────────────────────────────────────────────────
 
-function trendColor(weeks) {
-    if (!weeks || weeks.length < 4) return '#9ca3af';
+// Direction is the single source of truth; color derives from it so the
+// glyph/label/stroke can never disagree (Issue 11: not color-only).
+function trendDirection(weeks) {
+    if (!weeks || weeks.length < 4) return 'flat';
     const half = Math.floor(weeks.length / 2);
     const firstAvg = weeks.slice(0, half).reduce((a, b) => a + b, 0) / half;
     const lastAvg  = weeks.slice(weeks.length - half).reduce((a, b) => a + b, 0) / half;
     const delta = lastAvg - firstAvg;
-    if (delta > 0.15) return 'var(--color-success)';
-    if (delta < -0.15) return '#ef4444';
-    return '#9ca3af';
+    return delta > 0.15 ? 'up' : (delta < -0.15 ? 'down' : 'flat');
+}
+
+const TREND_COLOR = { up: 'var(--color-success)', down: '#ef4444', flat: '#9ca3af' };
+const TREND_LABEL = { up: 'rosnący', down: 'spadkowy', flat: 'stabilny' };
+const TREND_GLYPH = { up: '▲', down: '▼', flat: '→' };
+
+function trendColor(weeks) {
+    return TREND_COLOR[trendDirection(weeks)];
 }
 
 function smooth2(data) {
@@ -607,7 +624,8 @@ function smooth2(data) {
 
 function sparklineSvg(months) {
     if (!months || !months.length) return '<span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>';
-    const color = trendColor(months);
+    const dir = trendDirection(months);
+    const color = TREND_COLOR[dir];
     const data = smooth2(months);
     const W = 60, H = 20, pad = 1.5;
     const max = Math.max(...data, 1);
@@ -617,9 +635,14 @@ function sparklineSvg(months) {
         const y = pad + (H - 2 * pad) * (1 - v / max);
         return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;">
-        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-    </svg>`;
+    // TREND_LABEL/GLYPH values are static literals — safe to interpolate
+    return `<span style="display:inline-flex;align-items:center;gap:0.25rem;" role="img" aria-label="Trend: ${TREND_LABEL[dir]}">
+        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;" aria-hidden="true">
+            <title>Trend: ${TREND_LABEL[dir]}</title>
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span aria-hidden="true" style="font-size:0.5625rem;color:${color};">${TREND_GLYPH[dir]}</span>
+    </span>`;
 }
 
 // ── VIP filter ────────────────────────────────────────────────────────────────
@@ -663,9 +686,15 @@ function sortBy(field) {
 }
 
 function updateSortHeaders() {
-    document.querySelectorAll('.th-sortable').forEach(th => th.classList.remove('sort-active'));
+    document.querySelectorAll('.th-sortable').forEach(th => {
+        th.classList.remove('sort-active');
+        th.setAttribute('aria-sort', 'none');
+    });
     const activeEl = document.getElementById(`th-${currentSort.field}`);
-    if (activeEl) activeEl.classList.add('sort-active');
+    if (activeEl) {
+        activeEl.classList.add('sort-active');
+        activeEl.setAttribute('aria-sort', currentSort.dir === 'asc' ? 'ascending' : 'descending');
+    }
 
     document.querySelectorAll('.th-sort-icon').forEach(el => el.textContent = '▲');
     const icon = document.getElementById(`si-${currentSort.field}`);
@@ -807,10 +836,23 @@ async function loadStatistics() {
     }
 }
 
+// Skeleton shimmer while fetching (Issue 9) — matches the app-wide pattern
+function renderSkeleton(rows = 6) {
+    const tbody = document.getElementById('clients-tbody');
+    let html = '';
+    for (let i = 0; i < rows; i++) {
+        html += '<tr>' + Array.from({ length: 9 }).map(() =>
+            '<td><div class="skeleton" style="height:1rem;border-radius:2px;"></div></td>'
+        ).join('') + '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
 async function loadClients() {
     saveClientState();
     const searchQuery = document.getElementById('search-input').value.trim();
     const tbody = document.getElementById('clients-tbody');
+    renderSkeleton();
 
     try {
         const params = new URLSearchParams();
@@ -842,11 +884,14 @@ async function loadClients() {
                         <p class="empty-text" style="color:var(--color-error);">
                             Błąd ładowania klientów: ${escapeHtml(clientsResp.error)}
                         </p>
-                        <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top:0.75rem;">
+                        <button onclick="loadClients()" id="clients-retry-btn" class="refined-btn-secondary" style="margin-top:0.75rem;">
                             Spróbuj ponownie
                         </button>
                     </td>
                 </tr>`;
+            // Move focus so keyboard/SR users land on the recovery action (Issue 12)
+            const retry = document.getElementById('clients-retry-btn');
+            if (retry) retry.focus();
         }
     } catch (error) {
         console.error('Error loading clients:', error);
@@ -854,11 +899,13 @@ async function loadClients() {
             <tr>
                 <td colspan="9" class="empty-state">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
-                    <button onclick="loadClients()" class="refined-btn-secondary" style="margin-top:0.75rem;">
+                    <button onclick="loadClients()" id="clients-retry-btn" class="refined-btn-secondary" style="margin-top:0.75rem;">
                         Spróbuj ponownie
                     </button>
                 </td>
             </tr>`;
+        const retry = document.getElementById('clients-retry-btn');
+        if (retry) retry.focus();
     }
 }
 

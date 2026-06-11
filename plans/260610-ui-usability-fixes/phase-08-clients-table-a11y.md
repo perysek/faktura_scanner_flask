@@ -2,7 +2,7 @@
 title: "Phase 08: Clients Table A11y & Polish"
 description: "Make clients/list.html sorting keyboard/SR-accessible, replace text loading with a skeleton, give the sparkline a non-color cue + label, and move focus to retry on error (Issues 1-clients, 9, 11, 12)."
 skill: "none"
-status: pending
+status: done
 group: "clients-table"
 dependencies: [P01]
 tags: [phase, accessibility, javascript, clients]
