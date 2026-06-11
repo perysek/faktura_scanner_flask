@@ -2,7 +2,7 @@
 title: "Phase 06: Migrate Table Macros + Accessible Sortable Header"
 description: "Migrate scrollable_table.html macros onto canonical tokens, make sortable_header keyboard/SR-accessible with aria-sort, and unify on the glyph sort icon (Issue 5-tables + Issue 1-macro + S3)."
 skill: "web-design-guidelines"
-status: pending
+status: done
 group: "design-system-migration"
 dependencies: [P01, P05]
 tags: [phase, design-system, accessibility, jinja, css]
@@ -268,6 +268,18 @@ git grep -n "unfold_more\|rounded-2xl\|from-primary-" templates/components/scrol
 ---
 
 ## Notes
+
+### Implementation Deviation (2026-06-11)
+
+**Discovery:** `scrollable_table.html` also has ZERO consumers (same as
+`form_fields.html` in P05) — every live table is hand-rolled. The macro file was
+migrated as planned and now serves as the canonical reference. The REAL Issue 1
+inventory: 47 `<th onclick>` headers across 8 hand-rolled pages (counts:
+appointments/list 8, superadmin_edit_table 8, clients/list 7, employees/list 5,
+invoices/list_refined 4, sellers/list_refined 6, services/list 6,
+services/categories/list 3). Clients is P08's job; **the remaining 7 pages get
+the `.th-sort-btn` + `aria-sort` conversion during the P07 sweep**, which visits
+those pages anyway. `.th-sort-btn` CSS shipped here so the sweep only edits markup.
 
 ### Technical Considerations
 - The latent `sortTable(columnIndex)` vs. `sortTable(sort_key)` mismatch in `table-utils.js` is NOT fixed here (a11y-only scope). Raise as a separate ticket if a consuming page's sort is found broken.

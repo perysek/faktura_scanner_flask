@@ -1,6 +1,7 @@
 {#
     Reusable Table Component Macros
-    Following the Flask + Jinja2 GUI Design Guide v2.1
+    Canonical token-based styling (System B): flat fills, 2-3px radii,
+    --color-* tokens, glyph sort icons, accessible sortable headers.
 
     Usage:
     {% from 'components/scrollable_table.html' import table_card, table_header_classes, empty_state, status_badge, ocr_badge %}
@@ -19,13 +20,14 @@
 #}
 {% macro table_card(title='', count_label='', full_height=false, id='', extra_classes='') %}
 <div {% if id %}id="{{ id }}"{% endif %}
-     class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden {{ 'flex-1 flex flex-col' if full_height else '' }} {{ extra_classes }}">
+     class="bg-white rounded-[3px] border border-[var(--color-border)] overflow-hidden {{ 'flex-1 flex flex-col' if full_height else '' }} {{ extra_classes }}"
+     style="box-shadow: 0 1px 3px rgba(0,0,0,.04);">
 
     {% if title %}
-    <div class="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-slate-800">{{ title }}</h2>
+    <div class="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-[var(--color-ink)]">{{ title }}</h2>
         {% if count_label %}
-        <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm font-medium">
+        <span class="px-3 py-1 bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] rounded-[2px] text-sm font-medium">
             {{ count_label }}
         </span>
         {% endif %}
@@ -48,13 +50,19 @@
     - with_search: If true, adds padding for search inputs
 #}
 {% macro table_header_classes(full_height=false, with_search=false) %}
-{{ 'sticky top-0 z-10' if full_height else '' }} bg-slate-50 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider
+{{ 'sticky top-0 z-10' if full_height else '' }} bg-[var(--color-surface)] text-left text-xs font-semibold text-[var(--color-ink-subtle)] uppercase tracking-wider
 {%- endmacro %}
 
 
 {#
-    Table Header Cell with Sort
-    Creates a sortable header cell
+    Table Header Cell with Sort (Issue 1 / S3)
+    Accessible sortable header: focusable inner <button> (native Enter/Space),
+    aria-sort on the <th>, canonical glyph icon (.th-sort-icon).
+
+    For server-sorted tables (?sort= reload) aria-sort is correct at render time.
+    For client-sorted tables, the page JS must keep aria-sort in sync after each
+    sort:  th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending')
+    and reset all sibling th-sortable elements to 'none'.
 
     Parameters:
     - label: Column label
@@ -65,19 +73,16 @@
     - width_class: Optional width class (e.g., 'w-32')
 #}
 {% macro sortable_header(label, sort_key, current_sort='', current_order='asc', align='left', width_class='') %}
-<th class="px-6 py-3 {{ width_class }} cursor-pointer hover:text-slate-700 hover:bg-slate-100/50 transition-colors group"
-    onclick="sortTable('{{ sort_key }}')">
-    <div class="flex items-center gap-2 {{ 'justify-end' if align == 'right' else ('justify-center' if align == 'center' else '') }}">
+{% set is_active = (current_sort == sort_key) %}
+{% set aria = ('ascending' if current_order == 'asc' else 'descending') if is_active else 'none' %}
+<th class="th-sortable px-6 py-3 {{ width_class }} {{ 'sort-active' if is_active else '' }}"
+    aria-sort="{{ aria }}" id="th-{{ sort_key }}">
+    <button type="button"
+            class="th-sort-btn {{ 'justify-end w-full' if align == 'right' else ('justify-center w-full' if align == 'center' else '') }}"
+            onclick="sortTable('{{ sort_key }}')">
         <span>{{ label }}</span>
-        <span class="material-icons text-xs opacity-50 group-hover:opacity-100 transition-opacity
-                     {{ 'text-primary-600' if current_sort == sort_key else '' }}">
-            {% if current_sort == sort_key %}
-                {{ 'expand_less' if current_order == 'asc' else 'expand_more' }}
-            {% else %}
-                unfold_more
-            {% endif %}
-        </span>
-    </div>
+        <span class="th-sort-icon" id="si-{{ sort_key }}" aria-hidden="true">{{ '▲' if (is_active and current_order == 'asc') else ('▼' if is_active else '▲') }}</span>
+    </button>
 </th>
 {% endmacro %}
 
@@ -91,16 +96,14 @@
     - visible: Whether search row is visible by default
 #}
 {% macro search_row(columns, visible=false) %}
-<tr id="table-search-row" class="bg-slate-50/70 border-b border-slate-200 {{ '' if visible else 'hidden' }} animate-fade-in">
+<tr id="table-search-row" class="bg-[var(--color-surface)] border-b border-[var(--color-border)] {{ '' if visible else 'hidden' }} animate-fade-in">
     {% for col in columns %}
     <td class="px-2 py-2">
         {% if col.searchable is not defined or col.searchable %}
         <input type="{{ col.type|default('text') }}"
                id="search-{{ col.id }}"
                placeholder="{{ col.placeholder|default('Szukaj...') }}"
-               class="w-full px-2 py-1.5 text-sm rounded-lg border border-slate-200
-                      focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-                      bg-white placeholder:text-slate-400 transition-shadow"
+               class="form-input px-2 py-1.5 text-sm"
                onkeyup="filterTable(this, {{ loop.index0 }})">
         {% endif %}
     </td>
@@ -126,17 +129,15 @@
 <tr>
     <td colspan="{{ col_count }}" class="px-6 py-16 text-center">
         <div class="flex flex-col items-center animate-fade-up">
-            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <span class="material-icons text-3xl text-slate-400">{{ icon }}</span>
+            <div class="w-16 h-16 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full flex items-center justify-center mb-4">
+                <span class="material-icons text-3xl text-[var(--color-ink-subtle)]">{{ icon }}</span>
             </div>
-            <p class="text-lg font-medium text-slate-700 mb-1">{{ title }}</p>
+            <p class="text-lg font-medium text-[var(--color-ink)] mb-1">{{ title }}</p>
             {% if message %}
-            <p class="text-sm text-slate-500 max-w-sm mb-6">{{ message }}</p>
+            <p class="text-sm text-[var(--color-ink-subtle)] max-w-sm mb-6">{{ message }}</p>
             {% endif %}
             {% if action_url %}
-            <a href="{{ action_url }}"
-               class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl
-                      hover:bg-primary-700 transition-colors shadow-sm shadow-primary-500/20 btn-press">
+            <a href="{{ action_url }}" class="form-btn-primary btn-press">
                 <span class="material-icons text-sm">{{ action_icon }}</span>
                 {{ action_label }}
             </a>
@@ -149,7 +150,7 @@
 
 {#
     Status Badge
-    Displays invoice payment status with appropriate colors
+    Displays invoice payment status with token semantic colors
 
     Parameters:
     - status: Status string ('Opłacona', 'Nieopłacona', 'Przeterminowana')
@@ -158,27 +159,27 @@
 {% macro status_badge(status, size='sm') %}
 {% set badge_config = {
     'Opłacona': {
-        'bg': 'bg-emerald-100',
-        'text': 'text-emerald-700',
+        'bg': 'bg-[rgba(45,106,79,0.12)]',
+        'text': 'text-[var(--color-success)]',
         'icon': 'check_circle'
     },
     'Nieopłacona': {
-        'bg': 'bg-amber-100',
-        'text': 'text-amber-700',
+        'bg': 'bg-[rgba(154,103,0,0.12)]',
+        'text': 'text-[var(--color-warning)]',
         'icon': 'schedule'
     },
     'Przeterminowana': {
-        'bg': 'bg-red-100',
-        'text': 'text-red-700',
+        'bg': 'bg-[rgba(155,44,44,0.12)]',
+        'text': 'text-[var(--color-error)]',
         'icon': 'warning'
     }
 } %}
-{% set config = badge_config.get(status, {'bg': 'bg-slate-100', 'text': 'text-slate-700', 'icon': 'help_outline'}) %}
+{% set config = badge_config.get(status, {'bg': 'bg-[var(--color-surface)]', 'text': 'text-[var(--color-ink-muted)]', 'icon': 'help_outline'}) %}
 {% set padding = 'px-2 py-0.5' if size == 'sm' else 'px-2.5 py-1' %}
 {% set text_size = 'text-xs' if size == 'sm' else 'text-sm' %}
 {% set icon_size = 'text-xs' if size == 'sm' else 'text-sm' %}
 
-<span class="inline-flex items-center gap-1 {{ padding }} rounded-lg {{ text_size }} font-medium {{ config.bg }} {{ config.text }}">
+<span class="inline-flex items-center gap-1 {{ padding }} rounded-[2px] {{ text_size }} font-medium {{ config.bg }} {{ config.text }}">
     <span class="material-icons {{ icon_size }}">{{ config.icon }}</span>
     {{ status }}
 </span>
@@ -187,7 +188,7 @@
 
 {#
     OCR Confidence Badge
-    Displays OCR confidence level with color coding
+    Displays OCR confidence level with token color coding
 
     Parameters:
     - confidence: Confidence percentage (0-100)
@@ -197,17 +198,17 @@
 {% if confidence is not none %}
 {% set conf_val = confidence|float %}
 {% if conf_val >= 80 %}
-    {% set bg = 'bg-emerald-100' %}
-    {% set text = 'text-emerald-700' %}
+    {% set bg = 'bg-[rgba(45,106,79,0.12)]' %}
+    {% set text = 'text-[var(--color-success)]' %}
 {% elif conf_val >= 60 %}
-    {% set bg = 'bg-amber-100' %}
-    {% set text = 'text-amber-700' %}
+    {% set bg = 'bg-[rgba(154,103,0,0.12)]' %}
+    {% set text = 'text-[var(--color-warning)]' %}
 {% else %}
-    {% set bg = 'bg-red-100' %}
-    {% set text = 'text-red-700' %}
+    {% set bg = 'bg-[rgba(155,44,44,0.12)]' %}
+    {% set text = 'text-[var(--color-error)]' %}
 {% endif %}
 
-<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium {{ bg }} {{ text }}">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] text-xs font-medium {{ bg }} {{ text }}">
     {% if show_label %}<span class="opacity-75">OCR</span>{% endif %}
     {{ "%.0f"|format(conf_val) }}%
 </span>
@@ -217,7 +218,8 @@
 
 {#
     Action Button
-    Creates a small action button for table rows
+    Creates a small action button for table rows.
+    Keeps aria-label + title (icon-only buttons must stay labelled).
 
     Parameters:
     - icon: Material icon name
@@ -229,11 +231,11 @@
 #}
 {% macro action_button(icon, title='', onclick='', href='', color='default', size='sm') %}
 {% set color_classes = {
-    'default': 'text-slate-400 hover:text-slate-600 hover:bg-slate-100',
-    'primary': 'text-slate-400 hover:text-primary-600 hover:bg-primary-50',
-    'danger': 'text-slate-400 hover:text-red-600 hover:bg-red-50',
-    'success': 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50',
-    'warning': 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
+    'default': 'text-[var(--color-ink-subtle)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface)]',
+    'primary': 'text-[var(--color-ink-subtle)] hover:text-[var(--color-focus-ring)] hover:bg-[var(--color-info-bg)]',
+    'danger': 'text-[var(--color-ink-subtle)] hover:text-[var(--color-error)] hover:bg-[rgba(155,44,44,0.08)]',
+    'success': 'text-[var(--color-ink-subtle)] hover:text-[var(--color-success)] hover:bg-[rgba(45,106,79,0.08)]',
+    'warning': 'text-[var(--color-ink-subtle)] hover:text-[var(--color-warning)] hover:bg-[rgba(154,103,0,0.08)]'
 } %}
 {% set size_classes = {
     'sm': 'p-1.5',
@@ -246,14 +248,14 @@
 
 {% if href %}
 <a href="{{ href }}"
-   class="{{ size_classes[size] }} rounded-lg transition-colors {{ color_classes[color] }} btn-press"
+   class="{{ size_classes[size] }} rounded-[2px] transition-colors {{ color_classes[color] }} btn-press"
    title="{{ title }}" aria-label="{{ title }}">
     <span class="material-icons {{ icon_sizes[size] }}">{{ icon }}</span>
 </a>
 {% else %}
 <button type="button"
         onclick="{{ onclick }}"
-        class="{{ size_classes[size] }} rounded-lg transition-colors {{ color_classes[color] }} btn-press"
+        class="{{ size_classes[size] }} rounded-[2px] transition-colors {{ color_classes[color] }} btn-press"
         title="{{ title }}" aria-label="{{ title }}">
     <span class="material-icons {{ icon_sizes[size] }}">{{ icon }}</span>
 </button>
@@ -273,7 +275,7 @@
 <button type="button"
         id="toggle-search-btn"
         onclick="toggleTableSearch('{{ target_id }}')"
-        class="p-2 rounded-lg transition-all {{ 'bg-primary-50 text-primary-600' if active else 'text-slate-400 hover:text-primary-600 hover:bg-primary-50' }}"
+        class="p-2 rounded-[2px] transition-all {{ 'bg-[var(--color-info-bg)] text-[var(--color-focus-ring)]' if active else 'text-[var(--color-ink-subtle)] hover:text-[var(--color-focus-ring)] hover:bg-[var(--color-info-bg)]' }}"
         title="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}" aria-label="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}">
     <span class="material-icons text-xl">filter_list</span>
 </button>
@@ -293,7 +295,7 @@
 <tr class="stagger-item" style="animation-delay: {{ i * 0.05 }}s">
     {% for j in range(col_count) %}
     <td class="px-6 py-4">
-        <div class="h-4 skeleton rounded w-{{ ['full', '3/4', '1/2', '2/3', '5/6'][j % 5] }}"></div>
+        <div class="h-4 skeleton rounded-[2px] w-{{ ['full', '3/4', '1/2', '2/3', '5/6'][j % 5] }}"></div>
     </td>
     {% endfor %}
 </tr>

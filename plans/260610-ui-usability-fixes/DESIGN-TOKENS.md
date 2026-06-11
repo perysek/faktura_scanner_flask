@@ -118,6 +118,24 @@ page styles expecting them to apply on mobile — they won't.
 Notes: readonly/disabled styling lives on `.form-input[readonly]`/`:disabled` — do not
 re-add `bg-slate-50` conditionals. Checkboxes use `accent-color: var(--color-ink)`.
 
+## Accessible sortable header (added Phase 06)
+
+Pattern (see `scrollable_table.html` `sortable_header` for the reference):
+`<th class="th-sortable" aria-sort="none|ascending|descending">` wrapping a
+transparent `.th-sort-btn` `<button type="button">` that carries the label +
+`.th-sort-icon` glyph (`aria-hidden`). Native Enter/Space; `:focus-visible` ring.
+
+Client-sorted pages must sync `aria-sort` after each sort:
+```js
+th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
+// + reset all sibling .th-sortable to 'none'
+```
+
+**Inventory (2026-06-11):** 47 `<th onclick>` headers remain across 8 hand-rolled
+pages (appointments/list, superadmin_edit_table, clients/list, employees/list,
+invoices/list_refined, sellers/list_refined, services/list, services/categories).
+Clients = P08; the rest are converted during the P07 sweep using this pattern.
+
 ## Build pipeline
 
 ```
