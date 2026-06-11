@@ -88,6 +88,10 @@ const Modals = {
 
         this.container.appendChild(overlay);
 
+        // Lock background scroll while any modal is open (shared .scroll-lock
+        // utility, same as the mobile sidebar drawer)
+        document.body.classList.add('scroll-lock');
+
         // Focus trap (simple implementation)
         const focusableElements = overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (focusableElements.length > 0) {
@@ -127,7 +131,13 @@ const Modals = {
             // .is-closing drives a 0.2s fade + scale-out (see input.css) — matches
             // the golden-master modal motion instead of the old instant 600ms stall.
             overlay.classList.add('is-closing');
-            setTimeout(() => overlay.remove(), 220);
+            setTimeout(() => {
+                overlay.remove();
+                // Unlock only when the LAST modal is gone (modals can stack)
+                if (this.container && !this.container.children.length) {
+                    document.body.classList.remove('scroll-lock');
+                }
+            }, 220);
         }
     },
 
@@ -138,6 +148,7 @@ const Modals = {
         if (this.container) {
             this.container.innerHTML = '';
         }
+        document.body.classList.remove('scroll-lock');
     },
 
     /**

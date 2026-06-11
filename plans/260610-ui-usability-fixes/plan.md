@@ -81,7 +81,7 @@ We follow a **shared-foundation-first** strategy: fixes that live in shared code
 | :----- | :---- | :---- | :---- | :----- |
 | **01** | [Canonical tokens + mobile input-zoom fix](./phase-01-design-tokens-foundation.md) | design-foundation | Tokens of record + Issue 2 + S3 token | **DONE** |
 | **02** | [Mobile sidebar a11y + accordion resize](./phase-02-mobile-sidebar-a11y.md) | shared-behavior | Issue 3 + S2 | **DONE** |
-| **03** | [Status-toast poller + overlay scroll-lock](./phase-03-status-toast-scroll-lock.md) | shared-behavior | Issue 6 + S1 | Pending |
+| **03** | [Status-toast poller + overlay scroll-lock](./phase-03-status-toast-scroll-lock.md) | shared-behavior | Issue 6 + S1 | **DONE** |
 | **04** | [Mobile header page-title](./phase-04-mobile-header-title.md) | shared-behavior | Issue 7 | Pending |
 | **05** | [Migrate form_fields macros to tokens + Cancel link](./phase-05-migrate-form-fields.md) | design-system-migration | Issue 5 (forms) + Issue 8 | Pending |
 | **06** | [Migrate table macros + accessible sortable header](./phase-06-migrate-table-macros.md) | design-system-migration | Issue 5 (tables) + Issue 1 (macro) + S3 | Pending |

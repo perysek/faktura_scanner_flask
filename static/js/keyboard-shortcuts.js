@@ -55,10 +55,15 @@
      * Close open modals, dropdowns, and menus
      */
     function closeOpenElements() {
-        // Close modals
+        // Close modals — go through Modals.closeAll() so the body scroll-lock
+        // is released too; raw innerHTML='' would leave the page unscrollable
         const modalContainer = document.getElementById('modal-container');
         if (modalContainer && modalContainer.children.length > 0) {
-            modalContainer.innerHTML = '';
+            if (typeof Modals !== 'undefined' && Modals.closeAll) {
+                Modals.closeAll();
+            } else {
+                modalContainer.innerHTML = '';
+            }
             return true;
         }
 

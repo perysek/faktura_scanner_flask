@@ -275,12 +275,20 @@
         padding: 0.75rem 1.25rem; border-radius: 6px;
         font-size: 0.875rem; z-index: 9999;
         animation: status-toast-in 0.25s ease;
-        max-width: 320px; pointer-events: none;
+        max-width: 320px; cursor: default;
         box-shadow: 0 4px 16px rgba(0,0,0,.18);
     }
+    .status-toast .st-close {
+        margin-left: 0.75rem; background: none; border: none; color: #cbd5e1;
+        font-size: 1rem; line-height: 1; cursor: pointer; padding: 0;
+    }
+    .status-toast .st-close:hover { color: #fff; }
     @keyframes status-toast-in {
         from { transform: translateX(16px); opacity: 0; }
         to   { transform: translateX(0);    opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .status-toast { animation: none; }
     }
     </style>
     <script>
@@ -307,23 +315,67 @@
                 .catch(function () {});  // Non-critical; silence network errors
         }
 
+        // Fallback-path toast bookkeeping: dismissable + capped at 3,
+        // replace-oldest (Issue 6). The primary path delegates to
+        // Notifications.show(), which already does all of this.
+        var activeStatusToasts = [];
+
+        function removeStatusToast(el) {
+            var i = activeStatusToasts.indexOf(el);
+            if (i > -1) activeStatusToasts.splice(i, 1);
+            if (el.parentNode) el.parentNode.removeChild(el);
+            // Re-stack the survivors so no gap is left behind
+            activeStatusToasts.forEach(function (t, idx) {
+                t.style.bottom = (1.5 + idx * 3.5) + 'rem';
+            });
+        }
+
         function showStatusToast(msg) {
-            if (typeof window.showToast === 'function') {
-                window.showToast(msg, 'info', 6000);
+            if (typeof Notifications !== 'undefined' && typeof Notifications.show === 'function') {
+                Notifications.show(msg, 'info', 6000);  // capped + dismissable there
                 return;
             }
             var el = document.createElement('div');
             el.className = 'status-toast';
             el.textContent = msg;
+            el.style.bottom = (1.5 + activeStatusToasts.length * 3.5) + 'rem';
+            var close = document.createElement('button');
+            close.className = 'st-close';
+            close.setAttribute('aria-label', 'Zamknij');
+            close.textContent = '×';
+            close.addEventListener('click', function () { removeStatusToast(el); });
+            el.appendChild(close);
+            el.addEventListener('click', function () { removeStatusToast(el); });
+            activeStatusToasts.push(el);
+            while (activeStatusToasts.length > 3) { removeStatusToast(activeStatusToasts[0]); }
             document.body.appendChild(el);
             setTimeout(function () {
+                if (!el.parentNode) return;  // already dismissed
                 el.style.opacity = '0';
                 el.style.transition = 'opacity 0.3s';
-                setTimeout(function () { el.parentNode && el.parentNode.removeChild(el); }, 350);
+                setTimeout(function () { removeStatusToast(el); }, 350);
             }, 5000);
         }
 
-        setInterval(pollStatusEvents, 5000);
+        // Page Visibility pause: no polling (network/battery) while the tab is
+        // hidden; immediate catch-up on return (since= covers the gap).
+        var pollTimer = null;
+        function startPolling() {
+            if (pollTimer) return;
+            pollTimer = setInterval(pollStatusEvents, 5000);
+        }
+        function stopPolling() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                pollStatusEvents();   // immediate catch-up
+                startPolling();
+            }
+        });
+        if (!document.hidden) startPolling();
     })();
     </script>
     {% endif %}
