@@ -2,7 +2,7 @@
 title: "Phase 09: Clients Mobile Stacked-Card Layout"
 description: "Give clients/list.html a stacked-card layout below ~640px (each row → a labelled card) so the 9-column table is legible on phones without horizontal scrolling (Issue 4, clients-first)."
 skill: "web-design-guidelines"
-status: pending
+status: done
 group: "clients-table"
 dependencies: [P01, P08]
 tags: [phase, responsive, mobile, clients]

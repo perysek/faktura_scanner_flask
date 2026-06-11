@@ -136,6 +136,22 @@ pages (appointments/list, superadmin_edit_table, clients/list, employees/list,
 invoices/list_refined, sellers/list_refined, services/list, services/categories).
 Clients = P08; the rest are converted during the P07 sweep using this pattern.
 
+## Mobile stacked-card table pattern (added Phase 09)
+
+Reference implementation: `templates/clients/list.html` `@media (max-width: 640px)`.
+Recipe for any wide data table (invoices/appointments adopt this in a follow-up):
+
+1. In the row renderer, add `data-label="Kolumna"` to every generic `<td>`;
+   mark the identity cell `class="cell-name"` and the buttons cell `class="cell-actions"`.
+2. Add the ≤640px media block: container `overflow: visible`; table/thead/tbody/tr/td
+   → `display: block` (thead `display: none`); each `td` becomes a flex row with
+   `td::before { content: attr(data-label) }` as the label; `cell-name` = card header
+   (no label, bottom border), `cell-actions` = footer (`::before { content: "Akcje" }`).
+3. Hide decorative cells (e.g. sparkline `trend-cell`) on cards.
+4. Relax any `min-width` on the table inside the media query only.
+
+One DOM, CSS-only — desktop rendering is untouched (`data-label` is inert above 640px).
+
 ## Build pipeline
 
 ```
