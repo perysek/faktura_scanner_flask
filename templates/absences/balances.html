@@ -48,7 +48,7 @@
     /* Status badge */
     .status-badge { display: inline-block; padding: 0.1875rem 0.5rem; border-radius: 2px; font-size: 0.6875rem; font-weight:
     600; text-transform: uppercase; letter-spacing: 0.04em; width: 9rem; text-align: center; }
-    .badge-ok       { background: rgba(22,163,74,.1);   color: #15803d; }
+    .badge-ok       { background: rgba(22,163,74,.1);   color: #166534; }
     .badge-warning  { background: rgba(194,65,12,.1);   color: #c2410c; }
     .badge-exceeded { background: rgba(185,28,28,.1);   color: #b91c1c; }
     .badge-unlimited{ background: var(--color-surface); color: var(--color-ink-subtle); }
@@ -342,9 +342,11 @@
             : `<td class="cell-name"><span class="emp-grouped-hidden">${escHtml(row.employee_name)}</span></td>`;
 
         // Spinbox builder
-        function spinbox(cls, val) {
+        const rowCtx = `${escHtml(row.employee_name)}, ${escHtml(row.category_name)}`;
+        function spinbox(cls, val, label) {
             return `<div class="row-spinbox-wrap">
                         <input type="number" class="row-spinbox ${cls}" value="${val}"
+                               aria-label="${label} — ${rowCtx}"
                                step="${step}" min="0" oninput="onRowChange(this.closest('tr'))">
                         <div class="row-spinbox-arrows">
                             <button type="button" class="row-arrow" onclick="stepRowSpinbox(this,1)" tabindex="-1">&#9650;</button>
@@ -355,7 +357,7 @@
 
         const limitCell = `<td data-label="Limit" style="text-align:right;">
             <div style="display:inline-flex;align-items:center;gap:0.25rem;">
-                ${spinbox('limit-input', limitVal)}
+                ${spinbox('limit-input', limitVal, 'Limit')}
                 <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
                     ${row.status === 'unlimited' ? '∞' : unitL}
                 </span>
@@ -379,14 +381,16 @@
             <td data-label="Okres">
                 <input type="text" class="row-period-input period-input"
                        value="${escHtml(row.period_label || '')}"
+                       aria-label="Okres — ${rowCtx}"
                        oninput="onRowChange(this.closest('tr'))"
                        placeholder="np. 2026">
             </td>
             <td data-label="Wykorzystano">
                 <div style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;">
-                    ${spinbox('used-input', usedVal)}
+                    ${spinbox('used-input', usedVal, 'Wykorzystano')}
                     <span style="font-size:0.75rem;color:var(--color-ink-subtle);">${unitL}</span>
                     <input type="text" class="row-reason"
+                           aria-label="Powód zmiany — ${rowCtx}"
                            placeholder="Powód zmiany…"
                            oninput="onReasonChange(this.closest('tr'))">
                 </div>
