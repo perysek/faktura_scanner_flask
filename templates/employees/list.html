@@ -491,8 +491,8 @@
     </div>
 
     <!-- Employees Table -->
-    <div class="table-container">
-        <table class="refined-table">
+    <div class="table-container stack-cards-wrap">
+        <table class="refined-table stack-cards">
             <colgroup>
                 <col style="width:30%"><!-- Imię i nazwisko -->
                 <col style="width:15%"><!-- Stanowisko -->
@@ -513,7 +513,7 @@
             </thead>
             <tbody id="employees-tbody">
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="6" class="empty-state cell-empty">
                         <span class="material-icons empty-icon">badge</span>
                         <p class="empty-text">Ładowanie pracowników...</p>
                     </td>
@@ -745,7 +745,7 @@ function renderEmployees() {
 
         return `
             <tr>
-                <td>
+                <td class="cell-name">
                     <div class="employee-info">
                         <div class="employee-avatar">${initials}</div>
                         <div>
@@ -754,13 +754,13 @@ function renderEmployees() {
                         </div>
                     </div>
                 </td>
-                <td>${position}</td>
-                <td>${getStatusBadge(emp)}</td>
-                <td>${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
-                <td style="text-align:center;">
+                <td data-label="Stanowisko">${position}</td>
+                <td data-label="Status">${getStatusBadge(emp)}</td>
+                <td data-label="Ocena klientów">${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
+                <td data-label="Bilans urlopu" style="text-align:center;">
                     ${renderBalanceBadge(emp.id)}
                 </td>
-                <td style="text-align:right; white-space:nowrap;">
+                <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
                         <a href="/employee/${emp.id}" class="action-icon-btn" title="Zobacz" aria-label="Zobacz">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">

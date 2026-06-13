@@ -50,7 +50,7 @@
     <div class="refined-card">
         <div id="loading-state">Ładowanie...</div>
         <div id="empty-state" style="display:none;">Brak użytkowników.</div>
-        <table class="refined-table" id="users-table" style="display:none;">
+        <table class="refined-table stack-cards" id="users-table" style="display:none;">
             <thead>
                 <tr>
                     <th>Imię i nazwisko</th>
@@ -211,13 +211,13 @@
                 : '';
 
             return `<tr>
-                <td style="font-weight:500">${escapeHtml(u.full_name)}</td>
-                <td style="color:var(--color-ink-muted)">${escapeHtml(u.email)}</td>
-                <td><span class="badge ${roleBadgeClass}">${escapeHtml(u.role)}</span></td>
-                <td>${employeeName}</td>
-                <td>${statusBadge}</td>
-                <td style="color:var(--color-ink-muted)">${lastLogin}</td>
-                <td style="text-align:right;white-space:nowrap;">
+                <td class="cell-name" style="font-weight:500">${escapeHtml(u.full_name)}</td>
+                <td data-label="Email" style="color:var(--color-ink-muted)">${escapeHtml(u.email)}</td>
+                <td data-label="Rola"><span class="badge ${roleBadgeClass}">${escapeHtml(u.role)}</span></td>
+                <td data-label="Pracownik">${employeeName}</td>
+                <td data-label="Status">${statusBadge}</td>
+                <td data-label="Ostatnie logowanie" style="color:var(--color-ink-muted)">${lastLogin}</td>
+                <td class="cell-actions" style="white-space:nowrap;">
                     <a href="/system/users/${u.id}/edit" class="btn-ghost">Edytuj</a>
                     ${resetBtn}
                     ${deleteBtn}

@@ -438,6 +438,17 @@
             grid-template-columns: repeat(2, 1fr);
         }
     }
+
+    /* Mobile stacked cards (ADR-D-01): body table opts into .stack-cards;
+       neutralise the bespoke flex/scroll wrappers + hide the fixed header. */
+    @media (max-width: 640px) {
+        .table-container, .table-scroll-wrapper, .tbody-scroll {
+            display: block !important; overflow: visible !important;
+            min-height: 0 !important; height: auto !important; flex: none !important;
+        }
+        .table-scroll-wrapper > table:first-child { display: none !important; }
+        .stack-cards .skeleton-row { display: none !important; }
+    }
 </style>
 {% endblock %}
 
@@ -511,13 +522,13 @@
                         <th class="th-sortable" style="text-align: right;" id="th-total_paid" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_paid')">Opłacone <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                         <th class="th-sortable" style="text-align: right;" id="th-total_unpaid" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_unpaid')">Nieopłacone <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                         <th class="th-sortable col-updated" id="th-last_updated" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('last_updated')">Aktualizacja <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                        <th></th>
+                        <th><span class="sr-only">Akcje</span></th>
                     </tr>
                 </thead>
             </table>
 
             <div class="tbody-scroll">
-                <table class="refined-table" id="sellersTable">
+                <table class="refined-table stack-cards" id="sellersTable">
                     <colgroup>
                         <col class="col-nip"><col class="col-name">
                         <col class="col-invoices"><col class="col-paid"><col class="col-unpaid">
@@ -781,13 +792,13 @@ function renderTable() {
 
         return `
             <tr class="stagger-row" style="animation-delay: ${delay}s" data-seller-id="${seller.id}">
-                <td><span class="nip-number">${escapeHtml(seller.seller_nip || '—')}</span></td>
-                <td><span class="seller-name" title="${escapeHtml(seller.seller_name || '')}">${escapeHtml(seller.seller_name || '—')}</span></td>
-                <td style="text-align: center;"><span class="invoice-count">${invoiceCount}</span></td>
-                <td style="text-align: right;"><span class="amount-paid">${formatCurrency(seller.total_paid || 0, 'PLN')}</span></td>
-                <td style="text-align: right;"><span class="amount-unpaid">${formatCurrency(seller.total_unpaid || 0, 'PLN')}</span></td>
-                <td class="col-updated"><span class="date-value">${seller.last_updated ? formatDateShort(seller.last_updated) : '—'}</span></td>
-                <td>
+                <td data-label="NIP"><span class="nip-number">${escapeHtml(seller.seller_nip || '—')}</span></td>
+                <td class="cell-name"><span class="seller-name" title="${escapeHtml(seller.seller_name || '')}">${escapeHtml(seller.seller_name || '—')}</span></td>
+                <td data-label="Faktury" style="text-align: center;"><span class="invoice-count">${invoiceCount}</span></td>
+                <td data-label="Opłacone" style="text-align: right;"><span class="amount-paid">${formatCurrency(seller.total_paid || 0, 'PLN')}</span></td>
+                <td data-label="Nieopłacone" style="text-align: right;"><span class="amount-unpaid">${formatCurrency(seller.total_unpaid || 0, 'PLN')}</span></td>
+                <td class="col-updated" data-label="Aktualizacja"><span class="date-value">${seller.last_updated ? formatDateShort(seller.last_updated) : '—'}</span></td>
+                <td class="cell-actions">
                     <div class="row-actions">
                         <a href="/seller/${seller.id}/edit" class="action-btn" title="Edytuj" aria-label="Edytuj">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
