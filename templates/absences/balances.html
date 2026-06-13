@@ -92,6 +92,14 @@
         font-family: var(--font-body); font-size: 0.75rem;
         border: 1px solid var(--color-border); border-radius: 2px; outline: none; }
     .row-reason:focus { border-color: var(--color-ink-muted); }
+
+    /* Mobile cards (ADR-D-01): grouped employee name is hidden on desktop for
+       non-first rows; on stacked cards every card repeats it as its header. */
+    .emp-grouped-hidden { display: none; }
+    @media (max-width: 640px) {
+        .emp-grouped-hidden { display: inline; }
+        .card-body { overflow: visible; }
+    }
 </style>
 {% endblock %}
 
@@ -128,10 +136,10 @@
     <div class="filter-bar">
         <input type="text" class="filter-input" id="search-input"
                placeholder="Szukaj pracownika…" oninput="filterTable()" style="min-width:220px;">
-        <select class="filter-input" id="cat-filter" onchange="filterTable()">
+        <select class="filter-input" id="cat-filter" aria-label="Filtruj według kategorii" onchange="filterTable()">
             <option value="">Wszystkie kategorie</option>
         </select>
-        <select class="filter-input" id="status-filter" onchange="filterTable()">
+        <select class="filter-input" id="status-filter" aria-label="Filtruj według statusu" onchange="filterTable()">
             <option value="">Wszystkie statusy</option>
             <option value="ok">OK</option>
             <option value="warning">Blisko limitu</option>
@@ -142,7 +150,7 @@
     <!-- Table -->
     <div class="card">
         <div class="card-body">
-            <table class="balance-table" id="balance-table">
+            <table class="balance-table stack-cards" id="balance-table">
                 <thead>
                     <tr>
                         <th style="width:9rem;">Pracownik</th>
@@ -156,7 +164,7 @@
                     </tr>
                 </thead>
                 <tbody id="balance-tbody">
-                    <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Ładowanie…</td></tr>
+                    <tr><td colspan="8" class="cell-empty" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Ładowanie…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -294,7 +302,7 @@
     function renderTable(rows) {
         const tbody = document.getElementById('balance-tbody');
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Brak danych</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="cell-empty" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);">Brak danych</td></tr>';
             return;
         }
 
@@ -327,10 +335,11 @@
             ? `Zostało: ${(row.limit - row.used).toFixed(step === 1 ? 0 : 1)} ${unitL}`
             : badgeLabel(row.status);
 
-        // Employee name only in first row of each group
+        // Employee name only in first row of each group on desktop; on mobile
+        // cards every row repeats it (grouping is meaningless once stacked).
         const empCell = isFirst
-            ? `<td style="font-weight:500;white-space:nowrap;">${escHtml(row.employee_name)}</td>`
-            : `<td></td>`;
+            ? `<td class="cell-name" style="font-weight:500;white-space:nowrap;">${escHtml(row.employee_name)}</td>`
+            : `<td class="cell-name"><span class="emp-grouped-hidden">${escHtml(row.employee_name)}</span></td>`;
 
         // Spinbox builder
         function spinbox(cls, val) {
@@ -344,7 +353,7 @@
                     </div>`;
         }
 
-        const limitCell = `<td style="text-align:right;">
+        const limitCell = `<td data-label="Limit" style="text-align:right;">
             <div style="display:inline-flex;align-items:center;gap:0.25rem;">
                 ${spinbox('limit-input', limitVal)}
                 <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
@@ -366,14 +375,14 @@
             data-orig-period="${escHtml(row.period_label || '')}"
             data-warning-threshold="${row.warning_threshold_pct || 80}">
             ${empCell}
-            <td style="white-space:nowrap;">${escHtml(row.category_name)}</td>
-            <td>
+            <td data-label="Kategoria" style="white-space:nowrap;">${escHtml(row.category_name)}</td>
+            <td data-label="Okres">
                 <input type="text" class="row-period-input period-input"
                        value="${escHtml(row.period_label || '')}"
                        oninput="onRowChange(this.closest('tr'))"
                        placeholder="np. 2026">
             </td>
-            <td>
+            <td data-label="Wykorzystano">
                 <div style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;">
                     ${spinbox('used-input', usedVal)}
                     <span style="font-size:0.75rem;color:var(--color-ink-subtle);">${unitL}</span>
@@ -383,7 +392,7 @@
                 </div>
             </td>
             ${limitCell}
-            <td>
+            <td data-label="% wykorzystania">
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <div class="progress-wrap" style="flex:1;">
                         <div class="progress-bar row-bar ${barClass(row.status)}"
@@ -395,10 +404,10 @@
                     </span>
                 </div>
             </td>
-            <td>
+            <td data-label="Status">
                 <span class="status-badge row-badge ${badgeClass(row.status)}">${statusLabel}</span>
             </td>
-            <td style="white-space:nowrap;">
+            <td class="cell-actions" style="white-space:nowrap;">
                 <div style="display:flex;gap:0.25rem;">
                     <button type="button" class="icon-btn delete-btn"
                             onclick="deleteRow(this,${row.employee_id},${row.category_id})"
