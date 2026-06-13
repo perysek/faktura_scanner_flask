@@ -269,7 +269,7 @@
     <!-- Table -->
     <div class="refined-card">
         <div class="card-title" id="table-count">Formy zatrudnienia</div>
-        <table class="refined-table">
+        <table class="refined-table stack-cards">
             <thead>
                 <tr>
                     <th>Nazwa</th>
@@ -281,7 +281,7 @@
                 </tr>
             </thead>
             <tbody id="formy-tbody">
-                <tr><td colspan="6" class="empty-state">
+                <tr><td colspan="6" class="empty-state cell-empty">
                     <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     <div>Ładowanie...</div>
                 </td></tr>
@@ -327,7 +327,7 @@ function renderTable(formy) {
     count.textContent = `Formy zatrudnienia (${formy.length})`;
 
     if (formy.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state cell-empty">
             <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             <div>Brak form zatrudnienia. Dodaj pierwszą powyżej.</div>
         </td></tr>`;
@@ -336,12 +336,12 @@ function renderTable(formy) {
 
     tbody.innerHTML = formy.map(f => `
         <tr id="row-${f.id}" data-id="${f.id}">
-            <td><strong>${escapeHtml(f.nazwa)}</strong></td>
-            <td>${escapeHtml(f.uwagi) || '<span style="color:var(--color-ink-subtle)">—</span>'}</td>
-            <td style="text-align:center">${boolBadge(f.min_salary_required)}</td>
-            <td style="text-align:center">${boolBadge(f.granted_salary)}</td>
-            <td style="text-align:center">${boolBadge(f.commision_included)}</td>
-            <td>
+            <td class="cell-name"><strong>${escapeHtml(f.nazwa)}</strong></td>
+            <td data-label="Uwagi">${escapeHtml(f.uwagi) || '<span style="color:var(--color-ink-subtle)">—</span>'}</td>
+            <td data-label="Min. wynagrodzenie" style="text-align:center">${boolBadge(f.min_salary_required)}</td>
+            <td data-label="Gwarantowane" style="text-align:center">${boolBadge(f.granted_salary)}</td>
+            <td data-label="Prowizja" style="text-align:center">${boolBadge(f.commision_included)}</td>
+            <td class="cell-actions">
                 <div class="table-actions">
                     <button class="refined-btn-ghost" onclick="startEdit(${f.id})">
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>

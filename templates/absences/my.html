@@ -296,9 +296,9 @@
                 {{ absences|length }} {{ 'wpis' if absences|length == 1 else 'wpisów' }}
             </span>
         </div>
-        <div class="table-container" style="border:none;border-radius:0;">
+        <div class="table-container stack-cards-wrap" style="border:none;border-radius:0;">
             {% if absences %}
-            <table class="refined-table">
+            <table class="refined-table stack-cards">
                 <thead>
                     <tr>
                         <th>Kategoria</th>
@@ -312,13 +312,13 @@
                 <tbody>
                     {% for ab in absences %}
                     <tr>
-                        <td>
+                        <td class="cell-name">
                             <span style="font-weight:500;">{{ ab.get('category_name', '—') }}</span>
                             {% if not ab.get('absence_full_day', True) %}
                             <span style="font-size:0.75rem;color:var(--color-ink-subtle);display:block;">godzinowa</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Okres">
                             {% if ab['time_from'] %}
                                 {{ ab['date_from'] }},
                                 {{ ab['time_from']|string|truncate(5, true, '') }} – {{ ab['time_to']|string|truncate(5, true, '') }}
@@ -328,8 +328,8 @@
                                 {{ ab['date_from'] }} – {{ ab['date_to'] }}
                             {% endif %}
                         </td>
-                        <td>{{ ab.get('approver_name', '—') }}</td>
-                        <td>
+                        <td data-label="Przełożony">{{ ab.get('approver_name', '—') }}</td>
+                        <td data-label="Status">
                             {% if ab['status'] == 'pending' %}
                                 <span class="ab-status ab-status--pending">Oczekujący</span>
                             {% elif ab['status'] == 'approved' %}
@@ -343,12 +343,12 @@
                                 <span class="ab-status ab-status--cancelled">Anulowany</span>
                             {% endif %}
                         </td>
-                        <td style="color:var(--color-ink-subtle);white-space:nowrap;">
+                        <td data-label="Złożono" style="color:var(--color-ink-subtle);white-space:nowrap;">
                             {% if ab['requested_at'] %}
                                 {{ ab['requested_at'].strftime('%d.%m.%Y %H:%M') if ab['requested_at'] else '—' }}
                             {% else %}—{% endif %}
                         </td>
-                        <td style="text-align:right;">
+                        <td class="cell-actions">
                             {% if ab['status'] == 'pending' %}
                             <form method="POST"
                                   action="{{ url_for('absence.cancel_own_request', absence_id=ab['id']) }}"

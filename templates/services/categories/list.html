@@ -421,7 +421,7 @@
     <!-- Table -->
     <div class="refined-card">
         <div class="card-title" id="table-count">Kategorie usług</div>
-        <table class="refined-table">
+        <table class="refined-table stack-cards">
             <thead>
                 <tr>
                     <th class="th-sortable" id="th-name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('name')">Nazwa <span class="sort-icon" aria-hidden="true">↕</span></button></th>
@@ -431,7 +431,7 @@
                 </tr>
             </thead>
             <tbody id="categories-tbody">
-                <tr><td colspan="4" class="empty-state">
+                <tr><td colspan="4" class="empty-state cell-empty">
                     <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                     </svg>
@@ -567,7 +567,7 @@ function renderCategoriesRows() {
     countEl.textContent = `Kategorie usług (${categories.length})`;
 
     if (categories.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state cell-empty">
             <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
             </svg>
@@ -585,12 +585,12 @@ function renderCategoriesRows() {
 
         return `
         <tr id="row-${c.id}" data-id="${c.id}">
-            <td><strong>${escapeHtml(c.name)}</strong></td>
-            <td>${escapeHtml(c.additional_description) || '<span style="color:var(--color-ink-subtle)">—</span>'}</td>
-            <td style="text-align:center">
+            <td class="cell-name"><strong>${escapeHtml(c.name)}</strong></td>
+            <td data-label="Dodatkowy opis">${escapeHtml(c.additional_description) || '<span style="color:var(--color-ink-subtle)">—</span>'}</td>
+            <td data-label="Usługi" style="text-align:center">
                 <span class="service-count-badge ${badgeClass}" ${badgeOnClick} ${badgeTitle}>${c.service_count}</span>
             </td>
-            <td>
+            <td class="cell-actions">
                 <div class="table-actions">
                     <button class="refined-btn-ghost" onclick="startEdit(${c.id})">
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>

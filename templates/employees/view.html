@@ -525,7 +525,7 @@
 
         <!-- Services Table -->
         <div id="services-container">
-            <table class="service-table" id="services-table" style="display: none;">
+            <table class="service-table stack-cards" id="services-table" style="display: none;">
                 <thead>
                     <tr>
                         <th>Usługa</th>
@@ -856,14 +856,14 @@ async function loadAssignedServices() {
 
                 return `
                     <tr>
-                        <td>
+                        <td class="cell-name">
                             <div style="font-weight: 500;">${name}</div>
                             ${category ? `<div style="font-size: 0.75rem; color: var(--color-ink-subtle);">${category}</div>` : ''}
                         </td>
-                        <td><span class="${priceClass}">${priceLabel}</span></td>
-                        <td>${commission}</td>
-                        <td>${duration}</td>
-                        <td style="text-align: right;">
+                        <td data-label="Cena"><span class="${priceClass}">${priceLabel}</span></td>
+                        <td data-label="Prowizja">${commission}</td>
+                        <td data-label="Czas">${duration}</td>
+                        <td class="cell-actions">
                             <button class="action-link-sm" onclick="removeService(${svc.id})">Usuń</button>
                         </td>
                     </tr>
