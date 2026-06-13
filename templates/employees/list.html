@@ -475,10 +475,10 @@
                 placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..."
                 class="refined-input"
             >
-            <select id="filter-position" class="refined-select" onchange="loadEmployees()">
+            <select id="filter-position" class="refined-select" aria-label="Filtruj według stanowiska" onchange="loadEmployees()">
                 <option value="">Wszystkie stanowiska</option>
             </select>
-            <select id="filter-status" class="refined-select" onchange="loadEmployees()">
+            <select id="filter-status" class="refined-select" aria-label="Filtruj według statusu" onchange="loadEmployees()">
                 <option value="">Wszystkie statusy</option>
                 <option value="active">Aktywni</option>
                 <option value="inactive">Nieaktywni</option>
