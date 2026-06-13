@@ -8,7 +8,7 @@ bcrypt==4.1.2
 
 # Database Migrations
 alembic==1.18.4
-psycopg2-binary==2.9.9  # PostgreSQL support (future migration)
+psycopg2-binary==2.9.10  # PostgreSQL support (2.9.10 = first with cp313 wheels; fixes CI on Python 3.13)
 
 # OCR i przetwarzanie PDF
 pytesseract==0.3.13
