@@ -47,7 +47,7 @@ const Modals = {
                 <div class="modal-header">
                     <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(title)}</h3>
                     <button class="modal-close text-gray-400 hover:text-gray-600 transition-colors" aria-label="Zamknij okno dialogowe">
-                        <span class="material-icons">close</span>
+                        ${Icons.svg('close')}
                     </button>
                 </div>
                 <div class="modal-body">
@@ -113,7 +113,7 @@ const Modals = {
         } = button;
 
         const buttonClass = `btn-${type}`;
-        const iconHtml = icon ? `<span class="material-icons text-sm mr-2">${icon}</span>` : '';
+        const iconHtml = icon ? Icons.svg(icon, 'text-sm mr-2') : '';
         const disabledAttr = disabled ? 'disabled' : '';
 
         return `
@@ -222,7 +222,7 @@ const Modals = {
             title,
             content: `
                 <div class="flex items-start gap-3">
-                    <span class="material-icons ${color} text-3xl">${icon}</span>
+                    ${Icons.svg(icon, `${color} text-3xl`)}
                     <p class="text-gray-700 flex-1">${escapeHtml(message)}</p>
                 </div>
             `,

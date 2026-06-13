@@ -47,12 +47,12 @@ const Notifications = {
         const icon = icons[type] || icons.info;
 
         toast.innerHTML = `
-            <span class="material-icons">${icon}</span>
+            ${Icons.svg(icon)}
             <div class="flex-1">
                 <p class="text-sm font-medium" style="color: var(--color-ink);">${escapeHtml(message)}</p>
             </div>
             <button style="color: var(--color-ink-subtle);" class="hover:opacity-75 transition-opacity" onclick="this.parentElement.remove()">
-                <span class="material-icons text-sm">close</span>
+                ${Icons.svg('close', 'text-sm')}
             </button>
         `;
 

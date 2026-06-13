@@ -204,6 +204,16 @@
 }
 
 @layer components {
+  /* Inline-SVG icon base (P05). SVGs from the icon() macro / Icons.svg() size by
+     the element's font-size (1em), matching the sizing model the old Material
+     Icons font used — so existing text-sm/text-xl/text-3xl size them correctly
+     and color inherits via currentColor. */
+  .icon {
+      width: 1em; height: 1em; flex-shrink: 0;
+      display: inline-block; vertical-align: -0.125em;
+      fill: currentColor;
+  }
+
   /* Table row hover effect from guide */
   .table-row-hover:hover {
       background-color: #f8fafc;

@@ -184,10 +184,10 @@
         .toast-info:hover {
             box-shadow: 0 4px 10px rgba(0,0,0,.07), 0 8px 32px rgba(30,96,145,.22);
         }
-        .toast-success .material-icons { color:#2d6a4f; }
-        .toast-error   .material-icons { color:#9b2c2c; }
-        .toast-warning .material-icons { color:#9a6700; }
-        .toast-info    .material-icons { color:#1e6091; }
+        .toast-success .icon { color:#2d6a4f; }
+        .toast-error   .icon { color:#9b2c2c; }
+        .toast-warning .icon { color:#9a6700; }
+        .toast-info    .icon { color:#1e6091; }
         @media (prefers-reduced-motion: reduce) {
             .toast-success, .toast-error, .toast-warning, .toast-info {
                 animation: none; transition: none;
@@ -265,6 +265,7 @@
 
     <!-- Core JavaScript -->
     <script src="{{ asset_url('js/utils.js') }}"></script>
+    <script src="{{ asset_url('js/icons.js') }}"></script>
     <script src="{{ asset_url('js/api.js') }}"></script>
     <script src="{{ asset_url('js/notifications.js') }}"></script>
     <script src="{{ asset_url('js/modals.js') }}"></script>

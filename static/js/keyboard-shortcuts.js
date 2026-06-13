@@ -91,11 +91,11 @@
                 <div class="modal-content max-w-md">
                     <div class="modal-header">
                         <h3 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="material-icons text-primary">keyboard</span>
+                            ${Icons.svg('keyboard', 'text-primary')}
                             Skróty klawiszowe
                         </h3>
                         <button onclick="document.getElementById('shortcuts-modal').remove()" class="text-gray-400 hover:text-gray-600">
-                            <span class="material-icons">close</span>
+                            ${Icons.svg('close')}
                         </button>
                     </div>
                     <div class="modal-body">
