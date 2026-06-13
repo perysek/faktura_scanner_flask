@@ -1065,4 +1065,46 @@
 
   /* Toast notification styles live in base.html <style> block
      to ensure availability independent of the Tailwind build pipeline. */
+
+  /* ── Mobile stacked-card tables (ADR-D-01) ──────────────────────────────
+     Opt in: add `stack-cards` to a <table>; cells carry data-label="…";
+     identity cell = .cell-name, actions cell = .cell-actions, decorative
+     cells = .cell-hide-sm, full-width colspan rows = .cell-empty. Keyed off
+     marker classes only (never bare .refined-table) so non-opted tables are
+     untouched. !important beats page-local unlayered <style> — same cascade
+     basis as the 16px input rule. One DOM, CSS-only; desktop untouched. */
+  @media (max-width: 640px) {
+      table.stack-cards { min-width: 0 !important; display: block !important; }
+      table.stack-cards thead { display: none !important; }
+      table.stack-cards tbody { display: block !important; }
+      table.stack-cards tbody tr {
+          display: block !important;
+          background: white; border: 1px solid var(--color-border);
+          border-radius: var(--radius-sm); padding: 0.75rem 1rem;
+          margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+      }
+      table.stack-cards td {
+          display: flex !important; justify-content: space-between; align-items: center;
+          gap: 1rem; padding: 0.375rem 0 !important; border: none !important;
+          white-space: normal !important; max-width: none !important; overflow: visible;
+          text-align: left !important;
+      }
+      table.stack-cards td::before {
+          content: attr(data-label); font-size: 0.6875rem; font-weight: 600;
+          text-transform: uppercase; letter-spacing: 0.06em;
+          color: var(--color-ink-subtle); flex-shrink: 0;
+      }
+      table.stack-cards td.cell-name {
+          padding-bottom: 0.5rem !important; margin-bottom: 0.25rem;
+          border-bottom: 1px solid var(--color-border-subtle) !important;
+      }
+      table.stack-cards td.cell-name::before { content: none; }
+      table.stack-cards td.cell-actions { padding-top: 0.5rem !important; }
+      table.stack-cards td.cell-actions::before { content: "Akcje"; }
+      table.stack-cards td.cell-hide-sm { display: none !important; }
+      table.stack-cards td.cell-empty { display: block !important; text-align: center !important; }
+      table.stack-cards td.cell-empty::before { content: none; }
+      /* Reset wrapper cosmetics so cards aren't boxed twice */
+      .stack-cards-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; background: transparent !important; }
+  }
 }

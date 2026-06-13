@@ -772,6 +772,19 @@
         overflow: hidden;
         pointer-events: none;
     }
+
+    /* Mobile stacked cards (ADR-D-01): the body table opts into .stack-cards;
+       here we only neutralise this page's bespoke full-height flex/scroll
+       wrappers and hide the fixed header table so cards flow with the page. */
+    @media (max-width: 640px) {
+        .table-container, .table-scroll-wrapper, .tbody-scroll {
+            display: block !important; overflow: visible !important;
+            min-height: 0 !important; height: auto !important; flex: none !important;
+        }
+        .table-scroll-wrapper > table:first-child { display: none !important; }
+        /* skeleton placeholder rows are 8 unlabelled cells — hide on cards */
+        .stack-cards .skeleton-row { display: none !important; }
+    }
 </style>
 {% endblock %}
 
@@ -898,14 +911,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                             </svg></button></th>
                         <th class="col-status">Status</th>
-                        <th class="col-actions"></th>
+                        <th class="col-actions"><span class="sr-only">Akcje</span></th>
                     </tr>
                 </thead>
             </table>
 
             <!-- Scrollable Body -->
             <div class="tbody-scroll">
-                <table class="refined-table" id="invoicesTable">
+                <table class="refined-table stack-cards" id="invoicesTable">
                     <colgroup>
                         <col class="col-number">
                         <col class="col-seller">
@@ -1273,35 +1286,35 @@ function renderTable() {
 
         return `
             <tr class="stagger-row clickable-row" style="animation-delay: ${delay}s" data-invoice-id="${invoice.id}" data-has-pdf="${hasPdf}">
-                <td>
+                <td class="cell-name">
                     <span class="invoice-number">${escapeHtml(invoice.invoice_number || '—')}</span>
                 </td>
-                <td>
+                <td data-label="Sprzedawca">
                     <span class="seller-name" title="${escapeHtml(invoice.seller_name || '')}">
                         ${escapeHtml(invoice.seller_name || '—')}
                     </span>
                 </td>
-                <td>
+                <td data-label="NIP">
                     <span class="nip-number">${escapeHtml(invoice.seller_nip || '—')}</span>
                 </td>
-                <td>
+                <td data-label="Data wyst.">
                     <span class="date-value">${formatDateShort(invoice.invoice_date)}</span>
                 </td>
-                <td>
+                <td data-label="Termin">
                     <span class="date-value">${formatDateShort(invoice.payment_due_date)}</span>
                 </td>
-                <td class="col-amount">
+                <td class="col-amount" data-label="Kwota">
                     <span class="amount-value">${formatAmountDisplay(invoice.amount)}</span>
                     <span class="currency-code">${(!invoice.currency || invoice.currency === 'PLN') ? 'zł' : invoice.currency}</span>
                 </td>
-                <td>
+                <td data-label="Status">
                     <span class="status-badge ${statusInfo.class} clickable-status"
                           data-invoice-id="${invoice.id}"
                           data-current-status="${invoice.status || 'Nieopłacona'}"
                           data-due-date="${invoice.payment_due_date || ''}"
                           title="Kliknij aby zmienić status">${escapeHtml(statusInfo.text)}</span>
                 </td>
-                <td>
+                <td class="cell-actions">
                     <div class="row-actions">
                         ${invoice.pdf_path ? `
                         <button class="action-btn" onclick="viewPDF(${invoice.id})" title="Podgląd" aria-label="Podgląd">
@@ -1704,7 +1717,7 @@ function showSellerSyncModal(items) {
             <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
                 <thead>
                     <tr style="background:var(--color-surface-warm);position:sticky;top:0;">
-                        <th style="padding:0.4rem 0.25rem;width:2rem;"></th>
+                        <th style="padding:0.4rem 0.25rem;width:2rem;"><span class="sr-only">Zaznacz</span></th>
                         <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Nr faktury</th>
                         <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Sprzedawca (faktura)</th>
                         <th style="padding:0.4rem 0.5rem;text-align:left;font-weight:600;color:var(--color-ink-muted);">Sprzedawca (baza)</th>

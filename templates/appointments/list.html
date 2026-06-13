@@ -163,8 +163,8 @@
     </div>
 
     <!-- Table -->
-    <div class="table-container" aria-live="polite" aria-label="Lista wizyt">
-        <table class="refined-table">
+    <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista wizyt">
+        <table class="refined-table stack-cards">
             <thead>
                 <tr>
                     <th class="th-sortable" id="th-appointment_date" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('appointment_date')">Data <span class="sort-icon" aria-hidden="true">↕</span></button></th>
@@ -181,7 +181,7 @@
             </thead>
             <tbody id="appointments-tbody">
                 <tr>
-                    <td colspan="10" class="empty-state">
+                    <td colspan="10" class="empty-state cell-empty">
                         <span class="material-icons empty-icon">calendar_today</span>
                         <p class="empty-text">Ładowanie wizyt...</p>
                     </td>
@@ -415,7 +415,7 @@ function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="empty-state"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state cell-empty"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
@@ -428,16 +428,16 @@ function renderTable(appointments) {
             : '';
         return `
             <tr>
-                <td>${formatDate(a.appointment_date)}</td>
-                <td>${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
-                <td>${escapeHtml(a.client_name)}</td>
-                <td>${escapeHtml(serviceName)}</td>
-                <td>${escapeHtml(a.employee_name)}</td>
-                <td>${formatCurrency(a.total_price)}</td>
-                <td><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
-                <td>${renderVisitRating(a.satisfaction_score)}</td>
-                <td class="col-sms">${renderSmsCell(a.id, a.confirmation_status)}</td>
-                <td style="text-align:right; white-space:nowrap;">
+                <td data-label="Data">${formatDate(a.appointment_date)}</td>
+                <td data-label="Godzina">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
+                <td class="cell-name">${escapeHtml(a.client_name)}</td>
+                <td data-label="Usługa">${escapeHtml(serviceName)}</td>
+                <td data-label="Pracownik">${escapeHtml(a.employee_name)}</td>
+                <td data-label="Kwota">${formatCurrency(a.total_price)}</td>
+                <td data-label="Status"><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
+                <td data-label="Ocena">${renderVisitRating(a.satisfaction_score)}</td>
+                <td class="col-sms" data-label="SMS">${renderSmsCell(a.id, a.confirmation_status)}</td>
+                <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
                         <a href="/appointment/${a.id}?from=list" class="action-icon-btn" title="Szczegóły" aria-label="Szczegóły">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -488,7 +488,7 @@ async function loadAppointments() {
         console.error('Error loading appointments:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="empty-state">
+                <td colspan="10" class="empty-state cell-empty">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadAppointments()" class="refined-btn-secondary" style="margin-top:0.75rem;">Spróbuj ponownie</button>
                 </td>

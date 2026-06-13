@@ -394,43 +394,10 @@
         .stats-grid { grid-template-columns: 1fr; }
     }
 
-    /* ── Mobile stacked cards (Issue 4 / ADR-09-01) ──
-       Below 640px the 9-column table collapses to one card per client:
-       thead hidden, each td becomes a "Label: value" line via data-label,
-       name = card header, actions = card footer. One DOM, CSS-only. */
-    @media (max-width: 640px) {
-        .table-container { overflow: visible; border: none; box-shadow: none; background: transparent; }
-        .refined-table { min-width: 0; display: block; }
-        .refined-table thead { display: none; }
-        .refined-table tbody { display: block; }
-        .refined-table tbody tr {
-            display: block; background: white; border: 1px solid var(--color-border);
-            border-radius: 2px; padding: 0.75rem 1rem; margin-bottom: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,.04);
-        }
-        .refined-table td {
-            display: flex; justify-content: space-between; align-items: center;
-            gap: 1rem; padding: 0.375rem 0; border: none; white-space: normal;
-            text-overflow: clip; overflow: visible; max-width: none;
-        }
-        .refined-table td::before {
-            content: attr(data-label); font-size: 0.6875rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle);
-            flex-shrink: 0;
-        }
-        /* Name cell = card header (no label, full width) */
-        .refined-table td.cell-name {
-            padding-bottom: 0.5rem; margin-bottom: 0.25rem;
-            border-bottom: 1px solid var(--color-border-subtle);
-        }
-        .refined-table td.cell-name::before { content: none; }
-        /* Actions = card footer row */
-        .refined-table td.cell-actions { justify-content: space-between; padding-top: 0.5rem; }
-        .refined-table td.cell-actions::before { content: "Akcje"; }
-        .refined-table td.cell-actions .action-icons { justify-content: flex-end; }
-        /* Hide decorative sparkline on cards (ADR-09-02) */
-        .refined-table td.trend-cell { display: none; }
-    }
+    /* Mobile stacked cards: now provided by the shared .stack-cards component
+       in input.css @layer components (ADR-D-01). This page opts in via the
+       `stack-cards` class on the table + `stack-cards-wrap` on the container;
+       the sparkline cell uses `cell-hide-sm`. No page-local media block. */
 </style>
 {% endblock %}
 
@@ -523,8 +490,8 @@
     </div>
 
     <!-- Clients Table -->
-    <div class="table-container" aria-live="polite" aria-label="Lista klientów">
-        <table class="refined-table">
+    <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista klientów">
+        <table class="refined-table stack-cards">
             <colgroup>
                 <col style="width:22%"><!-- Imię i nazwisko -->
                 <col style="width:12%"><!-- Telefon -->
@@ -772,7 +739,7 @@ function renderClients(clients) {
     if (sorted.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="9" class="empty-state cell-empty">
                     <span class="material-icons empty-icon">search_off</span>
                     <p class="empty-text">Nie znaleziono klientów</p>
                 </td>
@@ -834,7 +801,7 @@ function renderClients(clients) {
                 <td data-label="Wizyt"><span class="visit-count">${client.completed_visits || 0}</span></td>
                 <td data-label="No-shows">${noShowCell}</td>
                 <td data-label="Odwołał"><span class="visit-count">${client.cancelled_count || 0}</span></td>
-                <td class="trend-cell" data-label="Trend">${sparklineSvg(clientTrends[client.id])}</td>
+                <td class="trend-cell cell-hide-sm" data-label="Trend">${sparklineSvg(clientTrends[client.id])}</td>
                 <td data-label="Status">${statusBadge}</td>
                 <td class="cell-actions" style="text-align:right; white-space:nowrap;">
                     <div class="action-icons">
@@ -879,8 +846,8 @@ function renderSkeleton(rows = 6) {
     const tbody = document.getElementById('clients-tbody');
     let html = '';
     for (let i = 0; i < rows; i++) {
-        html += '<tr>' + Array.from({ length: 9 }).map(() =>
-            '<td><div class="skeleton" style="height:1rem;border-radius:2px;"></div></td>'
+        html += '<tr>' + Array.from({ length: 9 }).map((_, c) =>
+            `<td class="${c >= 3 ? 'cell-hide-sm' : ''}"><div class="skeleton" style="height:1rem;border-radius:2px;"></div></td>`
         ).join('') + '</tr>';
     }
     tbody.innerHTML = html;
@@ -918,7 +885,7 @@ async function loadClients() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="9" class="empty-state cell-empty">
                         <p class="empty-text" style="color:var(--color-error);">
                             Błąd ładowania klientów: ${escapeHtml(clientsResp.error)}
                         </p>
@@ -935,7 +902,7 @@ async function loadClients() {
         console.error('Error loading clients:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="9" class="empty-state cell-empty">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadClients()" id="clients-retry-btn" class="refined-btn-secondary" style="margin-top:0.75rem;">
                         Spróbuj ponownie
