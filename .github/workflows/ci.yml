@@ -15,6 +15,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  design-guard:
+    name: Design-system guard (System-A regressions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fail the build if legacy "System-A" classes (gradient buttons,
+      # rounded-xl/2xl) reappear in authenticated templates. The three
+      # standalone auth pages never migrated (they don't load output.css),
+      # so they are excluded.
+      - name: No rounded-xl / gradient classes in authenticated templates
+        run: |
+          if grep -rnE 'rounded-xl|rounded-2xl|from-primary-|to-primary-' templates \
+               --include='*.html' \
+               --exclude=login.html --exclude=forgot_password.html --exclude=reset_password.html; then
+            echo "::error::System-A class reappeared in an authenticated template (see matches above). Use the flat System-B token classes."
+            exit 1
+          fi
+          echo "Design-system guard passed: no System-A classes found."
+
   test:
     name: Tests + coverage gate
     runs-on: ubuntu-latest
