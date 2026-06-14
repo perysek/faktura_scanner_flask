@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'components/icons.html' import icon %}
 {% block title %}Zarządzanie nieobecnościami — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -211,17 +212,17 @@
     <!-- ── Tab bar ──────────────────────────────────────────────────────── -->
     <div class="ab-tabs" role="tablist">
         <button class="ab-tab" data-tab="requests" role="tab" aria-selected="true">
-            <span class="material-icons" style="font-size:1rem;">inbox</span>
+            {{ icon('inbox', style="font-size:1rem;") }}
             Wnioski
             <span class="ab-tab-count {{ 'zero' if pending_count == 0 else '' }}">{{ pending_count }}</span>
         </button>
         <button class="ab-tab" data-tab="manual" role="tab" aria-selected="false">
-            <span class="material-icons" style="font-size:1rem;">edit_calendar</span>
+            {{ icon('edit_calendar', style="font-size:1rem;") }}
             L4 / Manualne
         </button>
         {% if user_permissions.absences %}
         <button class="ab-tab" data-tab="categories" role="tab" aria-selected="false">
-            <span class="material-icons" style="font-size:1rem;">category</span>
+            {{ icon('category', style="font-size:1rem;") }}
             Kategorie
         </button>
         {% endif %}
@@ -362,7 +363,7 @@
                 </table>
                 {% else %}
                 <div class="empty-state">
-                    <span class="material-icons" style="font-size:2.5rem;color:var(--color-ink-subtle);opacity:.3;display:block;margin-bottom:0.75rem;">inbox</span>
+                    {{ icon('inbox', style="font-size:2.5rem;color:var(--color-ink-subtle);opacity:.3;display:block;margin-bottom:0.75rem;") }}
                     <p class="empty-text">Brak wniosków</p>
                 </div>
                 {% endif %}
@@ -379,7 +380,7 @@
         <div class="card">
             <div class="card-header">
                 <span class="card-title">
-                    <span class="material-icons" style="font-size:1rem;vertical-align:middle;margin-right:0.375rem;">add_circle_outline</span>
+                    {{ icon('add_circle_outline', style="font-size:1rem;vertical-align:middle;margin-right:0.375rem;") }}
                     Rejestruj nieobecność manualnie
                 </span>
                 <span style="font-size:0.75rem;color:var(--color-ink-subtle);">
@@ -457,7 +458,7 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="refined-btn-primary" onclick="Absences.submitManual()">
-                        <span class="material-icons" style="font-size:1rem;">save</span>
+                        {{ icon('save', style="font-size:1rem;") }}
                         Zapisz nieobecność
                     </button>
                 </div>
@@ -528,7 +529,7 @@
                 </table>
                 {% else %}
                 <div class="empty-state">
-                    <span class="material-icons" style="font-size:2.5rem;color:var(--color-ink-subtle);opacity:.3;display:block;margin-bottom:0.75rem;">edit_calendar</span>
+                    {{ icon('edit_calendar', style="font-size:2.5rem;color:var(--color-ink-subtle);opacity:.3;display:block;margin-bottom:0.75rem;") }}
                     <p class="empty-text">Brak manualnych nieobecności</p>
                 </div>
                 {% endif %}
@@ -546,7 +547,7 @@
                 <span class="card-title">Kategorie nieobecności</span>
                 <button class="refined-btn-primary"
                         onclick="Absences.openCategoryForm(null, '', '', true)">
-                    <span class="material-icons" style="font-size:1rem;">add</span>
+                    {{ icon('add', style="font-size:1rem;") }}
                     Nowa kategoria
                 </button>
             </div>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Edytuj {{ client.full_name }} — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -140,7 +141,7 @@
     }
 
     /* Material Icons in Buttons */
-    .material-icons {
+    .icon {
         font-size: 1rem;
     }
 
@@ -280,7 +281,7 @@
             <!-- Form Actions -->
             <div class="form-actions">
                 <button type="submit" class="refined-btn-primary">
-                    <span class="material-icons">save</span>
+                    {{ icon('save') }}
                     Zapisz zmiany
                 </button>
                 <a href="{{ url_for('main.view_client', client_id=client.id) }}" class="refined-btn-secondary">

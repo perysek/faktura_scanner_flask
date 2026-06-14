@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}{{ client.full_name }} — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -149,7 +150,7 @@
     }
 
     /* Material Icons */
-    .material-icons {
+    .icon {
         font-size: 1rem;
     }
 
@@ -433,7 +434,7 @@
         <div class="section-header">
             <h2 class="section-title">Preferencje klienta</h2>
             <button onclick="toggleAddPrefForm()" class="refined-btn-secondary refined-btn-sm">
-                <span class="material-icons">add</span>
+                {{ icon('add') }}
                 Dodaj preferencję
             </button>
         </div>
@@ -481,7 +482,7 @@
                 <tbody id="preferences-tbody"></tbody>
             </table>
             <div id="preferences-empty" class="empty-preferences">
-                <span class="material-icons" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;">person_search</span>
+                {{ icon('person_search', style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;") }}
                 Brak zdefiniowanych preferencji
             </div>
         </div>
@@ -499,7 +500,7 @@
         </div>
 
         <div id="appt-empty" style="display:none;text-align:center;padding:1.5rem;">
-            <span class="material-icons" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:0.5rem;">event_busy</span>
+            {{ icon('event_busy', style="font-size:2rem;opacity:0.3;display:block;margin-bottom:0.5rem;") }}
             <p style="color:var(--color-ink-subtle);font-size:0.8125rem;">Brak historii wizyt</p>
         </div>
 
@@ -524,15 +525,15 @@
     <div class="refined-card">
         <div class="action-bar">
             <a href="{{ url_for('main.edit_client', client_id=client.id) }}" class="refined-btn-primary">
-                <span class="material-icons">edit</span>
+                {{ icon('edit') }}
                 Edytuj klienta
             </a>
             <a href="{{ url_for('main.clients_list') }}" class="refined-btn-secondary">
-                <span class="material-icons">arrow_back</span>
+                {{ icon('arrow_back') }}
                 Powrót do listy
             </a>
             <button onclick="confirmDelete()" class="refined-btn-danger">
-                <span class="material-icons">delete</span>
+                {{ icon('delete') }}
                 {% if client.is_active %}Dezaktywuj{% else %}Usuń{% endif %}
             </button>
         </div>
@@ -998,7 +999,7 @@ async function loadAppointmentHistory() {
                 <td style="padding:0.625rem 0.75rem;text-align:right;color:var(--color-ink-muted);">${price}</td>
                 <td style="padding:0.625rem 0.5rem;text-align:right;">
                     <a href="/appointment/${a.id}" style="font-size:0.75rem;color:var(--color-status-scheduled);text-decoration:none;" title="Szczegóły" aria-label="Szczegóły">
-                        <span class="material-icons" style="font-size:1rem;vertical-align:middle;">open_in_new</span>
+                        {{ icon('open_in_new', style="font-size:1rem;vertical-align:middle;") }}
                     </a>
                 </td>
             </tr>`;

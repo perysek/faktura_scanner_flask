@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'components/icons.html' import icon %}
 {% block title %}Import dokumentów — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -517,7 +518,7 @@
         }
     }
 
-    .material-icons {
+    .icon {
         font-size: inherit;
     }
 
@@ -600,7 +601,7 @@
         <div class="card">
             <div class="card-header">
                 <div class="card-icon">
-                    <span class="material-icons">upload_file</span>
+                    {{ icon('upload_file') }}
                 </div>
                 <h3 class="card-title">Upload plików</h3>
             </div>
@@ -623,7 +624,7 @@
 
             <div class="btn-group">
                 <button id="upload-btn" class="btn btn-primary" disabled>
-                    <span class="material-icons">upload</span>
+                    {{ icon('upload') }}
                     Przetwórz pliki
                 </button>
                 <button id="clear-btn" class="btn btn-secondary" disabled onclick="clearFiles()">
@@ -647,7 +648,7 @@
         <div class="card">
             <div class="card-header">
                 <div class="card-icon">
-                    <span class="material-icons">email</span>
+                    {{ icon('email') }}
                 </div>
                 <h3 class="card-title">Import z e-mail</h3>
             </div>
@@ -656,7 +657,7 @@
                 <label class="form-label">Foldery e-mail</label>
                 <button id="select-folders-btn" type="button" class="form-input" style="display: flex; justify-content: space-between; align-items: center;">
                     <span id="selected-folders-text" style="color: var(--color-ink-subtle);">Kliknij aby wybrać foldery</span>
-                    <span class="material-icons">folder_open</span>
+                    {{ icon('folder_open') }}
                 </button>
                 <p class="form-hint">Wybierz foldery, z których chcesz pobrać faktury</p>
             </div>
@@ -671,7 +672,7 @@
                 </div>
                 <div id="folder-list" style="max-height: 200px; overflow-y: auto; padding-right: 0.5rem;">
                     <p style="text-align: center; color: var(--color-ink-subtle); font-size: 0.75rem; padding: 1rem 0;">
-                        <span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>
+                        {{ icon('refresh', style="animation: spin 1s linear infinite;") }}
                         Ładowanie...
                     </p>
                 </div>
@@ -696,7 +697,7 @@
             </div>
 
             <button id="email-import-btn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" disabled>
-                <span class="material-icons">download</span>
+                {{ icon('download') }}
                 Importuj z e-mail
             </button>
         </div>
@@ -707,7 +708,7 @@
         <div class="table-container">
             <div class="table-header">
                 <div class="table-title">
-                    <span class="material-icons">checklist</span>
+                    {{ icon('checklist') }}
                     Przegląd plików
                 </div>
             </div>
@@ -729,11 +730,11 @@
 
             <div class="table-footer">
                 <button id="clear-all-btn" class="btn btn-secondary">
-                    <span class="material-icons">delete_sweep</span>
+                    {{ icon('delete_sweep') }}
                     Usuń wszystko
                 </button>
                 <button id="process-documents-btn" class="btn btn-primary">
-                    <span class="material-icons">auto_fix_high</span>
+                    {{ icon('auto_fix_high') }}
                     Przetwórz dokumenty
                 </button>
             </div>
@@ -745,7 +746,7 @@
         <div class="table-container">
             <div class="table-header">
                 <div class="table-title">
-                    <span class="material-icons">assessment</span>
+                    {{ icon('assessment') }}
                     Wyniki przetwarzania
                 </div>
             </div>
@@ -781,7 +782,7 @@
                         Anuluj
                     </button>
                     <button id="save-finish-btn" class="btn btn-success">
-                        <span class="material-icons">save</span>
+                        {{ icon('save') }}
                         Zapisz i zakończ
                     </button>
                 </div>

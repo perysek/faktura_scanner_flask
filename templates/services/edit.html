@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Edytuj {{ service.name }} — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -123,7 +124,7 @@
         margin-top: 1.5rem;
     }
 
-    .material-icons { font-size: 1rem; }
+    .icon { font-size: 1rem; }
 
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo); }
     @keyframes fadeIn {
@@ -225,7 +226,7 @@
 
             <div class="form-actions">
                 <button type="submit" class="refined-btn-primary">
-                    <span class="material-icons">save</span>
+                    {{ icon('save') }}
                     Zapisz zmiany
                 </button>
                 <a href="{{ url_for('main.view_service', service_id=service.id) }}" class="refined-btn-secondary">Anuluj</a>

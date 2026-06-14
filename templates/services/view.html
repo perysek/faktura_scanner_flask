@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}{{ service.name }} — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -122,7 +123,7 @@
         border-top: 1px solid var(--color-border-subtle);
     }
 
-    .material-icons { font-size: 1rem; }
+    .icon { font-size: 1rem; }
 
     /* Addon List Styles */
     .addon-item {
@@ -171,7 +172,7 @@
         color: var(--color-ink-subtle);
     }
 
-    .empty-state .material-icons {
+    .empty-state .icon {
         font-size: 3rem;
         opacity: 0.3;
         margin-bottom: 0.75rem;
@@ -201,7 +202,7 @@
         background: rgba(155, 44, 44, 0.06);
     }
 
-    .remove-btn .material-icons {
+    .remove-btn .icon {
         font-size: 0.875rem;
     }
 
@@ -300,7 +301,7 @@
         transition: all 0.15s ease;
     }
     .ph-del-btn:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.06); }
-    .ph-del-btn .material-icons { font-size: 1rem; }
+    .ph-del-btn .icon { font-size: 1rem; }
 </style>
 {% endblock %}
 
@@ -427,7 +428,7 @@
                     onclick="toggleAddAddonForm()"
                     class="refined-btn-secondary"
                     style="margin-bottom: 1rem;">
-                    <span class="material-icons">add</span>
+                    {{ icon('add') }}
                     Dodaj mikrousługę
                 </button>
 
@@ -462,15 +463,15 @@
     <div class="refined-card">
         <div class="action-bar">
             <a href="{{ url_for('main.edit_service', service_id=service.id) }}" class="refined-btn-primary">
-                <span class="material-icons">edit</span>
+                {{ icon('edit') }}
                 Edytuj usługę
             </a>
             <a href="{{ url_for('main.services_list') }}" class="refined-btn-secondary">
-                <span class="material-icons">arrow_back</span>
+                {{ icon('arrow_back') }}
                 Powrót do listy
             </a>
             <button onclick="confirmDelete()" class="refined-btn-danger">
-                <span class="material-icons">delete</span>
+                {{ icon('delete') }}
                 {% if service.is_active %}Dezaktywuj{% else %}Usuń{% endif %}
             </button>
         </div>
@@ -503,7 +504,7 @@ async function loadCompatibleAddons() {
             compatibleAddonIds.clear(); // Clear when no addons
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="material-icons">extension</div>
+                    ${Icons.svg('extension', 'empty-icon')}
                     <p class="empty-state-text">Brak przypisanych mikrousług</p>
                 </div>
             `;
@@ -526,7 +527,7 @@ async function loadCompatibleAddons() {
                     </div>
                 </div>
                 <button class="remove-btn" onclick="removeCompatibleAddon(${addon.id})">
-                    <span class="material-icons">close</span>
+                    {{ icon('close') }}
                     Usuń
                 </button>
             </div>
@@ -775,7 +776,7 @@ document.addEventListener('keydown', function(e) {
             const actionCell = PH_CAN_EDIT
                 ? `<td style="text-align: right;">
                        <button class="ph-del-btn" data-id="${h.id}" data-open="${isOpen ? '1' : '0'}" title="Usuń wpis">
-                           <span class="material-icons">delete</span>
+                           {{ icon('delete') }}
                        </button>
                    </td>`
                 : '';

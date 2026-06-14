@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Nowa usługa — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -18,7 +19,7 @@
     .refined-input:focus, .refined-select:focus { outline: none; border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04); }
     textarea.refined-input { resize: vertical; min-height: 100px; }
     .form-actions { display: flex; gap: 0.75rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border-subtle); margin-top: 1.5rem; }
-    .material-icons { font-size: 1rem; }
+    .icon { font-size: 1rem; }
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo); }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 </style>
@@ -99,7 +100,7 @@
 
             <div class="form-actions">
                 <button type="submit" class="refined-btn-primary">
-                    <span class="material-icons">save</span>
+                    {{ icon('save') }}
                     Zapisz usługę
                 </button>
                 <a href="{{ url_for('main.services_list') }}" class="refined-btn-secondary">Anuluj</a>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Pracownicy — {{ app_name }}{% endblock %}
 {% block mobile_title %}Pracownicy{% endblock %}
 
@@ -355,8 +356,8 @@
         font-weight: 300;
     }
 
-    .material-icons { font-size: 1rem; vertical-align: middle; }
-    .material-icons.lg { font-size: 1.5rem; }
+    .icon { font-size: 1rem; vertical-align: middle; }
+    .icon.lg { font-size: 1.5rem; }
 
     /* Fade-in */
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
@@ -413,11 +414,11 @@
         </div>
         <div class="page-header-actions">
             <button id="btn-update-services" class="refined-btn-secondary" onclick="bulkUpdateServices()">
-                <span class="material-icons">sync</span>
+                {{ icon('sync') }}
                 Aktualizuj preferencje
             </button>
             <a href="{{ url_for('main.create_employee') }}" class="refined-btn-primary">
-                <span class="material-icons">add</span>
+                {{ icon('add') }}
                 Dodaj pracownika
             </a>
         </div>
@@ -431,7 +432,7 @@
                 <p class="stat-value" id="stat-total">-</p>
             </div>
             <div class="stat-icon blue">
-                <span class="material-icons lg">badge</span>
+                {{ icon('badge', class='lg') }}
             </div>
         </div>
 
@@ -441,7 +442,7 @@
                 <p class="stat-value" id="stat-active">-</p>
             </div>
             <div class="stat-icon green">
-                <span class="material-icons lg">check_circle</span>
+                {{ icon('check_circle', class='lg') }}
             </div>
         </div>
 
@@ -451,7 +452,7 @@
                 <p class="stat-value" id="stat-commission">-</p>
             </div>
             <div class="stat-icon purple">
-                <span class="material-icons lg">percent</span>
+                {{ icon('percent', class='lg') }}
             </div>
         </div>
 
@@ -461,7 +462,7 @@
                 <p class="stat-value" id="stat-positions">-</p>
             </div>
             <div class="stat-icon orange">
-                <span class="material-icons lg">work</span>
+                {{ icon('work', class='lg') }}
             </div>
         </div>
     </div>
@@ -484,7 +485,7 @@
                 <option value="inactive">Nieaktywni</option>
             </select>
             <button onclick="loadEmployees()" class="refined-btn-secondary">
-                <span class="material-icons">search</span>
+                {{ icon('search') }}
                 Szukaj
             </button>
         </div>
@@ -514,7 +515,7 @@
             <tbody id="employees-tbody">
                 <tr>
                     <td colspan="6" class="empty-state cell-empty">
-                        <span class="material-icons empty-icon">badge</span>
+                        {{ icon('badge', class='empty-icon') }}
                         <p class="empty-text">Ładowanie pracowników...</p>
                     </td>
                 </tr>
@@ -525,7 +526,7 @@
 
 <!-- Bulk result toast -->
 <div class="bulk-result-toast" id="bulk-toast">
-    <span class="material-icons" id="bulk-toast-icon">check_circle</span>
+    <span id="bulk-toast-icon">{{ icon('check_circle') }}</span>
     <span id="bulk-toast-msg"></span>
 </div>
 {% endblock %}
@@ -717,7 +718,7 @@ function renderEmployees() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" class="empty-state">
-                    <span class="material-icons empty-icon">search_off</span>
+                    {{ icon('search_off', class='empty-icon') }}
                     <p class="empty-text">Nie znaleziono pracowników</p>
                 </td>
             </tr>`;
@@ -801,7 +802,7 @@ function confirmHardDelete(empId, empName, hasUser) {
     const userWarning = hasUser ? `
         <div style="margin-top:0.875rem;padding:0.75rem 0.875rem;background:rgba(155,44,44,0.06);
                     border:1px solid rgba(155,44,44,0.25);border-radius:2px;display:flex;gap:0.5rem;align-items:flex-start;">
-            <span class="material-icons" style="color:var(--color-error);font-size:1.125rem;">person_off</span>
+            {{ icon('person_off', style="color:var(--color-error);font-size:1.125rem;") }}
             <span style="font-size:0.8125rem;color:var(--color-ink);">
                 Ten pracownik ma <strong>przypisane konto użytkownika</strong> — zostanie ono również
                 trwale usunięte wraz z dostępem do aplikacji.
@@ -912,7 +913,7 @@ async function loadEmployees() {
 async function bulkUpdateServices() {
     const btn = document.getElementById('btn-update-services');
     btn.disabled = true;
-    btn.innerHTML = '<span class="material-icons">hourglass_empty</span> Aktualizowanie...';
+    btn.innerHTML = '{{ icon('hourglass_empty') }} Aktualizowanie...';
 
     try {
         const resp = await fetch('/api/employees/bulk-update-services', { method: 'POST' });
@@ -929,7 +930,7 @@ async function bulkUpdateServices() {
         showToast('error', 'Błąd połączenia z serwerem');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span class="material-icons">sync</span> Aktualizuj preferencje';
+        btn.innerHTML = '{{ icon('sync') }} Aktualizuj preferencje';
     }
 }
 
@@ -942,7 +943,7 @@ function showToast(type, msg) {
 
     toast.className = `bulk-result-toast ${type}`;
     msgEl.textContent = msg;
-    iconEl.textContent = type === 'success' ? 'check_circle' : 'error';
+    iconEl.innerHTML = Icons.svg(type === 'success' ? 'check_circle' : 'error');
 
     requestAnimationFrame(() => {
         toast.classList.add('show');

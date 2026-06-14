@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Ustawienia SMS — {{ app_name }}{% endblock %}
 {% block page_title %}{% endblock %}
 {% block page_subtitle %}{% endblock %}
@@ -138,7 +139,7 @@ textarea.form-input { resize: vertical; min-height: 80px; }
     transition: opacity 0.15s, color 0.15s;
     border-radius: 2px;
 }
-.btn-delete-type .material-icons { font-size: 1rem; }
+.btn-delete-type .icon { font-size: 1rem; }
 .btn-delete-type:hover { color: #dc2626; }
 .type-summary:hover .btn-delete-type { opacity: 1; pointer-events: auto; }
 /* Hide delete icon when card is expanded */
@@ -332,7 +333,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
             <button type="button" class="btn-delete-type"
                     title="Usuń typ wiadomości"
                     onclick="deleteMessageType({{ mt.id }}, event)">
-                <span class="material-icons">delete</span>
+                {{ icon('delete') }}
             </button>
             {% endif %}
         </summary>

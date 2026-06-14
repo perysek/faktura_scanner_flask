@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Usługi — {{ app_name }}{% endblock %}
 {% block mobile_title %}Usługi{% endblock %}
 
@@ -238,12 +239,12 @@
         font-weight: 300;
     }
 
-    .material-icons {
+    .icon {
         font-size: 1rem;
         vertical-align: middle;
     }
 
-    .material-icons.lg {
+    .icon.lg {
         font-size: 1.5rem;
     }
 
@@ -283,7 +284,7 @@
             <p class="page-subtitle">Zarządzanie katalogiem usług salonu</p>
         </div>
         <a href="{{ url_for('main.create_service') }}" class="refined-btn-primary">
-            <span class="material-icons">add</span>
+            {{ icon('add') }}
             Dodaj usługę
         </a>
     </header>
@@ -296,7 +297,7 @@
                 <p class="stat-value" id="stat-total">-</p>
             </div>
             <div class="stat-icon blue">
-                <span class="material-icons lg">spa</span>
+                {{ icon('spa', class='lg') }}
             </div>
         </div>
 
@@ -306,7 +307,7 @@
                 <p class="stat-value green" id="stat-active">-</p>
             </div>
             <div class="stat-icon green">
-                <span class="material-icons lg">check_circle</span>
+                {{ icon('check_circle', class='lg') }}
             </div>
         </div>
 
@@ -316,7 +317,7 @@
                 <p class="stat-value purple" id="stat-avg-price">-</p>
             </div>
             <div class="stat-icon purple">
-                <span class="material-icons lg">payments</span>
+                {{ icon('payments', class='lg') }}
             </div>
         </div>
     </div>
@@ -336,7 +337,7 @@
                 <option value="addon">Dodatkowe</option>
             </select>
             <button onclick="loadServices()" class="refined-btn-secondary">
-                <span class="material-icons">search</span>
+                {{ icon('search') }}
                 Szukaj
             </button>
         </div>
@@ -359,7 +360,7 @@
             <tbody id="services-tbody">
                 <tr>
                     <td colspan="7" class="empty-state">
-                        <span class="material-icons empty-icon">spa</span>
+                        {{ icon('spa', class='empty-icon') }}
                         <p class="empty-text">Ładowanie usług...</p>
                     </td>
                 </tr>
@@ -466,7 +467,7 @@ function renderServices() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="empty-state">
-                    <span class="material-icons empty-icon">search_off</span>
+                    {{ icon('search_off', class='empty-icon') }}
                     <p class="empty-text">Nie znaleziono usług</p>
                 </td>
             </tr>

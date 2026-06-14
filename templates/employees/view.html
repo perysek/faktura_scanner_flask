@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}{{ employee.full_name }} — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -262,7 +263,7 @@
         font-size: 0.8125rem;
     }
 
-    .material-icons { font-size: 1rem; }
+    .icon { font-size: 1rem; }
 
     /* Balance rows */
     .balance-row-top { display: flex; align-items: center; margin-bottom: 0.375rem; }
@@ -423,7 +424,7 @@
         </div>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
             <button onclick="toggleAdjHistory()" class="refined-btn-secondary refined-btn-sm">
-                <span class="material-icons">history</span>
+                {{ icon('history') }}
                 Historia korekt
             </button>
         </div>
@@ -489,7 +490,7 @@
         <div class="section-header">
             <h2 class="section-title">Przypisane usługi</h2>
             <button id="toggle-add-service-btn" onclick="toggleAddForm()" class="refined-btn-secondary refined-btn-sm">
-                <span class="material-icons" id="toggle-add-service-icon">add</span>
+                <span id="toggle-add-service-icon">{{ icon('add') }}</span>
                 <span id="toggle-add-service-label">Dodaj usługę</span>
             </button>
         </div>
@@ -538,7 +539,7 @@
                 <tbody id="services-tbody"></tbody>
             </table>
             <div id="services-empty" class="empty-services">
-                <span class="material-icons" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;">content_cut</span>
+                {{ icon('content_cut', style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;") }}
                 Brak przypisanych usług
             </div>
         </div>
@@ -568,7 +569,7 @@
         <!-- Tab: Przegląd -->
         <div id="tab-overview">
             <div id="tab-loading-overview" style="text-align:center;padding:2rem;color:var(--color-ink-subtle);font-size:0.875rem;display:none;">
-                <span class="material-icons" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;">hourglass_empty</span>
+                {{ icon('hourglass_empty', style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;") }}
                 Ładowanie...
             </div>
             <div id="tab-error-overview" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
@@ -599,7 +600,7 @@
         <!-- Tab: Przychody -->
         <div id="tab-przychody" style="display:none;">
             <div id="tab-loading-przychody" style="display:none;text-align:center;padding:2rem;color:var(--color-ink-subtle);font-size:0.875rem;">
-                <span class="material-icons" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;">hourglass_empty</span>
+                {{ icon('hourglass_empty', style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;") }}
                 Ładowanie...
             </div>
             <div id="tab-error-przychody" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
@@ -618,7 +619,7 @@
         <!-- Tab: Wizyty -->
         <div id="tab-wizyty" style="display:none;">
             <div id="tab-loading-wizyty" style="display:none;text-align:center;padding:2rem;color:var(--color-ink-subtle);font-size:0.875rem;">
-                <span class="material-icons" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;">hourglass_empty</span>
+                {{ icon('hourglass_empty', style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;") }}
                 Ładowanie...
             </div>
             <div id="tab-error-wizyty" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
@@ -647,7 +648,7 @@
         <!-- Tab: Umiejętności -->
         <div id="tab-umiejetnosci" style="display:none;">
             <div id="tab-loading-umiejetnosci" style="display:none;text-align:center;padding:2rem;color:var(--color-ink-subtle);font-size:0.875rem;">
-                <span class="material-icons" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;">hourglass_empty</span>
+                {{ icon('hourglass_empty', style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;") }}
                 Ładowanie...
             </div>
             <div id="tab-error-umiejetnosci" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
@@ -686,7 +687,7 @@
         <!-- Tab: Satysfakcja -->
         <div id="tab-satysfakcja" style="display:none;">
             <div id="tab-loading-satysfakcja" style="display:none;text-align:center;padding:2rem;color:var(--color-ink-subtle);font-size:0.875rem;">
-                <span class="material-icons" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;">hourglass_empty</span>
+                {{ icon('hourglass_empty', style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;") }}
                 Ładowanie...
             </div>
             <div id="tab-error-satysfakcja" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
@@ -731,15 +732,15 @@
     <div class="refined-card">
         <div class="action-bar">
             <a href="{{ url_for('main.edit_employee', employee_id=employee.id) }}" class="refined-btn-primary">
-                <span class="material-icons">edit</span>
+                {{ icon('edit') }}
                 Edytuj pracownika
             </a>
             <a href="{{ url_for('main.employees_list') }}" class="refined-btn-secondary">
-                <span class="material-icons">arrow_back</span>
+                {{ icon('arrow_back') }}
                 Powrót do listy
             </a>
             <button onclick="confirmDelete()" class="refined-btn-danger">
-                <span class="material-icons">delete</span>
+                {{ icon('delete') }}
                 {% if employee.is_active %}Dezaktywuj{% else %}Usuń{% endif %}
             </button>
         </div>
@@ -777,14 +778,14 @@ function toggleAddForm() {
 
     if (isOpen) {
         // Closing via header button = user cancelled
-        icon.textContent = 'add';
+        icon.innerHTML = Icons.svg('add');
         label.textContent = 'Dodaj usługę';
         if (typeof Notifications !== 'undefined') {
             Notifications.info('Przypisywanie usługi zostało przerwane');
         }
     } else {
         // Opening
-        icon.textContent = 'remove';
+        icon.innerHTML = Icons.svg('remove');
         label.textContent = 'Anuluj';
         loadAvailableServices();
     }
@@ -932,7 +933,7 @@ async function assignService() {
             document.getElementById('new-commission').value = '';
             document.getElementById('new-duration').value = '';
             document.getElementById('add-service-form').classList.remove('visible');
-            document.getElementById('toggle-add-service-icon').textContent = 'add';
+            document.getElementById('toggle-add-service-icon').innerHTML = Icons.svg('add');
             document.getElementById('toggle-add-service-label').textContent = 'Dodaj usługę';
             loadAssignedServices();
             if (typeof Notifications !== 'undefined') {

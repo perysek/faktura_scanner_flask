@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Wizyta #{{ appointment_id }} — {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -54,7 +55,7 @@
 
     .star-btn.active { color: var(--color-star-filled) !important; }
     .star-btn:hover { color: #fbbf24 !important; }
-    .material-icons { font-size: 1rem; vertical-align: middle; }
+    .icon { font-size: 1rem; vertical-align: middle; }
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr 1fr; } }
@@ -109,7 +110,7 @@
             <p class="page-subtitle" id="page-subtitle">Ładowanie...</p>
         </div>
         <a href="{{ url_for('main.appointments_list') }}" class="btn-action" id="back-button">
-            <span class="material-icons">arrow_back</span> <span id="back-text">Powrót do listy</span>
+            {{ icon('arrow_back') }} <span id="back-text">Powrót do listy</span>
         </a>
     </header>
 
@@ -188,7 +189,7 @@
             <span id="score-label" style="font-size:0.8125rem;color:var(--color-ink-subtle);margin-left:0.5rem;">Brak oceny</span>
         </div>
         <button id="save-satisfaction-btn" class="btn-action primary" disabled style="opacity:0.4;">
-            <span class="material-icons">save</span>
+            {{ icon('save') }}
             Zapisz ocenę
         </button>
 
@@ -346,7 +347,7 @@ async function loadAppointment() {
 
     // Add Edit button for editable statuses (not cancelled, not completed)
     if (a.status !== 'cancelled' && a.status !== 'completed') {
-        actionsHTML += `<a href="/appointment/${APPT_ID}/edit" class="btn-action"><span class="material-icons">edit</span>Edytuj</a>`;
+        actionsHTML += `<a href="/appointment/${APPT_ID}/edit" class="btn-action">{{ icon('edit') }}Edytuj</a>`;
     }
 
     if (actions.length === 0) {
@@ -356,9 +357,9 @@ async function loadAppointment() {
     } else {
         actionsHTML += actions.map(act => {
             if (act.status === 'completed') {
-                return `<button class="btn-action ${act.cls}" onclick="completeAppointment()"><span class="material-icons">check_circle</span>${act.label}</button>`;
+                return `<button class="btn-action ${act.cls}" onclick="completeAppointment()">{{ icon('check_circle') }}${act.label}</button>`;
             }
-            return `<button class="btn-action ${act.cls}" onclick="changeStatus('${act.status}')"><span class="material-icons">${act.cls==='danger'?'cancel':'arrow_forward'}</span>${act.label}</button>`;
+            return `<button class="btn-action ${act.cls}" onclick="changeStatus('${act.status}')">${Icons.svg(act.cls==='danger'?'cancel':'arrow_forward')}${act.label}</button>`;
         }).join('');
     }
 
@@ -496,7 +497,7 @@ async function loadAvailableAddons() {
     if (data.success && data.addons.length > 0) {
         container.innerHTML = data.addons.map(a => `
             <button class="addon-btn" onclick="addAddon(${a.service_id})">
-                <span class="material-icons">add</span>
+                {{ icon('add') }}
                 ${esc(a.service_name)} (${fmtPrice(a.price)})
             </button>
         `).join('');

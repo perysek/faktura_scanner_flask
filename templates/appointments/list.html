@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'components/icons.html' import icon %}
 {% block title %}Wizyty — {{ app_name }}{% endblock %}
 {% block mobile_title %}Wizyty{% endblock %}
 
@@ -83,8 +84,8 @@
     .empty-state { padding: 3rem 2rem; text-align: center; }
     .empty-icon { font-size: 4rem; color: var(--color-ink-subtle); opacity: 0.3; margin-bottom: 1rem; }
     .empty-text { color: var(--color-ink-subtle); font-size: 0.9375rem; font-weight: 300; }
-    .material-icons { font-size: 1rem; vertical-align: middle; }
-    .material-icons.lg { font-size: 1.5rem; }
+    .icon { font-size: 1rem; vertical-align: middle; }
+    .icon.lg { font-size: 1.5rem; }
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -114,7 +115,7 @@
                 <a href="{{ url_for('main.appointments_list') }}" class="active" id="nav-list">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary">
-                <span class="material-icons">add</span>
+                {{ icon('add') }}
                 Nowa wizyta
             </a>
         </div>
@@ -144,7 +145,7 @@
         </div>
         <div style="align-self: flex-end;">
             <button onclick="loadAppointments()" class="refined-btn-secondary">
-                <span class="material-icons">search</span>
+                {{ icon('search') }}
                 Filtruj
             </button>
         </div>
@@ -152,12 +153,12 @@
         <!-- Kontrolki paginacji miesięcznej -->
         <div style="margin-left: auto; align-self: flex-end; display: flex; gap: 0.5rem;">
             <button onclick="previousMonth()" class="refined-btn-secondary" title="Poprzedni miesiąc (–30 dni)" aria-label="Poprzedni miesiąc">
-                <span class="material-icons">chevron_left</span>
+                {{ icon('chevron_left') }}
                 –30 dni
             </button>
             <button onclick="nextMonth()" class="refined-btn-secondary" title="Następny miesiąc (+30 dni)" aria-label="Następny miesiąc">
                 +30 dni
-                <span class="material-icons">chevron_right</span>
+                {{ icon('chevron_right') }}
             </button>
         </div>
     </div>
@@ -182,7 +183,7 @@
             <tbody id="appointments-tbody">
                 <tr>
                     <td colspan="10" class="empty-state cell-empty">
-                        <span class="material-icons empty-icon">calendar_today</span>
+                        {{ icon('calendar_today', class='empty-icon') }}
                         <p class="empty-text">Ładowanie wizyt...</p>
                     </td>
                 </tr>
@@ -415,7 +416,7 @@ function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="empty-state cell-empty"><span class="material-icons empty-icon">event_busy</span><p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
