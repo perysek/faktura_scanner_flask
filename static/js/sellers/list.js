@@ -87,12 +87,12 @@ function renderSellersTable() {
                         <a href="/seller/${seller.id}/edit"
                            class="table-action-btn table-action-btn-edit"
                            title="Edytuj">
-                            <span class="material-icons">edit</span>
+                            ${Icons.svg('edit')}
                         </a>
                         <button onclick="confirmDeleteSeller(${seller.id})"
                                 class="table-action-btn table-action-btn-delete"
                                 title="Usun">
-                            <span class="material-icons">delete</span>
+                            ${Icons.svg('delete')}
                         </button>
                     </div>
                 </td>
@@ -135,7 +135,7 @@ async function confirmDeleteSeller(sellerId) {
         if (invoiceCount > 0) {
             message += `<div class="bg-red-50 border border-red-200 p-3 rounded-lg">
                 <p class="text-red-800 font-semibold mb-2">
-                    <span class="material-icons align-middle mr-1">warning</span>
+                    ${Icons.svg('warning', 'align-middle mr-1')}
                     Uwaga: Zostanie usuniete ${invoiceCount} faktur!
                 </p>
                 <ul class="text-red-700 text-sm max-h-32 overflow-y-auto">`;
@@ -264,7 +264,7 @@ function showSyncResults(data) {
                 <td class="text-center">
                     <button onclick="addMissingSeller('${escapeHtml(ms.nip)}', '${escapeHtml(ms.name)}')"
                             class="btn-success">
-                        <span class="material-icons text-sm mr-1">add</span>
+                        ${Icons.svg('add', 'text-sm mr-1')}
                         Dodaj do bazy
                     </button>
                 </td>
@@ -289,12 +289,12 @@ function showSyncResults(data) {
                     <div class="flex gap-2 justify-center">
                         <button onclick="fixDiscrepancy('use_seller_name', ${d.invoice_id}, ${d.seller_id})"
                                 class="btn-secondary" title="Zmien fakture na nazwe z bazy">
-                            <span class="material-icons text-sm mr-1">arrow_back</span>
+                            ${Icons.svg('arrow_back', 'text-sm mr-1')}
                             Uzyj z bazy
                         </button>
                         <button onclick="fixDiscrepancy('use_invoice_name', ${d.invoice_id}, ${d.seller_id})"
                                 class="btn-warning" title="Zmien baze na nazwe z faktury">
-                            <span class="material-icons text-sm mr-1">arrow_forward</span>
+                            ${Icons.svg('arrow_forward', 'text-sm mr-1')}
                             Uzyj z faktury
                         </button>
                     </div>

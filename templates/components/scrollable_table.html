@@ -1,3 +1,5 @@
+{% from 'components/icons.html' import icon %}
+{% from 'components/icons.html' import icon as svg_icon %}
 {#
     Reusable Table Component Macros
     Canonical token-based styling (System B): flat fills, 2-3px radii,
@@ -130,7 +132,7 @@
     <td colspan="{{ col_count }}" class="px-6 py-16 text-center">
         <div class="flex flex-col items-center animate-fade-up">
             <div class="w-16 h-16 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full flex items-center justify-center mb-4">
-                <span class="material-icons text-3xl text-[var(--color-ink-subtle)]">{{ icon }}</span>
+                {{ svg_icon(icon, class='text-3xl text-[var(--color-ink-subtle)]') }}
             </div>
             <p class="text-lg font-medium text-[var(--color-ink)] mb-1">{{ title }}</p>
             {% if message %}
@@ -138,7 +140,7 @@
             {% endif %}
             {% if action_url %}
             <a href="{{ action_url }}" class="form-btn-primary btn-press">
-                <span class="material-icons text-sm">{{ action_icon }}</span>
+                {{ icon(action_icon, class='text-sm') }}
                 {{ action_label }}
             </a>
             {% endif %}
@@ -180,7 +182,7 @@
 {% set icon_size = 'text-xs' if size == 'sm' else 'text-sm' %}
 
 <span class="inline-flex items-center gap-1 {{ padding }} rounded-[2px] {{ text_size }} font-medium {{ config.bg }} {{ config.text }}">
-    <span class="material-icons {{ icon_size }}">{{ config.icon }}</span>
+    {{ icon(config.icon, class=icon_size) }}
     {{ status }}
 </span>
 {% endmacro %}
@@ -250,14 +252,14 @@
 <a href="{{ href }}"
    class="{{ size_classes[size] }} rounded-[2px] transition-colors {{ color_classes[color] }} btn-press"
    title="{{ title }}" aria-label="{{ title }}">
-    <span class="material-icons {{ icon_sizes[size] }}">{{ icon }}</span>
+    {{ svg_icon(icon, class=icon_sizes[size]) }}
 </a>
 {% else %}
 <button type="button"
         onclick="{{ onclick }}"
         class="{{ size_classes[size] }} rounded-[2px] transition-colors {{ color_classes[color] }} btn-press"
         title="{{ title }}" aria-label="{{ title }}">
-    <span class="material-icons {{ icon_sizes[size] }}">{{ icon }}</span>
+    {{ svg_icon(icon, class=icon_sizes[size]) }}
 </button>
 {% endif %}
 {% endmacro %}
@@ -277,7 +279,7 @@
         onclick="toggleTableSearch('{{ target_id }}')"
         class="p-2 rounded-[2px] transition-all {{ 'bg-[var(--color-info-bg)] text-[var(--color-focus-ring)]' if active else 'text-[var(--color-ink-subtle)] hover:text-[var(--color-focus-ring)] hover:bg-[var(--color-info-bg)]' }}"
         title="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}" aria-label="{{ 'Ukryj filtry' if active else 'Pokaż filtry' }}">
-    <span class="material-icons text-xl">filter_list</span>
+    {{ icon('filter_list', class='text-xl') }}
 </button>
 {% endmacro %}
 

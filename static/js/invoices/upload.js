@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Przywrócić poprzednią sesję?',
             content: `
                 <div class="text-center py-4">
-                    <span class="material-icons text-primary text-5xl mb-4">restore</span>
+                    ${Icons.svg('restore', 'text-primary text-5xl mb-4')}
                     <p class="text-gray-700 mb-2">Znaleziono <strong>${restoredResults.length}</strong> niezapisanych faktur z poprzedniej sesji.</p>
                     <p class="text-sm text-gray-500">Czy chcesz kontynuować pracę?</p>
                 </div>
@@ -111,7 +111,7 @@ function updateWorkflowStep(step) {
         if (i < step) {
             // Completed step
             circle.classList.add('bg-emerald-500', 'text-white', 'shadow-emerald-500/30');
-            numberSpan.innerHTML = '<span class="material-icons text-sm">check</span>';
+            numberSpan.innerHTML = Icons.svg('check', 'text-sm');
             if (label) {
                 label.className = 'block text-xs font-semibold text-emerald-600 uppercase tracking-wide';
             }
@@ -223,14 +223,14 @@ function displaySelectedFiles() {
     container.innerHTML = selectedFiles.map((file, index) => `
         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3">
-                <span class="material-icons text-gray-500">insert_drive_file</span>
+                ${Icons.svg('insert_drive_file', 'text-gray-500')}
                 <div>
                     <p class="text-sm font-medium text-gray-900">${escapeHtml(file.name)}</p>
                     <p class="text-xs text-gray-500">${formatFileSize(file.size)}</p>
                 </div>
             </div>
             <button onclick="removeFile(${index})" class="text-gray-400 hover:text-status-error transition-colors">
-                <span class="material-icons text-sm">close</span>
+                ${Icons.svg('close', 'text-sm')}
             </button>
         </div>
     `).join('');
@@ -267,7 +267,7 @@ function updateUploadButton() {
     clearBtn.disabled = !hasFiles;
 
     uploadBtn.innerHTML = `
-        <span class="material-icons text-sm mr-2">upload</span>
+        ${Icons.svg('upload', 'text-sm mr-2')}
         Prześlij pliki${hasFiles ? ` (${selectedFiles.length})` : ''}
     `;
 }
@@ -712,7 +712,7 @@ function displayProcessingResults() {
                 <td class="py-3 px-2 text-center">
                     <button onclick="viewPdf('${escapeHtml(result.filename)}')"
                             class="text-primary hover:text-primary-700 hover:bg-primary-50 p-1.5 rounded transition-colors" title="Podgląd PDF">
-                        <span class="material-icons text-lg">visibility</span>
+                        ${Icons.svg('visibility', 'text-lg')}
                     </button>
                 </td>
                 <td class="py-3 px-2 text-center">
@@ -884,7 +884,7 @@ async function saveAndFinish() {
 
     const saveBtn = document.getElementById('save-finish-btn');
     saveBtn.disabled = true;
-    saveBtn.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">sync</span>Zapisywanie...';
+    saveBtn.innerHTML = Icons.svg('sync', 'text-sm mr-2 animate-spin') + 'Zapisywanie...';
 
     try {
         // Prepare invoices to save
@@ -1009,7 +1009,7 @@ async function clearAllStagedFiles() {
         title: 'Usuń wszystkie pliki',
         content: `
             <div class="text-center py-4">
-                <span class="material-icons text-status-warning text-5xl mb-4">warning</span>
+                ${Icons.svg('warning', 'text-status-warning text-5xl mb-4')}
                 <p class="text-gray-700 mb-2">Czy na pewno chcesz usunąć <strong>${fileCount}</strong> plik${fileCount === 1 ? '' : fileCount < 5 ? 'i' : 'ów'}?</p>
                 <p class="text-sm text-gray-500">Tej operacji nie można cofnąć.</p>
             </div>
@@ -1115,7 +1115,7 @@ async function getFoldersAndOpenModal() {
     // Disable button during fetch
     const originalContent = selectFoldersBtn.innerHTML;
     selectFoldersBtn.disabled = true;
-    selectFoldersBtn.innerHTML = '<span class="material-icons text-sm animate-spin">sync</span> Pobieranie folderów...';
+    selectFoldersBtn.innerHTML = Icons.svg('sync', 'text-sm animate-spin') + ' Pobieranie folderów...';
 
     try {
         const result = await API.email.getFolders();
@@ -1180,7 +1180,7 @@ async function getFolders() {
 
     // Disable button during fetch
     getFoldersBtn.disabled = true;
-    getFoldersBtn.innerHTML = '<span class="material-icons text-sm animate-spin">sync</span> Pobieranie...';
+    getFoldersBtn.innerHTML = Icons.svg('sync', 'text-sm animate-spin') + ' Pobieranie...';
 
     try {
         const result = await API.email.getFolders();
@@ -1222,7 +1222,7 @@ async function getFolders() {
     } finally {
         // Re-enable button
         getFoldersBtn.disabled = false;
-        getFoldersBtn.innerHTML = '<span class="material-icons text-sm">folder</span> Pobierz foldery';
+        getFoldersBtn.innerHTML = Icons.svg('folder', 'text-sm') + ' Pobierz foldery';
     }
 }
 
@@ -1500,7 +1500,7 @@ function addProgressNotification(message, type = 'info') {
 
     const icon = getNotificationIcon(type);
     notification.innerHTML = `
-        <span class="material-icons text-sm mt-0.5">${icon}</span>
+        ${Icons.svg(icon, 'text-sm mt-0.5')}
         <span class="text-sm flex-1">${escapeHtml(message)}</span>
     `;
 

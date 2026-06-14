@@ -1,3 +1,5 @@
+{% from 'components/icons.html' import icon %}
+{% from 'components/icons.html' import icon as svg_icon %}
 {#
     Reusable Form Field Component Macros
     Following the Flask + Jinja2 GUI Design Guide v2.1
@@ -30,7 +32,7 @@
 {% macro form_section(title, icon='edit', description='') %}
 <div class="form-card animate-fade-up">
     <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" style="color: var(--color-ink);">
-        <span class="material-icons" style="color: var(--color-ink-muted);">{{ icon }}</span>
+        {{ svg_icon(icon, style='color: var(--color-ink-muted);') }}
         {{ title }}
     </h3>
     {% if description %}
@@ -84,7 +86,7 @@
                 onclick="pasteToField('{{ name }}')"
                 class="{{ paste_btn_classes }}"
                 title="Wklej ze schowka" aria-label="Wklej ze schowka">
-            <span class="material-icons text-sm">content_paste</span>
+            {{ icon('content_paste', class='text-sm') }}
         </button>
         {% endif %}
     </div>
@@ -130,7 +132,7 @@
                 onclick="pasteToField('{{ name }}')"
                 class="{{ paste_btn_classes }}"
                 title="Wklej ze schowka" aria-label="Wklej ze schowka">
-            <span class="material-icons text-sm">content_paste</span>
+            {{ icon('content_paste', class='text-sm') }}
         </button>
         {% endif %}
     </div>
@@ -171,7 +173,7 @@
                 onclick="pasteToField('{{ name }}')"
                 class="{{ paste_btn_classes }}"
                 title="Wklej ze schowka" aria-label="Wklej ze schowka">
-            <span class="material-icons text-sm">content_paste</span>
+            {{ icon('content_paste', class='text-sm') }}
         </button>
         {% endif %}
     </div>
@@ -222,7 +224,7 @@
             {% endfor %}
         </select>
         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3" style="color: var(--color-ink-subtle);">
-            <span class="material-icons text-lg">expand_more</span>
+            {{ icon('expand_more', class='text-lg') }}
         </div>
     </div>
 </div>
@@ -269,7 +271,7 @@
                 onclick="pasteToField('{{ name }}')"
                 class="{{ paste_btn_classes }} h-fit"
                 title="Wklej ze schowka" aria-label="Wklej ze schowka">
-            <span class="material-icons text-sm">content_paste</span>
+            {{ icon('content_paste', class='text-sm') }}
         </button>
         {% endif %}
     </div>
@@ -346,7 +348,7 @@
                     onclick="pasteToField('{{ amount_name }}')"
                     class="{{ paste_btn_classes }}"
                     title="Wklej ze schowka" aria-label="Wklej ze schowka">
-                <span class="material-icons text-sm">content_paste</span>
+                {{ icon('content_paste', class='text-sm') }}
             </button>
             {% endif %}
         </div>
@@ -364,7 +366,7 @@
             {% endfor %}
         </select>
         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3" style="color: var(--color-ink-subtle);">
-            <span class="material-icons text-lg">expand_more</span>
+            {{ icon('expand_more', class='text-lg') }}
         </div>
     </div>
 </div>
@@ -388,10 +390,10 @@
             class="form-btn-primary btn-press flex-1 md:flex-none"
             {% if is_loading %}disabled{% endif %}>
         {% if is_loading %}
-        <span class="material-icons text-sm animate-spin">hourglass_top</span>
+        {{ icon('hourglass_top', class='text-sm animate-spin') }}
         Zapisywanie...
         {% else %}
-        <span class="material-icons text-sm">{{ submit_icon }}</span>
+        {{ icon(submit_icon, class='text-sm') }}
         {{ submit_label }}
         {% endif %}
     </button>
@@ -416,7 +418,7 @@
 {% macro field_error(field_name, error_message) %}
 {% if error_message %}
 <p id="{{ field_name }}-error" class="mt-1 text-sm flex items-center gap-1 animate-fade-in" style="color: var(--color-error);">
-    <span class="material-icons text-sm">error_outline</span>
+    {{ icon('error_outline', class='text-sm') }}
     {{ error_message }}
 </p>
 {% endif %}
@@ -451,7 +453,7 @@
     <div class="px-4 py-2 flex items-center gap-2"
          style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
         {% if icon %}
-        <span class="material-icons text-sm" style="color: var(--color-ink-subtle);">{{ icon }}</span>
+        {{ svg_icon(icon, class='text-sm', style='color: var(--color-ink-subtle);') }}
         {% endif %}
         <span class="text-sm" style="color: var(--color-ink);">{{ value or '-' }}</span>
     </div>

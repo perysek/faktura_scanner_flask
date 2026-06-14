@@ -105,7 +105,7 @@ function renderInvoicesTable() {
         let nameCell = escapeHtml(invoiceName);
         if (namesDiffer) {
             nameCell = `<span class="text-yellow-600" title="Rozni sie od nazwy sprzedawcy">
-                <span class="material-icons text-sm align-middle mr-1">warning</span>
+                ${Icons.svg('warning', 'text-sm align-middle mr-1')}
                 ${escapeHtml(invoiceName)}
             </span>`;
         }
@@ -121,7 +121,7 @@ function renderInvoicesTable() {
                     <a href="/invoice/${invoice.id}/edit"
                        class="table-action-btn table-action-btn-edit"
                        title="Edytuj fakture">
-                        <span class="material-icons">edit</span>
+                        ${Icons.svg('edit')}
                     </a>
                 </td>
             </tr>
@@ -197,7 +197,7 @@ function showPropagatePrompt(count) {
             <div class="mb-4">
                 <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                     <p class="text-blue-800">
-                        <span class="material-icons align-middle mr-1">info</span>
+                        ${Icons.svg('info', 'align-middle mr-1')}
                         ${count} faktur ma inna nazwe sprzedawcy niz zapisana w bazie.
                     </p>
                 </div>

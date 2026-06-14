@@ -191,7 +191,7 @@ function showNipConflictModal(existingSeller, newName) {
             <div class="mb-4">
                 <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-4">
                     <p class="text-yellow-800">
-                        <span class="material-icons align-middle mr-1">warning</span>
+                        ${Icons.svg('warning', 'align-middle mr-1')}
                         NIP <strong>${escapeHtml(existingSeller.seller_nip)}</strong> juz istnieje w bazie.
                     </p>
                 </div>
@@ -249,7 +249,7 @@ function showNameConflictModal(existingSeller, nip, name, address) {
             <div class="mb-4">
                 <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-4">
                     <p class="text-blue-800">
-                        <span class="material-icons align-middle mr-1">info</span>
+                        ${Icons.svg('info', 'align-middle mr-1')}
                         Sprzedawca o podobnej nazwie juz istnieje.
                     </p>
                 </div>
