@@ -6,7 +6,7 @@ import atexit
 import base64
 import logging
 import os
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 from flask.json.provider import DefaultJSONProvider
 
@@ -118,13 +118,27 @@ def create_app():
     # Session cookie hardening (defense-in-depth against CSRF + cookie theft).
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # blocks cross-site POST cookie send
-    # Secure requires HTTPS end-to-end. The live Vultr box is reached over plain
-    # HTTP (raw IP, no TLS cert), so default OFF — a Secure cookie over HTTP is
-    # silently dropped by the browser and login breaks. Flip on via env once a
-    # domain + cert is in place.
+    # Secure = cookie only sent over HTTPS. Flip on by setting SESSION_COOKIE_SECURE=true
+    # in .env once the site is reached over the TLS edge (Cloudflare) AND the app sees
+    # the https scheme (ProxyFix + nginx X-Forwarded-Proto, below). A Secure cookie over
+    # plain HTTP is silently dropped and login breaks, so this stays env-gated.
     app.config['SESSION_COOKIE_SECURE'] = (
         os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
     )
+
+    # Sessions persist 30 days (sliding window — each request resets the clock),
+    # so users stay logged in across browser restarts without the "remember me"
+    # box. `session.permanent = True` is set on login (routes/auth/routes.py).
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+    app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
+    # Behind a TLS-terminating reverse proxy (Cloudflare -> nginx -> gunicorn).
+    # Trust ONE proxy hop's X-Forwarded-* so Flask sees the real client IP
+    # (audit logs), the original https scheme (secure-cookie + external URLs),
+    # and the original host. Only safe because the origin is reached solely via
+    # the proxy — keep the nginx Cloudflare IP allowlist in place.
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # CSRF protection — applies to every POST/PUT/PATCH/DELETE by default.
     # Public, token-authenticated blueprints are exempted after registration.

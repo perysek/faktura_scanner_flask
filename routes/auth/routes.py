@@ -4,7 +4,7 @@ Trasy autentykacji - logowanie, wylogowanie, profil, reset hasła
 import secrets
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from repositories.users.user_repository import UserRepository
 from repositories.audit_repository import AuditRepository
@@ -40,6 +40,7 @@ def login():
 
         if success:
             login_user(user, remember=remember)
+            session.permanent = True  # 30-day sliding session (PERMANENT_SESSION_LIFETIME)
             flash(f'Witaj, {user.full_name}!', 'success')
 
             AuditRepository().safe_log_event(
