@@ -1,14 +1,22 @@
 ---
 title: "Deferred Design Tickets — Implementation Plan"
 description: "Close the 8 deferred tickets from DESIGN-TOKENS.md plus the expanded mobile-stacked-card mandate: card-ify 13 data tables, retire dead JS, replace Material Icons with inline SVG, tokenize radii, add a CI design-guard, consolidate VARIANT buttons, and add a page_title processor."
-status: pending
+status: complete
 priority: P2
 tags: [ui, responsive, accessibility, design-system, icons, ci, planning]
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-06-14
 ---
 
 # Deferred Design Tickets — Implementation Plan
+
+> **COMPLETE (2026-06-14).** All 9 phases shipped + deployed to Vultr. All 8 deferred
+> tickets closed (see DESIGN-TOKENS.md § "Deferred items — RESOLVED"). 14 tables card
+> at ≤640px via shared `.stack-cards`; icon font removed (inline SVG); dead JS deleted;
+> CI design-guard live; `page_title` processor + 6 pytest tests; axe 0 critical/serious
+> on all key pages. Commits: P01 `8de5235`, P02 `aae15db`/`715d175`, P03 `854272e`/
+> `b256bb2`/`fdd58ce`, P04 `ca8ac5c`/`2586eee`, P05 `10f82ea`, P06 `a253886`/`dd915a3`,
+> P07 `e776047`, P08 `2c2f669`, P09 `037bb8a`.
 
 ## Executive Summary
 
