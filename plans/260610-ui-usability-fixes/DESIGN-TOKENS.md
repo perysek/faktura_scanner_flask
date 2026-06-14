@@ -164,21 +164,62 @@ static/css/input.css  ──npm run build:css──▶  static/css/output.css (m
 - `npm run watch:css` during development.
 - `output.css` is generated — never edit it by hand; changes are overwritten.
 
-## Deferred items (post-plan tickets, 2026-06-11)
+## Deferred items — RESOLVED (260613-deferred-design-tickets plan, 2026-06-14)
 
-1. **Invoices/appointments mobile stacked cards** — adopt the Phase 09 recipe
-   (ADR-G-02 chose clients-first; the pattern is documented above).
-2. **`table-utils.js` `sortTable(columnIndex, tableId)` vs per-page `sortTable(sort_key)`
-   mismatch** — the global util shadows page functions when a page block fails to
-   parse; reconcile to one key-based util that also syncs `aria-sort` centrally.
-3. **Material Icons → inline SVG** unification outside sort headers (forms, badges,
-   toasts still use the icon font).
-4. Convert hardcoded `2px`/`3px` radii throughout `input.css` to `--radius-*` (cosmetic).
-5. Optional `page_title` context processor to auto-populate `mobile_title` per route.
-6. CI grep guard: fail the build if `rounded-xl|rounded-2xl|from-primary-` reappears
-   in authenticated templates.
-7. Page-local "VARIANT" button styles (appointments compact, absences, calendars,
-   profile, formy_zatrudnienia, services/categories) — optionally consolidate into
-   global size modifiers.
-8. axe leftovers below the serious gate: invoices `empty-table-header` (minor),
-   appointments `heading-order` + `region` (moderate).
+All eight deferred tickets are closed. See `plans/260613-deferred-design-tickets/`.
+
+1. ✅ **Mobile stacked cards** — extended from clients to **13 tables** (invoices,
+   appointments, sellers, employees, users, roles, absences requests/categories/
+   balances, my-absences, employee assigned-services, service-categories, formy).
+   Recipe extracted into a **shared `.stack-cards` component** (`input.css @layer
+   components`, ADR-D-01): opt-in via class + `data-label`/`cell-name`/`cell-actions`/
+   `cell-hide-sm`/`cell-empty`. `!important` on layout-resets beats page-local
+   unlayered `<style>` (same basis as the 16px rule). One component, not 13 copies.
+2. ✅ **`table-utils.js`** — deleted (ADR-D-02). It had zero live consumers; every
+   list page already has its own key-based, aria-syncing sorter. Removed the
+   shadowing trap entirely. Orphans `invoices/list.js` + `upload_original.js.bak`
+   also deleted.
+3. ✅ **Material Icons → inline SVG** — full removal of the icon font. New
+   `components/icons.html` `icon()` macro + `static/js/icons.js` `Icons.svg()` (66
+   Material Symbols outlined glyphs, `viewBox 0 -960 960 960`, `currentColor`,
+   `aria-hidden`). Swept ~163 template spans + ~24 JS usages; removed the
+   Google-Fonts `<link>`. `grep material-icons` == 0. `static/js/ui.js` (dead) deleted.
+4. ✅ Hardcoded `2px`/`3px` radii in `input.css` → `var(--radius-sm/md)` (token defs
+   keep the literals).
+5. ✅ `page_title` context processor — `config/page_titles.py` (`request.endpoint` →
+   Polish label), exposed via `inject_globals`; `base.html` mobile-title defaults to
+   it, explicit blocks still override. 6 pytest tests.
+6. ✅ CI design-guard — `ci.yml` fails the build on
+   `rounded-xl|rounded-2xl|from-primary-|to-primary-` in authenticated templates
+   (auth standalone pages excluded). Also fixed a pre-existing CI breakage
+   (psycopg2-binary 2.9.9 → 2.9.10 for Python 3.13 wheels).
+7. ✅ VARIANT button consolidation — `.refined-btn-ghost`/`.refined-btn-danger`
+   promoted to global; the 4 appointments compact pages reduced to density-only
+   deltas (base styles delegate to global). Deliberate per-page densities
+   (create/edit form-large, absences, profile) kept local; standalone auth untouched.
+8. ✅ axe leftovers — invoices `empty-table-header` fixed (sr-only `<th>` labels);
+   appointments `heading-order`/`region` no longer present. Carding the admin tables
+   also surfaced + fixed pre-existing criticals (employees/balances unlabeled
+   selects + inputs, categories modal button-name) and the login flash-warning
+   contrast. Remaining `region`/`landmark-one-main` are moderate (below the gate).
+
+## Shared `.stack-cards` component (added 260613)
+
+`input.css @layer components`, opt-in per `<table class="… stack-cards">`:
+- `data-label="Kolumna"` on each `<td>` → label shown above the value at ≤640px.
+- `cell-name` = card header (no label, bottom border); `cell-actions` = footer
+  (label "Akcje"); `cell-hide-sm` = hidden on cards; `cell-empty` = full-width
+  colspan/empty-state row.
+- Split sticky-header/body tables (invoices, sellers): add `stack-cards` to the
+  **body** table + a page-local ≤640px block that hides the fixed header table and
+  neutralises the flex/scroll wrappers.
+- `.stack-cards-wrap` on the container resets its border/overflow cosmetics.
+
+## Icon system (added 260613)
+
+Inline SVG only — no icon font. Jinja: `{% from 'components/icons.html' import icon %}`
+then `{{ icon('save', class='…', style='…') }}`. JS: `Icons.svg('save', 'class')`.
+`.icon` base (input.css) sizes by font-size (1em) so `text-sm`/`text-xl` still work
+and color inherits via `currentColor`. Unknown name falls back to `info`. Paths are
+fetched from Google Material Symbols (never hand-authored); keep `icons.html` and
+`icons.js` in sync.

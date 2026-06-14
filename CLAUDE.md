@@ -82,13 +82,23 @@ Rules:
   buttons in authenticated templates.
 - CSS build: edit `static/css/input.css`, run `npm run build:css`. **Never hand-edit
   `static/css/output.css`** (generated, gitignored, rebuilt on the server at deploy).
-- Buttons: global `.refined-btn-primary/secondary` (flat) or `.form-btn-*`. Forms:
+- Buttons: global `.refined-btn-primary/secondary` (flat), `.refined-btn-ghost/danger`,
+  `.refined-btn-sm`, or `.form-btn-*`. Forms:
   `.form-input/.form-select/.form-textarea/.form-label/.form-card`.
+- Icons: **inline SVG only** via `{% from 'components/icons.html' import icon %}` →
+  `{{ icon('save', class='…') }}`, or `Icons.svg('save', 'class')` in JS. **Never**
+  the Material Icons font (removed). Sizes by font-size (1em); color via
+  `currentColor`. Add a glyph by fetching its Material Symbols path into both
+  `components/icons.html` and `static/js/icons.js`.
 - Sortable tables: `<th class="th-sortable" aria-sort="…">` wrapping a
   `.th-sort-btn` `<button>` + `.th-sort-icon` glyph (▲/▼). Sync `aria-sort` in the
-  page's sort JS.
-- Mobile: every page sets `{% block mobile_title %}Label{% endblock %}` (shown in
-  the header < lg). Wide tables use the stacked-card pattern from DESIGN-TOKENS.md
-  (`data-label` + ≤640px media block — see `clients/list.html`).
+  page's sort JS. (Note: the global `table-utils.js` was deleted — each list page
+  owns its sorter.)
+- Mobile: every routed page gets a header title (< lg) from the `page_title`
+  processor (`config/page_titles.py` — add new endpoints there) or an explicit
+  `{% block mobile_title %}Label{% endblock %}`. Wide tables opt into the shared
+  **`.stack-cards`** component (`input.css @layer components`): add `stack-cards` to
+  the `<table>`, `data-label` per `<td>`, `cell-name`/`cell-actions`/`cell-hide-sm`/
+  `cell-empty` markers. Full recipe in DESIGN-TOKENS.md.
 - Form controls must compute ≥16px font-size at ≤1023px (global guard in input.css
   — do not override with !important page styles).
