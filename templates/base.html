@@ -228,7 +228,7 @@
                     <img src="{{ logo_data_uri }}" alt="" class="h-6 w-auto object-contain" aria-hidden="true">
                     {% endif %}
                     <span class="truncate text-sm font-semibold" style="color: var(--color-ink);">
-                        {%- block mobile_title %}{% endblock -%}
+                        {%- block mobile_title %}{{ page_title or '' }}{% endblock -%}
                     </span>
                 </div>
                 <!-- Right Header Actions (e.g. User Profile or Global Actions) -->

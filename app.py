@@ -77,6 +77,11 @@ class PostgreSQLJSONProvider(DefaultJSONProvider):
         return super().default(obj)
 
 
+# Per-route mobile header titles (P08) live in config/page_titles.py so the
+# mapping is importable in tests without the app factory / DB init.
+from config.page_titles import page_title_for  # noqa: E402
+
+
 def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__)
@@ -299,6 +304,7 @@ def create_app():
     @app.context_processor
     def inject_globals():
         from flask_login import current_user
+        from flask import request as _request
         from config.auth_config import (
             get_user_module_permissions, is_supervisor, get_linked_employee,
             can_edit_service_price_history, can_send_appointment_sms
@@ -342,6 +348,7 @@ def create_app():
             'has_linked_employee': _has_linked_employee,
             'can_edit_price_history': _can_edit_price_history,
             'can_send_sms': _can_send_sms,
+            'page_title': page_title_for(getattr(_request, 'endpoint', None)),
         }
 
     # P4-3/P4-4: Clean up stale upload temp files on startup
