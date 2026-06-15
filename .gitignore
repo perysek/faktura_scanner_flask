@@ -58,6 +58,20 @@ id_rsa*
 id_ed25519*
 *.pem
 
+# TLS / Cloudflare certs + private keys (SENSITIVE — these .txt files bundle a PRIVATE KEY)
+origin-certificate-key.txt
+*-certificate-*.txt
+claudflare-files/
+cloudflare-files/
+*.har
+
+# Cloudflare API token (SENSITIVE — never commit)
+.cf-token
+.cf-token.txt
+.cf_token
+.cf_token.txt
+*cf?token*
+
 # Deployment notes
 vultr_deployment.txt
 
@@ -99,3 +113,4 @@ entities.json
 .claude/worktrees/
 plans/260522-entity-import-step0/*-Klienci.xlsx
 plans/260522-entity-import-step0/*_raw.xlsx
+.gstack/
