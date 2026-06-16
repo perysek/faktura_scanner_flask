@@ -201,6 +201,14 @@
             <p class="page-subtitle">Widok dzienny harmonogramu pracowników</p>
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <button type="button" id="past-visits-trigger" class="past-visits-trigger" hidden
+                    aria-label="Pokaż przeszłe wizyty do rozliczenia">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                </svg>
+                Rozlicz przeszłe wizyty
+                <span class="past-visits-trigger__count" id="past-visits-count">0</span>
+            </button>
             <div class="view-toggle">
                 <a href="{{ url_for('main.appointments_calendar') }}" class="active" id="nav-day">Dzień</a>
                 <a href="{{ url_for('main.appointments_calendar_week') }}" id="nav-week">Tydzień</a>

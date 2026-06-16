@@ -1,298 +1,527 @@
 /**
  * Past Visits Scanner
  *
- * Skanuje przeszłe wizyty z nieukończonym statusem przy załadowaniu widoków wizyt.
- * Wyświetla modal z listą wizyt do aktualizacji statusu.
+ * Skanuje przeszłe wizyty z nieukończonym statusem (finished/cancelled/no-show
+ * jeszcze nieustawiony). NIE pokazuje już modala automatycznie przy załadowaniu
+ * widoku — zamiast tego podświetla przycisk-ostrzeżenie "Rozlicz przeszłe wizyty"
+ * przed przełącznikami widoków. Kliknięcie przycisku otwiera modal.
+ *
+ * Modal (desktop): zwarta tabela mieszcząca się w szerokości modala (bez
+ * h-scrolla). Kolumna "Data i godzina" łączy datę (dd.mm.yyyy) i zakres godzin
+ * (hh:mm-hh:mm). Kolumna "Status" to klikalny badge, który rozwija pod sobą
+ * wybór statusu końcowego (kolory zgodne z typologią badge'y statusów).
+ *
+ * Modal (mobile, ≤640px): poziomo przewijane, zwarte karty z 3-pozycyjnym
+ * przełącznikiem (zakończona / anulowana / no-show) na dole każdej karty.
+ *
+ * Licznik zmian (np. "3/7") jest pokazany w prawym górnym rogu nagłówka modala.
+ * Przycisk "Zapisz zmiany" jest aktywny dopiero gdy zmieniono ≥1 status.
  */
 
 const PastVisitsScanner = {
+    appointments: [],
+    selections: {},   // { [appointmentId]: 'completed' | 'cancelled' | 'no_show' }
+    original: {},     // { [appointmentId]: bieżący (nierozliczony) status }
+    total: 0,
+    modalOverlay: null,
+    trigger: null,
+    countEl: null,
+    saveBtn: null,
+    bulkBtn: null,
+
+    // Statusy końcowe oferowane użytkownikowi (kolejność = kolejność w UI)
+    RESOLUTIONS: ['completed', 'cancelled', 'no_show'],
+
+    STATUS_LABELS: {
+        'scheduled': 'Zaplanowana',
+        'confirmed': 'Potwierdzona',
+        'in_progress': 'W trakcie',
+        'completed': 'Zakończona',
+        'cancelled': 'Anulowana',
+        'no_show': 'Nieobecność klienta'
+    },
+
+    // Krótsze etykiety pod zwarty przełącznik mobilny
+    STATUS_LABELS_SHORT: {
+        'completed': 'Zakończona',
+        'cancelled': 'Anulowana',
+        'no_show': 'No-show'
+    },
+
+    STATUS_VARS: {
+        'scheduled': 'color-status-scheduled',
+        'confirmed': 'color-status-confirmed',
+        'in_progress': 'color-status-in-progress',
+        'completed': 'color-status-completed',
+        'cancelled': 'color-status-cancelled',
+        'no_show': 'color-status-no-show'
+    },
+
     /**
-     * Inicjalizuje skaner i wywołuje skanowanie przy załadowaniu strony
+     * Inicjalizacja: podłącza przycisk-trigger i wczytuje wstępny licznik.
+     * NIE otwiera modala automatycznie (cel c).
      */
     init() {
-        // Czekaj na DOMContentLoaded jeśli dokument nie jest jeszcze gotowy
+        const boot = () => this.boot();
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.scan());
+            document.addEventListener('DOMContentLoaded', boot);
         } else {
-            this.scan();
+            boot();
         }
     },
 
+    async boot() {
+        this.trigger = document.getElementById('past-visits-trigger');
+        this.countEl = document.getElementById('past-visits-count');
+        if (this.trigger) {
+            this.trigger.addEventListener('click', () => this.open());
+        }
+        await this.refreshCount();
+    },
+
     /**
-     * Skanuje przeszłe wizyty z nieukończonym statusem
+     * Pobiera listę przeszłych wizyt i aktualizuje przycisk-trigger.
      */
-    async scan() {
+    async refreshCount() {
         try {
-            const response = await fetch('/api/appointments/past-pending');
-            const data = await response.json();
-
-            if (!data.success) {
-                console.error('Błąd podczas skanowania przeszłych wizyt:', data.error);
-                return;
-            }
-
-            // Jeśli są przeszłe wizyty do aktualizacji, pokaż modal
-            if (data.appointments && data.appointments.length > 0) {
-                this.showModal(data.appointments);
-            }
+            this.appointments = await this.fetchPending();
         } catch (error) {
             console.error('Błąd podczas skanowania przeszłych wizyt:', error);
+            this.appointments = [];
+        }
+        this.updateTrigger();
+    },
+
+    async fetchPending() {
+        const response = await fetch('/api/appointments/past-pending');
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Nie udało się pobrać przeszłych wizyt');
+        }
+        return data.appointments || [];
+    },
+
+    updateTrigger() {
+        if (!this.trigger) return;
+        const n = this.appointments.length;
+        if (this.countEl) this.countEl.textContent = n;
+        if (n > 0) {
+            this.trigger.removeAttribute('hidden');
+        } else {
+            this.trigger.setAttribute('hidden', '');
         }
     },
 
     /**
-     * Wyświetla modal z listą przeszłych wizyt
+     * Otwiera modal — odświeża dane, aby pokazać aktualny stan.
+     */
+    async open() {
+        try {
+            this.appointments = await this.fetchPending();
+        } catch (error) {
+            // W razie błędu sieci skorzystaj z ostatnio wczytanych danych
+            console.error('Błąd podczas odświeżania przeszłych wizyt:', error);
+        }
+        this.updateTrigger();
+
+        if (!this.appointments.length) {
+            Modals.alert({
+                title: 'Brak wizyt do rozliczenia',
+                message: 'Wszystkie przeszłe wizyty mają już ustawiony status końcowy.',
+                type: 'success'
+            });
+            return;
+        }
+        this.showModal(this.appointments);
+    },
+
+    /**
+     * Buduje i pokazuje modal.
      */
     showModal(appointments) {
+        this.selections = {};
+        this.original = {};
+        this.total = appointments.length;
+        appointments.forEach(apt => { this.original[apt.id] = apt.status; });
+
         const content = this.createModalContent(appointments);
 
-        const modalOverlay = Modals.show({
-            title: `Przeszłe wizyty do zaktualizowania (${appointments.length})`,
+        const overlay = Modals.show({
+            title: 'Przeszłe wizyty do rozliczenia',
             content: content,
             size: 'large',
             closeOnOverlay: false,
             buttons: [
                 {
-                    text: 'Pomiń',
+                    // ###3 — lewy przycisk: ustaw wszystkie na "zakończona"
+                    text: 'Wszystkie na zakończone',
                     type: 'secondary',
-                    onClick: (e, overlay) => {
-                        Modals.close(overlay);
-                    }
+                    onClick: (e, ov) => this.markAllCompleted()
                 },
                 {
+                    text: 'Pomiń',
+                    type: 'secondary',
+                    onClick: (e, ov) => Modals.close(ov)
+                },
+                {
+                    // ###4 — aktywny dopiero po pierwszej zmianie statusu
                     text: 'Zapisz zmiany',
                     type: 'primary',
-                    onClick: async (e, overlay) => {
-                        await this.saveChanges(overlay);
-                    }
+                    disabled: true,
+                    onClick: (e, ov) => this.saveChanges(ov)
                 }
             ]
         });
+        this.modalOverlay = overlay;
 
-        // Dodaj event listenery dla dropdownów
-        this.attachDropdownListeners(modalOverlay, appointments);
+        // ###5 — usuń ikonę zamknięcia (X) w prawym górnym rogu (tylko ten modal)
+        const closeBtn = overlay.querySelector('.modal-close');
+        if (closeBtn) closeBtn.remove();
+
+        // Licznik postępu zmian w prawym górnym rogu nagłówka ("3/7")
+        const header = overlay.querySelector('.modal-header');
+        if (header) {
+            const prog = document.createElement('span');
+            prog.className = 'pv-progress';
+            prog.id = 'pv-progress';
+            prog.setAttribute('aria-live', 'polite');
+            prog.textContent = `0/${this.total}`;
+            header.appendChild(prog);
+        }
+
+        // Referencje do przycisków stopki (kolejność = jak w buttons[])
+        const footerBtns = overlay.querySelectorAll('.modal-footer button');
+        this.bulkBtn = footerBtns[0] || null;
+        this.saveBtn = footerBtns[2] || null;
+        // ###3 — wyrównaj przycisk zbiorczy do lewej krawędzi stopki
+        if (this.bulkBtn) this.bulkBtn.style.marginRight = 'auto';
+
+        this.attachInteractions(overlay);
+        this.updateControls();
     },
 
     /**
-     * Tworzy zawartość HTML modala
+     * Treść modala: notka + tabela (desktop) + karty (mobile).
      */
     createModalContent(appointments) {
+        const rows = appointments.map(apt => this.createTableRow(apt)).join('');
+        const cards = appointments.map(apt => this.createCard(apt)).join('');
+
         return `
-            <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--color-warning-bg, #fffbeb); border: 1px solid var(--color-warning-border, #fcd34d); border-radius: 2px;">
-                <p style="font-size: 0.875rem; color: var(--color-warning, #78350f); margin: 0;">
-                    <strong>Uwaga:</strong> Poniższe wizyty zakończyły się, ale nie mają jeszcze finalnego statusu.
-                    Wybierz odpowiedni status dla każdej wizyty.
-                </p>
+            <div class="pv-note">
+                <strong>Uwaga:</strong> poniższe wizyty już się odbyły, ale nie mają
+                statusu końcowego. Kliknij status, aby wybrać: zakończona, anulowana
+                lub nieobecność.
             </div>
 
-            <div style="max-height: 500px; overflow-y: auto;">
-                <table class="refined-table" style="width: 100%; border-collapse: collapse;">
-                    <thead style="position: sticky; top: 0; background: var(--color-surface); z-index: 10;">
-                        <tr>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Klient</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Pracownik</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Data</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Godzina</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Usługi</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Obecny status</th>
-                            <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-muted); border-bottom: 1px solid var(--color-border);">Nowy status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${appointments.map(apt => this.createTableRow(apt)).join('')}
-                    </tbody>
-                </table>
+            <!-- Desktop: zwarta tabela mieszcząca się w modalu -->
+            <div class="pv-desktop">
+                <div class="pv-table-wrap">
+                    <table class="pv-table">
+                        <thead>
+                            <tr>
+                                <th>Klient</th>
+                                <th>Pracownik</th>
+                                <th>Data i godzina</th>
+                                <th>Usługi</th>
+                                <th class="pv-th-status">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mobile: poziomo przewijane zwarte karty -->
+            <div class="pv-mobile">
+                <div class="pv-cards">${cards}</div>
             </div>
         `;
     },
 
-    /**
-     * Tworzy wiersz tabeli dla wizyty
-     */
-    createTableRow(appointment) {
-        const statusLabels = {
-            'scheduled': 'Zaplanowana',
-            'confirmed': 'Potwierdzona',
-            'in_progress': 'W trakcie'
-        };
+    createTableRow(apt) {
+        const currentStatus = apt.status;
+        const currentLabel = this.STATUS_LABELS[currentStatus] || currentStatus;
+        const currentVar = this.STATUS_VARS[currentStatus] || 'color-ink-muted';
 
-        const statusBadges = {
-            'scheduled': `background: ${cssVarAlpha('color-status-scheduled', 0.08)}; color: ${cssVar('color-status-scheduled')};`,
-            'confirmed': `background: ${cssVarAlpha('color-status-confirmed', 0.08)}; color: ${cssVar('color-status-confirmed')};`,
-            'in_progress': `background: ${cssVarAlpha('color-status-in-progress', 0.08)}; color: ${cssVar('color-status-in-progress')};`
-        };
+        // ###1 — scalone "Data i godzina": dd.mm.yyyy + zakres hh:mm-hh:mm
+        const dateLine = this.fmtDateFull(apt.appointment_date);
+        const timeLine = `${this.fmtTime(apt.start_time)}-${this.fmtTime(apt.end_time)}`;
 
-        const currentStatusLabel = statusLabels[appointment.status] || appointment.status;
-        const currentStatusStyle = statusBadges[appointment.status] || '';
+        const choices = this.RESOLUTIONS.map(s => `
+            <button type="button" class="pv-choice" data-id="${apt.id}" data-status="${s}"
+                    style="${this.badgeStyle(this.STATUS_VARS[s])}"
+                    aria-pressed="false">
+                ${this.STATUS_LABELS[s]}
+            </button>
+        `).join('');
 
-        const formattedDate = this.formatDate(appointment.appointment_date);
-        const formattedTime = `${this.formatTime(appointment.start_time)} - ${this.formatTime(appointment.end_time)}`;
-
+        // ###2 — klikalny badge + rozwijany wybór statusu pod nim
         return `
-            <tr data-appointment-id="${appointment.id}" style="border-bottom: 1px solid var(--color-border-subtle);">
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink);">${this.escapeHtml(appointment.client_name)}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink);">${this.escapeHtml(appointment.employee_name)}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink);">${formattedDate}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink); white-space: nowrap;">${formattedTime}</td>
-                <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-ink-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${this.escapeHtml(appointment.service_names || 'Brak')}">${this.escapeHtml(appointment.service_names || 'Brak')}</td>
-                <td style="padding: 0.75rem;">
-                    <span style="display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 2px; ${currentStatusStyle}">
-                        ${currentStatusLabel}
-                    </span>
+            <tr data-id="${apt.id}">
+                <td class="pv-cell-name">${this.escapeHtml(apt.client_name)}</td>
+                <td>${this.escapeHtml(apt.employee_name)}</td>
+                <td class="pv-cell-dt">
+                    <span class="pv-date">${dateLine}</span><br>
+                    <span class="pv-time">${timeLine}</span>
                 </td>
-                <td style="padding: 0.75rem;">
-                    <select
-                        class="status-dropdown"
-                        data-appointment-id="${appointment.id}"
-                        aria-label="Nowy status wizyty: ${this.escapeHtml(appointment.client_name)}, ${formattedDate}"
-                        style="padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); width: 100%; max-width: 180px; cursor: pointer;"
-                    >
-                        <option value="">-- Wybierz --</option>
-                        <option value="completed">Zakończona</option>
-                        <option value="cancelled">Anulowana</option>
-                        <option value="no_show">Nieobecność klienta</option>
-                    </select>
+                <td class="pv-cell-services" title="${this.escapeHtml(apt.service_names || 'Brak')}">${this.escapeHtml(apt.service_names || 'Brak')}</td>
+                <td class="pv-status-cell">
+                    <button type="button" class="pv-badge" data-id="${apt.id}"
+                            style="${this.badgeStyle(currentVar)}"
+                            aria-haspopup="true" aria-expanded="false"
+                            title="Kliknij, aby zmienić status">
+                        <span class="pv-badge-label">${currentLabel}</span>
+                        <span class="pv-caret" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="pv-rollout" data-id="${apt.id}" hidden>${choices}</div>
                 </td>
             </tr>
         `;
     },
 
-    /**
-     * Dodaje event listenery dla dropdownów
-     */
-    attachDropdownListeners(modalOverlay, appointments) {
-        const dropdowns = modalOverlay.querySelectorAll('.status-dropdown');
+    createCard(apt) {
+        const initials = this.initials(apt.employee_name);
+        const dt = `${this.fmtDateShort(apt.appointment_date)} ${this.fmtTime(apt.start_time)}`;
 
-        dropdowns.forEach(dropdown => {
-            dropdown.addEventListener('change', (e) => {
-                const appointmentId = e.target.dataset.appointmentId;
-                const newStatus = e.target.value;
+        const toggles = this.RESOLUTIONS.map(s => `
+            <button type="button" class="pv-toggle-btn" data-id="${apt.id}" data-status="${s}"
+                    aria-pressed="false">
+                ${this.STATUS_LABELS_SHORT[s]}
+            </button>
+        `).join('');
 
-                // Zapisz wybór w pamięci (data attribute)
-                e.target.dataset.selectedStatus = newStatus;
-
-                // Wizualna informacja o zmianie
-                const row = e.target.closest('tr');
-                if (newStatus) {
-                    row.style.background = '#f0fdf4'; // Zielone tło dla wierszy ze zmianą
-                } else {
-                    row.style.background = '';
-                }
-            });
-        });
+        return `
+            <div class="pv-card" data-id="${apt.id}">
+                <div class="pv-card-name" title="${this.escapeHtml(apt.client_name)}">${this.escapeHtml(apt.client_name)}</div>
+                <div class="pv-card-service" title="${this.escapeHtml(apt.service_names || 'Brak usługi')}">${this.escapeHtml(apt.service_names || 'Brak usługi')}</div>
+                <div class="pv-card-meta">
+                    <span class="pv-card-initials" title="${this.escapeHtml(apt.employee_name)}">${initials}</span>
+                    <span class="pv-card-dt">${dt}</span>
+                </div>
+                <div class="pv-card-toggle" role="group" aria-label="Status wizyty">${toggles}</div>
+            </div>
+        `;
     },
 
     /**
-     * Zapisuje zmiany statusów
+     * Delegacja zdarzeń wewnątrz modala (działa dla desktop i mobile).
      */
-    async saveChanges(modalOverlay) {
-        const dropdowns = modalOverlay.querySelectorAll('.status-dropdown');
-        const changes = [];
+    attachInteractions(overlay) {
+        const body = overlay.querySelector('.modal-body');
+        if (!body) return;
 
-        // Zbierz wszystkie zmiany
-        dropdowns.forEach(dropdown => {
-            const newStatus = dropdown.value;
-            if (newStatus) {
-                changes.push({
-                    appointmentId: parseInt(dropdown.dataset.appointmentId),
-                    status: newStatus
-                });
+        body.addEventListener('click', (e) => {
+            const badge = e.target.closest('.pv-badge');
+            if (badge) {
+                this.toggleRollout(badge.dataset.id);
+                return;
+            }
+            const choice = e.target.closest('.pv-choice');
+            if (choice) {
+                this.selectStatus(choice.dataset.id, choice.dataset.status);
+                this.closeRollout(choice.dataset.id);
+                return;
+            }
+            const toggle = e.target.closest('.pv-toggle-btn');
+            if (toggle) {
+                this.selectStatus(toggle.dataset.id, toggle.dataset.status);
+                return;
             }
         });
+    },
 
-        if (changes.length === 0) {
-            Modals.alert({
-                title: 'Uwaga',
-                message: 'Nie wybrano żadnych zmian statusu.',
-                type: 'warning'
-            });
-            return;
+    toggleRollout(id) {
+        const rollout = this.modalOverlay.querySelector(`.pv-rollout[data-id="${id}"]`);
+        const badge = this.modalOverlay.querySelector(`.pv-badge[data-id="${id}"]`);
+        if (!rollout) return;
+        const willOpen = rollout.hasAttribute('hidden');
+        // Zamknij inne rozwinięte
+        this.modalOverlay.querySelectorAll('.pv-rollout:not([hidden])').forEach(r => {
+            r.setAttribute('hidden', '');
+            const b = this.modalOverlay.querySelector(`.pv-badge[data-id="${r.dataset.id}"]`);
+            if (b) b.setAttribute('aria-expanded', 'false');
+        });
+        if (willOpen) {
+            rollout.removeAttribute('hidden');
+            if (badge) badge.setAttribute('aria-expanded', 'true');
+        }
+    },
+
+    closeRollout(id) {
+        const rollout = this.modalOverlay.querySelector(`.pv-rollout[data-id="${id}"]`);
+        const badge = this.modalOverlay.querySelector(`.pv-badge[data-id="${id}"]`);
+        if (rollout) rollout.setAttribute('hidden', '');
+        if (badge) badge.setAttribute('aria-expanded', 'false');
+    },
+
+    /**
+     * Ustawia (lub cofa) wybór statusu dla danej wizyty i synchronizuje oba widoki.
+     */
+    selectStatus(id, status) {
+        if (this.selections[id] === status) {
+            delete this.selections[id]; // ponowne kliknięcie = cofnięcie wyboru
+        } else {
+            this.selections[id] = status;
+        }
+        this.updateRowVisual(id);
+        this.updateControls();
+    },
+
+    updateRowVisual(id) {
+        const selected = this.selections[id];
+
+        // --- Desktop: badge + aktywny wybór ---
+        const badge = this.modalOverlay.querySelector(`.pv-badge[data-id="${id}"]`);
+        if (badge) {
+            const status = selected || this.original[id];
+            const label = this.STATUS_LABELS[status] || status;
+            const varName = this.STATUS_VARS[status] || 'color-ink-muted';
+            badge.style.cssText = this.badgeStyle(varName);
+            const labelEl = badge.querySelector('.pv-badge-label');
+            if (labelEl) labelEl.textContent = label;
+            badge.classList.toggle('pv-badge--changed', !!selected);
+        }
+        this.modalOverlay.querySelectorAll(`.pv-choice[data-id="${id}"]`).forEach(ch => {
+            const active = ch.dataset.status === selected;
+            ch.classList.toggle('pv-choice--active', active);
+            ch.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        // --- Mobile: przełącznik 3-pozycyjny ---
+        this.modalOverlay.querySelectorAll(`.pv-toggle-btn[data-id="${id}"]`).forEach(btn => {
+            const active = btn.dataset.status === selected;
+            btn.classList.toggle('pv-toggle-btn--active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            if (active) {
+                btn.style.cssText = this.badgeStyle(this.STATUS_VARS[selected]);
+            } else {
+                btn.style.cssText = '';
+            }
+        });
+        const card = this.modalOverlay.querySelector(`.pv-card[data-id="${id}"]`);
+        if (card) card.classList.toggle('pv-card--changed', !!selected);
+    },
+
+    /**
+     * ###3 — ustawia wszystkie wizyty na "zakończona" (użytkownik może nadal
+     * zmienić pojedyncze ręcznie).
+     */
+    markAllCompleted() {
+        this.appointments.forEach(apt => {
+            this.selections[apt.id] = 'completed';
+            this.updateRowVisual(apt.id);
+            this.closeRollout(apt.id);
+        });
+        this.updateControls();
+    },
+
+    /**
+     * Aktualizuje licznik postępu i aktywność przycisku zapisu.
+     */
+    updateControls() {
+        const changed = Object.keys(this.selections).length;
+        const prog = this.modalOverlay && this.modalOverlay.querySelector('#pv-progress');
+        if (prog) prog.textContent = `${changed}/${this.total}`;
+        if (this.saveBtn) this.saveBtn.disabled = changed === 0;
+    },
+
+    /**
+     * Zapisuje wybrane statusy (PUT na każdą zmienioną wizytę).
+     */
+    async saveChanges(overlay) {
+        const changes = Object.entries(this.selections)
+            .map(([id, status]) => ({ appointmentId: parseInt(id, 10), status }));
+
+        if (changes.length === 0) return; // przycisk i tak jest wtedy nieaktywny
+
+        if (this.saveBtn) {
+            this.saveBtn.dataset.label = this.saveBtn.textContent;
+            this.saveBtn.textContent = 'Zapisywanie...';
+            this.saveBtn.disabled = true;
+        }
+        if (this.bulkBtn) this.bulkBtn.disabled = true;
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const change of changes) {
+            try {
+                const response = await fetch(`/api/appointments/${change.appointmentId}/past-status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: change.status })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                    console.error(`Błąd przy aktualizacji wizyty ${change.appointmentId}:`, data.error);
+                }
+            } catch (error) {
+                errorCount++;
+                console.error(`Błąd przy aktualizacji wizyty ${change.appointmentId}:`, error);
+            }
         }
 
-        // Wyświetl loading
-        const saveButton = modalOverlay.querySelector('.modal-footer button:last-child');
-        const originalText = saveButton.textContent;
-        saveButton.textContent = 'Zapisywanie...';
-        saveButton.disabled = true;
-
-        try {
-            // Zapisz każdą zmianę osobno
-            let successCount = 0;
-            let errorCount = 0;
-
-            for (const change of changes) {
-                try {
-                    const response = await fetch(`/api/appointments/${change.appointmentId}/past-status`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            status: change.status
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (data.success) {
-                        successCount++;
-                    } else {
-                        errorCount++;
-                        console.error(`Błąd przy aktualizacji wizyty ${change.appointmentId}:`, data.error);
-                    }
-                } catch (error) {
-                    errorCount++;
-                    console.error(`Błąd przy aktualizacji wizyty ${change.appointmentId}:`, error);
-                }
-            }
-
-            // Pokaż wynik
-            if (successCount > 0) {
-                Modals.alert({
-                    title: successCount === changes.length ? 'Sukces' : 'Częściowy sukces',
-                    message: `Zaktualizowano ${successCount} wizyt(y).${errorCount > 0 ? ` Błędów: ${errorCount}` : ''}`,
-                    type: errorCount > 0 ? 'warning' : 'success',
-                    onClose: () => window.location.reload()
-                });
-            }
-
-            // Zamknij modal (odświeżenie nastąpi w onClose)
-        } catch (error) {
-            console.error('Błąd podczas zapisywania zmian:', error);
+        if (successCount > 0) {
+            Modals.close(overlay);
+            Modals.alert({
+                title: successCount === changes.length ? 'Sukces' : 'Częściowy sukces',
+                message: `Zaktualizowano ${successCount} wizyt(y).${errorCount > 0 ? ` Błędów: ${errorCount}` : ''}`,
+                type: errorCount > 0 ? 'warning' : 'success',
+                onClose: () => window.location.reload()
+            });
+        } else {
             Modals.alert({
                 title: 'Błąd',
-                message: 'Wystąpił błąd podczas zapisywania zmian.',
+                message: 'Nie udało się zapisać zmian. Spróbuj ponownie.',
                 type: 'error'
             });
-            saveButton.textContent = originalText;
-            saveButton.disabled = false;
+            if (this.saveBtn) {
+                this.saveBtn.textContent = this.saveBtn.dataset.label || 'Zapisz zmiany';
+                this.saveBtn.disabled = false;
+            }
+            if (this.bulkBtn) this.bulkBtn.disabled = false;
         }
     },
 
-    /**
-     * Formatuje datę do formatu DD.MM.YYYY
-     */
-    formatDate(dateStr) {
+    // ── Helpery ────────────────────────────────────────────────────────────────
+
+    /** Styl badge'a/wyboru w kolorze statusu (zgodny z typologią badge'y). */
+    badgeStyle(varName) {
+        return `background:${cssVarAlpha(varName, 0.12)};color:${cssVar(varName)};border:1px solid ${cssVarAlpha(varName, 0.35)};`;
+    },
+
+    /** 'YYYY-MM-DD' → 'dd.mm.yyyy' (parsowanie po częściach, bez stref czasowych). */
+    fmtDateFull(dateStr) {
         if (!dateStr) return '';
-        const date = new Date(dateStr + 'T00:00:00'); // Add time to avoid timezone issues
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}.${month}.${year}`;
+        const [y, m, d] = String(dateStr).split('-');
+        return `${d}.${m}.${y}`;
     },
 
-    /**
-     * Formatuje czas do formatu HH:MM
-     */
-    formatTime(timeStr) {
+    /** 'YYYY-MM-DD' → 'dd.mm.yy'. */
+    fmtDateShort(dateStr) {
+        if (!dateStr) return '';
+        const [y, m, d] = String(dateStr).split('-');
+        return `${d}.${m}.${String(y).slice(2)}`;
+    },
+
+    /** 'HH:MM:SS' / 'HH:MM' → 'HH:MM'. */
+    fmtTime(timeStr) {
         if (!timeStr) return '';
-        // Input: "09:00:00" or "09:00"
-        const parts = timeStr.split(':');
-        return `${parts[0]}:${parts[1]}`;
+        return String(timeStr).slice(0, 5);
     },
 
-    /**
-     * Escape HTML to prevent XSS
-     */
+    /** Inicjały pracownika (maks. 2 litery). */
+    initials(name) {
+        if (!name) return '—';
+        const parts = name.trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    },
+
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -301,5 +530,8 @@ const PastVisitsScanner = {
     }
 };
 
-// Auto-inicjalizacja przy załadowaniu strony
+// Udostępnij globalnie (pomocne do debugowania w konsoli)
+window.PastVisitsScanner = PastVisitsScanner;
+
+// Auto-inicjalizacja: podłącza trigger, NIE otwiera modala automatycznie.
 PastVisitsScanner.init();

@@ -1156,4 +1156,149 @@
       /* Reset wrapper cosmetics so cards aren't boxed twice */
       .stack-cards-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; background: transparent !important; }
   }
+
+  /* ── Past-visits "rozliczenie" trigger + modal ─────────────────────────────
+     Trigger button sits before the calendar view toggles; the modal is built by
+     past_visits_scanner.js. Dynamic per-status colours are applied inline via JS
+     (cssVarAlpha) so they stay in sync with the badge typology — here we own
+     layout, density and the desktop↔mobile switch. */
+  .past-visits-trigger {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      padding: 0.375rem 0.625rem;
+      font-size: 0.6875rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--color-warning);
+      background: var(--color-status-in-progress-bg);
+      border: 1px solid rgba(217, 119, 6, 0.35);
+      border-radius: var(--radius-sm);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .past-visits-trigger:hover { background: rgba(217, 119, 6, 0.14); border-color: rgba(217, 119, 6, 0.55); }
+  .past-visits-trigger[hidden] { display: none; }
+  .past-visits-trigger svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+  .past-visits-trigger__count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 1.25rem; height: 1.25rem; padding: 0 0.3rem;
+      font-size: 0.6875rem; font-weight: 700;
+      color: white; background: var(--color-status-in-progress);
+      border-radius: 999px;
+  }
+
+  /* Progress counter in the modal header (top-right, e.g. "3/7") */
+  .pv-progress {
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--color-ink-muted);
+      font-variant-numeric: tabular-nums; margin-left: auto;
+  }
+
+  /* Intro note */
+  .pv-note {
+      margin-bottom: 1rem; padding: 0.625rem 0.75rem;
+      font-size: 0.8125rem; line-height: 1.45;
+      color: var(--color-warning);
+      background: var(--color-status-in-progress-bg);
+      border: 1px solid rgba(217, 119, 6, 0.30);
+      border-radius: var(--radius-sm);
+  }
+
+  /* Desktop ↔ mobile switch inside the modal */
+  .pv-mobile { display: none; }
+
+  /* Desktop table — fits modal width, vertical scroll only (no h-scroll) */
+  .pv-table-wrap { overflow-x: hidden; overflow-y: visible; }
+  .pv-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+  .pv-table thead th {
+      position: sticky; top: 0; z-index: 5;
+      padding: 0.5rem 0.625rem;
+      font-size: 0.6875rem; font-weight: 600; text-align: left;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--color-ink-muted);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+  }
+  .pv-table td {
+      padding: 0.5rem 0.625rem;
+      font-size: 0.8125rem; color: var(--color-ink);
+      border-bottom: 1px solid var(--color-border-subtle);
+      vertical-align: top;
+  }
+  .pv-table tbody tr:last-child td { border-bottom: none; }
+  .pv-cell-name { font-weight: 600; }
+  .pv-cell-dt { white-space: nowrap; }
+  .pv-cell-dt .pv-time { color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+  .pv-cell-services { color: var(--color-ink-muted); max-width: 14rem; word-break: break-word; }
+  .pv-th-status { width: 12rem; }
+
+  /* Clickable status badge + roll-out of resolution choices */
+  .pv-status-cell { position: relative; }
+  .pv-badge {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      border-radius: var(--radius-sm);
+      cursor: pointer; transition: filter 0.15s ease;
+  }
+  .pv-badge:hover { filter: brightness(0.96); }
+  .pv-badge--changed { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px currentColor; }
+  .pv-caret { font-size: 0.625rem; opacity: 0.7; }
+  .pv-rollout { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.5rem; }
+  .pv-choice {
+      padding: 0.3rem 0.55rem;
+      font-size: 0.6875rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      border-radius: var(--radius-sm);
+      cursor: pointer; opacity: 0.85;
+      transition: opacity 0.15s ease;
+  }
+  .pv-choice:hover { opacity: 1; }
+  .pv-choice--active { opacity: 1; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px currentColor; }
+
+  /* Mobile dense, horizontally-scrollable cards */
+  .pv-cards {
+      display: flex; gap: 0.625rem;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding-bottom: 0.5rem; scroll-snap-type: x mandatory;
+  }
+  .pv-card {
+      flex: 0 0 11rem; scroll-snap-align: start;
+      display: flex; flex-direction: column; gap: 0.25rem;
+      padding: 0.625rem;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+  }
+  .pv-card--changed { border-color: var(--color-status-completed); box-shadow: 0 0 0 1px var(--color-status-completed); }
+  .pv-card-name {
+      font-size: 0.8125rem; font-weight: 600; color: var(--color-ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pv-card-service {
+      font-size: 0.6875rem; color: var(--color-ink-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pv-card-meta { display: flex; align-items: center; gap: 0.375rem; margin-top: 0.125rem; }
+  .pv-card-initials {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 1.5rem; height: 1.25rem; padding: 0 0.25rem;
+      font-size: 0.625rem; font-weight: 700; color: var(--color-ink-muted);
+      background: var(--color-surface); border-radius: var(--radius-sm);
+  }
+  .pv-card-dt { font-size: 0.6875rem; color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+  .pv-card-toggle { display: flex; gap: 0.25rem; margin-top: 0.375rem; }
+  .pv-toggle-btn {
+      flex: 1; padding: 0.3rem 0.125rem;
+      font-size: 0.625rem; font-weight: 600; line-height: 1.1;
+      color: var(--color-ink-muted);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+  }
+
+  @media (max-width: 640px) {
+      .pv-desktop { display: none; }
+      .pv-mobile { display: block; }
+  }
 }
