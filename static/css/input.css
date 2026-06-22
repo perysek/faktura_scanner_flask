@@ -882,6 +882,18 @@
       transform: translateY(0) scale(0.98);
   }
 
+  /* Disabled primary (e.g. "Zapisz zmiany" before any status change): the button
+     already carries the real `disabled` attribute — this just gives it the matching
+     greyed-out, non-interactive look instead of painting the enabled ink fill. */
+  .modal-footer .btn-primary:disabled,
+  .modal-footer .btn-primary:disabled:hover {
+      background: var(--color-border);
+      color: var(--color-ink-muted);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+  }
+
   .modal-footer .btn-secondary {
       padding: 0.625rem 1.25rem;
       font-size: 0.8125rem;
@@ -1231,16 +1243,17 @@
       vertical-align: top;
   }
   .pv-table tbody tr:last-child td { border-bottom: none; }
-  .pv-cell-name { font-weight: 600; }
-  /* Stacked "Data i godzina": dd mmmm / hh:mm / 90min / (1,5h) */
+  /* Klient — two lines (imię / nazwisko); narrower column donates width to Status */
+  .pv-cell-name { width: 7rem; max-width: 7rem; font-weight: 600; line-height: 1.25; white-space: normal; }
+  .pv-cell-name span { display: block; }
+  /* Stacked "Data i godzina": dd mmmm / hh:mm / "90min (1,5h)" (duration one line) */
   .pv-cell-dt { white-space: nowrap; line-height: 1.3; }
   .pv-cell-dt > span { display: block; }
   .pv-cell-dt .pv-date { font-weight: 600; }
   .pv-cell-dt .pv-time { font-variant-numeric: tabular-nums; }
   .pv-cell-dt .pv-dur { margin-top: 0.125rem; font-size: 0.6875rem; color: var(--color-ink-muted); }
-  .pv-cell-dt .pv-dur-h { font-size: 0.6875rem; color: var(--color-ink-muted); }
-  .pv-cell-services { color: var(--color-ink-muted); max-width: 14rem; word-break: break-word; }
-  .pv-th-status { width: 12rem; }
+  .pv-cell-services { color: var(--color-ink-muted); max-width: 9rem; word-break: break-word; }
+  .pv-th-status { width: 12.5rem; }
 
   /* Status cycle button — a single click advances to the next status in the
      loop (original → completed → cancelled → no_show → original …). Colours are
@@ -1254,7 +1267,7 @@
   .pv-cycle {
       display: inline-flex; align-items: center; gap: 0.3rem;
       box-sizing: border-box;
-      width: 10rem; height: 1.875rem;
+      width: 11rem; height: 1.875rem;
       padding: 0 0.55rem; vertical-align: middle;
       font-size: 0.6875rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.04em;

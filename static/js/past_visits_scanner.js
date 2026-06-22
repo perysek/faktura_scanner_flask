@@ -253,8 +253,14 @@ const PastVisitsScanner = {
         const dateLine = this.fmtDateMonth(apt.appointment_date);
         const startLine = this.fmtTime(apt.start_time);
         const mins = this.durationMinutes(apt.start_time, apt.end_time);
-        const durMinLine = mins != null ? `${mins}min` : '';
-        const durHrLine = mins != null ? `(${this.fmtHours(mins)}h)` : '';
+        // Czas trwania w jednej linii: "90min (1,5h)"
+        const durLine = mins != null ? `${mins}min (${this.fmtHours(mins)}h)` : '';
+
+        // Klient w dwóch liniach: imię (1. linia) / nazwisko (2. linia)
+        const fullName = (apt.client_name || '').trim();
+        const sp = fullName.indexOf(' ');
+        const firstName = sp === -1 ? fullName : fullName.slice(0, sp);
+        const lastName = sp === -1 ? '' : fullName.slice(sp + 1);
 
         // Pojedynczy przycisk cyklicznie przełączający status: każde kliknięcie
         // przechodzi do następnego statusu w pętli [aktualny → zakończona →
@@ -262,13 +268,15 @@ const PastVisitsScanner = {
         // płynnie (0,2s). Powrót do statusu pierwotnego = brak zmiany.
         return `
             <tr data-id="${apt.id}">
-                <td class="pv-cell-name">${this.escapeHtml(apt.client_name)}</td>
+                <td class="pv-cell-name">
+                    <span class="pv-name-first">${this.escapeHtml(firstName)}</span>
+                    <span class="pv-name-last">${this.escapeHtml(lastName)}</span>
+                </td>
                 <td>${this.escapeHtml(apt.employee_name)}</td>
                 <td class="pv-cell-dt">
                     <span class="pv-date">${dateLine}</span>
                     <span class="pv-time">${startLine}</span>
-                    <span class="pv-dur">${durMinLine}</span>
-                    <span class="pv-dur-h">${durHrLine}</span>
+                    <span class="pv-dur">${durLine}</span>
                 </td>
                 <td class="pv-cell-services" title="${this.escapeHtml(apt.service_names || 'Brak')}">${this.escapeHtml(apt.service_names || 'Brak')}</td>
                 <td class="pv-status-cell">
