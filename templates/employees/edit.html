@@ -143,14 +143,32 @@
        overflow. Also hide the whole "Dodatkowe informacje" section (Podwładni +
        Notatki) on phones. */
     @media (max-width: 640px) {
+        /* Trim page/card padding so the schedule row has the most width to work
+           with (the native time inputs run at the global ≥16px mobile font). */
+        .refined-page { padding: 1rem; }
+        .refined-card { padding: 1.25rem; }
+
+        /* One row per day: [✓ day name] [from] [to], no "–" separator. The day
+           label keeps its content width; the two time inputs grow to fill the
+           remaining width equally (capped at 8rem), with min-width:0 so the
+           tracks shrink instead of overflowing — no horizontal scrollbar, and
+           each input stays wide enough to show the full HH:MM value. */
         .schedule-row {
-            grid-template-columns: minmax(0, 140px) auto minmax(0, 140px);
-            justify-content: start;
-            column-gap: 0.5rem;
-            row-gap: 0.375rem;
+            grid-template-columns: auto 1fr 1fr;
+            column-gap: 0.4rem;
+            row-gap: 0;
+            align-items: center;
         }
-        .schedule-day-label { grid-column: 1 / -1; }
-        .schedule-time { width: 100%; min-width: 0; box-sizing: border-box; }
+        .schedule-day-label { grid-column: auto; min-width: 0; }
+        .schedule-sep { display: none; }
+        .schedule-time {
+            width: 100%;
+            min-width: 0;
+            max-width: 8rem;
+            box-sizing: border-box;
+            padding: 0.45rem 0.5rem;
+        }
+
         .section-additional { display: none; }
     }
 </style>
