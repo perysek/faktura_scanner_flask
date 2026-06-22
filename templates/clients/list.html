@@ -218,6 +218,19 @@
         font-weight: 300;
     }
 
+    /* Phone line tucked under the name (desktop only — the dedicated Telefon
+       column was removed). Smaller + lighter ink than the bold name so it reads
+       as secondary metadata. Hidden on mobile, where the original "Telefon"
+       card row is preserved via the cell-hide-lg <td>. */
+    .client-phone {
+        font-size: 0.75rem;
+        color: var(--color-ink-muted);
+        font-weight: 400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     /* Visit count cells */
     .visit-count {
         font-weight: 500;
@@ -400,6 +413,9 @@
        eat the whole first screen on a phone. Matches the .stack-cards breakpoint. */
     @media (max-width: 640px) {
         .stats-grid { display: none; }
+        /* Keep mobile intact: phone shows as its own "Telefon" card row
+           (the cell-hide-lg <td>), not duplicated under the name. */
+        .client-phone { display: none; }
     }
 
     /* Next-visit card value: date+time on line 1, employee on line 2, both
@@ -517,15 +533,14 @@
     <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista klientów">
         <table class="refined-table stack-cards">
             <colgroup>
-                <col style="width:22%"><!-- Imię i nazwisko -->
-                <col style="width:12%"><!-- Telefon -->
-                <col style="width:12%"><!-- Ostatnia wizyta -->
+                <col style="width:24%"><!-- Imię i nazwisko (+ telefon poniżej) -->
+                <col style="width:13%"><!-- Ostatnia wizyta -->
                 <col style="width:9%"> <!-- Wizyt -->
                 <col style="width:9%"> <!-- No-shows -->
                 <col style="width:9%"> <!-- Odwołał -->
-                <col style="width:8%"> <!-- Trend -->
+                <col style="width:18%"><!-- Trend (poszerzony po usunięciu Telefonu) -->
                 <col style="width:9%"> <!-- Status -->
-                <col style="width:10%"><!-- Akcje -->
+                <col style="width:9%"> <!-- Akcje -->
             </colgroup>
             <thead>
                 <tr>
@@ -533,12 +548,6 @@
                         <button type="button" class="th-sort-btn" onclick="sortBy('full_name')">
                             Imię i&nbsp;nazwisko
                             <span class="th-sort-icon" id="si-full_name" aria-hidden="true">▲</span>
-                        </button>
-                    </th>
-                    <th class="th-sortable" aria-sort="none" id="th-phone">
-                        <button type="button" class="th-sort-btn" onclick="sortBy('phone')">
-                            Telefon
-                            <span class="th-sort-icon" id="si-phone" aria-hidden="true">▲</span>
                         </button>
                     </th>
                     <th class="th-sortable" aria-sort="none" id="th-last_visit_date">
@@ -682,7 +691,7 @@ function sparklineSvg(months) {
     const dir = trendDirection(months);
     const color = TREND_COLOR[dir];
     const data = smooth2(months);
-    const W = 60, H = 20, pad = 1.5;
+    const W = 96, H = 22, pad = 1.5;
     const max = Math.max(...data, 1);
     const step = (W - 2 * pad) / Math.max(data.length - 1, 1);
     const points = data.map((v, i) => {
@@ -694,7 +703,7 @@ function sparklineSvg(months) {
     return `<span style="display:inline-flex;align-items:center;gap:0.25rem;" role="img" aria-label="Trend: ${TREND_LABEL[dir]}">
         <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;" aria-hidden="true">
             <title>Trend: ${TREND_LABEL[dir]}</title>
-            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
         <span aria-hidden="true" style="font-size:0.5625rem;color:${color};">${TREND_GLYPH[dir]}</span>
     </span>`;
@@ -789,7 +798,7 @@ function renderClients(clients) {
     if (sorted.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state cell-empty">
+                <td colspan="8" class="empty-state cell-empty">
                     {{ icon('search_off', class='empty-icon') }}
                     <p class="empty-text">Nie znaleziono klientów</p>
                 </td>
@@ -802,9 +811,15 @@ function renderClients(clients) {
             client.first_name.charAt(0) + (client.last_name || '').charAt(0)
         );
         const fullName = escapeHtml((client.full_name || '').trim());
+        // `phone` feeds the mobile "Telefon" card row (cell-hide-lg <td>);
+        // `phoneUnderName` is the desktop-only line beneath the name (omitted
+        // entirely when the client has no phone, rather than showing a dash).
         const phone = client.phone
             ? escapeHtml(client.phone)
             : '<span style="color:var(--color-ink-subtle)">—</span>';
+        const phoneUnderName = client.phone
+            ? `<div class="client-phone">${escapeHtml(client.phone)}</div>`
+            : '';
         const lastVisit = formatDate(client.last_visit_date);
         const nextVisit = formatNextVisit(
             client.next_visit_date, client.next_visit_time, client.next_visit_employee
@@ -845,11 +860,12 @@ function renderClients(clients) {
                         </div>
                         <div>
                             <div class="client-name">${fullName}</div>
+                            ${phoneUnderName}
                             ${ageInfo}
                         </div>
                     </div>
                 </td>
-                <td data-label="Telefon">${phone}</td>
+                <td class="cell-hide-lg" data-label="Telefon">${phone}</td>
                 <td data-label="Ostatnia wizyta">${lastVisit}</td>
                 <td class="cell-hide-lg" data-label="Następna wizyta">${nextVisit}</td>
                 <td data-label="Wizyt"><span class="visit-count">${client.completed_visits || 0}</span></td>
@@ -900,7 +916,7 @@ function renderSkeleton(rows = 6) {
     const tbody = document.getElementById('clients-tbody');
     let html = '';
     for (let i = 0; i < rows; i++) {
-        html += '<tr>' + Array.from({ length: 9 }).map((_, c) =>
+        html += '<tr>' + Array.from({ length: 8 }).map((_, c) =>
             `<td class="${c >= 3 ? 'cell-hide-sm' : ''}"><div class="skeleton" style="height:1rem;border-radius:2px;"></div></td>`
         ).join('') + '</tr>';
     }
@@ -939,7 +955,7 @@ async function loadClients() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="empty-state cell-empty">
+                    <td colspan="8" class="empty-state cell-empty">
                         <p class="empty-text" style="color:var(--color-error);">
                             Błąd ładowania klientów: ${escapeHtml(clientsResp.error)}
                         </p>
@@ -956,7 +972,7 @@ async function loadClients() {
         console.error('Error loading clients:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state cell-empty">
+                <td colspan="8" class="empty-state cell-empty">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadClients()" id="clients-retry-btn" class="refined-btn-secondary" style="margin-top:0.75rem;">
                         Spróbuj ponownie
