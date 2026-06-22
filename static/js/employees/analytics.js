@@ -324,17 +324,30 @@ function renderHeatmap(data) {
     const DAY_NAMES = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'];
     const WORK_HOURS = Array.from({length: 14}, (_, i) => i + 7); // 7–20
 
-    let html = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:0.6875rem;width:100%;">';
+    // Phone: 14 hour-columns can't fit without a scrollbar, which the mobile
+    // spec forbids. Switch to a fixed table layout (columns share the container
+    // width equally → table never exceeds 100%, so no horizontal scroll), shrink
+    // hour headers to the bare number, drop the per-cell min-width, and clip so
+    // nothing wraps. Desktop keeps its scrollable "h:00" layout unchanged.
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
+    const headText = h => isMobile ? `${h}` : `${h}:00`;
+    const cellMin  = isMobile ? '0' : '24px';
+    const clip     = isMobile ? 'white-space:nowrap;overflow:hidden;' : '';
+    const tableStyle = isMobile
+        ? 'border-collapse:collapse;font-size:0.625rem;width:100%;table-layout:fixed;'
+        : 'border-collapse:collapse;font-size:0.6875rem;width:100%;';
+
+    let html = (isMobile ? '' : '<div style="overflow-x:auto;">') + `<table style="${tableStyle}">`;
     // Header row
-    html += '<tr><th style="padding:2px 4px;color:var(--color-ink-subtle);"></th>';
+    html += `<tr><th style="padding:2px 4px;color:var(--color-ink-subtle);${clip}"></th>`;
     WORK_HOURS.forEach(h => {
-        html += `<th style="padding:2px 3px;color:var(--color-ink-subtle);font-weight:500;text-align:center;">${h}:00</th>`;
+        html += `<th style="padding:2px 3px;color:var(--color-ink-subtle);font-weight:500;text-align:center;${clip}">${headText(h)}</th>`;
     });
     html += '</tr>';
 
     // Data rows
     for (let day = 1; day <= 7; day++) {
-        html += `<tr><td style="padding:2px 6px 2px 0;color:var(--color-ink-subtle);font-weight:500;white-space:nowrap;">${DAY_NAMES[day-1]}</td>`;
+        html += `<tr><td style="padding:2px 6px 2px 0;color:var(--color-ink-subtle);font-weight:500;white-space:nowrap;overflow:hidden;">${DAY_NAMES[day-1]}</td>`;
         WORK_HOURS.forEach(hour => {
             const count = matrix[`${day}-${hour}`] || 0;
             const opacity = count > 0 ? 0.15 + (count / maxCount) * 0.75 : 0;
@@ -344,14 +357,15 @@ function renderHeatmap(data) {
                 text-align:center;
                 background:${cssVarAlpha('color-chart-blue', opacity)};
                 border-radius:2px;
-                min-width:24px;
+                min-width:${cellMin};
+                ${clip}
                 color:${count > 0 ? (opacity > 0.5 ? 'white' : 'var(--color-ink)') : 'transparent'};
                 font-size:0.625rem;
             ">${count > 0 ? count : ''}</td>`;
         });
         html += '</tr>';
     }
-    html += '</table></div>';
+    html += `</table>${isMobile ? '' : '</div>'}`;
     container.innerHTML = html;
 }
 
@@ -571,11 +585,22 @@ function setTabError(tab, msg) {
 /* ─── Entry point ─────────────────────────────────────────────────────── */
 function initAnalytics(employeeId) {
     EMPLOYEE_ID = employeeId;
+    const start = () => {
+        // Phone (≤640px): the view.html CSS hides the tab bar and forces the
+        // Przychody + Wizyty panels visible (stacked). The tab UI never runs, so
+        // render both panels' charts directly instead of only the active tab.
+        if (window.matchMedia('(max-width: 640px)').matches) {
+            loadPrzychody();
+            loadWizyty();
+        } else {
+            loadTab('overview');
+        }
+    };
     // Guard: if DOM is already ready (script placed at end of body), call directly.
     // Otherwise register for DOMContentLoaded.
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => loadTab('overview'));
+        document.addEventListener('DOMContentLoaded', start);
     } else {
-        loadTab('overview');
+        start();
     }
 }

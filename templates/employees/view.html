@@ -280,6 +280,30 @@
         .action-bar { flex-direction: column; }
         .refined-btn-primary, .refined-btn-secondary, .refined-btn-danger { width: 100%; justify-content: center; }
     }
+
+    /* ── Mobile analytics (phone ≤640px) ───────────────────────────────────
+       Drop the tab UI entirely and stack the Przychody charts, then the Wizyty
+       charts/heatmap — one element per row, each full-width of the card. CSS
+       forces panel visibility (beats the panels' inline display:none via
+       !important); analytics.js renders BOTH panels' charts on mobile instead
+       of only the active tab. No wraps, no horizontal scroll, no overlap. */
+    @media (max-width: 640px) {
+        #analytics-section { padding: 1.25rem; }
+        #analytics-section .analytics-tabs { display: none !important; }
+        #analytics-section #tab-overview,
+        #analytics-section #tab-umiejetnosci,
+        #analytics-section #tab-satysfakcja { display: none !important; }
+        #analytics-section #tab-przychody,
+        #analytics-section #tab-wizyty { display: block !important; }
+        /* Visual break between the Przychody group and the Wizyty group. */
+        #analytics-section #tab-wizyty {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border-subtle);
+        }
+        /* One chart/heatmap per row, each expanded to the section's full width. */
+        #analytics-section .analytics-grid { grid-template-columns: 1fr !important; }
+    }
 </style>
 {% endblock %}
 
@@ -604,7 +628,7 @@
                 Ładowanie...
             </div>
             <div id="tab-error-przychody" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
-            <div style="display:grid;grid-template-columns:1fr;gap:1.25rem;">
+            <div class="analytics-grid" style="display:grid;grid-template-columns:1fr;gap:1.25rem;">
                 <div>
                     <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-subtle);margin-bottom:0.5rem;">Przychód i prowizja (12 miesięcy)</div>
                     <div style="height:250px;"><canvas id="chart-revenue"></canvas></div>
@@ -623,7 +647,7 @@
                 Ładowanie...
             </div>
             <div id="tab-error-wizyty" style="display:none;color:var(--color-error);font-size:0.8125rem;padding:0.5rem 0;"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;">
+            <div class="analytics-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;">
                 <div>
                     <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-subtle);margin-bottom:0.5rem;">Liczba wizyt</div>
                     <div style="height:250px;"><canvas id="chart-appointments"></canvas></div>
@@ -633,7 +657,7 @@
                     <div style="height:250px;"><canvas id="chart-client-split"></canvas></div>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 3fr;gap:1.25rem;margin-bottom:1.25rem;">
+            <div class="analytics-grid" style="display:grid;grid-template-columns:1fr 3fr;gap:1.25rem;margin-bottom:1.25rem;">
                 <div style="min-width:0;">
                     <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-subtle);margin-bottom:0.5rem;">Mix usług (top 8)</div>
                     <div style="height:250px;"><canvas id="chart-services-mix"></canvas></div>
