@@ -97,6 +97,18 @@
     .sms-tag--fail      { background: #fee2e2; color: #991b1b; }
     .sms-tag--pending   { background: #f3f4f6; color: #6b7280; border: 1px dashed #d1d5db; }
     .sms-tag--none      { color: #9ca3af; }
+
+    /* Desktop table shows the per-column values; the mobile stacked card (≤640px,
+       matching .stack-cards) swaps the Data cell to a combined "Data i godzina"
+       and the Ocena cell to a five-star display. Both variants live in the DOM
+       and toggle by media query so a resize/rotate never strands the wrong one. */
+    .dt-mobile, .rating-mobile { display: none; }
+    .stars-cell { display: inline-flex; gap: 0.05rem; font-size: 0.95rem; line-height: 1; }
+    @media (max-width: 640px) {
+        .dt-desktop, .rating-desktop { display: none; }
+        .dt-mobile { display: inline; }
+        .rating-mobile { display: inline-flex; }
+    }
 </style>
 {% endblock %}
 
@@ -303,6 +315,48 @@ function renderVisitRating(score) {
     return `<span style="color:${color};font-weight:600;">★ ${score}</span>`;
 }
 
+// Five-star display for the mobile card. Filled stars use the GUI star token,
+// empty stars the gray token; an absent rating shows five gray stars (never a
+// dash). aria-label carries the numeric meaning since the glyphs are decorative.
+function renderStars(score) {
+    const filled = score != null ? Math.round(score) : 0;
+    const label = score != null ? `Ocena ${score} na 5` : 'Brak oceny';
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        const color = i <= filled ? 'var(--color-star-filled)' : 'var(--color-star-empty)';
+        stars += `<span aria-hidden="true" style="color:${color};">${i <= filled ? '★' : '☆'}</span>`;
+    }
+    return `<span class="stars-cell" role="img" aria-label="${label}">${stars}</span>`;
+}
+
+// Visit length in whole minutes from start→end "HH:MM[:SS]" strings.
+// Guards a negative span (appointment crossing midnight) by wrapping +24h.
+function visitDurationMin(start, end) {
+    if (!start || !end) return null;
+    const [sh, sm] = String(start).split(':').map(Number);
+    const [eh, em] = String(end).split(':').map(Number);
+    if ([sh, sm, eh, em].some(Number.isNaN)) return null;
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) mins += 24 * 60;
+    return mins;
+}
+
+// Combined "dd mmm ddddd hh:mm (xx min)" for the mobile card, e.g.
+// "22 cze poniedziałek 14:30 (45 min)". Built piecewise because Intl can't
+// emit day→month→weekday in that order. Duration is omitted if end is unknown.
+function formatDateTimeMobile(dateStr, start, end) {
+    if (!dateStr) return '—';
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);  // local time — avoids UTC midnight shift
+    const day = String(d).padStart(2, '0');
+    const month = dateObj.toLocaleDateString('pl-PL', { month: 'short' }).replace('.', '');
+    const weekday = dateObj.toLocaleDateString('pl-PL', { weekday: 'long' });
+    const time = start ? String(start).substring(0, 5) : '';
+    const dur = visitDurationMin(start, end);
+    const durStr = dur != null ? ` (${dur} min)` : '';
+    return `${day} ${month} ${weekday} ${time}${durStr}`.trim();
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '—';
     const [y, m, d] = String(dateStr).split('-').map(Number);
@@ -442,15 +496,15 @@ function renderTable(appointments) {
             : '';
         return `
             <tr>
-                <td data-label="Data">${formatDate(a.appointment_date)}</td>
-                <td data-label="Godzina">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
+                <td data-label="Data i godzina"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile">${formatDateTimeMobile(a.appointment_date, a.start_time, a.end_time)}</span></td>
+                <td data-label="Godzina" class="cell-hide-sm">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
                 <td class="cell-name">${escapeHtml(a.client_name)}</td>
                 <td data-label="Usługa">${escapeHtml(serviceName)}</td>
                 <td data-label="Pracownik">${escapeHtml(a.employee_name)}</td>
-                <td data-label="Kwota">${formatCurrency(a.total_price)}</td>
+                <td data-label="Kwota" class="cell-hide-sm">${formatCurrency(a.total_price)}</td>
                 <td data-label="Status"><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
-                <td data-label="Ocena">${renderVisitRating(a.satisfaction_score)}</td>
-                <td class="col-sms" data-label="SMS">${renderSmsCell(a.id, a.confirmation_status)}</td>
+                <td data-label="Ocena"><span class="rating-desktop">${renderVisitRating(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
+                <td class="col-sms cell-hide-sm" data-label="SMS">${renderSmsCell(a.id, a.confirmation_status)}</td>
                 <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
                         <a href="/appointment/${a.id}?from=list" class="action-icon-btn" title="Szczegóły" aria-label="Szczegóły">
