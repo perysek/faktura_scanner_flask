@@ -167,15 +167,22 @@ function sleep(ms) {
  * page has scrolled past `threshold`, scrolls back to top on click.
  * Mobile-only by design (the component CSS hides it above 640px) — pairs
  * with the long stack-cards list views.
+ *
+ * The app shell (base.html) locks <body>/<html> height and scrolls inside
+ * #main-content (`overflow-auto`) instead — window.scrollY never changes,
+ * so the listener and the scroll action both target #main-content, with a
+ * window fallback for any page rendered outside that shell.
  */
 function initScrollToTopButton(buttonId, threshold = 400) {
     const btn = document.getElementById(buttonId);
     if (!btn) return;
-    window.addEventListener('scroll', () => {
-        btn.classList.toggle('visible', window.scrollY > threshold);
+    const scroller = document.getElementById('main-content') || window;
+    const getScrollTop = () => (scroller === window ? window.scrollY : scroller.scrollTop);
+    scroller.addEventListener('scroll', () => {
+        btn.classList.toggle('visible', getScrollTop() > threshold);
     }, { passive: true });
     btn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scroller.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 
