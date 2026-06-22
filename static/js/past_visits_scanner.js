@@ -7,9 +7,11 @@
  * przed przełącznikami widoków. Kliknięcie przycisku otwiera modal.
  *
  * Modal (desktop): zwarta tabela mieszcząca się w szerokości modala (bez
- * h-scrolla). Kolumna "Data i godzina" łączy datę (dd.mm.yyyy) i zakres godzin
- * (hh:mm-hh:mm). Kolumna "Status" to klikalny badge, który rozwija pod sobą
- * wybór statusu końcowego (kolory zgodne z typologią badge'y statusów).
+ * h-scrolla). Nagłówek tabeli jest przyklejony (sticky) — przewijają się tylko
+ * wiersze. Kolumna "Data i godzina": data "dd mmmm", pod nią godzina startu
+ * "hh:mm", a niżej czas trwania w minutach ("90min") i w godzinach ("(1,5h)").
+ * Kolumna "Status" to klikalny badge, który rozwija pod sobą kolorowane menu
+ * wyboru statusu końcowego (kolory zgodne z typologią badge'y statusów).
  *
  * Modal (mobile, ≤640px): poziomo przewijane, zwarte karty z 3-pozycyjnym
  * przełącznikiem (zakończona / anulowana / no-show) na dole każdej karty.
@@ -56,6 +58,12 @@ const PastVisitsScanner = {
         'cancelled': 'color-status-cancelled',
         'no_show': 'color-status-no-show'
     },
+
+    // Polskie nazwy miesięcy w dopełniaczu (do formatu "22 czerwca")
+    MONTHS_PL: [
+        'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
+        'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'
+    ],
 
     /**
      * Inicjalizacja: podłącza przycisk-trigger i wczytuje wstępny licznik.
@@ -244,14 +252,18 @@ const PastVisitsScanner = {
         const currentLabel = this.STATUS_LABELS[currentStatus] || currentStatus;
         const currentVar = this.STATUS_VARS[currentStatus] || 'color-ink-muted';
 
-        // ###1 — scalone "Data i godzina": dd.mm.yyyy + zakres hh:mm-hh:mm
-        const dateLine = this.fmtDateFull(apt.appointment_date);
-        const timeLine = `${this.fmtTime(apt.start_time)}-${this.fmtTime(apt.end_time)}`;
+        // "Data i godzina": data "dd mmmm" + godzina startu + czas trwania
+        const dateLine = this.fmtDateMonth(apt.appointment_date);
+        const startLine = this.fmtTime(apt.start_time);
+        const mins = this.durationMinutes(apt.start_time, apt.end_time);
+        const durMinLine = mins != null ? `${mins}min` : '';
+        const durHrLine = mins != null ? `(${this.fmtHours(mins)}h)` : '';
 
         const choices = this.RESOLUTIONS.map(s => `
             <button type="button" class="pv-choice" data-id="${apt.id}" data-status="${s}"
                     style="${this.badgeStyle(this.STATUS_VARS[s])}"
                     aria-pressed="false">
+                <span class="pv-choice-dot" aria-hidden="true"></span>
                 ${this.STATUS_LABELS[s]}
             </button>
         `).join('');
@@ -262,8 +274,10 @@ const PastVisitsScanner = {
                 <td class="pv-cell-name">${this.escapeHtml(apt.client_name)}</td>
                 <td>${this.escapeHtml(apt.employee_name)}</td>
                 <td class="pv-cell-dt">
-                    <span class="pv-date">${dateLine}</span><br>
-                    <span class="pv-time">${timeLine}</span>
+                    <span class="pv-date">${dateLine}</span>
+                    <span class="pv-time">${startLine}</span>
+                    <span class="pv-dur">${durMinLine}</span>
+                    <span class="pv-dur-h">${durHrLine}</span>
                 </td>
                 <td class="pv-cell-services" title="${this.escapeHtml(apt.service_names || 'Brak')}">${this.escapeHtml(apt.service_names || 'Brak')}</td>
                 <td class="pv-status-cell">
@@ -282,7 +296,9 @@ const PastVisitsScanner = {
 
     createCard(apt) {
         const initials = this.initials(apt.employee_name);
-        const dt = `${this.fmtDateShort(apt.appointment_date)} ${this.fmtTime(apt.start_time)}`;
+        const mins = this.durationMinutes(apt.start_time, apt.end_time);
+        const durPart = mins != null ? ` · ${mins}min` : '';
+        const dt = `${this.fmtDateMonth(apt.appointment_date)}, ${this.fmtTime(apt.start_time)}${durPart}`;
 
         const toggles = this.RESOLUTIONS.map(s => `
             <button type="button" class="pv-toggle-btn" data-id="${apt.id}" data-status="${s}"
@@ -494,24 +510,42 @@ const PastVisitsScanner = {
         return `background:${cssVarAlpha(varName, 0.12)};color:${cssVar(varName)};border:1px solid ${cssVarAlpha(varName, 0.35)};`;
     },
 
-    /** 'YYYY-MM-DD' → 'dd.mm.yyyy' (parsowanie po częściach, bez stref czasowych). */
-    fmtDateFull(dateStr) {
+    /**
+     * 'YYYY-MM-DD' → 'd mmmm' po polsku, np. '22 czerwca'
+     * (parsowanie po częściach, bez stref czasowych — patrz reguła date-formatting).
+     */
+    fmtDateMonth(dateStr) {
         if (!dateStr) return '';
-        const [y, m, d] = String(dateStr).split('-');
-        return `${d}.${m}.${y}`;
-    },
-
-    /** 'YYYY-MM-DD' → 'dd.mm.yy'. */
-    fmtDateShort(dateStr) {
-        if (!dateStr) return '';
-        const [y, m, d] = String(dateStr).split('-');
-        return `${d}.${m}.${String(y).slice(2)}`;
+        const [, m, d] = String(dateStr).split('-').map(Number);
+        const month = this.MONTHS_PL[m - 1] || '';
+        return `${d} ${month}`.trim();
     },
 
     /** 'HH:MM:SS' / 'HH:MM' → 'HH:MM'. */
     fmtTime(timeStr) {
         if (!timeStr) return '';
         return String(timeStr).slice(0, 5);
+    },
+
+    /** Czas trwania wizyty w minutach (start→koniec). null gdy brak danych. */
+    durationMinutes(startStr, endStr) {
+        if (!startStr || !endStr) return null;
+        const toMin = (t) => {
+            const [h, m] = String(t).split(':').map(Number);
+            if (Number.isNaN(h) || Number.isNaN(m)) return null;
+            return h * 60 + m;
+        };
+        const a = toMin(startStr), b = toMin(endStr);
+        if (a == null || b == null) return null;
+        let diff = b - a;
+        if (diff < 0) diff += 24 * 60; // zabezpieczenie na wizyty przez północ
+        return diff;
+    },
+
+    /** Minuty → godziny z polskim przecinkiem, bez zbędnych zer: 90 → '1,5', 60 → '1'. */
+    fmtHours(minutes) {
+        const h = Math.round((minutes / 60) * 100) / 100;
+        return String(h).replace('.', ',');
     },
 
     /** Inicjały pracownika (maks. 2 litery). */
