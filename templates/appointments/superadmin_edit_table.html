@@ -833,7 +833,7 @@ function openDropdown(trigger) {
     if (type === 'client') {
         items = (clientsCache || []).map(c => ({
             id: c.id,
-            label: `${c.first_name} ${c.last_name}` + (c.phone ? ` (${c.phone})` : ''),
+            label: `${c.first_name} ${c.last_name}` + (c.phone ? ` (${formatPhone(c.phone)})` : ''),
             selected: c.id === row.client_id
         }));
     } else if (type === 'employee') {

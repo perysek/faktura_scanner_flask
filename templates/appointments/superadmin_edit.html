@@ -590,7 +590,7 @@ function populateClientSelect(clients) {
     clients.forEach(c => {
         const o = document.createElement('option');
         o.value = c.id;
-        o.textContent = `${c.first_name} ${c.last_name}` + (c.phone ? ` (${c.phone})` : '');
+        o.textContent = `${c.first_name} ${c.last_name}` + (c.phone ? ` (${formatPhone(c.phone)})` : '');
         sel.appendChild(o);
     });
     SearchableSelect.sync('client-select');

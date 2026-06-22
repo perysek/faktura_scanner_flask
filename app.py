@@ -418,6 +418,25 @@ def create_app():
             # than 500 the whole page over a cache-busting nicety.
             return url_for('static', filename=filename)
 
+    @app.template_filter('format_phone')
+    def format_phone(raw):
+        """Display a stored Polish phone as '48 XXX XXX XXX' (display-only).
+
+        Mirror of the JS formatPhone() in static/js/utils.js. Stored numbers are
+        the bare 11-digit '48XXXXXXXXX' form (see normalize_phone). Unrecognized
+        values are returned unchanged so legacy oddities still render.
+        """
+        if not raw:
+            return raw
+        digits = ''.join(ch for ch in str(raw) if ch.isdigit())
+        if len(digits) == 11 and digits.startswith('48'):
+            national = digits[2:]
+        elif len(digits) == 9:
+            national = digits
+        else:
+            return raw
+        return f"48 {national[0:3]} {national[3:6]} {national[6:9]}"
+
     return app
 
 

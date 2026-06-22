@@ -67,6 +67,32 @@ function formatPLN(amount) {
 }
 
 /**
+ * Format a stored Polish phone number for display as "48 XXX XXX XXX".
+ *
+ * Display-only — never mutates the stored value. Stored numbers are the bare
+ * 11-digit "48XXXXXXXXX" form (see services/data_import_helpers.normalize_phone),
+ * so we strip to digits and regroup. Anything that isn't a recognizable Polish
+ * number (9 digits, or 11 starting with 48) is returned unchanged so legacy
+ * oddities still render instead of disappearing.
+ *
+ * @param {string} raw - stored phone, e.g. '48451042666'
+ * @returns {string} e.g. '48 451 042 666', or the original string if unrecognized
+ */
+function formatPhone(raw) {
+    if (!raw) return '';
+    const digits = String(raw).replace(/\D/g, '');
+    let national;
+    if (digits.length === 11 && digits.startsWith('48')) {
+        national = digits.slice(2);
+    } else if (digits.length === 9) {
+        national = digits;
+    } else {
+        return String(raw);
+    }
+    return `48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
+}
+
+/**
  * Debounce function to limit rapid function calls
  */
 function debounce(func, wait) {

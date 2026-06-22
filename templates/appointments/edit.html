@@ -286,7 +286,7 @@ async function loadClients() {
         clients.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c.id;
-            opt.textContent = `${c.first_name} ${c.last_name}` + (c.phone ? ` (${c.phone})` : '');
+            opt.textContent = `${c.first_name} ${c.last_name}` + (c.phone ? ` (${formatPhone(c.phone)})` : '');
             sel.appendChild(opt);
         });
         SearchableSelect.sync('client-select');

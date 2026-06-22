@@ -828,10 +828,10 @@ function renderClients(clients) {
         // `phoneUnderName` is the desktop-only line beneath the name (omitted
         // entirely when the client has no phone, rather than showing a dash).
         const phone = client.phone
-            ? escapeHtml(client.phone)
+            ? escapeHtml(formatPhone(client.phone))
             : '<span style="color:var(--color-ink-subtle)">—</span>';
         const phoneUnderName = client.phone
-            ? `<div class="client-phone">${escapeHtml(client.phone)}</div>`
+            ? `<div class="client-phone">${escapeHtml(formatPhone(client.phone))}</div>`
             : '';
         const lastVisit = formatDate(client.last_visit_date);
         const nextVisit = formatNextVisit(

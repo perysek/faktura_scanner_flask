@@ -419,7 +419,7 @@
             <div>
                 <label class="field-label">Telefon</label>
                 <p class="field-value{% if not client.phone %} empty{% endif %}">
-                    {{ client.phone if client.phone else 'Brak danych' }}
+                    {{ client.phone | format_phone if client.phone else 'Brak danych' }}
                 </p>
             </div>
             <div>
