@@ -148,13 +148,13 @@
         .refined-page { padding: 1rem; }
         .refined-card { padding: 1.25rem; }
 
-        /* One row per day: [✓ day name] [from] [to], no "–" separator. The day
-           label keeps its content width; the two time inputs grow to fill the
-           remaining width equally (capped at 8rem), with min-width:0 so the
-           tracks shrink instead of overflowing — no horizontal scrollbar, and
-           each input stays wide enough to show the full HH:MM value. */
+        /* One row per day: [✓ day name] [from] [to], no "–" separator. The two
+           time inputs are a FIXED 6rem so they're identical on every row and
+           line up vertically; the flexible day label (1fr) absorbs the differing
+           day-name lengths. min-width:0 lets the label wrap on the narrowest
+           phones rather than push the inputs off-screen — no horizontal scroll. */
         .schedule-row {
-            grid-template-columns: auto 1fr 1fr;
+            grid-template-columns: 1fr 6rem 6rem;
             column-gap: 0.4rem;
             row-gap: 0;
             align-items: center;
@@ -164,7 +164,6 @@
         .schedule-time {
             width: 100%;
             min-width: 0;
-            max-width: 8rem;
             box-sizing: border-box;
             padding: 0.45rem 0.5rem;
         }
