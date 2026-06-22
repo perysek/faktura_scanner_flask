@@ -10,8 +10,9 @@
  * h-scrolla). Nagłówek tabeli jest przyklejony (sticky) — przewijają się tylko
  * wiersze. Kolumna "Data i godzina": data "dd mmmm", pod nią godzina startu
  * "hh:mm", a niżej czas trwania w minutach ("90min") i w godzinach ("(1,5h)").
- * Kolumna "Status" to klikalny badge, który rozwija pod sobą kolorowane menu
- * wyboru statusu końcowego (kolory zgodne z typologią badge'y statusów).
+ * Kolumna "Status" to pojedynczy przycisk cyklicznie zmieniający status: każde
+ * kliknięcie przechodzi do kolejnego statusu w pętli (pierwotny → zakończona →
+ * anulowana → nieobecność → pierwotny ...), z płynną (0,2s) zmianą koloru.
  *
  * Modal (mobile, ≤640px): poziomo przewijane, zwarte karty z 3-pozycyjnym
  * przełącznikiem (zakończona / anulowana / no-show) na dole każdej karty.
@@ -216,11 +217,7 @@ const PastVisitsScanner = {
         const cards = appointments.map(apt => this.createCard(apt)).join('');
 
         return `
-            <div class="pv-note">
-                <strong>Uwaga:</strong> poniższe wizyty już się odbyły, ale nie mają
-                statusu końcowego. Kliknij status, aby wybrać: zakończona, anulowana
-                lub nieobecność.
-            </div>
+            <div class="pv-note">Zaktualizuj status przeszłych wizyt.</div>
 
             <!-- Desktop: zwarta tabela mieszcząca się w modalu -->
             <div class="pv-desktop">
@@ -259,16 +256,10 @@ const PastVisitsScanner = {
         const durMinLine = mins != null ? `${mins}min` : '';
         const durHrLine = mins != null ? `(${this.fmtHours(mins)}h)` : '';
 
-        const choices = this.RESOLUTIONS.map(s => `
-            <button type="button" class="pv-choice" data-id="${apt.id}" data-status="${s}"
-                    style="${this.badgeStyle(this.STATUS_VARS[s])}"
-                    aria-pressed="false">
-                <span class="pv-choice-dot" aria-hidden="true"></span>
-                ${this.STATUS_LABELS[s]}
-            </button>
-        `).join('');
-
-        // ###2 — klikalny badge + rozwijany wybór statusu pod nim
+        // Pojedynczy przycisk cyklicznie przełączający status: każde kliknięcie
+        // przechodzi do następnego statusu w pętli [aktualny → zakończona →
+        // anulowana → nieobecność → aktualny ...]. Kolor i etykieta zmieniają się
+        // płynnie (0,2s). Powrót do statusu pierwotnego = brak zmiany.
         return `
             <tr data-id="${apt.id}">
                 <td class="pv-cell-name">${this.escapeHtml(apt.client_name)}</td>
@@ -281,14 +272,13 @@ const PastVisitsScanner = {
                 </td>
                 <td class="pv-cell-services" title="${this.escapeHtml(apt.service_names || 'Brak')}">${this.escapeHtml(apt.service_names || 'Brak')}</td>
                 <td class="pv-status-cell">
-                    <button type="button" class="pv-badge" data-id="${apt.id}"
+                    <button type="button" class="pv-cycle" data-id="${apt.id}"
                             style="${this.badgeStyle(currentVar)}"
-                            aria-haspopup="true" aria-expanded="false"
-                            title="Kliknij, aby zmienić status">
-                        <span class="pv-badge-label">${currentLabel}</span>
-                        <span class="pv-caret" aria-hidden="true">▾</span>
+                            aria-label="Zmień status — kliknij, aby przełączyć"
+                            title="Kliknij, aby przełączyć status">
+                        <span class="pv-cycle-label">${currentLabel}</span>
+                        <span class="pv-cycle-icon" aria-hidden="true">↻</span>
                     </button>
-                    <div class="pv-rollout" data-id="${apt.id}" hidden>${choices}</div>
                 </td>
             </tr>
         `;
@@ -328,17 +318,13 @@ const PastVisitsScanner = {
         if (!body) return;
 
         body.addEventListener('click', (e) => {
-            const badge = e.target.closest('.pv-badge');
-            if (badge) {
-                this.toggleRollout(badge.dataset.id);
+            // Desktop: pojedynczy przycisk cyklicznie zmieniający status
+            const cycle = e.target.closest('.pv-cycle');
+            if (cycle) {
+                this.cycleStatus(cycle.dataset.id);
                 return;
             }
-            const choice = e.target.closest('.pv-choice');
-            if (choice) {
-                this.selectStatus(choice.dataset.id, choice.dataset.status);
-                this.closeRollout(choice.dataset.id);
-                return;
-            }
+            // Mobile: 3-pozycyjny przełącznik (wybór bezpośredni)
             const toggle = e.target.closest('.pv-toggle-btn');
             if (toggle) {
                 this.selectStatus(toggle.dataset.id, toggle.dataset.status);
@@ -347,28 +333,22 @@ const PastVisitsScanner = {
         });
     },
 
-    toggleRollout(id) {
-        const rollout = this.modalOverlay.querySelector(`.pv-rollout[data-id="${id}"]`);
-        const badge = this.modalOverlay.querySelector(`.pv-badge[data-id="${id}"]`);
-        if (!rollout) return;
-        const willOpen = rollout.hasAttribute('hidden');
-        // Zamknij inne rozwinięte
-        this.modalOverlay.querySelectorAll('.pv-rollout:not([hidden])').forEach(r => {
-            r.setAttribute('hidden', '');
-            const b = this.modalOverlay.querySelector(`.pv-badge[data-id="${r.dataset.id}"]`);
-            if (b) b.setAttribute('aria-expanded', 'false');
-        });
-        if (willOpen) {
-            rollout.removeAttribute('hidden');
-            if (badge) badge.setAttribute('aria-expanded', 'true');
+    /**
+     * Przechodzi do następnego statusu w pętli [pierwotny → completed →
+     * cancelled → no_show → pierwotny ...]. Powrót na status pierwotny cofa zmianę.
+     */
+    cycleStatus(id) {
+        const cycle = [this.original[id], ...this.RESOLUTIONS];
+        const current = this.selections[id] || this.original[id];
+        const idx = cycle.indexOf(current);
+        const next = cycle[(idx + 1) % cycle.length];
+        if (next === this.original[id]) {
+            delete this.selections[id]; // pełna pętla = brak zmiany
+        } else {
+            this.selections[id] = next;
         }
-    },
-
-    closeRollout(id) {
-        const rollout = this.modalOverlay.querySelector(`.pv-rollout[data-id="${id}"]`);
-        const badge = this.modalOverlay.querySelector(`.pv-badge[data-id="${id}"]`);
-        if (rollout) rollout.setAttribute('hidden', '');
-        if (badge) badge.setAttribute('aria-expanded', 'false');
+        this.updateRowVisual(id);
+        this.updateControls();
     },
 
     /**
@@ -387,22 +367,19 @@ const PastVisitsScanner = {
     updateRowVisual(id) {
         const selected = this.selections[id];
 
-        // --- Desktop: badge + aktywny wybór ---
-        const badge = this.modalOverlay.querySelector(`.pv-badge[data-id="${id}"]`);
-        if (badge) {
+        // --- Desktop: przycisk cyklicznie zmieniający status (płynna zmiana koloru) ---
+        const cycleBtn = this.modalOverlay.querySelector(`.pv-cycle[data-id="${id}"]`);
+        if (cycleBtn) {
             const status = selected || this.original[id];
             const label = this.STATUS_LABELS[status] || status;
             const varName = this.STATUS_VARS[status] || 'color-ink-muted';
-            badge.style.cssText = this.badgeStyle(varName);
-            const labelEl = badge.querySelector('.pv-badge-label');
+            // Zachowaj ikonę-podpowiedź; podmień tylko kolory (cssText nie rusza
+            // właściwości transition, która żyje w arkuszu — animacja 0,2s działa).
+            cycleBtn.style.cssText = this.badgeStyle(varName);
+            const labelEl = cycleBtn.querySelector('.pv-cycle-label');
             if (labelEl) labelEl.textContent = label;
-            badge.classList.toggle('pv-badge--changed', !!selected);
+            cycleBtn.classList.toggle('pv-cycle--changed', !!selected);
         }
-        this.modalOverlay.querySelectorAll(`.pv-choice[data-id="${id}"]`).forEach(ch => {
-            const active = ch.dataset.status === selected;
-            ch.classList.toggle('pv-choice--active', active);
-            ch.setAttribute('aria-pressed', active ? 'true' : 'false');
-        });
 
         // --- Mobile: przełącznik 3-pozycyjny ---
         this.modalOverlay.querySelectorAll(`.pv-toggle-btn[data-id="${id}"]`).forEach(btn => {
@@ -427,7 +404,6 @@ const PastVisitsScanner = {
         this.appointments.forEach(apt => {
             this.selections[apt.id] = 'completed';
             this.updateRowVisual(apt.id);
-            this.closeRollout(apt.id);
         });
         this.updateControls();
     },
