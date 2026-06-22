@@ -1247,9 +1247,15 @@
      applied inline (badgeStyle); the 0.2s transition lives HERE in the sheet, so
      it survives the inline style.cssText swap and animates each colour change. */
   .pv-status-cell { position: relative; }
+  /* Fixed box — does NOT resize with label length. Width fits the longest
+     possible label ("Potwierdzona"); label is centred in the free space and the
+     ↻ icon is pinned right, so the button's size, position and text alignment
+     stay constant as the status cycles. */
   .pv-cycle {
       display: inline-flex; align-items: center; gap: 0.3rem;
-      padding: 0.3rem 0.55rem;
+      box-sizing: border-box;
+      width: 10rem; height: 1.875rem;
+      padding: 0 0.55rem; vertical-align: middle;
       font-size: 0.6875rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.04em;
       border-radius: var(--radius-sm);
@@ -1258,7 +1264,11 @@
   }
   .pv-cycle:hover { filter: brightness(0.96); }
   .pv-cycle--changed { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px currentColor; }
-  .pv-cycle-icon { font-size: 0.75rem; opacity: 0.55; }
+  .pv-cycle-label {
+      flex: 1 1 auto; text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pv-cycle-icon { flex-shrink: 0; font-size: 0.75rem; opacity: 0.55; }
 
   /* Mobile dense, horizontally-scrollable cards */
   .pv-cards {

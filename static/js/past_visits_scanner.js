@@ -41,7 +41,7 @@ const PastVisitsScanner = {
         'in_progress': 'W trakcie',
         'completed': 'Zakończona',
         'cancelled': 'Anulowana',
-        'no_show': 'Nieobecność klienta'
+        'no_show': 'Nieobecność'
     },
 
     // Krótsze etykiety pod zwarty przełącznik mobilny
