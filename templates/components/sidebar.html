@@ -1,11 +1,37 @@
 {% from 'macros/sidebar_macros.html' import sidebar_link, sidebar_section_start, sidebar_section_end %}
 
 <style>
-    /* Trim the mobile drawer (< lg, where the sidebar is a slide-in panel) to the
-       links a phone user actually needs. Items/sections tagged `nav-mobile-hide`
-       drop out below 1024px and reappear on the always-on desktop rail. */
+    /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present EVERY
+       navlink as one flat list. The accordion section headers are removed, all
+       section bodies are forced open, and the old `nav-mobile-hide` trim is
+       lifted so previously-hidden links reappear. Gaps + per-link height are
+       tightened to fight vertical overflow in the drawer. Desktop (>= lg) keeps
+       the collapsible grouped rail untouched. */
     @media (max-width: 1023px) {
-        .nav-mobile-hide { display: none !important; }
+        /* Un-trim: links/sections that were hidden on phones now show. Split by
+           element type so the section wrapper stays block and links stay flex. */
+        .sidebar-link.nav-mobile-hide  { display: flex !important; }
+        .sidebar-section.nav-mobile-hide { display: block !important; }
+
+        /* Drop the section grouping — hide the accordion header (and its chevron). */
+        .sidebar-nav .sidebar-section-header { display: none !important; }
+
+        /* Force every section body open regardless of the JS accordion state,
+           which pins max-height inline (only !important beats an inline style). */
+        .sidebar-nav .sidebar-section-items {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        /* Flatten + compact: remove inter-section margins so links read as one
+           continuous list, and trim link height/padding to claw back vertical
+           space (kept at a usable ~40px tap target, down from the 44px default). */
+        .sidebar-nav .sidebar-section { margin-top: 0 !important; }
+        .sidebar-nav .sidebar-link {
+            min-height: 40px !important;
+            padding-top: 0.375rem !important;
+            padding-bottom: 0.375rem !important;
+        }
     }
 </style>
 
