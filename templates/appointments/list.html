@@ -89,14 +89,11 @@
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-    .col-sms { width: 140px; white-space: nowrap; }
-    .sms-tag { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 2px; font-size: 0.625rem; font-weight: 500; letter-spacing: 0.02em; margin-right: 2px; margin-bottom: 2px; cursor: default; }
-    .sms-tag--confirmed { background: #dcfce7; color: #166534; }
-    .sms-tag--declined  { background: #fee2e2; color: #991b1b; }
-    .sms-tag--ok        { background: #dbeafe; color: #1e40af; }
-    .sms-tag--fail      { background: #fee2e2; color: #991b1b; }
-    .sms-tag--pending   { background: #f3f4f6; color: #6b7280; border: 1px dashed #d1d5db; }
-    .sms-tag--none      { color: #9ca3af; }
+    /* Weekend visits (Sat/Sun) get a subtle gray so the week scans at a glance.
+       Desktop: low-specificity .weekend-row lets the :hover rule still win on
+       hover. Mobile card: higher-specificity selector beats the card's white. */
+    .weekend-row { background: #f3f4f6; }
+    table.stack-cards tbody tr.weekend-row { background: #f3f4f6; }
 
     /* Desktop table shows the per-column values; the mobile stacked card (≤640px,
        matching .stack-cards) swaps the Data cell to a combined "Data i godzina"
@@ -170,14 +167,14 @@
             </button>
         </div>
 
-        <!-- Kontrolki paginacji miesięcznej -->
+        <!-- Kontrolki paginacji tygodniowej -->
         <div style="margin-left: auto; align-self: flex-end; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button onclick="previousMonth()" class="refined-btn-secondary" title="Poprzedni miesiąc (–30 dni)" aria-label="Poprzedni miesiąc">
+            <button onclick="previousWeek()" class="refined-btn-secondary" title="Poprzedni tydzień (–7 dni)" aria-label="Poprzedni tydzień">
                 {{ icon('chevron_left') }}
-                –30 dni
+                –7 dni
             </button>
-            <button onclick="nextMonth()" class="refined-btn-secondary" title="Następny miesiąc (+30 dni)" aria-label="Następny miesiąc">
-                +30 dni
+            <button onclick="nextWeek()" class="refined-btn-secondary" title="Następny tydzień (+7 dni)" aria-label="Następny tydzień">
+                +7 dni
                 {{ icon('chevron_right') }}
             </button>
         </div>
@@ -186,23 +183,33 @@
     <!-- Table -->
     <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista wizyt">
         <table class="refined-table stack-cards">
+            <colgroup>
+                <col style="width:11%"><!-- Data -->
+                <col style="width:12%"><!-- Rozpoczęcie -->
+                <col style="width:16%"><!-- Klient -->
+                <col style="width:17%"><!-- Usługa -->
+                <col style="width:13%"><!-- Pracownik -->
+                <col style="width:8%"> <!-- Kwota -->
+                <col style="width:11%"><!-- Status -->
+                <col style="width:6%"> <!-- Ocena -->
+                <col style="width:6%"> <!-- Akcje -->
+            </colgroup>
             <thead>
                 <tr>
                     <th class="th-sortable" id="th-appointment_date" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('appointment_date')">Data <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                    <th class="th-sortable" id="th-start_time" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('start_time')">Godzina <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-start_time" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('start_time')">Rozpoczęcie <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-client_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('client_name')">Klient <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-service_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('service_name')">Usługa <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-employee_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('employee_name')">Pracownik <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-total_price" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_price')">Kwota <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-status" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('status')">Status <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-satisfaction_score" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('satisfaction_score')">Ocena <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                    <th class="col-sms">SMS</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody id="appointments-tbody">
                 <tr>
-                    <td colspan="10" class="empty-state cell-empty">
+                    <td colspan="9" class="empty-state cell-empty">
                         {{ icon('calendar_today', class='empty-icon') }}
                         <p class="empty-text">Ładowanie wizyt...</p>
                     </td>
@@ -265,40 +272,9 @@ const VALID_TRANSITIONS = {
     'no_show': []
 };
 
-// Sort state
+// Sort state. Defaults to chronological (date ascending) for the upcoming-week view.
 let allAppointments = [];
-let sortState = { column: null, direction: 'asc' };
-let smsSentMap = {};
-let smsTypes = [];
-
-function renderSmsCell(apptId, confirmStatus) {
-    const sent = smsSentMap[apptId] || [];
-    const sentKeys = new Set(sent.map(s => s.type_key));
-    const tags = [];
-
-    if (confirmStatus === 'confirmed')
-        tags.push(`<span class="sms-tag sms-tag--confirmed" title="Klient potwierdził">✓ Potw.</span>`);
-    else if (confirmStatus === 'declined')
-        tags.push(`<span class="sms-tag sms-tag--declined" title="Klient odmówił">✕ Odmowa</span>`);
-
-    const seenKeys = new Set();
-    for (const entry of sent) {
-        if (seenKeys.has(entry.type_key)) continue;
-        seenKeys.add(entry.type_key);
-        const cls = ['sent','delivered'].includes(entry.status) ? 'ok' : 'fail';
-        const shortName = (entry.type_name || entry.type_key).slice(0, 8);
-        tags.push(`<span class="sms-tag sms-tag--${cls}" title="${escapeHtml(entry.type_name || '')}: ${entry.status}">${shortName}</span>`);
-    }
-
-    for (const mt of smsTypes) {
-        if (mt.is_enabled && !sentKeys.has(mt.type_key)) {
-            const shortName = mt.name.slice(0, 8);
-            tags.push(`<span class="sms-tag sms-tag--pending" title="${escapeHtml(mt.name)}: oczekuje">${shortName}…</span>`);
-        }
-    }
-
-    return tags.length ? tags.join('') : '<span class="sms-tag sms-tag--none">—</span>';
-}
+let sortState = { column: 'appointment_date', direction: 'asc' };
 
 // Status modal state
 let modalAppointmentId = null;
@@ -357,11 +333,31 @@ function formatDateTimeMobile(dateStr, start, end) {
     return `${day} ${month} ${weekday} ${time}${durStr}`.trim();
 }
 
+// Desktop "Data" cell: "dd.mm.yyyy (ddd)", e.g. "22.06.2026 (pon)".
 function formatDate(dateStr) {
     if (!dateStr) return '—';
     const [y, m, d] = String(dateStr).split('-').map(Number);
     const date = new Date(y, m - 1, d);  // local time — avoids UTC midnight shift
-    return date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+    const dd = String(d).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    const wd = date.toLocaleDateString('pl-PL', { weekday: 'short' }).replace('.', '');
+    return `${dd}.${mm}.${y} (${wd})`;
+}
+
+// True when the visit date falls on Saturday or Sunday (local time).
+function isWeekend(dateStr) {
+    if (!dateStr) return false;
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const day = new Date(y, m - 1, d).getDay();  // 0 = Sun, 6 = Sat
+    return day === 0 || day === 6;
+}
+
+// Desktop "Rozpoczęcie" cell: start time + visit length, e.g. "14:30 (45 min)".
+function formatStart(start, end) {
+    if (!start) return '—';
+    const t = String(start).substring(0, 5);
+    const dur = visitDurationMin(start, end);
+    return dur != null ? `${t} (${dur} min)` : t;
 }
 
 function formatTime(timeStr) {
@@ -398,32 +394,32 @@ function addDays(date, days) {
     return result;
 }
 
-// ── Period navigation (±30 days) ─────────────────────────────────────────────
+// ── Period navigation (±7 days) ──────────────────────────────────────────────
 
-function previousMonth() {
+function previousWeek() {
     const startDate = getDateFromInput('filter-start');
     const endDate = getDateFromInput('filter-end');
     if (!startDate || !endDate) {
         const today = new Date();
-        setDateToInput('filter-start', addDays(today, -30));
+        setDateToInput('filter-start', addDays(today, -7));
         setDateToInput('filter-end', today);
     } else {
-        setDateToInput('filter-start', addDays(startDate, -30));
-        setDateToInput('filter-end', addDays(endDate, -30));
+        setDateToInput('filter-start', addDays(startDate, -7));
+        setDateToInput('filter-end', addDays(endDate, -7));
     }
     loadAppointments();
 }
 
-function nextMonth() {
+function nextWeek() {
     const startDate = getDateFromInput('filter-start');
     const endDate = getDateFromInput('filter-end');
     if (!startDate || !endDate) {
         const today = new Date();
         setDateToInput('filter-start', today);
-        setDateToInput('filter-end', addDays(today, 30));
+        setDateToInput('filter-end', addDays(today, 7));
     } else {
-        setDateToInput('filter-start', addDays(startDate, 30));
-        setDateToInput('filter-end', addDays(endDate, 30));
+        setDateToInput('filter-start', addDays(startDate, 7));
+        setDateToInput('filter-end', addDays(endDate, 7));
     }
     loadAppointments();
 }
@@ -459,6 +455,8 @@ function getSortValue(a, column) {
     const v = a[column];
     if (v == null) return '';
     if (column === 'total_price' || column === 'satisfaction_score') return parseFloat(v) || 0;
+    // Chronological: tie-break same-day visits by start time so the list reads in order.
+    if (column === 'appointment_date') return `${a.appointment_date || ''} ${a.start_time || ''}`;
     return String(v).toLowerCase();
 }
 
@@ -483,7 +481,7 @@ function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
@@ -495,16 +493,15 @@ function renderTable(appointments) {
             ? `data-appt-id="${a.id}" data-status="${a.status}" data-client="${escapeHtml(a.client_name || '')}" data-date="${a.appointment_date || ''}" data-time="${formatTime(a.start_time)}"`
             : '';
         return `
-            <tr>
+            <tr${isWeekend(a.appointment_date) ? ' class="weekend-row"' : ''}>
                 <td data-label="Data i godzina"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile">${formatDateTimeMobile(a.appointment_date, a.start_time, a.end_time)}</span></td>
-                <td data-label="Godzina" class="cell-hide-sm">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</td>
+                <td data-label="Rozpoczęcie" class="cell-hide-sm">${formatStart(a.start_time, a.end_time)}</td>
                 <td class="cell-name">${escapeHtml(a.client_name)}</td>
                 <td data-label="Usługa">${escapeHtml(serviceName)}</td>
                 <td data-label="Pracownik">${escapeHtml(a.employee_name)}</td>
                 <td data-label="Kwota" class="cell-hide-sm">${formatCurrency(a.total_price)}</td>
                 <td data-label="Status"><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
                 <td data-label="Ocena"><span class="rating-desktop">${renderVisitRating(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
-                <td class="col-sms cell-hide-sm" data-label="SMS">${renderSmsCell(a.id, a.confirmation_status)}</td>
                 <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
                         <a href="/appointment/${a.id}?from=list" class="action-icon-btn" title="Szczegóły" aria-label="Szczegóły">
@@ -548,15 +545,13 @@ async function loadAppointments() {
         const data = await response.json();
         if (data.success) {
             allAppointments = data.appointments;
-            smsSentMap = data.sms_sent_map || {};
-            smsTypes = data.sms_types || [];
             renderTable(allAppointments);
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="empty-state cell-empty">
+                <td colspan="9" class="empty-state cell-empty">
                     <p class="empty-text" style="color:var(--color-error);">Błąd połączenia z serwerem</p>
                     <button onclick="loadAppointments()" class="refined-btn-secondary" style="margin-top:0.75rem;">Spróbuj ponownie</button>
                 </td>
@@ -698,13 +693,14 @@ function updateViewLinks() {
     }
 }
 
-// Default: today → today+30 days (next 30 days)
+// Default: today → today+7 days (the upcoming week), date ascending.
 document.addEventListener('DOMContentLoaded', () => {
     updateViewLinks();
     restoreFilterState('appointments', ['filter-status']);
     const today = new Date();
     setDateToInput('filter-start', today);
-    setDateToInput('filter-end', addDays(today, 30));
+    setDateToInput('filter-end', addDays(today, 7));
+    updateSortHeaders();   // surface the default date-ascending sort on the header
     loadAppointments();
     initScrollToTopButton('scroll-top-btn');
 });
