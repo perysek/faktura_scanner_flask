@@ -1,17 +1,16 @@
 {% from 'macros/sidebar_macros.html' import sidebar_link, sidebar_section_start, sidebar_section_end %}
 
 <style>
-    /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present EVERY
-       navlink as one flat list. The accordion section headers are removed, all
-       section bodies are forced open, and the old `nav-mobile-hide` trim is
-       lifted so previously-hidden links reappear. Gaps + per-link height are
-       tightened to fight vertical overflow in the drawer. Desktop (>= lg) keeps
-       the collapsible grouped rail untouched. */
+    /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present the
+       deliberately-limited link set as one flat list. The accordion section
+       headers are removed and all section bodies are forced open, but the
+       `nav-mobile-hide` trim is KEPT — only the phone-relevant links show.
+       Gaps + per-link height are tightened to fight vertical overflow. Desktop
+       (>= lg) keeps the collapsible grouped rail untouched. */
     @media (max-width: 1023px) {
-        /* Un-trim: links/sections that were hidden on phones now show. Split by
-           element type so the section wrapper stays block and links stay flex. */
-        .sidebar-link.nav-mobile-hide  { display: flex !important; }
-        .sidebar-section.nav-mobile-hide { display: block !important; }
+        /* Keep the mobile trim: links/sections tagged nav-mobile-hide stay
+           hidden on phones (they reappear on the always-on desktop rail). */
+        .nav-mobile-hide { display: none !important; }
 
         /* Drop the section grouping — hide the accordion header (and its chevron). */
         .sidebar-nav .sidebar-section-header { display: none !important; }
