@@ -403,6 +403,15 @@
     /* Trend sparkline cell */
     .trend-cell { line-height: 0; }
 
+    /* Status holds a fixed-size pill badge, not free text — exempt it from the
+       global `td { overflow:hidden; text-overflow:ellipsis }` so the badge can
+       never render a phantom "…" when the column is a hair narrow. Needs the
+       `td` in the selector to out-specify the global `.refined-table td` rule. */
+    .refined-table td.status-cell {
+        overflow: visible;
+        text-overflow: clip;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
         .page-header { flex-direction: column; align-items: flex-start; }
@@ -533,13 +542,13 @@
     <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista klientów">
         <table class="refined-table stack-cards">
             <colgroup>
-                <col style="width:24%"><!-- Imię i nazwisko (+ telefon poniżej) -->
-                <col style="width:13%"><!-- Ostatnia wizyta -->
+                <col style="width:22%"><!-- Imię i nazwisko (+ telefon poniżej) -->
+                <col style="width:12%"><!-- Ostatnia wizyta -->
                 <col style="width:9%"> <!-- Wizyt -->
                 <col style="width:9%"> <!-- No-shows -->
                 <col style="width:9%"> <!-- Odwołał -->
-                <col style="width:18%"><!-- Trend (poszerzony po usunięciu Telefonu) -->
-                <col style="width:9%"> <!-- Status -->
+                <col style="width:19%"><!-- Trend (sparkline wypełnia kolumnę) -->
+                <col style="width:11%"><!-- Status (mieści badge bez ucinania) -->
                 <col style="width:9%"> <!-- Akcje -->
             </colgroup>
             <thead>
@@ -699,13 +708,17 @@ function sparklineSvg(months) {
         const y = pad + (H - 2 * pad) * (1 - v / max);
         return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
+    // Fluid sparkline: the <svg> fills the trend column (width:100% inside a
+    // flex wrapper). preserveAspectRatio="none" stretches the polyline
+    // horizontally to the column width; vector-effect="non-scaling-stroke"
+    // keeps the line a constant 1.75px so it doesn't thin out when stretched.
     // TREND_LABEL/GLYPH values are static literals — safe to interpolate
-    return `<span style="display:inline-flex;align-items:center;gap:0.25rem;" role="img" aria-label="Trend: ${TREND_LABEL[dir]}">
-        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;" aria-hidden="true">
+    return `<span style="display:flex;align-items:center;gap:0.375rem;width:100%;" role="img" aria-label="Trend: ${TREND_LABEL[dir]}">
+        <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;flex:1;min-width:0;overflow:visible;" aria-hidden="true">
             <title>Trend: ${TREND_LABEL[dir]}</title>
-            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
         </svg>
-        <span aria-hidden="true" style="font-size:0.5625rem;color:${color};">${TREND_GLYPH[dir]}</span>
+        <span aria-hidden="true" style="font-size:0.5625rem;color:${color};flex-shrink:0;">${TREND_GLYPH[dir]}</span>
     </span>`;
 }
 
@@ -872,7 +885,7 @@ function renderClients(clients) {
                 <td data-label="No-shows">${noShowCell}</td>
                 <td data-label="Odwołał"><span class="visit-count">${client.cancelled_count || 0}</span></td>
                 <td class="trend-cell cell-hide-sm" data-label="Trend">${sparklineSvg(clientTrends[client.id])}</td>
-                <td data-label="Status">${statusBadge}</td>
+                <td class="status-cell" data-label="Status">${statusBadge}</td>
                 <td class="cell-actions" style="text-align:right; white-space:nowrap;">
                     <div class="action-icons">
                         <a href="/client/${client.id}" class="action-icon-btn" title="Zobacz" aria-label="Zobacz">
