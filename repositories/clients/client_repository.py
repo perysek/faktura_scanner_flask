@@ -225,6 +225,18 @@ class ClientRepository(BaseRepository):
         """
         return self._fetch_all(query, tuple(params) if params else ())
 
+    def get_all_identities(self) -> List[Any]:
+        """Lean id/first_name/last_name/phone list of live clients.
+
+        Used by the live duplicate-detection check on the create/edit forms —
+        only the fields the matcher needs, so the per-keystroke scan stays cheap.
+        """
+        query = """
+            SELECT id, first_name, last_name, phone FROM clients
+            WHERE is_deleted = FALSE
+        """
+        return self._fetch_all(query)
+
     def get_recent_clients(self, limit: int = 10) -> List[Any]:
         """Pobierz ostatnio dodanych klientów"""
         query = f"""

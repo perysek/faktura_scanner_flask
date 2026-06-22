@@ -2645,6 +2645,37 @@ def get_client(client_id):
         raise AppError('Wystapil blad serwera')
 
 
+@api_bp.route('/clients/duplicate-check', methods=['GET'])
+@login_required
+@module_permission_required('clients')
+def clients_duplicate_check():
+    """Live duplicate-detection for the client create/edit forms.
+
+    Query params: first_name, last_name, phone, optional exclude_id (edit form).
+    Returns possible-duplicate warnings using every dedup strategy from the
+    2026-06 cleanup (exact phone, identical/swapped name, prefix, initial,
+    blank-field twin, single-char and combined typos). Read-only — never writes.
+    """
+    try:
+        from services.client_duplicate_service import find_duplicate_warnings
+
+        first_name = request.args.get('first_name', '')
+        last_name = request.args.get('last_name', '')
+        phone = request.args.get('phone', '')
+        exclude_id = request.args.get('exclude_id', type=int)
+
+        existing = current_app.client_repo.get_all_identities()
+        matches = find_duplicate_warnings(
+            first_name, last_name, phone, existing, exclude_id=exclude_id
+        )
+        return jsonify({'success': True, 'matches': matches, 'count': len(matches)})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in clients_duplicate_check')
+        raise AppError('Wystapil blad serwera')
+
+
 @api_bp.route('/clients', methods=['POST'])
 @login_required
 @module_permission_required('clients')
