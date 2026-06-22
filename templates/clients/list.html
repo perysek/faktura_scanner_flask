@@ -81,6 +81,7 @@
     .search-wrapper {
         display: flex;
         gap: 0.75rem;
+        flex-wrap: wrap;
     }
 
     .refined-input {
@@ -564,6 +565,11 @@
     <span id="bulk-toast-icon">{{ icon('check_circle') }}</span>
     <span id="bulk-toast-msg"></span>
 </div>
+
+<!-- Floating scroll-to-top (mobile stack-cards) -->
+<button type="button" id="scroll-top-btn" class="scroll-top-btn" aria-label="Przewiń do góry" title="Przewiń do góry">
+    {{ icon('arrow_upward') }}
+</button>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -784,7 +790,7 @@ function renderClients(clients) {
             : '';
 
         return `
-            <tr>
+            <tr data-client-id="${client.id}">
                 <td class="cell-name">
                     <div class="client-info">
                         <div class="avatar-wrapper">
@@ -991,6 +997,17 @@ document.getElementById('search-input').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') loadClients();
 });
 
+// Tap-anywhere-on-card navigation (mobile stack-cards view only). Icon
+// buttons inside .action-icons keep their own behavior; tapping elsewhere
+// on the card opens the client view, same destination as the "Zobacz" icon.
+document.getElementById('clients-tbody').addEventListener('click', (e) => {
+    if (!window.matchMedia('(max-width: 640px)').matches) return;
+    if (e.target.closest('.action-icons')) return;
+    const row = e.target.closest('tr[data-client-id]');
+    if (!row) return;
+    window.location.href = `/client/${row.dataset.clientId}`;
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     // Restore sort + search state from previous visit
     try {
@@ -1005,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStatistics();
     restoreFilterState('clients', ['search-input']);
     loadClients();
+    initScrollToTopButton('scroll-top-btn');
 });
 </script>
 {% endblock %}

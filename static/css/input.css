@@ -1197,6 +1197,24 @@
       border-radius: 999px;
   }
 
+  /* ── Floating "scroll to top" button — mobile stack-cards pages only ───────
+     Pairs with initScrollToTopButton() in utils.js. Hidden above the
+     stack-cards breakpoint since desktop tables don't need it. */
+  .scroll-top-btn {
+      position: fixed; bottom: 1.25rem; right: 1.25rem;
+      width: 2.75rem; height: 2.75rem;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--color-ink); color: white;
+      border: none; border-radius: 50%;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+      cursor: pointer; z-index: 40;
+      opacity: 0; visibility: hidden; transform: translateY(12px);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  }
+  .scroll-top-btn.visible { opacity: 1; visibility: visible; transform: translateY(0); }
+  .scroll-top-btn svg { width: 1.375rem; height: 1.375rem; }
+  @media (min-width: 641px) { .scroll-top-btn { display: none; } }
+
   /* Progress counter in the modal header (top-right, e.g. "3/7") */
   .pv-progress {
       font-size: 0.8125rem; font-weight: 600;

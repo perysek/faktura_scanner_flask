@@ -162,6 +162,23 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Wire a floating "scroll to top" button (`.scroll-top-btn`): shown once the
+ * page has scrolled past `threshold`, scrolls back to top on click.
+ * Mobile-only by design (the component CSS hides it above 640px) — pairs
+ * with the long stack-cards list views.
+ */
+function initScrollToTopButton(buttonId, threshold = 400) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+    window.addEventListener('scroll', () => {
+        btn.classList.toggle('visible', window.scrollY > threshold);
+    }, { passive: true });
+    btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
 // ── Filter State Persistence ──────────────────────────────────────────────────
 const FILTER_STATE_TTL = 30 * 60 * 1000; // 30 minutes
 
