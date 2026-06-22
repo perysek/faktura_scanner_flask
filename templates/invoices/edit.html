@@ -474,6 +474,16 @@
             gap: 0.5rem;
         }
         .doc-viewer-col { display: none; }
+
+        /* Fit the form to the phone viewport: trim side padding, collapse the
+           per-card field grid to one column (two date inputs at the 16px form
+           guard can't share a phone row), and let flex inputs shrink inside
+           .input-with-button instead of forcing the page wider than the screen. */
+        .refined-page { padding: 1rem; }
+        .form-grid { grid-template-columns: 1fr; }
+        .form-input { min-width: 0; }
+        /* A slash-heavy invoice number has no break points — let it wrap. */
+        .page-title { overflow-wrap: anywhere; }
     }
 </style>
 {% endblock %}
