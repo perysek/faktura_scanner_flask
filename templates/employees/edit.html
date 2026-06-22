@@ -133,6 +133,26 @@
     }
     #dr-panel::-webkit-scrollbar { width: 4px; }
     #dr-panel::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+    /* ── Mobile (phone ≤640px) ─────────────────────────────────────────────
+       The native time inputs render at the global ≥16px mobile font, so the
+       old `120px 1fr 16px 1fr` schedule row pushed the end-time input past the
+       card edge (x-scroll). Drop the day name onto its own line and let the two
+       time inputs share the row, capped and shrinkable: `min-width:0` lets the
+       1fr-ish tracks shrink below the input's min-content, so the row can never
+       overflow. Also hide the whole "Dodatkowe informacje" section (Podwładni +
+       Notatki) on phones. */
+    @media (max-width: 640px) {
+        .schedule-row {
+            grid-template-columns: minmax(0, 140px) auto minmax(0, 140px);
+            justify-content: start;
+            column-gap: 0.5rem;
+            row-gap: 0.375rem;
+        }
+        .schedule-day-label { grid-column: 1 / -1; }
+        .schedule-time { width: 100%; min-width: 0; box-sizing: border-box; }
+        .section-additional { display: none; }
+    }
 </style>
 {% endblock %}
 
@@ -269,7 +289,7 @@
             </section>
 
             <!-- Additional -->
-            <section>
+            <section class="section-additional">
                 <h2 class="section-title">Dodatkowe informacje</h2>
                 <div class="form-grid">
                     <div style="grid-column: 1 / -1;">
