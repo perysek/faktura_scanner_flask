@@ -26,6 +26,8 @@
     .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
     .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+    /* Calendar/list switcher is desktop-only; phones are redirected to the list. */
+    @media (max-width: 640px) { .view-toggle { display: none !important; } }
 
     /* Coverage Stat Card */
     .coverage-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 140px; }
@@ -123,6 +125,17 @@
         .refined-card { padding: 0.5rem; margin-bottom: 0.5rem; }
     }
 </style>
+{% endblock %}
+
+{% block extra_head %}
+<script>
+  // Phone (≤640px): the multi-column timeline calendar isn't usable on a narrow
+  // screen, so land on the stacked-card list instead. Runs in <head> before the
+  // body paints; replace() keeps the calendar URL out of history.
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    window.location.replace("{{ url_for('main.appointments_list') }}");
+  }
+</script>
 {% endblock %}
 
 {% block content %}

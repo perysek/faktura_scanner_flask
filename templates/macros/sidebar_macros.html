@@ -5,10 +5,12 @@
 #}
 
 
-{# ── Single navigation link ── #}
-{% macro sidebar_link(url, label, icon_path, is_active=false) %}
+{# ── Single navigation link ──
+   extra_class: optional utility class(es) appended to the link — e.g.
+   `nav-mobile-hide` to drop the link from the mobile drawer (< lg). #}
+{% macro sidebar_link(url, label, icon_path, is_active=false, extra_class='') %}
 <a href="{{ url }}"
-   class="sidebar-link flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-sm font-medium transition-all duration-200 group
+   class="sidebar-link flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-sm font-medium transition-all duration-200 group {{ extra_class }}
    {{ 'sidebar-link--active rounded-lg' if is_active else 'sidebar-link--default rounded-lg' }}"
    {% if is_active %}aria-current="page"{% endif %}>
     <svg class="w-5 h-5 shrink-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -19,9 +21,11 @@
 {% endmacro %}
 
 
-{# ── Section opener (accordion header) ── #}
-{% macro sidebar_section_start(id, title, is_active=false) %}
-<div class="sidebar-section mt-4 first:mt-2" data-active="{{ 'true' if is_active else 'false' }}">
+{# ── Section opener (accordion header) ──
+   extra_class: optional utility class(es) on the section wrapper — e.g.
+   `nav-mobile-hide` to drop the whole section from the mobile drawer. #}
+{% macro sidebar_section_start(id, title, is_active=false, extra_class='') %}
+<div class="sidebar-section mt-4 first:mt-2 {{ extra_class }}" data-active="{{ 'true' if is_active else 'false' }}">
     <button type="button"
             class="sidebar-section-header w-full px-2 mb-1 text-sm font-semibold uppercase tracking-wider flex items-center gap-1 select-none transition-colors duration-200 py-1"
             style="color: var(--sidebar-heading);"

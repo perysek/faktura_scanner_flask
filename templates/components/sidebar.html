@@ -1,5 +1,14 @@
 {% from 'macros/sidebar_macros.html' import sidebar_link, sidebar_section_start, sidebar_section_end %}
 
+<style>
+    /* Trim the mobile drawer (< lg, where the sidebar is a slide-in panel) to the
+       links a phone user actually needs. Items/sections tagged `nav-mobile-hide`
+       drop out below 1024px and reappear on the always-on desktop rail. */
+    @media (max-width: 1023px) {
+        .nav-mobile-hide { display: none !important; }
+    }
+</style>
+
 <aside class="w-64 flex-col shadow-xl hidden lg:flex"
        style="background: var(--sidebar-bg); color: var(--sidebar-text);"
        id="sidebar">
@@ -31,7 +40,7 @@
             {{ sidebar_link(
                 url_for('main.dashboard'), 'Koszty',
                 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
-                request.endpoint == 'main.dashboard') }}
+                request.endpoint == 'main.dashboard', extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('main.invoices_list'), 'Lista faktur',
                 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
@@ -39,15 +48,15 @@
             {{ sidebar_link(
                 url_for('main.sellers_list'), 'Lista sprzedawcow',
                 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-                request.endpoint == 'main.sellers_list') }}
+                request.endpoint == 'main.sellers_list', extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('main.upload'), 'Import dokumentow',
                 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
-                request.endpoint == 'main.upload') }}
+                request.endpoint == 'main.upload', extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('main.analytics_dashboard'), 'Analiza biznesowa',
                 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-                request.endpoint == 'main.analytics_dashboard') }}
+                request.endpoint == 'main.analytics_dashboard', extra_class='nav-mobile-hide') }}
         {{ sidebar_section_end() }}
         {% endif %}
 
@@ -86,7 +95,7 @@
             {{ sidebar_link(
                 url_for('absence_balance.balances_index'), 'Bilanse urlopow',
                 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-                request.endpoint == 'absence_balance.balances_index') }}
+                request.endpoint == 'absence_balance.balances_index', extra_class='nav-mobile-hide') }}
             {% endif %}
             {% if has_linked_employee %}
             {{ sidebar_link(
@@ -98,22 +107,22 @@
             {{ sidebar_link(
                 url_for('main.services_list'), 'Uslugi',
                 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-                request.endpoint == 'main.services_list') }}
+                request.endpoint == 'main.services_list', extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('main.service_categories_list'), 'Kategorie uslug',
                 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
-                request.endpoint == 'main.service_categories_list') }}
+                request.endpoint == 'main.service_categories_list', extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('main.formy_zatrudnienia_list'), 'Rodzaje zatrudnienia',
                 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-                request.endpoint == 'main.formy_zatrudnienia_list') }}
+                request.endpoint == 'main.formy_zatrudnienia_list', extra_class='nav-mobile-hide') }}
             {% endif %}
         {{ sidebar_section_end() }}
         {% endif %}
 
         <!-- Korekta danych -->
         {% if user_permissions.data_correction %}
-        {{ sidebar_section_start('korekta', 'Korekta danych', korekta_active) }}
+        {{ sidebar_section_start('korekta', 'Korekta danych', korekta_active, extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('main.superadmin_edit_latest'), 'Edycja wizyt',
                 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
@@ -131,12 +140,12 @@
             {{ sidebar_link(
                 url_for('main.history'), 'Historia zmian',
                 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-                request.endpoint == 'main.history') }}
+                request.endpoint == 'main.history', extra_class='nav-mobile-hide') }}
             {% endif %}
             {% if user_permissions.settings %}
             {# Settings icon has two paths — use inline instead of macro #}
             <a href="{{ url_for('main.email_settings') }}"
-               class="sidebar-link flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-sm font-medium transition-all duration-200 group
+               class="sidebar-link nav-mobile-hide flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-sm font-medium transition-all duration-200 group
                {{ 'sidebar-link--active rounded-lg' if request.endpoint == 'main.email_settings' else 'sidebar-link--default rounded-lg' }}"
                {% if request.endpoint == 'main.email_settings' %}aria-current="page"{% endif %}>
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -148,13 +157,13 @@
             {{ sidebar_link(
                 url_for('users.users_list'), 'Uzytkownicy',
                 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-                request.endpoint == 'users.users_list') }}
+                request.endpoint == 'users.users_list', extra_class='nav-mobile-hide') }}
             {% endif %}
             {% if user_permissions.settings %}
             {{ sidebar_link(
                 url_for('roles.roles_list'), 'Poziomy dostepu',
                 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
-                request.endpoint == 'roles.roles_list') }}
+                request.endpoint == 'roles.roles_list', extra_class='nav-mobile-hide') }}
             {{ sidebar_link(
                 url_for('sms.sms_settings'), 'Ustawienia SMS',
                 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
@@ -164,7 +173,7 @@
             {{ sidebar_link(
                 url_for('main.import_page'), 'Import danych',
                 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
-                request.endpoint == 'main.import_page') }}
+                request.endpoint == 'main.import_page', extra_class='nav-mobile-hide') }}
             {% endif %}
             {{ sidebar_link(
                 url_for('auth.profile'), 'Profil',

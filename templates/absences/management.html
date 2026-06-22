@@ -197,6 +197,14 @@
 
     /* Rejection note inline */
     .rejection-note { font-size: 0.75rem; color: var(--color-error); margin-top: 0.2rem; font-style: italic; }
+
+    /* ── Mobile (phone) ──────────────────────────────────────────────────────
+       Hide the "Kategorie" tab on phones — admin category config is desktop-only.
+       The remaining "Wnioski" and "L4 / Manualne" tables already opt into the
+       shared .stack-cards component, so they reflow into cards (no h-scroll). */
+    @media (max-width: 640px) {
+        .ab-tab[data-tab="categories"] { display: none; }
+    }
 </style>
 {% endblock %}
 
@@ -471,9 +479,9 @@
                 <span class="card-title">Zarejestrowane nieobecności manualne</span>
                 <span style="font-size:0.75rem;color:var(--color-ink-subtle);">{{ manual_list|length }} wpisów</span>
             </div>
-            <div class="table-container">
+            <div class="table-container stack-cards-wrap">
                 {% if manual_list %}
-                <table class="refined-table">
+                <table class="refined-table stack-cards">
                     <thead>
                         <tr>
                             <th>Pracownik</th>
@@ -488,15 +496,15 @@
                         {% for ab in manual_list %}
                         {% if ab['source'] == 'manual' %}
                         <tr>
-                            <td style="font-weight:500;">
+                            <td class="cell-name" style="font-weight:500;">
                                 {{ ab.get('employee_name', '—') }}
                                 <span class="balance-hint"
                                       data-employee-id="{{ ab.get('employee_id', '') }}"
                                       data-category-id="{{ ab.get('category_id', '') }}"
                                       style="font-size:0.75rem;color:var(--color-ink-subtle);margin-left:0.375rem;font-weight:400;"></span>
                             </td>
-                            <td>{{ ab.get('category_name', '—') }}</td>
-                            <td style="white-space:nowrap;">
+                            <td data-label="Kategoria">{{ ab.get('category_name', '—') }}</td>
+                            <td data-label="Okres" style="white-space:nowrap;">
                                 {% if ab['time_from'] %}
                                     {{ ab['date_from'] }},
                                     {{ ab['time_from']|string|truncate(5,true,'') }}–{{ ab['time_to']|string|truncate(5,true,'') }}
@@ -506,11 +514,11 @@
                                     {{ ab['date_from'] }} – {{ ab['date_to'] }}
                                 {% endif %}
                             </td>
-                            <td><span class="ab-status ab-status--manual">Ręczna</span></td>
-                            <td style="color:var(--color-ink-subtle);font-size:0.75rem;">
+                            <td data-label="Źródło"><span class="ab-status ab-status--manual">Ręczna</span></td>
+                            <td data-label="Dodano" style="color:var(--color-ink-subtle);font-size:0.75rem;">
                                 {% if ab['requested_at'] %}{{ ab['requested_at'].strftime('%d.%m.%y') }}{% else %}—{% endif %}
                             </td>
-                            <td>
+                            <td class="cell-actions">
                                 <div class="action-icons">
                                     <button class="action-icon-btn delete"
                                             onclick="Absences.deleteAbsence({{ ab['id'] }})"

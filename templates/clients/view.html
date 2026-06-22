@@ -333,6 +333,44 @@
         resize: vertical;
         min-height: 60px;
     }
+
+    /* ── Mobile (phone ≤640px) ─────────────────────────────────────────────
+       On desktop, .basic-info-group is an inert wrapper — the three cards
+       (Dane podstawowe / kontaktowe / dodatkowe) render exactly as before.
+       On a phone the wrapper BECOMES the single card and the inner cards shed
+       their own chrome, merging into one "Dane podstawowe" section. */
+    @media (max-width: 640px) {
+        .basic-info-group {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            margin-bottom: 1.5rem;
+        }
+        .basic-info-group .refined-card {
+            border: none;
+            box-shadow: none;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .basic-info-group .refined-card:first-child { padding-top: 1.5rem; }
+        .basic-info-group .refined-card:last-child { padding-bottom: 1.5rem; }
+        /* Only the first heading survives; the field labels carry the rest. */
+        .basic-info-group .refined-card:not(:first-child) .section-title { display: none; }
+        .basic-info-group .refined-card + .refined-card .field-grid { margin-top: 1.25rem; }
+
+        /* Preferences table: drop the Notatki column and the Usuń action cell. */
+        #preferences-table th:nth-child(3),
+        #preferences-table td:nth-child(3),
+        #preferences-table th:nth-child(4),
+        #preferences-table td:nth-child(4) { display: none; }
+        /* Hide the "Dodaj preferencję" button (its form can't be opened either). */
+        .add-pref-btn { display: none; }
+
+        /* Hide the full visit-history section on phones. */
+        .history-visits-card { display: none; }
+    }
 </style>
 {% endblock %}
 
@@ -356,6 +394,9 @@
         </div>
     </header>
 
+    <!-- Basic / Contact / Additional info — three cards on desktop; on mobile the
+         .basic-info-group wrapper merges them into one "Dane podstawowe" section. -->
+    <div class="basic-info-group">
     <!-- Basic Information -->
     <div class="refined-card">
         <h2 class="section-title">Dane podstawowe</h2>
@@ -429,11 +470,13 @@
         </div>
     </div>
 
+    </div><!-- /.basic-info-group -->
+
     <!-- Client Preferences -->
     <div class="refined-card">
         <div class="section-header">
             <h2 class="section-title">Preferencje klienta</h2>
-            <button onclick="toggleAddPrefForm()" class="refined-btn-secondary refined-btn-sm">
+            <button onclick="toggleAddPrefForm()" class="refined-btn-secondary refined-btn-sm add-pref-btn">
                 {{ icon('add') }}
                 Dodaj preferencję
             </button>
@@ -489,7 +532,7 @@
     </div>
 
     <!-- Appointment History -->
-    <div class="refined-card">
+    <div class="refined-card history-visits-card">
         <div class="section-header">
             <h2 class="section-title">Historia wizyt</h2>
             <span id="appt-count-badge" style="font-size:0.75rem;color:var(--color-ink-subtle);"></span>

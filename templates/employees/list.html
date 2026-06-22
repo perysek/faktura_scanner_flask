@@ -402,6 +402,13 @@
         .stats-grid { grid-template-columns: 1fr; }
         .search-wrapper { flex-direction: column; }
     }
+
+    /* Mobile (stacked-card) view: hide the summary stat cards entirely — they
+       eat the whole first screen on a phone. Matches the .stack-cards breakpoint
+       and mirrors the clients list. */
+    @media (max-width: 640px) {
+        .stats-grid { display: none; }
+    }
 </style>
 {% endblock %}
 

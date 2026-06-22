@@ -111,6 +111,16 @@
            only the edit icon. Whole card gets a pointer affordance. */
         .view-icon-btn { display: none; }
         table.stack-cards tbody tr[data-appt-id] { cursor: pointer; }
+
+        /* Phone filter bar = just the ±7-day period switcher. The date inputs,
+           status select and "Filtruj" button are hidden (JS still seeds the
+           hidden start/end inputs, so the ±7 buttons keep working). The bar then
+           holds a single control, so drop its chrome and center the switcher. */
+        .filter-mobile-hide { display: none !important; }
+        .filter-bar { padding: 0; border: none; box-shadow: none; background: transparent; margin-bottom: 1rem; justify-content: center; }
+        .filter-bar > div:last-child { margin-left: 0 !important; }
+        /* Calendar/list view switcher is desktop-only — mobile lives on the list. */
+        .view-toggle { display: none !important; }
     }
 </style>
 {% endblock %}
@@ -146,15 +156,15 @@
 
     <!-- Filters -->
     <div class="filter-bar">
-        <div>
+        <div class="filter-mobile-hide">
             <label for="filter-start">Od</label><br>
             <input type="date" id="filter-start" />
         </div>
-        <div>
+        <div class="filter-mobile-hide">
             <label for="filter-end">Do</label><br>
             <input type="date" id="filter-end" />
         </div>
-        <div>
+        <div class="filter-mobile-hide">
             <label for="filter-status">Status</label><br>
             <select id="filter-status">
                 <option value="">Wszystkie</option>
@@ -166,7 +176,7 @@
                 <option value="no_show">Nieobecność</option>
             </select>
         </div>
-        <div style="align-self: flex-end;">
+        <div class="filter-mobile-hide" style="align-self: flex-end;">
             <button onclick="loadAppointments()" class="refined-btn-secondary">
                 {{ icon('search') }}
                 Filtruj

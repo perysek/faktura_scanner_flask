@@ -32,9 +32,13 @@ const Absences = {
             });
         });
 
-        // Restore from URL hash or default to first tab
+        // Restore from URL hash or default to first tab. Only consider tabs that
+        // are actually visible — on mobile the "Kategorie" tab is hidden via CSS,
+        // so a stale #categories hash falls back to the first visible tab instead
+        // of stranding the user on a panel with no way back.
         const hash = location.hash.replace('#', '');
-        const validIds = [...tabs].map(t => t.dataset.tab);
+        const visibleTabs = [...tabs].filter(t => t.offsetParent !== null);
+        const validIds = (visibleTabs.length ? visibleTabs : [...tabs]).map(t => t.dataset.tab);
         activate(validIds.includes(hash) ? hash : validIds[0]);
     },
 
