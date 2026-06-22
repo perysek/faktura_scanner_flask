@@ -2585,6 +2585,12 @@ def get_clients():
             client_dict['no_show_count'] = int(row['no_show_count'] or 0)
             client_dict['cancelled_count'] = int(row['cancelled_count'] or 0)
             client_dict['visits_last_8w'] = int(row['visits_last_8w'] or 0)
+            # Next upcoming visit (mobile card row) — NULL when none scheduled
+            nv_date = row['next_visit_date']
+            nv_time = row['next_visit_time']
+            client_dict['next_visit_date'] = nv_date.isoformat() if nv_date else None
+            client_dict['next_visit_time'] = nv_time.strftime('%H:%M') if nv_time else None
+            client_dict['next_visit_employee'] = row['next_visit_employee']
             clients_data.append(client_dict)
 
         return jsonify({

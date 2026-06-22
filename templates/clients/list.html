@@ -396,6 +396,12 @@
         .stats-grid { grid-template-columns: 1fr; }
     }
 
+    /* Mobile (stacked-card) view: hide the summary stat cards entirely — they
+       eat the whole first screen on a phone. Matches the .stack-cards breakpoint. */
+    @media (max-width: 640px) {
+        .stats-grid { display: none; }
+    }
+
     /* Mobile stacked cards: now provided by the shared .stack-cards component
        in input.css @layer components (ADR-D-01). This page opts in via the
        `stack-cards` class on the table + `stack-cards-wrap` on the container;
@@ -604,6 +610,22 @@ function formatDate(dateString) {
     return date.toLocaleDateString('pl-PL');
 }
 
+// Polish abbreviated month names (Jan…Dec) for the compact next-visit label.
+const PL_MONTHS_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze',
+                         'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+
+// "23 cze 12:30 (Kinga Machnowska)" — date+time of the next upcoming visit plus
+// the assigned employee. Returns "—" when the client has nothing scheduled.
+function formatNextVisit(dateStr, timeStr, employee) {
+    if (!dateStr) return '—';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const month = PL_MONTHS_SHORT[m - 1] || '';
+    let out = `${d} ${month}`;
+    if (timeStr) out += ` ${timeStr}`;
+    if (employee) out += ` (${escapeHtml(employee)})`;
+    return out;
+}
+
 function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return String(text).replace(/[&<>"']/g, m => map[m]);
@@ -763,6 +785,9 @@ function renderClients(clients) {
             ? escapeHtml(client.phone)
             : '<span style="color:var(--color-ink-subtle)">—</span>';
         const lastVisit = formatDate(client.last_visit_date);
+        const nextVisit = formatNextVisit(
+            client.next_visit_date, client.next_visit_time, client.next_visit_employee
+        );
         const ageInfo = client.age
             ? `<div class="client-age">${client.age} lat</div>`
             : '';
@@ -805,6 +830,7 @@ function renderClients(clients) {
                 </td>
                 <td data-label="Telefon">${phone}</td>
                 <td data-label="Ostatnia wizyta">${lastVisit}</td>
+                <td class="cell-hide-lg" data-label="Następna wizyta">${nextVisit}</td>
                 <td data-label="Wizyt"><span class="visit-count">${client.completed_visits || 0}</span></td>
                 <td data-label="No-shows">${noShowCell}</td>
                 <td data-label="Odwołał"><span class="visit-count">${client.cancelled_count || 0}</span></td>

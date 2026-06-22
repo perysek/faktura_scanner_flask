@@ -1169,6 +1169,13 @@
       .stack-cards-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; background: transparent !important; }
   }
 
+  /* Mobile-only stacked-card row — complement of .cell-hide-sm. Hidden in the
+     desktop table (plain display:none, no phantom column under table-layout:fixed),
+     but the generic `td { display:flex !important }` inside the ≤640px block above
+     overrides it on mobile, so the cell surfaces only inside the card. Lets a page
+     add a card-only data row without introducing a desktop column. */
+  table.stack-cards td.cell-hide-lg { display: none; }
+
   /* ── Past-visits "rozliczenie" trigger + modal ─────────────────────────────
      Trigger button sits before the calendar view toggles; the modal is built by
      past_visits_scanner.js. Dynamic per-status colours are applied inline via JS

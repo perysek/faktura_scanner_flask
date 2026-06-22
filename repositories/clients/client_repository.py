@@ -188,16 +188,36 @@ class ClientRepository(BaseRepository):
                 COALESCE(COUNT(CASE WHEN a.status = 'no_show' THEN 1 END), 0)  AS no_show_count,
                 COALESCE(COUNT(CASE WHEN a.status = 'cancelled' THEN 1 END), 0) AS cancelled_count,
                 COALESCE(COUNT(CASE WHEN a.status = 'completed'
-                    AND a.appointment_date >= CURRENT_DATE - INTERVAL '56 days' THEN 1 END), 0) AS visits_last_8w
+                    AND a.appointment_date >= CURRENT_DATE - INTERVAL '56 days' THEN 1 END), 0) AS visits_last_8w,
+                nv.next_visit_date,
+                nv.next_visit_time,
+                nv.next_visit_employee
             FROM clients c
             LEFT JOIN appointments a ON a.client_id = c.id
+            -- Soonest upcoming (not-yet-past, non-cancelled/no-show/completed) appointment
+            -- with its assigned employee. LATERAL returns at most one row per client.
+            LEFT JOIN LATERAL (
+                SELECT na.appointment_date AS next_visit_date,
+                       na.start_time       AS next_visit_time,
+                       (ne.first_name || ' ' || ne.last_name) AS next_visit_employee
+                FROM appointments na
+                JOIN employees ne ON ne.id = na.employee_id
+                WHERE na.client_id = c.id
+                  AND na.is_deleted = FALSE
+                  AND na.status NOT IN ('cancelled', 'no_show', 'completed')
+                  AND (na.appointment_date > CURRENT_DATE
+                       OR (na.appointment_date = CURRENT_DATE AND na.start_time >= LOCALTIME))
+                ORDER BY na.appointment_date ASC, na.start_time ASC
+                LIMIT 1
+            ) nv ON TRUE
             WHERE c.is_deleted = FALSE {active_clause}
             {search_clause}
             GROUP BY
                 c.id, c.first_name, c.last_name, c.phone, c.email,
                 c.date_of_birth, c.notes, c.preferences,
                 c.first_visit_date, c.last_visit_date,
-                c.is_active, c.created_at, c.updated_at
+                c.is_active, c.created_at, c.updated_at,
+                nv.next_visit_date, nv.next_visit_time, nv.next_visit_employee
             ORDER BY
                 CASE WHEN c.last_name = '' OR c.last_name IS NULL THEN 1 ELSE 0 END,
                 LOWER(c.last_name),
