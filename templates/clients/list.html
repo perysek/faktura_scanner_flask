@@ -402,6 +402,22 @@
         .stats-grid { display: none; }
     }
 
+    /* Next-visit card value: date+time on line 1, employee on line 2, both
+       hugging the right edge so it lines up with the other stacked-card values.
+       Only ever rendered inside the mobile card (parent td is .cell-hide-lg). */
+    .next-visit-val {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        text-align: right;
+        line-height: 1.35;
+    }
+    .next-visit-emp {
+        font-size: 0.75rem;
+        font-weight: 300;
+        color: var(--color-ink-subtle);
+    }
+
     /* Mobile stacked cards: now provided by the shared .stack-cards component
        in input.css @layer components (ADR-D-01). This page opts in via the
        `stack-cards` class on the table + `stack-cards-wrap` on the container;
@@ -614,16 +630,21 @@ function formatDate(dateString) {
 const PL_MONTHS_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze',
                          'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
-// "23 cze 12:30 (Kinga Machnowska)" — date+time of the next upcoming visit plus
-// the assigned employee. Returns "—" when the client has nothing scheduled.
+// Next upcoming visit as two right-aligned lines:
+//   line 1: "23 cze 12:30"  (date + time)
+//   line 2: "(Kinga Machnowska)"  (assigned employee, subtle)
+// Returns "—" when the client has nothing scheduled. line1 is built from
+// numbers + a static month literal (safe); only the employee name is escaped.
 function formatNextVisit(dateStr, timeStr, employee) {
     if (!dateStr) return '—';
     const [y, m, d] = dateStr.split('-').map(Number);
     const month = PL_MONTHS_SHORT[m - 1] || '';
-    let out = `${d} ${month}`;
-    if (timeStr) out += ` ${timeStr}`;
-    if (employee) out += ` (${escapeHtml(employee)})`;
-    return out;
+    let line1 = `${d} ${month}`;
+    if (timeStr) line1 += ` ${timeStr}`;
+    const empLine = employee
+        ? `<span class="next-visit-emp">(${escapeHtml(employee)})</span>`
+        : '';
+    return `<span class="next-visit-val">${line1}${empLine}</span>`;
 }
 
 function escapeHtml(text) {
