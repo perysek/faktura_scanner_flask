@@ -168,6 +168,11 @@
         <div class="refined-card" style="padding: 2.5rem;">
             <!-- Logo/Header -->
             <div class="text-center" style="margin-bottom: 2.5rem;">
+                {% if logo_data_uri %}
+                <img src="{{ logo_data_uri }}"
+                     alt="MyWay Nails &amp; Beauty"
+                     style="display: block; width: 100%; max-width: 220px; height: auto; margin: 0 auto 1.5rem; object-fit: contain;">
+                {% endif %}
                 <h1 class="refined-title">MyWay Beauty Salon</h1>
                 <p class="refined-subtitle">Management System</p>
             </div>
