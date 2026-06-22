@@ -42,8 +42,7 @@
          style="border-bottom: 1px solid var(--sidebar-border);">
         <img src="{{ logo_data_uri }}"
              alt="MyWay Nails &amp; Beauty"
-             class="w-full h-auto object-contain"
-             style="filter: invert(1);">
+             class="w-full h-auto object-contain">
         <p class="text-xs tracking-widest uppercase text-center"
            style="color: var(--sidebar-text);">Beauty Salon Management</p>
     </div>
@@ -214,11 +213,12 @@
     <div class="px-4 py-3 shrink-0"
          style="border-top: 1px solid var(--sidebar-border); background: var(--sidebar-bg-deep);">
         <div class="flex items-center gap-2">
-            <div class="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg"
+                 style="background: linear-gradient(135deg, var(--color-accent), #a07d1a);">
                 {{ current_user.full_name[:2].upper() }}
             </div>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-white truncate">{{ current_user.full_name }}</p>
+                <p class="text-sm font-medium truncate" style="color: var(--color-ink);">{{ current_user.full_name }}</p>
                 <p class="text-xs" style="color: var(--sidebar-text);">{{ {'superuser': 'Superadmin', 'admin': 'Administrator', 'accountant': 'Księgowa', 'receptionist': 'Recepcjonistka', 'stylist': 'Stylistka'}.get(current_user.role, current_user.role | capitalize) }}</p>
             </div>
         </div>
@@ -227,7 +227,7 @@
         <a href="{{ url_for('auth.logout') }}"
            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group border border-transparent hover:border-red-800/30"
            style="color: var(--sidebar-text);"
-           onmouseenter="this.style.color='#f87171'; this.style.background='rgba(127,29,29,0.2)';"
+           onmouseenter="this.style.color='var(--color-error)'; this.style.background='#fef2f2';"
            onmouseleave="this.style.color='var(--sidebar-text)'; this.style.background='transparent';">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

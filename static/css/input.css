@@ -96,19 +96,19 @@
       --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
       --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 
-      /* Sidebar */
-      --sidebar-bg: #0f172a;
-      --sidebar-bg-deep: #162032;
-      --sidebar-text: #94a3b8;
-      --sidebar-text-hover: #ffffff;
-      --sidebar-text-active: #60a5fa;
-      /* Lightened from #64748b (3.4:1 on #0f172a, failed WCAG AA) so section
-         headings meet 4.5:1; hierarchy vs links is kept by size/uppercase. */
-      --sidebar-heading: #8b9cb3;
-      --sidebar-border: rgba(51, 65, 85, 0.5);
-      --sidebar-hover-bg: #1e293b;
-      --sidebar-active-bg: rgba(37, 99, 235, 0.2);
-      --sidebar-active-border: #60a5fa;
+      /* Sidebar — warm light theme (matches app surface, a shade darker) */
+      --sidebar-bg: #dedad3;
+      --sidebar-bg-deep: #d2cec6;
+      --sidebar-text: #525252;            /* = --color-ink-muted */
+      --sidebar-text-hover: #1a1a1a;      /* = --color-ink */
+      --sidebar-text-active: #1a1a1a;     /* ink; gold reserved for pill/icon */
+      /* Design used #8a8a8a (~2.5:1 on #dedad3, fails WCAG AA); darkened to
+         ~5:1. Hierarchy vs links kept via uppercase/size, as the dark theme did. */
+      --sidebar-heading: #595959;
+      --sidebar-border: #ccc7be;
+      --sidebar-hover-bg: #e6e2db;
+      --sidebar-active-bg: var(--color-accent-muted);   /* rgba(201,162,39,.12) */
+      --sidebar-active-border: var(--color-accent);     /* #c9a227 gold */
   }
 
   html {
@@ -1021,20 +1021,20 @@
       color: var(--sidebar-text);
   }
   .sidebar-link--default:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: #e2e8f0;
+      background: var(--sidebar-hover-bg);
+      color: var(--sidebar-text-hover);
   }
 
-  /* ── Sidebar link: active — pill indicator + luminance glow ── */
+  /* ── Sidebar link: active — gold pill indicator ── */
   .sidebar-link--active {
       position: relative;
-      background: rgba(96, 165, 250, 0.08);
-      color: #ffffff;
+      background: var(--sidebar-active-bg);
+      color: var(--sidebar-text-active);
       /* Fallback entrance animation for browsers without View Transitions */
       animation: sidebar-link-enter 0.35s var(--ease-out-expo) both;
   }
 
-  /* Pill indicator — left edge accent bar */
+  /* Pill indicator — left edge accent bar (gold) */
   .sidebar-link--active::before {
       content: '';
       position: absolute;
@@ -1044,13 +1044,11 @@
       width: 3px;
       border-radius: 0 3px 3px 0;
       background: var(--sidebar-active-border);
-      box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
       animation: pill-enter 0.4s var(--ease-out-expo) both;
   }
 
-  /* Icon glow on active link */
+  /* Active icon takes the gold accent */
   .sidebar-link--active svg {
-      filter: drop-shadow(0 0 3px rgba(96, 165, 250, 0.5));
       color: var(--sidebar-active-border);
   }
 
@@ -1061,7 +1059,7 @@
       }
       to {
           opacity: 1;
-          background: rgba(96, 165, 250, 0.08);
+          background: var(--sidebar-active-bg);
       }
   }
 
