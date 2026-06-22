@@ -466,19 +466,17 @@ const PastVisitsScanner = {
         }
 
         if (successCount > 0) {
+            // Bez okna potwierdzenia ani przeładowania: zamknij modal, pokaż toast,
+            // odśwież tylko licznik triggera (rozliczone wizyty znikają z listy).
             Modals.close(overlay);
-            Modals.alert({
-                title: successCount === changes.length ? 'Sukces' : 'Częściowy sukces',
-                message: `Zaktualizowano ${successCount} wizyt(y).${errorCount > 0 ? ` Błędów: ${errorCount}` : ''}`,
-                type: errorCount > 0 ? 'warning' : 'success',
-                onClose: () => window.location.reload()
-            });
+            if (errorCount > 0) {
+                Notifications.warning(`Zaktualizowano ${successCount} z ${changes.length} wizyt (błędów: ${errorCount})`);
+            } else {
+                Notifications.success(`Zaktualizowano ${successCount} ${this.pluralVisits(successCount)}`);
+            }
+            this.refreshCount();
         } else {
-            Modals.alert({
-                title: 'Błąd',
-                message: 'Nie udało się zapisać zmian. Spróbuj ponownie.',
-                type: 'error'
-            });
+            Notifications.error('Nie udało się zapisać zmian. Spróbuj ponownie.');
             if (this.saveBtn) {
                 this.saveBtn.textContent = this.saveBtn.dataset.label || 'Zapisz zmiany';
                 this.saveBtn.disabled = false;
@@ -488,6 +486,14 @@ const PastVisitsScanner = {
     },
 
     // ── Helpery ────────────────────────────────────────────────────────────────
+
+    /** Polska odmiana rzeczownika "wizyta": 1 → wizytę, 2-4 → wizyty, reszta → wizyt. */
+    pluralVisits(n) {
+        const mod10 = n % 10, mod100 = n % 100;
+        if (n === 1) return 'wizytę';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'wizyty';
+        return 'wizyt';
+    },
 
     /** Styl badge'a/wyboru w kolorze statusu (zgodny z typologią badge'y). */
     badgeStyle(varName) {
