@@ -11,6 +11,9 @@
 
 
     .detail-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
+    /* SMS history is a desktop-only detail panel — hide on mobile to keep the
+       visit view compact (the list card no longer surfaces SMS at all). */
+    @media (max-width: 640px) { .sms-log-panel { display: none; } }
     .detail-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
     .detail-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); margin-bottom: 0.25rem; }
@@ -153,9 +156,9 @@
         <p id="d-notes" style="font-size: 0.8125rem; color: var(--color-ink-muted);"></p>
     </div>
 
-    <!-- SMS History panel -->
+    <!-- SMS History panel (hidden on mobile — see media query in extra_css) -->
     {% if settings_sms_active %}
-    <details id="sms-log-panel" class="detail-card" style="padding:0;">
+    <details id="sms-log-panel" class="detail-card sms-log-panel" style="padding:0;">
         <summary style="padding:1rem 1.5rem;cursor:pointer;font-size:1rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:0.5rem;">
             Historia SMS
             <span class="badge-count" id="sms-count"></span>

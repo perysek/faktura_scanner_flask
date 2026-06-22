@@ -101,10 +101,16 @@
        and toggle by media query so a resize/rotate never strands the wrong one. */
     .dt-mobile, .rating-mobile { display: none; }
     .stars-cell { display: inline-flex; gap: 0.05rem; font-size: 0.95rem; line-height: 1; }
+    .dtm-time { font-size: 0.75rem; color: var(--color-ink-subtle); }
     @media (max-width: 640px) {
         .dt-desktop, .rating-desktop { display: none; }
-        .dt-mobile { display: inline; }
+        /* Two-line date: full date over time+duration, right-aligned in the cell */
+        .dt-mobile { display: flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.35; }
         .rating-mobile { display: inline-flex; }
+        /* Card is tap-to-open; the redundant view (eye) icon is hidden, leaving
+           only the edit icon. Whole card gets a pointer affordance. */
+        .view-icon-btn { display: none; }
+        table.stack-cards tbody tr[data-appt-id] { cursor: pointer; }
     }
 </style>
 {% endblock %}
@@ -317,20 +323,21 @@ function visitDurationMin(start, end) {
     return mins;
 }
 
-// Combined "dd mmm ddddd hh:mm (xx min)" for the mobile card, e.g.
-// "22 cze poniedziałek 14:30 (45 min)". Built piecewise because Intl can't
-// emit day→month→weekday in that order. Duration is omitted if end is unknown.
-function formatDateTimeMobile(dateStr, start, end) {
+// Polish genitive month names — the form a date takes ("22 czerwca", not
+// "22 czerwiec"). Intl's {month:'long'} returns the nominative when the day
+// isn't in the same format call, so we spell the genitive out explicitly.
+const PL_MONTHS_GEN = [
+    'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
+    'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'
+];
+
+// Mobile card date line: "dd mmmmm yyyy", e.g. "22 czerwca 2026".
+// The time + duration go on a second line via formatStart().
+function formatDateLongMobile(dateStr) {
     if (!dateStr) return '—';
     const [y, m, d] = String(dateStr).split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);  // local time — avoids UTC midnight shift
     const day = String(d).padStart(2, '0');
-    const month = dateObj.toLocaleDateString('pl-PL', { month: 'short' }).replace('.', '');
-    const weekday = dateObj.toLocaleDateString('pl-PL', { weekday: 'long' });
-    const time = start ? String(start).substring(0, 5) : '';
-    const dur = visitDurationMin(start, end);
-    const durStr = dur != null ? ` (${dur} min)` : '';
-    return `${day} ${month} ${weekday} ${time}${durStr}`.trim();
+    return `${day} ${PL_MONTHS_GEN[m - 1]} ${y}`;
 }
 
 // Desktop "Data" cell: "dd.mm.yyyy (ddd)", e.g. "22.06.2026 (pon)".
@@ -493,8 +500,8 @@ function renderTable(appointments) {
             ? `data-appt-id="${a.id}" data-status="${a.status}" data-client="${escapeHtml(a.client_name || '')}" data-date="${a.appointment_date || ''}" data-time="${formatTime(a.start_time)}"`
             : '';
         return `
-            <tr${isWeekend(a.appointment_date) ? ' class="weekend-row"' : ''}>
-                <td data-label="Data i godzina"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile">${formatDateTimeMobile(a.appointment_date, a.start_time, a.end_time)}</span></td>
+            <tr data-appt-id="${a.id}"${isWeekend(a.appointment_date) ? ' class="weekend-row"' : ''}>
+                <td data-label="Data i godzina"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile"><span class="dtm-date">${formatDateLongMobile(a.appointment_date)}</span><span class="dtm-time">${formatStart(a.start_time, a.end_time)}</span></span></td>
                 <td data-label="Rozpoczęcie" class="cell-hide-sm">${formatStart(a.start_time, a.end_time)}</td>
                 <td class="cell-name">${escapeHtml(a.client_name)}</td>
                 <td data-label="Usługa">${escapeHtml(serviceName)}</td>
@@ -504,7 +511,7 @@ function renderTable(appointments) {
                 <td data-label="Ocena"><span class="rating-desktop">${renderVisitRating(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
                 <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
-                        <a href="/appointment/${a.id}?from=list" class="action-icon-btn" title="Szczegóły" aria-label="Szczegóły">
+                        <a href="/appointment/${a.id}?from=list" class="action-icon-btn view-icon-btn" title="Szczegóły" aria-label="Szczegóły">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -662,15 +669,27 @@ async function submitStatusChange() {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointments-tbody').addEventListener('click', e => {
+        // Status badge keeps its own behavior (open the change-status modal).
         const badge = e.target.closest('.status-badge.clickable');
-        if (!badge) return;
-        openStatusModal(
-            parseInt(badge.dataset.apptId),
-            badge.dataset.status,
-            badge.dataset.client,
-            badge.dataset.date,
-            badge.dataset.time
-        );
+        if (badge) {
+            openStatusModal(
+                parseInt(badge.dataset.apptId),
+                badge.dataset.status,
+                badge.dataset.client,
+                badge.dataset.date,
+                badge.dataset.time
+            );
+            return;
+        }
+
+        // Mobile stacked card: tapping anywhere except an action icon or the
+        // status badge opens the visit view (same destination as the desktop
+        // eye icon, which is hidden on mobile).
+        if (!window.matchMedia('(max-width: 640px)').matches) return;
+        if (e.target.closest('.action-icons') || e.target.closest('.status-badge')) return;
+        const row = e.target.closest('tr[data-appt-id]');
+        if (!row) return;
+        window.location.href = `/appointment/${row.dataset.apptId}?from=list`;
     });
 });
 
