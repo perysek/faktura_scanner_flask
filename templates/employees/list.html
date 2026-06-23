@@ -106,6 +106,45 @@
         box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
     }
 
+    /* Search field with an inline "clear" (X) button. The wrapper owns the
+       flex:1 sizing so the input fills it; the button is absolutely positioned
+       inside on the right and only displayed once there is text to clear. */
+    .search-input-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+    }
+
+    .search-input-wrap .refined-input {
+        flex: 1;
+        min-width: 0;
+        padding-right: 2.5rem; /* leave room for the clear button */
+    }
+
+    .search-clear-btn {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1.5rem;
+        height: 1.5rem;
+        padding: 0;
+        display: none; /* shown via .visible when the input is non-empty */
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        color: var(--color-ink-subtle);
+        transition: color 0.2s ease, background 0.2s ease;
+    }
+
+    .search-clear-btn.visible { display: inline-flex; }
+    .search-clear-btn:hover { color: var(--color-ink); background: var(--color-surface); }
+    .search-clear-btn svg { width: 1rem; height: 1rem; }
+
     .refined-select {
         padding: 0.625rem 1rem;
         font-family: var(--font-body);
@@ -477,12 +516,20 @@
     <!-- Search & Filters -->
     <div class="search-card">
         <div class="search-wrapper">
-            <input
-                type="text"
-                id="search-input"
-                placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..."
-                class="refined-input"
-            >
+            <div class="search-input-wrap">
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..."
+                    class="refined-input"
+                >
+                <button type="button" id="search-clear" class="search-clear-btn"
+                        aria-label="Wyczyść wyszukiwanie" title="Wyczyść">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
             <select id="filter-position" class="refined-select" aria-label="Filtruj według stanowiska" onchange="loadEmployees()">
                 <option value="">Wszystkie stanowiska</option>
             </select>
@@ -491,10 +538,6 @@
                 <option value="active">Aktywni</option>
                 <option value="inactive">Nieaktywni</option>
             </select>
-            <button onclick="loadEmployees()" class="refined-btn-secondary">
-                {{ icon('search') }}
-                Szukaj
-            </button>
         </div>
     </div>
 
@@ -514,7 +557,7 @@
                     <th class="th-sortable" id="th-full_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('full_name')">Imię i nazwisko <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-position" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('position')">Stanowisko <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-status" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('status')">Status <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                    <th class="th-sortable" id="th-avg_satisfaction" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('avg_satisfaction')">Ocena klientów <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" style="text-align:center;" id="th-avg_satisfaction" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('avg_satisfaction')">Ocena klientów <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" style="text-align:center;" id="th-balance" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('balance')">Bilans urlopu <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th>Akcje</th>
                 </tr>
@@ -717,9 +760,25 @@ function getSortedEmployees(list) {
     });
 }
 
+// Real-time, client-side search over the already-loaded employee set. Matches
+// the placeholder fields (name / phone / email) plus position. Runs on every
+// keystroke — no server round-trip — because /api/employees already returns
+// these fields in the payload.
+function getFilteredBySearch(list) {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(emp => {
+        const haystack = [
+            emp.full_name, emp.first_name, emp.last_name,
+            emp.phone, emp.email, emp.position
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(q);
+    });
+}
+
 function renderEmployees() {
     const tbody = document.getElementById('employees-tbody');
-    const employees = getSortedEmployees(allEmployees);
+    const employees = getSortedEmployees(getFilteredBySearch(allEmployees));
 
     if (employees.length === 0) {
         tbody.innerHTML = `
@@ -764,11 +823,11 @@ function renderEmployees() {
                 </td>
                 <td data-label="Stanowisko">${position}</td>
                 <td data-label="Status">${getStatusBadge(emp)}</td>
-                <td data-label="Ocena klientów">${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
+                <td data-label="Ocena klientów" style="text-align:center;">${renderAvgRating(emp.avg_satisfaction, emp.rated_count)}</td>
                 <td data-label="Bilans urlopu" style="text-align:center;">
                     ${renderBalanceBadge(emp.id)}
                 </td>
-                <td class="cell-actions" style="white-space:nowrap;">
+                <td class="cell-actions" style="white-space:nowrap;text-align:right;">
                     <div class="action-icons">
                         <a href="/employee/${emp.id}" class="action-icon-btn" title="Zobacz" aria-label="Zobacz">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -868,16 +927,17 @@ function confirmHardDelete(empId, empName, hasUser) {
     });
 }
 
+// Fetches the working set for the current position/status filters. The free-text
+// search is applied client-side in renderEmployees(), so it is intentionally NOT
+// sent to the server — that keeps typing instant and avoids a fetch per keystroke.
 async function loadEmployees() {
     saveFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
-    const searchQuery = document.getElementById('search-input').value.trim();
     const positionFilter = document.getElementById('filter-position').value;
     const statusFilter = document.getElementById('filter-status').value;
     const tbody = document.getElementById('employees-tbody');
 
     try {
         let url = '/api/employees?active_only=false';
-        if (searchQuery)    url += `&search=${encodeURIComponent(searchQuery)}`;
         if (positionFilter) url += `&position=${encodeURIComponent(positionFilter)}`;
 
         const [response] = await Promise.all([fetch(url), fetchBalanceSummary()]);
@@ -960,14 +1020,34 @@ function showToast(type, msg) {
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
 
-document.getElementById('search-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') loadEmployees();
+// ── Live search wiring ──────────────────────────────────────────────────────
+const searchInput = document.getElementById('search-input');
+const searchClearBtn = document.getElementById('search-clear');
+
+// Show the inline clear (X) button only when there is something to clear.
+function syncSearchClear() {
+    searchClearBtn.classList.toggle('visible', searchInput.value.length > 0);
+}
+
+searchInput.addEventListener('input', () => {
+    syncSearchClear();
+    saveFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
+    renderEmployees();
+});
+
+searchClearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    syncSearchClear();
+    saveFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
+    renderEmployees();
+    searchInput.focus();
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadPositions();
     loadStatistics();
     restoreFilterState('employees', ['search-input', 'filter-position', 'filter-status']);
+    syncSearchClear(); // reflect any restored search term
     loadEmployees();
 });
 </script>
