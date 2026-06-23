@@ -141,7 +141,29 @@
     .boolean-badge.yes { background: rgba(45,106,79,0.1); color: var(--color-success); }
     .boolean-badge.no  { background: rgba(0,0,0,0.04); color: var(--color-ink-subtle); }
 
-    .table-actions { display: flex; justify-content: flex-end; gap: 0.25rem; }
+    .table-actions { display: flex; justify-content: flex-end; gap: 0.125rem; }
+
+    /* Icon-only action buttons (matches employees list design) */
+    .action-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        background: transparent;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        color: var(--color-ink-subtle);
+        transition: color 0.2s ease, background 0.2s ease;
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+    .action-icon-btn:hover { color: var(--color-ink); background: var(--color-surface-warm); }
+    .action-icon-btn svg { width: 1.125rem; height: 1.125rem; }
+    .action-icon-btn.danger { color: var(--color-ink-subtle); }
+    .action-icon-btn.danger:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.1); }
 
     /* Edit inline row */
     .edit-row { background: #fffdf9 !important; }
@@ -310,13 +332,11 @@ function renderTable(formy) {
             <td data-label="Prowizja" style="text-align:center">${boolBadge(f.commision_included)}</td>
             <td class="cell-actions">
                 <div class="table-actions">
-                    <button class="refined-btn-ghost" onclick="startEdit(${f.id})">
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                        Edytuj
+                    <button type="button" class="action-icon-btn" onclick="startEdit(${f.id})" title="Edytuj" aria-label="Edytuj">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button class="refined-btn-danger" onclick="deleteForma(${f.id}, '${escapeHtml(f.nazwa)}')">
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        Usuń
+                    <button type="button" class="action-icon-btn danger" onclick="deleteForma(${f.id}, '${escapeHtml(f.nazwa)}')" title="Usuń" aria-label="Usuń">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>
             </td>

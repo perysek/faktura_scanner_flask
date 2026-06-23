@@ -161,7 +161,7 @@
                         <th style="width:7rem;text-align:right;">Limit</th>
                         <th style="width:13rem;text-align:center">% wykorzystania</th>
                         <th style="width:13rem;text-align:center">Status</th>
-                        <th style="width:6rem;">Akcje</th>
+                        <th style="width:6rem;text-align:right;">Akcje</th>
                     </tr>
                 </thead>
                 <tbody id="balance-tbody">
@@ -413,7 +413,7 @@
                 <span class="status-badge row-badge ${badgeClass(row.status)}">${statusLabel}</span>
             </td>
             <td class="cell-actions" style="white-space:nowrap;">
-                <div style="display:flex;gap:0.25rem;">
+                <div style="display:flex;gap:0.25rem;justify-content:flex-end;">
                     <button type="button" class="icon-btn delete-btn"
                             onclick="deleteRow(this,${row.employee_id},${row.category_id})"
                             title="Resetuj bilans do zera">

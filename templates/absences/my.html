@@ -349,7 +349,7 @@
                                 {{ ab['requested_at'].strftime('%d.%m.%Y %H:%M') if ab['requested_at'] else '—' }}
                             {% else %}—{% endif %}
                         </td>
-                        <td class="cell-actions">
+                        <td class="cell-actions" style="text-align:right;">
                             {% if ab['status'] == 'pending' %}
                             <form method="POST"
                                   action="{{ url_for('absence.cancel_own_request', absence_id=ab['id']) }}"

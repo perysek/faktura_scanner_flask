@@ -143,7 +143,9 @@
     .source-badge { font-size: 0.6875rem; color: var(--color-ink-subtle); font-style: italic; }
 
     /* ── Action icon buttons ─────────────────────────────────────────────── */
-    .action-icons { display: inline-flex; align-items: center; gap: 0.125rem; justify-content: flex-end; }
+    /* display:flex (not inline-flex) so the group fills the cell and pins to the
+       right edge in every row, even rows with fewer action buttons than the widest. */
+    .action-icons { display: flex; align-items: center; gap: 0.125rem; justify-content: flex-end; }
     .action-icon-btn {
         display: inline-flex; align-items: center; justify-content: center;
         width: 2rem; height: 2rem; background: transparent; border: none;

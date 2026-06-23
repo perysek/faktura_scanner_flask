@@ -316,9 +316,11 @@
     .action-link.secondary { color: var(--color-ink-muted); }
     .action-link.secondary:hover { color: var(--color-ink); }
 
-    /* Icon-only action buttons */
+    /* Icon-only action buttons. display:flex (not inline-flex) so the group
+       fills the cell and pins to the right edge in every row, regardless of how
+       many buttons a given row has (e.g. superuser delete present or not). */
     .action-icons {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 0.125rem;
         justify-content: flex-end;
