@@ -365,13 +365,13 @@
                     });
                     const data = await resp.json();
                     if (data.success) {
-                        Notifications.success('Użytkownik usunięty');
+                        Notifications.success('Użytkownik wykasowany. Konto poszło w niebyt.');
                         setTimeout(() => location.reload(), 700);
                     } else {
                         Notifications.error(data.error || 'Błąd usuwania użytkownika');
                     }
                 } catch (e) {
-                    Notifications.error('Błąd połączenia z serwerem');
+                    Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
                 }
             },
         });

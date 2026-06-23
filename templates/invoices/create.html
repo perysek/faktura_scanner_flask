@@ -649,7 +649,7 @@ function setupFileUpload() {
         if (!file) return;
 
         if (file.size > 10 * 1024 * 1024) {
-            Notifications.error('Plik jest za duży. Maksymalny rozmiar: 10MB');
+            Notifications.error('Plik za gruby. Max 10MB, nie cała galeria.');
             fileInput.value = '';
             return;
         }
@@ -739,9 +739,9 @@ function setupForm() {
             Modals.close(loadingModal);
 
             if (result.success) {
-                Notifications.success('Faktura została zapisana pomyślnie');
+                Notifications.success('Faktura zapisana. Pierwsza klasa.');
                 if (result.warnings && result.warnings.length > 0) {
-                    Notifications.warning('Ostrzeżenia: ' + result.warnings.join(', '));
+                    Notifications.warning('Drobne zastrzeżenia: ' + result.warnings.join(', '));
                 }
 
                 setTimeout(() => {
@@ -758,18 +758,18 @@ function setupForm() {
                     }
                 }
 
-                Notifications.error(result.error || 'Błąd zapisu faktury');
+                Notifications.error(result.error || 'Faktura nie chciała się zapisać.');
                 if (result.validation_errors) {
                     const errors = result.validation_errors.errors || [];
                     if (errors.length > 0) {
-                        Notifications.error('Błędy walidacji: ' + errors.join(', '));
+                        Notifications.error('Walidacja się czepia: ' + errors.join(', '));
                     }
                 }
             }
         } catch (error) {
             Modals.close(loadingModal);
             console.error('Error submitting form:', error);
-            Notifications.error('Błąd zapisu: ' + error.message);
+            Notifications.error('Zapis się wyłożył: ' + error.message);
         }
     });
 }
@@ -788,7 +788,7 @@ async function handleSellerConflict(conflict, originalFormData) {
     } else if (action === 'update_seller') {
         await confirmSellerAction('update_seller', originalFormData, existingSeller.id);
     } else {
-        Notifications.info('Anulowano zapis faktury');
+        Notifications.info('Zapis faktury anulowany. Rozmyśliłeś się.');
     }
 }
 
@@ -801,7 +801,7 @@ async function handleNewSeller(sellerInfo, originalFormData) {
     if (action === 'create') {
         await confirmSellerAction('create_new', originalFormData, null);
     } else {
-        Notifications.info('Anulowano zapis faktury');
+        Notifications.info('Zapis faktury anulowany. Rozmyśliłeś się.');
     }
 }
 
@@ -948,9 +948,9 @@ function showNewSellerModal({ nip, name }) {
 function pasteToField(fieldId) {
     navigator.clipboard.readText().then(text => {
         document.getElementById(fieldId).value = text;
-        Notifications.success('Wklejono ze schowka');
+        Notifications.success('Wklejone. Schowek się przydał.');
     }).catch(err => {
-        Notifications.error('Nie można odczytać schowka');
+        Notifications.error('Schowek zamknięty na cztery spusty.');
     });
 }
 </script>

@@ -528,14 +528,14 @@ function deleteMessageType(id, e) {
             try {
                 resp = await fetch(url, { method: 'POST' });
             } catch (_) {
-                Notifications.error('Błąd połączenia — spróbuj ponownie');
+                Notifications.error('Połączenie padło. Weź jeszcze raz.');
                 return;
             }
             let data;
             try {
                 data = await resp.json();
             } catch (_) {
-                Notifications.error(`Błąd serwera (${resp.status}) — spróbuj ponownie`);
+                Notifications.error(`Serwer rzucił ${resp.status}. Spróbuj jeszcze raz.`);
                 return;
             }
             if (data.success) {

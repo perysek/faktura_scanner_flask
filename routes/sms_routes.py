@@ -38,7 +38,7 @@ def sms_credentials_save():
         messaging_service_sid=data.get('messaging_service_sid', '').strip() or None,
         is_active=('is_active' in data),
     )
-    flash('Dane dostępowe Twilio zapisane', 'success')
+    flash('Dane Twilio zapisane. Teraz SMS-y mają z czego latać.', 'success')
     return redirect(url_for('sms.sms_settings'))
 
 
@@ -60,7 +60,7 @@ def sms_message_type_save(type_id):
         send_only_if_confirmed=('send_only_if_confirmed' in data),
         name=data.get('name', '').strip(),
     )
-    flash('Typ wiadomości SMS zaktualizowany', 'success')
+    flash('Typ SMS-a podrasowany.', 'success')
     return redirect(url_for('sms.sms_settings'))
 
 
@@ -71,7 +71,7 @@ def sms_message_type_create():
     data = request.form
     name = data.get('name', '').strip()
     if not name:
-        flash('Nazwa jest wymagana', 'error')
+        flash('Nazwa się sama nie wymyśli. Wpisz coś.', 'error')
         return redirect(url_for('sms.sms_settings'))
     svc = SmsService()
     svc.create_custom_type(
@@ -81,7 +81,7 @@ def sms_message_type_create():
         include_confirm_link=('include_confirm_link' in data),
         include_cancel_link=('include_cancel_link' in data),
     )
-    flash('Nowy typ wiadomości SMS dodany', 'success')
+    flash('Nowy typ SMS-a na pokładzie.', 'success')
     return redirect(url_for('sms.sms_settings'))
 
 

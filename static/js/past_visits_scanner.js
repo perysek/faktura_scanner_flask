@@ -135,8 +135,8 @@ const PastVisitsScanner = {
 
         if (!this.appointments.length) {
             Modals.alert({
-                title: 'Brak wizyt do rozliczenia',
-                message: 'Wszystkie przeszłe wizyty mają już ustawiony status końcowy.',
+                title: 'Nic do rozliczenia',
+                message: 'Wszystkie wizyty już mają status. Czysto jak łza — możesz iść na kawę.',
                 type: 'success'
             });
             return;
@@ -476,7 +476,7 @@ const PastVisitsScanner = {
             }
             this.refreshCount();
         } else {
-            Notifications.error('Nie udało się zapisać zmian. Spróbuj ponownie.');
+            Notifications.error('Zapis nie wyszedł. Weź jeszcze raz, z uczuciem.');
             if (this.saveBtn) {
                 this.saveBtn.textContent = this.saveBtn.dataset.label || 'Zapisz zmiany';
                 this.saveBtn.disabled = false;

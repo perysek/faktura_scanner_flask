@@ -272,7 +272,7 @@ async function pasteToField(fieldId) {
         const field = document.getElementById(fieldId);
 
         if (!field) {
-            Notifications.error('Pole nie zostało znalezione');
+            Notifications.error('Nie ma takiego pola. Zniknęło? Dziwne.');
             return;
         }
 
@@ -311,9 +311,9 @@ async function pasteToField(fieldId) {
         // Trigger input event for any listeners
         field.dispatchEvent(new Event('input', { bubbles: true }));
 
-        Notifications.success('Wklejono ze schowka');
+        Notifications.success('Wklejone. Schowek się przydał.');
     } catch (error) {
         console.error('Paste error:', error);
-        Notifications.error('Błąd wklejania: ' + error.message);
+        Notifications.error('Schowek nie chce współpracować: ' + error.message);
     }
 }

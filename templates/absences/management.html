@@ -741,13 +741,13 @@ function _doManualSubmit(payload) {
     .then(r => r.json())
     .then(res => {
         if (!res.success) {
-            Notifications.error(res.error || 'Błąd zapisu');
+            Notifications.error(res.error || 'Zapis się nie udał. Bywa.');
             return;
         }
         if (res.conflicts && res.conflicts.length > 0) {
             Notifications.warning(`Nieobecność zapisana. Uwaga: ${res.conflicts.length} kolidujących wizyt.`);
         } else {
-            Notifications.success('Nieobecność zapisana');
+            Notifications.success('Nieobecność zapisana. Ktoś tu planuje wolne.');
         }
         setTimeout(() => location.reload(), 900);
     })
@@ -764,18 +764,18 @@ Absences.submitManual = function() {
     const notes    = document.getElementById('manual-notes');
 
     if (!empSel?.value || !catSel?.value || !dateFrom?.value) {
-        Notifications.error('Uzupełnij wszystkie wymagane pola');
+        Notifications.error('Wypełnij wymagane pola. Te z gwiazdką nie są dla ozdoby.');
         return;
     }
     const catOpt  = catSel.options[catSel.selectedIndex];
     const fullDay = !catOpt || catOpt.dataset.fullDay !== 'false';
 
     if (fullDay && !dateTo?.value) {
-        Notifications.error('Uzupełnij wszystkie wymagane pola');
+        Notifications.error('Wypełnij wymagane pola. Te z gwiazdką nie są dla ozdoby.');
         return;
     }
     if (!fullDay && (!timeFrom?.value || !timeTo?.value)) {
-        Notifications.error('Dla nieobecności godzinowej wymagane są godziny');
+        Notifications.error('Nieobecność godzinowa bez godzin? Podaj je, geniuszu.');
         return;
     }
 

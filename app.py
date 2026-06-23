@@ -288,7 +288,7 @@ def create_app():
             return jsonify({'success': False,
                             'error': 'Sesja wygasła lub token bezpieczeństwa jest '
                                      'nieprawidłowy. Odśwież stronę i spróbuj ponownie.'}), 400
-        flash('Sesja wygasła. Odśwież stronę i spróbuj ponownie.', 'error')
+        flash('Sesja Ci się zdrzemnęła. Odśwież stronę i do dzieła.', 'error')
         return render_template('errors/500.html'), 400
 
     @app.errorhandler(AppError)

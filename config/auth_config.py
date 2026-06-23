@@ -43,11 +43,11 @@ def role_required(*roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
-                flash('Musisz być zalogowany', 'error')
+                flash('Najpierw się zaloguj. Nie ma drogi na skróty.', 'error')
                 return redirect(url_for('auth.login'))
 
             if current_user.role not in roles:
-                flash('Brak uprawnień do tej strony', 'error')
+                flash('Tu nie wejdziesz. Twoja rola na to nie pozwala.', 'error')
                 return redirect(url_for('main.dashboard'))
 
             return f(*args, **kwargs)
@@ -65,7 +65,7 @@ def module_permission_required(*module_names):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
-                flash('Musisz być zalogowany', 'error')
+                flash('Najpierw się zaloguj. Nie ma drogi na skróty.', 'error')
                 return redirect(url_for('auth.login'))
 
             has_access = False
@@ -83,7 +83,7 @@ def module_permission_required(*module_names):
                         break
 
             if not has_access:
-                flash(f'Brak dostępu do modułu: {module_names[0]}', 'error')
+                flash(f'Moduł „{module_names[0]}" nie dla Ciebie. Pogadaj z szefem.', 'error')
                 return redirect(url_for('main.dashboard'))
 
             return f(*args, **kwargs)
@@ -160,7 +160,7 @@ def absence_management_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('Musisz być zalogowany', 'error')
+            flash('Najpierw się zaloguj. Nie ma drogi na skróty.', 'error')
             return redirect(url_for('auth.login'))
 
         has_access = False
@@ -176,7 +176,7 @@ def absence_management_required(f):
             has_access = is_supervisor(current_user)
 
         if not has_access:
-            flash('Brak uprawnień do zarządzania nieobecnościami', 'error')
+            flash('Nieobecności to nie Twoja działka. Ręce przy sobie.', 'error')
             return redirect(url_for('main.dashboard'))
 
         return f(*args, **kwargs)

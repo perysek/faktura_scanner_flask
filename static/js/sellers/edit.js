@@ -46,11 +46,11 @@ async function loadSellerData() {
 
             renderInvoicesTable();
         } else {
-            Notifications.error('Blad ladowania danych sprzedawcy');
+            Notifications.error('Dane sprzedawcy się nie wczytały.');
         }
     } catch (error) {
         console.error('Error loading seller:', error);
-        Notifications.error('Blad ladowania danych: ' + error.message);
+        Notifications.error('Dane nie dojechały: ' + error.message);
     }
 }
 
@@ -181,7 +181,7 @@ async function handleSubmit(event) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error updating seller:', error);
-        Notifications.error('Blad aktualizacji: ' + error.message);
+        Notifications.error('Aktualizacja się wyłożyła: ' + error.message);
     }
 
     return false;
@@ -249,7 +249,7 @@ async function propagateChanges() {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error propagating changes:', error);
-        Notifications.error('Blad aktualizacji faktur: ' + error.message);
+        Notifications.error('Faktury nie chcą się zaktualizować: ' + error.message);
     }
 }
 
@@ -369,7 +369,7 @@ async function savePassword() {
         }
     } catch (error) {
         console.error('Error saving password:', error);
-        Notifications.error('Blad zapisu: ' + error.message);
+        Notifications.error('Zapis odmówił posłuszeństwa: ' + error.message);
     }
 }
 
@@ -389,7 +389,7 @@ async function deletePassword() {
                     Notifications.success('Hasło skasowane');
                 }
             } catch (error) {
-                Notifications.error('Blad usuwania: ' + error.message);
+                Notifications.error('Nie chce się usunąć: ' + error.message);
             }
         }
     });

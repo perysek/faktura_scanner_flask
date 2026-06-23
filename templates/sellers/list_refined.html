@@ -728,7 +728,7 @@ async function loadSellers() {
         }
     } catch (error) {
         console.error('Error loading sellers:', error);
-        Notifications.error('Błąd ładowania sprzedawców');
+        Notifications.error('Sprzedawcy się nie wczytali. Strajk?');
     }
 }
 
@@ -832,14 +832,14 @@ async function confirmDeleteSeller(sellerId) {
                 const result = await API.sellers.delete(sellerId);
                 Modals.close(loadingModal);
                 if (result.success) {
-                    Notifications.success('Sprzedawca zostal usuniety');
+                    Notifications.success('Sprzedawca skasowany. Pa, pa.');
                     loadSellers();
                 } else {
-                    Notifications.error(result.error || 'Błąd usuwania');
+                    Notifications.error(result.error || 'Nie chce się usunąć. Foch.');
                 }
             } catch (error) {
                 Modals.close(loadingModal);
-                Notifications.error('Błąd usuwania sprzedawcy');
+                Notifications.error('Sprzedawca nie chce zniknąć. Trzyma się życia.');
             }
         }
     });
@@ -853,12 +853,12 @@ async function syncSellers() {
         if (result.success) {
             showSyncResults(result);
         } else {
-            Notifications.error(result.error || 'Błąd synchronizacji');
+            Notifications.error(result.error || 'Synchronizacja się wykrzaczyła.');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Sync error:', error);
-        Notifications.error('Błąd synchronizacji: ' + error.message);
+        Notifications.error('Synchronizacja padła: ' + error.message);
     }
 }
 
@@ -1030,12 +1030,12 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
             // Re-run sync to refresh the inline view
             await refreshSyncResults();
         } else {
-            Notifications.error(result.error || 'Błąd naprawiania niezgodności');
+            Notifications.error(result.error || 'Naprawa się nie udała.');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fixing discrepancy:', error);
-        Notifications.error('Błąd naprawiania:' + error.message);
+        Notifications.error('Naprawa legła: ' + error.message);
     }
 }
 
@@ -1051,12 +1051,12 @@ async function addMissingSeller(nip, name) {
             // Re-run sync to refresh the inline view
             await refreshSyncResults();
         } else {
-            Notifications.error(result.error || 'Błąd dodawania sprzedawcy');
+            Notifications.error(result.error || 'Sprzedawca nie chciał się urodzić.');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error adding missing seller:', error);
-        Notifications.error('Błąd dodawania:' + error.message);
+        Notifications.error('Nie dało się dodać: ' + error.message);
     }
 }
 
@@ -1068,7 +1068,7 @@ async function refreshSyncResults() {
         }
     } catch (error) {
         console.error('Error refreshing sync results:', error);
-        Notifications.error('Błąd odświeżania:' + error.message);
+        Notifications.error('Odświeżanie się zacięło: ' + error.message);
     }
 }
 
@@ -1204,7 +1204,7 @@ async function openPasswordsPanel() {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error opening passwords panel:', error);
-        Notifications.error('Blad ladowania hasel: ' + error.message);
+        Notifications.error('Hasła się nie wczytały: ' + error.message);
     }
 }
 
@@ -1239,7 +1239,7 @@ function cancelPanelForm() {
 async function savePanelPassword() {
     const password = document.getElementById('pwd-panel-password').value.trim();
     if (!password) {
-        Notifications.error('Haslo PDF jest wymagane');
+        Notifications.error('Hasło PDF poproszę. Puste pole nie przejdzie.');
         return;
     }
 
@@ -1261,16 +1261,16 @@ async function savePanelPassword() {
         }
 
         if (result.success) {
-            Notifications.success(entryId ? 'Haslo zaktualizowane' : 'Haslo dodane');
+            Notifications.success(entryId ? 'Hasło podmienione.' : 'Hasło zapisane.');
             // Close current modal and reopen with fresh data
             const overlay = document.querySelector('.modal-overlay');
             if (overlay) Modals.close(overlay);
             openPasswordsPanel();
         } else {
-            Notifications.error(result.error || 'Blad zapisu');
+            Notifications.error(result.error || 'Zapis się nie udał. Bywa.');
         }
     } catch (error) {
-        Notifications.error('Blad zapisu: ' + error.message);
+        Notifications.error('Zapis się wyłożył: ' + error.message);
     }
 }
 
@@ -1282,24 +1282,24 @@ async function editPasswordEntry(entryId) {
             if (entry) showPanelForm(entry);
         }
     } catch (error) {
-        Notifications.error('Blad ladowania danych');
+        Notifications.error('Dane się nie wczytały. Kaprys serwera.');
     }
 }
 
 async function deletePasswordEntry(entryId) {
     Modals.confirm({
-        title: 'Usun haslo PDF',
-        message: 'Czy na pewno chcesz usunac to haslo? Zaszyfrowane faktury tego sprzedawcy nie beda automatycznie odblokowywane.',
-        confirmText: 'Usun',
+        title: 'Kasujemy hasło PDF?',
+        message: 'Skasować to hasło? Zaszyfrowane faktury tego sprzedawcy same się potem nie otworzą — będziesz klikać ręcznie.',
+        confirmText: 'Kasuj',
         onConfirm: async () => {
             try {
                 const result = await API.sellerPasswords.delete(entryId);
                 if (result.success) {
-                    Notifications.success('Haslo usuniete');
+                    Notifications.success('Hasło skasowane.');
                     openPasswordsPanel();
                 }
             } catch (error) {
-                Notifications.error('Blad usuwania: ' + error.message);
+                Notifications.error('Nie chce się usunąć: ' + error.message);
             }
         }
     });

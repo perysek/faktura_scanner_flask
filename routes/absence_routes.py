@@ -66,7 +66,7 @@ def _get_employee_or_403():
     """Return the employee row for current_user, or abort with 403 flash."""
     emp = get_linked_employee(current_user)
     if not emp:
-        flash('Twoje konto użytkownika nie ma przypisanego pracownika.', 'error')
+        flash('Twoje konto wisi w próżni — żaden pracownik do niego nie przypisany.', 'error')
         return None
     return emp
 
@@ -128,7 +128,7 @@ def submit_request():
             notes=notes,
             created_by=current_user.id,
         )
-        flash('Wniosek o nieobecność został złożony.', 'success')
+        flash('Wniosek poszedł. Teraz czekaj i módl się o zatwierdzenie.', 'success')
     except (AbsenceError, AppError, ValueError, KeyError) as e:
         flash(str(e), 'error')
 
@@ -143,7 +143,7 @@ def cancel_own_request(absence_id: int):
         return redirect(url_for('main.dashboard'))
     try:
         _svc().cancel_own(absence_id, emp['id'])
-        flash('Wniosek został anulowany.', 'success')
+        flash('Wniosek anulowany. Rozmyśliłeś się, bywa.', 'success')
     except (AbsenceError, AppError) as e:
         flash(str(e), 'error')
     return redirect(url_for('absence.my_absences'))
@@ -162,7 +162,7 @@ def cancel_own_approved_request(absence_id: int):
         return redirect(url_for('main.dashboard'))
     try:
         _svc().cancel_own_approved(absence_id, emp['id'], cancelled_by=current_user.id)
-        flash('Nieobecność została anulowana — sloty w kalendarzu zostały zwolnione.', 'success')
+        flash('Nieobecność anulowana — sloty wróciły do kalendarza, jakby nigdy nic.', 'success')
     except (AbsenceError, AppError) as e:
         flash(str(e), 'error')
     return redirect(url_for('absence.my_absences'))

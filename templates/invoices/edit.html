@@ -871,10 +871,10 @@ async function submitInvoiceUpdate(data, skipSellerValidation = false) {
 
             if (result.warnings && result.warnings.length > 0) {
                 console.log('Warnings detected:', result.warnings);
-                Notifications.warning('Ostrzeżenia: ' + result.warnings.join(', '));
+                Notifications.warning('Drobne zastrzeżenia: ' + result.warnings.join(', '));
             }
 
-            Notifications.success('Faktura została zaktualizowana');
+            Notifications.success('Faktura zaktualizowana. Ładnie.');
 
             if (!result.seller_conflict || (result.seller_conflict && result.seller_conflict.conflict_type !== 'name_mismatch')) {
                 setTimeout(() => {
@@ -901,12 +901,12 @@ async function submitInvoiceUpdate(data, skipSellerValidation = false) {
                     const allMessages = [...errors, ...warnings];
 
                     if (allMessages.length > 0) {
-                        Notifications.error('Błędy walidacji: ' + allMessages.join(', '));
+                        Notifications.error('Walidacja się czepia: ' + allMessages.join(', '));
                     } else {
-                        Notifications.error(result.error || 'Błąd aktualizacji faktury');
+                        Notifications.error(result.error || 'Faktura nie chciała się zaktualizować.');
                     }
                 } else {
-                    Notifications.error(result.error || 'Błąd aktualizacji faktury');
+                    Notifications.error(result.error || 'Faktura nie chciała się zaktualizować.');
                 }
             }
         }
@@ -931,7 +931,7 @@ async function submitInvoiceUpdate(data, skipSellerValidation = false) {
             }
         }
 
-        Notifications.error('Błąd aktualizacji: ' + (error.message || 'Unknown error'));
+        Notifications.error('Aktualizacja się wyłożyła: ' + (error.message || 'sam nie wiem co'));
     }
 }
 
@@ -958,7 +958,7 @@ async function handleSellerConflict(conflict, originalData) {
         await confirmSellerAction('update_seller', originalData, existingSeller.id);
     } else if (action === 'cancel') {
         console.log('User chose: Cancel - reloading page');
-        Notifications.info('Anulowano zapis - przywracanie oryginalnych wartości...');
+        Notifications.info('Anulowane. Wracam do tego, co było...');
         setTimeout(() => {
             window.location.reload();
         }, 500);
@@ -1166,7 +1166,7 @@ async function handleNewSeller(sellerInfo, originalData) {
         await confirmSellerAction('create_new', originalData, null);
     } else {
         console.log('User clicked CANCEL - reloading page');
-        Notifications.info('Anulowano zapis - przywracanie oryginalnych wartości...');
+        Notifications.info('Anulowane. Wracam do tego, co było...');
         setTimeout(() => {
             window.location.reload();
         }, 500);
@@ -1341,12 +1341,12 @@ async function confirmSellerAction(action, invoiceData, existingSellerId = null)
                 window.location.href = '{{ url_for('main.invoices_list') }}';
             }, 1000);
         } else {
-            Notifications.error(result.error || 'Błąd zapisu');
+            Notifications.error(result.error || 'Zapis się nie udał. Bywa.');
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Confirmation error:', error);
-        Notifications.error('Błąd zapisu: ' + error.message);
+        Notifications.error('Zapis się wyłożył: ' + error.message);
     }
 }
 
@@ -1504,9 +1504,9 @@ function triggerFieldFilled(el) {
 function pasteToField(fieldId) {
     navigator.clipboard.readText().then(text => {
         document.getElementById(fieldId).value = text;
-        Notifications.success('Wklejono ze schowka');
+        Notifications.success('Wklejone. Schowek się przydał.');
     }).catch(err => {
-        Notifications.error('Nie można odczytać schowka');
+        Notifications.error('Schowek zamknięty na cztery spusty.');
     });
 }
 </script>

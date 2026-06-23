@@ -200,7 +200,7 @@ function handleFiles(files) {
     const allowedFiles = Array.from(files).filter(file => isAllowedFile(file));
 
     if (allowedFiles.length === 0) {
-        Notifications.warning('Proszę wybrać pliki PDF lub obrazy (JPG, PNG, TIFF, BMP)');
+        Notifications.warning('PDF albo obrazek (JPG, PNG, TIFF, BMP). Nie mem, nie .exe.');
         return;
     }
 
@@ -312,11 +312,11 @@ async function stageFiles() {
             showUploadedFilesSection();
             hideUploadControls();
         } else {
-            Notifications.error('Błąd przesyłania plików: ' + (result.error || 'Unknown error'));
+            Notifications.error('Wysyłka się zacięła: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Upload error:', error);
-        Notifications.error('Błąd przesyłania plików: ' + error.message);
+        Notifications.error('Wysyłka się zacięła: ' + error.message);
     } finally {
         progressContainer.classList.add('hidden');
         progressBar.style.width = '0%';
@@ -418,11 +418,11 @@ async function removeStagedFile(filename) {
                 showUploadControls();
             }
         } else {
-            Notifications.error('Błąd usuwania pliku: ' + (result.error || 'Unknown error'));
+            Notifications.error('Plik nie chce zniknąć: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error removing file:', error);
-        Notifications.error('Błąd usuwania pliku: ' + error.message);
+        Notifications.error('Plik nie chce zniknąć: ' + error.message);
     }
 }
 
@@ -544,7 +544,7 @@ async function processDocuments() {
                 hideUploadedFilesSection();
                 displayProcessingResults();
             } else {
-                Notifications.warning('Nie udało się przetworzyć żadnych plików');
+                Notifications.warning('Ani jednego pliku nie przerobiłem. Słaby wynik.');
             }
         }, 1000);
 
@@ -552,7 +552,7 @@ async function processDocuments() {
         console.error('Processing error:', error);
         addProgressNotification(`Błąd komunikacji: ${error.message}`, 'error');
         setTimeout(() => Modals.close(progressModal), 2000);
-        Notifications.error('Błąd przetwarzania: ' + error.message);
+        Notifications.error('Przetwarzanie padło: ' + error.message);
     } finally {
         processBtn.disabled = false;
     }
@@ -776,7 +776,7 @@ function selectAllValid() {
  */
 function deselectAll() {
     document.querySelectorAll('.add-to-list-checkbox').forEach(cb => cb.checked = false);
-    Notifications.info('Odznaczono wszystkie faktury');
+    Notifications.info('Wszystko odznaczone. Zaczynamy od zera.');
 }
 
 /**
@@ -1051,11 +1051,11 @@ async function performClearAllStagedFiles() {
             hideUploadedFilesSection();
             showUploadControls();
         } else {
-            Notifications.error('Błąd usuwania plików: ' + (result.error || 'Unknown error'));
+            Notifications.error('Pliki stawiają opór: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error clearing files:', error);
-        Notifications.error('Błąd usuwania plików: ' + error.message);
+        Notifications.error('Pliki stawiają opór: ' + error.message);
     }
 }
 
@@ -1158,13 +1158,13 @@ async function getFoldersAndOpenModal() {
             // Open the modal after successful fetch
             openFolderModal();
         } else {
-            Notifications.warning('Nie znaleziono folderów e-mail');
+            Notifications.warning('Zero folderów w mailu. Pusto jak w lodówce w niedzielę.');
             selectFoldersBtn.disabled = false;
             selectFoldersBtn.innerHTML = originalContent;
         }
     } catch (error) {
         console.error('Get folders error:', error);
-        Notifications.error('Błąd pobierania folderów: ' + error.message);
+        Notifications.error('Foldery nie dojechały: ' + error.message);
         selectFoldersBtn.disabled = false;
         selectFoldersBtn.innerHTML = originalContent;
     }
@@ -1214,11 +1214,11 @@ async function getFolders() {
 
             Notifications.success(`Załadowano ${result.folders.length} folderów`);
         } else {
-            Notifications.warning('Nie znaleziono folderów e-mail');
+            Notifications.warning('Zero folderów w mailu. Pusto jak w lodówce w niedzielę.');
         }
     } catch (error) {
         console.error('Get folders error:', error);
-        Notifications.error('Błąd pobierania folderów: ' + error.message);
+        Notifications.error('Foldery nie dojechały: ' + error.message);
     } finally {
         // Re-enable button
         getFoldersBtn.disabled = false;
@@ -1573,12 +1573,12 @@ async function importFromEmail() {
 
     // Check if folders are selected (either "All" or specific folders)
     if (!isAllFoldersSelected && selectedFolders.length === 0) {
-        Notifications.warning('Proszę wybrać co najmniej jeden folder');
+        Notifications.warning('Zaznacz chociaż jeden folder. Jeden. Błagam.');
         return;
     }
 
     if (!dateFrom || !dateTo) {
-        Notifications.warning('Proszę wybrać zakres dat');
+        Notifications.warning('Zakres dat by się przydał, nie sądzisz?');
         return;
     }
 
@@ -1677,7 +1677,7 @@ async function importFromEmail() {
                 showUploadedFilesSection();
                 hideUploadControls();
             } else {
-                Notifications.warning('Nie znaleziono plików PDF w wybranych folderach');
+                Notifications.warning('Żadnych PDF-ów w tych folderach. Pustka.');
             }
         }, 1000);
 
@@ -1686,7 +1686,7 @@ async function importFromEmail() {
         addProgressNotification(`Błąd: ${error.message}`, 'error');
         setTimeout(() => {
             Modals.close(progressModal);
-            Notifications.error('Błąd importu z e-mail: ' + error.message);
+            Notifications.error('Import z maila legł: ' + error.message);
         }, 1000);
     }
 }

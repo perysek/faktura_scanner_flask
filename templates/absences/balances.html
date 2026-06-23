@@ -294,7 +294,7 @@
         const exc = allRows.filter(r => r.status === 'exceeded');
         if (exc.length && typeof Notifications !== 'undefined') {
             const names = [...new Set(exc.map(r => r.employee_name))].slice(0, 3).join(', ');
-            setTimeout(() => Notifications.warning(`Przekroczony limit: ${names}`), 800);
+            setTimeout(() => Notifications.warning(`Limit przekroczony: ${names}. Ktoś tu lubi wolne.`), 800);
         }
     }
 
@@ -553,7 +553,7 @@
             if (!tr._warnedExceeded) {
                 tr._warnedExceeded = true;
                 if (typeof Notifications !== 'undefined')
-                    Notifications.warning('Wartość wykorzystania przekracza limit!');
+                    Notifications.warning('Limit przekroczony! Ktoś tu lubi wolne.');
             }
         } else {
             tr.classList.remove('exceeded-row');
@@ -573,7 +573,7 @@
         const reason   = reasonEl ? reasonEl.value.trim() : '';
 
         if (Math.abs(delta) >= 0.001 && !reason) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Podaj powód zmiany wykorzystania');
+            if (typeof Notifications !== 'undefined') Notifications.error('Podaj powód. „Bo tak" się nie liczy.');
             if (reasonEl) { reasonEl.style.display = ''; reasonEl.focus(); }
             return;
         }
@@ -616,7 +616,7 @@
                 if (undoBtn) undoBtn.disabled = false;
                 if (reasonEl) { reasonEl.style.display = 'none'; reasonEl.value = ''; }
 
-                if (typeof Notifications !== 'undefined') Notifications.success('Zmiany zapisane');
+                if (typeof Notifications !== 'undefined') Notifications.success('Zmiany zapisane. Bilans się zgadza.');
 
                 allRows = allRows.map(r =>
                     r.employee_id === empId && r.category_id === catId
@@ -624,11 +624,11 @@
                         : r);
                 updateStats();
             } else {
-                const err = results.find(d => !d.success)?.error || 'Błąd zapisu';
+                const err = results.find(d => !d.success)?.error || 'Zapis się nie udał. Bywa.';
                 if (typeof Notifications !== 'undefined') Notifications.error(err);
             }
         } catch (_) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+            if (typeof Notifications !== 'undefined') Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
         }
     };
 
@@ -665,7 +665,7 @@
             if (calls.length) {
                 const results = await Promise.all(calls);
                 if (!results.every(d => d.success)) {
-                    if (typeof Notifications !== 'undefined') Notifications.error('Błąd cofania');
+                    if (typeof Notifications !== 'undefined') Notifications.error('Cofnięcie się nie udało. Czas płynie tylko naprzód.');
                     return;
                 }
             }
@@ -692,7 +692,7 @@
             if (reasonEl) { reasonEl.style.display = 'none'; reasonEl.value = ''; }
 
             updateRowDisplay(tr);
-            if (typeof Notifications !== 'undefined') Notifications.success('Cofnięto ostatni zapis');
+            if (typeof Notifications !== 'undefined') Notifications.success('Cofnięte. Jakby się nie stało.');
 
             allRows = allRows.map(r =>
                 r.employee_id === empId && r.category_id === catId
@@ -701,7 +701,7 @@
             updateStats();
 
         } catch (_) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+            if (typeof Notifications !== 'undefined') Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
         }
     };
 
@@ -713,11 +713,11 @@
 
         Modals.confirm({
             title: 'Resetuj bilans',
-            message: `Wyzerować bilans tej kategorii nieobecności? Zostanie dodana korekta −${used.toFixed(1)} i zapisana w historii.`,
+            message: `Wyzerować bilans tej kategorii? Wpadnie korekta −${used.toFixed(1)} do historii — wstecz się tego nie wyklika.`,
             confirmText: 'Resetuj',
             onConfirm: async () => {
                 if (used <= 0) {
-                    if (typeof Notifications !== 'undefined') Notifications.info('Bilans już wynosi 0');
+                    if (typeof Notifications !== 'undefined') Notifications.info('Bilans już na zerze. Nie ma co zerować.');
                     return;
                 }
                 try {
@@ -733,13 +733,13 @@
                     });
                     const d = await r.json();
                     if (d.success) {
-                        if (typeof Notifications !== 'undefined') Notifications.success('Bilans zresetowany do zera');
+                        if (typeof Notifications !== 'undefined') Notifications.success('Bilans wyzerowany. Czysta karta.');
                         await loadSummary();
                     } else {
-                        if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Błąd');
+                        if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Coś nie pykło.');
                     }
                 } catch (_) {
-                    if (typeof Notifications !== 'undefined') Notifications.error('Błąd połączenia');
+                    if (typeof Notifications !== 'undefined') Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
                 }
             },
         });

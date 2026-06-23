@@ -791,7 +791,7 @@ function deleteVisit(appointmentId) {
                     if (totalCount > 0) totalCount--;
                     renderTable();
                     updateInfo();
-                    Notifications.success(`Wizyta #${appointmentId} usunięta`);
+                    Notifications.success(`Wizyta #${appointmentId} wykasowana. Jakby jej nie było.`);
                 } else {
                     Notifications.error(data.error || 'Błąd usuwania wizyty');
                 }

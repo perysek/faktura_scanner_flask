@@ -304,7 +304,7 @@ async function updateSellerName(sellerId, newName) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error updating seller:', error);
-        Notifications.error('Blad aktualizacji: ' + error.message);
+        Notifications.error('Aktualizacja się wyłożyła: ' + error.message);
     }
 }
 
@@ -356,7 +356,7 @@ async function createSeller(nip, name, address, force = false) {
             }
         } else {
             console.error('Error creating seller:', error);
-            Notifications.error('Blad tworzenia sprzedawcy: ' + error.message);
+            Notifications.error('Sprzedawca nie chciał się urodzić: ' + error.message);
         }
     }
 }

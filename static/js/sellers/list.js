@@ -32,11 +32,11 @@ async function loadSellers(searchQuery = '') {
             sellersData = data.sellers;
             renderSellersTable();
         } else {
-            Notifications.error('Blad ladowania sprzedawcow');
+            Notifications.error('Sprzedawcy nie chcą się załadować.');
         }
     } catch (error) {
         console.error('Error loading sellers:', error);
-        Notifications.error('Blad ladowania sprzedawcow: ' + error.message);
+        Notifications.error('Sprzedawcy się buntują: ' + error.message);
     }
 }
 
@@ -180,7 +180,7 @@ async function confirmDeleteSeller(sellerId) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fetching seller invoices:', error);
-        Notifications.error('Blad pobierania danych: ' + error.message);
+        Notifications.error('Dane nie dojechały: ' + error.message);
     }
 }
 
@@ -204,7 +204,7 @@ async function deleteSeller(sellerId) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error deleting seller:', error);
-        Notifications.error('Blad usuwania sprzedawcy: ' + error.message);
+        Notifications.error('Sprzedawca nie chce zniknąć: ' + error.message);
     }
 }
 
@@ -227,7 +227,7 @@ async function syncSellers() {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error syncing sellers:', error);
-        Notifications.error('Blad synchronizacji: ' + error.message);
+        Notifications.error('Synchronizacja się wykrzaczyła: ' + error.message);
     }
 }
 
@@ -349,7 +349,7 @@ async function addMissingSeller(nip, name) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error adding missing seller:', error);
-        Notifications.error('Blad dodawania sprzedawcy: ' + error.message);
+        Notifications.error('Nie dało się dodać sprzedawcy: ' + error.message);
     }
 }
 
@@ -374,7 +374,7 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fixing discrepancy:', error);
-        Notifications.error('Blad naprawiania niezgodnosci: ' + error.message);
+        Notifications.error('Naprawa się nie udała: ' + error.message);
     }
 }
 

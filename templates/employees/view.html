@@ -805,7 +805,7 @@ function toggleAddForm() {
         icon.innerHTML = Icons.svg('add');
         label.textContent = 'Dodaj usługę';
         if (typeof Notifications !== 'undefined') {
-            Notifications.info('Przypisywanie usługi zostało przerwane');
+            Notifications.info('Przerwane. Rozmyśliłeś się w pół drogi.');
         }
     } else {
         // Opening
@@ -841,13 +841,13 @@ async function loadAvailableServices() {
             SearchableSelect.sync('new-service-id');
         } else {
             if (typeof Notifications !== 'undefined') {
-                Notifications.warning('Nie można załadować listy usług');
+                Notifications.warning('Lista usług się nie ładuje. Uparta.');
             }
         }
     } catch (error) {
         console.error('Error loading services:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd wczytywania usług (500)');
+            Notifications.error('Usługi padły z błędem 500. Serwer ma gorszy dzień.');
         }
     }
 }
@@ -899,7 +899,7 @@ async function loadAssignedServices() {
             table.style.display = 'none';
             empty.style.display = 'block';
             if (typeof Notifications !== 'undefined') {
-                Notifications.warning('Nie można załadować przypisanych usług');
+                Notifications.warning('Przypisane usługi się nie ładują. Cierpliwości.');
             }
         } else {
             assignedServiceIds.clear(); // Clear the set when no services
@@ -909,7 +909,7 @@ async function loadAssignedServices() {
     } catch (error) {
         console.error('Error loading assigned services:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd wczytywania przypisanych usług (500)');
+            Notifications.error('Przypisane usługi padły (500). Klasyka.');
         }
     }
 }
@@ -919,7 +919,7 @@ async function assignService() {
     const serviceId = document.getElementById('new-service-id').value;
     if (!serviceId) {
         if (typeof Notifications !== 'undefined') {
-            Notifications.warning('Wybierz usługę');
+            Notifications.warning('Najpierw wybierz usługę. Telepatii nie mam.');
         } else {
             Modals.alert({
                 title: 'Uwaga',
@@ -961,7 +961,7 @@ async function assignService() {
             document.getElementById('toggle-add-service-label').textContent = 'Dodaj usługę';
             loadAssignedServices();
             if (typeof Notifications !== 'undefined') {
-                Notifications.success('Usługa została przypisana');
+                Notifications.success('Usługa przypisana. Robota się sama nie zrobi, ale ta już tak.');
             }
         } else {
             if (typeof Notifications !== 'undefined') {
@@ -1007,7 +1007,7 @@ function removeService(esId) {
                         loadUmiejetnosci();
                     }
                     if (typeof Notifications !== 'undefined') {
-                        Notifications.success('Przypisanie usunięte');
+                        Notifications.success('Przypisanie skasowane.');
                     }
                 } else {
                     if (typeof Notifications !== 'undefined') {
@@ -1047,7 +1047,7 @@ function confirmDelete() {
                 const data = await response.json();
                 if (data.success) {
                     if (typeof Notifications !== 'undefined') {
-                        Notifications.success('Pracownik został dezaktywowany');
+                        Notifications.success('Pracownik dezaktywowany. Pa, pa.');
                     }
                     setTimeout(() => { window.location.href = '/employees'; }, 1500);
                 } else {
@@ -1084,7 +1084,7 @@ function confirmDelete() {
             renderBalances(d.balances || []);
             const hasAlert = (d.balances || []).some(b => b.status === 'warning' || b.status === 'exceeded');
             if (hasAlert && typeof Notifications !== 'undefined') {
-                setTimeout(() => Notifications.warning('Uwaga: limit nieobecności przekroczony lub bliski przekroczenia'), 800);
+                setTimeout(() => Notifications.warning('Limit nieobecności na granicy. Ktoś tu lubi wolne.'), 800);
             }
         } catch (e) { console.error('loadBalances', e); }
     }

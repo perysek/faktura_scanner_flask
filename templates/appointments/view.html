@@ -575,7 +575,7 @@ function initSatisfactionWidget(currentScore) {
         const data = await resp.json();
         if (data.success) {
             if (typeof Notifications !== 'undefined') {
-                Notifications.success(`Ocena ${selectedScore}/5 zapisana`);
+                Notifications.success(`Ocena ${selectedScore}/5 zapisana. Sąd okrutny, ale sprawiedliwy.`);
             }
             saveBtn.textContent = '✓ Zapisano';
         } else {
@@ -635,10 +635,10 @@ async function sendSms(appointmentId, typeKey, typeName) {
         const data = await resp.json();
         if (data.success) {
             SMS_SENT_KEYS.add(typeKey);
-            Notifications.success(`SMS "${typeName}" wysłany`);
+            Notifications.success(`SMS „${typeName}" poszedł w świat.`);
             loadSmsLog(true);
         } else {
-            Notifications.error('Błąd: ' + (data.message || 'Nieznany błąd'));
+            Notifications.error('Coś nie pykło: ' + (data.message || 'sam nie wiem co'));
         }
     } catch (e) {
         Notifications.error('Serwer nie odpowiada. Chyba się obraził.');

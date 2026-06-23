@@ -66,7 +66,7 @@ def edit_user(user_id):
 
     # Admin cannot edit superuser accounts
     if user.role == 'superuser' and current_user.role != 'superuser':
-        flash('Brak uprawnień do edycji konta właściciela', 'error')
+        flash('Konta właściciela nie ruszasz. Próbowałeś, widzieliśmy.', 'error')
         return redirect(url_for('users.users_list'))
 
     linked_employee = user_repo.get_linked_employee(user_id)

@@ -713,7 +713,7 @@ async function filterServicesByEmployee(employeeId) {
     } catch (error) {
         console.error('Error filtering services:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd wczytywania usług pracownika');
+            Notifications.error('Usługi pracownika się nie wczytały. Marudzą.');
         }
     }
 }
@@ -766,7 +766,7 @@ async function filterEmployeesByService(serviceId) {
     } catch (error) {
         console.error('Error filtering employees:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd wczytywania pracowników');
+            Notifications.error('Pracownicy się nie wczytali. Strajk?');
         }
     }
 }
@@ -849,7 +849,7 @@ async function loadPreferences() {
     } catch (error) {
         console.error('Error loading preferences:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd wczytywania preferencji');
+            Notifications.error('Preferencje się nie wczytały. Kaprys serwera.');
         }
     }
 }
@@ -919,7 +919,7 @@ async function addPreference() {
             loadServices();
 
             if (typeof Notifications !== 'undefined') {
-                Notifications.success('Preferencja została dodana');
+                Notifications.success('Preferencja zapisana. Klient ma gust.');
             }
         } else {
             if (typeof Notifications !== 'undefined') {
@@ -961,7 +961,7 @@ function removePreference(prefId) {
                 if (data.success) {
                     loadPreferences();
                     if (typeof Notifications !== 'undefined') {
-                        Notifications.success('Preferencja usunięta');
+                        Notifications.success('Preferencja skasowana. Zdania się zmieniają.');
                     }
                 } else {
                     if (typeof Notifications !== 'undefined') {
