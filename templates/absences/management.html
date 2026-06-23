@@ -322,6 +322,21 @@
                             </td>
                             <td class="cell-actions">
                                 <div class="action-icons">
+                                    {# Superuser-only permanent delete (hover-reveal). Placed FIRST so its
+                                       invisible opacity:0 slot sits on the LEFT of the group — that keeps the
+                                       always-visible actions flush to the right edge instead of leaving a gap. #}
+                                    {% if current_user.role == 'superuser' %}
+                                    <button class="action-icon-btn danger-reveal js-ab-harddelete"
+                                            data-ab-id="{{ ab['id'] }}"
+                                            data-ab-status="{{ ab['status'] }}"
+                                            data-ab-label="{{ ab.get('employee_name', '') }} — {{ ab.get('category_name', '') }} ({{ ab['date_from'] }})"
+                                            title="Usuń trwale" aria-label="Usuń nieobecność trwale">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                    {% endif %}
                                     {% if ab['status'] == 'pending' %}
                                     <button id="btn-approve-{{ ab['id'] }}"
                                             class="action-icon-btn approve"
@@ -350,20 +365,8 @@
                                                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
                                     </button>
-                                    {% endif %}
-                                    {# Superuser-only permanent delete on every row (hover-reveal). #}
-                                    {% if current_user.role == 'superuser' %}
-                                    <button class="action-icon-btn danger-reveal js-ab-harddelete"
-                                            data-ab-id="{{ ab['id'] }}"
-                                            data-ab-status="{{ ab['status'] }}"
-                                            data-ab-label="{{ ab.get('employee_name', '') }} — {{ ab.get('category_name', '') }} ({{ ab['date_from'] }})"
-                                            title="Usuń trwale" aria-label="Usuń nieobecność trwale">
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
-                                    {% elif ab['status'] != 'pending' %}
+                                    {% elif ab['status'] != 'pending' and current_user.role != 'superuser' %}
+                                    {# Non-superuser placeholder only; superuser always has the hover harddelete above. #}
                                     <span style="color:var(--color-ink-subtle);font-size:0.75rem;">—</span>
                                     {% endif %}
                                 </div>
@@ -748,7 +751,7 @@ function _doManualSubmit(payload) {
         }
         setTimeout(() => location.reload(), 900);
     })
-    .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+    .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
 }
 
 Absences.submitManual = function() {
@@ -949,7 +952,7 @@ function _absDangerModal(opts) {
                         }
                     } catch (_) {
                         Modals.close(o);
-                        Notifications.error('Błąd połączenia z serwerem');
+                        Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
                     }
                 },
             },
