@@ -316,11 +316,13 @@
     .action-link.secondary { color: var(--color-ink-muted); }
     .action-link.secondary:hover { color: var(--color-ink); }
 
-    /* Icon-only action buttons. display:flex (not inline-flex) so the group
-       fills the cell and pins to the right edge in every row, regardless of how
-       many buttons a given row has (e.g. superuser delete present or not). */
+    /* Icon-only action buttons. width:100% forces the flex container to span the
+       full cell — without it, a flex box inside a <td> can shrink-to-fit and sit
+       on the LEFT, leaving justify-content:flex-end nothing to push against. With
+       full width, the buttons pin to the right edge in every row. */
     .action-icons {
         display: flex;
+        width: 100%;
         align-items: center;
         gap: 0.125rem;
         justify-content: flex-end;

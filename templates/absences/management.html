@@ -143,9 +143,10 @@
     .source-badge { font-size: 0.6875rem; color: var(--color-ink-subtle); font-style: italic; }
 
     /* ── Action icon buttons ─────────────────────────────────────────────── */
-    /* display:flex (not inline-flex) so the group fills the cell and pins to the
-       right edge in every row, even rows with fewer action buttons than the widest. */
-    .action-icons { display: flex; align-items: center; gap: 0.125rem; justify-content: flex-end; }
+    /* width:100% forces the flex container to span the full cell — without it a
+       flex box inside a <td> can shrink-to-fit and sit on the LEFT, leaving
+       justify-content:flex-end nothing to push against. */
+    .action-icons { display: flex; width: 100%; align-items: center; gap: 0.125rem; justify-content: flex-end; }
     .action-icon-btn {
         display: inline-flex; align-items: center; justify-content: center;
         width: 2rem; height: 2rem; background: transparent; border: none;
