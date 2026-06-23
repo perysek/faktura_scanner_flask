@@ -103,7 +103,7 @@ const Absences = {
             }
         })
         .catch(() => {
-            Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+            Notifications.error(MSG('error.server.unreachable'));
             if (btn) btn.disabled = false;
         });
     },
@@ -125,7 +125,7 @@ const Absences = {
                 Notifications.error(res.error || 'Błąd zatwierdzania');
             }
         })
-        .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+        .catch(() => Notifications.error(MSG('error.server.unreachable')));
     },
 
     // ── Reject modal ──────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ const Absences = {
                                 Notifications.error(res.error || 'Błąd odrzucania');
                             }
                         })
-                        .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+                        .catch(() => Notifications.error(MSG('error.server.unreachable')));
                     },
                 },
             ],
@@ -288,7 +288,7 @@ const Absences = {
                         Notifications.error(res.error || 'Błąd usuwania');
                     }
                 })
-                .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+                .catch(() => Notifications.error(MSG('error.server.unreachable')));
             },
         });
     },
@@ -315,7 +315,7 @@ const Absences = {
                         Notifications.error(res.error || 'Błąd anulowania');
                     }
                 })
-                .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+                .catch(() => Notifications.error(MSG('error.server.unreachable')));
             },
         });
     },
@@ -449,7 +449,7 @@ const Absences = {
                                 Notifications.error(res.error || 'Błąd zapisu');
                             }
                         })
-                        .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+                        .catch(() => Notifications.error(MSG('error.server.unreachable')));
                     },
                 },
             ],
@@ -485,7 +485,7 @@ const Absences = {
                         Notifications.error(res.error || 'Błąd usuwania');
                     }
                 })
-                .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+                .catch(() => Notifications.error(MSG('error.server.unreachable')));
             },
         });
     },

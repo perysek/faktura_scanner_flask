@@ -371,7 +371,7 @@
                         Notifications.error(data.error || 'Błąd usuwania użytkownika');
                     }
                 } catch (e) {
-                    Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+                    Notifications.error(MSG('error.server.unreachable'));
                 }
             },
         });

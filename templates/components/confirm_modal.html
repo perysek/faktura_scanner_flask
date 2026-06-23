@@ -61,8 +61,8 @@
                         </svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-semibold text-slate-800 leading-tight" id="confirm-modal-title">Na pewno na pewno?</h3>
-                        <p class="text-sm text-slate-500 mt-2 leading-relaxed" id="confirm-modal-message">Ostatnia szansa, żeby się rozmyślić.</p>
+                        <h3 class="text-lg font-semibold text-slate-800 leading-tight" id="confirm-modal-title">{{ msg('modal.confirm.title') }}</h3>
+                        <p class="text-sm text-slate-500 mt-2 leading-relaxed" id="confirm-modal-message">{{ msg('modal.confirm.message') }}</p>
                     </div>
                     <!-- Close X Button -->
                     <button type="button" onclick="closeConfirmModal()"
@@ -79,11 +79,11 @@
             <div class="px-6 pb-6 pt-2 flex items-center justify-end gap-3 bg-slate-50/80 rounded-b-[3px] border-t border-slate-100">
                 <button type="button" onclick="closeConfirmModal()"
                         class="cm-btn cm-btn-cancel active:scale-[0.98]">
-                    Jednak nie
+                    {{ msg('modal.confirm.cancel_btn') }}
                 </button>
                 <button type="button" id="confirm-modal-submit-btn"
                         class="cm-btn cm-btn-confirm cm-danger active:scale-[0.98]">
-                    No dawaj
+                    {{ msg('modal.confirm.confirm_btn') }}
                 </button>
             </div>
         </div>
@@ -103,7 +103,7 @@
      * @param {string} type - Modal type: 'danger', 'warning', 'info' (affects icon/button color)
      * @param {Function} callback - Optional callback function instead of form submit
      */
-    function showConfirmModal(form, title, message, confirmBtnText = 'No dawaj', type = 'danger', callback = null) {
+    function showConfirmModal(form, title, message, confirmBtnText = MSG('modal.confirm.confirm_btn'), type = 'danger', callback = null) {
         confirmModalTargetForm = form;
         confirmModalCallback = callback;
 
@@ -203,9 +203,9 @@
     function confirmDelete(form, itemName) {
         showConfirmModal(
             form,
-            'Kasujemy na amen?',
-            `Skasować „${itemName}" na zawsze? Tego się nie odklika, nie ma „ctrl+z".`,
-            'Kasuj',
+            MSG('modal.delete.title'),
+            MSG('modal.delete.message', { item: itemName }),
+            MSG('modal.delete.confirm_btn'),
             'danger'
         );
         return false;

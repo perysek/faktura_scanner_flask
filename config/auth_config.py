@@ -5,6 +5,7 @@ Role-based access control (RBAC) configuration
 from functools import wraps
 from flask import redirect, url_for, flash
 from flask_login import current_user
+from config.ui_messages import msg
 
 # Role hierarchy (higher number = more permissions)
 ROLE_HIERARCHY = {
@@ -43,11 +44,11 @@ def role_required(*roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
-                flash('Najpierw się zaloguj. Nie ma drogi na skróty.', 'error')
+                flash(msg('auth.guard.login_required'), 'error')
                 return redirect(url_for('auth.login'))
 
             if current_user.role not in roles:
-                flash('Tu nie wejdziesz. Twoja rola na to nie pozwala.', 'error')
+                flash(msg('auth.permission.role_denied'), 'error')
                 return redirect(url_for('main.dashboard'))
 
             return f(*args, **kwargs)
@@ -65,7 +66,7 @@ def module_permission_required(*module_names):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
-                flash('Najpierw się zaloguj. Nie ma drogi na skróty.', 'error')
+                flash(msg('auth.guard.login_required'), 'error')
                 return redirect(url_for('auth.login'))
 
             has_access = False
@@ -83,7 +84,7 @@ def module_permission_required(*module_names):
                         break
 
             if not has_access:
-                flash(f'Moduł „{module_names[0]}" nie dla Ciebie. Pogadaj z szefem.', 'error')
+                flash(msg('auth.permission.module_denied', module=module_names[0]), 'error')
                 return redirect(url_for('main.dashboard'))
 
             return f(*args, **kwargs)
@@ -160,7 +161,7 @@ def absence_management_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('Najpierw się zaloguj. Nie ma drogi na skróty.', 'error')
+            flash(msg('auth.guard.login_required'), 'error')
             return redirect(url_for('auth.login'))
 
         has_access = False
@@ -176,7 +177,7 @@ def absence_management_required(f):
             has_access = is_supervisor(current_user)
 
         if not has_access:
-            flash('Nieobecności to nie Twoja działka. Ręce przy sobie.', 'error')
+            flash(msg('auth.permission.absences_denied'), 'error')
             return redirect(url_for('main.dashboard'))
 
         return f(*args, **kwargs)

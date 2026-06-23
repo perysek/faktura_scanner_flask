@@ -288,7 +288,8 @@ def create_app():
             return jsonify({'success': False,
                             'error': 'Sesja wygasła lub token bezpieczeństwa jest '
                                      'nieprawidłowy. Odśwież stronę i spróbuj ponownie.'}), 400
-        flash('Sesja Ci się zdrzemnęła. Odśwież stronę i do dzieła.', 'error')
+        from config.ui_messages import msg
+        flash(msg('auth.session.expired'), 'error')
         return render_template('errors/500.html'), 400
 
     @app.errorhandler(AppError)
@@ -352,6 +353,13 @@ def create_app():
             except Exception:
                 pass
 
+        # Active-tone UI message map for the JS MSG() resolver. Only the active
+        # tone crosses to the browser; '<' is escaped so a string can never
+        # break out of the injecting <script> tag. (Catalog: config/ui_messages.py)
+        import json
+        from config.ui_messages import flat_map, ACTIVE_TONE, msg as _msg
+        ui_messages_json = json.dumps(flat_map(), ensure_ascii=False).replace('<', '\\u003c')
+
         return {
             'app_name': APP_NAME,
             'version': VERSION,
@@ -363,6 +371,9 @@ def create_app():
             'can_edit_price_history': _can_edit_price_history,
             'can_send_sms': _can_send_sms,
             'page_title': page_title_for(getattr(_request, 'endpoint', None)),
+            'ui_messages_json': ui_messages_json,
+            'ui_tone': ACTIVE_TONE,
+            'msg': _msg,
         }
 
     # P4-3/P4-4: Clean up stale upload temp files on startup

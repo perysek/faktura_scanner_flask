@@ -8,6 +8,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 
 from config.auth_config import role_required
+from config.ui_messages import msg
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from repositories.users.user_repository import UserRepository
 from repositories.roles.role_repository import RoleRepository
@@ -66,7 +67,7 @@ def edit_user(user_id):
 
     # Admin cannot edit superuser accounts
     if user.role == 'superuser' and current_user.role != 'superuser':
-        flash('Konta właściciela nie ruszasz. Próbowałeś, widzieliśmy.', 'error')
+        flash(msg('users.edit.owner_denied'), 'error')
         return redirect(url_for('users.users_list'))
 
     linked_employee = user_repo.get_linked_employee(user_id)

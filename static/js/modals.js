@@ -156,10 +156,10 @@ const Modals = {
      */
     confirm(options) {
         const {
-            title = 'Na pewno na pewno?',
-            message = 'No to jak — robimy to, czy się rozmyślasz?',
-            confirmText = 'No dawaj',
-            cancelText = 'Jednak nie',
+            title = MSG('modal.confirm.title'),
+            message = MSG('modal.confirm.message'),
+            confirmText = MSG('modal.confirm.confirm_btn'),
+            cancelText = MSG('modal.confirm.cancel_btn'),
             onConfirm = null,
             onCancel = null
         } = options;
@@ -194,7 +194,7 @@ const Modals = {
      */
     alert(options) {
         const {
-            title = 'Słuchaj no',
+            title = MSG('modal.alert.title'),
             message = '',
             type = 'info', // info, success, error, warning
             buttonText = 'OK',
@@ -243,9 +243,9 @@ const Modals = {
     /**
      * Show loading modal
      */
-    loading(message = 'Mielę dane, nie poganiaj...') {
+    loading(message = MSG('modal.loading.message')) {
         return this.show({
-            title: 'Chwila, pracuję',
+            title: MSG('modal.loading.title'),
             content: `
                 <div class="flex items-center justify-center py-8">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

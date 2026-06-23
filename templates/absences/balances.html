@@ -628,7 +628,7 @@
                 if (typeof Notifications !== 'undefined') Notifications.error(err);
             }
         } catch (_) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+            if (typeof Notifications !== 'undefined') Notifications.error(MSG('error.server.unreachable'));
         }
     };
 
@@ -701,7 +701,7 @@
             updateStats();
 
         } catch (_) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+            if (typeof Notifications !== 'undefined') Notifications.error(MSG('error.server.unreachable'));
         }
     };
 
@@ -739,7 +739,7 @@
                         if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Coś nie pykło.');
                     }
                 } catch (_) {
-                    if (typeof Notifications !== 'undefined') Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+                    if (typeof Notifications !== 'undefined') Notifications.error(MSG('error.server.unreachable'));
                 }
             },
         });

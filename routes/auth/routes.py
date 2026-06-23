@@ -10,6 +10,7 @@ from repositories.users.user_repository import UserRepository
 from repositories.audit_repository import AuditRepository
 from services.auth.auth_service import AuthService
 from config.database import DatabaseConnection
+from config.ui_messages import msg
 
 # Create blueprint
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -29,7 +30,7 @@ def login():
 
         # Walidacja pól
         if not email or not password:
-            flash('Email i hasło. Oba. Naprawdę.', 'error')
+            flash(msg('auth.login.missing_credentials'), 'error')
             return render_template('auth/login.html')
 
         # Autentykacja
@@ -41,7 +42,7 @@ def login():
         if success:
             login_user(user, remember=remember)
             session.permanent = True  # 30-day sliding session (PERMANENT_SESSION_LIFETIME)
-            flash(f'O, {user.full_name}! Patrzcie kto wrócił.', 'success')
+            flash(msg('auth.login.welcome', name=user.full_name), 'success')
 
             AuditRepository().safe_log_event(
                 entity_type='login', action='LOGIN',
@@ -76,7 +77,7 @@ def logout():
         user_id=current_user.id, user_name=current_user.full_name,
     )
     logout_user()
-    flash('Wylogowano. Idź już, odpocznij od tych faktur.', 'info')
+    flash(msg('auth.logout'), 'info')
     return redirect(url_for('auth.login'))
 
 
@@ -98,11 +99,11 @@ def change_password():
 
         # Walidacja
         if not old_password or not new_password or not confirm_password:
-            flash('Wypełnij wszystkie pola. Tak, wszystkie.', 'error')
+            flash(msg('auth.change_password.missing_fields'), 'error')
             return render_template('auth/change_password.html')
 
         if new_password != confirm_password:
-            flash('Te dwa hasła to nie ta sama para. Spróbuj jeszcze raz.', 'error')
+            flash(msg('auth.change_password.mismatch'), 'error')
             return render_template('auth/change_password.html')
 
         # Zmień hasło
@@ -116,7 +117,7 @@ def change_password():
         )
 
         if success:
-            flash('Hasło zmienione. Tym razem je zapamiętaj, co?', 'success')
+            flash(msg('auth.change_password.success'), 'success')
             return redirect(url_for('auth.profile'))
         else:
             flash(error_message, 'error')
@@ -186,7 +187,7 @@ def reset_password(token: str):
     token_row = cursor.fetchone()
 
     if not token_row:
-        flash('Ten link już nie żyje — wygasł albo ktoś go zużył. Bierz nowy.', 'error')
+        flash(msg('auth.reset.link_dead'), 'error')
         return redirect(url_for('auth.forgot_password'))
 
     if request.method == 'POST':
@@ -194,11 +195,11 @@ def reset_password(token: str):
         confirm_password = request.form.get('confirm_password', '')
 
         if len(new_password) < 8:
-            flash('Minimum 8 znaków. „1234" to nie hasło, to zaproszenie dla włamywacza.', 'error')
+            flash(msg('auth.reset.weak_password'), 'error')
             return render_template('auth/reset_password.html', token=token)
 
         if new_password != confirm_password:
-            flash('Hasła się nie zgadzają. Skup się na chwilę.', 'error')
+            flash(msg('auth.reset.mismatch'), 'error')
             return render_template('auth/reset_password.html', token=token)
 
         # Update password and mark token as used
@@ -217,7 +218,7 @@ def reset_password(token: str):
             new_value=request.remote_addr,
         )
 
-        flash('Nowe hasło ustawione. Loguj się i tym razem go nie zgub.', 'success')
+        flash(msg('auth.reset.success'), 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/reset_password.html', token=token)

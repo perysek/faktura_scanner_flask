@@ -641,7 +641,7 @@ async function sendSms(appointmentId, typeKey, typeName) {
             Notifications.error('Coś nie pykło: ' + (data.message || 'sam nie wiem co'));
         }
     } catch (e) {
-        Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+        Notifications.error(MSG('error.server.unreachable'));
     }
 }
 

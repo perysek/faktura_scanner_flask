@@ -751,7 +751,7 @@ function _doManualSubmit(payload) {
         }
         setTimeout(() => location.reload(), 900);
     })
-    .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
+    .catch(() => Notifications.error(MSG('error.server.unreachable')));
 }
 
 Absences.submitManual = function() {
@@ -952,7 +952,7 @@ function _absDangerModal(opts) {
                         }
                     } catch (_) {
                         Modals.close(o);
-                        Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
+                        Notifications.error(MSG('error.server.unreachable'));
                     }
                 },
             },

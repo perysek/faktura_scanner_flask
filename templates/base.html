@@ -63,6 +63,12 @@
     })();
     </script>
 
+    <!-- UI message catalog: active-tone {id: text} map for the MSG() resolver.
+         Injected in <head> so MSG() is global before any body/inline script runs.
+         Source of truth: config/ui_messages.py (switch ACTIVE_TONE to retone). -->
+    <script>window.UI_MESSAGES = {{ ui_messages_json|default('{}')|safe }}; window.UI_TONE = "{{ ui_tone|default('new') }}";</script>
+    <script src="{{ asset_url('js/messages.js') }}"></script>
+
     <!-- TailwindCSS -->
     <link rel="stylesheet" href="{{ asset_url('css/output.css') }}">
 
