@@ -796,7 +796,7 @@ function deleteVisit(appointmentId) {
                     Notifications.error(data.error || 'Błąd usuwania wizyty');
                 }
             } catch (e) {
-                Notifications.error('Błąd połączenia z serwerem');
+                Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
             }
         },
     });

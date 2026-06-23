@@ -142,14 +142,14 @@ async function handleSubmit(event) {
 
     // Basic validation
     if (!nip || !name) {
-        Notifications.error('NIP i nazwa sa wymagane');
+        Notifications.error('NIP i nazwa. Bez nich ani rusz.');
         return false;
     }
 
     // Check NIP format
     const normalizedNip = nip.replace(/[^0-9]/g, '');
     if (normalizedNip.length !== 10) {
-        Notifications.error('NIP musi miec 10 cyfr');
+        Notifications.error('NIP ma 10 cyfr. Nie 9, nie 11. Dziesięć.');
         return false;
     }
 
@@ -160,7 +160,7 @@ async function handleSubmit(event) {
 
         if (existingName === newName) {
             // Exact match - redirect to existing seller
-            Notifications.info('Sprzedawca juz istnieje');
+            Notifications.info('Tego sprzedawcę już masz.');
             window.location.href = `/seller/${existingSellerByNip.id}/edit`;
             return false;
         }
@@ -296,7 +296,7 @@ async function updateSellerName(sellerId, newName) {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success('Nazwa sprzedawcy zostala zaktualizowana');
+            Notifications.success('Nazwa zmieniona.');
             window.location.href = `/seller/${sellerId}/edit`;
         } else {
             Notifications.error(result.error || 'Blad aktualizacji');
@@ -325,10 +325,10 @@ async function createSeller(nip, name, address, force = false) {
 
         if (result.success) {
             if (result.already_exists) {
-                Notifications.info('Sprzedawca juz istnieje');
+                Notifications.info('Tego sprzedawcę już masz.');
                 window.location.href = `/seller/${result.seller.id}/edit`;
             } else {
-                Notifications.success('Sprzedawca zostal utworzony');
+                Notifications.success('Sprzedawca dodany. Witamy na pokładzie.');
                 window.location.href = '/sellers';
             }
         } else {

@@ -1566,19 +1566,19 @@ function deleteInvoice(invoiceId) {
     const invoice = invoicesData.find(inv => inv.id === invoiceId);
 
     Modals.confirm({
-        title: 'Usuń fakturę',
-        message: `Czy na pewno chcesz usunąć fakturę ${invoice?.invoice_number || invoiceId}?`,
-        confirmText: 'Usuń',
-        cancelText: 'Anuluj',
+        title: 'Kasujemy fakturę?',
+        message: `Skasować fakturę ${invoice?.invoice_number || invoiceId} na zawsze? Księgowa może mieć pytania.`,
+        confirmText: 'Kasuj',
+        cancelText: 'Jednak nie',
         onConfirm: async () => {
-            const loadingModal = Modals.loading('Usuwanie...');
+            const loadingModal = Modals.loading('Kasuję...');
 
             try {
                 const result = await API.invoices.delete(invoiceId);
                 Modals.close(loadingModal);
 
                 if (result.success) {
-                    Notifications.success('Faktura została usunięta');
+                    Notifications.success('Faktura wykasowana. Już jej nie ma.');
                     loadInvoices();
                 } else {
                     Notifications.error('Błąd usuwania faktury');

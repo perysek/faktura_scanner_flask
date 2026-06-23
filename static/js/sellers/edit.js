@@ -143,7 +143,7 @@ async function handleSubmit(event) {
 
     // Basic validation
     if (!name) {
-        Notifications.error('Nazwa sprzedawcy jest wymagana');
+        Notifications.error('Nazwa sprzedawcy się sama nie wpisze.');
         return false;
     }
 
@@ -158,7 +158,7 @@ async function handleSubmit(event) {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success('Dane sprzedawcy zostaly zaktualizowane');
+            Notifications.success('Zapisane. Sprzedawca odświeżony.');
 
             // Update local data
             sellerData = result.seller;
@@ -341,7 +341,7 @@ function cancelPasswordForm() {
 async function savePassword() {
     const password = document.getElementById('pwd-password').value.trim();
     if (!password) {
-        Notifications.error('Haslo PDF jest wymagane');
+        Notifications.error('Hasło PDF poproszę. Puste pole nie przejdzie.');
         return;
     }
 
@@ -377,16 +377,16 @@ async function deletePassword() {
     if (!passwordData) return;
 
     Modals.confirm({
-        title: 'Usun haslo PDF',
-        message: 'Czy na pewno chcesz usunac haslo PDF dla tego sprzedawcy? Zaszyfrowane faktury nie beda automatycznie odblokowywane.',
-        confirmText: 'Usun',
+        title: 'Kasujemy hasło PDF?',
+        message: 'Skasować hasło PDF tego sprzedawcy? Zaszyfrowane faktury same się potem nie otworzą — będziesz klikać ręcznie.',
+        confirmText: 'Kasuj',
         onConfirm: async () => {
             try {
                 const result = await API.sellerPasswords.delete(passwordData.id);
                 if (result.success) {
                     passwordData = null;
                     renderPasswordSection();
-                    Notifications.success('Haslo usuniete');
+                    Notifications.success('Hasło skasowane');
                 }
             } catch (error) {
                 Notifications.error('Blad usuwania: ' + error.message);

@@ -354,9 +354,9 @@
 
     function deleteUser(userId, userName) {
         Modals.confirm({
-            title: 'Usuń użytkownika',
-            message: `Czy na pewno chcesz usunąć konto użytkownika <strong>${escapeHtml(userName)}</strong>? Operacja jest nieodwracalna.`,
-            confirmText: 'Usuń',
+            title: 'Kasujemy człowieka?',
+            message: `Skasować konto <strong>${escapeHtml(userName)}</strong>? Zniknie bez śladu, jak kawa o 15:00.`,
+            confirmText: 'Kasuj',
             onConfirm: async () => {
                 try {
                     const resp = await fetch(`/system/users/api/${userId}`, {

@@ -98,12 +98,12 @@ const Absences = {
                 if (btn) btn.disabled = false;
                 Absences.showConflictModal(absenceId, res.conflicts);
             } else {
-                Notifications.success('Wniosek zatwierdzony');
+                Notifications.success('Wniosek klepnięty ✔');
                 setTimeout(() => location.reload(), 800);
             }
         })
         .catch(() => {
-            Notifications.error('Błąd połączenia z serwerem');
+            Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
             if (btn) btn.disabled = false;
         });
     },
@@ -119,13 +119,13 @@ const Absences = {
         .then(r => r.json())
         .then(res => {
             if (res.success) {
-                Notifications.success('Wniosek zatwierdzony (mimo konfliktów)');
+                Notifications.success('Wniosek klepnięty — mimo że terminy się gryzą');
                 setTimeout(() => location.reload(), 800);
             } else {
                 Notifications.error(res.error || 'Błąd zatwierdzania');
             }
         })
-        .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+        .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
     },
 
     // ── Reject modal ──────────────────────────────────────────────────────────
@@ -178,13 +178,13 @@ const Absences = {
                         .then(r => r.json())
                         .then(res => {
                             if (res.success) {
-                                Notifications.success('Wniosek odrzucony');
+                                Notifications.success('Wniosek odrzucony. Bez sentymentów.');
                                 setTimeout(() => location.reload(), 800);
                             } else {
                                 Notifications.error(res.error || 'Błąd odrzucania');
                             }
                         })
-                        .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+                        .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
                     },
                 },
             ],
@@ -271,9 +271,9 @@ const Absences = {
 
     deleteAbsence(absenceId) {
         Modals.confirm({
-            title: 'Usuń nieobecność',
-            message: 'Czy na pewno chcesz usunąć ten wpis? Operacja jest nieodwracalna.',
-            confirmText: 'Usuń',
+            title: 'Kasujemy nieobecność?',
+            message: 'Wywalić ten wpis na dobre? Powrotu nie ma, tak jak z urlopu.',
+            confirmText: 'Kasuj',
             onConfirm: () => {
                 fetch(`/absences/${absenceId}`, {
                     method: 'DELETE',
@@ -282,13 +282,13 @@ const Absences = {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Notifications.success('Nieobecność usunięta');
+                        Notifications.success('Nieobecność wykasowana');
                         setTimeout(() => location.reload(), 600);
                     } else {
                         Notifications.error(res.error || 'Błąd usuwania');
                     }
                 })
-                .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+                .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
             },
         });
     },
@@ -297,9 +297,9 @@ const Absences = {
 
     cancelApproved(absenceId) {
         Modals.confirm({
-            title: 'Anuluj zatwierdzoną nieobecność',
-            message: 'Anulować tę nieobecność? Sloty pracownika zostaną zwolnione w kalendarzu, ' +
-                     'a wpis otrzyma status „Anulowany”.',
+            title: 'Cofamy zatwierdzoną nieobecność?',
+            message: 'Anulować tę nieobecność? Sloty pracownika wrócą do kalendarza, ' +
+                     'a wpis dostanie pieczątkę „Anulowany”.',
             confirmText: 'Anuluj nieobecność',
             onConfirm: () => {
                 fetch(`/absences/${absenceId}/cancel-approved`, {
@@ -309,13 +309,13 @@ const Absences = {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Notifications.success('Nieobecność anulowana — sloty zwolnione');
+                        Notifications.success('Nieobecność anulowana — sloty znów wolne');
                         setTimeout(() => location.reload(), 700);
                     } else {
                         Notifications.error(res.error || 'Błąd anulowania');
                     }
                 })
-                .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+                .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
             },
         });
     },
@@ -449,7 +449,7 @@ const Absences = {
                                 Notifications.error(res.error || 'Błąd zapisu');
                             }
                         })
-                        .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+                        .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
                     },
                 },
             ],
@@ -468,9 +468,9 @@ const Absences = {
 
     deleteCategory(id, name) {
         Modals.confirm({
-            title: 'Usuń kategorię',
-            message: `Usunąć kategorię "${name}"? Istniejące wnioski nie zostaną zmienione.`,
-            confirmText: 'Usuń',
+            title: 'Kasujemy kategorię?',
+            message: `Skasować kategorię „${name}"? Stare wnioski to przeżyją, spokojnie.`,
+            confirmText: 'Kasuj',
             onConfirm: () => {
                 fetch(`/absences/categories/${id}`, {
                     method: 'DELETE',
@@ -479,13 +479,13 @@ const Absences = {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Notifications.success('Kategoria usunięta');
+                        Notifications.success('Kategoria poszła do kosza');
                         setTimeout(() => location.reload(), 600);
                     } else {
                         Notifications.error(res.error || 'Błąd usuwania');
                     }
                 })
-                .catch(() => Notifications.error('Błąd połączenia z serwerem'));
+                .catch(() => Notifications.error('Serwer nie odpowiada. Chyba się obraził.'));
             },
         });
     },

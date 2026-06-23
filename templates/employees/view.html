@@ -977,7 +977,7 @@ async function assignService() {
     } catch (error) {
         console.error('Error assigning service:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd połączenia z serwerem (500)');
+            Notifications.error('Serwer padł (500). Klasyka gatunku.');
         } else {
             Modals.alert({
                 title: 'Błąd połączenia',
@@ -1019,7 +1019,7 @@ function removeService(esId) {
             } catch (error) {
                 console.error('Error removing service:', error);
                 if (typeof Notifications !== 'undefined') {
-                    Notifications.error('Błąd połączenia z serwerem (500)');
+                    Notifications.error('Serwer padł (500). Klasyka gatunku.');
                 } else {
                     Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
                 }
@@ -1060,7 +1060,7 @@ function confirmDelete() {
             } catch (error) {
                 console.error('Error:', error);
                 if (typeof Notifications !== 'undefined') {
-                    Notifications.error('Błąd połączenia z serwerem (500)');
+                    Notifications.error('Serwer padł (500). Klasyka gatunku.');
                 } else {
                     Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
                 }

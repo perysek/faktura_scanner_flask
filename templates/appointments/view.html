@@ -641,7 +641,7 @@ async function sendSms(appointmentId, typeKey, typeName) {
             Notifications.error('Błąd: ' + (data.message || 'Nieznany błąd'));
         }
     } catch (e) {
-        Notifications.error('Błąd połączenia z serwerem');
+        Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
     }
 }
 

@@ -409,7 +409,7 @@ async function removeStagedFile(filename) {
         const result = await response.json();
 
         if (result.success) {
-            Notifications.success(`Plik ${filename} usunięty`);
+            Notifications.success(`Plik ${filename} wyleciał`);
             await loadStagedFiles();
 
             // If no files left, show upload controls again
@@ -878,7 +878,7 @@ async function saveAndFinish() {
     const checkboxes = document.querySelectorAll('.add-to-list-checkbox:checked');
 
     if (checkboxes.length === 0) {
-        Notifications.warning('Nie wybrano żadnych faktur do zapisu');
+        Notifications.warning('Nic nie zaznaczyłeś. Mam zapisać powietrze?');
         return;
     }
 
@@ -911,7 +911,7 @@ async function saveAndFinish() {
         // Handle partial or full success
         if (result.saved_invoices && result.saved_invoices.length > 0) {
             const savedCount = result.saved_invoices.length;
-            Notifications.success(`Zapisano ${savedCount} faktur!`);
+            Notifications.success(`Zapisano ${savedCount} faktur. Brawo Ty.`);
 
             // Mark saved rows in UI
             result.saved_invoices.forEach(saved => {
@@ -933,7 +933,7 @@ async function saveAndFinish() {
         }
 
         if (result.failed_invoices && result.failed_invoices.length > 0) {
-            Notifications.error(`Nie udało się zapisać ${result.failed_invoices.length} faktur.`);
+            Notifications.error(`${result.failed_invoices.length} faktur się nie zapisało. Marudzą.`);
 
             // Highlight failed rows
             result.failed_invoices.forEach(failed => {
@@ -965,7 +965,7 @@ async function saveAndFinish() {
 
     } catch (error) {
         console.error('Save error:', error);
-        Notifications.error('Błąd zapisu: ' + error.message);
+        Notifications.error('Zapis się wyłożył: ' + error.message);
         clearSavedResults();
         setTimeout(() => {
             window.location.href = '/invoices';
@@ -1046,7 +1046,7 @@ async function performClearAllStagedFiles() {
         const result = await response.json();
 
         if (result.success) {
-            Notifications.success('Wszystkie pliki usunięte');
+            Notifications.success('Wszystkie pliki w kosz. Czysto.');
             uploadedFiles = [];
             hideUploadedFilesSection();
             showUploadControls();

@@ -935,7 +935,7 @@ async function addPreference() {
     } catch (error) {
         console.error('Error adding preference:', error);
         if (typeof Notifications !== 'undefined') {
-            Notifications.error('Błąd połączenia z serwerem');
+            Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
         } else {
             Modals.alert({
                 title: 'Błąd połączenia',
@@ -973,7 +973,7 @@ function removePreference(prefId) {
             } catch (error) {
                 console.error('Error removing preference:', error);
                 if (typeof Notifications !== 'undefined') {
-                    Notifications.error('Błąd połączenia z serwerem');
+                    Notifications.error('Serwer nie odpowiada. Chyba się obraził.');
                 } else {
                     Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem', type: 'error' });
                 }

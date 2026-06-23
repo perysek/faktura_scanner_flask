@@ -116,7 +116,7 @@ async function confirmDeleteSeller(sellerId) {
         Modals.close(loadingModal);
 
         if (!invoicesData.success) {
-            Notifications.error('Blad pobierania faktur');
+            Notifications.error('Nie dało się pobrać faktur.');
             return;
         }
 
@@ -196,7 +196,7 @@ async function deleteSeller(sellerId) {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success(result.message || 'Sprzedawca zostal usuniety');
+            Notifications.success(result.message || 'Sprzedawca skasowany');
             loadSellers();
         } else {
             Notifications.error(result.error || 'Blad usuwania sprzedawcy');
