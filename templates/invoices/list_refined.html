@@ -1143,11 +1143,11 @@ async function loadInvoices() {
             updateFilterCounts();
             applyFiltersAndRender();
         } else {
-            Notifications.error('Faktury się nie wczytały. Grymaszą.');
+            Notifications.error(MSG('invoice.list_load_failed'));
         }
     } catch (error) {
         console.error('Error loading invoices:', error);
-        Notifications.error('Faktury się nie wczytały. Grymaszą.');
+        Notifications.error(MSG('invoice.list_load_failed'));
     }
 }
 
@@ -1421,11 +1421,11 @@ async function handleStatusClick(event) {
                 updateFilteredStats();
             }
         } else {
-            Notifications.error('Status nie chciał się zmienić. Uparty.');
+            Notifications.error(MSG('invoice.status_failed'));
         }
     } catch (error) {
         console.error('Error updating status:', error);
-        Notifications.error('Status nie chciał się zmienić. Uparty.');
+        Notifications.error(MSG('invoice.status_failed'));
     }
 }
 
@@ -1467,7 +1467,7 @@ function handleRowClick(event) {
         if (invoice?.pdf_path) {
             viewPDF(invoiceId);
         } else {
-            Notifications.info('Tej faktury PDF nie uświadczysz. Nie ma i już.');
+            Notifications.info(MSG('invoice.no_pdf'));
         }
         return;
     }
@@ -1578,14 +1578,14 @@ function deleteInvoice(invoiceId) {
                 Modals.close(loadingModal);
 
                 if (result.success) {
-                    Notifications.success('Faktura wykasowana. Już jej nie ma.');
+                    Notifications.success(MSG('invoice.deleted'));
                     loadInvoices();
                 } else {
-                    Notifications.error('Faktura nie chce zniknąć. Trzyma się życia.');
+                    Notifications.error(MSG('invoice.delete_failed'));
                 }
             } catch (error) {
                 Modals.close(loadingModal);
-                Notifications.error('Faktura nie chce zniknąć. Trzyma się życia.');
+                Notifications.error(MSG('invoice.delete_failed'));
             }
         }
     });
@@ -1597,10 +1597,10 @@ function deleteInvoice(invoiceId) {
 function exportToExcel() {
     try {
         API.export.toExcel();
-        Notifications.success('Lecę z tym do Excela...');
+        Notifications.success(MSG('invoice.export_xlsx'));
         toggleDropdown('export-dropdown');
     } catch (error) {
-        Notifications.error('Eksport się wyłożył. Bez paniki.');
+        Notifications.error(MSG('invoice.export_failed'));
     }
 }
 
@@ -1610,10 +1610,10 @@ function exportToExcel() {
 function exportToCSV() {
     try {
         API.export.toCSV();
-        Notifications.success('Pakuję do CSV...');
+        Notifications.success(MSG('invoice.export_csv'));
         toggleDropdown('export-dropdown');
     } catch (error) {
-        Notifications.error('Eksport się wyłożył. Bez paniki.');
+        Notifications.error(MSG('invoice.export_failed'));
     }
 }
 
@@ -1688,14 +1688,14 @@ async function openSellerSyncModal() {
 
         const all = [...(data.unlinked || []), ...(data.wrong_link || [])];
         if (all.length === 0) {
-            Notifications.success('Wszystkie faktury ładnie powiązane. Porządek jak w aptece.');
+            Notifications.success(MSG('invoice.links_ok'));
             return;
         }
         showSellerSyncModal(all);
     } catch (err) {
         Modals.close(loadingModal);
         console.error('Seller sync check error:', err);
-        Notifications.error('Nie dało się sprawdzić powiązań: ' + err.message);
+        Notifications.error(MSG('invoice.links_check_error') + err.message);
     } finally {
         if (btn) btn.disabled = false;
     }
@@ -1783,7 +1783,7 @@ async function applySellerSyncUpdates() {
         .map(item => ({ invoice_id: item.invoice_id, seller_id: item.suggested_seller_id }));
 
     if (updates.length === 0) {
-        Notifications.info('Nic nie zaznaczyłeś. Nie ma czego aktualizować.');
+        Notifications.info(MSG('invoice.nothing_to_update'));
         return;
     }
 
@@ -1800,7 +1800,7 @@ async function applySellerSyncUpdates() {
     } catch (err) {
         Modals.close(loadingModal);
         console.error('Seller sync apply error:', err);
-        Notifications.error('Aktualizacja się wyłożyła: ' + err.message);
+        Notifications.error(MSG('common.update_error') + err.message);
     }
 }
 </script>

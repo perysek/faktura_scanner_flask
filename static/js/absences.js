@@ -98,7 +98,7 @@ const Absences = {
                 if (btn) btn.disabled = false;
                 Absences.showConflictModal(absenceId, res.conflicts);
             } else {
-                Notifications.success('Wniosek klepnięty ✔');
+                Notifications.success(MSG('absence.approved'));
                 setTimeout(() => location.reload(), 800);
             }
         })
@@ -119,7 +119,7 @@ const Absences = {
         .then(r => r.json())
         .then(res => {
             if (res.success) {
-                Notifications.success('Wniosek klepnięty — mimo że terminy się gryzą');
+                Notifications.success(MSG('absence.approved_conflict'));
                 setTimeout(() => location.reload(), 800);
             } else {
                 Notifications.error(res.error || 'Błąd zatwierdzania');
@@ -178,7 +178,7 @@ const Absences = {
                         .then(r => r.json())
                         .then(res => {
                             if (res.success) {
-                                Notifications.success('Wniosek odrzucony. Bez sentymentów.');
+                                Notifications.success(MSG('absence.rejected'));
                                 setTimeout(() => location.reload(), 800);
                             } else {
                                 Notifications.error(res.error || 'Błąd odrzucania');
@@ -282,7 +282,7 @@ const Absences = {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Notifications.success('Nieobecność wykasowana');
+                        Notifications.success(MSG('absence.deleted'));
                         setTimeout(() => location.reload(), 600);
                     } else {
                         Notifications.error(res.error || 'Błąd usuwania');
@@ -309,7 +309,7 @@ const Absences = {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Notifications.success('Nieobecność anulowana — sloty znów wolne');
+                        Notifications.success(MSG('absence.cancelled_freed'));
                         setTimeout(() => location.reload(), 700);
                     } else {
                         Notifications.error(res.error || 'Błąd anulowania');
@@ -479,7 +479,7 @@ const Absences = {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Notifications.success('Kategoria poszła do kosza');
+                        Notifications.success(MSG('absence.category_deleted'));
                         setTimeout(() => location.reload(), 600);
                     } else {
                         Notifications.error(res.error || 'Błąd usuwania');

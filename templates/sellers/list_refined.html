@@ -728,7 +728,7 @@ async function loadSellers() {
         }
     } catch (error) {
         console.error('Error loading sellers:', error);
-        Notifications.error('Sprzedawcy się nie wczytali. Strajk?');
+        Notifications.error(MSG('seller.list_load_failed'));
     }
 }
 
@@ -832,14 +832,14 @@ async function confirmDeleteSeller(sellerId) {
                 const result = await API.sellers.delete(sellerId);
                 Modals.close(loadingModal);
                 if (result.success) {
-                    Notifications.success('Sprzedawca skasowany. Pa, pa.');
+                    Notifications.success(MSG('seller.deleted'));
                     loadSellers();
                 } else {
-                    Notifications.error(result.error || 'Nie chce się usunąć. Foch.');
+                    Notifications.error(result.error || MSG('seller.delete_failed'));
                 }
             } catch (error) {
                 Modals.close(loadingModal);
-                Notifications.error('Sprzedawca nie chce zniknąć. Trzyma się życia.');
+                Notifications.error(MSG('seller.delete_failed'));
             }
         }
     });
@@ -853,12 +853,12 @@ async function syncSellers() {
         if (result.success) {
             showSyncResults(result);
         } else {
-            Notifications.error(result.error || 'Synchronizacja się wykrzaczyła.');
+            Notifications.error(result.error || MSG('seller.sync_failed'));
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Sync error:', error);
-        Notifications.error('Synchronizacja padła: ' + error.message);
+        Notifications.error(MSG('seller.sync_error') + error.message);
     }
 }
 
@@ -1030,12 +1030,12 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
             // Re-run sync to refresh the inline view
             await refreshSyncResults();
         } else {
-            Notifications.error(result.error || 'Naprawa się nie udała.');
+            Notifications.error(result.error || MSG('seller.fix_failed'));
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fixing discrepancy:', error);
-        Notifications.error('Naprawa legła: ' + error.message);
+        Notifications.error(MSG('seller.fix_error') + error.message);
     }
 }
 
@@ -1051,12 +1051,12 @@ async function addMissingSeller(nip, name) {
             // Re-run sync to refresh the inline view
             await refreshSyncResults();
         } else {
-            Notifications.error(result.error || 'Sprzedawca nie chciał się urodzić.');
+            Notifications.error(result.error || MSG('seller.create_failed'));
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error adding missing seller:', error);
-        Notifications.error('Nie dało się dodać: ' + error.message);
+        Notifications.error(MSG('seller.add_error') + error.message);
     }
 }
 
@@ -1068,7 +1068,7 @@ async function refreshSyncResults() {
         }
     } catch (error) {
         console.error('Error refreshing sync results:', error);
-        Notifications.error('Odświeżanie się zacięło: ' + error.message);
+        Notifications.error(MSG('seller.refresh_error') + error.message);
     }
 }
 
@@ -1084,7 +1084,7 @@ async function openPasswordsPanel() {
         Modals.close(loadingModal);
 
         if (!data.success) {
-            Notifications.error('Blad ladowania hasel');
+            Notifications.error(MSG('pdfpwd.load_failed'));
             return;
         }
 
@@ -1204,7 +1204,7 @@ async function openPasswordsPanel() {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error opening passwords panel:', error);
-        Notifications.error('Hasła się nie wczytały: ' + error.message);
+        Notifications.error(MSG('pdfpwd.panel_load_error') + error.message);
     }
 }
 
@@ -1239,7 +1239,7 @@ function cancelPanelForm() {
 async function savePanelPassword() {
     const password = document.getElementById('pwd-panel-password').value.trim();
     if (!password) {
-        Notifications.error('Hasło PDF poproszę. Puste pole nie przejdzie.');
+        Notifications.error(MSG('pdfpwd.required'));
         return;
     }
 
@@ -1261,16 +1261,16 @@ async function savePanelPassword() {
         }
 
         if (result.success) {
-            Notifications.success(entryId ? 'Hasło podmienione.' : 'Hasło zapisane.');
+            Notifications.success(entryId ? MSG('pdfpwd.updated') : MSG('pdfpwd.created'));
             // Close current modal and reopen with fresh data
             const overlay = document.querySelector('.modal-overlay');
             if (overlay) Modals.close(overlay);
             openPasswordsPanel();
         } else {
-            Notifications.error(result.error || 'Zapis się nie udał. Bywa.');
+            Notifications.error(result.error || MSG('common.save_generic_failed'));
         }
     } catch (error) {
-        Notifications.error('Zapis się wyłożył: ' + error.message);
+        Notifications.error(MSG('common.save_error') + error.message);
     }
 }
 
@@ -1282,7 +1282,7 @@ async function editPasswordEntry(entryId) {
             if (entry) showPanelForm(entry);
         }
     } catch (error) {
-        Notifications.error('Dane się nie wczytały. Kaprys serwera.');
+        Notifications.error(MSG('common.data_failed'));
     }
 }
 
@@ -1295,11 +1295,11 @@ async function deletePasswordEntry(entryId) {
             try {
                 const result = await API.sellerPasswords.delete(entryId);
                 if (result.success) {
-                    Notifications.success('Hasło skasowane.');
+                    Notifications.success(MSG('pdfpwd.deleted'));
                     openPasswordsPanel();
                 }
             } catch (error) {
-                Notifications.error('Nie chce się usunąć: ' + error.message);
+                Notifications.error(MSG('common.delete_error') + error.message);
             }
         }
     });

@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         processedResults = restoredResults;
                         Modals.close(overlay);
                         displayProcessingResults();
-                        Notifications.success(`Przywrócono ${restoredResults.length} faktur`);
+                        Notifications.success(MSG('upload.restored', { count: restoredResults.length }));
                     }
                 }
             ]
@@ -200,7 +200,7 @@ function handleFiles(files) {
     const allowedFiles = Array.from(files).filter(file => isAllowedFile(file));
 
     if (allowedFiles.length === 0) {
-        Notifications.warning('PDF albo obrazek (JPG, PNG, TIFF, BMP). Nie mem, nie .exe.');
+        Notifications.warning(MSG('upload.wrong_file_type'));
         return;
     }
 
@@ -302,7 +302,7 @@ async function stageFiles() {
         const result = await response.json();
 
         if (result.success) {
-            Notifications.success(`Przesłano ${result.files.length} plików`);
+            Notifications.success(MSG('upload.sent', { count: result.files.length }));
 
             // Clear selection
             clearFiles();
@@ -312,11 +312,11 @@ async function stageFiles() {
             showUploadedFilesSection();
             hideUploadControls();
         } else {
-            Notifications.error('Wysyłka się zacięła: ' + (result.error || 'Unknown error'));
+            Notifications.error(MSG('upload.send_error') +(result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Upload error:', error);
-        Notifications.error('Wysyłka się zacięła: ' + error.message);
+        Notifications.error(MSG('upload.send_error') +error.message);
     } finally {
         progressContainer.classList.add('hidden');
         progressBar.style.width = '0%';
@@ -409,7 +409,7 @@ async function removeStagedFile(filename) {
         const result = await response.json();
 
         if (result.success) {
-            Notifications.success(`Plik ${filename} wyleciał`);
+            Notifications.success(MSG('upload.file_removed', { name: filename }));
             await loadStagedFiles();
 
             // If no files left, show upload controls again
@@ -418,11 +418,11 @@ async function removeStagedFile(filename) {
                 showUploadControls();
             }
         } else {
-            Notifications.error('Plik nie chce zniknąć: ' + (result.error || 'Unknown error'));
+            Notifications.error(MSG('upload.file_remove_error') +(result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error removing file:', error);
-        Notifications.error('Plik nie chce zniknąć: ' + error.message);
+        Notifications.error(MSG('upload.file_remove_error') +error.message);
     }
 }
 
@@ -540,11 +540,11 @@ async function processDocuments() {
 
             // Show results
             if (processedResults.length > 0) {
-                Notifications.success(`Przetworzono ${processedResults.length} plików`);
+                Notifications.success(MSG('upload.processed', { count: processedResults.length }));
                 hideUploadedFilesSection();
                 displayProcessingResults();
             } else {
-                Notifications.warning('Ani jednego pliku nie przerobiłem. Słaby wynik.');
+                Notifications.warning(MSG('upload.processed_none'));
             }
         }, 1000);
 
@@ -552,7 +552,7 @@ async function processDocuments() {
         console.error('Processing error:', error);
         addProgressNotification(`Błąd komunikacji: ${error.message}`, 'error');
         setTimeout(() => Modals.close(progressModal), 2000);
-        Notifications.error('Przetwarzanie padło: ' + error.message);
+        Notifications.error(MSG('upload.process_error') + error.message);
     } finally {
         processBtn.disabled = false;
     }
@@ -768,7 +768,7 @@ function selectAllValid() {
             checkbox.checked = canAdd;
         }
     });
-    Notifications.info(`Zaznaczono ${processedResults.filter(r => r.success && !r.is_duplicate && (!r.validation_errors || r.validation_errors.length === 0)).length} poprawnych faktur`);
+    Notifications.info(MSG('upload.selected_valid', { count: processedResults.filter(r => r.success && !r.is_duplicate && (!r.validation_errors || r.validation_errors.length === 0)).length }));
 }
 
 /**
@@ -776,7 +776,7 @@ function selectAllValid() {
  */
 function deselectAll() {
     document.querySelectorAll('.add-to-list-checkbox').forEach(cb => cb.checked = false);
-    Notifications.info('Wszystko odznaczone. Zaczynamy od zera.');
+    Notifications.info(MSG('upload.deselected_all'));
 }
 
 /**
@@ -878,7 +878,7 @@ async function saveAndFinish() {
     const checkboxes = document.querySelectorAll('.add-to-list-checkbox:checked');
 
     if (checkboxes.length === 0) {
-        Notifications.warning('Nic nie zaznaczyłeś. Mam zapisać powietrze?');
+        Notifications.warning(MSG('upload.nothing_selected'));
         return;
     }
 
@@ -911,7 +911,7 @@ async function saveAndFinish() {
         // Handle partial or full success
         if (result.saved_invoices && result.saved_invoices.length > 0) {
             const savedCount = result.saved_invoices.length;
-            Notifications.success(`Zapisano ${savedCount} faktur. Brawo Ty.`);
+            Notifications.success(MSG('upload.saved', { count: savedCount }));
 
             // Mark saved rows in UI
             result.saved_invoices.forEach(saved => {
@@ -933,7 +933,7 @@ async function saveAndFinish() {
         }
 
         if (result.failed_invoices && result.failed_invoices.length > 0) {
-            Notifications.error(`${result.failed_invoices.length} faktur się nie zapisało. Marudzą.`);
+            Notifications.error(MSG('upload.save_failed_count', { count: result.failed_invoices.length }));
 
             // Highlight failed rows
             result.failed_invoices.forEach(failed => {
@@ -965,7 +965,7 @@ async function saveAndFinish() {
 
     } catch (error) {
         console.error('Save error:', error);
-        Notifications.error('Zapis się wyłożył: ' + error.message);
+        Notifications.error(MSG('common.save_error') + error.message);
         clearSavedResults();
         setTimeout(() => {
             window.location.href = '/invoices';
@@ -1046,16 +1046,16 @@ async function performClearAllStagedFiles() {
         const result = await response.json();
 
         if (result.success) {
-            Notifications.success('Wszystkie pliki w kosz. Czysto.');
+            Notifications.success(MSG('upload.all_deleted'));
             uploadedFiles = [];
             hideUploadedFilesSection();
             showUploadControls();
         } else {
-            Notifications.error('Pliki stawiają opór: ' + (result.error || 'Unknown error'));
+            Notifications.error(MSG('upload.files_delete_error') +(result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error clearing files:', error);
-        Notifications.error('Pliki stawiają opór: ' + error.message);
+        Notifications.error(MSG('upload.files_delete_error') +error.message);
     }
 }
 
@@ -1153,18 +1153,18 @@ async function getFoldersAndOpenModal() {
                 textSpan.classList.add('text-gray-700');
             }
 
-            Notifications.success(`Załadowano ${result.folders.length} folderów`);
+            Notifications.success(MSG('upload.folders_loaded', { count: result.folders.length }));
 
             // Open the modal after successful fetch
             openFolderModal();
         } else {
-            Notifications.warning('Zero folderów w mailu. Pusto jak w lodówce w niedzielę.');
+            Notifications.warning(MSG('upload.no_folders'));
             selectFoldersBtn.disabled = false;
             selectFoldersBtn.innerHTML = originalContent;
         }
     } catch (error) {
         console.error('Get folders error:', error);
-        Notifications.error('Foldery nie dojechały: ' + error.message);
+        Notifications.error(MSG('upload.folders_error') +error.message);
         selectFoldersBtn.disabled = false;
         selectFoldersBtn.innerHTML = originalContent;
     }
@@ -1212,13 +1212,13 @@ async function getFolders() {
             document.getElementById('selected-folders-text').classList.remove('text-gray-500');
             document.getElementById('selected-folders-text').classList.add('text-gray-700');
 
-            Notifications.success(`Załadowano ${result.folders.length} folderów`);
+            Notifications.success(MSG('upload.folders_loaded', { count: result.folders.length }));
         } else {
-            Notifications.warning('Zero folderów w mailu. Pusto jak w lodówce w niedzielę.');
+            Notifications.warning(MSG('upload.no_folders'));
         }
     } catch (error) {
         console.error('Get folders error:', error);
-        Notifications.error('Foldery nie dojechały: ' + error.message);
+        Notifications.error(MSG('upload.folders_error') +error.message);
     } finally {
         // Re-enable button
         getFoldersBtn.disabled = false;
@@ -1573,12 +1573,12 @@ async function importFromEmail() {
 
     // Check if folders are selected (either "All" or specific folders)
     if (!isAllFoldersSelected && selectedFolders.length === 0) {
-        Notifications.warning('Zaznacz chociaż jeden folder. Jeden. Błagam.');
+        Notifications.warning(MSG('upload.pick_folder'));
         return;
     }
 
     if (!dateFrom || !dateTo) {
-        Notifications.warning('Zakres dat by się przydał, nie sądzisz?');
+        Notifications.warning(MSG('upload.pick_date_range'));
         return;
     }
 
@@ -1670,14 +1670,14 @@ async function importFromEmail() {
         setTimeout(async () => {
             Modals.close(progressModal);
             if (finalResults && finalResults.total_processed > 0) {
-                Notifications.success(`Import zakończony: pobrano ${finalResults.total_processed} plików`);
+                Notifications.success(MSG('upload.import_done', { count: finalResults.total_processed }));
 
                 // Load staged files and show review section
                 await loadStagedFiles();
                 showUploadedFilesSection();
                 hideUploadControls();
             } else {
-                Notifications.warning('Żadnych PDF-ów w tych folderach. Pustka.');
+                Notifications.warning(MSG('upload.no_pdfs'));
             }
         }, 1000);
 
@@ -1686,7 +1686,7 @@ async function importFromEmail() {
         addProgressNotification(`Błąd: ${error.message}`, 'error');
         setTimeout(() => {
             Modals.close(progressModal);
-            Notifications.error('Import z maila legł: ' + error.message);
+            Notifications.error(MSG('upload.import_error') + error.message);
         }, 1000);
     }
 }

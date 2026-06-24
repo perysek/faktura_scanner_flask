@@ -741,13 +741,13 @@ function _doManualSubmit(payload) {
     .then(r => r.json())
     .then(res => {
         if (!res.success) {
-            Notifications.error(res.error || 'Zapis się nie udał. Bywa.');
+            Notifications.error(res.error || MSG('common.save_generic_failed'));
             return;
         }
         if (res.conflicts && res.conflicts.length > 0) {
-            Notifications.warning(`Nieobecność zapisana. Uwaga: ${res.conflicts.length} kolidujących wizyt.`);
+            Notifications.warning(MSG('absence.saved_conflicts', { count: res.conflicts.length }));
         } else {
-            Notifications.success('Nieobecność zapisana. Ktoś tu planuje wolne.');
+            Notifications.success(MSG('absence.saved'));
         }
         setTimeout(() => location.reload(), 900);
     })
@@ -764,18 +764,18 @@ Absences.submitManual = function() {
     const notes    = document.getElementById('manual-notes');
 
     if (!empSel?.value || !catSel?.value || !dateFrom?.value) {
-        Notifications.error('Wypełnij wymagane pola. Te z gwiazdką nie są dla ozdoby.');
+        Notifications.error(MSG('absence.fields_required'));
         return;
     }
     const catOpt  = catSel.options[catSel.selectedIndex];
     const fullDay = !catOpt || catOpt.dataset.fullDay !== 'false';
 
     if (fullDay && !dateTo?.value) {
-        Notifications.error('Wypełnij wymagane pola. Te z gwiazdką nie są dla ozdoby.');
+        Notifications.error(MSG('absence.fields_required'));
         return;
     }
     if (!fullDay && (!timeFrom?.value || !timeTo?.value)) {
-        Notifications.error('Nieobecność godzinowa bez godzin? Podaj je, geniuszu.');
+        Notifications.error(MSG('absence.hours_required'));
         return;
     }
 
@@ -948,7 +948,7 @@ function _absDangerModal(opts) {
                             Notifications.success(opts.successMsg(d));
                             setTimeout(() => location.reload(), 700);
                         } else {
-                            Notifications.error(d.error || 'Nie udało się usunąć');
+                            Notifications.error(d.error || MSG('common.delete_generic_failed'));
                         }
                     } catch (_) {
                         Modals.close(o);
@@ -977,8 +977,8 @@ Absences.hardDelete = function (id, label, status) {
         </div>`,
         url: `/absences/${id}/permanent`,
         successMsg: (d) => d.slots_freed
-            ? 'Nieobecność trwale usunięta — sloty zwolnione'
-            : 'Nieobecność trwale usunięta',
+            ? MSG('absence.hard_deleted_freed')
+            : MSG('absence.hard_deleted'),
     });
 };
 
@@ -994,7 +994,7 @@ Absences.hardDeleteCategory = function (id, name) {
             </p>
         </div>`,
         url: `/absences/categories/${id}/permanent`,
-        successMsg: () => 'Kategoria trwale usunięta',
+        successMsg: () => MSG('absence.category_hard_deleted'),
     });
 };
 

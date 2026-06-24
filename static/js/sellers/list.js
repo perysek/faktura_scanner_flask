@@ -32,11 +32,11 @@ async function loadSellers(searchQuery = '') {
             sellersData = data.sellers;
             renderSellersTable();
         } else {
-            Notifications.error('Sprzedawcy nie chcą się załadować.');
+            Notifications.error(MSG('seller.list_load_failed'));
         }
     } catch (error) {
         console.error('Error loading sellers:', error);
-        Notifications.error('Sprzedawcy się buntują: ' + error.message);
+        Notifications.error(MSG('seller.list_load_error') + error.message);
     }
 }
 
@@ -116,7 +116,7 @@ async function confirmDeleteSeller(sellerId) {
         Modals.close(loadingModal);
 
         if (!invoicesData.success) {
-            Notifications.error('Nie dało się pobrać faktur.');
+            Notifications.error(MSG('seller.invoices_load_failed'));
             return;
         }
 
@@ -180,7 +180,7 @@ async function confirmDeleteSeller(sellerId) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fetching seller invoices:', error);
-        Notifications.error('Dane nie dojechały: ' + error.message);
+        Notifications.error(MSG('common.load_error') + error.message);
     }
 }
 
@@ -204,7 +204,7 @@ async function deleteSeller(sellerId) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error deleting seller:', error);
-        Notifications.error('Sprzedawca nie chce zniknąć: ' + error.message);
+        Notifications.error(MSG('common.delete_error') + error.message);
     }
 }
 
@@ -227,7 +227,7 @@ async function syncSellers() {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error syncing sellers:', error);
-        Notifications.error('Synchronizacja się wykrzaczyła: ' + error.message);
+        Notifications.error(MSG('seller.sync_error') + error.message);
     }
 }
 
@@ -349,7 +349,7 @@ async function addMissingSeller(nip, name) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error adding missing seller:', error);
-        Notifications.error('Nie dało się dodać sprzedawcy: ' + error.message);
+        Notifications.error(MSG('seller.add_error') + error.message);
     }
 }
 
@@ -374,7 +374,7 @@ async function fixDiscrepancy(action, invoiceId, sellerId) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error fixing discrepancy:', error);
-        Notifications.error('Naprawa się nie udała: ' + error.message);
+        Notifications.error(MSG('seller.fix_error') + error.message);
     }
 }
 

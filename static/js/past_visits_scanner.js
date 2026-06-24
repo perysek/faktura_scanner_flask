@@ -135,8 +135,8 @@ const PastVisitsScanner = {
 
         if (!this.appointments.length) {
             Modals.alert({
-                title: 'Nic do rozliczenia',
-                message: 'Wszystkie wizyty już mają status. Czysto jak łza — możesz iść na kawę.',
+                title: MSG('visits.nothing.title'),
+                message: MSG('visits.nothing.message'),
                 type: 'success'
             });
             return;
@@ -470,13 +470,13 @@ const PastVisitsScanner = {
             // odśwież tylko licznik triggera (rozliczone wizyty znikają z listy).
             Modals.close(overlay);
             if (errorCount > 0) {
-                Notifications.warning(`Zaktualizowano ${successCount} z ${changes.length} wizyt (błędów: ${errorCount})`);
+                Notifications.warning(MSG('visits.updated_partial', { ok: successCount, total: changes.length, err: errorCount }));
             } else {
-                Notifications.success(`Zaktualizowano ${successCount} ${this.pluralVisits(successCount)}`);
+                Notifications.success(MSG('visits.updated', { count: successCount, label: this.pluralVisits(successCount) }));
             }
             this.refreshCount();
         } else {
-            Notifications.error('Zapis nie wyszedł. Weź jeszcze raz, z uczuciem.');
+            Notifications.error(MSG('visits.save_failed'));
             if (this.saveBtn) {
                 this.saveBtn.textContent = this.saveBtn.dataset.label || 'Zapisz zmiany';
                 this.saveBtn.disabled = false;

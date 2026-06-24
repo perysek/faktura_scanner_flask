@@ -294,7 +294,7 @@
         const exc = allRows.filter(r => r.status === 'exceeded');
         if (exc.length && typeof Notifications !== 'undefined') {
             const names = [...new Set(exc.map(r => r.employee_name))].slice(0, 3).join(', ');
-            setTimeout(() => Notifications.warning(`Limit przekroczony: ${names}. Ktoś tu lubi wolne.`), 800);
+            setTimeout(() => Notifications.warning(MSG('balance.limit_names', { names })), 800);
         }
     }
 
@@ -553,7 +553,7 @@
             if (!tr._warnedExceeded) {
                 tr._warnedExceeded = true;
                 if (typeof Notifications !== 'undefined')
-                    Notifications.warning('Limit przekroczony! Ktoś tu lubi wolne.');
+                    Notifications.warning(MSG('balance.limit_exceeded'));
             }
         } else {
             tr.classList.remove('exceeded-row');
@@ -573,7 +573,7 @@
         const reason   = reasonEl ? reasonEl.value.trim() : '';
 
         if (Math.abs(delta) >= 0.001 && !reason) {
-            if (typeof Notifications !== 'undefined') Notifications.error('Podaj powód. „Bo tak" się nie liczy.');
+            if (typeof Notifications !== 'undefined') Notifications.error(MSG('balance.reason_required'));
             if (reasonEl) { reasonEl.style.display = ''; reasonEl.focus(); }
             return;
         }
@@ -616,7 +616,7 @@
                 if (undoBtn) undoBtn.disabled = false;
                 if (reasonEl) { reasonEl.style.display = 'none'; reasonEl.value = ''; }
 
-                if (typeof Notifications !== 'undefined') Notifications.success('Zmiany zapisane. Bilans się zgadza.');
+                if (typeof Notifications !== 'undefined') Notifications.success(MSG('balance.saved'));
 
                 allRows = allRows.map(r =>
                     r.employee_id === empId && r.category_id === catId
@@ -624,7 +624,7 @@
                         : r);
                 updateStats();
             } else {
-                const err = results.find(d => !d.success)?.error || 'Zapis się nie udał. Bywa.';
+                const err = results.find(d => !d.success)?.error || MSG('common.save_generic_failed');
                 if (typeof Notifications !== 'undefined') Notifications.error(err);
             }
         } catch (_) {
@@ -665,7 +665,7 @@
             if (calls.length) {
                 const results = await Promise.all(calls);
                 if (!results.every(d => d.success)) {
-                    if (typeof Notifications !== 'undefined') Notifications.error('Cofnięcie się nie udało. Czas płynie tylko naprzód.');
+                    if (typeof Notifications !== 'undefined') Notifications.error(MSG('balance.undo_failed'));
                     return;
                 }
             }
@@ -692,7 +692,7 @@
             if (reasonEl) { reasonEl.style.display = 'none'; reasonEl.value = ''; }
 
             updateRowDisplay(tr);
-            if (typeof Notifications !== 'undefined') Notifications.success('Cofnięte. Jakby się nie stało.');
+            if (typeof Notifications !== 'undefined') Notifications.success(MSG('balance.undone'));
 
             allRows = allRows.map(r =>
                 r.employee_id === empId && r.category_id === catId
@@ -717,7 +717,7 @@
             confirmText: 'Resetuj',
             onConfirm: async () => {
                 if (used <= 0) {
-                    if (typeof Notifications !== 'undefined') Notifications.info('Bilans już na zerze. Nie ma co zerować.');
+                    if (typeof Notifications !== 'undefined') Notifications.info(MSG('balance.already_zero'));
                     return;
                 }
                 try {
@@ -733,10 +733,10 @@
                     });
                     const d = await r.json();
                     if (d.success) {
-                        if (typeof Notifications !== 'undefined') Notifications.success('Bilans wyzerowany. Czysta karta.');
+                        if (typeof Notifications !== 'undefined') Notifications.success(MSG('balance.reset_zero'));
                         await loadSummary();
                     } else {
-                        if (typeof Notifications !== 'undefined') Notifications.error(d.error || 'Coś nie pykło.');
+                        if (typeof Notifications !== 'undefined') Notifications.error(d.error || MSG('common.save_generic_failed'));
                     }
                 } catch (_) {
                     if (typeof Notifications !== 'undefined') Notifications.error(MSG('error.server.unreachable'));

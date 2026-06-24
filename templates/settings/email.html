@@ -390,14 +390,14 @@ function setupForm() {
             Modals.close(loadingModal);
 
             if (result.success) {
-                Notifications.success('Ustawienia zapisane. Ogarnięte.');
+                Notifications.success(MSG('settings.email.saved'));
             } else {
-                Notifications.error('Ustawienia nie chciały się zapisać. Foch.');
+                Notifications.error(MSG('settings.email.save_failed'));
             }
         } catch (error) {
             Modals.close(loadingModal);
             console.error('Save error:', error);
-            Notifications.error('Zapis się wyłożył: ' + error.message);
+            Notifications.error(MSG('common.save_error') + error.message);
         }
     });
 }
@@ -409,7 +409,7 @@ async function testConnection() {
     const password = document.getElementById('password').value;
 
     if (!server || !email || !password) {
-        Notifications.warning('Wypełnij wymagane pola. Serwer telepatii nie zna.');
+        Notifications.warning(MSG('settings.email.fields_required'));
         return;
     }
 
@@ -426,14 +426,14 @@ async function testConnection() {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success('IMAP odebrał. Dogadaliście się!');
+            Notifications.success(MSG('settings.email.imap_ok'));
         } else {
-            Notifications.error('Serwer nie odebrał. Sprawdź ustawienia i próbuj dalej.');
+            Notifications.error(MSG('settings.email.imap_failed'));
         }
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Test error:', error);
-        Notifications.error('Test połączenia legł: ' + error.message);
+        Notifications.error(MSG('settings.email.test_error') + error.message);
     }
 }
 

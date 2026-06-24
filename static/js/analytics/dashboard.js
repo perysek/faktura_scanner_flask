@@ -260,12 +260,12 @@ function applyCustomRange() {
     const endDate = document.getElementById('customEndDate').value;
 
     if (!startDate || !endDate) {
-        Notifications.warning('Dwie daty, nie jedna. Matematyka.');
+        Notifications.warning(MSG('analytics.pick_both_dates'));
         return;
     }
 
     if (new Date(startDate) > new Date(endDate)) {
-        Notifications.error('Początek po końcu? Czas tak nie działa.');
+        Notifications.error(MSG('analytics.date_order'));
         return;
     }
 

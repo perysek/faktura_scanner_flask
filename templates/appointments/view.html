@@ -575,7 +575,7 @@ function initSatisfactionWidget(currentScore) {
         const data = await resp.json();
         if (data.success) {
             if (typeof Notifications !== 'undefined') {
-                Notifications.success(`Ocena ${selectedScore}/5 zapisana. Sąd okrutny, ale sprawiedliwy.`);
+                Notifications.success(MSG('appt.rating_saved', { score: selectedScore }));
             }
             saveBtn.textContent = '✓ Zapisano';
         } else {
@@ -635,10 +635,10 @@ async function sendSms(appointmentId, typeKey, typeName) {
         const data = await resp.json();
         if (data.success) {
             SMS_SENT_KEYS.add(typeKey);
-            Notifications.success(`SMS „${typeName}" poszedł w świat.`);
+            Notifications.success(MSG('appt.sms_sent', { type: typeName }));
             loadSmsLog(true);
         } else {
-            Notifications.error('Coś nie pykło: ' + (data.message || 'sam nie wiem co'));
+            Notifications.error(MSG('appt.sms_error') + (data.message || 'sam nie wiem co'));
         }
     } catch (e) {
         Notifications.error(MSG('error.server.unreachable'));

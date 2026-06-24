@@ -412,7 +412,7 @@ async function loadHistory() {
         const data = await API.get('/history');
 
         if (!data.success) {
-            Notifications.error('Historia się nie wczytała. Przeszłość bywa trudna.');
+            Notifications.error(MSG('history.load_failed'));
             return;
         }
 
@@ -426,7 +426,7 @@ async function loadHistory() {
 
     } catch (error) {
         console.error('Error loading history:', error);
-        Notifications.error('Historia się nie wczytała. Przeszłość bywa trudna.');
+        Notifications.error(MSG('history.load_failed'));
     }
 }
 

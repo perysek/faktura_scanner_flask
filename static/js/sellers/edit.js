@@ -46,11 +46,11 @@ async function loadSellerData() {
 
             renderInvoicesTable();
         } else {
-            Notifications.error('Dane sprzedawcy się nie wczytały.');
+            Notifications.error(MSG('seller.data_load_failed'));
         }
     } catch (error) {
         console.error('Error loading seller:', error);
-        Notifications.error('Dane nie dojechały: ' + error.message);
+        Notifications.error(MSG('common.load_error') + error.message);
     }
 }
 
@@ -143,7 +143,7 @@ async function handleSubmit(event) {
 
     // Basic validation
     if (!name) {
-        Notifications.error('Nazwa sprzedawcy się sama nie wpisze.');
+        Notifications.error(MSG('seller.name_required'));
         return false;
     }
 
@@ -158,7 +158,7 @@ async function handleSubmit(event) {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success('Zapisane. Sprzedawca odświeżony.');
+            Notifications.success(MSG('seller.saved'));
 
             // Update local data
             sellerData = result.seller;
@@ -181,7 +181,7 @@ async function handleSubmit(event) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error updating seller:', error);
-        Notifications.error('Aktualizacja się wyłożyła: ' + error.message);
+        Notifications.error(MSG('common.update_error') + error.message);
     }
 
     return false;
@@ -249,7 +249,7 @@ async function propagateChanges() {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error propagating changes:', error);
-        Notifications.error('Faktury nie chcą się zaktualizować: ' + error.message);
+        Notifications.error(MSG('seller.invoices_update_error') + error.message);
     }
 }
 
@@ -341,7 +341,7 @@ function cancelPasswordForm() {
 async function savePassword() {
     const password = document.getElementById('pwd-password').value.trim();
     if (!password) {
-        Notifications.error('Hasło PDF poproszę. Puste pole nie przejdzie.');
+        Notifications.error(MSG('pdfpwd.required'));
         return;
     }
 
@@ -369,7 +369,7 @@ async function savePassword() {
         }
     } catch (error) {
         console.error('Error saving password:', error);
-        Notifications.error('Zapis odmówił posłuszeństwa: ' + error.message);
+        Notifications.error(MSG('common.save_error') + error.message);
     }
 }
 
@@ -386,10 +386,10 @@ async function deletePassword() {
                 if (result.success) {
                     passwordData = null;
                     renderPasswordSection();
-                    Notifications.success('Hasło skasowane');
+                    Notifications.success(MSG('pdfpwd.deleted'));
                 }
             } catch (error) {
-                Notifications.error('Nie chce się usunąć: ' + error.message);
+                Notifications.error(MSG('common.delete_error') + error.message);
             }
         }
     });

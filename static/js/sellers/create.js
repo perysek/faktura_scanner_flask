@@ -142,14 +142,14 @@ async function handleSubmit(event) {
 
     // Basic validation
     if (!nip || !name) {
-        Notifications.error('NIP i nazwa. Bez nich ani rusz.');
+        Notifications.error(MSG('seller.nip_name_required'));
         return false;
     }
 
     // Check NIP format
     const normalizedNip = nip.replace(/[^0-9]/g, '');
     if (normalizedNip.length !== 10) {
-        Notifications.error('NIP ma 10 cyfr. Nie 9, nie 11. Dziesięć.');
+        Notifications.error(MSG('seller.nip_ten_digits'));
         return false;
     }
 
@@ -160,7 +160,7 @@ async function handleSubmit(event) {
 
         if (existingName === newName) {
             // Exact match - redirect to existing seller
-            Notifications.info('Tego sprzedawcę już masz.');
+            Notifications.info(MSG('seller.already_exists'));
             window.location.href = `/seller/${existingSellerByNip.id}/edit`;
             return false;
         }
@@ -296,7 +296,7 @@ async function updateSellerName(sellerId, newName) {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success('Nazwa zmieniona.');
+            Notifications.success(MSG('seller.name_changed'));
             window.location.href = `/seller/${sellerId}/edit`;
         } else {
             Notifications.error(result.error || 'Blad aktualizacji');
@@ -304,7 +304,7 @@ async function updateSellerName(sellerId, newName) {
     } catch (error) {
         Modals.close(loadingModal);
         console.error('Error updating seller:', error);
-        Notifications.error('Aktualizacja się wyłożyła: ' + error.message);
+        Notifications.error(MSG('common.update_error') + error.message);
     }
 }
 
@@ -325,10 +325,10 @@ async function createSeller(nip, name, address, force = false) {
 
         if (result.success) {
             if (result.already_exists) {
-                Notifications.info('Tego sprzedawcę już masz.');
+                Notifications.info(MSG('seller.already_exists'));
                 window.location.href = `/seller/${result.seller.id}/edit`;
             } else {
-                Notifications.success('Sprzedawca dodany. Witamy na pokładzie.');
+                Notifications.success(MSG('seller.created'));
                 window.location.href = '/sellers';
             }
         } else {
@@ -356,7 +356,7 @@ async function createSeller(nip, name, address, force = false) {
             }
         } else {
             console.error('Error creating seller:', error);
-            Notifications.error('Sprzedawca nie chciał się urodzić: ' + error.message);
+            Notifications.error(MSG('seller.create_error') + error.message);
         }
     }
 }

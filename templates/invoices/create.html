@@ -649,7 +649,7 @@ function setupFileUpload() {
         if (!file) return;
 
         if (file.size > 10 * 1024 * 1024) {
-            Notifications.error('Plik za gruby. Max 10MB, nie cała galeria.');
+            Notifications.error(MSG('invoice.file_too_big'));
             fileInput.value = '';
             return;
         }
@@ -739,9 +739,9 @@ function setupForm() {
             Modals.close(loadingModal);
 
             if (result.success) {
-                Notifications.success('Faktura zapisana. Pierwsza klasa.');
+                Notifications.success(MSG('invoice.saved'));
                 if (result.warnings && result.warnings.length > 0) {
-                    Notifications.warning('Drobne zastrzeżenia: ' + result.warnings.join(', '));
+                    Notifications.warning(MSG('common.warnings') + result.warnings.join(', '));
                 }
 
                 setTimeout(() => {
@@ -758,18 +758,18 @@ function setupForm() {
                     }
                 }
 
-                Notifications.error(result.error || 'Faktura nie chciała się zapisać.');
+                Notifications.error(result.error || MSG('invoice.save_failed'));
                 if (result.validation_errors) {
                     const errors = result.validation_errors.errors || [];
                     if (errors.length > 0) {
-                        Notifications.error('Walidacja się czepia: ' + errors.join(', '));
+                        Notifications.error(MSG('common.validation_errors') + errors.join(', '));
                     }
                 }
             }
         } catch (error) {
             Modals.close(loadingModal);
             console.error('Error submitting form:', error);
-            Notifications.error('Zapis się wyłożył: ' + error.message);
+            Notifications.error(MSG('common.save_error') + error.message);
         }
     });
 }
@@ -788,7 +788,7 @@ async function handleSellerConflict(conflict, originalFormData) {
     } else if (action === 'update_seller') {
         await confirmSellerAction('update_seller', originalFormData, existingSeller.id);
     } else {
-        Notifications.info('Zapis faktury anulowany. Rozmyśliłeś się.');
+        Notifications.info(MSG('invoice.save_cancelled_short'));
     }
 }
 
@@ -801,7 +801,7 @@ async function handleNewSeller(sellerInfo, originalFormData) {
     if (action === 'create') {
         await confirmSellerAction('create_new', originalFormData, null);
     } else {
-        Notifications.info('Zapis faktury anulowany. Rozmyśliłeś się.');
+        Notifications.info(MSG('invoice.save_cancelled_short'));
     }
 }
 
@@ -823,16 +823,16 @@ async function confirmSellerAction(action, formData, existingSellerId = null) {
         Modals.close(loadingModal);
 
         if (result.success) {
-            Notifications.success(result.message || 'Faktura została zapisana pomyślnie');
+            Notifications.success(result.message || MSG('invoice.saved'));
             setTimeout(() => {
                 window.location.href = '{{ url_for("main.invoices_list") }}';
             }, 1500);
         } else {
-            Notifications.error(result.error || 'Błąd zapisu faktury');
+            Notifications.error(result.error || MSG('invoice.save_failed'));
         }
     } catch (error) {
         Modals.close(loadingModal);
-        Notifications.error('Błąd zapisu: ' + error.message);
+        Notifications.error(MSG('common.save_error') + error.message);
     }
 }
 
@@ -948,9 +948,9 @@ function showNewSellerModal({ nip, name }) {
 function pasteToField(fieldId) {
     navigator.clipboard.readText().then(text => {
         document.getElementById(fieldId).value = text;
-        Notifications.success('Wklejone. Schowek się przydał.');
+        Notifications.success(MSG('common.clipboard_pasted'));
     }).catch(err => {
-        Notifications.error('Schowek zamknięty na cztery spusty.');
+        Notifications.error(MSG('common.clipboard_denied'));
     });
 }
 </script>
