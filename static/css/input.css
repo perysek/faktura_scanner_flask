@@ -693,11 +693,11 @@
      inline copy and it falls back to the definitions here. .refined-table is NOT
      here yet — the shared one (above) is still the old slate version; upgrading
      it is a separate cross-page job. */
-  .refined-page {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
+  /* NOTE: .refined-page is intentionally NOT shared. It's overloaded — centered
+     max-width list pages (employees/clients/services/categories) vs full-height,
+     full-width flex pages (*_refined lists, calendars, dashboards). A global
+     definition leaks max-width/margin onto the full-width pages. Each page keeps
+     its own .refined-page. */
 
   .page-header {
     display: flex;
@@ -770,7 +770,11 @@
     flex-wrap: wrap;
   }
 
-  .refined-input {
+  /* Scoped to .search-card so the list-page SEARCH input never collides with the
+     identically-named .refined-input used as a FORM field on CRUD pages (e.g.
+     services/categories). Layered + scoped: a page's own unlayered .refined-input
+     still wins everywhere. */
+  .search-card .refined-input {
     flex: 1;
     min-width: 200px;
     padding: 0.625rem 1rem;
@@ -784,9 +788,9 @@
     transition: all 0.3s var(--ease-out-expo);
   }
 
-  .refined-input::placeholder { color: var(--color-ink-subtle); }
+  .search-card .refined-input::placeholder { color: var(--color-ink-subtle); }
 
-  .refined-input:focus {
+  .search-card .refined-input:focus {
     outline: none;
     border-color: var(--color-ink-muted);
     box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
@@ -829,7 +833,7 @@
   .search-clear-btn:hover { color: var(--color-ink); background: var(--color-surface); }
   .search-clear-btn svg { width: 1rem; height: 1rem; }
 
-  .refined-select {
+  .search-card .refined-select {
     padding: 0.625rem 1rem;
     font-family: var(--font-body);
     font-size: 0.8125rem;
@@ -842,7 +846,7 @@
     min-width: 160px;
   }
 
-  .refined-select:focus {
+  .search-card .refined-select:focus {
     outline: none;
     border-color: var(--color-ink-muted);
   }

@@ -6,57 +6,12 @@
 
 {% block extra_css %}
 <style>
-    /* Refined Minimal Design System */
-    .refined-page {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-    }
+    /* Refined Minimal Design System — page chrome (.page-header(-actions), .page-title,
+       .stats-grid, .stat-card, .stat-icon base) now shared via static/css/input.css
+       @layer components. Only page-specific styles remain below. */
 
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .page-title { margin-bottom: 0.5rem; }
-
-    .page-header-actions {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    /* Statistics Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .stat-card {
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .stat-icon {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 2px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+    /* .refined-page is NOT shared (overloaded class — see input.css note); kept inline. */
+    .refined-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
 
     .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); }
     .stat-icon.green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
@@ -68,21 +23,7 @@
     .stat-value.purple { color: var(--color-purple); }
     .stat-value.pink { color: #be185d; }
 
-    /* Search Card */
-    .search-card {
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        margin-bottom: 1.5rem;
-    }
-
-    .search-wrapper {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
+    /* .search-card / .search-wrapper → shared (input.css @layer components). */
 
     .refined-input {
         flex: 1;
@@ -105,14 +46,7 @@
         box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
     }
 
-    /* Table Container */
-    .table-container {
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        overflow: auto;
-    }
+    /* .table-container → shared (input.css @layer components). */
 
     .refined-table {
         width: 100%;
@@ -242,27 +176,7 @@
         color: var(--color-error);
     }
 
-    /* Status Badge */
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.625rem;
-        font-size: 0.6875rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        border-radius: 1px;
-    }
-
-    .status-badge.active {
-        background: rgba(45, 106, 79, 0.08);
-        color: var(--color-success);
-    }
-
-    .status-badge.inactive {
-        background: rgba(107, 114, 128, 0.08);
-        color: var(--color-ink-muted);
-    }
+    /* .status-badge (+ .active/.inactive) → shared (input.css @layer components). */
 
     /* Action Links */
     .action-link {
@@ -333,35 +247,12 @@
         height: 1.125rem;
     }
 
-    /* Empty State */
-    .empty-state {
-        padding: 3rem 2rem;
-        text-align: center;
-    }
-
-    .empty-icon {
-        font-size: 4rem;
-        color: var(--color-ink-subtle);
-        opacity: 0.3;
-        margin-bottom: 1rem;
-    }
-
-    .empty-text {
-        color: var(--color-ink-subtle);
-        font-size: 0.9375rem;
-        font-weight: 300;
-    }
+    /* .empty-state / .empty-icon / .empty-text → shared (input.css @layer components). */
 
     .icon { font-size: 1rem; vertical-align: middle; }
     .icon.lg { font-size: 1.5rem; }
 
-    /* Fade-in Animation */
-    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    /* .fade-in / @keyframes fadeIn → shared (input.css @layer components). */
 
     /* ── Custom notification badge (bulk action result) ───── */
     .bulk-result-toast {
