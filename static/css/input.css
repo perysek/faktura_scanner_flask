@@ -683,6 +683,293 @@
   }
   .th-sort-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
 
+  /* ── Refined list-page chrome (Tier-1 consolidation) ─────────────────────────
+     Canonical, token-based versions of the page chrome that list templates used
+     to re-paste per file (.page-header in 32 templates, .empty-state in 17,
+     .status-badge in 14, .refined-input in 12, .action-icon-btn in 8, .stat-card
+     in 7, …). Lifted verbatim from templates/employees/list.html — the pilot
+     consumer. NOTE: page <style> blocks are UNLAYERED and still override these
+     (see the iOS guard above), so migrating a page is non-breaking: strip its
+     inline copy and it falls back to the definitions here. .refined-table is NOT
+     here yet — the shared one (above) is still the old slate version; upgrading
+     it is a separate cross-page job. */
+  .refined-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .page-header .page-title { margin-bottom: 0.5rem; }
+
+  .page-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* Statistics grid + cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .stat-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); }
+  .stat-icon.green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
+  .stat-icon.purple { background: rgba(147, 51, 234, 0.08); color: var(--color-purple); }
+  .stat-icon.orange { background: rgba(234, 88, 12, 0.08); color: #c2410c; }
+
+  .stat-value.blue { color: var(--color-status-scheduled); }
+  .stat-value.green { color: var(--color-success); }
+  .stat-value.purple { color: var(--color-purple); }
+  .stat-value.orange { color: #c2410c; }
+
+  /* Search / filter card */
+  .search-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: 1.5rem;
+  }
+
+  .search-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .refined-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.625rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 300;
+    color: var(--color-ink);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    transition: all 0.3s var(--ease-out-expo);
+  }
+
+  .refined-input::placeholder { color: var(--color-ink-subtle); }
+
+  .refined-input:focus {
+    outline: none;
+    border-color: var(--color-ink-muted);
+    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+  }
+
+  /* Search field with an inline "clear" (X) button. */
+  .search-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+  }
+
+  .search-input-wrap .refined-input {
+    flex: 1;
+    min-width: 0;
+    padding-right: 2.5rem;
+  }
+
+  .search-clear-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    color: var(--color-ink-subtle);
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+
+  .search-clear-btn.visible { display: inline-flex; }
+  .search-clear-btn:hover { color: var(--color-ink); background: var(--color-surface); }
+  .search-clear-btn svg { width: 1rem; height: 1rem; }
+
+  .refined-select {
+    padding: 0.625rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 300;
+    color: var(--color-ink);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    cursor: pointer;
+    min-width: 160px;
+  }
+
+  .refined-select:focus {
+    outline: none;
+    border-color: var(--color-ink-muted);
+  }
+
+  /* Table scroll shell */
+  .table-container {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: auto;
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 1px;
+  }
+
+  .status-badge.active   { background: rgba(45,106,79,0.08); color: var(--color-success); }
+  .status-badge.on-leave { background: rgba(234,88,12,0.08); color: #c2410c; }
+  .status-badge.terminated { background: rgba(155,44,44,0.08); color: var(--color-error); }
+  .status-badge.inactive  { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
+
+  /* Icon-only row-action buttons. width:100% so justify-content:flex-end can pin
+     them to the right edge of the <td> (flex box shrinks-to-fit otherwise). */
+  .action-icons {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.125rem;
+    justify-content: flex-end;
+  }
+
+  .action-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    color: var(--color-ink-subtle);
+    transition: color 0.2s ease, background 0.2s ease;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  .action-icon-btn:hover {
+    color: var(--color-ink);
+    background: var(--color-surface);
+  }
+
+  .action-icon-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  /* Destructive row action — hidden until the row is hovered/focused. */
+  .action-icon-btn.danger-reveal {
+    color: var(--color-error);
+    opacity: 0;
+    transform: translateX(6px);
+    pointer-events: none;
+    transition: opacity 0.35s var(--ease-out-expo),
+                transform 0.35s var(--ease-out-expo),
+                background 0.2s ease;
+  }
+
+  .refined-table tbody tr:hover .action-icon-btn.danger-reveal,
+  .refined-table tbody tr:focus-within .action-icon-btn.danger-reveal {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .action-icon-btn.danger-reveal:hover {
+    color: var(--color-error);
+    background: rgba(155, 44, 44, 0.1);
+  }
+
+  /* Empty / loading state */
+  .empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    color: var(--color-ink-subtle);
+    opacity: 0.3;
+    margin-bottom: 1rem;
+  }
+
+  .empty-text {
+    color: var(--color-ink-subtle);
+    font-size: 0.9375rem;
+    font-weight: 300;
+  }
+
+  /* Fade-in entrance */
+  .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive: list-page chrome */
+  @media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .search-wrapper { flex-direction: column; }
+  }
+  @media (max-width: 640px) {
+    .stats-grid { display: none; }
+  }
+
   /* ── Canonical form controls (token-based; P05 migration of form_fields macros) ── */
   .form-label {
       display: block; font-size: 0.8125rem; font-weight: 500;

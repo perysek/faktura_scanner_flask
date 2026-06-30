@@ -5,178 +5,16 @@
 {% block mobile_title %}Pracownicy{% endblock %}
 
 {% block extra_css %}
-<!-- Premium typeface (Plus Jakarta Sans) loaded for THIS page only. Mirrors the
-     Inter load in base.html; the preconnect to fonts.gstatic.com is already in
-     <head>, so it isn't repeated here. Scope + rationale: see the PREMIUM
-     TYPEFACE block at the end of the <style> below. -->
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    /* Refined Minimal Design System */
-    .refined-page {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-    }
+    /* Refined Minimal Design System
+       List-page chrome (.refined-page, .page-header(-actions), .stats-grid +
+       .stat-card/.stat-icon/.stat-value variants, .search-card/.search-wrapper/
+       .refined-input/.search-clear-btn/.refined-select, .table-container,
+       .status-badge, .action-icons/.action-icon-btn, .empty-state, .fade-in and
+       the responsive rules) now lives in static/css/input.css @layer components.
+       Only employee-specific styles remain below. */
 
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .page-title { margin-bottom: 0.5rem; }
-
-    .page-header-actions {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    /* Statistics Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .stat-card {
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .stat-icon {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 2px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); }
-    .stat-icon.green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
-    .stat-icon.purple { background: rgba(147, 51, 234, 0.08); color: var(--color-purple); }
-    .stat-icon.orange { background: rgba(234, 88, 12, 0.08); color: #c2410c; }
-
-    .stat-value.blue { color: var(--color-status-scheduled); }
-    .stat-value.green { color: var(--color-success); }
-    .stat-value.purple { color: var(--color-purple); }
-    .stat-value.orange { color: #c2410c; }
-
-    /* Search Card */
-    .search-card {
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        margin-bottom: 1.5rem;
-    }
-
-    .search-wrapper {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    .refined-input {
-        flex: 1;
-        min-width: 200px;
-        padding: 0.625rem 1rem;
-        font-family: var(--font-body);
-        font-size: 0.8125rem;
-        font-weight: 300;
-        color: var(--color-ink);
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        transition: all 0.3s var(--ease-out-expo);
-    }
-
-    .refined-input::placeholder { color: var(--color-ink-subtle); }
-
-    .refined-input:focus {
-        outline: none;
-        border-color: var(--color-ink-muted);
-        box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
-    }
-
-    /* Search field with an inline "clear" (X) button. The wrapper owns the
-       flex:1 sizing so the input fills it; the button is absolutely positioned
-       inside on the right and only displayed once there is text to clear. */
-    .search-input-wrap {
-        position: relative;
-        flex: 1;
-        min-width: 200px;
-        display: flex;
-    }
-
-    .search-input-wrap .refined-input {
-        flex: 1;
-        min-width: 0;
-        padding-right: 2.5rem; /* leave room for the clear button */
-    }
-
-    .search-clear-btn {
-        position: absolute;
-        right: 0.5rem;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 1.5rem;
-        height: 1.5rem;
-        padding: 0;
-        display: none; /* shown via .visible when the input is non-empty */
-        align-items: center;
-        justify-content: center;
-        background: transparent;
-        border: none;
-        border-radius: 2px;
-        cursor: pointer;
-        color: var(--color-ink-subtle);
-        transition: color 0.2s ease, background 0.2s ease;
-    }
-
-    .search-clear-btn.visible { display: inline-flex; }
-    .search-clear-btn:hover { color: var(--color-ink); background: var(--color-surface); }
-    .search-clear-btn svg { width: 1rem; height: 1rem; }
-
-    .refined-select {
-        padding: 0.625rem 1rem;
-        font-family: var(--font-body);
-        font-size: 0.8125rem;
-        font-weight: 300;
-        color: var(--color-ink);
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        cursor: pointer;
-        min-width: 160px;
-    }
-
-    .refined-select:focus {
-        outline: none;
-        border-color: var(--color-ink-muted);
-    }
-
-    /* Table */
-    .table-container {
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 2px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        overflow: auto;
-    }
-
+    /* Table (employee-specific overrides; base .refined-table is in input.css) */
     .refined-table {
         width: 100%;
         border-collapse: collapse;
@@ -289,23 +127,6 @@
     .coverage-mid   { background: rgba(234,88,12,0.10); color: #c2410c; }
     .coverage-low   { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
 
-    /* Status Badge */
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.625rem;
-        font-size: 0.6875rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        border-radius: 1px;
-    }
-
-    .status-badge.active   { background: rgba(45,106,79,0.08); color: var(--color-success); }
-    .status-badge.on-leave { background: rgba(234,88,12,0.08); color: #c2410c; }
-    .status-badge.terminated { background: rgba(155,44,44,0.08); color: var(--color-error); }
-    .status-badge.inactive  { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
-
     .commission-value { font-weight: 500; color: var(--color-purple); }
 
     /* Action Links */
@@ -321,99 +142,13 @@
     .action-link.secondary { color: var(--color-ink-muted); }
     .action-link.secondary:hover { color: var(--color-ink); }
 
-    /* Icon-only action buttons. width:100% forces the flex container to span the
-       full cell — without it, a flex box inside a <td> can shrink-to-fit and sit
-       on the LEFT, leaving justify-content:flex-end nothing to push against. With
-       full width, the buttons pin to the right edge in every row. */
-    .action-icons {
-        display: flex;
-        width: 100%;
-        align-items: center;
-        gap: 0.125rem;
-        justify-content: flex-end;
-    }
-
-    .action-icon-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        padding: 0;
-        background: transparent;
-        border: none;
-        border-radius: 2px;
-        cursor: pointer;
-        color: var(--color-ink-subtle);
-        transition: color 0.2s ease, background 0.2s ease;
-        text-decoration: none;
-        flex-shrink: 0;
-    }
-
-    .action-icon-btn:hover {
-        color: var(--color-ink);
-        background: var(--color-surface);
-    }
-
-    .action-icon-btn svg {
-        width: 1.125rem;
-        height: 1.125rem;
-    }
-
-    /* Destructive row action (superuser only) — hidden until the row is hovered.
-       Fades + slides in over 0.35s so it stays out of the way during normal use
-       and only surfaces when the operator is acting on a specific row. */
-    .action-icon-btn.danger-reveal {
-        color: var(--color-error);
-        opacity: 0;
-        transform: translateX(6px);
-        pointer-events: none;
-        transition: opacity 0.35s var(--ease-out-expo),
-                    transform 0.35s var(--ease-out-expo),
-                    background 0.2s ease;
-    }
-
-    .refined-table tbody tr:hover .action-icon-btn.danger-reveal,
-    .refined-table tbody tr:focus-within .action-icon-btn.danger-reveal {
-        opacity: 1;
-        transform: translateX(0);
-        pointer-events: auto;
-    }
-
-    .action-icon-btn.danger-reveal:hover {
-        color: var(--color-error);
-        background: rgba(155, 44, 44, 0.1);
-    }
-
-    /* Empty State */
-    .empty-state {
-        padding: 3rem 2rem;
-        text-align: center;
-    }
-
-    .empty-icon {
-        font-size: 4rem;
-        color: var(--color-ink-subtle);
-        opacity: 0.3;
-        margin-bottom: 1rem;
-    }
-
-    .empty-text {
-        color: var(--color-ink-subtle);
-        font-size: 0.9375rem;
-        font-weight: 300;
-    }
+    /* .action-icons / .action-icon-btn (+ .danger-reveal) and .empty-state /
+       .empty-icon / .empty-text moved to input.css @layer components. */
 
     .icon { font-size: 1rem; vertical-align: middle; }
     .icon.lg { font-size: 1.5rem; }
 
-    /* Fade-in */
-    .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    /* .fade-in / @keyframes fadeIn moved to input.css @layer components. */
 
     /* ── Custom notification toast ─────────────────────── */
     .bulk-result-toast {
@@ -445,67 +180,8 @@
     .bulk-result-toast.success { background: var(--color-success); }
     .bulk-result-toast.error   { background: var(--color-error); }
 
-    @media (max-width: 768px) {
-        .page-header { flex-direction: column; align-items: flex-start; }
-        .stats-grid { grid-template-columns: 1fr; }
-        .search-wrapper { flex-direction: column; }
-    }
-
-    /* Mobile (stacked-card) view: hide the summary stat cards entirely — they
-       eat the whole first screen on a phone. Matches the .stack-cards breakpoint
-       and mirrors the clients list. */
-    @media (max-width: 640px) {
-        .stats-grid { display: none; }
-    }
-
-    /* ───────────────────────────────────────────────────────────────────────
-       PREMIUM TYPEFACE — Plus Jakarta Sans, scoped to THIS page ONLY.
-       Deliberate, signed-off deviation from the canonical Inter token
-       (--font-body in input.css): only the employees list renders in Jakarta;
-       every other page stays Inter. Everything below is PURELY typographic —
-       it changes no column width, text-align, padding, or table-layout, so the
-       <colgroup> proportions and per-column alignment are untouched.
-       ─────────────────────────────────────────────────────────────────────── */
-    .refined-page,
-    .bulk-result-toast {
-        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-    }
-
-    /* The search input + filter selects hard-set font-family: var(--font-body)
-       above (= Inter). Re-point them to Jakarta so the controls match the rest
-       of the page instead of leaving a half-swapped look. */
-    .refined-page .refined-input,
-    .refined-page .refined-select {
-        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-    }
-
-    /* Tabular figures: the rating and leave-balance columns are numeric and
-       centered — tabular-nums makes every digit the same advance width so the
-       numbers line up cleanly down the column. Rendering hint only; cell width
-       is governed by <colgroup>, so this does not move any column. */
-    .refined-page .refined-table {
-        font-variant-numeric: tabular-nums;
-        font-feature-settings: 'tnum' 1;
-    }
-
-    /* Display face = Space Grotesk. The H1 and the four .stat-value numbers
-       hard-pin font-family: var(--font-display) (= Inter) in output.css, so the
-       page-root Jakarta swap never reached them — that's why the swap was
-       invisible. Re-point THESE selectors specifically (specificity 0,2,0 beats
-       the global 0,1,0) to a wide geometric display face that reads obviously
-       distinct from Inter. Size, weight and color stay as the global rules set
-       them, so the header height and stat-card layout are unchanged. */
-    .refined-page .page-title,
-    .refined-page .stat-value {
-        font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
-    }
-
-    /* Uppercase th labels read crisper in Jakarta with a hair less tracking
-       than Inter wanted. Headers are white-space:nowrap and column widths come
-       from <colgroup>, so trimming tracking only adds breathing room. */
-    .refined-page .refined-table th {
-        letter-spacing: 0.1em;
-    }
+    /* List-page responsive rules (.page-header / .stats-grid / .search-wrapper
+       at ≤768px, and .stats-grid hide at ≤640px) moved to input.css. */
 </style>
 {% endblock %}
 
