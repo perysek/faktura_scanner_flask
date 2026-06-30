@@ -5,6 +5,11 @@
 {% block mobile_title %}Pracownicy{% endblock %}
 
 {% block extra_css %}
+<!-- Premium typeface (Plus Jakarta Sans) loaded for THIS page only. Mirrors the
+     Inter load in base.html; the preconnect to fonts.gstatic.com is already in
+     <head>, so it isn't repeated here. Scope + rationale: see the PREMIUM
+     TYPEFACE block at the end of the <style> below. -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
     /* Refined Minimal Design System */
     .refined-page {
@@ -451,6 +456,51 @@
        and mirrors the clients list. */
     @media (max-width: 640px) {
         .stats-grid { display: none; }
+    }
+
+    /* ───────────────────────────────────────────────────────────────────────
+       PREMIUM TYPEFACE — Plus Jakarta Sans, scoped to THIS page ONLY.
+       Deliberate, signed-off deviation from the canonical Inter token
+       (--font-body in input.css): only the employees list renders in Jakarta;
+       every other page stays Inter. Everything below is PURELY typographic —
+       it changes no column width, text-align, padding, or table-layout, so the
+       <colgroup> proportions and per-column alignment are untouched.
+       ─────────────────────────────────────────────────────────────────────── */
+    .refined-page,
+    .bulk-result-toast {
+        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    }
+
+    /* The search input + filter selects hard-set font-family: var(--font-body)
+       above (= Inter). Re-point them to Jakarta so the controls match the rest
+       of the page instead of leaving a half-swapped look. */
+    .refined-page .refined-input,
+    .refined-page .refined-select {
+        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    }
+
+    /* Tabular figures: the rating and leave-balance columns are numeric and
+       centered — tabular-nums makes every digit the same advance width so the
+       numbers line up cleanly down the column. Rendering hint only; cell width
+       is governed by <colgroup>, so this does not move any column. */
+    .refined-page .refined-table {
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+    }
+
+    /* H1 gets the tight, confident grotesk treatment Jakarta is built for —
+       weight + negative tracking only. font-size is left to the global
+       .page-title rule, so header height and the flex layout are unchanged. */
+    .refined-page .page-title {
+        font-weight: 600;
+        letter-spacing: -0.02em;
+    }
+
+    /* Uppercase th labels read crisper in Jakarta with a hair less tracking
+       than Inter wanted. Headers are white-space:nowrap and column widths come
+       from <colgroup>, so trimming tracking only adds breathing room. */
+    .refined-page .refined-table th {
+        letter-spacing: 0.1em;
     }
 </style>
 {% endblock %}
