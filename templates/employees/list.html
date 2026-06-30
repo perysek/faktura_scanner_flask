@@ -9,7 +9,7 @@
      Inter load in base.html; the preconnect to fonts.gstatic.com is already in
      <head>, so it isn't repeated here. Scope + rationale: see the PREMIUM
      TYPEFACE block at the end of the <style> below. -->
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     /* Refined Minimal Design System */
     .refined-page {
@@ -488,12 +488,16 @@
         font-feature-settings: 'tnum' 1;
     }
 
-    /* H1 gets the tight, confident grotesk treatment Jakarta is built for —
-       weight + negative tracking only. font-size is left to the global
-       .page-title rule, so header height and the flex layout are unchanged. */
-    .refined-page .page-title {
-        font-weight: 600;
-        letter-spacing: -0.02em;
+    /* Display face = Space Grotesk. The H1 and the four .stat-value numbers
+       hard-pin font-family: var(--font-display) (= Inter) in output.css, so the
+       page-root Jakarta swap never reached them — that's why the swap was
+       invisible. Re-point THESE selectors specifically (specificity 0,2,0 beats
+       the global 0,1,0) to a wide geometric display face that reads obviously
+       distinct from Inter. Size, weight and color stay as the global rules set
+       them, so the header height and stat-card layout are unchanged. */
+    .refined-page .page-title,
+    .refined-page .stat-value {
+        font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
     }
 
     /* Uppercase th labels read crisper in Jakarta with a hair less tracking
