@@ -6,6 +6,45 @@
 
 ---
 
+## 0. Mandatory Design Law & Component Library
+
+**This design system is mandatory, and the shared components are non-negotiable.**
+
+Every authenticated page is built from the tokens, classes, and components defined here and in the
+**[GUI Components Golden Book](GUI-COMPONENTS-GOLDEN-BOOK.md)**. **Redundant hand-work is forbidden** —
+do **not** hand-roll a raw `<input>`, a bespoke `<svg>`, a private modal `<div>`, an ad-hoc
+`confirm()`, or a one-off table when a documented token, class, or component already covers it.
+
+Why this is a rule, not a preference:
+
+- **Consistency** — every screen inherits identical radii, tokens, focus rings, and motion. A
+  hand-rolled control drifts the instant tokens change.
+- **Accessibility** — the components already carry `aria-*`, focus traps, `role`, and focus rings.
+  A bespoke copy almost always drops one.
+- **Deployment safety** — each component already picks the correct CSS delivery strategy
+  (token `@layer` vs. inline `<style>`); a clone usually leaks styles that never reach the server.
+- **One source of truth** — a fix in the component propagates everywhere; a fix in a clone fixes nothing.
+
+> If a component lacks a variant you need, **extend the component and update its doc** — never fork
+> it inline. Updating the spec precedes deviating from it.
+
+### Component sub-documents (precise design + integration, portable to fresh projects)
+
+| Component | Source | Spec |
+|---|---|---|
+| **Sidebar** ★ | `templates/components/sidebar.html` (+ `macros/sidebar_macros.html`) | [`gui-components/sidebar.md`](gui-components/sidebar.md) |
+| **Icons** | `templates/components/icons.html` | [`gui-components/icons.md`](gui-components/icons.md) |
+| **Form fields** | `templates/components/form_fields.html` | [`gui-components/form-fields.md`](gui-components/form-fields.md) |
+| **Scrollable table** | `templates/components/scrollable_table.html` | [`gui-components/scrollable-table.md`](gui-components/scrollable-table.md) |
+| **Confirm modal** | `templates/components/confirm_modal.html` | [`gui-components/confirm-modal.md`](gui-components/confirm-modal.md) |
+| **Flash messages** | `templates/components/flash_messages.html` | [`gui-components/flash-messages.md`](gui-components/flash-messages.md) |
+| **Undo toast** | `templates/components/undo_toast.html` | [`gui-components/undo-toast.md`](gui-components/undo-toast.md) |
+
+General component rules, the dependency graph, the CSS-delivery-strategy table, and the per-component
+porting ritual live in **[GUI-COMPONENTS-GOLDEN-BOOK.md](GUI-COMPONENTS-GOLDEN-BOOK.md)**.
+
+---
+
 ## 1. Technology Stack
 
 | Layer | Technology |
@@ -102,16 +141,20 @@ All tokens live in `:root` inside `input.css`. Use them via `var()` — never ha
 
 ### Sidebar Tokens
 
+> **Current theme = warm light + gold** (a shade darker than the body surface). The old dark-slate
+> values were retired. Full sidebar spec: [`gui-components/sidebar.md`](gui-components/sidebar.md).
+
 ```css
---sidebar-bg:            #0f172a   /* dark slate */
---sidebar-bg-deep:       #162032   /* slightly deeper for footer */
---sidebar-text:          #94a3b8   /* default link text */
---sidebar-text-hover:    #ffffff
---sidebar-text-active:   #60a5fa   /* blue-400 */
---sidebar-active-bg:     rgba(37, 99, 235, 0.2)
---sidebar-active-border: #60a5fa   /* left pill indicator */
---sidebar-border:        rgba(51, 65, 85, 0.5)
---sidebar-hover-bg:      #1e293b
+--sidebar-bg:            #dedad3   /* warm light rail */
+--sidebar-bg-deep:       #d2cec6   /* user-info footer (slightly deeper) */
+--sidebar-text:          #525252   /* default link text (= --color-ink-muted) */
+--sidebar-text-hover:    #1a1a1a   /* = --color-ink */
+--sidebar-text-active:   #1a1a1a   /* ink; gold reserved for pill/icon */
+--sidebar-heading:       #595959   /* section header — darkened for WCAG AA (~5:1) */
+--sidebar-border:        #ccc7be
+--sidebar-hover-bg:      #e6e2db
+--sidebar-active-bg:     var(--color-accent-muted)   /* rgba(201,162,39,.12) gold tint */
+--sidebar-active-border: var(--color-accent)         /* #c9a227 gold pill + active icon */
 ```
 
 ---
@@ -449,11 +492,20 @@ The sidebar uses collapsible accordion sections. Only one section can be expande
 
 ### Active link indicator
 
-Active link uses a left-edge pill (3px wide, `#60a5fa`) with a luminance glow. The CSS uses `view-transition-name: sidebar-active-link` to morph the highlight between page navigations using the View Transitions API (progressive enhancement).
+Active link uses a left-edge **gold** pill (3px wide, `var(--color-accent)` = `#c9a227`) over a gold
+tint background (`--sidebar-active-bg`), and the active icon also turns gold. The CSS uses
+`view-transition-name: sidebar-active-link` to morph the highlight between page navigations via the
+View Transitions API (progressive enhancement), with a `sidebar-link-enter` keyframe fallback and a
+`prefers-reduced-motion` guard.
 
 ### User footer
 
-Bottom of sidebar: avatar circle (gradient `from-primary-500 to-primary-700`), full name, role label. Logout link turns red on hover via inline `onmouseenter`/`onmouseleave` (not Tailwind).
+Bottom of sidebar: avatar circle (**gold** gradient `linear-gradient(135deg, var(--color-accent), #a07d1a)`),
+full name, Polish role label. Logout link turns red on hover via inline `onmouseenter`/`onmouseleave`
+(not Tailwind), so it works without those exact utility classes in the build.
+
+> Full structure, accordion/drawer JS, focus trap, `nav-mobile-hide` trim, and porting checklist:
+> **[`gui-components/sidebar.md`](gui-components/sidebar.md)**.
 
 ---
 
@@ -826,4 +878,6 @@ Modals are the **only exception** — they remain `rounded-2xl` regardless of th
 
 ---
 
-*Last updated from codebase audit: 2026-05-04*
+*Last updated from codebase audit: 2026-06-30 — added §0 Mandatory Design Law + component
+sub-document index; corrected sidebar tokens (dark slate → warm-light gold). Component-level specs:
+[GUI-COMPONENTS-GOLDEN-BOOK.md](GUI-COMPONENTS-GOLDEN-BOOK.md).*
