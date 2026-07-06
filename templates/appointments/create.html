@@ -2,112 +2,162 @@
 
 {% from 'components/icons.html' import icon %}
 {% block title %}Nowa wizyta — {{ app_name }}{% endblock %}
+{% block mobile_title %}Nowa wizyta{% endblock %}
 
 {% block extra_css %}
 <style>
-.refined-page { max-width: 900px; margin: 0 auto; padding: 2rem; }
-    .page-title { margin-bottom: 0.5rem; }
-    .page-subtitle { margin-bottom: 2rem; }
+    .create-page { padding: 1.25rem 1.5rem 2.5rem; }
+    .create-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .create-header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ink); margin: 0 0 2px; }
+    .create-header p { font-size: 12px; font-weight: 300; color: var(--color-ink-muted); margin: 0; }
+    .hdr-back { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 11px; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
+    .hdr-back:hover { border-color: var(--color-ink-muted); }
+    .hdr-back svg { width: 12px; height: 12px; }
 
-    .form-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
-    .form-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.375rem; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.625rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); box-sizing: border-box; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,0.04); }
+    .create-grid { max-width: 860px; display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
 
-    .service-picker { border: 1px solid var(--color-border); border-radius: 2px; max-height: 250px; overflow-y: auto; }
-    .service-option { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--color-border-subtle); transition: background 0.15s; }
-    .service-option:hover { background: var(--color-surface); }
-    .service-option:last-child { border-bottom: none; }
-    .service-option input[type="checkbox"] { flex-shrink: 0; }
-    .service-option .svc-name { font-size: 0.8125rem; font-weight: 500; flex: 1; }
-    .service-option .svc-meta { font-size: 0.75rem; color: var(--color-ink-subtle); }
+    .form-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 20px; margin-bottom: 12px; }
+    .fc-title { font-size: 11px; font-weight: 600; color: var(--color-ink); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border-subtle); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group label { display: block; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 5px; }
+    .form-group .req { color: var(--color-error); }
+    .form-group select, .form-group input[type="date"], .form-group textarea {
+        width: 100%; padding: 8px 10px; font-family: var(--font-body); font-size: 12px;
+        color: var(--color-ink); background: white; border: 1px solid var(--color-border);
+        border-radius: 2px; outline: none; box-sizing: border-box;
+    }
+    .form-group textarea { font-weight: 300; resize: vertical; min-height: 80px; }
+    .form-group select:focus, .form-group input:focus, .form-group textarea:focus { border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,0.04); }
 
-    .summary-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; margin-top: 1rem; }
-    .summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
-    .summary-row.total { font-weight: 600; font-size: 1rem; border-top: 1px solid var(--color-border); margin-top: 0.5rem; padding-top: 0.5rem; }
+    /* Service checkbox list */
+    .svc-picker { border: 1px solid var(--color-border); border-radius: 2px; overflow: hidden; }
+    .svc-option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--color-border-subtle); transition: background 0.15s; }
+    .svc-option:last-child { border-bottom: none; }
+    .svc-option:hover { background: var(--color-surface); }
+    .svc-cb { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .svc-box { width: 16px; height: 16px; border-radius: 2px; border: 2px solid var(--color-border); background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .svc-box svg { width: 10px; height: 10px; display: none; }
+    .svc-cb:checked + .svc-box { border-color: var(--color-ink); background: var(--color-ink); }
+    .svc-cb:checked + .svc-box svg { display: block; }
+    .svc-cb:focus-visible + .svc-box { box-shadow: 0 0 0 3px rgba(26,26,26,0.15); }
+    .svc-option .svc-name { flex: 1; font-size: 12px; font-weight: 500; color: var(--color-ink); }
+    .svc-option .svc-dur { font-size: 11px; color: var(--color-ink-subtle); }
+    .svc-option .svc-price { font-size: 12px; font-weight: 600; color: var(--color-ink); font-variant-numeric: tabular-nums; }
+    .svc-empty { font-size: 12px; font-weight: 300; color: var(--color-ink-subtle); }
 
-    .btn-bar { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
-    .refined-btn-primary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 500; background: var(--color-ink); color: white; border-radius: 2px; border: none; cursor: pointer; }
-    .refined-btn-primary:hover { background: var(--color-ink); }
-    .refined-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .refined-btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; background: white; color: var(--color-ink-muted); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
+    /* Time-slot grid */
+    .slot-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .slot-btn { padding: 5px 10px; font-size: 11px; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); cursor: pointer; font-family: var(--font-body); }
+    .slot-btn:hover:not(.taken):not(.selected) { border-color: var(--color-ink); background: var(--color-surface); }
+    .slot-btn.taken { background: var(--color-surface); color: var(--color-ink-subtle); cursor: not-allowed; opacity: 0.4; text-decoration: line-through; }
+    .slot-btn.selected { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+
+    /* Sticky summary */
+    .summary-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 18px; position: sticky; top: 12px; }
+    .summary-line { font-size: 12px; font-weight: 300; color: var(--color-ink-muted); margin-bottom: 6px; }
+    .summary-line strong { font-weight: 500; color: var(--color-ink); }
+    .summary-totals { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 10px 12px; margin: 8px 0 16px; }
+    .summary-totals .row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 300; color: var(--color-ink-muted); margin-bottom: 4px; }
+    .summary-totals .row.total { font-size: 14px; font-weight: 600; color: var(--color-ink); border-top: 1px solid var(--color-border); margin-top: 4px; padding-top: 8px; margin-bottom: 0; }
+
+    .btn-save { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 9px 16px; font-size: 12px; font-weight: 500; color: white; background: var(--color-ink); border: none; border-radius: 2px; cursor: pointer; }
+    .btn-save:disabled { color: rgba(255,255,255,0.5); background: rgba(26,26,26,0.4); cursor: not-allowed; }
+    .btn-save svg { width: 14px; height: 14px; }
+    .btn-cancel { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 8px 16px; font-size: 12px; font-weight: 400; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; margin-top: 6px; text-decoration: none; }
+    .btn-cancel:hover { border-color: var(--color-ink-muted); }
+
     .icon { font-size: 1rem; vertical-align: middle; }
     .fade-in { animation: fadeIn 0.4s var(--ease-out-expo) forwards; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-    .slot-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
-    .slot-btn { padding: 0.375rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; background: white; }
-    .slot-btn.available:hover { border-color: var(--color-ink); background: var(--color-surface); }
-    .slot-btn.unavailable { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-    .slot-btn.selected { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+    @media (max-width: 768px) {
+        .create-grid { grid-template-columns: 1fr; max-width: 560px; }
+        .summary-card { position: static; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="refined-page fade-in">
-    <h1 class="page-title">Nowa wizyta</h1>
-    <p class="page-subtitle">Wypełnij formularz, aby zarezerwować wizytę</p>
-
-    <!-- Client & Employee -->
-    <div class="form-card">
-        <h2>Klient i pracownik</h2>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Klient</label>
-                <select id="client-select"><option value="">Wybierz klienta...</option></select>
-            </div>
-            <div class="form-group">
-                <label>Pracownik</label>
-                <select id="employee-select"><option value="">Wybierz pracownika...</option></select>
-            </div>
+<div class="create-page fade-in">
+    <div class="create-header">
+        <a href="{{ url_for('main.appointments_list') }}" class="hdr-back" id="btn-cancel-top">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Wróć
+        </a>
+        <div>
+            <h1>Nowa wizyta</h1>
+            <p>Wypełnij formularz, aby zarezerwować wizytę</p>
         </div>
     </div>
 
-    <!-- Services -->
-    <div class="form-card">
-        <h2>Usługi</h2>
-        <div id="services-container">
-            <p style="color: var(--color-ink-subtle); font-size: 0.8125rem;">Wybierz pracownika, aby zobaczyć dostępne usługi</p>
-        </div>
-        <div class="summary-box" id="summary-box" style="display: none;">
-            <div class="summary-row"><span>Czas trwania:</span><span id="sum-duration">0 min</span></div>
-            <div class="summary-row total"><span>Razem:</span><span id="sum-price">0,00 zł</span></div>
-        </div>
-    </div>
-
-    <!-- Date & Time -->
-    <div class="form-card">
-        <h2>Data i godzina</h2>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Data wizyty</label>
-                <input type="date" id="appt-date" />
+    <div class="create-grid">
+        <!-- Left: form -->
+        <div>
+            <!-- Client & Employee -->
+            <div class="form-card">
+                <div class="fc-title">Klient i pracownik</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Klient <span class="req">*</span></label>
+                        <select id="client-select"><option value="">Wybierz klienta...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pracownik <span class="req">*</span></label>
+                        <select id="employee-select"><option value="">Wybierz pracownika...</option></select>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Godzina rozpoczęcia</label>
-                <input type="time" id="appt-time" step="900" />
+
+            <!-- Services -->
+            <div class="form-card">
+                <div class="fc-title">Usługi</div>
+                <div id="services-container">
+                    <p class="svc-empty">Wybierz pracownika, aby zobaczyć dostępne usługi.</p>
+                </div>
+            </div>
+
+            <!-- Date & Time -->
+            <div class="form-card">
+                <div class="fc-title">Data i godzina</div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Data wizyty</label>
+                    <input type="date" id="appt-date" style="width:220px;" />
+                </div>
+                <div class="form-group">
+                    <label>Godzina rozpoczęcia</label>
+                    <div class="slot-grid" id="slots-container"></div>
+                    <input type="hidden" id="appt-time" />
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-card">
+                <div class="fc-title">Uwagi</div>
+                <div class="form-group">
+                    <textarea id="appt-notes" placeholder="Opcjonalne uwagi do wizyty..."></textarea>
+                </div>
             </div>
         </div>
-        <div id="slots-container"></div>
-    </div>
 
-    <!-- Notes -->
-    <div class="form-card">
-        <h2>Uwagi</h2>
-        <div class="form-group">
-            <textarea id="appt-notes" rows="3" placeholder="Opcjonalne uwagi do wizyty..."></textarea>
+        <!-- Right: sticky summary -->
+        <div>
+            <div class="summary-card">
+                <div class="fc-title">Podsumowanie</div>
+                <div class="summary-line">Klient: <strong id="sum-client">—</strong></div>
+                <div class="summary-line">Pracownik: <strong id="sum-employee">—</strong></div>
+                <div class="summary-line">Data: <strong id="sum-date">—</strong></div>
+                <div class="summary-line" style="margin-bottom:14px;">Godzina: <strong id="sum-time">—</strong></div>
+                <div class="summary-totals">
+                    <div class="row"><span>Czas trwania</span><span id="sum-duration">—</span></div>
+                    <div class="row total"><span>Razem</span><span id="sum-price">0,00 zł</span></div>
+                </div>
+                <button id="btn-save" onclick="saveAppointment()" class="btn-save" disabled>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    Zarezerwuj wizytę
+                </button>
+                <a href="{{ url_for('main.appointments_list') }}" class="btn-cancel" id="btn-cancel">Anuluj</a>
+            </div>
         </div>
-    </div>
-
-    <div class="btn-bar">
-        <a href="{{ url_for('main.appointments_list') }}" class="refined-btn-secondary" id="btn-cancel">Anuluj</a>
-        <button id="btn-save" onclick="saveAppointment()" class="refined-btn-primary" disabled>
-            {{ icon('check') }}
-            Zarezerwuj wizytę
-        </button>
     </div>
 </div>
 {% endblock %}
@@ -116,10 +166,20 @@
 <script>
 let employeeServices = [];
 let selectedServiceIds = new Set();
+let selectedTime = '';
+let takenTimes = new Set();
 
 function escapeHtml(t){if(!t)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};return String(t).replace(/[&<>"']/g,c=>m[c]);}
 
-// Load clients
+function fmtMoney(n){ return Number(n).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function fmtDatePl(dateStr){
+    if(!dateStr) return '—';
+    const [y,m,d] = dateStr.split('-');
+    return `${d}.${m}.${y}`;
+}
+
+// ── Load clients / employees (searchable — the roster is large) ──
 async function loadClients() {
     const resp = await fetch('/api/clients');
     const data = await resp.json();
@@ -135,7 +195,6 @@ async function loadClients() {
     }
 }
 
-// Load employees
 async function loadEmployees() {
     const resp = await fetch('/api/employees');
     const data = await resp.json();
@@ -151,15 +210,15 @@ async function loadEmployees() {
     }
 }
 
-// Load services for selected employee
+// ── Services for the selected employee ──
 async function loadEmployeeServices() {
     const employeeId = document.getElementById('employee-select').value;
     const container = document.getElementById('services-container');
     selectedServiceIds.clear();
 
     if (!employeeId) {
-        container.innerHTML = '<p style="color:var(--color-ink-subtle);font-size:0.8125rem;">Wybierz pracownika, aby zobaczyć dostępne usługi</p>';
-        document.getElementById('summary-box').style.display = 'none';
+        container.innerHTML = '<p class="svc-empty">Wybierz pracownika, aby zobaczyć dostępne usługi.</p>';
+        refreshSummary();
         return;
     }
 
@@ -168,31 +227,86 @@ async function loadEmployeeServices() {
 
     if (data.success && data.services.length > 0) {
         employeeServices = data.services.filter(s => s.service_type === 'main');
-        container.innerHTML = '<div class="service-picker">' + employeeServices.map(s => `
-            <label class="service-option">
-                <input type="checkbox" value="${s.service_id}" onchange="toggleService(this)">
+        container.innerHTML = '<div class="svc-picker">' + employeeServices.map(s => `
+            <label class="svc-option">
+                <input type="checkbox" class="svc-cb" value="${s.service_id}" onchange="toggleService(this)">
+                <span class="svc-box"><svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
                 <span class="svc-name">${escapeHtml(s.service_name)}</span>
-                <span class="svc-meta">${s.effective_duration} min</span>
-                <span class="svc-meta">${parseFloat(s.effective_price).toFixed(2)} zł</span>
+                <span class="svc-dur">${s.effective_duration} min</span>
+                <span class="svc-price">${fmtMoney(s.effective_price)} zł</span>
             </label>
         `).join('') + '</div>';
     } else {
-        container.innerHTML = '<p style="color:var(--color-ink-subtle);font-size:0.8125rem;">Brak przypisanych usług dla tego pracownika</p>';
+        container.innerHTML = '<p class="svc-empty">Brak przypisanych usług dla tego pracownika.</p>';
     }
-    updateSummary();
+    refreshSummary();
 }
 
 function toggleService(checkbox) {
     const sid = parseInt(checkbox.value);
     if (checkbox.checked) selectedServiceIds.add(sid);
     else selectedServiceIds.delete(sid);
-    updateSummary();
+    refreshSummary();
 }
 
-function updateSummary() {
-    const box = document.getElementById('summary-box');
-    if (selectedServiceIds.size === 0) { box.style.display = 'none'; updateSaveBtn(); return; }
-    box.style.display = 'block';
+// ── Time slots (7:00–20:30, 30-min; taken slots struck through) ──
+async function loadTakenSlots() {
+    const empId = document.getElementById('employee-select').value;
+    const date = document.getElementById('appt-date').value;
+    takenTimes = new Set();
+    if (empId && date) {
+        try {
+            const resp = await fetch(`/api/appointments?employee_id=${empId}&start_date=${date}&end_date=${date}`);
+            const data = await resp.json();
+            (data.appointments || [])
+                .filter(a => !['cancelled', 'no_show'].includes(a.status))
+                .forEach(a => takenTimes.add(String(a.start_time).substring(0, 5)));
+        } catch (_) {}
+    }
+    // A previously-picked slot may now be taken → clear it.
+    if (selectedTime && takenTimes.has(selectedTime)) {
+        selectedTime = '';
+        document.getElementById('appt-time').value = '';
+    }
+    renderSlots();
+    refreshSummary();
+}
+
+function renderSlots() {
+    const container = document.getElementById('slots-container');
+    let html = '';
+    for (let h = 7; h < 21; h++) {
+        for (const mi of [0, 30]) {
+            const t = `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+            const taken = takenTimes.has(t);
+            const selected = selectedTime === t;
+            const cls = 'slot-btn' + (taken ? ' taken' : '') + (selected ? ' selected' : '');
+            html += `<button type="button" class="${cls}" ${taken ? 'disabled' : `onclick="selectSlot('${t}')"`}>${t}</button>`;
+        }
+    }
+    container.innerHTML = html;
+}
+
+function selectSlot(t) {
+    selectedTime = t;
+    document.getElementById('appt-time').value = t;
+    renderSlots();
+    refreshSummary();
+}
+
+// ── Live summary + save-button gating ──
+function optionText(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel.value) return '—';
+    const txt = sel.options[sel.selectedIndex].text || '';
+    return txt.split(' (')[0].split(' — ')[0] || '—';
+}
+
+function refreshSummary() {
+    document.getElementById('sum-client').textContent = optionText('client-select');
+    document.getElementById('sum-employee').textContent = optionText('employee-select');
+    document.getElementById('sum-date').textContent = fmtDatePl(document.getElementById('appt-date').value);
+    document.getElementById('sum-time').textContent = selectedTime || '—';
 
     let totalPrice = 0, totalDuration = 0;
     employeeServices.forEach(s => {
@@ -201,9 +315,8 @@ function updateSummary() {
             totalDuration += parseInt(s.effective_duration);
         }
     });
-
-    document.getElementById('sum-duration').textContent = totalDuration + ' min';
-    document.getElementById('sum-price').textContent = totalPrice.toFixed(2) + ' zł';
+    document.getElementById('sum-duration').textContent = totalDuration ? `${totalDuration} min` : '—';
+    document.getElementById('sum-price').textContent = `${fmtMoney(totalPrice)} zł`;
     updateSaveBtn();
 }
 
@@ -211,8 +324,8 @@ function updateSaveBtn() {
     const clientId = document.getElementById('client-select').value;
     const employeeId = document.getElementById('employee-select').value;
     const apptDate = document.getElementById('appt-date').value;
-    const apptTime = document.getElementById('appt-time').value;
-    document.getElementById('btn-save').disabled = !(clientId && employeeId && selectedServiceIds.size > 0 && apptDate && apptTime);
+    document.getElementById('btn-save').disabled =
+        !(clientId && employeeId && selectedServiceIds.size > 0 && apptDate && selectedTime);
 }
 
 async function saveAppointment() {
@@ -239,116 +352,88 @@ async function saveAppointment() {
             window.location.href = `/appointment/${data.appointment_id}`;
         } else {
             const errLower = (data.error || '').toLowerCase();
-            // Bug #1: working-hours violation → toast warning + reset offending input
             if (errLower.includes('nie pracuje') || errLower.includes('poza godzinami')) {
                 if (window.Notifications) Notifications.warning(data.error);
                 if (errLower.includes('poza godzinami')) {
-                    const timeInput = document.getElementById('appt-time');
-                    timeInput.value = '';
-                    timeInput.focus();
+                    selectedTime = '';
+                    document.getElementById('appt-time').value = '';
+                    renderSlots();
+                    refreshSummary();
                 } else {
                     document.getElementById('appt-date').focus();
                 }
-                updateSaveBtn();
             } else {
-                Modals.alert({
-                    title: 'Błąd rezerwacji',
-                    message: data.error,
-                    type: 'error'
-                });
+                Modals.alert({ title: 'Błąd rezerwacji', message: data.error, type: 'error' });
             }
             btn.disabled = false;
-            btn.innerHTML = '{{ icon('check') }} Zarezerwuj wizytę';
+            btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg> Zarezerwuj wizytę';
         }
     } catch (e) {
-        Modals.alert({
-            title: 'Błąd połączenia',
-            message: 'Nie udało się połączyć z serwerem. Spróbuj ponownie.',
-            type: 'error'
-        });
+        Modals.alert({ title: 'Błąd połączenia', message: 'Nie udało się połączyć z serwerem. Spróbuj ponownie.', type: 'error' });
         btn.disabled = false;
-        btn.innerHTML = '{{ icon('check') }} Zarezerwuj wizytę';
+        btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg> Zarezerwuj wizytę';
     }
 }
 
-document.getElementById('employee-select').addEventListener('change', loadEmployeeServices);
-['client-select','employee-select','appt-date','appt-time'].forEach(id =>
-    document.getElementById(id).addEventListener('change', updateSaveBtn)
-);
+// Employee change → reload services + taken slots. Client/date change → summary/slots.
+document.getElementById('employee-select').addEventListener('change', () => { loadEmployeeServices(); loadTakenSlots(); });
+document.getElementById('client-select').addEventListener('change', refreshSummary);
+document.getElementById('appt-date').addEventListener('change', loadTakenSlots);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Read URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const urlDate = urlParams.get('date');
     const urlEmployeeId = urlParams.get('employee_id');
     const urlStartTime = urlParams.get('start_time');
     const from = urlParams.get('from');
 
-    // Set default or URL date
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     document.getElementById('appt-date').value = urlDate || today;
 
-    // Prefill start time if provided
     if (urlStartTime) {
-        document.getElementById('appt-time').value = urlStartTime;
+        selectedTime = urlStartTime.substring(0, 5);
+        document.getElementById('appt-time').value = selectedTime;
     }
+    renderSlots();
 
-    // Set cancel button to return to correct view
-    const cancelBtn = document.getElementById('btn-cancel');
+    // Cancel/back targets return to the originating view.
     let backUrl;
-
-    if (from === 'calendar') {
-        backUrl = "{{ url_for('main.appointments_calendar') }}";
-    } else if (from === 'week') {
-        backUrl = "{{ url_for('main.appointments_calendar_week') }}";
-    } else if (from === 'month') {
-        backUrl = "{{ url_for('main.appointments_calendar_month') }}";
-    } else {
-        backUrl = "{{ url_for('main.appointments_list') }}";
-    }
-
-    // Add date and employee_id parameters if available
+    if (from === 'calendar')   backUrl = "{{ url_for('main.appointments_calendar') }}";
+    else if (from === 'week')  backUrl = "{{ url_for('main.appointments_calendar_week') }}";
+    else if (from === 'month') backUrl = "{{ url_for('main.appointments_calendar_month') }}";
+    else                       backUrl = "{{ url_for('main.appointments_list') }}";
     if (from === 'calendar' || from === 'week' || from === 'month') {
-        const backParams = new URLSearchParams();
-        if (urlDate) backParams.set('date', urlDate);
-        if (urlEmployeeId) backParams.set('employee_id', urlEmployeeId);
-        if (backParams.toString()) {
-            backUrl += '?' + backParams.toString();
-        }
+        const bp = new URLSearchParams();
+        if (urlDate) bp.set('date', urlDate);
+        if (urlEmployeeId) bp.set('employee_id', urlEmployeeId);
+        if (bp.toString()) backUrl += '?' + bp.toString();
     }
+    document.getElementById('btn-cancel').href = backUrl;
+    document.getElementById('btn-cancel-top').href = backUrl;
 
-    cancelBtn.href = backUrl;
-
-    // Skróty klawiszowe: Ctrl+S = zapisz, Esc = anuluj
+    // Keyboard: Ctrl+S = save, Esc = cancel.
     document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            document.getElementById('btn-save').click();
-        }
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); document.getElementById('btn-save').click(); }
         if (e.key === 'Escape') {
             if (document.querySelector('.modal-overlay')) return;
             const cm = document.getElementById('confirm-modal');
             if (cm && !cm.classList.contains('hidden')) return;
             const tag = document.activeElement?.tagName;
             if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
-            const btn = document.getElementById('btn-cancel');
-            if (btn) window.location.href = btn.href;
+            window.location.href = document.getElementById('btn-cancel').href;
         }
     });
 
-    // Load form data
     loadClients();
     loadEmployees().then(() => {
-        // Prefill employee selection if provided
         if (urlEmployeeId) {
-            const employeeSelect = document.getElementById('employee-select');
-            employeeSelect.value = urlEmployeeId;
-            // Trigger change event to load employee services
-            employeeSelect.dispatchEvent(new Event('change'));
+            const sel = document.getElementById('employee-select');
+            sel.value = urlEmployeeId;
+            sel.dispatchEvent(new Event('change'));
         }
+        refreshSummary();
     });
 });
 </script>
-
-<!-- Modal System -->
 {% endblock %}
