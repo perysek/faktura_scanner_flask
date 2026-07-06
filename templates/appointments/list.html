@@ -6,17 +6,39 @@
 
 {% block extra_css %}
 <style>
-.refined-page { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+    .refined-page { max-width: 1400px; margin: 0 auto; padding: 1rem; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.75rem; }
     .page-header > div:last-child { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
     .page-title { margin-bottom: 0.25rem; }
     .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
 
+    /* Toolbar: filter pills (left) + search (right) — mirrors the Appointments mock. */
+    .list-toolbar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .filter-pills { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+    .filter-pill {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        padding: 0.375rem 0.75rem; font-size: 0.6875rem; font-weight: 400;
+        letter-spacing: 0.04em; text-transform: uppercase;
+        border: 1px solid var(--color-border); border-radius: 2px;
+        background: white; color: var(--color-ink-muted); cursor: pointer;
+        transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+    }
+    .filter-pill:hover { border-color: var(--color-ink-muted); }
+    .filter-pill.active { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
+    .filter-pill .pill-count { font-weight: 500; }
+    .filter-pill.active .pill-count { color: rgba(255,255,255,0.9); }
 
-    .filter-bar { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
-    .filter-bar label { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); }
-    .filter-bar input, .filter-bar select { padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); }
-    .filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: var(--color-ink-muted); }
+    .list-search { position: relative; flex: 1; max-width: 320px; margin-left: auto; }
+    .list-search input {
+        width: 100%; padding: 0.4rem 0.625rem 0.4rem 1.75rem;
+        font-family: inherit; font-size: 0.75rem; font-weight: 300;
+        color: var(--color-ink); background: white;
+        border: 1px solid var(--color-border); border-radius: 2px; outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .list-search input::placeholder { color: var(--color-ink-subtle); }
+    .list-search input:focus { border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,0.04); }
+    .list-search svg { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); width: 0.8125rem; height: 0.8125rem; color: var(--color-ink-subtle); pointer-events: none; }
 
     /* Compact toolbar density — base styles come from global .refined-btn-* (P07) */
     .refined-btn-primary { padding: 0.4rem 0.75rem; font-size: 0.75rem; gap: 0.25rem; }
@@ -30,20 +52,34 @@
     .table-container { background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
     .refined-table { width: 100%; border-collapse: collapse; }
     .refined-table thead { background: var(--color-surface); }
-    .refined-table th { padding: 0.75rem 1rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-ink-subtle); text-align: left; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
-    .refined-table th:last-child { text-align: right; }
+    .refined-table th { padding: 0.5rem 1rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-subtle); text-align: left; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+    .refined-table th.th-right, .refined-table th.th-right .th-sort-btn { text-align: right; justify-content: flex-end; }
     .refined-table tbody tr { transition: background-color 0.2s ease; }
+    .refined-table tbody tr[data-appt-id] { cursor: pointer; }
     .refined-table tbody tr:hover { background: var(--color-surface); }
-    .refined-table td { padding: 0.75rem 1rem; font-size: 0.8125rem; color: var(--color-ink); border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
+    .refined-table td { padding: 0.5rem 1rem; font-size: 0.75rem; color: var(--color-ink); border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
     .refined-table tbody tr:last-child td { border-bottom: none; }
+    .cell-date { font-weight: 500; }
+    .cell-time { font-weight: 300; color: var(--color-ink-muted); white-space: nowrap; }
+    .cell-service { font-weight: 300; color: var(--color-ink-muted); }
+    .cell-price { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .emp-cell { display: flex; align-items: center; gap: 0.375rem; }
+    .emp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .emp-name { font-weight: 300; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stars-desktop { color: #c9a227; letter-spacing: 0.05em; white-space: nowrap; }
+    .stars-none { color: var(--color-ink-subtle); }
 
-    .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 1px; }
-    .status-badge.scheduled { background: rgba(59,130,246,0.08); color: var(--color-status-scheduled); }
-    .status-badge.confirmed { background: rgba(16,185,129,0.08); color: var(--color-status-confirmed); }
-    .status-badge.in_progress { background: rgba(245,158,11,0.08); color: var(--color-status-in-progress); }
-    .status-badge.completed { background: rgba(45,106,79,0.08); color: var(--color-status-completed); }
-    .status-badge.cancelled { background: rgba(239,68,68,0.08); color: var(--color-status-cancelled); }
-    .status-badge.no_show { background: rgba(107,114,128,0.08); color: var(--color-ink-muted); }
+    /* Summary bar pinned to the bottom of the table card (count + revenue). */
+    .list-footer { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-top: 1px solid var(--color-border-subtle); background: var(--color-surface); font-size: 0.6875rem; color: var(--color-ink-muted); }
+    .list-footer strong { color: var(--color-ink); font-weight: 600; }
+
+    .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 2px; }
+    .status-badge.scheduled { background: rgba(59,130,246,0.1); color: #1d4ed8; }
+    .status-badge.confirmed { background: rgba(16,185,129,0.1); color: #047857; }
+    .status-badge.in_progress { background: rgba(245,158,11,0.1); color: #92400e; }
+    .status-badge.completed { background: rgba(45,106,79,0.08); color: #2d6a4f; }
+    .status-badge.cancelled { background: rgba(239,68,68,0.08); color: #991b1b; }
+    .status-badge.no_show { background: rgba(107,114,128,0.1); color: #374151; }
     .status-badge.clickable { cursor: pointer; transition: opacity 0.15s ease; }
     .status-badge.clickable:hover { opacity: 0.7; }
 
@@ -70,17 +106,17 @@
     .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
 
     /* F-016: icon-only action buttons — same pattern as clients/employees/users lists */
-    .action-icons { display: inline-flex; align-items: center; gap: 0.125rem; justify-content: flex-end; }
+    .action-icons { display: inline-flex; align-items: center; gap: 0.125rem; justify-content: flex-end; width: 100%; }
     .action-icon-btn {
         display: inline-flex; align-items: center; justify-content: center;
-        width: 2rem; height: 2rem; padding: 0;
+        width: 1.75rem; height: 1.75rem; padding: 0;
         background: transparent; border: none; border-radius: 2px;
         cursor: pointer; color: var(--color-ink-subtle);
         transition: color 0.2s ease, background 0.2s ease;
         text-decoration: none; flex-shrink: 0;
     }
     .action-icon-btn:hover { color: var(--color-ink); background: var(--color-surface); }
-    .action-icon-btn svg { width: 1.125rem; height: 1.125rem; }
+    .action-icon-btn svg { width: 1rem; height: 1rem; }
     .empty-state { padding: 3rem 2rem; text-align: center; }
     .empty-icon { font-size: 4rem; color: var(--color-ink-subtle); opacity: 0.3; margin-bottom: 1rem; }
     .empty-text { color: var(--color-ink-subtle); font-size: 0.9375rem; font-weight: 300; }
@@ -92,8 +128,8 @@
     /* Weekend visits (Sat/Sun) get a subtle gray so the week scans at a glance.
        Desktop: low-specificity .weekend-row lets the :hover rule still win on
        hover. Mobile card: higher-specificity selector beats the card's white. */
-    .weekend-row { background: #f3f4f6; }
-    table.stack-cards tbody tr.weekend-row { background: #f3f4f6; }
+    .weekend-row { background: #f8fafc; }
+    table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 
     /* Desktop table shows the per-column values; the mobile stacked card (≤640px,
        matching .stack-cards) swaps the Data cell to a combined "Data i godzina"
@@ -108,17 +144,11 @@
         .dt-mobile { display: flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.35; }
         .rating-mobile { display: inline-flex; }
         /* Card is tap-to-open; the redundant view (eye) icon is hidden, leaving
-           only the edit icon. Whole card gets a pointer affordance. */
+           only the edit icon. */
         .view-icon-btn { display: none; }
-        table.stack-cards tbody tr[data-appt-id] { cursor: pointer; }
 
-        /* Phone filter bar = just the ±7-day period switcher. The date inputs,
-           status select and "Filtruj" button are hidden (JS still seeds the
-           hidden start/end inputs, so the ±7 buttons keep working). The bar then
-           holds a single control, so drop its chrome and center the switcher. */
-        .filter-mobile-hide { display: none !important; }
-        .filter-bar { padding: 0; border: none; box-shadow: none; background: transparent; margin-bottom: 1rem; justify-content: center; }
-        .filter-bar > div:last-child { margin-left: 0 !important; }
+        /* Toolbar stacks; search takes the full row below the pills. */
+        .list-search { max-width: none; margin-left: 0; flex-basis: 100%; }
         /* Calendar/list view switcher is desktop-only — mobile lives on the list. */
         .view-toggle { display: none !important; }
     }
@@ -130,7 +160,7 @@
     <header class="page-header">
         <div>
             <h1 class="page-title">Wizyty</h1>
-            <p class="page-subtitle">Zarządzanie wizytami i harmonogramem salonu</p>
+            <p class="page-subtitle" id="list-subtitle">Ładowanie wizyt...</p>
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <button type="button" id="past-visits-trigger" class="past-visits-trigger" hidden
@@ -154,45 +184,17 @@
         </div>
     </header>
 
-    <!-- Filters -->
-    <div class="filter-bar">
-        <div class="filter-mobile-hide">
-            <label for="filter-start">Od</label><br>
-            <input type="date" id="filter-start" />
+    <!-- Toolbar: filter pills + search -->
+    <div class="list-toolbar">
+        <div class="filter-pills" role="tablist" aria-label="Filtr wizyt">
+            <button type="button" class="filter-pill" data-filter="upcoming" role="tab" onclick="setFilter('upcoming')">Nadchodzące <span class="pill-count" id="pill-count-upcoming">0</span></button>
+            <button type="button" class="filter-pill" data-filter="today" role="tab" onclick="setFilter('today')">Dziś <span class="pill-count" id="pill-count-today">0</span></button>
+            <button type="button" class="filter-pill" data-filter="past" role="tab" onclick="setFilter('past')">Minione <span class="pill-count" id="pill-count-past">0</span></button>
+            <button type="button" class="filter-pill" data-filter="all" role="tab" onclick="setFilter('all')">Wszystkie <span class="pill-count" id="pill-count-all">0</span></button>
         </div>
-        <div class="filter-mobile-hide">
-            <label for="filter-end">Do</label><br>
-            <input type="date" id="filter-end" />
-        </div>
-        <div class="filter-mobile-hide">
-            <label for="filter-status">Status</label><br>
-            <select id="filter-status">
-                <option value="">Wszystkie</option>
-                <option value="scheduled">Zaplanowana</option>
-                <option value="confirmed">Potwierdzona</option>
-                <option value="in_progress">W trakcie</option>
-                <option value="completed">Zakończona</option>
-                <option value="cancelled">Anulowana</option>
-                <option value="no_show">Nieobecność</option>
-            </select>
-        </div>
-        <div class="filter-mobile-hide" style="align-self: flex-end;">
-            <button onclick="loadAppointments()" class="refined-btn-secondary">
-                {{ icon('search') }}
-                Filtruj
-            </button>
-        </div>
-
-        <!-- Kontrolki paginacji tygodniowej -->
-        <div style="margin-left: auto; align-self: flex-end; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button onclick="previousWeek()" class="refined-btn-secondary" title="Poprzedni tydzień (–7 dni)" aria-label="Poprzedni tydzień">
-                {{ icon('chevron_left') }}
-                –7 dni
-            </button>
-            <button onclick="nextWeek()" class="refined-btn-secondary" title="Następny tydzień (+7 dni)" aria-label="Następny tydzień">
-                +7 dni
-                {{ icon('chevron_right') }}
-            </button>
+        <div class="list-search">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input type="text" id="list-search-input" placeholder="Szukaj klienta, usługi..." aria-label="Szukaj wizyt" oninput="onSearchInput(this.value)">
         </div>
     </div>
 
@@ -200,12 +202,12 @@
     <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista wizyt">
         <table class="refined-table stack-cards">
             <colgroup>
-                <col style="width:11%"><!-- Data -->
-                <col style="width:12%"><!-- Rozpoczęcie -->
-                <col style="width:16%"><!-- Klient -->
+                <col style="width:10%"><!-- Data -->
+                <col style="width:11%"><!-- Godzina -->
+                <col style="width:17%"><!-- Klient -->
                 <col style="width:17%"><!-- Usługa -->
                 <col style="width:13%"><!-- Pracownik -->
-                <col style="width:8%"> <!-- Kwota -->
+                <col style="width:9%"> <!-- Kwota -->
                 <col style="width:11%"><!-- Status -->
                 <col style="width:6%"> <!-- Ocena -->
                 <col style="width:6%"> <!-- Akcje -->
@@ -213,14 +215,14 @@
             <thead>
                 <tr>
                     <th class="th-sortable" id="th-appointment_date" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('appointment_date')">Data <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                    <th class="th-sortable" id="th-start_time" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('start_time')">Rozpoczęcie <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable" id="th-start_time" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('start_time')">Godzina <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-client_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('client_name')">Klient <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-service_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('service_name')">Usługa <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-employee_name" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('employee_name')">Pracownik <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                    <th class="th-sortable" id="th-total_price" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_price')">Kwota <span class="sort-icon" aria-hidden="true">↕</span></button></th>
+                    <th class="th-sortable th-right" id="th-total_price" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('total_price')">Kwota <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-status" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('status')">Status <span class="sort-icon" aria-hidden="true">↕</span></button></th>
                     <th class="th-sortable" id="th-satisfaction_score" aria-sort="none"><button type="button" class="th-sort-btn" onclick="sortBy('satisfaction_score')">Ocena <span class="sort-icon" aria-hidden="true">↕</span></button></th>
-                    <th>Akcje</th>
+                    <th><span class="sr-only">Akcje</span></th>
                 </tr>
             </thead>
             <tbody id="appointments-tbody">
@@ -232,6 +234,10 @@
                 </tr>
             </tbody>
         </table>
+        <div class="list-footer">
+            <span>Wyświetlono <strong id="list-count">0</strong> <span id="list-count-noun">wizyt</span></span>
+            <span>Przychód: <strong id="list-revenue">0,00 zł</strong></span>
+        </div>
     </div>
 </div>
 <!-- Status Update Modal -->
@@ -288,8 +294,21 @@ const VALID_TRANSITIONS = {
     'no_show': []
 };
 
-// Sort state. Defaults to chronological (date ascending) for the upcoming-week view.
+// Deterministic employee colour — the mock hardcodes per-employee colours; real
+// rows only carry employee_id, so we hash it onto a fixed palette. Same employee
+// → same dot every render, no schema/API change required.
+const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
+function empColor(id) {
+    if (id == null || id === '') return '#9ca3af';
+    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
+}
+
+// Filter/search state. The mock derives four views (upcoming/today/past/all)
+// client-side over one fetched dataset — we do the same.
+const FILTER_KEY = 'appt_list_filter';
 let allAppointments = [];
+let activeFilter = 'upcoming';
+let searchQuery = '';
 let sortState = { column: 'appointment_date', direction: 'asc' };
 
 // Status modal state
@@ -301,10 +320,19 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
-function renderVisitRating(score) {
-    if (score == null) return '<span style="color:var(--color-ink-subtle)">—</span>';
-    const color = score >= 4 ? 'var(--color-status-completed)' : score >= 3 ? 'var(--color-status-in-progress)' : 'var(--color-status-cancelled)';
-    return `<span style="color:${color};font-weight:600;">★ ${score}</span>`;
+// Polish plural for "wizyta": 1 → wizyta, 2–4 (not 12–14) → wizyty, else wizyt.
+function plWizyt(n) {
+    if (n === 1) return 'wizyta';
+    const m = n % 10, h = n % 100;
+    if (m >= 2 && m <= 4 && !(h >= 12 && h <= 14)) return 'wizyty';
+    return 'wizyt';
+}
+
+// Desktop Ocena cell: gold filled stars (mock style), or a subtle dash.
+function renderStarsDesktop(score) {
+    if (score == null) return '<span class="stars-none">—</span>';
+    const n = Math.max(0, Math.min(5, Math.round(score)));
+    return `<span class="stars-desktop" aria-label="Ocena ${score} na 5">${'★'.repeat(n)}</span>`;
 }
 
 // Five-star display for the mobile card. Filled stars use the GUI star token,
@@ -342,7 +370,6 @@ const PL_MONTHS_GEN = [
 ];
 
 // Mobile card date line: "dd mmmmm yyyy", e.g. "22 czerwca 2026".
-// The time + duration go on a second line via formatStart().
 function formatDateLongMobile(dateStr) {
     if (!dateStr) return '—';
     const [y, m, d] = String(dateStr).split('-').map(Number);
@@ -369,7 +396,17 @@ function isWeekend(dateStr) {
     return day === 0 || day === 6;
 }
 
-// Desktop "Rozpoczęcie" cell: start time + visit length, e.g. "14:30 (45 min)".
+// Desktop "Godzina" cell: start–end range + visit length, e.g. "14:30–15:15 (45m)".
+function formatTimeRange(start, end) {
+    if (!start) return '—';
+    const s = String(start).substring(0, 5);
+    if (!end) return s;
+    const e = String(end).substring(0, 5);
+    const dur = visitDurationMin(start, end);
+    return dur != null ? `${s}–${e} (${dur}m)` : `${s}–${e}`;
+}
+
+// Mobile card time line: start + duration (Data cell shows the full date above).
 function formatStart(start, end) {
     if (!start) return '—';
     const t = String(start).substring(0, 5);
@@ -387,58 +424,9 @@ function formatCurrency(amount) {
     return parseFloat(amount).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
 }
 
-function formatDateForInput(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function getDateFromInput(inputId) {
-    const dateStr = document.getElementById(inputId).value;
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return new Date(y, m - 1, d);  // local time
-}
-
-function setDateToInput(inputId, date) {
-    document.getElementById(inputId).value = formatDateForInput(date);
-}
-
-function addDays(date, days) {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-}
-
-// ── Period navigation (±7 days) ──────────────────────────────────────────────
-
-function previousWeek() {
-    const startDate = getDateFromInput('filter-start');
-    const endDate = getDateFromInput('filter-end');
-    if (!startDate || !endDate) {
-        const today = new Date();
-        setDateToInput('filter-start', addDays(today, -7));
-        setDateToInput('filter-end', today);
-    } else {
-        setDateToInput('filter-start', addDays(startDate, -7));
-        setDateToInput('filter-end', addDays(endDate, -7));
-    }
-    loadAppointments();
-}
-
-function nextWeek() {
-    const startDate = getDateFromInput('filter-start');
-    const endDate = getDateFromInput('filter-end');
-    if (!startDate || !endDate) {
-        const today = new Date();
-        setDateToInput('filter-start', today);
-        setDateToInput('filter-end', addDays(today, 7));
-    } else {
-        setDateToInput('filter-start', addDays(startDate, 7));
-        setDateToInput('filter-end', addDays(endDate, 7));
-    }
-    loadAppointments();
+function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // ── Sorting ───────────────────────────────────────────────────────────────────
@@ -451,21 +439,23 @@ function sortBy(column) {
         sortState.direction = 'asc';
     }
     updateSortHeaders();
-    renderTable(allAppointments);
+    applyFilters();
 }
 
 function updateSortHeaders() {
     document.querySelectorAll('.th-sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
         th.setAttribute('aria-sort', 'none');
-        th.querySelector('.sort-icon').textContent = '↕';
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
     });
     if (!sortState.column) return;
     const th = document.getElementById('th-' + sortState.column);
     if (!th) return;
     th.classList.add('sort-' + sortState.direction);
     th.setAttribute('aria-sort', sortState.direction === 'asc' ? 'ascending' : 'descending');
-    th.querySelector('.sort-icon').textContent = sortState.direction === 'asc' ? '↑' : '↓';
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = sortState.direction === 'asc' ? '↑' : '↓';
 }
 
 function getSortValue(a, column) {
@@ -492,13 +482,76 @@ function getSortedAppointments(appointments) {
     });
 }
 
+// ── Filter pills + search ───────────────────────────────────────────────────
+
+function setFilter(f) {
+    activeFilter = f;
+    try { localStorage.setItem(FILTER_KEY, f); } catch (e) {}
+    // Past reads best newest-first; the forward-looking views read oldest-first.
+    sortState = (f === 'past')
+        ? { column: 'appointment_date', direction: 'desc' }
+        : { column: 'appointment_date', direction: 'asc' };
+    document.querySelectorAll('.filter-pill').forEach(p =>
+        p.classList.toggle('active', p.dataset.filter === f));
+    updateSortHeaders();
+    applyFilters();
+}
+
+let searchDebounce = null;
+function onSearchInput(value) {
+    searchQuery = value;
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(applyFilters, 120);
+}
+
+function matchesFilter(a, filter, today) {
+    if (filter === 'upcoming') return a.appointment_date >= today && !['cancelled', 'no_show'].includes(a.status);
+    if (filter === 'today')    return a.appointment_date === today;
+    if (filter === 'past')     return a.appointment_date < today;
+    return true; // 'all'
+}
+
+function applyFilters() {
+    const today = todayStr();
+
+    // Pill counts derive from the full set, independent of the search box.
+    const counts = { upcoming: 0, today: 0, past: 0, all: allAppointments.length };
+    allAppointments.forEach(a => {
+        if (matchesFilter(a, 'upcoming', today)) counts.upcoming++;
+        if (matchesFilter(a, 'today', today))    counts.today++;
+        if (matchesFilter(a, 'past', today))     counts.past++;
+    });
+    ['upcoming', 'today', 'past', 'all'].forEach(k => {
+        const el = document.getElementById('pill-count-' + k);
+        if (el) el.textContent = counts[k];
+    });
+
+    let rows = allAppointments.filter(a => matchesFilter(a, activeFilter, today));
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+        rows = rows.filter(a =>
+            (a.client_name || '').toLowerCase().includes(q) ||
+            (a.service_name || '').toLowerCase().includes(q));
+    }
+
+    renderTable(rows);
+
+    // Header subtitle + footer summary reflect the currently visible rows.
+    document.getElementById('list-subtitle').textContent = `${rows.length} ${plWizyt(rows.length)}`;
+    document.getElementById('list-count').textContent = rows.length;
+    document.getElementById('list-count-noun').textContent = plWizyt(rows.length);
+    const rev = rows.reduce((s, a) => s + (parseFloat(a.total_price) || 0), 0);
+    document.getElementById('list-revenue').textContent =
+        rev.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+}
+
 // ── Table rendering ───────────────────────────────────────────────────────────
 
 function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w wybranym zakresie</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w tym widoku</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
@@ -509,16 +562,19 @@ function renderTable(appointments) {
         const badgeData = hasTransitions
             ? `data-appt-id="${a.id}" data-status="${a.status}" data-client="${escapeHtml(a.client_name || '')}" data-date="${a.appointment_date || ''}" data-time="${formatTime(a.start_time)}"`
             : '';
+        const dot = empColor(a.employee_id);
         return `
             <tr data-appt-id="${a.id}"${isWeekend(a.appointment_date) ? ' class="weekend-row"' : ''}>
-                <td data-label="Data i godzina"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile"><span class="dtm-date">${formatDateLongMobile(a.appointment_date)}</span><span class="dtm-time">${formatStart(a.start_time, a.end_time)}</span></span></td>
-                <td data-label="Rozpoczęcie" class="cell-hide-sm">${formatStart(a.start_time, a.end_time)}</td>
+                <td data-label="Data i godzina" class="cell-date"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile"><span class="dtm-date">${formatDateLongMobile(a.appointment_date)}</span><span class="dtm-time">${formatStart(a.start_time, a.end_time)}</span></span></td>
+                <td data-label="Godzina" class="cell-time cell-hide-sm">${formatTimeRange(a.start_time, a.end_time)}</td>
                 <td class="cell-name">${escapeHtml(a.client_name)}</td>
-                <td data-label="Usługa">${escapeHtml(serviceName)}</td>
-                <td data-label="Pracownik">${escapeHtml(a.employee_name)}</td>
-                <td data-label="Kwota" class="cell-hide-sm">${formatCurrency(a.total_price)}</td>
+                <td data-label="Usługa" class="cell-service">${escapeHtml(serviceName)}</td>
+                <td data-label="Pracownik">
+                    <span class="emp-cell"><span class="emp-dot" style="background:${dot};"></span><span class="emp-name">${escapeHtml(a.employee_name)}</span></span>
+                </td>
+                <td data-label="Kwota" class="cell-price cell-hide-sm">${formatCurrency(a.total_price)}</td>
                 <td data-label="Status"><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
-                <td data-label="Ocena"><span class="rating-desktop">${renderVisitRating(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
+                <td data-label="Ocena"><span class="rating-desktop">${renderStarsDesktop(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
                 <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
                         <a href="/appointment/${a.id}?from=list" class="action-icon-btn view-icon-btn" title="Szczegóły" aria-label="Szczegóły">
@@ -542,27 +598,20 @@ function renderTable(appointments) {
 // ── Data loading ──────────────────────────────────────────────────────────────
 
 async function loadAppointments() {
-    saveFilterState('appointments', ['filter-start', 'filter-end', 'filter-status']);
-    const startDate = document.getElementById('filter-start').value;
-    const endDate = document.getElementById('filter-end').value;
-    const status = document.getElementById('filter-status').value;
     const tbody = document.getElementById('appointments-tbody');
-
-    const params = new URLSearchParams();
-    if (startDate && endDate) {
-        params.set('start_date', startDate);
-        params.set('end_date', endDate);
-    } else {
-        params.set('mode', 'latest');
-    }
-    if (status) params.set('status', status);
+    // One broad fetch (100 most-recent by date); all four views + search are
+    // derived client-side, matching the mock's computeListRows.
+    const params = new URLSearchParams({ mode: 'latest' });
+    // Preserve the "filter to one employee" deep-link the calendar views pass.
+    const urlEmp = new URLSearchParams(window.location.search).get('employee_id');
+    if (urlEmp) params.set('employee_id', urlEmp);
 
     try {
         const response = await fetch(`/api/appointments?${params}`);
         const data = await response.json();
         if (data.success) {
             allAppointments = data.appointments;
-            renderTable(allAppointments);
+            applyFilters();
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
@@ -675,7 +724,7 @@ async function submitStatusChange() {
     }
 }
 
-// ── Status badge click delegation ────────────────────────────────────────────
+// ── Row + status-badge click delegation ──────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointments-tbody').addEventListener('click', e => {
@@ -692,10 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Mobile stacked card: tapping anywhere except an action icon or the
-        // status badge opens the visit view (same destination as the desktop
-        // eye icon, which is hidden on mobile).
-        if (!window.matchMedia('(max-width: 640px)').matches) return;
+        // Clicking a row (anywhere but an action icon or the status badge) opens
+        // the visit — matches the mock's row.onClick. Action links keep their own
+        // hrefs; the status badge above is handled first.
         if (e.target.closest('.action-icons') || e.target.closest('.status-badge')) return;
         const row = e.target.closest('tr[data-appt-id]');
         if (!row) return;
@@ -722,14 +770,13 @@ function updateViewLinks() {
     }
 }
 
-// Default: today → today+7 days (the upcoming week), date ascending.
 document.addEventListener('DOMContentLoaded', () => {
     updateViewLinks();
-    restoreFilterState('appointments', ['filter-status']);
-    const today = new Date();
-    setDateToInput('filter-start', today);
-    setDateToInput('filter-end', addDays(today, 7));
-    updateSortHeaders();   // surface the default date-ascending sort on the header
+    // Restore the last-used pill (default: upcoming, matching the mock).
+    let saved = 'upcoming';
+    try { saved = localStorage.getItem(FILTER_KEY) || 'upcoming'; } catch (e) {}
+    if (!['upcoming', 'today', 'past', 'all'].includes(saved)) saved = 'upcoming';
+    setFilter(saved);        // sets sort + active pill + triggers applyFilters (on empty set)
     loadAppointments();
     initScrollToTopButton('scroll-top-btn');
 });
