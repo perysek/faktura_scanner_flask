@@ -4,134 +4,97 @@
 
 {% block extra_css %}
 <style>
-.refined-page { padding: 1rem; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-    .page-title { margin-bottom: 0.25rem; }
-    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
+    .refined-page { padding: 1rem 1.25rem 0; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem; flex-wrap: wrap; gap: 0.75rem; }
+    .page-title { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ink); margin: 0 0 0.125rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; margin: 0; }
 
-    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 0.75rem; }
-
-    .controls-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .controls-bar label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem; display: block; }
-    .controls-bar select { padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); min-width: 150px; }
-    .controls-bar select:focus { outline: none; border-color: var(--color-ink-muted); }
-
-    /* Compact toolbar density — base styles come from global .refined-btn-* (P07) */
     .refined-btn-primary { padding: 0.4rem 0.75rem; font-size: 0.75rem; gap: 0.25rem; }
-    .refined-btn-secondary { padding: 0.375rem 0.5rem; font-size: 0.75rem; gap: 0.25rem; }
-    .refined-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .refined-btn-secondary:disabled:hover { border-color: var(--color-border); background: white; }
 
     .view-toggle { display: flex; gap: 0.375rem; }
-    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
+    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
-    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
-    /* Calendar/list switcher is desktop-only; phones are redirected to the list. */
+    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
     @media (max-width: 640px) { .view-toggle { display: none !important; } }
 
-    /* Coverage Stat Card */
-    .coverage-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 140px; }
-    .coverage-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); text-align: center; }
-    .coverage-value { font-size: 1.5rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
-    .coverage-bar { width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden; margin-top: 0.25rem; }
-    .coverage-fill { height: 100%; background: var(--color-success); transition: width 0.3s ease; }
+    /* Week nav row */
+    .week-nav-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.625rem; flex-wrap: wrap; }
+    .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
+    .wk-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 0.125rem; }
+    .wk-emp-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); }
+    .wk-emp-pills { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+    .wk-emp-pills[hidden] { display: none; }
+    .wk-pill { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; font-size: 0.6875rem; font-weight: 400; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink-muted); cursor: pointer; }
+    .wk-pill.active { font-weight: 500; }
+    .wk-pill-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .wk-emp-dropdown { position: relative; display: flex; align-items: center; }
+    .wk-emp-dropdown[hidden] { display: none; }
+    .wk-emp-dropdown .wk-dd-dot { position: absolute; left: 9px; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; }
+    .wk-emp-dropdown select { padding: 0.3125rem 0.625rem 0.3125rem 1.375rem; font-family: inherit; font-size: 0.6875rem; font-weight: 500; color: var(--color-ink); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; outline: none; max-width: 220px; }
 
-    /* Week Navigation */
-    .week-nav { display: flex; align-items: center; gap: 0.5rem; }
-    .week-label { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); min-width: 180px; text-align: center; }
+    /* Week timeline card */
+    .week-timeline { display: flex; flex-direction: column; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; position: relative; }
 
-    /* Week Grid */
-    .week-container { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
-    .week-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); grid-template-rows: 60px 1050px; }
+    .week-day-headers { display: flex; border-bottom: 1px solid var(--color-border); flex-shrink: 0; background: var(--color-surface); }
+    .wk-hours-head { width: 48px; flex-shrink: 0; border-right: 1px solid var(--color-border); }
+    .wk-day-head { flex: 1; padding: 0.5rem 0.25rem; text-align: center; border-right: 1px solid var(--color-border-subtle); cursor: pointer; transition: background 0.15s ease; }
+    .wk-day-head:last-child { border-right: none; }
+    .wk-day-head:hover { background: rgba(59,130,246,0.06); }
+    .wk-day-head.weekend { background: #faf9f8; }
+    .wk-day-head.today { background: rgba(59,130,246,0.05); }
+    .wk-day-name { font-size: 0.5625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 2px; }
+    .wk-day-num { font-size: 0.9375rem; font-weight: 500; color: var(--color-ink); }
+    .wk-day-head.today .wk-day-num { font-weight: 700; color: #3b82f6; }
+    .wk-day-count { font-size: 0.5625rem; color: var(--color-ink-subtle); margin-top: 2px; }
 
-    /* Day Headers */
-    .day-header { padding: 0.5rem 0.375rem; text-align: center; border-bottom: 1px solid var(--color-border); border-right: 1px solid var(--color-border-subtle); background: var(--color-surface); cursor: pointer; transition: background 0.2s ease; }
-    .day-header:hover { background: var(--color-surface-warm); }
-    .day-header.today { background: var(--color-status-in-progress-bg); border-bottom-color: var(--color-status-in-progress); }
-    .day-name { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink-subtle); margin-bottom: 0.125rem; }
-    .day-date { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); }
-    .day-header.today .day-date { color: var(--color-status-in-progress); }
+    .week-body { flex: 1; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 300px); min-height: 380px; }
+    .week-body-inner { display: flex; height: 900px; }
+    .wk-hours { width: 48px; flex-shrink: 0; border-right: 1px solid var(--color-border); background: var(--color-surface); }
+    .wk-hr { height: 60px; padding: 0.375rem 0.375rem 0; font-size: 0.5625rem; color: var(--color-ink-subtle); border-bottom: 1px solid rgba(232,230,225,0.5); text-align: right; }
+    .wk-col {
+        flex: 1; position: relative; height: 900px; border-right: 1px solid var(--color-border-subtle); background: white;
+        background-image: repeating-linear-gradient(to bottom, transparent 59px, rgba(210,206,200,0.5) 59px, rgba(210,206,200,0.5) 60px);
+        background-size: 100% 60px;
+    }
+    .wk-col:last-child { border-right: none; }
+    .wk-col.weekend { background: #faf9f8; }
+    .wk-layer { position: absolute; inset: 0; }
 
-    /* Hour Labels */
-    .week-hours { border-right: 1px solid var(--color-border); background: var(--color-surface); display: grid; grid-template-rows: repeat(16, 65.625px); grid-row: 2; grid-column: 1; }
-    .hour-label { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: var(--color-ink-muted); text-align: right; border-bottom: 1px solid var(--color-border-subtle); display: flex; align-items: start; justify-content: flex-end; }
+    .wk-block { position: absolute; left: 3px; right: 3px; border-radius: 2px; padding: 2px 4px; overflow: hidden; cursor: pointer; border-left: 3px solid var(--color-status-scheduled); }
+    .wk-block.scheduled   { background: #eff6ff; }
+    .wk-block.confirmed   { background: #f0fdf4; }
+    .wk-block.in_progress { background: #fffbeb; }
+    .wk-block.completed   { background: #f0fdf4; }
+    .wk-block.cancelled   { background: #fff1f2; }
+    .wk-block.no_show     { background: #f9fafb; }
+    .wk-block-client { font-size: 0.5625rem; font-weight: 600; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wk-block-time { font-size: 0.5rem; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* Day Columns */
-    .day-column { position: relative; border-right: 1px solid var(--color-border-subtle); grid-row: 2; background: white; }
-    .day-column:last-child { border-right: none; }
-    .day-column-bg { display: grid; grid-template-rows: repeat(32, 32.8125px); height: 100%; }
-    .time-slot { border-bottom: 1px solid var(--color-border-subtle); }
-    .time-slot:hover { background: var(--color-surface); }
+    .wk-absence { position: absolute; left: 3px; right: 3px; border-left: 3px solid var(--color-ink-subtle); border-radius: 2px; padding: 2px 4px; overflow: hidden; opacity: 0.82; background: repeating-linear-gradient(45deg, rgba(138,138,138,0.06), rgba(138,138,138,0.06) 6px, rgba(138,138,138,0.13) 6px, rgba(138,138,138,0.13) 12px); }
+    .wk-absence-label { font-size: 0.5rem; font-weight: 600; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* Appointment Blocks */
-    .appointments-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
-    .appointment-block { position: absolute; left: 4px; right: 4px; background: white; border-left: 3px solid var(--color-status-scheduled); border-radius: 2px; padding: 0.375rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); pointer-events: auto; cursor: pointer; transition: all 0.2s var(--ease-out-expo); overflow: hidden; }
-    .appointment-block:hover { transform: translateX(1px); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-    .absence-block { position:absolute; left:4px; right:4px; border-left:3px solid var(--color-ink-subtle); border-radius:2px; padding:0.3rem 0.4rem; overflow:hidden; opacity:0.82; background:repeating-linear-gradient(45deg,rgba(138,138,138,0.06),rgba(138,138,138,0.06) 6px,rgba(138,138,138,0.13) 6px,rgba(138,138,138,0.13) 12px); cursor:default; }
-    .absence-label { font-size:0.5625rem; font-weight:600; color:var(--color-ink-muted); text-transform:uppercase; letter-spacing:0.07em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .absence-time { font-size:0.5rem; color:var(--color-ink-subtle); }
+    .wk-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 10; pointer-events: none; }
 
-    .appointment-block.scheduled { border-left-color: var(--color-status-scheduled); background: var(--color-status-scheduled-bg); }
-    .appointment-block.confirmed { border-left-color: var(--color-status-confirmed); background: var(--color-status-confirmed-bg); }
-    .appointment-block.in_progress { border-left-color: var(--color-status-in-progress); background: var(--color-status-in-progress-bg); }
-    .appointment-block.completed { border-left-color: var(--color-status-completed); background: var(--color-status-completed-bg); }
-    .appointment-block.cancelled { border-left-color: var(--color-status-cancelled); background: var(--color-status-cancelled-bg); opacity: 0.7; }
+    .week-summary-bar { display: flex; align-items: center; gap: 1.25rem; padding: 0.375rem 0.875rem; border-top: 1px solid var(--color-border); background: var(--color-surface); flex-shrink: 0; flex-wrap: wrap; }
+    .wsb-item { font-size: 0.75rem; color: var(--color-ink-muted); }
+    .wsb-count { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); }
+    .wsb-rev { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); margin-left: auto; }
 
-    .apt-time { font-size: 0.6875rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; line-height: 1.2; display: flex; justify-content: space-between; align-items: center; }
-    .apt-stylist { font-size: 0.5rem; color: var(--color-ink-subtle); background: rgba(0,0,0,0.04); padding: 0.0625rem 0.1875rem; border-radius: 2px; white-space: nowrap; font-weight: 500; }
-    .apt-client { font-size: 0.6875rem; color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-bottom: 0.0625rem; }
-    .apt-service { font-size: 0.625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; font-style: italic; }
-    .apt-addons { font-size: 0.5625rem; color: var(--color-status-in-progress); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-top: 0.0625rem; font-weight: 500; }
-    .apt-notes { font-size: 0.5625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-top: 0.0625rem; font-style: italic; }
-
-    /* Week Summary */
-    .week-summary { display: flex; justify-content: center; gap: 2rem; padding: 0.375rem 0.75rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
-    .summary-item { display: flex; align-items: center; gap: 0.5rem; }
-    .summary-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); white-space: nowrap; }
-    .summary-value { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); }
-
-    /* Loading State */
-    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
     .spinner { border: 3px solid var(--color-border); border-top: 3px solid var(--color-ink); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* Empty State */
     .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--color-ink-muted); }
     .empty-state svg { width: 48px; height: 48px; margin: 0 auto 0.75rem; opacity: 0.3; }
     .empty-state h3 { font-size: 0.9375rem; font-weight: 500; margin-bottom: 0.25rem; }
     .empty-state p { font-size: 0.8125rem; }
-
-    /* Responsive */
-    @media (max-width: 1400px) {
-        .week-grid { grid-template-columns: 70px repeat(7, 1fr); }
-        .hour-label { padding: 0.375rem 0.5rem; font-size: 0.6875rem; }
-        .day-header { padding: 0.375rem 0.25rem; }
-        .day-name { font-size: 0.5625rem; }
-        .day-date { font-size: 0.8125rem; }
-    }
-    @media (max-width: 1200px) {
-        .week-grid { grid-template-columns: 60px repeat(7, 1fr); }
-        .hour-label { padding: 0.25rem 0.375rem; font-size: 0.625rem; }
-        .appointment-block { left: 2px; right: 2px; padding: 0.25rem; }
-        .apt-time, .apt-client { font-size: 0.625rem; }
-        .apt-service { font-size: 0.5625rem; }
-        .day-header { padding: 0.25rem; }
-        .day-name { font-size: 0.5rem; }
-        .day-date { font-size: 0.75rem; }
-    }
-    @media (max-width: 1024px) {
-        .refined-page { padding: 0.5rem; }
-        .page-header { margin-bottom: 0.5rem; }
-        .refined-card { padding: 0.5rem; margin-bottom: 0.5rem; }
-    }
 </style>
 {% endblock %}
 
 {% block extra_head %}
 <script>
   // Phone (≤640px): the multi-column timeline calendar isn't usable on a narrow
-  // screen, so land on the stacked-card list instead. Runs in <head> before the
-  // body paints; replace() keeps the calendar URL out of history.
+  // screen, so land on the stacked-card list instead.
   if (window.matchMedia('(max-width: 640px)').matches) {
     window.location.replace("{{ url_for('main.appointments_list') }}");
   }
@@ -143,8 +106,8 @@
     <!-- Page Header -->
     <div class="page-header">
         <div>
-            <h1 class="page-title">Kalendarz tygodnia</h1>
-            <p class="page-subtitle">Widok tygodniowy harmonogramu pracowników</p>
+            <h1 class="page-title">Kalendarz — Tydzień</h1>
+            <p class="page-subtitle" id="weekSubtitle">Widok tygodniowy harmonogramu</p>
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <button type="button" id="past-visits-trigger" class="past-visits-trigger" hidden
@@ -162,170 +125,73 @@
                 <a href="{{ url_for('main.appointments_list') }}" id="nav-list">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
-                <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                <svg style="width: 13px; height: 13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 Nowa wizyta
             </a>
         </div>
     </div>
 
-    <!-- Controls -->
-    <div class="refined-card">
-        <div class="controls-bar">
-            <!-- Employee Controls (Left) -->
-            <div id="employeeControlsContainer">
-                <label id="employeeLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Wybór pracownika</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <!-- Employee Pagination -->
-                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" aria-label="Poprzedni pracownik" disabled>
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <div id="employeePagination" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; min-height: 32px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
-                        Ładowanie...
-                    </div>
-                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" aria-label="Następny pracownik" disabled>
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-
-                    <!-- Employee Dropdown -->
-                    <select id="employeeSelect" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);">
-                        <option value="">Ładowanie...</option>
-                    </select>
-                </div>
-            </div>
-	        
-	        <!-- Coverage Badges (Left) -->
-            <div style="display: flex; gap: 0.5rem; align-items: stretch; flex-shrink: 0;">
-                <div class="coverage-card">
-                    <div class="coverage-label">Obłożenie pracownik</div>
-                    <div class="coverage-value" id="coverageValue">0%</div>
-                    <div class="coverage-bar"><div class="coverage-fill" id="coverageFill" style="width: 0%;"></div></div>
-                </div>
-                <div class="coverage-card">
-                    <div class="coverage-label">Obłożenie wszyscy</div>
-                    <div class="coverage-value" id="coverageValueAll">0%</div>
-                    <div class="coverage-bar"><div class="coverage-fill" id="coverageFillAll" style="width: 0%;"></div></div>
-                </div>
-            </div>
-
-            <!-- Week Controls (Right) -->
-            <div style="display: flex; gap: 0.5rem; align-items: end; margin-left: auto;">
-                <button id="thisWeekBtn" class="refined-btn-secondary">Ten tydzień</button>
-
-                <!-- Week Navigation -->
-                <div style="display: flex; gap: 0.5rem; align-items: end;">
-                    <button id="prevWeekBtn" class="refined-btn-secondary" title="Poprzedni tydzień" aria-label="Poprzedni tydzień">
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <div style="min-width: 180px;">
-                        <label for="weekLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Tydzień</label>
-                        <div class="week-label" id="weekLabel" style="min-height: 32px; display: flex; align-items: center; justify-content: center;">Tydzień</div>
-                    </div>
-                    <button id="nextWeekBtn" class="refined-btn-secondary" title="Następny tydzień" aria-label="Następny tydzień">
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
+    <!-- Week navigation + employee selector -->
+    <div class="week-nav-row">
+        <button id="prevWeekBtn" class="nav-btn" type="button">← Poprzedni tydzień</button>
+        <button id="thisWeekBtn" class="nav-btn" type="button">Ten tydzień</button>
+        <button id="nextWeekBtn" class="nav-btn" type="button">Następny →</button>
+        <div class="wk-divider"></div>
+        <span class="wk-emp-label">Pracownik:</span>
+        <div class="wk-emp-pills" id="empPills"></div>
+        <div class="wk-emp-dropdown" id="empDropdownWrap" hidden>
+            <span class="wk-dd-dot" id="empDropdownDot"></span>
+            <select id="employeeSelect"></select>
         </div>
     </div>
 
     <!-- Week Timeline -->
-    <div class="week-container">
+    <div class="week-timeline" aria-live="polite" aria-label="Harmonogram tygodnia">
         <div id="loadingOverlay" class="loading-overlay" style="display: none;">
             <div class="spinner"></div>
         </div>
 
-        <div class="week-grid">
-            <!-- Empty top-left corner -->
-            <div style="grid-column: 1; grid-row: 1; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: var(--color-surface);"></div>
+        <!-- Day headers -->
+        <div class="week-day-headers" id="weekDayHeaders">
+            <div class="wk-hours-head"></div>
+            <div class="wk-day-head" data-day="0"></div>
+            <div class="wk-day-head" data-day="1"></div>
+            <div class="wk-day-head" data-day="2"></div>
+            <div class="wk-day-head" data-day="3"></div>
+            <div class="wk-day-head" data-day="4"></div>
+            <div class="wk-day-head" data-day="5"></div>
+            <div class="wk-day-head" data-day="6"></div>
+        </div>
 
-            <!-- Day Headers (7 columns) -->
-            <div class="day-header" id="dayHeader0">
-                <div class="day-name">Pon</div>
-                <div class="day-date">--</div>
-            </div>
-            <div class="day-header" id="dayHeader1">
-                <div class="day-name">Wt</div>
-                <div class="day-date">--</div>
-            </div>
-            <div class="day-header" id="dayHeader2">
-                <div class="day-name">Śr</div>
-                <div class="day-date">--</div>
-            </div>
-            <div class="day-header" id="dayHeader3">
-                <div class="day-name">Czw</div>
-                <div class="day-date">--</div>
-            </div>
-            <div class="day-header" id="dayHeader4">
-                <div class="day-name">Pt</div>
-                <div class="day-date">--</div>
-            </div>
-            <div class="day-header" id="dayHeader5">
-                <div class="day-name">Sob</div>
-                <div class="day-date">--</div>
-            </div>
-            <div class="day-header" id="dayHeader6">
-                <div class="day-name">Ndz</div>
-                <div class="day-date">--</div>
-            </div>
-
-            <!-- Hour Labels -->
-            <div class="week-hours">
-                <div class="hour-label">7:00</div>
-                <div class="hour-label">8:00</div>
-                <div class="hour-label">9:00</div>
-                <div class="hour-label">10:00</div>
-                <div class="hour-label">11:00</div>
-                <div class="hour-label">12:00</div>
-                <div class="hour-label">13:00</div>
-                <div class="hour-label">14:00</div>
-                <div class="hour-label">15:00</div>
-                <div class="hour-label">16:00</div>
-                <div class="hour-label">17:00</div>
-                <div class="hour-label">18:00</div>
-                <div class="hour-label">19:00</div>
-                <div class="hour-label">20:00</div>
-                <div class="hour-label">21:00</div>
-                <div class="hour-label">22:00</div>
-            </div>
-
-            <!-- Day Columns (7 columns) -->
-            <div class="day-column" style="grid-column: 2;">
-                <div class="day-column-bg" id="dayColumnBg0"></div>
-                <div class="appointments-layer" id="dayColumn0"></div>
-            </div>
-            <div class="day-column" style="grid-column: 3;">
-                <div class="day-column-bg" id="dayColumnBg1"></div>
-                <div class="appointments-layer" id="dayColumn1"></div>
-            </div>
-            <div class="day-column" style="grid-column: 4;">
-                <div class="day-column-bg" id="dayColumnBg2"></div>
-                <div class="appointments-layer" id="dayColumn2"></div>
-            </div>
-            <div class="day-column" style="grid-column: 5;">
-                <div class="day-column-bg" id="dayColumnBg3"></div>
-                <div class="appointments-layer" id="dayColumn3"></div>
-            </div>
-            <div class="day-column" style="grid-column: 6;">
-                <div class="day-column-bg" id="dayColumnBg4"></div>
-                <div class="appointments-layer" id="dayColumn4"></div>
-            </div>
-            <div class="day-column" style="grid-column: 7;">
-                <div class="day-column-bg" id="dayColumnBg5"></div>
-                <div class="appointments-layer" id="dayColumn5"></div>
-            </div>
-            <div class="day-column" style="grid-column: 8;">
-                <div class="day-column-bg" id="dayColumnBg6"></div>
-                <div class="appointments-layer" id="dayColumn6"></div>
+        <!-- Scrollable body -->
+        <div class="week-body">
+            <div class="week-body-inner">
+                <div class="wk-hours">
+                    <div class="wk-hr">7:00</div>
+                    <div class="wk-hr">8:00</div>
+                    <div class="wk-hr">9:00</div>
+                    <div class="wk-hr">10:00</div>
+                    <div class="wk-hr">11:00</div>
+                    <div class="wk-hr">12:00</div>
+                    <div class="wk-hr">13:00</div>
+                    <div class="wk-hr">14:00</div>
+                    <div class="wk-hr">15:00</div>
+                    <div class="wk-hr">16:00</div>
+                    <div class="wk-hr">17:00</div>
+                    <div class="wk-hr">18:00</div>
+                    <div class="wk-hr">19:00</div>
+                    <div class="wk-hr">20:00</div>
+                    <div class="wk-hr">21:00</div>
+                </div>
+                <div class="wk-col" data-day="0"><div class="wk-layer" id="dayColumn0"></div></div>
+                <div class="wk-col" data-day="1"><div class="wk-layer" id="dayColumn1"></div></div>
+                <div class="wk-col" data-day="2"><div class="wk-layer" id="dayColumn2"></div></div>
+                <div class="wk-col" data-day="3"><div class="wk-layer" id="dayColumn3"></div></div>
+                <div class="wk-col" data-day="4"><div class="wk-layer" id="dayColumn4"></div></div>
+                <div class="wk-col weekend" data-day="5"><div class="wk-layer" id="dayColumn5"></div></div>
+                <div class="wk-col weekend" data-day="6"><div class="wk-layer" id="dayColumn6"></div></div>
             </div>
         </div>
 
@@ -339,19 +205,10 @@
         </div>
 
         <!-- Week Summary -->
-        <div class="week-summary">
-            <div class="summary-item">
-                <div class="summary-label">Wizyty</div>
-                <div class="summary-value" id="totalAppointments">0</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Godziny</div>
-                <div class="summary-value" id="totalHours">0h</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Przychód</div>
-                <div class="summary-value" id="totalRevenue">0 zł</div>
-            </div>
+        <div class="week-summary-bar">
+            <span class="wsb-count"><span id="totalAppointments">0</span> <span id="totalApptNoun">wizyt</span></span>
+            <span class="wsb-item" id="totalHours">0h</span>
+            <span class="wsb-rev"><span id="totalRevenue">0,00</span> zł</span>
         </div>
     </div>
 </div>
@@ -359,45 +216,56 @@
 
 {% block extra_scripts %}
 <script>
+// ── Timeline window: 7:00–22:00, 60px/hour ──
+const WORK_START_MIN = 7 * 60;
+const WORK_END_MIN   = 22 * 60;
+const LANE_HEIGHT    = 900;
+
+const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
+function empColor(id) {
+    if (id == null) return '#64748b';
+    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
+}
+
+const PL_MONTHS = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+const PL_MONTHS_SHORT = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+const PL_DAY_NAMES = ['Pon','Wt','Śr','Czw','Pt','Sob','Ndz'];
+
 // State
 let currentEmployeeId = null;
 let currentEmployeePage = 0;
 let currentWeekStart = getMonday(new Date());
-let allEmployees = [];  // All employees in system
-let employees = [];     // Filtered employees with appointments in current week
+let allEmployees = [];
+let employees = [];
 let appointments = [];
-let allWeekAppointments = [];  // All employees' appointments for current week (coverage calc)
+let allWeekAppointments = [];
 
-// DOM Elements
-const employeeControlsContainer = document.getElementById('employeeControlsContainer');
-const employeeLabel = document.getElementById('employeeLabel');
+// DOM
 const employeeSelect = document.getElementById('employeeSelect');
-const prevEmployeeBtn = document.getElementById('prevEmployeeBtn');
-const nextEmployeeBtn = document.getElementById('nextEmployeeBtn');
-const employeePagination = document.getElementById('employeePagination');
+const empPills = document.getElementById('empPills');
+const empDropdownWrap = document.getElementById('empDropdownWrap');
+const empDropdownDot = document.getElementById('empDropdownDot');
 const prevWeekBtn = document.getElementById('prevWeekBtn');
 const nextWeekBtn = document.getElementById('nextWeekBtn');
 const thisWeekBtn = document.getElementById('thisWeekBtn');
-const weekLabel = document.getElementById('weekLabel');
+const weekSubtitle = document.getElementById('weekSubtitle');
 const newAppointmentBtn = document.getElementById('newAppointmentBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const emptyState = document.getElementById('emptyState');
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const urlDate = urlParams.get('date');
     const urlEmployeeId = urlParams.get('employee_id');
 
     if (urlDate) {
-        currentWeekStart = getMonday(new Date(urlDate));
+        const [y, m, d] = urlDate.split('-').map(Number);   // local — avoid UTC shift
+        currentWeekStart = getMonday(new Date(y, m - 1, d));
     }
-    if (urlEmployeeId) {
-        currentEmployeeId = urlEmployeeId;
-    }
+    if (urlEmployeeId) currentEmployeeId = urlEmployeeId;
 
-    initializeTimeline();
+    updateWeekLabel();
+    updateDayHeaders();
     loadEmployees();
     setupEventListeners();
 });
@@ -418,258 +286,145 @@ function formatLocalDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-function initializeTimeline() {
-    updateWeekLabel();
-    updateDayHeaders();
-
-    // Create 32 time slots for each day column
-    for (let day = 0; day < 7; day++) {
-        const bgContainer = document.getElementById(`dayColumnBg${day}`);
-        for (let i = 0; i < 32; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'time-slot';
-            bgContainer.appendChild(slot);
-        }
-    }
+function plWizyt(n) {
+    if (n === 1) return 'wizyta';
+    const m = n % 10, h = n % 100;
+    if (m >= 2 && m <= 4 && !(h >= 12 && h <= 14)) return 'wizyty';
+    return 'wizyt';
 }
 
 function setupEventListeners() {
-    employeeSelect.addEventListener('change', handleEmployeeChange);
-    prevEmployeeBtn.addEventListener('click', () => navigateEmployee(-1));
-    nextEmployeeBtn.addEventListener('click', () => navigateEmployee(1));
+    employeeSelect.addEventListener('change', () => selectEmployee(employeeSelect.value));
     prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
     nextWeekBtn.addEventListener('click', () => navigateWeek(1));
     thisWeekBtn.addEventListener('click', goToThisWeek);
 
-    // Day header click -> go to day view
-    for (let i = 0; i < 7; i++) {
-        document.getElementById(`dayHeader${i}`).addEventListener('click', () => {
+    // Day header click → day view for that date.
+    document.querySelectorAll('.wk-day-head').forEach(head => {
+        head.addEventListener('click', () => {
+            const i = parseInt(head.dataset.day);
             const date = new Date(currentWeekStart);
             date.setDate(date.getDate() + i);
-            const dateStr = formatLocalDate(date);
-            const params = new URLSearchParams({
-                date: dateStr,
-                employee_id: currentEmployeeId
-            });
+            const params = new URLSearchParams({ date: formatLocalDate(date) });
+            if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
             window.location.href = `/appointments/calendar?${params}`;
         });
-    }
+    });
 }
 
 async function loadEmployees() {
     try {
         const response = await fetch('/api/appointments/employees');
         if (!response.ok) throw new Error('Failed to load employees');
-
         allEmployees = await response.json();
-
-        // Load week data which will filter employees
         await loadWeekAndFilterEmployees();
     } catch (error) {
         console.error('Error loading employees:', error);
-        Modals.alert({
-            title: 'Błąd ładowania',
-            message: 'Nie udało się załadować listy pracowników',
-            type: 'error'
-        });
+        Modals.alert({ title: 'Błąd ładowania', message: 'Nie udało się załadować listy pracowników', type: 'error' });
     }
 }
 
 async function loadWeekAndFilterEmployees() {
     if (allEmployees.length === 0) return;
-
     showLoading(true);
-
     try {
-        // Load all appointments for the week (no employee filter)
         const weekEnd = new Date(currentWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
-
-        const params = new URLSearchParams({
-            start_date: formatLocalDate(currentWeekStart),
-            end_date: formatLocalDate(weekEnd)
-        });
-
+        const params = new URLSearchParams({ start_date: formatLocalDate(currentWeekStart), end_date: formatLocalDate(weekEnd) });
         const response = await fetch(`/api/appointments?${params}`);
         if (!response.ok) throw new Error('Failed to load appointments');
-
         const data = await response.json();
-        const allAppointments = (data.appointments || []).filter(apt =>
-            apt.status !== 'cancelled' && apt.status !== 'no_show'
-        );
-
-        // Save for "all employees" coverage calculation
+        const allAppointments = (data.appointments || []).filter(apt => apt.status !== 'cancelled' && apt.status !== 'no_show');
         allWeekAppointments = allAppointments;
 
-        // Also fetch approved absences for the week so employees with only absences appear
+        // Approved absences for the week (so employees with only absences appear).
         let weekAbsences = [];
         try {
-            const absParams = new URLSearchParams({
-                start_date: formatLocalDate(currentWeekStart),
-                end_date: formatLocalDate(weekEnd)
-            });
+            const absParams = new URLSearchParams({ start_date: formatLocalDate(currentWeekStart), end_date: formatLocalDate(weekEnd) });
             const absResp = await fetch(`/api/appointments/absences?${absParams}`);
-            if (absResp.ok) {
-                const absData = await absResp.json();
-                weekAbsences = absData.absences || [];
-            }
+            if (absResp.ok) { const absData = await absResp.json(); weekAbsences = absData.absences || []; }
         } catch (_) {}
-        // Store for rendering
         window._weekAbsences = weekAbsences;
 
-        // Union: employees with appointments OR approved absences
-        const employeeIdsWithAppointments = new Set(
-            allAppointments.map(apt => apt.employee_id)
-        );
-        weekAbsences.forEach(ab => employeeIdsWithAppointments.add(ab.employee_id));
+        const idsWithActivity = new Set(allAppointments.map(a => a.employee_id));
+        weekAbsences.forEach(ab => idsWithActivity.add(ab.employee_id));
+        employees = allEmployees.filter(emp => idsWithActivity.has(emp.id));
 
-        // Filter employees to only those with appointments or absences
-        employees = allEmployees.filter(emp =>
-            employeeIdsWithAppointments.has(emp.id)
-        );
-
-        // Update dropdown
-        updateEmployeeDropdown();
-
-        // Select employee
+        // Select the employee to display.
         if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
-            // Current employee still has appointments in this week
-            const empIndex = employees.findIndex(e => e.id == currentEmployeeId);
-            if (empIndex !== -1) {
-                currentEmployeePage = empIndex;
-            }
-            employeeSelect.value = currentEmployeeId;
-
-            // Filter appointments for current employee
-            appointments = allAppointments.filter(apt => apt.employee_id == currentEmployeeId);
+            currentEmployeePage = employees.findIndex(e => e.id == currentEmployeeId);
+            appointments = allAppointments.filter(a => a.employee_id == currentEmployeeId);
         } else if (employees.length > 0) {
-            // Select first available employee
             currentEmployeePage = 0;
             currentEmployeeId = employees[0].id;
-            employeeSelect.value = employees[0].id;
-
-            // Filter appointments for selected employee
-            appointments = allAppointments.filter(apt => apt.employee_id == currentEmployeeId);
+            appointments = allAppointments.filter(a => a.employee_id == currentEmployeeId);
         } else {
-            // No employees with appointments this week
             currentEmployeeId = null;
             appointments = [];
         }
 
-        updateEmployeePagination();
+        renderEmployeeSelector();
         updateViewLinks();
+        updateNewAppointmentLink();
         renderWeek();
         updateSummary();
     } catch (error) {
         console.error('Error loading week:', error);
-        Modals.alert({
-            title: 'Błąd ładowania',
-            message: 'Nie udało się załadować harmonogramu',
-            type: 'error'
-        });
+        Modals.alert({ title: 'Błąd ładowania', message: 'Nie udało się załadować harmonogramu', type: 'error' });
     } finally {
         showLoading(false);
     }
 }
 
-function updateEmployeeDropdown() {
-    const employeeDropdown = employeeSelect.closest('.ss-wrap') || employeeSelect;
-    // Hide dropdown if only one employee
-    if (employees.length === 1) {
-        employeeDropdown.style.display = 'none';
+// ≤5 active employees → pills (single-click switch); >5 → dropdown (mock rule).
+function renderEmployeeSelector() {
+    if (employees.length === 0) {
+        empPills.hidden = false; empPills.innerHTML = '<span class="wk-emp-label">Brak wizyt w tym tygodniu</span>';
+        empDropdownWrap.hidden = true;
+        return;
+    }
+    if (employees.length <= 5) {
+        empDropdownWrap.hidden = true;
+        empPills.hidden = false;
+        empPills.innerHTML = employees.map(e => {
+            const active = e.id == currentEmployeeId;
+            const c = empColor(e.id);
+            const style = active ? `background:${c};border-color:${c};color:#fff;` : '';
+            const dot = active ? 'rgba(255,255,255,0.9)' : c;
+            return `<button type="button" class="wk-pill${active ? ' active' : ''}" data-emp="${e.id}" style="${style}"><span class="wk-pill-dot" style="background:${dot};"></span>${escapeHtml(e.full_name)}</button>`;
+        }).join('');
+        empPills.querySelectorAll('.wk-pill').forEach(b => b.addEventListener('click', () => selectEmployee(b.dataset.emp)));
     } else {
-        employeeDropdown.style.display = 'block';
-        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
-        employees.forEach(emp => {
-            const option = document.createElement('option');
-            option.value = emp.id;
-            option.textContent = emp.full_name;
-            option.title = emp.full_name + (emp.position ? ` (${emp.position})` : '');
-            employeeSelect.appendChild(option);
-        });
-        SearchableSelect.sync('employeeSelect');
+        empPills.hidden = true;
+        empDropdownWrap.hidden = false;
+        empDropdownDot.style.background = empColor(currentEmployeeId);
+        employeeSelect.innerHTML = employees.map(e => `<option value="${e.id}">${escapeHtml(e.full_name)}</option>`).join('');
+        employeeSelect.value = currentEmployeeId;
     }
 }
 
-function handleEmployeeChange() {
-    currentEmployeeId = employeeSelect.value;
-    if (currentEmployeeId) {
-        // Update pagination to match selected employee
-        const empIndex = employees.findIndex(e => e.id == currentEmployeeId);
-        if (empIndex !== -1) {
-            currentEmployeePage = empIndex;
-            updateEmployeePagination();
-        }
-        // Reload week data for selected employee
-        loadWeekForCurrentEmployee();
-        updateNewAppointmentLink();
-        updateViewLinks();
-    }
+function selectEmployee(id) {
+    if (!id) return;
+    currentEmployeeId = id;
+    const idx = employees.findIndex(e => e.id == id);
+    if (idx !== -1) currentEmployeePage = idx;
+    renderEmployeeSelector();
+    updateViewLinks();
+    updateNewAppointmentLink();
+    loadWeekForCurrentEmployee();
 }
 
 function updateViewLinks() {
-    // Update navigation links to preserve selected employee
     const baseUrls = {
         'nav-day': '{{ url_for("main.appointments_calendar") }}',
         'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
         'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
         'nav-list': '{{ url_for("main.appointments_list") }}'
     };
-
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
-        if (link && currentEmployeeId) {
-            link.href = `${baseUrl}?employee_id=${currentEmployeeId}`;
-        }
+        if (link && currentEmployeeId) link.href = `${baseUrl}?employee_id=${currentEmployeeId}`;
     });
-}
-
-function navigateEmployee(offset) {
-    if (employees.length === 0) return;
-
-    const newPage = currentEmployeePage + offset;
-    if (newPage < 0 || newPage >= employees.length) return;
-
-    currentEmployeePage = newPage;
-    currentEmployeeId = employees[currentEmployeePage].id;
-
-    // Update dropdown to match pagination
-    employeeSelect.value = currentEmployeeId;
-
-    updateEmployeePagination();
-    loadWeekForCurrentEmployee();
-    updateNewAppointmentLink();
-    updateViewLinks();
-}
-
-function updateEmployeePagination() {
-    if (employees.length === 0) {
-        // Hide entire employee controls when no employees with appointments
-        employeeControlsContainer.style.display = 'none';
-        return;
-    }
-
-    // Show employee controls
-    employeeControlsContainer.style.display = 'block';
-
-    // Update label based on employee count
-    if (employees.length === 1) {
-        employeeLabel.textContent = 'Pracownik';
-        prevEmployeeBtn.disabled = true;
-        nextEmployeeBtn.disabled = true;
-    } else {
-        employeeLabel.textContent = 'Wybór pracownika';
-        // Update pagination buttons
-        prevEmployeeBtn.disabled = currentEmployeePage === 0;
-        nextEmployeeBtn.disabled = currentEmployeePage === employees.length - 1;
-    }
-
-    // Update label
-    const currentEmployee = employees[currentEmployeePage];
-    if (currentEmployee) {
-        employeePagination.textContent = currentEmployee.full_name;
-        employeePagination.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
-    }
 }
 
 function navigateWeek(offset) {
@@ -677,7 +432,6 @@ function navigateWeek(offset) {
     updateWeekLabel();
     updateDayHeaders();
     loadWeekAndFilterEmployees();
-    updateNewAppointmentLink();
 }
 
 function goToThisWeek() {
@@ -685,61 +439,39 @@ function goToThisWeek() {
     updateWeekLabel();
     updateDayHeaders();
     loadWeekAndFilterEmployees();
-    updateNewAppointmentLink();
 }
 
 function updateWeekLabel() {
     const weekEnd = new Date(currentWeekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
-
-    const startDay = currentWeekStart.getDate();
-    const endDay = weekEnd.getDate();
-    const startMonth = currentWeekStart.toLocaleDateString('pl-PL', { month: 'long' });
-    const endMonth = weekEnd.toLocaleDateString('pl-PL', { month: 'long' });
-    const year = currentWeekStart.getFullYear();
-
-    let label;
-    if (startMonth === endMonth) {
-        label = `${startDay}-${endDay} ${startMonth} ${year}`;
-    } else {
-        label = `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
-    }
-
-    weekLabel.textContent = label;
+    const s = currentWeekStart, e = weekEnd;
+    const label = (s.getMonth() === e.getMonth())
+        ? `${s.getDate()}–${e.getDate()} ${PL_MONTHS_SHORT[e.getMonth()]} ${e.getFullYear()}`
+        : `${s.getDate()} ${PL_MONTHS_SHORT[s.getMonth()]} – ${e.getDate()} ${PL_MONTHS_SHORT[e.getMonth()]} ${e.getFullYear()}`;
+    weekSubtitle.textContent = label;
     updateThisWeekButton();
 }
 
 function updateThisWeekButton() {
-    // Check if current week is this week
     const thisWeekStart = getMonday(new Date());
-    const isThisWeek = currentWeekStart.getTime() === thisWeekStart.getTime();
-
-    // Hide button if displaying current week
-    if (isThisWeek) {
-        thisWeekBtn.style.display = 'none';
-    } else {
-        thisWeekBtn.style.display = 'inline-flex';
-    }
+    thisWeekBtn.style.display = (currentWeekStart.getTime() === thisWeekStart.getTime()) ? 'none' : 'inline-flex';
 }
 
-function updateDayHeaders() {
-    const today = new Date().toDateString();
-
-    for (let i = 0; i < 7; i++) {
+function updateDayHeaders(countsByDay) {
+    const todayStr = formatLocalDate(new Date());
+    document.querySelectorAll('.wk-day-head').forEach(head => {
+        const i = parseInt(head.dataset.day);
         const date = new Date(currentWeekStart);
         date.setDate(date.getDate() + i);
-
-        const header = document.getElementById(`dayHeader${i}`);
-        const dateEl = header.querySelector('.day-date');
-        dateEl.textContent = date.getDate();
-
-        // Highlight today
-        if (date.toDateString() === today) {
-            header.classList.add('today');
-        } else {
-            header.classList.remove('today');
-        }
-    }
+        const ds = formatLocalDate(date);
+        const count = countsByDay ? (countsByDay[ds] || 0) : 0;
+        head.classList.toggle('today', ds === todayStr);
+        head.classList.toggle('weekend', i >= 5);
+        head.innerHTML = `
+            <div class="wk-day-name">${PL_DAY_NAMES[i]}</div>
+            <div class="wk-day-num">${date.getDate()}</div>
+            <div class="wk-day-count">${count} wiz.</div>`;
+    });
 }
 
 function updateNewAppointmentLink() {
@@ -752,194 +484,133 @@ function updateNewAppointmentLink() {
 
 async function loadWeekForCurrentEmployee() {
     if (!currentEmployeeId) return;
-
     showLoading(true);
-
     try {
         const weekEnd = new Date(currentWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
-
-        const params = new URLSearchParams({
-            employee_id: currentEmployeeId,
-            start_date: formatLocalDate(currentWeekStart),
-            end_date: formatLocalDate(weekEnd)
-        });
-
+        const params = new URLSearchParams({ employee_id: currentEmployeeId, start_date: formatLocalDate(currentWeekStart), end_date: formatLocalDate(weekEnd) });
         const response = await fetch(`/api/appointments?${params}`);
         if (!response.ok) throw new Error('Failed to load appointments');
-
         const data = await response.json();
-        // Filter out cancelled and no_show appointments
-        appointments = (data.appointments || []).filter(apt =>
-            apt.status !== 'cancelled' && apt.status !== 'no_show'
-        );
-
+        appointments = (data.appointments || []).filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
         renderWeek();
         updateSummary();
     } catch (error) {
         console.error('Error loading week:', error);
-        Modals.alert({
-            title: 'Błąd ładowania',
-            message: 'Nie udało się załadować harmonogramu',
-            type: 'error'
-        });
+        Modals.alert({ title: 'Błąd ładowania', message: 'Nie udało się załadować harmonogramu', type: 'error' });
     } finally {
         showLoading(false);
     }
 }
 
 function renderWeek() {
-    // Clear all day columns
-    for (let i = 0; i < 7; i++) {
-        document.getElementById(`dayColumn${i}`).innerHTML = '';
-    }
+    for (let i = 0; i < 7; i++) document.getElementById(`dayColumn${i}`).innerHTML = '';
 
-    const hasAbsencesThisWeek = (window._weekAbsences || []).some(
-        ab => ab.employee_id == currentEmployeeId
-    );
-    if (appointments.length === 0 && !hasAbsencesThisWeek) {
-        emptyState.style.display = 'block';
-        return;
-    }
-
-    emptyState.style.display = 'none';
-
-    // Group appointments by day
     const appointmentsByDay = groupByDay(appointments);
 
-    // Group absences by date — expand multi-day absences into individual days
+    // Expand absences into individual days for the current employee.
     const absencesByDay = {};
     (window._weekAbsences || []).forEach(ab => {
         if (ab.employee_id != currentEmployeeId) return;
-        // Expand each date in the absence range
         const from = new Date(ab.date_from + 'T00:00:00');
-        const to   = new Date(ab.date_to   + 'T00:00:00');
+        const to   = new Date(ab.date_to + 'T00:00:00');
         const cur  = new Date(from);
         while (cur <= to) {
             const ds = formatLocalDate(cur);
-            if (!absencesByDay[ds]) absencesByDay[ds] = [];
-            absencesByDay[ds].push(ab);
+            (absencesByDay[ds] = absencesByDay[ds] || []).push(ab);
             cur.setDate(cur.getDate() + 1);
         }
     });
 
-    // Render each day
+    // Per-day counts for the headers.
+    const countsByDay = {};
+    Object.keys(appointmentsByDay).forEach(ds => countsByDay[ds] = appointmentsByDay[ds].length);
+    updateDayHeaders(countsByDay);
+
+    const hasAbsences = Object.keys(absencesByDay).length > 0;
+    if (appointments.length === 0 && !hasAbsences) {
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+    }
+
+    const nowMin = nowMinutesIfToday();
     for (let i = 0; i < 7; i++) {
         const date = new Date(currentWeekStart);
         date.setDate(date.getDate() + i);
-        const dateStr = formatLocalDate(date);
-
-        const dayAppointments = appointmentsByDay[dateStr] || [];
-        const dayAbsences = absencesByDay[dateStr] || [];
-        renderDayColumn(i, dayAppointments, dayAbsences);
+        const ds = formatLocalDate(date);
+        renderDayColumn(i, appointmentsByDay[ds] || [], absencesByDay[ds] || [], ds === formatLocalDate(new Date()) ? nowMin : null);
     }
 }
 
-function groupByDay(appointments) {
+function groupByDay(list) {
     const grouped = {};
-    appointments.forEach(apt => {
-        if (!grouped[apt.appointment_date]) {
-            grouped[apt.appointment_date] = [];
-        }
-        grouped[apt.appointment_date].push(apt);
-    });
+    list.forEach(a => { (grouped[a.appointment_date] = grouped[a.appointment_date] || []).push(a); });
     return grouped;
 }
 
-function renderDayColumn(dayIndex, dayAppointments, dayAbsences) {
-    const column = document.getElementById(`dayColumn${dayIndex}`);
-
-    dayAppointments.forEach(apt => {
-        const block = createAppointmentBlock(apt);
-        column.appendChild(block);
-    });
-
-    (dayAbsences || []).forEach(ab => {
-        const block = createAbsenceBlock(ab);
-        column.appendChild(block);
-    });
+function nowMinutesIfToday() {
+    const now = new Date();
+    const min = now.getHours() * 60 + now.getMinutes();
+    if (min < WORK_START_MIN || min > WORK_END_MIN) return null;
+    return min;
 }
 
-function createAbsenceBlock(absence) {
-    const block = document.createElement('div');
-    block.className = 'absence-block';
-    block.title = absence.category_name;
-
-    const startStr = absence.time_from ? absence.time_from + ':00' : '07:00:00';
-    const endStr   = absence.time_to   ? absence.time_to   + ':00' : '23:00:00';
-    const position = calculatePosition(startStr, endStr);
-    block.style.top    = position.top + '%';
-    block.style.height = Math.max(position.height, 1.5) + '%';
-
-    block.innerHTML = `<div class="absence-label">${escapeHtml(absence.category_name)}</div>${
-        absence.time_from ? `<div class="absence-time">${absence.time_from}–${absence.time_to}</div>` : ''
-    }`;
-    return block;
+function renderDayColumn(dayIndex, dayAppointments, dayAbsences, nowMin) {
+    const layer = document.getElementById(`dayColumn${dayIndex}`);
+    dayAppointments.forEach(a => layer.appendChild(createAppointmentBlock(a)));
+    (dayAbsences || []).forEach(ab => layer.appendChild(createAbsenceBlock(ab)));
+    if (nowMin != null) {
+        const line = document.createElement('div');
+        line.className = 'wk-now-line';
+        line.style.top = (nowMin - WORK_START_MIN) + 'px';
+        layer.appendChild(line);
+    }
 }
 
 function createAppointmentBlock(appointment) {
     const block = document.createElement('div');
-    block.className = `appointment-block ${appointment.status}`;
+    block.className = `wk-block ${appointment.status}`;
+    block.style.borderLeftColor = empColor(currentEmployeeId);
 
-    const position = calculatePosition(appointment.start_time, appointment.end_time);
-    block.style.top = position.top + '%';
-    block.style.height = position.height + '%';
+    const pos = calculatePosition(appointment.start_time, appointment.end_time);
+    block.style.top = pos.top + 'px';
+    block.style.height = pos.height + 'px';
 
-    const clientName = appointment.client_name || 'Bez klienta';
-    const serviceName = appointment.service_name || 'Brak usługi';
-    const employeeName = appointment.employee_name || '';
-    const timeRange = `${formatTime(appointment.start_time)} - ${formatTime(appointment.end_time)}`;
-    const addons = appointment.addon_services;
-    const notes = appointment.notes;
-
-    let content = `
-        <div class="apt-time">
-            <span>${timeRange}</span>
-            ${employeeName ? `<span class="apt-stylist" title="Stylista: ${escapeHtml(employeeName)}">${escapeHtml(getInitials(employeeName))}</span>` : ''}
-        </div>
-        <div class="apt-client" title="${escapeHtml(clientName)}">${escapeHtml(truncate(clientName, 15))}</div>
-        <div class="apt-service" title="${escapeHtml(serviceName)}">${escapeHtml(truncate(serviceName, 15))}</div>
-    `;
-
-    if (addons) {
-        content += `<div class="apt-addons" title="Dodatki: ${escapeHtml(addons)}">+ ${escapeHtml(truncate(addons, 20))}</div>`;
-    }
-
-    if (notes) {
-        content += `<div class="apt-notes" title="${escapeHtml(notes)}">${escapeHtml(truncate(notes, 20))}</div>`;
-    }
-
-    if (appointment.satisfaction_score != null) {
-        const score = appointment.satisfaction_score;
-        const ratingColor = score >= 4 ? 'var(--color-status-completed)' : score >= 3 ? 'var(--color-status-in-progress)' : 'var(--color-status-cancelled)';
-        content += `<div style="margin-top:0.0625rem;"><span style="font-size:0.5rem;font-weight:700;color:${ratingColor};" title="Ocena klienta: ${score}/5">★ ${score}</span></div>`;
-    }
-
-    block.innerHTML = content;
+    const firstName = (appointment.client_name || 'Bez klienta').split(' ')[0];
+    block.innerHTML = `<div class="wk-block-client" title="${escapeHtml(appointment.client_name || '')}">${escapeHtml(firstName)}</div>
+        <div class="wk-block-time">${formatTime(appointment.start_time)}</div>`;
 
     block.addEventListener('click', () => {
-        const params = new URLSearchParams({
-            from: 'week',
-            date: formatLocalDate(currentWeekStart),
-            employee_id: currentEmployeeId
-        });
+        const params = new URLSearchParams({ from: 'week', date: formatLocalDate(currentWeekStart) });
+        if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
         window.location.href = `/appointment/${appointment.id}?${params.toString()}`;
     });
-
     return block;
 }
 
-function calculatePosition(startTime, endTime) {
-    const workStart = 7 * 60;
-    const workEnd = 23 * 60;
-    const totalMinutes = workEnd - workStart;
+function createAbsenceBlock(absence) {
+    const block = document.createElement('div');
+    block.className = 'wk-absence';
+    block.title = absence.category_name;
+    const startStr = absence.time_from ? absence.time_from + ':00' : '07:00:00';
+    const endStr   = absence.time_to   ? absence.time_to   + ':00' : '22:00:00';
+    const pos = calculatePosition(startStr, endStr);
+    block.style.top = pos.top + 'px';
+    block.style.height = Math.max(pos.height, 14) + 'px';
+    block.innerHTML = `<div class="wk-absence-label">${escapeHtml(absence.category_name)}</div>`;
+    return block;
+}
 
+// Pixel position in the 7:00–22:00 / 900px lane, clamped to stay in-window.
+function calculatePosition(startTime, endTime) {
     const start = timeToMinutes(startTime);
     const end = timeToMinutes(endTime);
-
-    const top = ((start - workStart) / totalMinutes) * 100;
-    const height = ((end - start) / totalMinutes) * 100;
-
+    let top = start - WORK_START_MIN;
+    let height = Math.max(end - start, 16);
+    if (top < 0) { height += top; top = 0; }
+    if (top + height > LANE_HEIGHT) height = LANE_HEIGHT - top;
+    if (height < 12) height = 12;
     return { top, height };
 }
 
@@ -953,67 +624,31 @@ function formatTime(timeStr) {
     return `${parseInt(hours)}:${minutes}`;
 }
 
-function truncate(text, maxLength) {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-}
-
 function updateSummary() {
-    const totalAppointments = appointments.length;
-
-    let totalMinutes = 0;
-    appointments.forEach(apt => {
-        const start = timeToMinutes(apt.start_time);
-        const end = timeToMinutes(apt.end_time);
-        totalMinutes += (end - start);
+    const count = appointments.length;
+    let totalMinutes = 0, totalRevenue = 0;
+    appointments.forEach(a => {
+        totalMinutes += (timeToMinutes(a.end_time) - timeToMinutes(a.start_time));
+        totalRevenue += (a.total_price || 0);
     });
-    const totalHours = (totalMinutes / 60).toFixed(1);
-
-    const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.total_price || 0), 0);
-
-    document.getElementById('totalAppointments').textContent = totalAppointments;
-    document.getElementById('totalHours').textContent = totalHours + 'h';
-    document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
-
-    // Coverage for selected employee: 7 days × 16 h × 60 min
-    const weekMinutes = 7 * 16 * 60;
-    updateCoverage(totalMinutes, weekMinutes, 'coverageValue', 'coverageFill');
-
-    // Coverage for all active employees combined
-    let allTotalMinutes = 0;
-    allWeekAppointments.forEach(apt => {
-        allTotalMinutes += timeToMinutes(apt.end_time) - timeToMinutes(apt.start_time);
-    });
-    const weekMinutesAll = weekMinutes * (allEmployees.length || 1);
-    updateCoverage(allTotalMinutes, weekMinutesAll, 'coverageValueAll', 'coverageFillAll');
+    document.getElementById('totalAppointments').textContent = count;
+    document.getElementById('totalApptNoun').textContent = plWizyt(count);
+    document.getElementById('totalHours').textContent = (totalMinutes / 60).toFixed(1) + 'h';
+    document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function updateCoverage(appointmentMinutes, availableMinutes, valueId, fillId) {
-    const percent = availableMinutes > 0
-        ? Math.min((appointmentMinutes / availableMinutes) * 100, 100)
-        : 0;
-    const valueEl = document.getElementById(valueId);
-    const fillEl = document.getElementById(fillId);
-    if (!valueEl || !fillEl) return;
-    valueEl.textContent = Math.round(percent) + '%';
-    fillEl.style.width = percent + '%';
-    fillEl.style.background = percent >= 80 ? 'var(--color-status-completed)' : percent >= 50 ? 'var(--color-status-in-progress)' : 'var(--color-status-cancelled)';
-}
-
-function showLoading(show) {
-    loadingOverlay.style.display = show ? 'flex' : 'none';
-}
+function showLoading(show) { loadingOverlay.style.display = show ? 'flex' : 'none'; }
 
 function getInitials(fullName) {
     if (!fullName) return '';
     const names = fullName.trim().split(' ');
     if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
-    return names.map(n => n.charAt(0).toUpperCase()).join('');
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
 }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text == null ? '' : text;
     return div.innerHTML;
 }
 </script>

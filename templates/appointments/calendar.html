@@ -4,193 +4,118 @@
 
 {% block extra_css %}
 <style>
-.refined-page { padding: 1rem; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-    .page-title { margin-bottom: 0.25rem; }
-    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
+    .refined-page { padding: 1rem 1.25rem 0; display: flex; flex-direction: column; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem; flex-wrap: wrap; gap: 0.75rem; }
+    .page-title { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ink); margin: 0 0 0.125rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; margin: 0; }
 
-    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 0.75rem; }
-
-    .controls-bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    .controls-bar label { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.25rem; display: block; }
-    .controls-bar select, .controls-bar input[type="date"] { padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); min-width: 180px; }
-    .controls-bar select:focus, .controls-bar input:focus { outline: none; border-color: var(--color-ink-muted); }
-
-    /* Compact toolbar density — base styles come from global .refined-btn-* (P07) */
     .refined-btn-primary { padding: 0.4rem 0.75rem; font-size: 0.75rem; gap: 0.25rem; }
-    .refined-btn-secondary { padding: 0.375rem 0.5rem; font-size: 0.75rem; gap: 0.25rem; }
-    .refined-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .refined-btn-secondary:disabled:hover { border-color: var(--color-border); background: white; }
-
-    /* Coverage Stat Card */
-    .coverage-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 140px; }
-    .coverage-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); }
-    .coverage-value { font-size: 1.5rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
-    .coverage-bar { width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden; margin-top: 0.25rem; }
-    .coverage-fill { height: 100%; background: var(--color-success); transition: width 0.3s ease; }
 
     .view-toggle { display: flex; gap: 0.375rem; }
-    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
+    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
-    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
-    /* Calendar/list switcher is desktop-only; phones are redirected to the list. */
+    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
     @media (max-width: 640px) { .view-toggle { display: none !important; } }
 
-    /* Timeline Styles */
-    .timeline-container { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
-    .timeline-grid { display: grid; min-height: 600px; }
-    /* Dynamic grid columns set via JavaScript */
+    /* ── Date navigation row ── */
+    .date-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.625rem; flex-wrap: wrap; }
+    .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .nav-btn.is-today { color: white; background: var(--color-ink); border-color: var(--color-ink); font-weight: 500; }
+    .date-nav-center { flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem; min-width: 180px; }
+    .date-nav-center input[type="date"] { padding: 0.3125rem 0.5rem; font-family: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-align: center; }
+    .date-nav-center input[type="date"]:focus { outline: none; border-color: var(--color-ink-muted); }
 
-    .timeline-hours { border-right: 1px solid var(--color-border); background: var(--color-surface); display: grid; grid-template-rows: repeat(16, 65.625px); grid-row: 2; grid-column: 1; }
-    .hour-label { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: var(--color-ink-muted); text-align: right; border-bottom: 1px solid var(--color-border-subtle); display: flex; align-items: start; justify-content: flex-end; }
+    /* Employee pager (only shown when roster > one page) */
+    .emp-pager { display: flex; align-items: center; gap: 0.375rem; }
+    .emp-pager[hidden] { display: none; }
+    .emp-pager .pager-label { font-size: 0.6875rem; color: var(--color-ink-subtle); white-space: nowrap; }
 
-    /* Employee Headers */
-    .employee-header { padding: 0.75rem 0.5rem; text-align: center; border-bottom: 1px solid var(--color-border); border-right: 1px solid var(--color-border-subtle); background: var(--color-surface); grid-row: 1; }
-    .employee-header:last-child { border-right: none; }
-    .employee-name { font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .employee-stats { font-size: 0.625rem; color: var(--color-ink-muted); margin-top: 0.375rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
-    .employee-stat { display: inline-flex; align-items: center; gap: 0.25rem; }
-    .employee-stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+    /* ── Timeline card ── */
+    .cal-timeline { display: flex; flex-direction: column; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; position: relative; }
 
-    /* Employee Columns */
-    .timeline-column { position: relative; border-right: 1px solid var(--color-border-subtle); grid-row: 2; }
-    .timeline-column:last-child { border-right: none; }
-    .timeline-slots { display: grid; grid-template-rows: repeat(32, 32.8125px); position: relative; height: 100%; }
-    .timeline-slot { border-bottom: 1px solid var(--color-border-subtle); position: relative; }
-    .timeline-slot:hover { background: var(--color-surface); cursor: pointer; }
+    .cal-emp-headers { display: flex; border-bottom: 1px solid var(--color-border); flex-shrink: 0; background: var(--color-surface); }
+    .cal-godz-head { width: 52px; flex-shrink: 0; border-right: 1px solid var(--color-border); padding: 0.5rem 0.25rem; font-size: 0.5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-subtle); display: flex; align-items: center; justify-content: center; }
+    .cal-emp-head { flex: 1; padding: 0.625rem 0.875rem; border-right: 1px solid var(--color-border-subtle); min-width: 0; }
+    .cal-emp-head:last-child { border-right: none; }
+    .cal-emp-head-inner { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+    .cal-emp-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; font-weight: 700; color: white; flex-shrink: 0; }
+    .cal-emp-name { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-emp-stats { font-size: 0.625rem; color: var(--color-ink-muted); white-space: nowrap; }
 
-    /* Appointment Blocks */
-    .appointments-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
-    .appointment-block { position: absolute; left: 8px; right: 8px; background: white; border-left: 4px solid var(--color-status-scheduled); border-radius: 2px; padding: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: auto; cursor: pointer; transition: all 0.2s var(--ease-out-expo); overflow: hidden; }
-    .appointment-block:hover { transform: translateX(2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .cal-body { flex: 1; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 300px); min-height: 380px; }
+    .cal-body-inner { display: flex; height: 900px; }
+    .cal-hours { width: 52px; flex-shrink: 0; border-right: 1px solid var(--color-border); background: var(--color-surface); }
+    .cal-hr { height: 60px; padding: 0.375rem 0.5rem 0; font-size: 0.5625rem; font-weight: 400; color: var(--color-ink-subtle); border-bottom: 1px solid rgba(232,230,225,0.6); text-align: right; line-height: 1; }
 
-    .appointment-block.scheduled { border-left-color: var(--color-status-scheduled); background: var(--color-status-scheduled-bg); }
-    .appointment-block.confirmed { border-left-color: var(--color-status-confirmed); background: var(--color-status-confirmed-bg); }
-    .appointment-block.in_progress { border-left-color: var(--color-status-in-progress); background: var(--color-status-in-progress-bg); }
-    .appointment-block.completed { border-left-color: var(--color-status-completed); background: var(--color-status-completed-bg); }
-    .appointment-block.cancelled { border-left-color: var(--color-status-cancelled); background: var(--color-status-cancelled-bg); opacity: 0.7; }
+    .cal-col {
+        flex: 1; position: relative; height: 900px;
+        border-right: 1px solid var(--color-border-subtle);
+        background-image: repeating-linear-gradient(to bottom,
+            transparent 29px, rgba(232,230,225,0.4) 29px, rgba(232,230,225,0.4) 30px,
+            transparent 30px, transparent 59px, rgba(210,206,200,0.6) 59px, rgba(210,206,200,0.6) 60px);
+        background-size: 100% 60px;
+        cursor: pointer;
+    }
+    .cal-col:last-child { border-right: none; }
 
-    /* Absence blocks — approved employee absences displayed on the calendar */
-    .absence-block {
-        position: absolute;
-        left: 4px;
-        right: 4px;
-        border-left: 3px solid var(--color-ink-subtle);
-        border-radius: 2px;
-        padding: 0.375rem 0.5rem;
-        pointer-events: auto;
-        cursor: default;
-        overflow: hidden;
-        opacity: 0.82;
-        background: repeating-linear-gradient(
-            45deg,
-            rgba(138,138,138,0.06),
-            rgba(138,138,138,0.06) 6px,
-            rgba(138,138,138,0.13) 6px,
-            rgba(138,138,138,0.13) 12px
-        );
+    /* Appointment block — status-coloured (mock day view). */
+    .cal-block {
+        position: absolute; left: 6px; right: 6px;
+        border-radius: 2px; overflow: hidden; cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.07); z-index: 1;
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+        border-left: 4px solid var(--color-status-scheduled);
+    }
+    .cal-block:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateX(2px); }
+    .cal-block.scheduled   { background: #eff6ff; border-left-color: #60a5fa; }
+    .cal-block.confirmed   { background: #f0fdf4; border-left-color: #34d399; }
+    .cal-block.in_progress { background: #fffbeb; border-left-color: #fcd34d; }
+    .cal-block.completed   { background: #f0fdf4; border-left-color: #6ee7b7; }
+    .cal-block.cancelled   { background: #fff1f2; border-left-color: #fca5a5; }
+    .cal-block.no_show     { background: #f9fafb; border-left-color: #d1d5db; }
+    .cal-block-client { font-size: 0.6875rem; font-weight: 600; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+    .cal-block-time { font-size: 0.625rem; font-weight: 300; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cal-block-svc { font-size: 0.5625rem; color: var(--color-ink-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+    .cal-badge { display: inline-block; font-size: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 5px; border-radius: 2px; margin-top: 2px; }
+    .cal-badge.scheduled   { background: rgba(59,130,246,0.1);  color: #1d4ed8; }
+    .cal-badge.confirmed   { background: rgba(16,185,129,0.1);  color: #047857; }
+    .cal-badge.in_progress { background: rgba(245,158,11,0.1);  color: #92400e; }
+    .cal-badge.completed   { background: rgba(45,106,79,0.08);  color: #2d6a4f; }
+    .cal-badge.cancelled   { background: rgba(239,68,68,0.08);  color: #991b1b; }
+    .cal-badge.no_show     { background: rgba(107,114,128,0.1); color: #374151; }
+
+    /* Absence block — hatched, approved employee absence. */
+    .cal-absence {
+        position: absolute; left: 4px; right: 4px;
+        border-left: 3px solid var(--color-ink-subtle); border-radius: 2px;
+        padding: 0.25rem 0.375rem; overflow: hidden; opacity: 0.82; z-index: 1;
+        background: repeating-linear-gradient(45deg, rgba(138,138,138,0.06), rgba(138,138,138,0.06) 6px, rgba(138,138,138,0.13) 6px, rgba(138,138,138,0.13) 12px);
         box-shadow: inset 0 0 0 1px rgba(100,100,100,0.10);
     }
-    .absence-block:hover { opacity: 1; }
-    .absence-label {
-        font-size: 0.625rem;
-        font-weight: 600;
-        color: var(--color-ink-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .absence-time {
-        font-size: 0.5625rem;
-        color: var(--color-ink-subtle);
-        margin-top: 0.125rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+    .cal-absence-label { font-size: 0.5625rem; font-weight: 600; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-absence-time { font-size: 0.5rem; color: var(--color-ink-subtle); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .appointment-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.25rem; }
-    .appointment-client { font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
-    .appointment-status-badge { font-size: 0.5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.125rem 0.25rem; border-radius: 2px; white-space: nowrap; flex-shrink: 0; }
-    .appointment-status-badge.scheduled { background: var(--color-status-scheduled-badge); color: var(--color-status-scheduled); }
-    .appointment-status-badge.confirmed { background: var(--color-status-confirmed-badge); color: var(--color-status-confirmed); }
-    .appointment-status-badge.in_progress { background: var(--color-status-in-progress-badge); color: var(--color-status-in-progress); }
-    .appointment-status-badge.completed { background: rgba(45,106,79,0.15); color: var(--color-status-completed); }
-    .appointment-status-badge.cancelled { background: var(--color-status-cancelled-badge); color: var(--color-status-cancelled); }
+    /* Red "now" line (today only). */
+    .cal-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 10; pointer-events: none; }
+    .cal-now-dot { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
 
-    .appointment-details { font-size: 0.625rem; color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .appointment-separator { margin: 0 0.375rem; color: var(--color-ink-subtle); }
-    .appointment-addons { font-size: 0.625rem; color: var(--color-status-in-progress); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-weight: 500; }
-    .appointment-notes { font-size: 0.625rem; color: var(--color-ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.125rem; font-style: italic; }
-    .appointment-stylist { font-size: 0.5625rem; color: var(--color-ink-subtle); background: rgba(0,0,0,0.04); padding: 0.125rem 0.375rem; border-radius: 2px; white-space: nowrap; font-weight: 400; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    /* Day summary bar. */
+    .day-summary-bar { display: flex; align-items: center; gap: 1.25rem; padding: 0.375rem 0.875rem; border-top: 1px solid var(--color-border); background: var(--color-surface); flex-shrink: 0; flex-wrap: wrap; }
+    .dsb-date { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); }
+    .dsb-count { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); }
+    .dsb-item { font-size: 0.75rem; color: var(--color-ink-muted); }
+    .dsb-rev { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); margin-left: auto; }
 
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-    .status-dot.scheduled { background: var(--color-status-scheduled); }
-    .status-dot.confirmed { background: var(--color-status-confirmed); }
-    .status-dot.in_progress { background: var(--color-status-in-progress); }
-    .status-dot.completed { background: var(--color-status-completed); }
-    .status-dot.cancelled { background: var(--color-status-cancelled); }
-
-    /* Day Summary */
-    .day-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem 1.5rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
-    .summary-item { text-align: center; }
-    .summary-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.25rem; }
-    .summary-value { font-size: 1.25rem; font-weight: 600; color: var(--color-ink); }
-
-    /* Status Legend */
-    .status-legend { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; padding: 0.75rem 0; }
-    .legend-item { display: flex; align-items: center; gap: 0.375rem; font-size: 0.6875rem; color: var(--color-ink-muted); }
-    .legend-color { width: 3px; height: 14px; border-radius: 1px; }
-
-    /* Loading State */
-    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    /* Loading + empty states. */
+    .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
     .spinner { border: 3px solid var(--color-border); border-top: 3px solid var(--color-ink); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* Empty State */
-    .empty-state {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: white;
-        color: var(--color-ink-muted);
-        text-align: center;
-        z-index: 10;
-    }
-    .empty-state svg {
-        display: block;
-        width: 128px;
-        height: 128px;
-        margin: 0.5rem auto 1rem auto;
-        padding-top: 2rem;
-        opacity: 0.3;
-    }
-    .empty-state h3 {
-        font-size: 1rem;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-    }
-    .empty-state p {
-        font-size: 0.8125rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .timeline-grid { grid-template-columns: 60px 1fr; }
-        .hour-label { padding: 0.5rem; font-size: 0.6875rem; }
-        .appointment-block { left: 4px; right: 4px; padding: 0.375rem; }
-        .controls-bar { flex-direction: column; align-items: stretch; }
-        .controls-bar > div { width: 100%; }
-    }
+    .empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white; color: var(--color-ink-muted); text-align: center; z-index: 10; }
+    .empty-state svg { width: 96px; height: 96px; margin-bottom: 1rem; opacity: 0.3; }
+    .empty-state h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem; }
+    .empty-state p { font-size: 0.8125rem; }
 </style>
 {% endblock %}
 
@@ -210,8 +135,8 @@
     <!-- Page Header -->
     <div class="page-header">
         <div>
-            <h1 class="page-title">Kalendarz wizyt</h1>
-            <p class="page-subtitle">Widok dzienny harmonogramu pracowników</p>
+            <h1 class="page-title">Kalendarz</h1>
+            <p class="page-subtitle" id="daySubtitle">Widok dzienny harmonogramu pracowników</p>
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <button type="button" id="past-visits-trigger" class="past-visits-trigger" hidden
@@ -229,107 +154,68 @@
                 <a href="{{ url_for('main.appointments_list') }}" id="nav-list">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
-                <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                <svg style="width: 13px; height: 13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 Nowa wizyta
             </a>
         </div>
     </div>
 
-    <!-- Controls -->
-    <div class="refined-card">
-        <div class="controls-bar" style="justify-content: space-between;">
-            <!-- Coverage Stat Card (left side) -->
-            <div class="coverage-card">
-                <div class="coverage-label">Obłożenie</div>
-                <div class="coverage-value" id="coverageValue">0%</div>
-                <div class="coverage-bar">
-                    <div class="coverage-fill" id="coverageFill" style="width: 0%;"></div>
-                </div>
-            </div>
-
-            <!-- Right side controls -->
-            <div style="display: flex; gap: 1rem; align-items: end;">
-            <!-- Employee Pagination -->
-            <div style="display: flex; gap: 0.5rem; align-items: end;">
-                <button id="prevEmployeesBtn" class="refined-btn-secondary" title="Poprzedni pracownicy" aria-label="Poprzedni pracownicy" style="flex-shrink: 0;">
-                    <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div style="min-width: 180px;">
-                    <label for="employeesLabel" style="display: block;">Pracownicy</label>
-                    <div id="employeesLabel" style="padding: 0.5rem 0.75rem; font-size: 0.8125rem; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; min-height: 38px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
-                        Ładowanie...
-                    </div>
-                </div>
-                <button id="nextEmployeesBtn" class="refined-btn-secondary" title="Następni pracownicy" aria-label="Następni pracownicy" style="flex-shrink: 0;">
-                    <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Day Pagination (right side) -->
-            <div style="display: flex; gap: 0.5rem; align-items: end;">
-                <button id="prevDayBtn" class="refined-btn-secondary" title="Poprzedni dzień" aria-label="Poprzedni dzień" style="flex-shrink: 0;">
-                    <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div style="min-width: 180px;">
-                    <label for="dateInput">Data</label>
-                    <input type="date" id="dateInput" style="width: 100%;">
-                </div>
-                <button id="nextDayBtn" class="refined-btn-secondary" title="Następny dzień" aria-label="Następny dzień" style="flex-shrink: 0;">
-                    <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-                <button id="todayBtn" class="refined-btn-secondary">Dzisiaj</button>
-            </div>
-            </div> <!-- End right side controls -->
+    <!-- Date navigation -->
+    <div class="date-nav">
+        <button id="prevDayBtn" class="nav-btn" type="button">← Poprzedni</button>
+        <div class="date-nav-center">
+            <input type="date" id="dateInput" aria-label="Wybierz datę">
+        </div>
+        <button id="todayBtn" class="nav-btn" type="button">Dziś</button>
+        <button id="nextDayBtn" class="nav-btn" type="button">Następny →</button>
+        <!-- Employee pager appears only when the roster spans more than one page. -->
+        <div class="emp-pager" id="empPager" hidden>
+            <button id="prevEmployeesBtn" class="nav-btn" type="button" title="Poprzedni pracownicy" aria-label="Poprzedni pracownicy">◀</button>
+            <span class="pager-label" id="employeesLabel">—</span>
+            <button id="nextEmployeesBtn" class="nav-btn" type="button" title="Następni pracownicy" aria-label="Następni pracownicy">▶</button>
         </div>
     </div>
 
     <!-- Timeline -->
-    <div class="timeline-container" aria-live="polite" aria-label="Harmonogram dnia">
+    <div class="cal-timeline" aria-live="polite" aria-label="Harmonogram dnia">
         <div id="loadingOverlay" class="loading-overlay" style="display: none;">
             <div class="spinner"></div>
         </div>
 
-        <div class="timeline-grid" id="timelineGrid">
-            <!-- Top-left corner (Hours header) -->
-            <div style="grid-column: 1; grid-row: 1; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: var(--color-surface); display: flex; align-items: center; justify-content: center; padding: 0.75rem;">
-                <span style="font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); text-transform: uppercase; letter-spacing: 0.05em;">Godz</span>
-            </div>
+        <!-- Employee headers (GODZ + one per employee, injected by JS) -->
+        <div class="cal-emp-headers" id="empHeaders">
+            <div class="cal-godz-head">Godz</div>
+        </div>
 
-            <!-- Hour Labels (16 hours: 7:00-22:00) -->
-            <div class="timeline-hours">
-                <div class="hour-label">7:00</div>
-                <div class="hour-label">8:00</div>
-                <div class="hour-label">9:00</div>
-                <div class="hour-label">10:00</div>
-                <div class="hour-label">11:00</div>
-                <div class="hour-label">12:00</div>
-                <div class="hour-label">13:00</div>
-                <div class="hour-label">14:00</div>
-                <div class="hour-label">15:00</div>
-                <div class="hour-label">16:00</div>
-                <div class="hour-label">17:00</div>
-                <div class="hour-label">18:00</div>
-                <div class="hour-label">19:00</div>
-                <div class="hour-label">20:00</div>
-                <div class="hour-label">21:00</div>
-                <div class="hour-label">22:00</div>
+        <!-- Scrollable body -->
+        <div class="cal-body">
+            <div class="cal-body-inner" id="calBodyInner">
+                <!-- Hours column -->
+                <div class="cal-hours">
+                    <div class="cal-hr">7:00</div>
+                    <div class="cal-hr">8:00</div>
+                    <div class="cal-hr">9:00</div>
+                    <div class="cal-hr">10:00</div>
+                    <div class="cal-hr">11:00</div>
+                    <div class="cal-hr">12:00</div>
+                    <div class="cal-hr">13:00</div>
+                    <div class="cal-hr">14:00</div>
+                    <div class="cal-hr">15:00</div>
+                    <div class="cal-hr">16:00</div>
+                    <div class="cal-hr">17:00</div>
+                    <div class="cal-hr">18:00</div>
+                    <div class="cal-hr">19:00</div>
+                    <div class="cal-hr">20:00</div>
+                    <div class="cal-hr">21:00</div>
+                </div>
+                <!-- Employee columns injected here by JS -->
             </div>
-
-            <!-- Employee headers and columns will be inserted here by JavaScript -->
         </div>
 
         <!-- Empty State -->
-        <div id="emptyState" class="empty-state">
+        <div id="emptyState" class="empty-state" style="display:none;">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
@@ -337,20 +223,13 @@
             <p>W tym dniu nie ma zaplanowanych wizyt.</p>
         </div>
 
-        <!-- Day Summary -->
-        <div class="day-summary">
-            <div class="summary-item">
-                <div class="summary-label">Wizyty</div>
-                <div class="summary-value" id="totalAppointments">0</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Godziny</div>
-                <div class="summary-value" id="totalHours">0h</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Przychód</div>
-                <div class="summary-value" id="totalRevenue">0 zł</div>
-            </div>
+        <!-- Day Summary Bar -->
+        <div class="day-summary-bar">
+            <span class="dsb-date" id="summaryDate">—</span>
+            <span class="dsb-count"><span id="totalAppointments">0</span> <span id="totalApptNoun">wizyt</span></span>
+            <span class="dsb-item" id="totalHours">0h</span>
+            <span class="dsb-item" id="coverageValue">Obłożenie 0%</span>
+            <span class="dsb-rev"><span id="totalRevenue">0,00</span> zł</span>
         </div>
     </div>
 </div>
@@ -358,11 +237,27 @@
 
 {% block extra_scripts %}
 <script>
+// ── Timeline window: 7:00–22:00, 60px/hour (matches the Appointments mock) ──
+const WORK_START_MIN = 7 * 60;   // 07:00 → y=0
+const WORK_END_MIN   = 22 * 60;  // 22:00 → y=900
+const LANE_HEIGHT    = 900;      // px
+
+// Deterministic per-employee colour (the mock hardcodes colours; real rows only
+// carry an id). Same employee → same avatar/lane colour every render.
+const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
+function empColor(id) {
+    if (id == null) return '#64748b';
+    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
+}
+
 // State
 let currentDate = formatLocalDate(new Date());
-let currentPage = 0;  // Current employee page (0-indexed)
-let pageLimit = 8;    // Max employees per page
-let scheduleData = null;  // Full response from API
+let currentPage = 0;      // employee page (0-indexed)
+let pageLimit = 8;        // max employees per page
+let scheduleData = null;
+
+const PL_MONTHS_GEN = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+const PL_DAYS = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
 
 function formatLocalDate(date) {
     const year = date.getFullYear();
@@ -371,7 +266,29 @@ function formatLocalDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-// DOM Elements
+// "Poniedziałek, 22 czerwca 2026" from a YYYY-MM-DD string (local time).
+function formatLongDate(dateStr) {
+    if (!dateStr) return '—';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return `${PL_DAYS[dt.getDay()]}, ${d} ${PL_MONTHS_GEN[m - 1]} ${y}`;
+}
+
+// "22.06.2026" short form for the summary bar.
+function formatShortDate(dateStr) {
+    if (!dateStr) return '—';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}.${m}.${y}`;
+}
+
+function plWizyt(n) {
+    if (n === 1) return 'wizyta';
+    const m = n % 10, h = n % 100;
+    if (m >= 2 && m <= 4 && !(h >= 12 && h <= 14)) return 'wizyty';
+    return 'wizyt';
+}
+
+// DOM
 const dateInput = document.getElementById('dateInput');
 const prevDayBtn = document.getElementById('prevDayBtn');
 const nextDayBtn = document.getElementById('nextDayBtn');
@@ -379,22 +296,20 @@ const todayBtn = document.getElementById('todayBtn');
 const prevEmployeesBtn = document.getElementById('prevEmployeesBtn');
 const nextEmployeesBtn = document.getElementById('nextEmployeesBtn');
 const employeesLabel = document.getElementById('employeesLabel');
-const newAppointmentBtn = document.getElementById('newAppointmentBtn');
+const empPager = document.getElementById('empPager');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const emptyState = document.getElementById('emptyState');
-const timelineGrid = document.getElementById('timelineGrid');
+const empHeaders = document.getElementById('empHeaders');
+const calBodyInner = document.getElementById('calBodyInner');
+const daySubtitle = document.getElementById('daySubtitle');
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Check URL parameters for date
     const urlParams = new URLSearchParams(window.location.search);
     const urlDate = urlParams.get('date');
-
-    if (urlDate) {
-        currentDate = urlDate;
-    }
+    if (urlDate) currentDate = urlDate;
 
     dateInput.value = currentDate;
+    daySubtitle.textContent = formatLongDate(currentDate);
     setupEventListeners();
     loadSchedule();
 });
@@ -410,57 +325,56 @@ function setupEventListeners() {
 
 function handleDateChange() {
     currentDate = dateInput.value;
-    currentPage = 0;  // Reset to first page when date changes
+    currentPage = 0;
+    daySubtitle.textContent = formatLongDate(currentDate);
+    refreshTodayBtn();
     loadSchedule();
 }
 
 function navigateDay(offset) {
-    const date = new Date(currentDate);
+    const [y, m, d] = currentDate.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
     date.setDate(date.getDate() + offset);
     currentDate = formatLocalDate(date);
     dateInput.value = currentDate;
-    currentPage = 0;  // Reset to first page
+    daySubtitle.textContent = formatLongDate(currentDate);
+    currentPage = 0;
+    refreshTodayBtn();
     loadSchedule();
 }
 
 function goToToday() {
     currentDate = formatLocalDate(new Date());
     dateInput.value = currentDate;
-    currentPage = 0;  // Reset to first page
+    daySubtitle.textContent = formatLongDate(currentDate);
+    currentPage = 0;
+    refreshTodayBtn();
     loadSchedule();
+}
+
+function refreshTodayBtn() {
+    todayBtn.classList.toggle('is-today', currentDate === formatLocalDate(new Date()));
 }
 
 function navigateEmployees(direction) {
     if (!scheduleData) return;
-
     const newPage = currentPage + direction;
     if (newPage < 0 || newPage >= scheduleData.total_pages) return;
-
     currentPage = newPage;
     loadSchedule();
 }
 
 async function loadSchedule() {
     if (!currentDate) return;
-
     showLoading(true);
-
+    refreshTodayBtn();
     try {
         const offset = currentPage * pageLimit;
-        const params = new URLSearchParams({
-            date: currentDate,
-            offset: offset,
-            limit: pageLimit
-        });
-
+        const params = new URLSearchParams({ date: currentDate, offset: offset, limit: pageLimit });
         const response = await fetch(`/api/appointments/multi-employee-schedule?${params}`);
         if (!response.ok) throw new Error('Failed to load schedule');
-
         scheduleData = await response.json();
-
-        if (!scheduleData.success) {
-            throw new Error(scheduleData.error || 'Unknown error');
-        }
+        if (!scheduleData.success) throw new Error(scheduleData.error || 'Unknown error');
 
         renderTimeline();
         updateEmployeePagination();
@@ -473,287 +387,223 @@ async function loadSchedule() {
     }
 }
 
+function clearInjected() {
+    empHeaders.querySelectorAll('.cal-emp-head').forEach(el => el.remove());
+    calBodyInner.querySelectorAll('.cal-col').forEach(el => el.remove());
+}
+
 function renderTimeline() {
-    if (!scheduleData || scheduleData.employees.length === 0) {
-        emptyState.style.display = 'block';
-        // Remove all employee headers and columns
-        timelineGrid.querySelectorAll('.employee-header').forEach(el => el.remove());
-        timelineGrid.querySelectorAll('.timeline-column').forEach(el => el.remove());
-        timelineGrid.style.gridTemplateColumns = '80px 1fr';
-        timelineGrid.style.gridTemplateRows = '75px 1050px';
+    clearInjected();
+    if (!scheduleData || !scheduleData.employees || scheduleData.employees.length === 0) {
+        emptyState.style.display = 'flex';
         return;
     }
-
     emptyState.style.display = 'none';
 
-    const numEmployees = scheduleData.employees.length;
+    const nowMin = nowMinutesIfToday();
 
-    // Set grid template columns: 80px (hours) + N employee columns
-    timelineGrid.style.gridTemplateColumns = `80px repeat(${numEmployees}, 1fr)`;
-    timelineGrid.style.gridTemplateRows = '60px 1050px';
-
-    // Render employee headers
-    renderEmployeeHeaders();
-
-    // Render employee columns
-    renderEmployeeColumns();
-}
-
-function renderEmployeeHeaders() {
-    // Remove old headers (find and remove all .employee-header elements)
-    timelineGrid.querySelectorAll('.employee-header').forEach(el => el.remove());
-
-    scheduleData.employees.forEach((employee, index) => {
-        const header = document.createElement('div');
-        header.className = 'employee-header';
-        header.style.gridColumn = index + 2;  // +2 because column 1 is hours
-        header.style.gridRow = '1';
-
-        const nameEl = document.createElement('div');
-        nameEl.className = 'employee-name';
-        nameEl.textContent = employee.full_name;
-        nameEl.title = employee.full_name;
-
-        header.appendChild(nameEl);
-
-        // Calculate visit stats for this employee
-        const employeeAppointments = scheduleData.schedules[employee.id] || [];
-        const stats = {
-            scheduled: employeeAppointments.filter(a => a.status === 'scheduled').length,
-            confirmed: employeeAppointments.filter(a => a.status === 'confirmed').length,
-            completed: employeeAppointments.filter(a => a.status === 'completed').length,
-            cancelledOrNoShow: employeeAppointments.filter(a =>
-                a.status === 'cancelled' || a.status === 'no_show'
-            ).length
-        };
-
-        // Add stats row
-        const statsEl = document.createElement('div');
-        statsEl.className = 'employee-stats';
-
-        if (stats.scheduled > 0) {
-            statsEl.innerHTML += `
-                <span class="employee-stat" title="Zaplanowane">
-                    <span class="employee-stat-dot" style="background: var(--color-status-scheduled);"></span>
-                    ${stats.scheduled}
-                </span>
-            `;
-        }
-        if (stats.confirmed > 0) {
-            statsEl.innerHTML += `
-                <span class="employee-stat" title="Potwierdzone">
-                    <span class="employee-stat-dot" style="background: var(--color-status-confirmed);"></span>
-                    ${stats.confirmed}
-                </span>
-            `;
-        }
-        if (stats.completed > 0) {
-            statsEl.innerHTML += `
-                <span class="employee-stat" title="Zakończone">
-                    <span class="employee-stat-dot" style="background: var(--color-status-completed);"></span>
-                    ${stats.completed}
-                </span>
-            `;
-        }
-        if (stats.cancelledOrNoShow > 0) {
-            statsEl.innerHTML += `
-                <span class="employee-stat" title="Anulowane/Nieobecność">
-                    <span class="employee-stat-dot" style="background: var(--color-status-cancelled);"></span>
-                    ${stats.cancelledOrNoShow}
-                </span>
-            `;
-        }
-
-        if (employeeAppointments.length > 0) {
-            header.appendChild(statsEl);
-        }
-
-        // Add directly to grid
-        timelineGrid.appendChild(header);
+    scheduleData.employees.forEach(employee => {
+        renderEmployeeHeader(employee);
+        renderEmployeeColumn(employee, nowMin);
     });
 }
 
-function renderEmployeeColumns() {
-    // Remove old columns (find and remove all .timeline-column elements)
-    timelineGrid.querySelectorAll('.timeline-column').forEach(el => el.remove());
+function renderEmployeeHeader(employee) {
+    const appts = (scheduleData.schedules[employee.id] || [])
+        .filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+    const totalMin = appts.reduce((s, a) => s + (timeToMinutes(a.end_time) - timeToMinutes(a.start_time)), 0);
+    const statsTxt = appts.length > 0
+        ? `${appts.length} ${plWizyt(appts.length)} · ${(totalMin / 60).toFixed(1)}h`
+        : 'Brak wizyt';
 
-    scheduleData.employees.forEach((employee, index) => {
-        const column = document.createElement('div');
-        column.className = 'timeline-column';
-        column.style.gridColumn = index + 2;  // +2 because column 1 is hours
-        column.style.gridRow = '2';
-
-        // Create time slots background
-        const slotsContainer = document.createElement('div');
-        slotsContainer.className = 'timeline-slots';
-
-        for (let i = 0; i < 32; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'timeline-slot';
-            slot.dataset.employeeId = employee.id;
-            slot.dataset.slotIndex = i;
-            slot.addEventListener('click', handleSlotClick);
-            slotsContainer.appendChild(slot);
-        }
-
-        // Create appointments layer
-        const appointmentsLayer = document.createElement('div');
-        appointmentsLayer.className = 'appointments-layer';
-
-        // Get appointments for this employee (filter out cancelled/no_show for display)
-        const employeeAppointments = scheduleData.schedules[employee.id] || [];
-        const activeAppointments = employeeAppointments.filter(apt =>
-            apt.status !== 'cancelled' && apt.status !== 'no_show'
-        );
-
-        activeAppointments.forEach(appointment => {
-            const block = createAppointmentBlock(appointment);
-            appointmentsLayer.appendChild(block);
-        });
-
-        // Render approved absence blocks
-        const employeeAbsences = (scheduleData.absences || {})[employee.id] || [];
-        employeeAbsences.forEach(absence => {
-            const block = createAbsenceBlock(absence);
-            appointmentsLayer.appendChild(block);
-        });
-
-        column.appendChild(slotsContainer);
-        column.appendChild(appointmentsLayer);
-
-        // Add directly to grid
-        timelineGrid.appendChild(column);
-    });
+    const head = document.createElement('div');
+    head.className = 'cal-emp-head';
+    head.innerHTML = `
+        <div class="cal-emp-head-inner">
+            <div class="cal-emp-avatar" style="background:${empColor(employee.id)};">${escapeHtml(getInitials(employee.full_name))}</div>
+            <div style="min-width:0;">
+                <div class="cal-emp-name" title="${escapeHtml(employee.full_name)}">${escapeHtml(employee.full_name)}</div>
+                <div class="cal-emp-stats">${statsTxt}</div>
+            </div>
+        </div>`;
+    empHeaders.appendChild(head);
 }
 
-function updateEmployeePagination() {
-    if (!scheduleData) return;
+function renderEmployeeColumn(employee, nowMin) {
+    const column = document.createElement('div');
+    column.className = 'cal-col';
+    column.dataset.employeeId = employee.id;
 
-    const { total_employees, page, total_pages, has_prev, has_next } = scheduleData;
+    // Click on empty lane space → create at that half-hour slot.
+    column.addEventListener('click', (e) => {
+        if (e.target.closest('.cal-block') || e.target.closest('.cal-absence')) return;
+        const rect = column.getBoundingClientRect();
+        const y = Math.max(0, Math.min(LANE_HEIGHT, e.clientY - rect.top));
+        const slot = Math.floor(y / 30);           // 30px == 30 min at 60px/hr
+        const mins = WORK_START_MIN + slot * 30;
+        const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+        const mm = String(mins % 60).padStart(2, '0');
+        const params = new URLSearchParams({ from: 'calendar', employee_id: employee.id, date: currentDate, start_time: `${hh}:${mm}` });
+        window.location.href = `/appointment/create?${params}`;
+    });
 
-    // Update pagination buttons
-    prevEmployeesBtn.disabled = !has_prev;
-    nextEmployeesBtn.disabled = !has_next;
+    // Appointment blocks (skip cancelled/no_show for the day board).
+    const appts = (scheduleData.schedules[employee.id] || [])
+        .filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+    appts.forEach(a => column.appendChild(createAppointmentBlock(a)));
 
-    // Update label
-    if (total_employees === 0) {
-        employeesLabel.textContent = 'Brak pracowników';
-    } else {
-        const startNum = (page * pageLimit) + 1;
-        const endNum = Math.min((page + 1) * pageLimit, total_employees);
-        employeesLabel.textContent = `${startNum}-${endNum} z ${total_employees} pracowników`;
+    // Approved absences.
+    const absences = (scheduleData.absences || {})[employee.id] || [];
+    absences.forEach(ab => column.appendChild(createAbsenceBlock(ab)));
+
+    // "Now" line if viewing today.
+    if (nowMin != null) {
+        const line = document.createElement('div');
+        line.className = 'cal-now-line';
+        line.style.top = (nowMin - WORK_START_MIN) + 'px';
+        line.innerHTML = '<div class="cal-now-dot"></div>';
+        column.appendChild(line);
     }
+
+    calBodyInner.appendChild(column);
+}
+
+// Returns current minutes-of-day if today and within the window, else null.
+function nowMinutesIfToday() {
+    if (currentDate !== formatLocalDate(new Date())) return null;
+    const now = new Date();
+    const min = now.getHours() * 60 + now.getMinutes();
+    if (min < WORK_START_MIN || min > WORK_END_MIN) return null;
+    return min;
 }
 
 function createAppointmentBlock(appointment) {
     const block = document.createElement('div');
-    block.className = `appointment-block ${appointment.status}`;
+    block.className = `cal-block ${appointment.status}`;
     block.dataset.appointmentId = appointment.id;
 
-    // Calculate position and height
-    const position = calculatePosition(appointment.start_time, appointment.end_time);
-    block.style.top = position.top + '%';
-    block.style.height = position.height + '%';
+    const startMin = timeToMinutes(appointment.start_time);
+    const endMin = timeToMinutes(appointment.end_time);
+    const durMin = endMin - startMin;
+    let top = startMin - WORK_START_MIN;
+    let height = Math.max(durMin, 22);
+    // Clamp into the lane so a stray out-of-window visit can't escape.
+    if (top < 0) { height += top; top = 0; }
+    if (top + height > LANE_HEIGHT) height = LANE_HEIGHT - top;
+    if (height < 16) height = 16;
+    block.style.top = top + 'px';
+    block.style.height = height + 'px';
+    block.style.padding = height >= 40 ? '5px 7px' : '3px 7px';
 
-    // Build content
-    const clientName = appointment.client_name || 'Bez klienta';
-    const serviceName = appointment.service_name || 'Brak usługi';
-    const timeRange = `${formatTime(appointment.start_time)}-${formatTime(appointment.end_time)}`;
-    const statusLabel = getStatusLabel(appointment.status);
-    const addons = appointment.addon_services;
-    const notes = appointment.notes;
+    const client = appointment.client_name || 'Bez klienta';
+    const service = appointment.service_name || 'Brak usługi';
+    const timeRange = `${formatTime(appointment.start_time)}–${formatTime(appointment.end_time)}`;
+    const tall = durMin >= 50;
 
-    let content = `
-        <div class="appointment-header">
-            <div class="appointment-client" title="${escapeHtml(clientName)}">${escapeHtml(clientName)}</div>
-            <span class="appointment-status-badge ${appointment.status}">${statusLabel}</span>
-        </div>
-        <div class="appointment-details" title="${timeRange} • ${escapeHtml(serviceName)}">
-            ${timeRange}<span class="appointment-separator">•</span>${escapeHtml(serviceName)}
-        </div>
-    `;
-
-    if (addons && addons !== 'null') {
-        content += `<div class="appointment-addons" title="Dodatki: ${escapeHtml(addons)}">+ ${escapeHtml(addons)}</div>`;
-    }
-
-    if (notes) {
-        content += `<div class="appointment-notes" title="${escapeHtml(notes)}">${escapeHtml(notes)}</div>`;
-    }
-
-    if (appointment.satisfaction_score != null) {
-        const score = appointment.satisfaction_score;
-        const ratingColor = score >= 4 ? cssVar('color-status-completed') : score >= 3 ? cssVar('color-status-in-progress') : cssVar('color-status-cancelled');
-        content += `<div style="margin-top:0.125rem;"><span style="font-size:0.5625rem;font-weight:700;color:${ratingColor};" title="Ocena klienta: ${score}/5">★ ${score}</span></div>`;
-    }
-
-    block.innerHTML = content;
+    let html = `<div class="cal-block-client" title="${escapeHtml(client)}">${escapeHtml(client)}</div>`;
+    html += `<div class="cal-block-time">${timeRange}</div>`;
+    if (tall) html += `<div class="cal-block-svc" title="${escapeHtml(service)}">${escapeHtml(service)}</div>`;
+    html += `<span class="cal-badge ${appointment.status}">${getStatusLabel(appointment.status)}</span>`;
+    block.innerHTML = html;
 
     block.addEventListener('click', () => {
-        const params = new URLSearchParams({
-            from: 'calendar',
-            date: currentDate
-        });
+        const params = new URLSearchParams({ from: 'calendar', date: currentDate });
         window.location.href = `/appointment/${appointment.id}?${params.toString()}`;
     });
-
     return block;
 }
 
 function createAbsenceBlock(absence) {
     const block = document.createElement('div');
-    block.className = 'absence-block';
+    block.className = 'cal-absence';
     block.title = absence.category_name;
 
-    // Full-day absences span the entire visible work window (7:00–23:00)
     const startStr = absence.time_from ? absence.time_from + ':00' : '07:00:00';
-    const endStr   = absence.time_to   ? absence.time_to   + ':00' : '23:00:00';
+    const endStr   = absence.time_to   ? absence.time_to   + ':00' : '22:00:00';
+    let top = timeToMinutes(startStr) - WORK_START_MIN;
+    let height = Math.max(timeToMinutes(endStr) - timeToMinutes(startStr), 14);
+    if (top < 0) { height += top; top = 0; }
+    if (top + height > LANE_HEIGHT) height = LANE_HEIGHT - top;
+    block.style.top = top + 'px';
+    block.style.height = height + 'px';
 
-    const position = calculatePosition(startStr, endStr);
-    block.style.top    = position.top    + '%';
-    block.style.height = Math.max(position.height, 1.5) + '%';
-
-    const labelEl = document.createElement('div');
-    labelEl.className = 'absence-label';
-    labelEl.textContent = absence.category_name;
-    block.appendChild(labelEl);
-
+    const label = document.createElement('div');
+    label.className = 'cal-absence-label';
+    label.textContent = absence.category_name;
+    block.appendChild(label);
     if (absence.time_from) {
-        const timeEl = document.createElement('div');
-        timeEl.className = 'absence-time';
-        timeEl.textContent = `${absence.time_from} – ${absence.time_to}`;
-        block.appendChild(timeEl);
+        const t = document.createElement('div');
+        t.className = 'cal-absence-time';
+        t.textContent = `${absence.time_from} – ${absence.time_to}`;
+        block.appendChild(t);
     }
-
     return block;
 }
 
 function getStatusLabel(status) {
-    const labels = {
-        'scheduled': 'Zaplanowana',
-        'confirmed': 'Potwierdzona',
-        'in_progress': 'W trakcie',
-        'completed': 'Zakończona',
-        'cancelled': 'Anulowana'
-    };
+    const labels = { scheduled:'Zaplanowana', confirmed:'Potwierdzona', in_progress:'W trakcie', completed:'Zakończona', cancelled:'Anulowana', no_show:'Nieobecność' };
     return labels[status] || status;
 }
 
-function calculatePosition(startTime, endTime) {
-    // Work hours: 7:00 - 23:00 (16 hours = 960 minutes)
-    const workStart = 7 * 60;  // 7:00 in minutes
-    const workEnd = 23 * 60;   // 23:00 in minutes
-    const totalMinutes = workEnd - workStart;
+function updateEmployeePagination() {
+    if (!scheduleData) return;
+    const { total_employees, page, total_pages, has_prev, has_next } = scheduleData;
 
-    // Convert time strings to minutes
-    const start = timeToMinutes(startTime);
-    const end = timeToMinutes(endTime);
+    // Pager is only relevant when the roster spans multiple pages.
+    if (!total_pages || total_pages <= 1) {
+        empPager.hidden = true;
+        return;
+    }
+    empPager.hidden = false;
+    prevEmployeesBtn.disabled = !has_prev;
+    nextEmployeesBtn.disabled = !has_next;
+    const startNum = (page * pageLimit) + 1;
+    const endNum = Math.min((page + 1) * pageLimit, total_employees);
+    employeesLabel.textContent = `${startNum}–${endNum} z ${total_employees}`;
+}
 
-    // Calculate position as percentage
-    const top = ((start - workStart) / totalMinutes) * 100;
-    const height = ((end - start) / totalMinutes) * 100;
+function updateSummary() {
+    const dateEl = document.getElementById('summaryDate');
+    dateEl.textContent = formatShortDate(currentDate);
 
-    return { top, height };
+    if (!scheduleData || !scheduleData.schedules) {
+        setSummary(0, 0, 0);
+        updateCoverage(0);
+        return;
+    }
+    let count = 0, minutes = 0, revenue = 0;
+    Object.values(scheduleData.schedules).forEach(list => {
+        list.filter(a => a.status !== 'cancelled' && a.status !== 'no_show').forEach(a => {
+            count += 1;
+            minutes += (timeToMinutes(a.end_time) - timeToMinutes(a.start_time));
+            revenue += (a.total_price || 0);
+        });
+    });
+    setSummary(count, minutes, revenue);
+    calculateCoverage(minutes);
+}
+
+function setSummary(count, minutes, revenue) {
+    document.getElementById('totalAppointments').textContent = count;
+    document.getElementById('totalApptNoun').textContent = plWizyt(count);
+    document.getElementById('totalHours').textContent = (minutes / 60).toFixed(1) + 'h';
+    document.getElementById('totalRevenue').textContent =
+        revenue.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calculateCoverage(totalAppointmentMinutes) {
+    if (!scheduleData || !scheduleData.employees || scheduleData.employees.length === 0) {
+        updateCoverage(0);
+        return;
+    }
+    const workingMinutesPerEmployee = (WORK_END_MIN - WORK_START_MIN);
+    const totalAvailable = workingMinutesPerEmployee * scheduleData.employees.length;
+    updateCoverage(Math.min((totalAppointmentMinutes / totalAvailable) * 100, 100));
+}
+
+function updateCoverage(percent) {
+    const el = document.getElementById('coverageValue');
+    if (el) el.textContent = `Obłożenie ${Math.round(percent)}%`;
 }
 
 function timeToMinutes(timeStr) {
@@ -762,133 +612,34 @@ function timeToMinutes(timeStr) {
 }
 
 function formatTime(timeStr) {
-    // Input: "09:00:00" or "09:00"
-    // Output: "9:00"
     const [hours, minutes] = timeStr.split(':');
     return `${parseInt(hours)}:${minutes}`;
 }
 
-function updateSummary() {
-    if (!scheduleData || !scheduleData.schedules) {
-        document.getElementById('totalAppointments').textContent = '0';
-        document.getElementById('totalHours').textContent = '0h';
-        document.getElementById('totalRevenue').textContent = '0 zł';
-        updateCoverage(0);
-        return;
-    }
-
-    let totalAppointments = 0;
-    let totalMinutes = 0;
-    let totalRevenue = 0;
-
-    // Sum across all employees
-    Object.values(scheduleData.schedules).forEach(employeeAppointments => {
-        totalAppointments += employeeAppointments.length;
-
-        employeeAppointments.forEach(apt => {
-            const start = timeToMinutes(apt.start_time);
-            const end = timeToMinutes(apt.end_time);
-            totalMinutes += (end - start);
-            totalRevenue += (apt.total_price || 0);
-        });
-    });
-
-    const totalHours = (totalMinutes / 60).toFixed(1);
-
-    document.getElementById('totalAppointments').textContent = totalAppointments;
-    document.getElementById('totalHours').textContent = totalHours + 'h';
-    document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
-
-    // Calculate coverage
-    calculateCoverage(totalMinutes);
-}
-
-function calculateCoverage(totalAppointmentMinutes) {
-    if (!scheduleData || !scheduleData.employees || scheduleData.employees.length === 0) {
-        updateCoverage(0);
-        return;
-    }
-
-    // Working hours: 7:00 - 23:00 = 16 hours = 960 minutes per employee
-    const workingMinutesPerEmployee = 16 * 60; // 960 minutes
-    const numberOfEmployees = scheduleData.employees.length;
-    const totalAvailableMinutes = workingMinutesPerEmployee * numberOfEmployees;
-
-    const coveragePercent = (totalAppointmentMinutes / totalAvailableMinutes) * 100;
-    updateCoverage(Math.min(coveragePercent, 100)); // Cap at 100%
-}
-
-function updateCoverage(percent) {
-    const coverageValue = document.getElementById('coverageValue');
-    const coverageFill = document.getElementById('coverageFill');
-
-    if (coverageValue && coverageFill) {
-        coverageValue.textContent = Math.round(percent) + '%';
-        coverageFill.style.width = percent + '%';
-
-        // Change color based on coverage (read from CSS custom properties at runtime)
-        const root = document.documentElement;
-        const style = getComputedStyle(root);
-        const colorGreen = style.getPropertyValue('--color-status-completed').trim();
-        const colorOrange = style.getPropertyValue('--color-status-in-progress').trim();
-        const colorRed = style.getPropertyValue('--color-status-cancelled').trim();
-
-        if (percent >= 80) {
-            coverageFill.style.background = colorGreen;
-        } else if (percent >= 50) {
-            coverageFill.style.background = colorOrange;
-        } else {
-            coverageFill.style.background = colorRed;
-        }
-    }
-}
-
-function handleSlotClick(event) {
-    const employeeId = event.currentTarget.dataset.employeeId;
-    if (!employeeId) return;
-
-    const slotIndex = parseInt(event.currentTarget.dataset.slotIndex);
-    const startMinutes = 7 * 60 + (slotIndex * 30); // 7:00 + slot offset
-    const hours = Math.floor(startMinutes / 60);
-    const minutes = startMinutes % 60;
-    const startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-
-    const params = new URLSearchParams({
-        from: 'calendar',
-        employee_id: employeeId,
-        date: currentDate,
-        start_time: startTime
-    });
-
-    window.location.href = `/appointment/create?${params}`;
-}
-
-function showLoading(show) {
-    loadingOverlay.style.display = show ? 'flex' : 'none';
-}
+function showLoading(show) { loadingOverlay.style.display = show ? 'flex' : 'none'; }
 
 function showError(message) {
-    emptyState.style.display = 'block';
+    clearInjected();
+    emptyState.style.display = 'flex';
     emptyState.innerHTML = `
         <svg style="width:48px;height:48px;color:var(--color-error);margin-bottom:0.75rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
         <h3 style="color: var(--color-error); margin-bottom: 0.25rem;">Błąd ładowania</h3>
         <p>${message}</p>
-        <button onclick="loadSchedule()" class="refined-btn-secondary" style="margin-top: 1rem;">Spróbuj ponownie</button>
-    `;
+        <button onclick="loadSchedule()" class="nav-btn" style="margin-top: 1rem;">Spróbuj ponownie</button>`;
 }
 
 function getInitials(fullName) {
     if (!fullName) return '';
     const names = fullName.trim().split(' ');
     if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
-    return names.map(n => n.charAt(0).toUpperCase()).join('');
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
 }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text == null ? '' : text;
     return div.innerHTML;
 }
 </script>

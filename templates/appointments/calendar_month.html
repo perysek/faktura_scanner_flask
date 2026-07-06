@@ -4,120 +4,63 @@
 
 {% block extra_css %}
 <style>
-.refined-page { padding: 1rem; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-    .page-title { margin-bottom: 0.25rem; }
-    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
+    .refined-page { padding: 1rem 1.25rem 1.25rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem; flex-wrap: wrap; gap: 0.75rem; }
+    .page-title { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ink); margin: 0 0 0.125rem; }
+    .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; margin: 0; }
 
-    .refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 0.75rem; }
-
-    .controls-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .controls-bar label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem; display: block; }
-    .controls-bar select { padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); min-width: 150px; }
-    .controls-bar select:focus { outline: none; border-color: var(--color-ink-muted); }
-
-    /* Compact toolbar density — base styles come from global .refined-btn-* (P07) */
     .refined-btn-primary { padding: 0.4rem 0.75rem; font-size: 0.75rem; gap: 0.25rem; }
-    .refined-btn-secondary { padding: 0.375rem 0.5rem; font-size: 0.75rem; gap: 0.25rem; }
-    .refined-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .refined-btn-secondary:disabled:hover { border-color: var(--color-border); background: white; }
 
     .view-toggle { display: flex; gap: 0.375rem; }
-    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
+    .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
-    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); }
-    /* Calendar/list switcher is desktop-only; phones are redirected to the list. */
+    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
     @media (max-width: 640px) { .view-toggle { display: none !important; } }
 
-    /* Coverage Stat Card */
-    .coverage-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 0.75rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 140px; }
-    .coverage-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); text-align: center; }
-    .coverage-value { font-size: 1.5rem; font-weight: 600; color: var(--color-ink); line-height: 1; }
-    .coverage-bar { width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden; margin-top: 0.25rem; }
-    .coverage-fill { height: 100%; background: var(--color-success); transition: width 0.3s ease; }
+    /* Month nav row */
+    .month-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
+    .nav-btn:hover { border-color: var(--color-ink-muted); }
+    .month-title { flex: 1; text-align: center; font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); }
 
-    /* Month Navigation */
-    .month-nav { display: flex; align-items: center; gap: 0.5rem; }
-    .month-label { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); min-width: 150px; text-align: center; }
+    /* Month card */
+    .month-card { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+    .month-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+    .wd { padding: 0.5rem 0.625rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); text-align: center; }
+    .wd.weekend { color: #9b2c2c; }
 
-    /* Month Grid */
-    .month-container { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
-    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: 32px repeat(6, 100px); gap: 1px; background: var(--color-border); }
+    .month-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--color-border); }
+    .m-cell { background: white; padding: 0.375rem 0.5rem; min-height: 92px; cursor: pointer; overflow: hidden; }
+    .m-cell.other-month { background: #f8fafc; cursor: default; }
+    .m-cell.weekend { background: #faf9f8; }
+    .m-cell.today { background: rgba(59,130,246,0.04); }
+    .m-daynum { font-size: 0.75rem; font-weight: 400; color: var(--color-ink); }
+    .m-cell.other-month .m-daynum { color: var(--color-ink-subtle); }
+    .m-daynum.today { width: 22px; height: 22px; border-radius: 50%; background: #3b82f6; color: white; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .m-items { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+    .m-item { font-size: 0.625rem; color: var(--color-ink); border-radius: 1px; padding: 1px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; font-variant-numeric: tabular-nums; }
+    .m-more { display: block; font-size: 0.625rem; color: var(--color-ink-subtle); background: none; border: none; cursor: pointer; padding: 2px 0 0; text-align: left; width: 100%; line-height: 1.4; }
+    .m-more:hover { color: var(--color-ink); }
 
-    /* Day Headers */
-    .weekday-header { padding: 0.375rem; text-align: center; background: var(--color-surface); font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink-muted); }
+    .month-summary-bar { display: flex; align-items: center; gap: 1.25rem; padding: 0.375rem 0.875rem; border-top: 1px solid var(--color-border); background: var(--color-surface); flex-wrap: wrap; }
+    .msb-count { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); }
+    .msb-item { font-size: 0.75rem; color: var(--color-ink-muted); }
+    .msb-rev { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); margin-left: auto; }
 
-    /* Day Cells */
-    .day-cell { background: white; padding: 0.3rem; cursor: pointer; transition: background 0.2s ease; position: relative; overflow: hidden; }
-    .day-cell:hover { background: var(--color-surface); }
-    .day-cell.other-month { background: var(--color-surface-warm); }
-    .day-cell.other-month .day-number { color: var(--color-ink-subtle); }
-    .day-cell.today { background: var(--color-status-in-progress-bg); }
-    .day-cell.today .day-number { color: var(--color-status-in-progress); font-weight: 700; }
-
-    .day-number { font-size: 0.75rem; font-weight: 600; color: var(--color-ink); margin-bottom: 0.125rem; line-height: 1; }
-
-    /* Appointment List in Day Cell */
-    .apt-list { display: flex; flex-direction: column; gap: 0.0625rem; }
-    .apt-item { display: flex; align-items: center; gap: 0.125rem; font-size: 0.5625rem; color: var(--color-ink-muted); padding: 0.0625rem 0.125rem; border-radius: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-    .apt-item.scheduled { background: rgba(59,130,246,0.08); }
-    .apt-item.confirmed { background: rgba(16,185,129,0.08); }
-    .apt-item.in_progress { background: rgba(245,158,11,0.08); }
-    .apt-item.completed { background: rgba(45,106,79,0.08); }
-    .apt-item.cancelled { background: rgba(220,38,38,0.08); opacity: 0.7; }
-
-    .status-dot { width: 3px; height: 3px; border-radius: 50%; flex-shrink: 0; }
-    .status-dot.scheduled { background: var(--color-status-scheduled); }
-    .status-dot.confirmed { background: var(--color-status-confirmed); }
-    .status-dot.in_progress { background: var(--color-status-in-progress); }
-    .status-dot.completed { background: var(--color-status-completed); }
-    .status-dot.cancelled { background: var(--color-status-cancelled); }
-
-    .apt-overflow { font-size: 0.5625rem; color: var(--color-ink-subtle); padding: 0.0625rem 0.125rem; font-style: italic; }
-
-    /* Month Summary */
-    .month-summary { display: flex; justify-content: center; gap: 2rem; padding: 0.375rem 0.75rem; background: var(--color-surface); border-top: 1px solid var(--color-border); }
-    .summary-item { display: flex; align-items: center; gap: 0.5rem; }
-    .summary-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); white-space: nowrap; }
-    .summary-value { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); }
-
-    /* Loading State */
-    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
     .spinner { border: 3px solid var(--color-border); border-top: 3px solid var(--color-ink); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* Empty State */
     .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--color-ink-muted); }
     .empty-state svg { width: 48px; height: 48px; margin: 0 auto 0.75rem; opacity: 0.3; }
-    .empty-state h3 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
-    .empty-state p { font-size: 1rem; }
-
-    /* Responsive */
-    @media (max-width: 1400px) {
-        .month-grid { grid-template-rows: 28px repeat(6, 90px); }
-        .weekday-header { padding: 0.25rem; font-size: 0.625rem; }
-        .day-cell { padding: 0.25rem; }
-        .day-number { font-size: 0.6875rem; }
-        .apt-item { font-size: 0.5rem; }
-    }
-    @media (max-width: 1024px) {
-        .refined-page { padding: 0.5rem; }
-        .page-header { margin-bottom: 0.5rem; }
-        .refined-card { padding: 0.5rem; margin-bottom: 0.5rem; }
-        .month-grid { grid-template-rows: 24px repeat(6, 80px); }
-        .weekday-header { padding: 0.25rem; font-size: 0.5625rem; }
-        .day-cell { padding: 0.2rem; }
-        .day-number { font-size: 0.625rem; }
-        .apt-item { font-size: 0.5rem; }
-    }
+    .empty-state h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.25rem; }
+    .empty-state p { font-size: 0.8125rem; }
 </style>
 {% endblock %}
 
 {% block extra_head %}
 <script>
   // Phone (≤640px): the month grid isn't usable on a narrow screen, so land on
-  // the stacked-card list instead. Runs in <head> before the body paints;
-  // replace() keeps the calendar URL out of history.
+  // the stacked-card list instead.
   if (window.matchMedia('(max-width: 640px)').matches) {
     window.location.replace("{{ url_for('main.appointments_list') }}");
   }
@@ -129,8 +72,8 @@
     <!-- Page Header -->
     <div class="page-header">
         <div>
-            <h1 class="page-title">Kalendarz miesiąca</h1>
-            <p class="page-subtitle">Widok miesięczny harmonogramu pracowników</p>
+            <h1 class="page-title">Kalendarz</h1>
+            <p class="page-subtitle" id="monthSubtitle">Widok miesięczny — wszyscy pracownicy</p>
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
             <button type="button" id="past-visits-trigger" class="past-visits-trigger" hidden
@@ -148,99 +91,39 @@
                 <a href="{{ url_for('main.appointments_list') }}" id="nav-list">Lista</a>
             </div>
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
-                <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                <svg style="width: 13px; height: 13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                Nowa wizyta
+                Nowa
             </a>
         </div>
     </div>
 
-    <!-- Controls -->
-    <div class="refined-card">
-        <div class="controls-bar">
-           
-
-            <!-- Employee Controls (Left) -->
-            <div id="employeeControlsContainer">
-                <label id="employeeLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Wybór pracownika</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <!-- Employee Pagination -->
-                    <button id="prevEmployeeBtn" class="refined-btn-secondary" title="Poprzedni pracownik" aria-label="Poprzedni pracownik" disabled>
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-	                 <!-- Employee Dropdown -->
-                    <select id="employeeSelect" style="min-width: 180px; padding: 0.375rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink);">
-                        <option value="">Ładowanie...</option>
-                    </select>
-                    <button id="nextEmployeeBtn" class="refined-btn-secondary" title="Następny pracownik" aria-label="Następny pracownik" disabled>
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-
-                   
-                </div>
-            </div>
-	         <!-- Coverage Badges (Left) -->
-            <div style="display: flex; gap: 0.5rem; align-items: stretch; flex-shrink: 0;">
-                <div class="coverage-card">
-                    <div class="coverage-label">Obłożenie pracownik</div>
-                    <div class="coverage-value" id="coverageValue">0%</div>
-                    <div class="coverage-bar"><div class="coverage-fill" id="coverageFill" style="width: 0%;"></div></div>
-                </div>
-                <div class="coverage-card">
-                    <div class="coverage-label">Obłożenie wszyscy</div>
-                    <div class="coverage-value" id="coverageValueAll">0%</div>
-                    <div class="coverage-bar"><div class="coverage-fill" id="coverageFillAll" style="width: 0%;"></div></div>
-                </div>
-            </div>
-
-            <!-- Month Controls (Right) -->
-            <div style="display: flex; gap: 0.5rem; align-items: end; margin-left: auto;">
-                <button id="thisMonthBtn" class="refined-btn-secondary">Ten miesiąc</button>
-
-                <!-- Month Navigation -->
-                <div style="display: flex; gap: 0.5rem; align-items: end;">
-                    <button id="prevMonthBtn" class="refined-btn-secondary" title="Poprzedni miesiąc" aria-label="Poprzedni miesiąc">
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <div style="min-width: 180px;">
-                        <label for="monthLabel" style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.125rem;">Miesiąc</label>
-                        <div class="month-label" id="monthLabel" style="min-height: 32px; display: flex; align-items: center; justify-content: center;">Miesiąc</div>
-                    </div>
-                    <button id="nextMonthBtn" class="refined-btn-secondary" title="Następny miesiąc" aria-label="Następny miesiąc">
-                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
+    <!-- Month navigation -->
+    <div class="month-nav">
+        <button id="prevMonthBtn" class="nav-btn" type="button">← Poprzedni</button>
+        <button id="thisMonthBtn" class="nav-btn" type="button">Ten miesiąc</button>
+        <span class="month-title" id="monthTitle">—</span>
+        <button id="nextMonthBtn" class="nav-btn" type="button">Następny →</button>
     </div>
 
     <!-- Month Calendar -->
-    <div class="month-container">
+    <div class="month-card">
         <div id="loadingOverlay" class="loading-overlay" style="display: none;">
             <div class="spinner"></div>
         </div>
 
-        <div class="month-grid" id="monthGrid">
-            <!-- Weekday Headers -->
-            <div class="weekday-header">Pon</div>
-            <div class="weekday-header">Wt</div>
-            <div class="weekday-header">Śr</div>
-            <div class="weekday-header">Czw</div>
-            <div class="weekday-header">Pt</div>
-            <div class="weekday-header">Sob</div>
-            <div class="weekday-header">Ndz</div>
-
-            <!-- Day Cells will be populated by JavaScript -->
+        <div class="month-weekdays">
+            <div class="wd">Pon</div>
+            <div class="wd">Wt</div>
+            <div class="wd">Śr</div>
+            <div class="wd">Czw</div>
+            <div class="wd">Pt</div>
+            <div class="wd weekend">Sob</div>
+            <div class="wd weekend">Ndz</div>
         </div>
+
+        <div class="month-days" id="monthGrid"></div>
 
         <!-- Empty State -->
         <div id="emptyState" class="empty-state" style="display: none;">
@@ -248,23 +131,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <h3>Brak wizyt</h3>
-            <p>do wyświetlenia w bieżącym widoku.</p>
+            <p>do wyświetlenia w tym miesiącu.</p>
         </div>
 
         <!-- Month Summary -->
-        <div class="month-summary">
-            <div class="summary-item">
-                <div class="summary-label">Wizyty</div>
-                <div class="summary-value" id="totalAppointments">0</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Godziny</div>
-                <div class="summary-value" id="totalHours">0h</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Przychód</div>
-                <div class="summary-value" id="totalRevenue">0 zł</div>
-            </div>
+        <div class="month-summary-bar">
+            <span class="msb-count"><span id="totalAppointments">0</span> <span id="totalApptNoun">wizyt</span></span>
+            <span class="msb-item" id="totalHours">0h</span>
+            <span class="msb-rev"><span id="totalRevenue">0,00</span> zł</span>
         </div>
     </div>
 </div>
@@ -272,338 +146,55 @@
 
 {% block extra_scripts %}
 <script>
-// State
-let currentEmployeeId = null;
-let currentEmployeePage = 0;
+// The month is an all-employees overview (matches the mock): every appointment
+// is shown, coloured by employee. No per-employee filter here.
+const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
+function empColor(id) {
+    if (id == null) return '#64748b';
+    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
+}
+
+// Status → block background tint (mock day/month palette).
+const STATUS_BG = {
+    scheduled: '#eff6ff', confirmed: '#f0fdf4', in_progress: '#fffbeb',
+    completed: '#f0fdf4', cancelled: '#fff1f2', no_show: '#f9fafb'
+};
+
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-let allEmployees = [];  // All employees in system
-let employees = [];     // Filtered employees with appointments in current month
 let appointments = [];
-let allMonthAppointments = [];  // All employees' appointments for current month (coverage calc)
 
-// DOM Elements
-const employeeControlsContainer = document.getElementById('employeeControlsContainer');
-const employeeLabel = document.getElementById('employeeLabel');
-const employeeSelect = document.getElementById('employeeSelect');
-const prevEmployeeBtn = document.getElementById('prevEmployeeBtn');
-const nextEmployeeBtn = document.getElementById('nextEmployeeBtn');
-// const employeePagination = document.getElementById('employeePagination');
+const PL_MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+// DOM
 const prevMonthBtn = document.getElementById('prevMonthBtn');
 const nextMonthBtn = document.getElementById('nextMonthBtn');
 const thisMonthBtn = document.getElementById('thisMonthBtn');
-const monthLabel = document.getElementById('monthLabel');
+const monthTitle = document.getElementById('monthTitle');
+const monthSubtitle = document.getElementById('monthSubtitle');
 const newAppointmentBtn = document.getElementById('newAppointmentBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const emptyState = document.getElementById('emptyState');
 const monthGrid = document.getElementById('monthGrid');
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Check URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlEmployeeId = urlParams.get('employee_id');
-
-    if (urlEmployeeId) {
-        currentEmployeeId = urlEmployeeId;
-    }
-
     updateMonthLabel();
-    loadEmployees();
+    updateNewAppointmentLink();
     setupEventListeners();
+    loadMonth();
 });
 
 function setupEventListeners() {
-    employeeSelect.addEventListener('change', handleEmployeeChange);
-    prevEmployeeBtn.addEventListener('click', () => navigateEmployee(-1));
-    nextEmployeeBtn.addEventListener('click', () => navigateEmployee(1));
     prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
     nextMonthBtn.addEventListener('click', () => navigateMonth(1));
     thisMonthBtn.addEventListener('click', goToThisMonth);
 }
 
-async function loadEmployees() {
-    try {
-        const response = await fetch('/api/appointments/employees');
-        if (!response.ok) throw new Error('Failed to load employees');
-
-        allEmployees = await response.json();
-
-        // Load month data which will filter employees
-        await loadMonthAndFilterEmployees();
-    } catch (error) {
-        console.error('Error loading employees:', error);
-        Modals.alert({
-            title: 'Błąd ładowania',
-            message: 'Nie udało się załadować listy pracowników',
-            type: 'error'
-        });
-    }
-}
-
-async function loadMonthAndFilterEmployees() {
-    if (allEmployees.length === 0) return;
-
-    showLoading(true);
-
-    try {
-        // Load all appointments for the month (no employee filter)
-        const { start, end } = getMonthRange(currentYear, currentMonth);
-
-        const params = new URLSearchParams({
-            start_date: start,
-            end_date: end
-        });
-
-        const response = await fetch(`/api/appointments?${params}`);
-        if (!response.ok) throw new Error('Failed to load appointments');
-
-        const data = await response.json();
-        const allAppointments = (data.appointments || []).filter(apt =>
-            apt.status !== 'cancelled' && apt.status !== 'no_show'
-        );
-
-        // Save for "all employees" coverage calculation
-        allMonthAppointments = allAppointments;
-
-        // Also fetch approved absences so employees with only absences appear
-        let monthAbsences = [];
-        try {
-            const absParams = new URLSearchParams({ start_date: start, end_date: end });
-            const absResp = await fetch(`/api/appointments/absences?${absParams}`);
-            if (absResp.ok) {
-                const absData = await absResp.json();
-                monthAbsences = absData.absences || [];
-            }
-        } catch (_) {}
-        window._monthAbsences = monthAbsences;
-
-        // Union: employees with appointments OR approved absences
-        const employeeIdsWithAppointments = new Set(
-            allAppointments.map(apt => apt.employee_id)
-        );
-        monthAbsences.forEach(ab => employeeIdsWithAppointments.add(ab.employee_id));
-
-        // Filter employees to only those with appointments or absences
-        employees = allEmployees.filter(emp =>
-            employeeIdsWithAppointments.has(emp.id)
-        );
-
-        // Update dropdown
-        updateEmployeeDropdown();
-
-        // Select employee
-        if (currentEmployeeId && employees.some(e => e.id == currentEmployeeId)) {
-            // Current employee still has appointments in this month
-            const empIndex = employees.findIndex(e => e.id == currentEmployeeId);
-            if (empIndex !== -1) {
-                currentEmployeePage = empIndex;
-            }
-            employeeSelect.value = currentEmployeeId;
-
-            // Filter appointments for current employee
-            appointments = allAppointments.filter(apt => apt.employee_id == currentEmployeeId);
-        } else if (employees.length > 0) {
-            // Select first available employee
-            currentEmployeePage = 0;
-            currentEmployeeId = employees[0].id;
-            employeeSelect.value = employees[0].id;
-
-            // Filter appointments for selected employee
-            appointments = allAppointments.filter(apt => apt.employee_id == currentEmployeeId);
-        } else {
-            // No employees with appointments this month
-            currentEmployeeId = null;
-            appointments = [];
-        }
-
-        updateEmployeePagination();
-        updateViewLinks();
-        renderMonth();
-        updateSummary();
-    } catch (error) {
-        console.error('Error loading month:', error);
-        Modals.alert({
-            title: 'Błąd ładowania',
-            message: 'Nie udało się załadować harmonogramu',
-            type: 'error'
-        });
-    } finally {
-        showLoading(false);
-    }
-}
-
-function updateEmployeeDropdown() {
-    const employeeDropdown = employeeSelect.closest('.ss-wrap') || employeeSelect;
-    // Hide dropdown if only one employee
-    if (employees.length === 1) {
-        employeeDropdown.style.display = 'none';
-    } else {
-        employeeDropdown.style.display = 'block';
-        employeeSelect.innerHTML = '<option value="">Wybierz pracownika</option>';
-        employees.forEach(emp => {
-            const option = document.createElement('option');
-            option.value = emp.id;
-            option.textContent = emp.full_name;
-            option.title = emp.full_name + (emp.position ? ` (${emp.position})` : '');
-            employeeSelect.appendChild(option);
-        });
-        SearchableSelect.sync('employeeSelect');
-    }
-}
-
-function handleEmployeeChange() {
-    currentEmployeeId = employeeSelect.value;
-    if (currentEmployeeId) {
-        // Update pagination to match selected employee
-        const empIndex = employees.findIndex(e => e.id == currentEmployeeId);
-        if (empIndex !== -1) {
-            currentEmployeePage = empIndex;
-            updateEmployeePagination();
-        }
-        // Reload month data for selected employee
-        loadMonthForCurrentEmployee();
-        updateNewAppointmentLink();
-        updateViewLinks();
-    }
-}
-
-function navigateEmployee(offset) {
-    if (employees.length === 0) return;
-
-    const newPage = currentEmployeePage + offset;
-    if (newPage < 0 || newPage >= employees.length) return;
-
-    currentEmployeePage = newPage;
-    currentEmployeeId = employees[currentEmployeePage].id;
-
-    // Update dropdown to match pagination
-    employeeSelect.value = currentEmployeeId;
-
-    updateEmployeePagination();
-    loadMonthForCurrentEmployee();
-    updateNewAppointmentLink();
-    updateViewLinks();
-}
-
-function updateEmployeePagination() {
-    if (employees.length === 0) {
-        // Hide entire employee controls when no employees with appointments
-        employeeControlsContainer.style.display = 'none';
-        return;
-    }
-
-    // Show employee controls
-    employeeControlsContainer.style.display = 'block';
-
-    // Update label based on employee count
-    if (employees.length === 1) {
-        employeeLabel.textContent = 'Pracownik';
-        prevEmployeeBtn.disabled = true;
-        nextEmployeeBtn.disabled = true;
-    } else {
-        employeeLabel.textContent = 'Wybór pracownika';
-        // Update pagination buttons
-        prevEmployeeBtn.disabled = currentEmployeePage === 0;
-        nextEmployeeBtn.disabled = currentEmployeePage === employees.length - 1;
-    }
-
-    // Update label
-    const currentEmployee = employees[currentEmployeePage];
-    if (currentEmployee) {
-        employeeLabel.textContent = currentEmployee.full_name;
-        employeeLabel.title = currentEmployee.full_name + (currentEmployee.position ? ` (${currentEmployee.position})` : '');
-    }
-}
-
-function updateViewLinks() {
-    // Update navigation links to preserve selected employee
-    const baseUrls = {
-        'nav-day': '{{ url_for("main.appointments_calendar") }}',
-        'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
-        'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
-        'nav-list': '{{ url_for("main.appointments_list") }}'
-    };
-
-    Object.entries(baseUrls).forEach(([id, baseUrl]) => {
-        const link = document.getElementById(id);
-        if (link && currentEmployeeId) {
-            link.href = `${baseUrl}?employee_id=${currentEmployeeId}`;
-        }
-    });
-}
-
-function navigateMonth(offset) {
-    currentMonth += offset;
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    } else if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
-    updateMonthLabel();
-    loadMonthAndFilterEmployees();
-    updateNewAppointmentLink();
-}
-
-function goToThisMonth() {
-    const now = new Date();
-    currentMonth = now.getMonth();
-    currentYear = now.getFullYear();
-    updateMonthLabel();
-    loadMonthAndFilterEmployees();
-    updateNewAppointmentLink();
-}
-
-function updateMonthLabel() {
-    const date = new Date(currentYear, currentMonth, 1);
-    const monthName = date.toLocaleDateString('pl-PL', { month: 'long' });
-    monthLabel.textContent = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${currentYear}`;
-    updateThisMonthButton();
-}
-
-function updateThisMonthButton() {
-    // Check if current month is this month
-    const now = new Date();
-    const isThisMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear();
-
-    // Hide button if displaying current month
-    if (isThisMonth) {
-        thisMonthBtn.style.display = 'none';
-    } else {
-        thisMonthBtn.style.display = 'inline-flex';
-    }
-}
-
-function updateNewAppointmentLink() {
-    const params = new URLSearchParams();
-    params.set('from', 'month');
-    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    params.set('date', formatLocalDate(firstDay));
-    newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
-}
-
-function getMonthRange(year, month) {
-    // First day of month
-    const firstDay = new Date(year, month, 1);
-
-    // Start from Monday before first day
-    const startDay = new Date(firstDay);
-    const dayOfWeek = firstDay.getDay();
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    startDay.setDate(1 - daysToSubtract);
-
-    // End at Sunday after last day (6 weeks total = 42 days)
-    const endDay = new Date(startDay);
-    endDay.setDate(startDay.getDate() + 41);
-
-    return {
-        start: formatLocalDate(startDay),
-        end: formatLocalDate(endDay),
-        startDate: new Date(startDay)
-    };
+function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function getMonday(d) {
@@ -615,183 +206,154 @@ function getMonday(d) {
     return date;
 }
 
-function formatLocalDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+function plWizyt(n) {
+    if (n === 1) return 'wizyta';
+    const m = n % 10, h = n % 100;
+    if (m >= 2 && m <= 4 && !(h >= 12 && h <= 14)) return 'wizyty';
+    return 'wizyt';
 }
 
-async function loadMonthForCurrentEmployee() {
-    if (!currentEmployeeId) return;
+// The visible grid: leading Monday pad + month days, rounded up to whole weeks.
+function getGridBounds(year, month) {
+    const first = new Date(year, month, 1);
+    const leadingPad = (first.getDay() + 6) % 7;   // Monday = 0
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const totalCells = Math.ceil((leadingPad + daysInMonth) / 7) * 7;
+    const startDate = new Date(year, month, 1 - leadingPad);
+    const endDate = new Date(year, month, 1 - leadingPad + totalCells - 1);
+    return { startDate, totalCells, endDate };
+}
 
+function navigateMonth(offset) {
+    currentMonth += offset;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    updateMonthLabel();
+    updateNewAppointmentLink();
+    loadMonth();
+}
+
+function goToThisMonth() {
+    const now = new Date();
+    currentMonth = now.getMonth();
+    currentYear = now.getFullYear();
+    updateMonthLabel();
+    updateNewAppointmentLink();
+    loadMonth();
+}
+
+function updateMonthLabel() {
+    const label = `${PL_MONTHS[currentMonth]} ${currentYear}`;
+    monthTitle.textContent = label;
+    monthSubtitle.textContent = label;
+    const now = new Date();
+    const isThisMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear();
+    thisMonthBtn.style.display = isThisMonth ? 'none' : 'inline-flex';
+}
+
+function updateNewAppointmentLink() {
+    const params = new URLSearchParams({ from: 'month', date: formatLocalDate(new Date(currentYear, currentMonth, 1)) });
+    newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
+}
+
+async function loadMonth() {
     showLoading(true);
-
     try {
-        const { start, end } = getMonthRange(currentYear, currentMonth);
-
-        const params = new URLSearchParams({
-            employee_id: currentEmployeeId,
-            start_date: start,
-            end_date: end
-        });
-
+        const { startDate, endDate } = getGridBounds(currentYear, currentMonth);
+        const params = new URLSearchParams({ start_date: formatLocalDate(startDate), end_date: formatLocalDate(endDate) });
         const response = await fetch(`/api/appointments?${params}`);
         if (!response.ok) throw new Error('Failed to load appointments');
-
         const data = await response.json();
-        // Filter out cancelled and no_show appointments
-        appointments = (data.appointments || []).filter(apt =>
-            apt.status !== 'cancelled' && apt.status !== 'no_show'
-        );
-
+        appointments = (data.appointments || []).filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
         renderMonth();
         updateSummary();
     } catch (error) {
         console.error('Error loading month:', error);
-        Modals.alert({
-            title: 'Błąd ładowania',
-            message: 'Nie udało się załadować harmonogramu',
-            type: 'error'
-        });
+        Modals.alert({ title: 'Błąd ładowania', message: 'Nie udało się załadować harmonogramu', type: 'error' });
     } finally {
         showLoading(false);
     }
 }
 
-function renderMonth() {
-    // Remove existing day cells (keep the 7 weekday headers)
-    while (monthGrid.children.length > 7) {
-        monthGrid.removeChild(monthGrid.lastChild);
-    }
-
-    const monthAbsencesForEmployee = (window._monthAbsences || []).filter(
-        ab => !currentEmployeeId || ab.employee_id == currentEmployeeId
-    );
-    if (appointments.length === 0 && monthAbsencesForEmployee.length === 0) {
-        emptyState.style.display = 'block';
-    } else {
-        emptyState.style.display = 'none';
-    }
-
-    const { startDate } = getMonthRange(currentYear, currentMonth);
-    const appointmentsByDay = groupByDay(appointments);
-    const today = new Date().toDateString();
-
-    // Group absences by date (expand multi-day ranges, filter to current employee)
-    const absencesByDay = {};
-    (window._monthAbsences || []).forEach(ab => {
-        if (currentEmployeeId && ab.employee_id != currentEmployeeId) return;
-        const from = new Date(ab.date_from + 'T00:00:00');
-        const to   = new Date(ab.date_to   + 'T00:00:00');
-        const cur  = new Date(from);
-        while (cur <= to) {
-            const ds = formatLocalDate(cur);
-            if (!absencesByDay[ds]) absencesByDay[ds] = [];
-            absencesByDay[ds].push(ab);
-            cur.setDate(cur.getDate() + 1);
-        }
-    });
-
-    // Render 42 days (6 weeks)
-    for (let i = 0; i < 42; i++) {
-        const cellDate = new Date(startDate);
-        cellDate.setDate(cellDate.getDate() + i);
-        const dateStr = formatLocalDate(cellDate);
-
-        const cell = createDayCell(
-            cellDate,
-            appointmentsByDay[dateStr] || [],
-            today,
-            absencesByDay[dateStr] || []
-        );
-        monthGrid.appendChild(cell);
-    }
-}
-
-function groupByDay(appointments) {
+function groupByDay(list) {
     const grouped = {};
-    appointments.forEach(apt => {
-        if (!grouped[apt.appointment_date]) {
-            grouped[apt.appointment_date] = [];
-        }
-        grouped[apt.appointment_date].push(apt);
-    });
+    list.forEach(a => { (grouped[a.appointment_date] = grouped[a.appointment_date] || []).push(a); });
     return grouped;
 }
 
-function createDayCell(date, dayAppointments, today, dayAbsences) {
-    dayAbsences = dayAbsences || [];
-    const cell = document.createElement('div');
-    cell.className = 'day-cell';
+function renderMonth() {
+    monthGrid.innerHTML = '';
+    emptyState.style.display = appointments.length === 0 ? 'block' : 'none';
 
+    const { startDate, totalCells } = getGridBounds(currentYear, currentMonth);
+    const byDay = groupByDay(appointments);
+    const todayStr = formatLocalDate(new Date());
+
+    for (let i = 0; i < totalCells; i++) {
+        const cellDate = new Date(startDate);
+        cellDate.setDate(cellDate.getDate() + i);
+        monthGrid.appendChild(createDayCell(cellDate, byDay[formatLocalDate(cellDate)] || [], todayStr));
+    }
+}
+
+function shortClientName(fullName) {
+    if (!fullName) return 'Brak';
+    const parts = fullName.trim().split(' ');
+    return parts[0] + (parts[1] ? ' ' + parts[1].charAt(0) + '.' : '');
+}
+
+function createDayCell(date, dayAppointments, todayStr) {
+    const ds = formatLocalDate(date);
     const isCurrentMonth = date.getMonth() === currentMonth;
-    const isToday = date.toDateString() === today;
+    const isToday = ds === todayStr;
+    const isWeekend = [0, 6].includes(date.getDay());
 
-    if (!isCurrentMonth) cell.classList.add('other-month');
-    if (isToday) cell.classList.add('today');
+    const cell = document.createElement('div');
+    cell.className = 'm-cell'
+        + (!isCurrentMonth ? ' other-month' : '')
+        + (isCurrentMonth && isWeekend ? ' weekend' : '')
+        + (isToday ? ' today' : '');
 
-    // Day number
-    const dayNum = document.createElement('div');
-    dayNum.className = 'day-number';
-    dayNum.textContent = date.getDate();
-    cell.appendChild(dayNum);
+    const num = document.createElement('div');
+    num.className = 'm-daynum' + (isToday ? ' today' : '');
+    num.textContent = date.getDate();
+    cell.appendChild(num);
 
-    // Appointment list (max 4 visible)
-    const aptList = document.createElement('div');
-    aptList.className = 'apt-list';
-
-    const visibleApts = dayAppointments.slice(0, 4);
-    visibleApts.forEach(apt => {
+    // Chronological, cap at 3 chips; the rest collapse into "+N więcej…".
+    const sorted = [...dayAppointments].sort((a, b) => a.start_time.localeCompare(b.start_time));
+    const MAX_VISIBLE = 3;
+    const items = document.createElement('div');
+    items.className = 'm-items';
+    sorted.slice(0, MAX_VISIBLE).forEach(a => {
         const item = document.createElement('div');
-        item.className = `apt-item ${apt.status}`;
-        item.innerHTML = `
-            <span class="status-dot ${apt.status}"></span>
-            ${formatTime(apt.start_time)} ${escapeHtml(truncate(apt.client_name || 'Brak', 12))}
-        `;
-        aptList.appendChild(item);
+        item.className = 'm-item';
+        item.style.background = STATUS_BG[a.status] || '#eff6ff';
+        item.style.borderLeft = `2px solid ${empColor(a.employee_id)}`;
+        item.title = `${formatTime(a.start_time)} ${a.client_name || ''}`;
+        item.textContent = `${formatTime(a.start_time)} ${shortClientName(a.client_name)}`;
+        items.appendChild(item);
     });
+    cell.appendChild(items);
 
-    // Overflow indicator
-    if (dayAppointments.length > 4) {
-        const overflow = document.createElement('div');
-        overflow.className = 'apt-overflow';
-        overflow.textContent = `+${dayAppointments.length - 4} więcej`;
-        aptList.appendChild(overflow);
+    if (sorted.length > MAX_VISIBLE) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'm-more';
+        more.textContent = `+${sorted.length - MAX_VISIBLE} więcej…`;
+        more.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const monday = getMonday(date);
+            window.location.href = `/appointments/calendar/week?date=${formatLocalDate(monday)}`;
+        });
+        cell.appendChild(more);
     }
 
-    cell.appendChild(aptList);
-
-    // Absence markers
-    if (dayAbsences.length > 0) {
-        const abDiv = document.createElement('div');
-        abDiv.style.cssText = 'margin-top:0.2rem;display:flex;flex-direction:column;gap:0.15rem;';
-        dayAbsences.slice(0, 2).forEach(ab => {
-            const tag = document.createElement('div');
-            tag.style.cssText = 'font-size:0.5625rem;font-weight:500;color:var(--color-ink-muted);background:repeating-linear-gradient(45deg,rgba(138,138,138,0.08),rgba(138,138,138,0.08) 4px,rgba(138,138,138,0.16) 4px,rgba(138,138,138,0.16) 8px);border-left:2px solid var(--color-ink-subtle);padding:0.1rem 0.35rem;border-radius:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-            tag.title = ab.category_name;
-            tag.textContent = ab.category_name;
-            abDiv.appendChild(tag);
+    // Current-month cell click → that day's day view.
+    if (isCurrentMonth) {
+        cell.addEventListener('click', () => {
+            window.location.href = `/appointments/calendar?date=${ds}`;
         });
-        if (dayAbsences.length > 2) {
-            const more = document.createElement('div');
-            more.style.cssText = 'font-size:0.5rem;color:var(--color-ink-subtle);padding-left:0.35rem;';
-            more.textContent = `+${dayAbsences.length - 2} nieob.`;
-            abDiv.appendChild(more);
-        }
-        cell.appendChild(abDiv);
     }
-
-    // Click handler → navigate to week view
-    cell.addEventListener('click', () => {
-        const monday = getMonday(date);
-        const params = new URLSearchParams({
-            date: formatLocalDate(monday),
-            employee_id: currentEmployeeId
-        });
-        window.location.href = `/appointments/calendar/week?${params}`;
-    });
-
     return cell;
 }
 
@@ -800,67 +362,29 @@ function formatTime(timeStr) {
     return `${parseInt(hours)}:${minutes}`;
 }
 
-function truncate(text, maxLength) {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-}
-
-function updateSummary() {
-    const totalAppointments = appointments.length;
-
-    let totalMinutes = 0;
-    appointments.forEach(apt => {
-        const start = timeToMinutes(apt.start_time);
-        const end = timeToMinutes(apt.end_time);
-        totalMinutes += (end - start);
-    });
-    const totalHours = (totalMinutes / 60).toFixed(1);
-
-    const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.total_price || 0), 0);
-
-    document.getElementById('totalAppointments').textContent = totalAppointments;
-    document.getElementById('totalHours').textContent = totalHours + 'h';
-    document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' zł';
-
-    // Coverage for selected employee: daysInMonth × 16 h × 60 min
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const monthMinutes = daysInMonth * 16 * 60;
-    updateCoverage(totalMinutes, monthMinutes, 'coverageValue', 'coverageFill');
-
-    // Coverage for all active employees combined
-    let allTotalMinutes = 0;
-    allMonthAppointments.forEach(apt => {
-        allTotalMinutes += timeToMinutes(apt.end_time) - timeToMinutes(apt.start_time);
-    });
-    const monthMinutesAll = monthMinutes * (allEmployees.length || 1);
-    updateCoverage(allTotalMinutes, monthMinutesAll, 'coverageValueAll', 'coverageFillAll');
-}
-
-function updateCoverage(appointmentMinutes, availableMinutes, valueId, fillId) {
-    const percent = availableMinutes > 0
-        ? Math.min((appointmentMinutes / availableMinutes) * 100, 100)
-        : 0;
-    const valueEl = document.getElementById(valueId);
-    const fillEl = document.getElementById(fillId);
-    if (!valueEl || !fillEl) return;
-    valueEl.textContent = Math.round(percent) + '%';
-    fillEl.style.width = percent + '%';
-    fillEl.style.background = percent >= 80 ? 'var(--color-status-completed)' : percent >= 50 ? 'var(--color-status-in-progress)' : 'var(--color-status-cancelled)';
-}
-
 function timeToMinutes(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
 }
 
-function showLoading(show) {
-    loadingOverlay.style.display = show ? 'flex' : 'none';
+function updateSummary() {
+    const count = appointments.length;
+    let minutes = 0, revenue = 0;
+    appointments.forEach(a => {
+        minutes += (timeToMinutes(a.end_time) - timeToMinutes(a.start_time));
+        revenue += (a.total_price || 0);
+    });
+    document.getElementById('totalAppointments').textContent = count;
+    document.getElementById('totalApptNoun').textContent = plWizyt(count);
+    document.getElementById('totalHours').textContent = (minutes / 60).toFixed(1) + 'h';
+    document.getElementById('totalRevenue').textContent = revenue.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+function showLoading(show) { loadingOverlay.style.display = show ? 'flex' : 'none'; }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text == null ? '' : text;
     return div.innerHTML;
 }
 </script>
