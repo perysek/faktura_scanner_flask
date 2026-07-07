@@ -69,6 +69,13 @@
         Suchy przebieg (parsuj, nie zapisuj do bazy)
       </label>
     </div>
+    <div class="mt-2 flex items-center gap-2">
+      <input type="checkbox" id="keep-xlsx" name="keep_xlsx"
+             class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500">
+      <label for="keep-xlsx" class="text-sm" style="color: var(--text-secondary);">
+        Zapisz w Excel (zachowaj pobrany plik XLSX z caldis.pl)
+      </label>
+    </div>
     <div class="mt-4 flex items-center gap-3">
       <button id="import-btn" type="button"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
@@ -390,6 +397,7 @@ document.getElementById('import-btn').addEventListener('click', async function()
     const dateStart = document.getElementById('date-start').value;
     const dateEnd   = document.getElementById('date-end').value;
     const dryRun    = document.getElementById('dry-run').checked;
+    const keepXlsx  = document.getElementById('keep-xlsx').checked;
 
     if (!dateStart || !dateEnd) {
         setStatusMsg('Wybierz zakres dat.', 'error'); return;
@@ -408,7 +416,7 @@ document.getElementById('import-btn').addEventListener('click', async function()
         const resp = await fetch('/api/import/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date_start: dateStart, date_end: dateEnd, dry_run: dryRun }),
+            body: JSON.stringify({ date_start: dateStart, date_end: dateEnd, dry_run: dryRun, keep_xlsx: keepXlsx }),
         });
         if (resp.status === 409) {
             setStatusMsg('Import już trwa — poczekaj na zakończenie.', 'error');

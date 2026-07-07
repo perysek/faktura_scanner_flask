@@ -37,7 +37,7 @@ class ImportRunner:
 
     # ── public API ───────────────────────────────────────────────────────────
     def start_import(self, import_id: int, date_start: date, date_end: date,
-                     dry_run: bool) -> None:
+                     dry_run: bool, keep_xlsx: bool = False) -> None:
         """Start the background thread for an already-created import_id.
 
         The import_logs row must be created by the caller (route handler) before
@@ -48,7 +48,7 @@ class ImportRunner:
             q: queue_module.Queue = queue_module.Queue()
             thread = threading.Thread(
                 target=self._run_thread,
-                args=(import_id, date_start, date_end, dry_run, q),
+                args=(import_id, date_start, date_end, dry_run, keep_xlsx, q),
                 daemon=True,
                 name=f"import-{import_id}",
             )
@@ -79,7 +79,7 @@ class ImportRunner:
 
     # ── thread body ──────────────────────────────────────────────────────────
     def _run_thread(self, import_id: int, date_start: date, date_end: date,
-                    dry_run: bool, q: queue_module.Queue) -> None:
+                    dry_run: bool, keep_xlsx: bool, q: queue_module.Queue) -> None:
         """Thread entry — runs DataImportService, ensures cleanup."""
         try:
             svc = DataImportService()
@@ -89,6 +89,7 @@ class ImportRunner:
                 date_end=date_end,
                 dry_run=dry_run,
                 progress_callback=q.put,
+                keep_xlsx=keep_xlsx,
             )
         except Exception as exc:
             logger.exception("Import %d thread crashed", import_id)

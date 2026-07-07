@@ -226,6 +226,7 @@ def start_import():
         date_start_str = (data.get('date_start') or '').strip()
         date_end_str   = (data.get('date_end') or '').strip()
         dry_run        = bool(data.get('dry_run', False))
+        keep_xlsx      = bool(data.get('keep_xlsx', False))
 
         if not date_start_str or not date_end_str:
             raise ValidationError('Wymagane: date_start, date_end')
@@ -253,10 +254,11 @@ def start_import():
             dry_run=dry_run,
             triggered_by_user_id=current_user.id,
         )
-        IMPORT_RUNNER.start_import(import_id, date_start, date_end, dry_run)
+        IMPORT_RUNNER.start_import(import_id, date_start, date_end, dry_run,
+                                   keep_xlsx=keep_xlsx)
 
-        logger.info('Import %d started (range: %s to %s, dry_run=%s)',
-                    import_id, date_start, date_end, dry_run)
+        logger.info('Import %d started (range: %s to %s, dry_run=%s, keep_xlsx=%s)',
+                    import_id, date_start, date_end, dry_run, keep_xlsx)
 
         return jsonify({'success': True, 'import_id': import_id}), 202
 

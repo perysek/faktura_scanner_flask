@@ -53,7 +53,8 @@ class DataImportService:
     def run_import(self, import_id: int,
                    date_start: date, date_end: date,
                    dry_run: bool,
-                   progress_callback: Callable[[dict], None]) -> dict:
+                   progress_callback: Callable[[dict], None],
+                   keep_xlsx: bool = False) -> dict:
         """Run the full pipeline. Returns the final stats dict.
 
         Errors are caught, the log row is marked failed, and ImportError is raised
@@ -158,10 +159,17 @@ class DataImportService:
                 except Exception:
                     logger.exception("Could not return connection to pool")
             if xlsx_path is not None and xlsx_path.exists():
-                try:
-                    xlsx_path.unlink()
-                except Exception:
-                    logger.warning("Could not delete xlsx %s", xlsx_path)
+                if keep_xlsx:
+                    try:
+                        self._emit(progress_callback, 'log',
+                                   f"Plik XLSX z caldis.pl zachowany: {xlsx_path}")
+                    except Exception:
+                        logger.warning("Could not emit keep-xlsx log for %s", xlsx_path)
+                else:
+                    try:
+                        xlsx_path.unlink()
+                    except Exception:
+                        logger.warning("Could not delete xlsx %s", xlsx_path)
 
     # ── XLSX export ──────────────────────────────────────────────────────────
     def _export_xlsx(self, row_data: dict, import_id: int,

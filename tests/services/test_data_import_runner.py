@@ -25,7 +25,8 @@ class TestImportRunner:
     def test_queue_receives_events_and_done_sentinel(self):
         from services.data_import_runner import ImportRunner
 
-        def fake_run_import(import_id, date_start, date_end, dry_run, progress_callback):
+        def fake_run_import(import_id, date_start, date_end, dry_run, progress_callback,
+                            keep_xlsx=False):
             progress_callback({'type': 'log', 'message': 'hello'})
             return {}
 
