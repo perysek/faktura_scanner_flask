@@ -69,14 +69,17 @@ showUndoToast('Klient usunięty', `/api/clients/${id}/restore`, 8000);
 
 ## 4. Styling (informational — nothing to port)
 
-All styles are inlined in JS. Notable values, in case you want to align them with your tokens:
+All styles are inlined in JS, but they now reference the **live refined tokens** — each with a
+hardcoded fallback, so the toast still renders correctly in a project with no tokens at all:
 
-- White bg, **green left border (4px)** via `var(--pp-success, #10b981)` — note the **fallback**:
-  if `--pp-success` is undefined the literal `#10b981` is used, so it renders correctly with no
-  tokens at all.
-- `border-radius: 0.75rem` (this component predates the 2–3px refined radius and keeps a softer
-  pill — see Gotchas).
-- "Cofnij" button blue via `var(--pp-blue, #3b82f6)`; hover tint `rgba(59,130,246,0.1)`.
+- White bg (`#fff`), **green left border (4px)** via `var(--color-success-action, #10b981)`; the
+  box border is neutral `var(--color-border, #e8e6e1)`.
+- `border-radius: var(--radius-md, 3px)` on the toast (elevated card) and `var(--radius-sm, 2px)`
+  on the "Cofnij" button — on-system with the refined 2–3px scale.
+- Message text `var(--color-ink, #1a1a1a)`; close "×" `var(--color-ink-subtle, #6b6b6b)`.
+- "Cofnij" button blue via `var(--color-focus-ring, #2563eb)`; hover tint `rgba(37,99,235,0.1)`.
+- Elevation `box-shadow: 0 8px 32px rgba(0,0,0,0.18)` — **shared with the confirm-modal panel** so
+  both floating surfaces read at the same depth.
 - Fixed `bottom:1.5rem; right:1.5rem; z-index:9999; max-width:400px`.
 
 ---
@@ -88,20 +91,23 @@ All styles are inlined in JS. Notable values, in case you want to align them wit
    ```jinja2
    {% include 'components/undo_toast.html' %}
    ```
-3. Nothing else — no tokens, no `@layer` classes, no build step. The `var(--pp-*, fallback)`
-   pattern means it is correct even in a project with no design tokens.
+3. Nothing else — no `@layer` classes, no build step. The `var(--color-*, fallback)` pattern means
+   it renders correctly even in a project where none of these tokens are defined; if the tokens
+   *are* present it inherits the theme automatically.
 4. Implement a `POST` restore endpoint returning the JSON contract above.
 
 ---
 
 ## 6. Gotchas
 
-- **Radius mismatch.** It uses `0.75rem`/`0.375rem` radii (legacy soft pill), not the app's 2–3px
-  refined radius. If you want it on-system, change the inlined `border-radius` values — but only if
-  the project standardizes on the refined radius for toasts.
-- **Token names differ** from the rest of the app: it references `--pp-success` / `--pp-blue`
-  (with safe fallbacks) rather than `--color-success` / `--color-focus-ring`. If you want it to
-  follow the shared palette, either define those `--pp-*` aliases or edit the inlined colors.
+- **Inline styles reference live tokens *with fallbacks* — keep the fallbacks.** The
+  `var(--color-*, #hex)` form is deliberate: the token themes it when present, the literal hex keeps
+  it correct in a token-less project and on any deploy that skipped a CSS rebuild. Don't strip the
+  fallback to "tidy it up".
 - **It reloads the page on undo** — fine for server-rendered list pages, but in an SPA-ish flow
   you'd replace `location.reload()` with a targeted row re-insert.
 - Don't stack it with toast `Notifications.*` for the same action; pick one feedback channel.
+- **Historical note:** this component previously used the deleted `--pp-success` / `--pp-blue`
+  tokens and soft `0.75rem` / `0.375rem` radii; it was realigned to `--color-*` / `--radius-*` on
+  2026-07-07. If you spot `--pp-*` elsewhere (e.g. `appointments/superadmin_edit*.html`), it's the
+  same legacy drift awaiting the same fix.

@@ -13,9 +13,9 @@ function showUndoToast(message, restoreUrl, duration = 8000) {
     const toast = document.createElement('div');
     toast.id = 'undo-toast';
     toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;' +
-        'background:white;border:1px solid var(--pp-success, #10b981);border-left:4px solid var(--pp-success, #10b981);' +
-        'border-radius:0.75rem;padding:0.75rem 1rem;font-size:0.875rem;color:#1e293b;' +
-        'box-shadow:0 4px 20px rgba(0,0,0,0.15);opacity:0;transition:opacity 0.2s;' +
+        'background:#fff;border:1px solid var(--color-border, #e8e6e1);border-left:4px solid var(--color-success-action, #10b981);' +
+        'border-radius:var(--radius-md, 3px);padding:0.75rem 1rem;font-size:0.875rem;color:var(--color-ink, #1a1a1a);' +
+        'box-shadow:0 8px 32px rgba(0,0,0,0.18);opacity:0;transition:opacity 0.2s;' +
         'max-width:400px;display:flex;align-items:center;gap:0.75rem;';
 
     const msgSpan = document.createElement('span');
@@ -24,10 +24,10 @@ function showUndoToast(message, restoreUrl, duration = 8000) {
 
     const undoBtn = document.createElement('button');
     undoBtn.textContent = 'Cofnij';
-    undoBtn.style.cssText = 'background:none;border:none;color:var(--pp-blue, #3b82f6);' +
-        'font-weight:600;cursor:pointer;padding:0.25rem 0.5rem;border-radius:0.375rem;' +
+    undoBtn.style.cssText = 'background:none;border:none;color:var(--color-focus-ring, #2563eb);' +
+        'font-weight:600;cursor:pointer;padding:0.25rem 0.5rem;border-radius:var(--radius-sm, 2px);' +
         'font-size:0.875rem;white-space:nowrap;transition:background 0.15s;';
-    undoBtn.onmouseenter = () => undoBtn.style.background = 'rgba(59,130,246,0.1)';
+    undoBtn.onmouseenter = () => undoBtn.style.background = 'rgba(37,99,235,0.1)';
     undoBtn.onmouseleave = () => undoBtn.style.background = 'none';
     undoBtn.onclick = async () => {
         undoBtn.textContent = '...';
@@ -36,7 +36,7 @@ function showUndoToast(message, restoreUrl, duration = 8000) {
             const resp = await fetch(restoreUrl, { method: 'POST' });
             const data = await resp.json();
             if (data.success) {
-                toast.style.borderColor = 'var(--pp-success, #10b981)';
+                toast.style.borderColor = 'var(--color-success-action, #10b981)';
                 msgSpan.textContent = data.message || 'Przywrócono';
                 undoBtn.remove();
                 setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 2000);
@@ -56,7 +56,7 @@ function showUndoToast(message, restoreUrl, duration = 8000) {
 
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '&times;';
-    closeBtn.style.cssText = 'background:none;border:none;color:#94a3b8;font-size:1.25rem;' +
+    closeBtn.style.cssText = 'background:none;border:none;color:var(--color-ink-subtle, #6b6b6b);font-size:1.25rem;' +
         'cursor:pointer;padding:0 0.25rem;line-height:1;';
     closeBtn.onclick = () => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); };
 
