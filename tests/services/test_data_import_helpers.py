@@ -73,6 +73,38 @@ class TestResolveClientId:
         assert resolve_client_id('wolne', {}) is None
 
 
+class TestParseClientName:
+    def test_strip_prefix_p_dot(self):
+        from services.data_import_helpers import parse_client_name
+        assert parse_client_name('p. Anna Kowalska') == ('Anna', 'Kowalska')
+
+    def test_first_name_only(self):
+        from services.data_import_helpers import parse_client_name
+        assert parse_client_name('Anna') == ('Anna', '')
+
+    def test_blank_returns_none(self):
+        from services.data_import_helpers import parse_client_name
+        assert parse_client_name('') is None
+        assert parse_client_name(None) is None
+
+    def test_wolne_returns_none(self):
+        from services.data_import_helpers import parse_client_name
+        assert parse_client_name('Wolne') is None
+        assert parse_client_name('wolne') is None
+
+
+class TestCreateClient:
+    def test_inserts_and_returns_id(self, mock_db):
+        mock_db.cursor.fetchone.return_value = {'id': 123}
+        from services.data_import_helpers import create_client
+        new_id = create_client(mock_db.connection, 'Anna', 'Kowalska', '48504020116')
+        assert new_id == 123
+        sql = mock_db.cursor.execute.call_args[0][0]
+        params = mock_db.cursor.execute.call_args[0][1]
+        assert 'INSERT INTO clients' in sql
+        assert params == ('Anna', 'Kowalska', '48504020116')
+
+
 class TestResolveServiceId:
     def test_exact(self):
         from services.data_import_helpers import resolve_service_id

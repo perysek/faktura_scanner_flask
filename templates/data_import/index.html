@@ -118,7 +118,7 @@
   <div id="result-card" class="hidden rounded-[3px] border p-4"
        style="background: var(--card-bg); border-color: var(--card-border);">
     <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">Wynik importu</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="result-stats"></div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3" id="result-stats"></div>
     <p id="result-error" class="hidden mt-3 text-sm text-red-400"></p>
   </div>
 
@@ -202,10 +202,11 @@ function showResult(stats, errorMsg) {
     const s = stats || {};
 
     const metrics = [
-        { label: 'Wstawiono',  value: s.inserted  ?? 0, colour: '#4ade80' },
-        { label: 'Duplikaty',  value: s.skipped_duplicate ?? 0, colour: '#facc15' },
-        { label: 'Pominięto',  value: (s.skipped_zero ?? 0) + (s.skipped_no_client ?? 0) + (s.skipped_no_employee ?? 0), colour: '#94a3b8' },
-        { label: 'Błędy',      value: s.errors ?? 0, colour: '#f87171' },
+        { label: 'Wstawiono',     value: s.inserted  ?? 0, colour: '#4ade80' },
+        { label: 'Nowi klienci',  value: s.clients_created ?? 0, colour: '#38bdf8' },
+        { label: 'Duplikaty',    value: s.skipped_duplicate ?? 0, colour: '#facc15' },
+        { label: 'Pominięto',    value: (s.skipped_zero ?? 0) + (s.skipped_no_client ?? 0) + (s.skipped_no_employee ?? 0), colour: '#94a3b8' },
+        { label: 'Błędy',        value: s.errors ?? 0, colour: '#f87171' },
     ];
 
     statsEl.innerHTML = metrics.map(function(m) {

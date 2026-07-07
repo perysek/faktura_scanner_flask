@@ -27,6 +27,7 @@ from services.data_import_helpers import (
     DEFAULT_SERVICE_ID, KALENDARZ_OVERRIDES,
     build_employee_map, build_client_map, build_phone_map, build_service_map,
     resolve_employee_id, resolve_client_id, resolve_service_id,
+    parse_client_name, create_client, normalize_phone,
     parse_appointment_date, parse_time, parse_created_at,
     calc_duration_minutes,
 )
@@ -100,7 +101,7 @@ class DataImportService:
             for idx, row in df.iterrows():
                 self._process_row(row, idx, conn, dry_run, stats,
                                   employee_map, client_map, phone_map, service_list,
-                                  row_data=row_data)
+                                  progress_callback, row_data=row_data)
                 processed = (stats['inserted'] + stats['skipped_zero']
                              + stats['skipped_no_client'] + stats['skipped_no_employee']
                              + stats['skipped_duplicate'] + stats['errors'])
@@ -262,12 +263,15 @@ class DataImportService:
             ('generated_at', datetime.now()),
             ('', ''),
             ('inserted', stats.get('inserted', 0)),
+            ('clients_created', stats.get('clients_created', 0)),
             ('skipped_zero', stats.get('skipped_zero', 0)),
             ('skipped_no_client', stats.get('skipped_no_client', 0)),
             ('skipped_no_employee', stats.get('skipped_no_employee', 0)),
             ('skipped_duplicate', stats.get('skipped_duplicate', 0)),
             ('errors', stats.get('errors', 0)),
-            ('total_rows', sum(stats.values())),
+            # clients_created is a subset of inserted rows, not a distinct row
+            # category — exclude it so total_rows still equals rows processed.
+            ('total_rows', sum(v for k, v in stats.items() if k != 'clients_created')),
         ]
         for label, value in summary_rows:
             row = ws_sum.append([label, value])
@@ -289,6 +293,7 @@ class DataImportService:
     def _zero_stats() -> dict:
         return {
             'inserted': 0,
+            'clients_created': 0,
             'skipped_zero': 0,
             'skipped_no_client': 0,
             'skipped_no_employee': 0,
@@ -335,6 +340,7 @@ class DataImportService:
                      dry_run: bool, stats: dict,
                      employee_map: dict, client_map: dict,
                      phone_map: dict, service_list: list,
+                     progress_callback: Callable[[dict], None],
                      row_data: Optional[dict] = None) -> None:
         """Parse + dedupe + insert a single xlsx row. Updates stats in place.
 
@@ -434,7 +440,9 @@ class DataImportService:
                 'row_num':          int(idx),
                 # ── income_records table columns ─────────────────────────────
                 'appointment_id':   appointment_id,       # INTEGER FK → appointments.id
-                'client_id':        int(client_id),       # INTEGER FK → clients.id
+                # client_id is None only for a dry-run row that would create a
+                # brand-new client — nothing was actually inserted to cast.
+                'client_id':        (int(client_id) if client_id is not None else None),
                 'employee_id':      int(employee_id),     # INTEGER FK → employees.id
                 'total_amount':     float(total_price),   # NUMERIC
                 'discount_amount':  0.0,                  # NUMERIC NOT NULL DEFAULT 0
@@ -488,13 +496,24 @@ class DataImportService:
                 return
 
             client_id = resolve_client_id(imie_cell, client_map, telefon_cell, phone_map)
+            new_client_note = ''
+            pending_new_client = None
             if client_id is None:
-                stats['skipped_no_client'] += 1
-                _appt('skipped_no_client',
-                      f'Nie znaleziono klienta: {imie_cell!r}',
-                      appointment_date=appointment_date, start_time=start_time,
-                      employee_id=employee_id)
-                return
+                parsed_name = parse_client_name(imie_cell)
+                if parsed_name is None:
+                    # Blank cell or the 'Wolne' placeholder (blocked calendar
+                    # slot) — not a client, nothing to import.
+                    stats['skipped_no_client'] += 1
+                    _appt('skipped_no_client',
+                          f'Brak nazwiska klienta (puste pole lub "Wolne"): {imie_cell!r}',
+                          appointment_date=appointment_date, start_time=start_time,
+                          employee_id=employee_id)
+                    return
+                # A real name that matches no existing client. Hold off on
+                # actually creating it until after the duplicate check below,
+                # so a row that turns out to be a duplicate slot never leaves
+                # an orphan client behind.
+                pending_new_client = parsed_name
 
             # Duplicate check
             cursor = conn.cursor()
@@ -517,6 +536,27 @@ class DataImportService:
                       created_at=created_at)
                 return
 
+            if pending_new_client is not None:
+                # caldis.pl is the source of truth for new customers here — a
+                # name that matches no existing client is a new client, not a
+                # data error, so create one instead of skipping the visit.
+                first_name, last_name = pending_new_client
+                client_phone = normalize_phone(telefon_cell)
+                stats['clients_created'] += 1
+                new_client_note = f'Nowy klient: {first_name} {last_name}'.strip()
+
+                if dry_run:
+                    client_id = None  # nothing written yet — simulated only
+                else:
+                    client_id = create_client(conn, first_name, last_name, client_phone)
+                    # Repeat rows for this same new client later in the same
+                    # file now resolve to the row just created, not a duplicate.
+                    client_map[(first_name.lower(), last_name.lower())] = client_id
+                    if client_phone:
+                        phone_map[client_phone] = client_id
+                    self._emit(progress_callback, 'log',
+                               f'Nowy klient utworzony: {first_name} {last_name} (id={client_id})')
+
             service_id = (forced_service_id if forced_service_id is not None
                           else resolve_service_id(kategoria_cell, service_list))
 
@@ -536,10 +576,11 @@ class DataImportService:
 
             if dry_run:
                 stats['inserted'] += 1
-                _appt('inserted',
+                _appt('inserted', new_client_note,
                       appointment_date=appointment_date, start_time=start_time,
                       end_time=end_time, duration_minutes=duration_minutes,
-                      created_at=created_at, client_id=int(client_id),
+                      created_at=created_at,
+                      client_id=(int(client_id) if client_id is not None else None),
                       employee_id=int(employee_id), total_price=total_price)
                 _appt_svc(None, service_id, total_price,
                           duration_minutes, commission_rate, commission_amount)
@@ -610,7 +651,7 @@ class DataImportService:
                 )
 
             stats['inserted'] += 1
-            _appt('inserted',
+            _appt('inserted', new_client_note,
                   appointment_date=appointment_date, start_time=start_time,
                   end_time=end_time, duration_minutes=duration_minutes,
                   created_at=created_at, client_id=int(client_id),

@@ -149,6 +149,47 @@ def _resolve_by_phone(phone_raw: Any, phone_map: Optional[dict]) -> Optional[int
     return phone_map.get(normalized)
 
 
+def parse_client_name(full_name_raw: Any) -> Optional[tuple]:
+    """Split a raw 'Imie i nazwisko' cell into (first_name, last_name), 'p.' stripped.
+
+    Returns None for a blank cell or the 'Wolne' placeholder (a blocked calendar
+    slot, not a real client) — mirrors the same guard resolve_client_id uses, so
+    callers deciding whether to auto-create a client stay consistent with what
+    resolve_client_id would ever match against.
+    """
+    if _is_blank(full_name_raw):
+        return None
+    cleaned = _strip_prefix(str(full_name_raw))
+    if not cleaned or cleaned.lower() == 'wolne':
+        return None
+    parts = cleaned.split(None, 1)
+    if not parts:
+        return None
+    first_name = parts[0]
+    last_name = parts[1] if len(parts) > 1 else ''
+    return (first_name, last_name)
+
+
+def create_client(conn: psycopg2.extensions.connection,
+                  first_name: str, last_name: str,
+                  phone: Optional[str]) -> int:
+    """Insert a new client discovered via caldis.pl import, return its id.
+
+    A caldis.pl booking for a name that matches no existing client is a new
+    customer, not a data error — the salon's calendar is the source of truth.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO clients (first_name, last_name, phone, is_active, created_at, updated_at)
+        VALUES (%s, %s, %s, TRUE, NOW(), NOW())
+        RETURNING id
+        """,
+        (first_name, last_name, phone),
+    )
+    return cursor.fetchone()['id']
+
+
 def resolve_client_id(full_name_raw: Any, client_map: dict,
                       phone_raw: Any = None,
                       phone_map: Optional[dict] = None) -> Optional[int]:
