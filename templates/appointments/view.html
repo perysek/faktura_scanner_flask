@@ -6,12 +6,15 @@
 
 {% block extra_css %}
 <style>
+    /* ── Back bar (above the hero) ── */
+    .appt-topbar { padding: 12px 16px 0; }
+    .appt-back { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
+    .appt-back:hover { border-color: var(--color-ink-muted); color: var(--color-ink); }
+    .appt-back svg { width: 12px; height: 12px; }
+
     /* ── Dark gradient hero ── */
-    .appt-hero { background: linear-gradient(135deg, #1a1a1a, #2a2a2a); padding: 1.25rem 1.75rem; position: relative; }
-    .hero-back { position: absolute; top: 14px; left: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 11px; color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 2px; cursor: pointer; text-decoration: none; transition: color 0.15s ease, background 0.15s ease; }
-    .hero-back:hover { color: rgba(255,255,255,0.95); background: rgba(255,255,255,0.14); }
-    .hero-back svg { width: 12px; height: 12px; }
-    .hero-row { display: flex; align-items: center; gap: 18px; margin-top: 22px; flex-wrap: wrap; }
+    .appt-hero { background: linear-gradient(135deg, #1a1a1a, #2a2a2a); padding: 1.25rem 1.75rem; }
+    .hero-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
     .hero-avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,0.15); background: #475569; }
     .hero-meta { flex: 1; min-width: 0; }
     .hero-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
@@ -99,7 +102,6 @@
     .sms-sent-badge { font-size: 0.625rem; padding: 0.125rem 0.375rem; background: #f3f4f6; color: #6b7280; border-radius: 9999px; }
 
     /* SMS log table */
-    .sms-summary { padding: 1rem 1.25rem; cursor: pointer; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink); list-style: none; display: flex; align-items: center; gap: 0.5rem; }
     .sms-log-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.5rem; table-layout: fixed; }
     .sms-log-table th { padding: 0.5rem 0.75rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: left; overflow: hidden; }
     .sms-log-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -122,12 +124,15 @@
 
 {% block content %}
 <div class="fade-in" id="appt-page">
-    <!-- Dark hero header -->
-    <div class="appt-hero">
-        <a href="{{ url_for('main.appointments_list') }}" class="hero-back" id="back-button">
+    <!-- Back bar -->
+    <div class="appt-topbar">
+        <a href="{{ url_for('main.appointments_list') }}" class="appt-back" id="back-button">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
             <span id="back-text">Wróć</span>
         </a>
+    </div>
+    <!-- Dark hero header -->
+    <div class="appt-hero">
         <div class="hero-row">
             <div class="hero-avatar" id="hero-avatar">—</div>
             <div class="hero-meta">
@@ -141,10 +146,6 @@
                 <div class="hero-metric">
                     <div class="hero-metric-value" id="hero-price">—</div>
                     <div class="hero-metric-label">Kwota</div>
-                </div>
-                <div class="hero-metric">
-                    <div class="hero-metric-value">#{{ appointment_id }}</div>
-                    <div class="hero-metric-label">Nr wizyty</div>
                 </div>
             </div>
         </div>
@@ -212,31 +213,27 @@
             </div>
         </div>
 
-        <!-- SMS History (desktop-only, full width) -->
+        <!-- SMS History (desktop-only, full width) — always expanded -->
         {% if settings_sms_active %}
-        <div class="appt-card span-2 sms-log-panel" style="padding:0;">
-            <details id="sms-log-panel">
-                <summary class="sms-summary">
-                    Historia SMS
-                    <span class="badge-count" id="sms-count"></span>
-                </summary>
-                <div style="padding:0 1.25rem 1rem;">
-                    <table class="sms-log-table">
-                        <thead>
-                            <tr>
-                                <th class="col-date">Data</th>
-                                <th class="col-type">Typ</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-body">Treść</th>
-                                <th class="col-sender">Wysłał</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sms-log-tbody">
-                            <tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Kliknij aby załadować...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </details>
+        <div class="appt-card span-2 sms-log-panel" id="sms-log-panel">
+            <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                Historia SMS
+                <span class="badge-count" id="sms-count"></span>
+            </div>
+            <table class="sms-log-table">
+                <thead>
+                    <tr>
+                        <th class="col-date">Data</th>
+                        <th class="col-type">Typ</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-body">Treść</th>
+                        <th class="col-sender">Wysłał</th>
+                    </tr>
+                </thead>
+                <tbody id="sms-log-tbody">
+                    <tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--color-ink-muted);">Ładowanie...</td></tr>
+                </tbody>
+            </table>
         </div>
         {% endif %}
     </div>
@@ -589,8 +586,7 @@ document.addEventListener('DOMContentLoaded', loadAppointment);
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
         loadAppointment();
-        const panel = document.getElementById('sms-log-panel');
-        if (panel && panel.open) loadSmsLog(true);
+        if (document.getElementById('sms-log-panel')) loadSmsLog(true);
     }
 });
 
@@ -663,10 +659,8 @@ async function loadSmsLog(force = false) {
     }
 }
 
-const smsLogPanel = document.getElementById('sms-log-panel');
-if (smsLogPanel) {
-    smsLogPanel.addEventListener('toggle', function() { if (this.open) loadSmsLog(); });
-}
+// SMS history is always expanded — load it once on page load.
+if (document.getElementById('sms-log-panel')) loadSmsLog();
 
 // Esc = powrót (dynamiczny URL z przycisku #back-button)
 document.addEventListener('keydown', function(e) {

@@ -9,6 +9,14 @@
     .page-title { margin-bottom: 0.5rem; }
     .page-subtitle { margin-bottom: 2rem; }
 
+    /* Top back bar — matches the visit view/create back button. */
+    .edit-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+    .edit-header .page-title { margin-bottom: 2px; }
+    .edit-header .page-subtitle { margin-bottom: 0; }
+    .edit-back { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; flex-shrink: 0; transition: border-color 0.15s ease, color 0.15s ease; }
+    .edit-back:hover { border-color: var(--color-ink-muted); color: var(--color-ink); }
+    .edit-back svg { width: 12px; height: 12px; }
+
     .form-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
     .form-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -84,8 +92,16 @@
 
 {% block content %}
 <div class="refined-page fade-in">
-    <h1 class="page-title">Edytuj wizytę #{{ appointment_id }}</h1>
-    <p class="page-subtitle" id="page-subtitle">Ładowanie...</p>
+    <div class="edit-header">
+        <a href="/appointment/{{ appointment_id }}" class="edit-back" id="back-button">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Wróć
+        </a>
+        <div>
+            <h1 class="page-title">Edytuj wizytę #{{ appointment_id }}</h1>
+            <p class="page-subtitle" id="page-subtitle">Ładowanie...</p>
+        </div>
+    </div>
 
     <!-- Basic Info -->
     <div class="form-card">
