@@ -13,15 +13,108 @@
     /* .refined-page is NOT shared (overloaded class — see input.css note); kept inline. */
     .refined-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
 
-    .stat-icon.blue { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); }
-    .stat-icon.green { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
-    .stat-icon.purple { background: rgba(147, 51, 234, 0.08); color: var(--color-purple); }
-    .stat-icon.pink { background: rgba(236, 72, 153, 0.08); color: #be185d; }
+    /* ── Horizontal stats strip (design canvas) — replaces the 4-card grid.
+       One bordered row, hairline (1px) dividers made from the container's
+       border colour showing through 1px flex gaps. Keeps the live API stat
+       IDs (#stat-total/#stat-active/#stat-recent/#stat-birthdays). ───────── */
+    .stat-strip {
+        display: flex;
+        gap: 1px;
+        background: var(--color-border);
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 0.875rem;
+    }
+    .stat-strip-item { flex: 1; background: white; padding: 0.75rem 1rem; min-width: 0; }
+    .stat-strip-value {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1;
+        margin: 0 0 0.1875rem;
+        color: var(--color-ink);
+        font-variant-numeric: tabular-nums;
+    }
+    .stat-strip-value.green { color: var(--color-success); }
+    .stat-strip-value.info  { color: var(--color-info); }
+    .stat-strip-value.pink  { color: #be185d; }
+    .stat-strip-label {
+        font-size: 0.625rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-ink-subtle);
+    }
 
-    .stat-value.blue { color: var(--color-status-scheduled); }
-    .stat-value.green { color: var(--color-success); }
-    .stat-value.purple { color: var(--color-purple); }
-    .stat-value.pink { color: #be185d; }
+    /* ── Filter row: rectangular chips (left) + inline search (right) ─────── */
+    .filter-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .filter-chips { display: flex; gap: 0.25rem; }
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.375rem 0.75rem;
+        font-family: var(--font-body);
+        font-size: 0.6875rem;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-ink-muted);
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .filter-chip:hover { border-color: var(--color-ink-muted); color: var(--color-ink); }
+    .filter-chip .chip-count { font-weight: 600; }
+    .filter-chip.active {
+        background: var(--color-ink);
+        border-color: var(--color-ink);
+        color: white;
+        font-weight: 500;
+    }
+
+    .search-box-inline { position: relative; flex: 1; max-width: 360px; margin-left: auto; }
+    .search-box-inline svg {
+        position: absolute;
+        left: 0.625rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0.875rem;
+        height: 0.875rem;
+        color: var(--color-ink-subtle);
+        pointer-events: none;
+    }
+    .search-box-inline .refined-input { width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; }
+    @media (max-width: 640px) {
+        .search-box-inline { max-width: none; margin-left: 0; flex-basis: 100%; }
+    }
+
+    /* VIP inline tag next to the client name */
+    .vip-tag {
+        font-size: 0.625rem;
+        color: #c9a227;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        margin-left: 0.25rem;
+        white-space: nowrap;
+    }
+
+    /* Next-visit desktop cell: date (line 1) + assigned employee (line 2) */
+    .next-visit-desk { line-height: 1.35; }
+    .next-visit-desk .nv-emp {
+        font-size: 0.625rem;
+        color: var(--color-ink-subtle);
+        margin-top: 0.0625rem;
+    }
 
     /* .search-card / .search-wrapper → shared (input.css @layer components). */
 
@@ -90,13 +183,8 @@
 
     .refined-table tbody tr:last-child td { border-bottom: none; }
 
-    /* Avatar with no-show badge */
-    .avatar-wrapper {
-        position: relative;
-        display: inline-block;
-        flex-shrink: 0;
-    }
-
+    /* Client avatar (initials). The VIP (gold) / no-show-risk (red) ring is
+       applied inline in JS via box-shadow — see renderClients(). */
     .client-avatar {
         width: 2.5rem;
         height: 2.5rem;
@@ -110,20 +198,6 @@
         font-weight: 600;
         font-size: 0.875rem;
         flex-shrink: 0;
-    }
-
-    .no-show-badge {
-        position: absolute;
-        top: -3px;
-        right: -3px;
-        width: 14px;
-        height: 14px;
-        background: var(--color-error);
-        border-radius: 50%;
-        border: 2px solid white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
 
     .client-info {
@@ -144,12 +218,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    .client-age {
-        font-size: 0.75rem;
-        color: var(--color-ink-subtle);
-        font-weight: 300;
     }
 
     /* Phone line tucked under the name (desktop only — the dedicated Telefon
@@ -306,32 +374,16 @@
     /* Responsive */
     @media (max-width: 768px) {
         .page-header { flex-direction: column; align-items: flex-start; }
-        .stats-grid { grid-template-columns: 1fr; }
     }
 
-    /* Mobile (stacked-card) view: hide the summary stat cards entirely — they
-       eat the whole first screen on a phone. Matches the .stack-cards breakpoint. */
     @media (max-width: 640px) {
-        .stats-grid { display: none; }
+        /* Stat strip stays (it's one compact row, not four tall cards) but
+           reflows to a 2×2 grid so the numbers don't get crushed on a phone. */
+        .stat-strip { flex-wrap: wrap; }
+        .stat-strip-item { flex-basis: calc(50% - 0.5px); }
         /* Keep mobile intact: phone shows as its own "Telefon" card row
            (the cell-hide-lg <td>), not duplicated under the name. */
         .client-phone { display: none; }
-    }
-
-    /* Next-visit card value: date+time on line 1, employee on line 2, both
-       hugging the right edge so it lines up with the other stacked-card values.
-       Only ever rendered inside the mobile card (parent td is .cell-hide-lg). */
-    .next-visit-val {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        text-align: right;
-        line-height: 1.35;
-    }
-    .next-visit-emp {
-        font-size: 0.75rem;
-        font-weight: 300;
-        color: var(--color-ink-subtle);
     }
 
     /* Mobile stacked cards: now provided by the shared .stack-cards component
@@ -346,7 +398,7 @@
     <header class="page-header">
         <div>
             <h1 class="page-title">Klienci</h1>
-            <p class="page-subtitle">Zarządzanie bazą klientów salonu</p>
+            <p class="page-subtitle">Zarządzanie bazą klientów salonu · <span id="client-count">0</span> wyświetlonych</p>
         </div>
         <div class="page-header-actions">
             <button id="btn-update-prefs" class="refined-btn-secondary" onclick="bulkUpdatePreferences()">
@@ -360,72 +412,50 @@
         </div>
     </header>
 
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div>
-                <p class="stat-label">Wszyscy klienci</p>
-                <p class="stat-value" id="stat-total">-</p>
-            </div>
-            <div class="stat-icon blue">
-                {{ icon('people', class='lg') }}
-            </div>
+    <!-- Statistics strip (horizontal — design canvas) -->
+    <div class="stat-strip">
+        <div class="stat-strip-item">
+            <p class="stat-strip-value" id="stat-total">-</p>
+            <p class="stat-strip-label">Wszyscy</p>
         </div>
-
-        <div class="stat-card">
-            <div>
-                <p class="stat-label">Aktywni</p>
-                <p class="stat-value" id="stat-active">-</p>
-            </div>
-            <div class="stat-icon green">
-                {{ icon('check_circle', class='lg') }}
-            </div>
+        <div class="stat-strip-item">
+            <p class="stat-strip-value green" id="stat-active">-</p>
+            <p class="stat-strip-label">Aktywni</p>
         </div>
-
-        <div class="stat-card">
-            <div>
-                <p class="stat-label">Ostatni miesiąc</p>
-                <p class="stat-value" id="stat-recent">-</p>
-            </div>
-            <div class="stat-icon purple">
-                {{ icon('event', class='lg') }}
-            </div>
+        <div class="stat-strip-item">
+            <p class="stat-strip-value info" id="stat-recent">-</p>
+            <p class="stat-strip-label">Ostatni mies.</p>
         </div>
-
-        <div class="stat-card">
-            <div>
-                <p class="stat-label">Z urodzinami</p>
-                <p class="stat-value" id="stat-birthdays">-</p>
-            </div>
-            <div class="stat-icon pink">
-                {{ icon('cake', class='lg') }}
-            </div>
+        <div class="stat-strip-item">
+            <p class="stat-strip-value pink" id="stat-birthdays">-</p>
+            <p class="stat-strip-label">Urodziny</p>
         </div>
     </div>
 
-    <!-- Search Card -->
-    <div class="search-card">
-        <div class="search-wrapper">
+    <!-- Filter chips + inline search (design canvas) -->
+    <div class="filter-row">
+        <div class="filter-chips" role="group" aria-label="Filtruj klientów">
+            <button type="button" class="filter-chip active" data-filter="active" onclick="setFilter('active')">
+                Aktywni <span class="chip-count" id="chip-count-active">0</span>
+            </button>
+            <button type="button" class="filter-chip" data-filter="vip" onclick="setFilter('vip')" title="Minimum 3 wizyty w ostatnich 8 tygodniach">
+                VIP <span class="chip-count" id="chip-count-vip">0</span>
+            </button>
+            <button type="button" class="filter-chip" data-filter="inactive" onclick="setFilter('inactive')" title="Zdezaktywowani klienci">
+                Nieaktywni <span class="chip-count" id="chip-count-inactive">0</span>
+            </button>
+        </div>
+        <div class="search-box-inline">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
                 type="text"
                 id="search-input"
-                placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..."
+                placeholder="Szukaj po imieniu, telefonie lub emailu..."
                 class="refined-input"
+                aria-label="Szukaj klientów"
             >
-            <button onclick="loadClients()" class="refined-btn-secondary">
-                {{ icon('search') }}
-                Szukaj
-            </button>
-            <button id="btn-show-all" class="refined-btn-secondary" onclick="toggleShowAll()" title="Pokaż również zdezaktywowanych klientów">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:0.95rem;height:0.95rem;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.65" />
-                </svg>
-                <span id="btn-show-all-label">Aktywni</span>
-            </button>
-            <button id="btn-vip-only" class="refined-btn-secondary" onclick="toggleVip()" title="Minimum 3 wizyty w ostatnich 8 tygodniach">
-                {{ icon('star', style="font-size:0.9rem;") }}
-                Tylko VIP
-            </button>
         </div>
     </div>
 
@@ -433,12 +463,12 @@
     <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista klientów">
         <table class="refined-table stack-cards">
             <colgroup>
-                <col style="width:22%"><!-- Imię i nazwisko (+ telefon poniżej) -->
+                <col style="width:24%"><!-- Klient (imię, ★VIP, telefon poniżej) -->
                 <col style="width:12%"><!-- Ostatnia wizyta -->
-                <col style="width:9%"> <!-- Wizyt -->
-                <col style="width:9%"> <!-- No-shows -->
-                <col style="width:9%"> <!-- Odwołał -->
-                <col style="width:19%"><!-- Trend (sparkline wypełnia kolumnę) -->
+                <col style="width:14%"><!-- Następna wizyta -->
+                <col style="width:8%"> <!-- Wizyt -->
+                <col style="width:9%"> <!-- No-show -->
+                <col style="width:13%"><!-- Trend (sparkline wypełnia kolumnę) -->
                 <col style="width:11%"><!-- Status (mieści badge bez ucinania) -->
                 <col style="width:9%"> <!-- Akcje -->
             </colgroup>
@@ -446,7 +476,7 @@
                 <tr>
                     <th class="th-sortable" aria-sort="none" id="th-full_name">
                         <button type="button" class="th-sort-btn" onclick="sortBy('full_name')">
-                            Imię i&nbsp;nazwisko
+                            Klient
                             <span class="th-sort-icon" id="si-full_name" aria-hidden="true">▲</span>
                         </button>
                     </th>
@@ -454,6 +484,12 @@
                         <button type="button" class="th-sort-btn" onclick="sortBy('last_visit_date')">
                             Ostatnia wizyta
                             <span class="th-sort-icon" id="si-last_visit_date" aria-hidden="true">▲</span>
+                        </button>
+                    </th>
+                    <th class="th-sortable" aria-sort="none" id="th-next_visit_date">
+                        <button type="button" class="th-sort-btn" onclick="sortBy('next_visit_date')">
+                            Następna wizyta
+                            <span class="th-sort-icon" id="si-next_visit_date" aria-hidden="true">▲</span>
                         </button>
                     </th>
                     <th class="th-sortable" aria-sort="none" id="th-completed_visits">
@@ -464,14 +500,8 @@
                     </th>
                     <th class="th-sortable" aria-sort="none" id="th-no_show_count">
                         <button type="button" class="th-sort-btn" onclick="sortBy('no_show_count')">
-                            No&#8209;shows
+                            No&#8209;show
                             <span class="th-sort-icon" id="si-no_show_count" aria-hidden="true">▲</span>
-                        </button>
-                    </th>
-                    <th class="th-sortable" aria-sort="none" id="th-cancelled_count">
-                        <button type="button" class="th-sort-btn" onclick="sortBy('cancelled_count')">
-                            Odwołał
-                            <span class="th-sort-icon" id="si-cancelled_count" aria-hidden="true">▲</span>
                         </button>
                     </th>
                     <th>Trend<br><span style="font-size:0.5625rem;font-weight:400;letter-spacing:0;text-transform:none;">6 mies.</span></th>
@@ -507,9 +537,9 @@
 <script>
 let allClients = [];
 let clientTrends = {};   // {client_id: [week0_count, ..., week25_count]}
-let vipOnly = false;
-let showAll = false;     // false = active only, true = include deactivated clients
+let activeFilter = 'active';   // 'active' | 'vip' | 'inactive' — driven by the filter chips
 let currentSort = { field: 'last_visit_date', dir: 'desc' };
+let searchDebounce;
 
 function parseDateForSort(str) {
     if (!str) return 0;
@@ -523,6 +553,7 @@ function saveClientState() {
         const state = JSON.parse(sessionStorage.getItem('filterState:clients') || '{}');
         state._sortField = currentSort.field;
         state._sortDir   = currentSort.dir;
+        state._filter    = activeFilter;
         sessionStorage.setItem('filterState:clients', JSON.stringify(state));
     } catch(e) {}
 }
@@ -539,21 +570,21 @@ function formatDate(dateString) {
 const PL_MONTHS_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze',
                          'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
-// Next upcoming visit as two right-aligned lines:
+// Next upcoming visit as a left-aligned desktop cell (design canvas):
 //   line 1: "23 cze 12:30"  (date + time)
-//   line 2: "(Kinga Machnowska)"  (assigned employee, subtle)
-// Returns "—" when the client has nothing scheduled. line1 is built from
+//   line 2: "Kinga Machnowska"  (assigned employee, subtle)
+// Returns a dash when the client has nothing scheduled. line1 is built from
 // numbers + a static month literal (safe); only the employee name is escaped.
 function formatNextVisit(dateStr, timeStr, employee) {
-    if (!dateStr) return '—';
+    if (!dateStr) return '<span style="color:var(--color-ink-subtle);">—</span>';
     const [y, m, d] = dateStr.split('-').map(Number);
     const month = PL_MONTHS_SHORT[m - 1] || '';
     let line1 = `${d} ${month}`;
     if (timeStr) line1 += ` ${timeStr}`;
     const empLine = employee
-        ? `<span class="next-visit-emp">(${escapeHtml(employee)})</span>`
+        ? `<div class="nv-emp">${escapeHtml(employee)}</div>`
         : '';
-    return `<span class="next-visit-val">${line1}${empLine}</span>`;
+    return `<div class="next-visit-desk">${line1}${empLine}</div>`;
 }
 
 function escapeHtml(text) {
@@ -613,30 +644,41 @@ function sparklineSvg(months) {
     </span>`;
 }
 
-// ── VIP filter ────────────────────────────────────────────────────────────────
+// ── Filter chips (Aktywni / VIP / Nieaktywni) ──────────────────────────────────
+// All three are client-side filters over the full fetched set (loadClients now
+// always requests include_inactive=true), so switching chips is instant — no
+// re-fetch. VIP = ≥3 visits in the last 8 weeks (the app-wide VIP rule); the
+// same predicate drives the gold avatar ring and the ★ VIP tag in renderClients.
 
-function toggleVip() {
-    vipOnly = !vipOnly;
-    const btn = document.getElementById('btn-vip-only');
-    if (btn) btn.classList.toggle('btn-active', vipOnly);
+function isVipClient(c) { return c.is_active && (c.visits_last_8w || 0) >= 3; }
+
+function applyFilter(clients) {
+    if (activeFilter === 'vip')      return clients.filter(isVipClient);
+    if (activeFilter === 'inactive') return clients.filter(c => !c.is_active);
+    return clients.filter(c => c.is_active);
+}
+
+function setFilter(f) {
+    activeFilter = f;
+    updateFilterChips();
     renderClients(allClients);
+    saveClientState();
 }
 
-// ── Active / All filter ────────────────────────────────────────────────────────
-// Unlike the VIP toggle (a client-side filter), this changes WHICH rows the API
-// returns — deactivated clients are excluded server-side — so it must re-fetch.
-function toggleShowAll() {
-    showAll = !showAll;
-    const btn = document.getElementById('btn-show-all');
-    const label = document.getElementById('btn-show-all-label');
-    if (btn) btn.classList.toggle('btn-active', showAll);
-    if (label) label.textContent = showAll ? 'Wszyscy' : 'Aktywni';
-    loadClients();
+function updateFilterChips() {
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === activeFilter);
+    });
 }
 
-function applyVip(clients) {
-    if (!vipOnly) return clients;
-    return clients.filter(c => (c.visits_last_8w || 0) >= 3);
+function updateFilterCounts() {
+    const active   = allClients.filter(c => c.is_active).length;
+    const vip      = allClients.filter(isVipClient).length;
+    const inactive = allClients.filter(c => !c.is_active).length;
+    const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+    set('chip-count-active', active);
+    set('chip-count-vip', vip);
+    set('chip-count-inactive', inactive);
 }
 
 // ── Sort ─────────────────────────────────────────────────────────────────────
@@ -674,7 +716,7 @@ function sortedClients(clients) {
     return [...clients].sort((a, b) => {
         let av = a[field] ?? '';
         let bv = b[field] ?? '';
-        if (field === 'last_visit_date') {
+        if (field === 'last_visit_date' || field === 'next_visit_date') {
             av = parseDateForSort(av);
             bv = parseDateForSort(bv);
         } else if (field === 'is_active') {
@@ -697,7 +739,13 @@ function sortedClients(clients) {
 
 function renderClients(clients) {
     const tbody = document.getElementById('clients-tbody');
-    const sorted = sortedClients(applyVip(clients));
+    const sorted = sortedClients(applyFilter(clients));
+
+    // Chip counts derive from the full fetched set; the subtitle count reflects
+    // how many rows the current chip + search actually shows.
+    updateFilterCounts();
+    const countEl = document.getElementById('client-count');
+    if (countEl) countEl.textContent = sorted.length;
 
     if (sorted.length === 0) {
         tbody.innerHTML = `
@@ -728,23 +776,27 @@ function renderClients(clients) {
         const nextVisit = formatNextVisit(
             client.next_visit_date, client.next_visit_time, client.next_visit_employee
         );
-        const ageInfo = client.age
-            ? `<div class="client-age">${client.age} lat</div>`
-            : '';
 
         const noShows = client.no_show_count || 0;
-        const noShowDot = noShows > 2
-            ? `<div class="no-show-badge" title="${noShows} no-show"></div>`
-            : '';
         const noShowCell = noShows > 2
             ? `<span class="noshow-count-danger">${noShows}</span>`
             : `<span class="visit-count">${noShows}</span>`;
+
+        // Avatar ring signals standing at a glance (design canvas): red = no-show
+        // risk (>2), gold = VIP, none otherwise. Risk takes precedence over VIP.
+        const isVip  = isVipClient(client);
+        const isRisk = noShows > 2;
+        const ringColor = isRisk ? '#9b2c2c' : (isVip ? '#c9a227' : null);
+        const ringStyle = ringColor
+            ? ` style="box-shadow:0 0 0 2px #fff, 0 0 0 3.5px ${ringColor};"`
+            : '';
+        const vipTag = isVip ? ' <span class="vip-tag">★ VIP</span>' : '';
 
         const statusBadge = client.is_active
             ? '<span class="status-badge active">Aktywny</span>'
             : '<span class="status-badge inactive">Nieaktywny</span>';
 
-        const deactivateBtn = client.is_active && (client.no_show_count || 0) > 2
+        const deactivateBtn = client.is_active && noShows > 2
             ? `<button class="action-icon-btn danger"
                        onclick="deactivateClient(${client.id}, '${escapeHtml(fullName)}')"
                        title="Dezaktywuj klienta" aria-label="Dezaktywuj klienta">
@@ -756,26 +808,22 @@ function renderClients(clients) {
 
         return `
             <tr data-client-id="${client.id}">
-                <td class="cell-name">
+                <td class="cell-name" data-label="Klient">
                     <div class="client-info">
-                        <div class="avatar-wrapper">
-                            <div class="client-avatar">${initials}</div>
-                            ${noShowDot}
-                        </div>
+                        <div class="client-avatar"${ringStyle}>${initials}</div>
                         <div>
-                            <div class="client-name">${fullName}</div>
+                            <div class="client-name">${fullName}${vipTag}</div>
                             ${phoneUnderName}
-                            ${ageInfo}
                         </div>
                     </div>
                 </td>
-                <td class="cell-hide-lg" data-label="Telefon">${phone}</td>
                 <td data-label="Ostatnia wizyta">${lastVisit}</td>
-                <td class="cell-hide-lg" data-label="Następna wizyta">${nextVisit}</td>
+                <td data-label="Następna wizyta">${nextVisit}</td>
                 <td data-label="Wizyt"><span class="visit-count">${client.completed_visits || 0}</span></td>
-                <td data-label="No-shows">${noShowCell}</td>
-                <td data-label="Odwołał"><span class="visit-count">${client.cancelled_count || 0}</span></td>
+                <td data-label="No-show">${noShowCell}</td>
                 <td class="trend-cell cell-hide-sm" data-label="Trend">${sparklineSvg(clientTrends[client.id])}</td>
+                <td class="cell-hide-lg" data-label="Odwołał"><span class="visit-count">${client.cancelled_count || 0}</span></td>
+                <td class="cell-hide-lg" data-label="Telefon">${phone}</td>
                 <td class="status-cell" data-label="Status">${statusBadge}</td>
                 <td class="cell-actions" style="text-align:right; white-space:nowrap;">
                     <div class="action-icons">
@@ -836,9 +884,10 @@ async function loadClients() {
     try {
         const params = new URLSearchParams();
         if (searchQuery) params.set('search', searchQuery);
-        if (showAll) params.set('include_inactive', 'true');
-        const qs = params.toString();
-        const clientUrl = qs ? `/api/clients?${qs}` : '/api/clients';
+        // Always fetch inactive too — the chips filter client-side and need
+        // accurate counts for all three states (Aktywni / VIP / Nieaktywni).
+        params.set('include_inactive', 'true');
+        const clientUrl = `/api/clients?${params.toString()}`;
 
         const [clientsResp, trendsResp] = await Promise.all([
             fetch(clientUrl).then(r => r.json()),
@@ -960,8 +1009,14 @@ function showToast(type, msg) {
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
 
+// Debounced live search: the design's search box has no button, so re-fetch
+// 250ms after the user stops typing. Enter still fires immediately.
+document.getElementById('search-input').addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(loadClients, 250);
+});
 document.getElementById('search-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') loadClients();
+    if (e.key === 'Enter') { clearTimeout(searchDebounce); loadClients(); }
 });
 
 // Tap-anywhere-on-card navigation (mobile stack-cards view only). Icon
@@ -976,16 +1031,18 @@ document.getElementById('clients-tbody').addEventListener('click', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Restore sort + search state from previous visit
+    // Restore sort + filter + search state from previous visit
     try {
         const raw = sessionStorage.getItem('filterState:clients');
         if (raw) {
             const state = JSON.parse(raw);
             if (state._sortField) currentSort.field = state._sortField;
             if (state._sortDir)   currentSort.dir   = state._sortDir;
+            if (state._filter)    activeFilter       = state._filter;
         }
     } catch(e) {}
     updateSortHeaders();
+    updateFilterChips();
     loadStatistics();
     restoreFilterState('clients', ['search-input']);
     loadClients();
