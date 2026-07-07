@@ -6,27 +6,20 @@
 
 {% block extra_css %}
 <style>
-    .refined-page { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+    /* Full-bleed, matching the day/week/month calendar views (no max-width cap). */
+    .refined-page { padding: 1rem 1.25rem 1.25rem; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.75rem; }
     .page-header > div:last-child { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
     .page-title { margin-bottom: 0.25rem; }
     .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
 
-    /* Toolbar: filter pills (left) + search (right) — mirrors the Appointments mock. */
-    .list-toolbar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
-    .filter-pills { display: flex; gap: 0.25rem; flex-wrap: wrap; }
-    .filter-pill {
-        display: inline-flex; align-items: center; gap: 0.25rem;
-        padding: 0.375rem 0.75rem; font-size: 0.6875rem; font-weight: 400;
-        letter-spacing: 0.04em; text-transform: uppercase;
-        border: 1px solid var(--color-border); border-radius: 2px;
-        background: white; color: var(--color-ink-muted); cursor: pointer;
-        transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-    }
-    .filter-pill:hover { border-color: var(--color-ink-muted); }
-    .filter-pill.active { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
-    .filter-pill .pill-count { font-weight: 500; }
-    .filter-pill.active .pill-count { color: rgba(255,255,255,0.9); }
+    /* Date navigation row — same component as the day/week/month calendar views. */
+    .date-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
+    .date-nav-date { padding: 0.3125rem 0.5rem; font-family: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; }
+    .date-nav-date:focus { outline: none; border-color: var(--color-ink-muted); }
+    .date-nav-range { font-size: 0.75rem; font-weight: 500; color: var(--color-ink-muted); white-space: nowrap; }
 
     .list-search { position: relative; flex: 1; max-width: 320px; margin-left: auto; }
     .list-search input {
@@ -184,14 +177,13 @@
         </div>
     </header>
 
-    <!-- Toolbar: filter pills + search -->
-    <div class="list-toolbar">
-        <div class="filter-pills" role="tablist" aria-label="Filtr wizyt">
-            <button type="button" class="filter-pill" data-filter="upcoming" role="tab" onclick="setFilter('upcoming')">Nadchodzące <span class="pill-count" id="pill-count-upcoming">0</span></button>
-            <button type="button" class="filter-pill" data-filter="today" role="tab" onclick="setFilter('today')">Dziś <span class="pill-count" id="pill-count-today">0</span></button>
-            <button type="button" class="filter-pill" data-filter="past" role="tab" onclick="setFilter('past')">Minione <span class="pill-count" id="pill-count-past">0</span></button>
-            <button type="button" class="filter-pill" data-filter="all" role="tab" onclick="setFilter('all')">Wszystkie <span class="pill-count" id="pill-count-all">0</span></button>
-        </div>
+    <!-- Date navigation (Monday–Sunday week window) — matches the calendar views -->
+    <div class="date-nav">
+        <button type="button" id="listPrevBtn" class="nav-btn">← Poprzedni</button>
+        <input type="date" id="listDateInput" class="date-nav-date" aria-label="Wybierz tydzień">
+        <span class="date-nav-range" id="listRangeLabel">—</span>
+        <button type="button" id="listTodayBtn" class="nav-btn" style="display:none;">Dziś</button>
+        <button type="button" id="listNextBtn" class="nav-btn">Następny →</button>
         <div class="list-search">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input type="text" id="list-search-input" placeholder="Szukaj klienta, usługi..." aria-label="Szukaj wizyt" oninput="onSearchInput(this.value)">
@@ -303,13 +295,13 @@ function empColor(id) {
     return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
 }
 
-// Filter/search state. The mock derives four views (upcoming/today/past/all)
-// client-side over one fetched dataset — we do the same.
-const FILTER_KEY = 'appt_list_filter';
+// Search + sort + date-window state. The list shows one Monday–Sunday week at a
+// time (same model as the week calendar); prev/next page ±7 days and re-fetch.
+// getMonday is a hoisted function declaration, so calling it here is safe.
 let allAppointments = [];
-let activeFilter = 'upcoming';
 let searchQuery = '';
 let sortState = { column: 'appointment_date', direction: 'asc' };
+let currentWeekStart = getMonday(new Date());
 
 // Status modal state
 let modalAppointmentId = null;
@@ -482,20 +474,7 @@ function getSortedAppointments(appointments) {
     });
 }
 
-// ── Filter pills + search ───────────────────────────────────────────────────
-
-function setFilter(f) {
-    activeFilter = f;
-    try { localStorage.setItem(FILTER_KEY, f); } catch (e) {}
-    // Past reads best newest-first; the forward-looking views read oldest-first.
-    sortState = (f === 'past')
-        ? { column: 'appointment_date', direction: 'desc' }
-        : { column: 'appointment_date', direction: 'asc' };
-    document.querySelectorAll('.filter-pill').forEach(p =>
-        p.classList.toggle('active', p.dataset.filter === f));
-    updateSortHeaders();
-    applyFilters();
-}
+// ── Search + date window ────────────────────────────────────────────────────
 
 let searchDebounce = null;
 function onSearchInput(value) {
@@ -504,29 +483,10 @@ function onSearchInput(value) {
     searchDebounce = setTimeout(applyFilters, 120);
 }
 
-function matchesFilter(a, filter, today) {
-    if (filter === 'upcoming') return a.appointment_date >= today && !['cancelled', 'no_show'].includes(a.status);
-    if (filter === 'today')    return a.appointment_date === today;
-    if (filter === 'past')     return a.appointment_date < today;
-    return true; // 'all'
-}
-
+// Render the fetched week, narrowed by the search box, then refresh the
+// subtitle + footer summary. The week window is the scope now (no pills).
 function applyFilters() {
-    const today = todayStr();
-
-    // Pill counts derive from the full set, independent of the search box.
-    const counts = { upcoming: 0, today: 0, past: 0, all: allAppointments.length };
-    allAppointments.forEach(a => {
-        if (matchesFilter(a, 'upcoming', today)) counts.upcoming++;
-        if (matchesFilter(a, 'today', today))    counts.today++;
-        if (matchesFilter(a, 'past', today))     counts.past++;
-    });
-    ['upcoming', 'today', 'past', 'all'].forEach(k => {
-        const el = document.getElementById('pill-count-' + k);
-        if (el) el.textContent = counts[k];
-    });
-
-    let rows = allAppointments.filter(a => matchesFilter(a, activeFilter, today));
+    let rows = allAppointments;
     const q = searchQuery.trim().toLowerCase();
     if (q) {
         rows = rows.filter(a =>
@@ -545,13 +505,79 @@ function applyFilters() {
         rev.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
 }
 
+// ── Week window navigation (mirrors the week calendar) ──────────────────────
+
+const PL_MONTHS_SHORT = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+
+// Monday of the week containing d (local midnight). Sunday counts as the END of
+// the week, so it maps back to the preceding Monday.
+function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function fmtLocal(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function weekEndDate() {
+    const e = new Date(currentWeekStart);
+    e.setDate(e.getDate() + 6);
+    return e;
+}
+
+// Sync the date picker value, the "24–30 cze 2026" range label, and hide the
+// "Dziś" button when we're already on the current week.
+function updateWeekLabel() {
+    const s = currentWeekStart, e = weekEndDate();
+    const label = (s.getMonth() === e.getMonth())
+        ? `${s.getDate()}–${e.getDate()} ${PL_MONTHS_SHORT[e.getMonth()]} ${e.getFullYear()}`
+        : `${s.getDate()} ${PL_MONTHS_SHORT[s.getMonth()]} – ${e.getDate()} ${PL_MONTHS_SHORT[e.getMonth()]} ${e.getFullYear()}`;
+    const rangeEl = document.getElementById('listRangeLabel');
+    if (rangeEl) rangeEl.textContent = label;
+    const input = document.getElementById('listDateInput');
+    if (input) input.value = fmtLocal(currentWeekStart);
+    const todayBtn = document.getElementById('listTodayBtn');
+    if (todayBtn) {
+        const thisMon = getMonday(new Date());
+        todayBtn.style.display = (currentWeekStart.getTime() === thisMon.getTime()) ? 'none' : 'inline-flex';
+    }
+}
+
+function navigateWeek(offset) {
+    currentWeekStart.setDate(currentWeekStart.getDate() + offset * 7);
+    updateWeekLabel();
+    loadAppointments();
+}
+
+function goToToday() {
+    currentWeekStart = getMonday(new Date());
+    updateWeekLabel();
+    loadAppointments();
+}
+
+function onDatePick(value) {
+    if (!value) return;
+    const [y, m, d] = value.split('-').map(Number);   // local — avoid UTC shift
+    currentWeekStart = getMonday(new Date(y, m - 1, d));
+    updateWeekLabel();
+    loadAppointments();
+}
+
 // ── Table rendering ───────────────────────────────────────────────────────────
 
 function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w tym widoku</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w tym tygodniu</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
@@ -599,9 +625,12 @@ function renderTable(appointments) {
 
 async function loadAppointments() {
     const tbody = document.getElementById('appointments-tbody');
-    // One broad fetch (100 most-recent by date); all four views + search are
-    // derived client-side, matching the mock's computeListRows.
-    const params = new URLSearchParams({ mode: 'latest' });
+    // Fetch exactly the current Monday–Sunday window; search + sort run
+    // client-side over it. Same start_date/end_date contract the calendars use.
+    const params = new URLSearchParams({
+        start_date: fmtLocal(currentWeekStart),
+        end_date: fmtLocal(weekEndDate()),
+    });
     // Preserve the "filter to one employee" deep-link the calendar views pass.
     const urlEmp = new URLSearchParams(window.location.search).get('employee_id');
     if (urlEmp) params.set('employee_id', urlEmp);
@@ -772,11 +801,20 @@ function updateViewLinks() {
 
 document.addEventListener('DOMContentLoaded', () => {
     updateViewLinks();
-    // Restore the last-used pill (default: upcoming, matching the mock).
-    let saved = 'upcoming';
-    try { saved = localStorage.getItem(FILTER_KEY) || 'upcoming'; } catch (e) {}
-    if (!['upcoming', 'today', 'past', 'all'].includes(saved)) saved = 'upcoming';
-    setFilter(saved);        // sets sort + active pill + triggers applyFilters (on empty set)
+    // Optional deep-link: ?date=YYYY-MM-DD focuses the week containing that date.
+    const urlDate = new URLSearchParams(window.location.search).get('date');
+    if (urlDate) {
+        const [y, m, d] = urlDate.split('-').map(Number);   // local — avoid UTC shift
+        currentWeekStart = getMonday(new Date(y, m - 1, d));
+    }
+    // Wire the date-nav controls.
+    document.getElementById('listPrevBtn').addEventListener('click', () => navigateWeek(-1));
+    document.getElementById('listNextBtn').addEventListener('click', () => navigateWeek(1));
+    document.getElementById('listTodayBtn').addEventListener('click', goToToday);
+    document.getElementById('listDateInput').addEventListener('change', e => onDatePick(e.target.value));
+
+    updateWeekLabel();
+    updateSortHeaders();
     loadAppointments();
     initScrollToTopButton('scroll-top-btn');
 });
