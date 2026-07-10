@@ -170,3 +170,122 @@ class TestToggleRoute:
         assert resp.get_json()['enabled'] is False
         with client.session_transaction() as sess:
             assert sess.get('admin_view') is False
+
+
+class TestOwnDataActive:
+    """"Dane własne" is effective only for a superuser with admin view ON."""
+
+    def test_requires_superuser_admin_view_and_flag(self, app):
+        from config import admin_view
+        su = Mock(is_authenticated=True, role='superuser')
+        with app.test_request_context():
+            from flask import session
+            session['admin_view'] = True
+            session['own_data'] = True
+            with patch('config.admin_view.current_user', su):
+                assert admin_view.own_data_active() is True
+
+    def test_inert_without_admin_view(self, app):
+        from config import admin_view
+        su = Mock(is_authenticated=True, role='superuser')
+        with app.test_request_context():
+            from flask import session
+            session['admin_view'] = False
+            session['own_data'] = True   # stale / forged — must not take effect
+            with patch('config.admin_view.current_user', su):
+                assert admin_view.own_data_active() is False
+
+    def test_non_superuser_inert(self, app):
+        from config import admin_view
+        recep = Mock(is_authenticated=True, role='receptionist')
+        with app.test_request_context():
+            from flask import session
+            session['admin_view'] = True
+            session['own_data'] = True
+            with patch('config.admin_view.current_user', recep):
+                assert admin_view.own_data_active() is False
+
+
+class TestOwnDataScope:
+    """Own-data INVERTS the choke-point from "exclude the owner" to "only me"."""
+
+    def test_emp_exclusion_sql_only_me(self, app):
+        from config import admin_view
+        with app.app_context(), \
+                patch('config.admin_view.own_data_active', return_value=True), \
+                patch('config.admin_view.current_own_employee_id', return_value=8):
+            clause, params = admin_view.emp_exclusion_sql('a.employee_id')
+        assert clause.strip() == 'AND a.employee_id = %s'
+        assert params == [8]
+
+    def test_inline_only_me(self, app):
+        from config import admin_view
+        with app.app_context(), \
+                patch('config.admin_view.own_data_active', return_value=True), \
+                patch('config.admin_view.current_own_employee_id', return_value=8):
+            clause = admin_view.emp_exclusion_sql_inline('e.id')
+        assert clause.strip() == 'AND e.id = 8'
+
+    def test_own_data_with_no_linked_employee_matches_nothing(self, app):
+        from config import admin_view
+        with app.app_context(), \
+                patch('config.admin_view.own_data_active', return_value=True), \
+                patch('config.admin_view.current_own_employee_id', return_value=None):
+            clause, params = admin_view.emp_exclusion_sql('a.employee_id')
+            inline = admin_view.emp_exclusion_sql_inline('a.employee_id')
+        assert '1=0' in clause and params == []
+        assert '1=0' in inline
+
+    def test_is_employee_hidden_only_self_visible(self, app):
+        from config import admin_view
+        with app.app_context(), \
+                patch('config.admin_view.own_data_active', return_value=True), \
+                patch('config.admin_view.current_own_employee_id', return_value=8):
+            assert admin_view.is_employee_hidden(9) is True     # someone else → 404
+            assert admin_view.is_employee_hidden(8) is False    # yourself → visible
+
+
+class TestOwnDataToggleRoute:
+    def _client(self, app):
+        app.config['WTF_CSRF_ENABLED'] = False
+        return app.test_client()
+
+    def _su(self):
+        return Mock(is_authenticated=True, role='superuser',
+                    get_id=Mock(return_value='1'))
+
+    def test_non_superuser_gets_403(self, app):
+        client = self._client(app)
+        recep = Mock(is_authenticated=True, role='receptionist',
+                     get_id=Mock(return_value='2'))
+        with patch('flask_login.utils._get_user', return_value=recep):
+            resp = client.post('/api/own-data', json={'enabled': True})
+        assert resp.status_code == 403
+
+    def test_400_when_admin_view_off(self, app):
+        client = self._client(app)
+        with patch('flask_login.utils._get_user', return_value=self._su()):
+            resp = client.post('/api/own-data', json={'enabled': True})
+        assert resp.status_code == 400
+        with client.session_transaction() as sess:
+            assert sess.get('own_data') is None
+
+    def test_enables_when_admin_view_on(self, app):
+        client = self._client(app)
+        with patch('flask_login.utils._get_user', return_value=self._su()):
+            client.post('/api/admin-view', json={'enabled': True})
+            resp = client.post('/api/own-data', json={'enabled': True})
+        assert resp.status_code == 200
+        assert resp.get_json()['enabled'] is True
+        with client.session_transaction() as sess:
+            assert sess.get('own_data') is True
+
+    def test_disabling_admin_view_clears_own_data(self, app):
+        client = self._client(app)
+        with patch('flask_login.utils._get_user', return_value=self._su()):
+            client.post('/api/admin-view', json={'enabled': True})
+            client.post('/api/own-data', json={'enabled': True})
+            client.post('/api/admin-view', json={'enabled': False})
+        with client.session_transaction() as sess:
+            assert sess.get('admin_view') is False
+            assert sess.get('own_data') is False

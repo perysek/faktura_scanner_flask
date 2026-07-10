@@ -74,6 +74,24 @@ class TestDailySchedule:
         assert params[-1] == 9
 
 
+class TestOwnDataModeReachesRepos:
+    """End-to-end: with "Dane własne" active the repo query flips from NOT IN to = id,
+    proving repos inherit the inverted scope with no per-call-site change."""
+
+    def test_get_by_date_range_scopes_to_own_employee(self, app):
+        from repositories.appointments.appointment_repository import AppointmentRepository
+        conn, cur = _conn()
+        with app.app_context(), \
+                patch('config.admin_view.own_data_active', return_value=True), \
+                patch('config.admin_view.current_own_employee_id', return_value=8), \
+                patch(f'{REPO}.get_db_connection', return_value=conn):
+            AppointmentRepository().get_by_date_range(date(2026, 1, 1), date(2026, 1, 31))
+        sql, params = cur.execute.call_args.args[0], list(cur.execute.call_args.args[1])
+        assert 'a.employee_id = %s' in sql
+        assert 'NOT IN' not in sql
+        assert params[-1] == 8
+
+
 class TestMultiEmployeeSchedule:
     def test_employee_set_excludes_hidden(self, app):
         from repositories.appointments.appointment_repository import AppointmentRepository

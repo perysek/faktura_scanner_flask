@@ -18,6 +18,13 @@ No DB migration and no compensation-formula change: the hidden set is computed
 live from ``employees JOIN users WHERE users.role = 'superuser'`` and every total
 is calculated with the exact same formula as for any other employee — the owner's
 row is simply omitted from the result set unless admin view is ON.
+
+Second toggle — "Dane własne" (own data): a superuser with admin view ON can also
+tick "Dane własne" to *invert* the choke-point from "exclude the owner" to "show
+ONLY my own employee's data" across every page. It is only meaningful while admin
+view is ON (enforced server-side: ``own_data_active`` requires ``admin_view_active``).
+Both flags feed one resolver (``_scope_mode``) that the two SQL builders and the
+route guard read, so the whole app follows the flip with no per-call-site change.
 """
 import logging
 
@@ -100,8 +107,61 @@ def hidden_ids_to_exclude() -> tuple:
     return () if admin_view_active() else get_hidden_employee_ids()
 
 
+def current_own_employee_id():
+    """The employee id linked to the logged-in user, or None. Cached on ``flask.g``.
+
+    Used by "Dane własne" to scope every employee-filtered view to just this
+    person. Resolved via ``get_by_user_id`` — a PK-style lookup that is NOT itself
+    scope-filtered — so it still returns the owner's own id even though that
+    employee is otherwise hidden."""
+    try:
+        cached = g.get('_own_emp_id', '__unset__')
+    except RuntimeError:
+        return None
+    if cached != '__unset__':
+        return cached
+
+    emp_id = None
+    try:
+        from config.auth_config import get_linked_employee
+        emp = get_linked_employee(current_user)
+        emp_id = emp['id'] if emp else None
+    except Exception:
+        emp_id = None
+    g._own_emp_id = emp_id
+    return emp_id
+
+
+def own_data_active() -> bool:
+    """True only when a superuser has admin view ON *and* has ticked "Dane własne".
+
+    Depends on ``admin_view_active()``, so the "editable only when Widok
+    administratora is on" rule is enforced server-side too: with admin view OFF the
+    flag is inert no matter what the session cookie holds."""
+    try:
+        return admin_view_active() and bool(session.get('own_data', False))
+    except Exception:
+        return False
+
+
+def _scope_mode() -> tuple:
+    """Resolve the current employee-scope filter into one of three modes:
+
+      ``('only', emp_id)``  — Dane własne ON: restrict to the logged-in user's own
+                              employee (``emp_id`` may be None → match nothing).
+      ``('exclude', ids)``  — default: hide the superuser-linked employee(s).
+      ``('all', None)``     — Widok administratora ON (own-data OFF): no filter.
+
+    Every scope decision in the app derives from this single function, so the two
+    toggles compose here and nowhere else."""
+    if own_data_active():
+        return ('only', current_own_employee_id())
+    ids = hidden_ids_to_exclude()
+    return ('exclude', ids) if ids else ('all', None)
+
+
 def emp_exclusion_sql(col_expr: str) -> tuple:
-    """Append-ready exclusion clause for an employee-id column/expression.
+    """Append-ready employee-scope clause for an employee-id column/expression.
 
     Args:
         col_expr: the SQL expression identifying the employee, e.g.
@@ -109,49 +169,66 @@ def emp_exclusion_sql(col_expr: str) -> tuple:
             employees table, or ``'cp.preferred_employee_id'`` for a preference row.
             This is ALWAYS a trusted, hard-coded column name — never user input.
 
-    Returns:
-        ``(clause, params)`` where ``clause`` begins with ``' AND '`` and is ready
-        to concatenate onto an existing ``WHERE`` (every query that uses it already
-        has at least an ``is_deleted = FALSE`` predicate). Returns ``('', [])`` when
-        there is nothing to hide, so the caller's SQL is unchanged in that case.
+    Returns ``(clause, params)`` where ``clause`` begins with ``' AND '`` and is
+    ready to concatenate onto an existing ``WHERE`` (every query that uses it
+    already has at least one predicate). Depending on the active toggles the clause
+    is a ``NOT IN`` (hide the owner), a ``= %s`` (own-data: only me), or empty
+    (admin view, reveal everything). The placeholder count always matches
+    ``params``.
     """
-    ids = hidden_ids_to_exclude()
-    if not ids:
-        return '', []
-    placeholders = ','.join(['%s'] * len(ids))
-    return f' AND {col_expr} NOT IN ({placeholders}) ', list(ids)
+    mode, val = _scope_mode()
+    if mode == 'only':
+        if val is None:
+            return ' AND 1=0 ', []          # own-data but no linked employee → empty
+        return f' AND {col_expr} = %s ', [val]
+    if mode == 'exclude':
+        placeholders = ','.join(['%s'] * len(val))
+        return f' AND {col_expr} NOT IN ({placeholders}) ', list(val)
+    return '', []                            # 'all' → no filter
 
 
 def is_employee_hidden(employee_id: int) -> bool:
-    """True when this employee must be treated as non-existent for the current
-    viewer — i.e. they are superuser-linked AND admin view is OFF.
+    """True when this employee must be treated as non-existent (404) for the
+    current viewer.
 
-    Route-level guard for per-employee *detail* / *analytics* endpoints reached by
-    explicit id (where a query-level NOT IN would only empty the result rather than
-    404). Returns False under admin view (nothing is hidden then)."""
+    Route-level guard for per-employee *detail* / *analytics* / *balance* endpoints
+    reached by explicit id (where a query-level filter would only empty the result
+    rather than 404). Follows ``_scope_mode``: under "Dane własne" everyone *except*
+    the logged-in user is hidden; by default only the superuser-linked employee(s)
+    are; under plain admin view nobody is."""
     try:
-        return int(employee_id) in hidden_ids_to_exclude()
+        eid = int(employee_id)
     except (TypeError, ValueError):
         return False
+    mode, val = _scope_mode()
+    if mode == 'only':
+        return eid != val                    # own-data: all but yourself are hidden
+    if mode == 'exclude':
+        return eid in val
+    return False                             # 'all' → nothing hidden
 
 
 def emp_exclusion_sql_inline(col_expr: str) -> str:
     """Param-free sibling of ``emp_exclusion_sql`` for complex multi-CTE queries.
 
-    Returns just the clause (``' AND col NOT IN (3,7) '`` or ``''``) with the ids
-    inlined, so it can be dropped into a query that already has many positional
-    placeholders without disturbing their order — the analytics aggregates, where
-    the same appointments/employees scoping recurs across several CTEs, are the
-    reason this exists.
+    Returns just the clause (``' AND col NOT IN (3,7) '``, ``' AND col = 8 '``,
+    ``' AND 1=0 '`` or ``''``) with the ids inlined, so it can be dropped into a
+    query that already has many positional placeholders without disturbing their
+    order — the analytics aggregates, where the same scoping recurs across several
+    CTEs, are the reason this exists.
 
     Injection-safe by construction: the ids are this app's own ``employees.id``
-    primary keys returned by :func:`get_hidden_employee_ids`, never user input, and
+    primary keys (hidden set or the logged-in user's own id), never user input, and
     each is forced through ``int()`` here so a non-integer can only raise, never
-    reach the SQL text. Still one choke-point — same hidden-set source, second
-    render style.
+    reach the SQL text. Same ``_scope_mode`` source as everything else — one
+    choke-point, second render style.
     """
-    ids = hidden_ids_to_exclude()
-    if not ids:
-        return ''
-    id_list = ','.join(str(int(i)) for i in ids)
-    return f' AND {col_expr} NOT IN ({id_list}) '
+    mode, val = _scope_mode()
+    if mode == 'only':
+        if val is None:
+            return ' AND 1=0 '
+        return f' AND {col_expr} = {int(val)} '
+    if mode == 'exclude':
+        id_list = ','.join(str(int(i)) for i in val)
+        return f' AND {col_expr} NOT IN ({id_list}) '
+    return ''

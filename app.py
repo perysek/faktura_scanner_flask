@@ -357,9 +357,14 @@ def create_app():
         # (controls whether the sidebar checkbox renders at all) and whether the
         # hidden-employee data is currently being revealed (checkbox state + any
         # "tryb administratora" indicator). Both are cheap, exception-safe helpers.
-        from config.admin_view import admin_view_active as _admin_view_active, is_superuser as _is_superuser_fn
+        from config.admin_view import (
+            admin_view_active as _admin_view_active,
+            is_superuser as _is_superuser_fn,
+            own_data_active as _own_data_active,
+        )
         _admin_view_on = _admin_view_active()
         _viewer_is_superuser = _is_superuser_fn()
+        _own_data_on = _own_data_active()
 
         # Active-tone UI message map for the JS MSG() resolver. Only the active
         # tone crosses to the browser; '<' is escaped so a string can never
@@ -379,6 +384,7 @@ def create_app():
             'can_edit_price_history': _can_edit_price_history,
             'can_send_sms': _can_send_sms,
             'admin_view_active': _admin_view_on,
+            'own_data_active': _own_data_on,
             'is_superuser': _viewer_is_superuser,
             'page_title': page_title_for(getattr(_request, 'endpoint', None)),
             'ui_messages_json': ui_messages_json,

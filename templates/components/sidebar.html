@@ -22,7 +22,14 @@
         cursor: pointer;
         border-radius: var(--radius-sm);
     }
-    .admin-view-checkbox:disabled { opacity: 0.5; cursor: progress; }
+    .admin-view-checkbox:disabled { opacity: 0.5; }
+
+    /* "Dane własne" — a sub-toggle nested under admin view. No top divider (it
+       reads as a child of the row above); dimmed + non-interactive until admin
+       view is ON, which is the only state where it is editable. */
+    .own-data-row { border-top: none; }
+    .admin-view-row.is-disabled { opacity: 0.55; }
+    .admin-view-row.is-disabled .admin-view-label:hover { background: transparent; }
 
     /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present the
        deliberately-limited link set as one flat list. The accordion section
@@ -266,6 +273,26 @@
                    aria-label="Widok administratora">
         </label>
     </div>
+    {# "Dane własne" — show ONLY the logged-in user's own employee data everywhere.
+       Editable only while admin view is ON (disabled + dimmed otherwise); the
+       server enforces the same dependency. #}
+    <div class="admin-view-row own-data-row px-2 py-2 shrink-0 {{ 'is-active' if own_data_active else '' }} {{ '' if admin_view_active else 'is-disabled' }}">
+        <label for="own-data-toggle"
+               class="admin-view-label own-data-label flex items-center gap-2.5 pl-7 pr-4 py-2 rounded-[var(--radius-sm)] select-none transition-all duration-200 {{ 'cursor-pointer' if admin_view_active else 'cursor-not-allowed' }}"
+               title="Pokaż wyłącznie dane zalogowanego użytkownika">
+            {{ icon('badge', class='admin-view-glyph w-5 h-5 shrink-0') }}
+            <span class="flex-1 min-w-0">
+                <span class="block text-base font-medium truncate">Dane własne</span>
+                <span class="admin-view-state block text-[11px] uppercase tracking-wide"
+                      style="{{ '' if own_data_active else 'display:none;' }}">tylko moje</span>
+            </span>
+            <input type="checkbox" id="own-data-toggle"
+                   class="admin-view-checkbox shrink-0"
+                   {{ 'checked' if own_data_active else '' }}
+                   {{ '' if admin_view_active else 'disabled' }}
+                   aria-label="Dane własne">
+        </label>
+    </div>
     {% endif %}
     <div class="p-2 shrink-0" style="border-top: 1px solid var(--sidebar-border);">
         <a href="{{ url_for('auth.logout') }}"
@@ -450,30 +477,37 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// "Widok administratora" toggle. Superuser-only element (absent otherwise, so the
-// guard exits cleanly). POST the new state, then hard-reload: the whole app —
-// every server-rendered list/stat AND every client-side API fetch — re-runs under
-// the new session flag, so there is no partial/stale view to reconcile.
+// "Widok administratora" + "Dane własne" toggles. Superuser-only elements (absent
+// otherwise, so wireToggle exits cleanly). POST the new state, then hard-reload:
+// the whole app — every server-rendered list/stat AND every client-side API fetch
+// — re-runs under the new session flag, so there is no partial/stale view to
+// reconcile. The "Dane własne" box is disabled in HTML unless admin view is ON, so
+// its change event only fires when it is genuinely editable.
 document.addEventListener('DOMContentLoaded', function () {
-    var toggle = document.getElementById('admin-view-toggle');
-    if (!toggle) return;
-    toggle.addEventListener('change', function () {
-        var enabled = toggle.checked;
-        toggle.disabled = true;   // block double-submit while the round-trip runs
-        fetch('/api/admin-view', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled: enabled })
-        }).then(function (r) {
-            if (!r.ok) throw new Error('admin-view toggle failed: ' + r.status);
-            return r.json();
-        }).then(function () {
-            window.location.reload();
-        }).catch(function () {
-            // Revert the box so the UI never diverges from the persisted flag.
-            toggle.checked = !enabled;
-            toggle.disabled = false;
+    function wireToggle(id, url) {
+        var toggle = document.getElementById(id);
+        if (!toggle) return;
+        toggle.addEventListener('change', function () {
+            if (toggle.disabled) return;          // ignore programmatic/blocked changes
+            var enabled = toggle.checked;
+            toggle.disabled = true;               // block double-submit mid round-trip
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: enabled })
+            }).then(function (r) {
+                if (!r.ok) throw new Error(url + ' toggle failed: ' + r.status);
+                return r.json();
+            }).then(function () {
+                window.location.reload();
+            }).catch(function () {
+                // Revert the box so the UI never diverges from the persisted flag.
+                toggle.checked = !enabled;
+                toggle.disabled = false;
+            });
         });
-    });
+    }
+    wireToggle('admin-view-toggle', '/api/admin-view');
+    wireToggle('own-data-toggle', '/api/own-data');
 });
 </script>
