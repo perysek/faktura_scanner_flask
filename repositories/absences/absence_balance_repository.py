@@ -8,6 +8,7 @@ from datetime import date
 from typing import List
 
 from config.database import get_db_connection
+from config.admin_view import emp_exclusion_sql_inline
 
 
 class AbsenceBalanceRepository:
@@ -69,7 +70,7 @@ class AbsenceBalanceRepository:
           {employee_id, category_id, category_name, full_day, used, limit,
            warning_threshold_pct, pct, status}
         """
-        query = """
+        query = f"""
             WITH tracked AS (
                 SELECT ac.id AS category_id,
                        ac.name AS category_name,
@@ -87,6 +88,7 @@ class AbsenceBalanceRepository:
                 SELECT e.id AS employee_id
                 FROM employees e
                 WHERE e.is_active = TRUE
+                  {emp_exclusion_sql_inline('e.id')}
             ),
             -- pick the first tracked category (lowest id) per employee
             primary_cat AS (

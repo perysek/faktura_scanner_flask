@@ -1,6 +1,29 @@
 {% from 'macros/sidebar_macros.html' import sidebar_link, sidebar_section_start, sidebar_section_end %}
+{% from 'components/icons.html' import icon %}
 
 <style>
+    /* "Widok administratora" toggle (superuser-only, sidebar footer).
+       A flat, token-driven checkbox row. The whole row is a <label>, so tapping
+       anywhere flips the box. When admin view is live the row carries a faint gold
+       tint + accent glyph so the owner can never forget the secret data is showing. */
+    .admin-view-row {
+        border-top: 1px solid var(--sidebar-border);
+        transition: background 0.2s ease;
+    }
+    .admin-view-row.is-active { background: var(--color-accent-muted); }
+    .admin-view-label { color: var(--sidebar-text); }
+    .admin-view-label:hover { background: var(--sidebar-hover-bg); }
+    .admin-view-row.is-active .admin-view-glyph,
+    .admin-view-row.is-active .admin-view-state { color: var(--color-accent); }
+    .admin-view-checkbox {
+        width: 1.05rem;
+        height: 1.05rem;
+        accent-color: var(--color-accent);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+    }
+    .admin-view-checkbox:disabled { opacity: 0.5; cursor: progress; }
+
     /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present the
        deliberately-limited link set as one flat list. The accordion section
        headers are removed and all section bodies are forced open, but the
@@ -223,6 +246,27 @@
             </div>
         </div>
     </div>
+    {% if is_superuser %}
+    {# "Widok administratora" — superuser-only. Flips the session flag that reveals
+       the hidden owner-employee data app-wide; page reloads so every server render
+       and client API re-runs under the new flag. #}
+    <div class="admin-view-row px-2 py-2 shrink-0 {{ 'is-active' if admin_view_active else '' }}">
+        <label for="admin-view-toggle"
+               class="admin-view-label flex items-center gap-2.5 px-4 py-2 rounded-[var(--radius-sm)] cursor-pointer select-none transition-all duration-200"
+               title="Pokaż/ukryj dane administratora w całej aplikacji">
+            {{ icon('visibility', class='admin-view-glyph w-5 h-5 shrink-0') }}
+            <span class="flex-1 min-w-0">
+                <span class="block text-base font-medium truncate">Widok administratora</span>
+                <span class="admin-view-state block text-[11px] uppercase tracking-wide"
+                      style="{{ '' if admin_view_active else 'display:none;' }}">tryb aktywny</span>
+            </span>
+            <input type="checkbox" id="admin-view-toggle"
+                   class="admin-view-checkbox shrink-0"
+                   {{ 'checked' if admin_view_active else '' }}
+                   aria-label="Widok administratora">
+        </label>
+    </div>
+    {% endif %}
     <div class="p-2 shrink-0" style="border-top: 1px solid var(--sidebar-border);">
         <a href="{{ url_for('auth.logout') }}"
            class="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-base font-medium transition-all duration-200 group border border-transparent hover:border-red-800/30"
@@ -403,6 +447,33 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }, 120);
+    });
+});
+
+// "Widok administratora" toggle. Superuser-only element (absent otherwise, so the
+// guard exits cleanly). POST the new state, then hard-reload: the whole app —
+// every server-rendered list/stat AND every client-side API fetch — re-runs under
+// the new session flag, so there is no partial/stale view to reconcile.
+document.addEventListener('DOMContentLoaded', function () {
+    var toggle = document.getElementById('admin-view-toggle');
+    if (!toggle) return;
+    toggle.addEventListener('change', function () {
+        var enabled = toggle.checked;
+        toggle.disabled = true;   // block double-submit while the round-trip runs
+        fetch('/api/admin-view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enabled })
+        }).then(function (r) {
+            if (!r.ok) throw new Error('admin-view toggle failed: ' + r.status);
+            return r.json();
+        }).then(function () {
+            window.location.reload();
+        }).catch(function () {
+            // Revert the box so the UI never diverges from the persisted flag.
+            toggle.checked = !enabled;
+            toggle.disabled = false;
+        });
     });
 });
 </script>

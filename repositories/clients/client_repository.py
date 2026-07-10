@@ -4,6 +4,7 @@ Client Repository - Data access layer for clients
 from datetime import date, datetime, timedelta
 from typing import Any, List, Optional, Tuple
 
+from config.admin_view import emp_exclusion_sql_inline
 from database.models import Client
 from repositories.base_repository import BaseRepository
 from repositories.db_utils import parse_dt, parse_date
@@ -193,7 +194,10 @@ class ClientRepository(BaseRepository):
                 nv.next_visit_time,
                 nv.next_visit_employee
             FROM clients c
-            LEFT JOIN appointments a ON a.client_id = c.id
+            -- Widok administratora: the owner's appointments must not feed any client's
+            -- derived numbers (visit counts, last visit) — filter them out of the join,
+            -- but keep the client row itself (LEFT JOIN, no employee filter on clients).
+            LEFT JOIN appointments a ON a.client_id = c.id {emp_exclusion_sql_inline('a.employee_id')}
             -- Soonest upcoming (not-yet-past, non-cancelled/no-show/completed) appointment
             -- with its assigned employee. LATERAL returns at most one row per client.
             LEFT JOIN LATERAL (
@@ -207,6 +211,7 @@ class ClientRepository(BaseRepository):
                   AND na.status NOT IN ('cancelled', 'no_show', 'completed')
                   AND (na.appointment_date > CURRENT_DATE
                        OR (na.appointment_date = CURRENT_DATE AND na.start_time >= LOCALTIME))
+                  {emp_exclusion_sql_inline('na.employee_id')}
                 ORDER BY na.appointment_date ASC, na.start_time ASC
                 LIMIT 1
             ) nv ON TRUE
@@ -294,7 +299,7 @@ class ClientRepository(BaseRepository):
 
     def get_all_monthly_visit_trends(self, months: int = 12) -> dict:
         """Returns {client_id: [count_month0, ..., count_monthN]} oldest to newest."""
-        query = """
+        query = f"""
             WITH month_series AS (
                 SELECT
                     gs AS month_idx,
@@ -315,6 +320,7 @@ class ClientRepository(BaseRepository):
                   AND a.appointment_date >= (
                       date_trunc('month', CURRENT_DATE::date) - (%s - 1) * INTERVAL '1 month'
                   )
+                  {emp_exclusion_sql_inline('a.employee_id')}
                 GROUP BY a.client_id, date_trunc('month', a.appointment_date)::date
             )
             SELECT

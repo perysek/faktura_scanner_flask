@@ -5,6 +5,7 @@ from datetime import date, datetime, time
 from typing import Any, List, Optional
 
 from config.database import get_db_connection, safe_commit
+from config.admin_view import emp_exclusion_sql
 from database.models import EmployeeAbsence
 from repositories.db_utils import parse_date, parse_dt, parse_time
 
@@ -78,6 +79,10 @@ class AbsenceRepository:
             status_clause = f'AND ea.status IN ({placeholders})'
             params.extend(status_in)
 
+        # Widok administratora: hide the owner's own absences unless ON (the spec
+        # keeps their activity invisible even in the owner's own normal views).
+        excl_sql, excl_params = emp_exclusion_sql('ea.employee_id')
+        params.extend(excl_params)
         query = f"""
             SELECT {self._COLUMNS},
                    ac.name AS category_name,
@@ -88,7 +93,7 @@ class AbsenceRepository:
             LEFT JOIN employees sup ON sup.id = ea.approver_id
             WHERE ea.employee_id = %s
               AND ea.is_deleted = FALSE
-              {status_clause}
+              {status_clause} {excl_sql}
             ORDER BY ea.date_from DESC, ea.requested_at DESC
         """
         with get_db_connection() as conn:
@@ -106,6 +111,9 @@ class AbsenceRepository:
             status_clause = f'AND ea.status IN ({placeholders})'
             params.extend(status_in)
 
+        # Widok administratora: drop the owner's requests from an approver's queue.
+        excl_sql, excl_params = emp_exclusion_sql('ea.employee_id')
+        params.extend(excl_params)
         query = f"""
             SELECT {self._COLUMNS},
                    ac.name AS category_name,
@@ -116,7 +124,7 @@ class AbsenceRepository:
             JOIN employees e ON e.id = ea.employee_id
             WHERE ea.approver_id = %s
               AND ea.is_deleted = FALSE
-              {status_clause}
+              {status_clause} {excl_sql}
             ORDER BY ea.requested_at DESC
         """
         with get_db_connection() as conn:
@@ -148,6 +156,15 @@ class AbsenceRepository:
         if date_to is not None:
             clauses.append('ea.date_from <= %s')
             params.append(date_to.isoformat())
+
+        # Widok administratora: exclude the owner from the admin/calendar absence
+        # feed unless ON. The ids still come from the choke-point (excl_params);
+        # only the placeholder string is rebuilt so it slots into the clause list.
+        excl_sql, excl_params = emp_exclusion_sql('ea.employee_id')
+        if excl_params:
+            placeholders = ','.join(['%s'] * len(excl_params))
+            clauses.append(f'ea.employee_id NOT IN ({placeholders})')
+            params.extend(excl_params)
 
         where = ('WHERE ' + ' AND '.join(clauses)) if clauses else ''
         query = f"""

@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 from datetime import datetime, date
 from repositories.db_utils import parse_dt, parse_date
 from config.database import get_db_connection, safe_commit
+from config.admin_view import emp_exclusion_sql_inline
 from database.models import Employee
 from repositories.auditable import AuditableMixin
 from repositories.audit_repository import AuditRepository
@@ -119,11 +120,18 @@ class EmployeeRepository(AuditableMixin):
             return cursor.fetchone()
 
     def get_all(self, active_only: bool = True) -> List[Any]:
-        """Pobierz wszystkich pracowników"""
+        """Pobierz wszystkich pracowników.
+
+        Widok administratora: superuser-linked employees are dropped from this
+        selection list (and everything fed by it — /employees, calendar pickers,
+        direct-report choosers, balance lists) unless admin view is ON. ``WHERE
+        TRUE`` keeps the non-active branch valid whether or not a clause is added.
+        """
+        excl = emp_exclusion_sql_inline('id')
         if active_only:
-            query = f"SELECT {self._COLUMNS} FROM employees WHERE is_active = TRUE ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE is_active = TRUE {excl} ORDER BY last_name, first_name"
         else:
-            query = f"SELECT {self._COLUMNS} FROM employees ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE TRUE {excl} ORDER BY last_name, first_name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -132,10 +140,11 @@ class EmployeeRepository(AuditableMixin):
 
     def get_by_position(self, position: str, active_only: bool = True) -> List[Any]:
         """Pobierz pracowników według pozycji"""
+        excl = emp_exclusion_sql_inline('id')
         if active_only:
-            query = f"SELECT {self._COLUMNS} FROM employees WHERE position = %s AND is_active = TRUE ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE position = %s AND is_active = TRUE {excl} ORDER BY last_name, first_name"
         else:
-            query = f"SELECT {self._COLUMNS} FROM employees WHERE position = %s ORDER BY last_name, first_name"
+            query = f"SELECT {self._COLUMNS} FROM employees WHERE position = %s {excl} ORDER BY last_name, first_name"
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -144,7 +153,8 @@ class EmployeeRepository(AuditableMixin):
 
     def get_by_employment_status(self, status: str) -> List[Any]:
         """Pobierz pracowników według statusu zatrudnienia"""
-        query = f"SELECT {self._COLUMNS} FROM employees WHERE employment_status = %s ORDER BY last_name, first_name"
+        excl = emp_exclusion_sql_inline('id')
+        query = f"SELECT {self._COLUMNS} FROM employees WHERE employment_status = %s {excl} ORDER BY last_name, first_name"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (status,))
@@ -153,17 +163,18 @@ class EmployeeRepository(AuditableMixin):
     def search(self, query: str, active_only: bool = True) -> List[Any]:
         """Wyszukaj pracowników po imieniu, nazwisku, telefonie lub emailu"""
         search_pattern = f"%{query}%"
+        excl = emp_exclusion_sql_inline('id')
         if active_only:
             sql = f"""
                 SELECT {self._COLUMNS} FROM employees
                 WHERE (first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s)
-                AND is_active = TRUE
+                AND is_active = TRUE {excl}
                 ORDER BY last_name, first_name
             """
         else:
             sql = f"""
                 SELECT {self._COLUMNS} FROM employees
-                WHERE first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
+                WHERE (first_name ILIKE %s OR last_name ILIKE %s OR phone ILIKE %s OR email ILIKE %s) {excl}
                 ORDER BY last_name, first_name
             """
 
@@ -263,7 +274,8 @@ class EmployeeRepository(AuditableMixin):
 
     def get_positions(self) -> List[str]:
         """Pobierz listę wszystkich pozycji"""
-        query = "SELECT DISTINCT position FROM employees WHERE position IS NOT NULL ORDER BY position"
+        excl = emp_exclusion_sql_inline('id')
+        query = f"SELECT DISTINCT position FROM employees WHERE position IS NOT NULL {excl} ORDER BY position"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
@@ -271,7 +283,7 @@ class EmployeeRepository(AuditableMixin):
 
     def get_statistics(self) -> dict:
         """Pobierz statystyki pracowników"""
-        query = """
+        query = f"""
             SELECT
                 COUNT(*) as total_employees,
                 COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_employees,
@@ -281,6 +293,7 @@ class EmployeeRepository(AuditableMixin):
                 COUNT(CASE WHEN user_id IS NOT NULL THEN 1 END) as linked_to_users,
                 AVG(CASE WHEN base_salary IS NOT NULL THEN base_salary END) as avg_salary
             FROM employees
+            WHERE TRUE {emp_exclusion_sql_inline('id')}
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -302,7 +315,7 @@ class EmployeeRepository(AuditableMixin):
         """Pobierz pracowników zatrudnionych w ostatnich X dniach"""
         query = f"""
             SELECT {self._COLUMNS} FROM employees
-            WHERE hire_date >= CURRENT_DATE - INTERVAL '1 day' * %s
+            WHERE hire_date >= CURRENT_DATE - INTERVAL '1 day' * %s {emp_exclusion_sql_inline('id')}
             ORDER BY hire_date DESC
         """
         with get_db_connection() as conn:

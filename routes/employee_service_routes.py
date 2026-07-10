@@ -157,6 +157,11 @@ def remove_employee_service(employee_id, es_id):
 def get_employee_analytics(employee_id):
     """Pobierz metryki wydajności pracownika"""
     try:
+        # Widok administratora: the owner's employee is non-existent (404) while
+        # admin view is OFF, so this analytics endpoint can't reveal their metrics.
+        from config.admin_view import is_employee_hidden
+        if is_employee_hidden(employee_id):
+            raise NotFoundError('Pracownik nie istnieje')
         from repositories.analytics.analytics_repository import AnalyticsRepository
         repo = AnalyticsRepository()
         data = repo.get_employee_analytics(employee_id)

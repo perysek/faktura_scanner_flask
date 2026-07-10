@@ -426,9 +426,17 @@ def get_insights():
 # ============================================================================
 
 def _get_employee_analytics_repo(employee_id: int):
-    """Return (repo, None) or (None, error_response) if employee not found."""
+    """Return (repo, None) or (None, error_response) if employee not found.
+
+    Widok administratora: a superuser-linked employee is treated as non-existent
+    (404) while admin view is OFF — this single guard covers all eight per-employee
+    analytics endpoints below, so the owner's drill-down is unreachable by default.
+    """
     from flask import current_app
+    from config.admin_view import is_employee_hidden
     from repositories.employees.employee_analytics_repository import EmployeeAnalyticsRepository
+    if is_employee_hidden(employee_id):
+        return None, (jsonify({"success": False, "error": "Pracownik nie znaleziony"}), 404)
     row = current_app.employee_repo.get_by_id(employee_id)
     if not row:
         return None, (jsonify({"success": False, "error": "Pracownik nie znaleziony"}), 404)

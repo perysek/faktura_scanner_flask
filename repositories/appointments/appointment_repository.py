@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date, time
 from config.database import get_db_connection, safe_commit
+from config.admin_view import emp_exclusion_sql
 from config.appointment_statuses import AppointmentStatus
 from database.models import Appointment
 from repositories.db_utils import parse_dt, parse_date, parse_time
@@ -108,6 +109,8 @@ class AppointmentRepository:
             filters.append("a.status = %s")
             params.append(status)
 
+        # Widok administratora: hide superuser-linked employees unless admin view is ON.
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
         where_clause = " AND ".join(filters)
         query = f"""
             SELECT
@@ -125,10 +128,11 @@ class AppointmentRepository:
             JOIN employees e ON e.id = a.employee_id
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
-            WHERE {where_clause}
+            WHERE {where_clause} {excl_sql}
             GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
             ORDER BY a.appointment_date DESC, a.start_time DESC
         """
+        params.extend(excl_params)
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
@@ -226,7 +230,11 @@ class AppointmentRepository:
             )
             params.append(f"%{filters['service_name']}%")
 
-        where_clause = "WHERE " + " AND ".join(where)
+        # Widok administratora: exclusion rides inside the WHERE, so its params are
+        # bound before the trailing LIMIT/OFFSET params extended just below.
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
+        where_clause = "WHERE " + " AND ".join(where) + excl_sql
+        params.extend(excl_params)
 
         # ── deterministic ORDER BY (id tiebreaker → stable offset pagination) ───
         direction = 'ASC' if str(sort_dir).lower() == 'asc' else 'DESC'
@@ -271,6 +279,7 @@ class AppointmentRepository:
 
     def get_daily_schedule(self, employee_id: int, schedule_date: date) -> List[Any]:
         """Pobierz harmonogram dnia pracownika z nazwami usług"""
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
         query = f"""
             SELECT
                 a.*,
@@ -285,13 +294,13 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
-            AND a.is_deleted = FALSE
+            AND a.is_deleted = FALSE {excl_sql}
             GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.start_time
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (employee_id, schedule_date.isoformat()))
+            cursor.execute(query, (employee_id, schedule_date.isoformat(), *excl_params))
             return cursor.fetchall()
 
     def get_multi_employee_schedule(self, schedule_date: date,
@@ -309,6 +318,10 @@ class AppointmentRepository:
                 'schedules': {employee_id: [appointments...], ...}
             }
         """
+        # Widok administratora: drop superuser-linked employees from the day's
+        # employee column set (and from the appointments pulled below) unless ON.
+        emp_excl_sql, emp_excl_params = emp_exclusion_sql('e.id')
+        appt_excl_sql, appt_excl_params = emp_exclusion_sql('a.employee_id')
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
@@ -324,10 +337,10 @@ class AppointmentRepository:
                     WHERE a.appointment_date = %s
                     AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
                     AND a.is_deleted = FALSE
-                    AND e.is_active = TRUE
+                    AND e.is_active = TRUE {emp_excl_sql}
                     ORDER BY full_name
                 """
-                cursor.execute(query_employees, (schedule_date.isoformat(),))
+                cursor.execute(query_employees, (schedule_date.isoformat(), *emp_excl_params))
             else:
                 # Użyj podanych employee_ids
                 placeholders = ','.join('%s' * len(employee_ids))
@@ -338,10 +351,10 @@ class AppointmentRepository:
                         e.position
                     FROM employees e
                     WHERE e.id IN ({placeholders})
-                    AND e.is_active = TRUE
+                    AND e.is_active = TRUE {emp_excl_sql}
                     ORDER BY e.first_name, e.last_name
                 """
-                cursor.execute(query_employees, employee_ids)
+                cursor.execute(query_employees, [*employee_ids, *emp_excl_params])
 
             employees = [dict(row) for row in cursor.fetchall()]
 
@@ -369,11 +382,11 @@ class AppointmentRepository:
                     LEFT JOIN services s ON s.id = aps.service_id
                     WHERE a.employee_id IN ({placeholders})
                       AND a.appointment_date = %s
-                      AND a.is_deleted = FALSE
+                      AND a.is_deleted = FALSE {appt_excl_sql}
                     GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
                     ORDER BY a.employee_id, a.start_time
                 """
-                params = emp_ids + [schedule_date.isoformat()]
+                params = emp_ids + [schedule_date.isoformat()] + appt_excl_params
                 cursor.execute(query_all_appointments, params)
                 for row in cursor.fetchall():
                     row_dict = dict(row)
@@ -610,19 +623,22 @@ class AppointmentRepository:
 
     def get_client_appointments(self, client_id: int, limit: int = 20) -> List[Any]:
         """Pobierz wizyty klienta"""
-        query = """
+        # Widok administratora: the client's visit history omits owner appointments
+        # unless ON. Exclusion params sit before LIMIT (WHERE precedes LIMIT).
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
+        query = f"""
             SELECT
                 a.*,
                 e.first_name || ' ' || e.last_name as employee_name
             FROM appointments a
             JOIN employees e ON e.id = a.employee_id
-            WHERE a.client_id = %s AND a.is_deleted = FALSE
+            WHERE a.client_id = %s AND a.is_deleted = FALSE {excl_sql}
             ORDER BY a.appointment_date DESC, a.start_time DESC
             LIMIT %s
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (client_id, limit))
+            cursor.execute(query, (client_id, *excl_params, limit))
             return cursor.fetchall()
 
     def count_by_date(self, schedule_date: date, employee_id: Optional[int] = None) -> int:
@@ -713,6 +729,10 @@ class AppointmentRepository:
                 'client_name': r['client_name']
             }
 
+        # Widok administratora: prev/next navigation must SKIP hidden-employee
+        # appointments (the by-id anchor lookup below stays unfiltered so the
+        # current record can always be located).
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
@@ -728,48 +748,48 @@ class AppointmentRepository:
             cur_time = current['start_time']
 
             if mode == 'day':
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT a.id, a.appointment_date, a.start_time,
                            c.first_name || ' ' || c.last_name AS client_name
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE a.appointment_date = %s AND a.start_time < %s AND a.id != %s
-                    AND a.is_deleted = FALSE
+                    AND a.is_deleted = FALSE {excl_sql}
                     ORDER BY a.start_time DESC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
+                """, (cur_date, cur_time, appointment_id, *excl_params))
                 prev_row = cursor.fetchone()
 
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT a.id, a.appointment_date, a.start_time,
                            c.first_name || ' ' || c.last_name AS client_name
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE a.appointment_date = %s AND a.start_time > %s AND a.id != %s
-                    AND a.is_deleted = FALSE
+                    AND a.is_deleted = FALSE {excl_sql}
                     ORDER BY a.start_time ASC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
+                """, (cur_date, cur_time, appointment_id, *excl_params))
                 next_row = cursor.fetchone()
             else:  # mode='all'
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT a.id, a.appointment_date, a.start_time,
                            c.first_name || ' ' || c.last_name AS client_name
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE (a.appointment_date, a.start_time) < (%s, %s) AND a.id != %s
-                    AND a.is_deleted = FALSE
+                    AND a.is_deleted = FALSE {excl_sql}
                     ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
+                """, (cur_date, cur_time, appointment_id, *excl_params))
                 prev_row = cursor.fetchone()
 
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT a.id, a.appointment_date, a.start_time,
                            c.first_name || ' ' || c.last_name AS client_name
                     FROM appointments a
                     LEFT JOIN clients c ON c.id = a.client_id
                     WHERE (a.appointment_date, a.start_time) > (%s, %s) AND a.id != %s
-                    AND a.is_deleted = FALSE
+                    AND a.is_deleted = FALSE {excl_sql}
                     ORDER BY a.appointment_date ASC, a.start_time ASC LIMIT 1
-                """, (cur_date, cur_time, appointment_id))
+                """, (cur_date, cur_time, appointment_id, *excl_params))
                 next_row = cursor.fetchone()
 
         return {'prev': row_to_dict(prev_row), 'next': row_to_dict(next_row)}
@@ -841,6 +861,7 @@ class AppointmentRepository:
         Returns:
             Lista wizyt z danymi klienta, pracownika i usług
         """
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
         query = f"""
             SELECT
                 a.id,
@@ -863,7 +884,7 @@ class AppointmentRepository:
             WHERE
                 (a.appointment_date + a.end_time) < NOW()
                 AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
-                AND a.is_deleted = FALSE
+                AND a.is_deleted = FALSE {excl_sql}
             GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
                      a.start_time, a.end_time, a.total_price, a.notes,
                      c.first_name, c.last_name, e.first_name, e.last_name
@@ -871,7 +892,7 @@ class AppointmentRepository:
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query)
+            cursor.execute(query, tuple(excl_params))
             return cursor.fetchall()
 
     # ------------------------------------------------------------------
@@ -919,6 +940,10 @@ class AppointmentRepository:
 
     def get_today_for_employee(self, employee_id: int) -> List[Any]:
         """Today's appointments for an employee, ordered by start time."""
+        # Widok administratora: the owner's own "Moje wizyty" page also hides their
+        # day unless ON — the spec keeps the activity invisible even to the owner's
+        # own normal views. Harmless for any other employee (id never in the set).
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
         sql = f"""
             SELECT a.id, a.appointment_date, a.start_time, a.end_time,
                    a.status, a.employee_token,
@@ -932,6 +957,7 @@ class AppointmentRepository:
               AND a.appointment_date = CURRENT_DATE
               AND a.is_deleted = FALSE
               AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+              {excl_sql}
             GROUP BY a.id, a.appointment_date, a.start_time, a.end_time,
                      a.status, a.employee_token,
                      c.first_name, c.last_name
@@ -939,7 +965,7 @@ class AppointmentRepository:
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql, (employee_id,))
+            cursor.execute(sql, (employee_id, *excl_params))
             return cursor.fetchall()
 
     def get_by_employee_token(self, token: str) -> Optional[Any]:

@@ -7,6 +7,7 @@ from datetime import datetime
 from repositories.db_utils import parse_dt
 import psycopg2
 from config.database import get_db_connection
+from config.admin_view import emp_exclusion_sql_inline
 from database.models import EmployeeService
 
 
@@ -134,7 +135,7 @@ class EmployeeServiceRepository:
             FROM employee_services es
             JOIN services s ON s.id = es.service_id
             JOIN employees e ON e.id = es.employee_id
-            WHERE es.employee_id = %s {active_filter}
+            WHERE es.employee_id = %s {active_filter} {emp_exclusion_sql_inline('es.employee_id')}
             ORDER BY s.service_type, s.category, s.name
         """
         with get_db_connection() as conn:
@@ -161,7 +162,7 @@ class EmployeeServiceRepository:
             FROM employee_services es
             JOIN employees e ON e.id = es.employee_id
             JOIN services s ON s.id = es.service_id
-            WHERE es.service_id = %s {active_filter}
+            WHERE es.service_id = %s {active_filter} {emp_exclusion_sql_inline('e.id')}
             ORDER BY e.last_name, e.first_name
         """
         with get_db_connection() as conn:

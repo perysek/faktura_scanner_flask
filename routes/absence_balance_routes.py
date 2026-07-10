@@ -18,6 +18,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from config.auth_config import absence_management_required, get_linked_employee
+from config.admin_view import is_employee_hidden
 from services.absence_balance_service import AbsenceBalanceService
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,10 @@ def employee_balances(employee_id: int):
     """Bilanse konkretnego pracownika. Własne dane lub widok menedżerski."""
     emp = get_linked_employee(current_user)
     own_employee_id = emp['id'] if emp else None
+
+    # Widok administratora: the owner's balances are non-existent (404) while OFF.
+    if is_employee_hidden(employee_id):
+        return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
 
     is_own = own_employee_id == employee_id
     is_manager = (
@@ -178,6 +183,8 @@ def delete_employee_limit(employee_id: int, limit_id: int):
 @absence_management_required
 def list_employee_adjustments(employee_id: int):
     """Historia korekt bilansu dla pracownika."""
+    if is_employee_hidden(employee_id):
+        return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
     try:
         rows = current_app.absence_adjustment_repo.list_for_employee(employee_id)
         adjustments = []
@@ -264,6 +271,8 @@ def delete_employee_adjustment(employee_id: int, adj_id: int):
 @absence_management_required
 def employee_balance_audit(employee_id: int):
     """Historia zmian limitów i korekt dla danego pracownika."""
+    if is_employee_hidden(employee_id):
+        return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
     try:
         entries = current_app.audit_repo.get_for_employee_balance(employee_id)
         return jsonify({'success': True, 'entries': entries})

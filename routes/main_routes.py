@@ -1,13 +1,42 @@
 """
 Main page routes - renders Jinja templates
 """
-from flask import Blueprint, render_template, redirect, url_for, current_app
+from flask import (
+    Blueprint, render_template, redirect, url_for, current_app,
+    request, jsonify, session,
+)
 from flask_login import login_required, current_user
 
 from config.auth_config import module_permission_required, role_required
+from config.admin_view import admin_view_active, is_superuser, is_employee_hidden
 from config.database import get_db_connection
 
 main_bp = Blueprint('main', __name__)
+
+
+# ============================================================================
+# ADMIN VIEW TOGGLE ("Widok administratora")
+# ============================================================================
+
+@main_bp.route('/api/admin-view', methods=['POST'])
+@login_required
+def toggle_admin_view():
+    """Flip the session-scoped "Widok administratora" flag.
+
+    Superuser-only: the flag is meaningless (and inert) for every other role, so a
+    non-superuser POST is rejected with 403 rather than silently ignored. Logout
+    clears the whole session, so the flag resets to OFF automatically on sign-out.
+
+    Body: ``{"enabled": bool}``. Response: ``{"ok": true, "enabled": bool}``.
+    """
+    if not is_superuser():
+        return jsonify({'ok': False, 'error': 'Brak uprawnień.'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    session['admin_view'] = bool(payload.get('enabled', False))
+    # Persist alongside the 30-day sliding session (matches login's permanent flag).
+    session.permanent = True
+    return jsonify({'ok': True, 'enabled': session['admin_view']})
 
 
 @main_bp.route('/')
@@ -229,6 +258,9 @@ def create_employee():
 @module_permission_required('employees')
 def view_employee(employee_id):
     """View employee details"""
+    # Widok administratora: the owner's employee page is 404 while admin view is OFF.
+    if is_employee_hidden(employee_id):
+        return render_template('errors/404.html'), 404
     row = current_app.employee_repo.get_by_id(employee_id)
     if not row:
         return render_template('errors/404.html'), 404
@@ -247,6 +279,9 @@ def view_employee(employee_id):
 @module_permission_required('employees')
 def edit_employee(employee_id):
     """Edit employee form"""
+    # Widok administratora: the owner's employee is non-existent (404) while OFF.
+    if is_employee_hidden(employee_id):
+        return render_template('errors/404.html'), 404
     row = current_app.employee_repo.get_by_id(employee_id)
     if not row:
         return render_template('errors/404.html'), 404

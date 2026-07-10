@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date
 from config.database import get_db_connection, safe_commit
+from config.admin_view import emp_exclusion_sql
 from database.models import IncomeRecord
 from repositories.db_utils import parse_dt, parse_date
 
@@ -84,6 +85,10 @@ class IncomeRepository:
             employee_filter = "AND ir.employee_id = %s"
             params.append(employee_id)
 
+        # Widok administratora: hide the owner's cash flow unless admin view is ON.
+        excl_sql, excl_params = emp_exclusion_sql('ir.employee_id')
+        params.extend(excl_params)
+
         query = f"""
             SELECT
                 ir.id, ir.appointment_id, ir.client_id, ir.employee_id,
@@ -94,7 +99,7 @@ class IncomeRepository:
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id
             JOIN employees e ON e.id = ir.employee_id
-            WHERE ir.payment_date BETWEEN %s AND %s {employee_filter}
+            WHERE ir.payment_date BETWEEN %s AND %s {employee_filter} {excl_sql}
             ORDER BY ir.payment_date DESC
         """
         with get_db_connection() as conn:
@@ -110,7 +115,8 @@ class IncomeRepository:
         else:
             end_date = f"{year}-{month + 1:02d}-01"
 
-        query = """
+        excl_sql, excl_params = emp_exclusion_sql('ir.employee_id')
+        query = f"""
             SELECT
                 ir.id, ir.appointment_id, ir.client_id, ir.employee_id,
                 ir.total_amount, ir.discount_amount, ir.net_amount, ir.commission_total,
@@ -118,12 +124,12 @@ class IncomeRepository:
                 c.first_name || ' ' || c.last_name as client_name
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id
-            WHERE ir.employee_id = %s AND ir.payment_date >= %s AND ir.payment_date < %s
+            WHERE ir.employee_id = %s AND ir.payment_date >= %s AND ir.payment_date < %s {excl_sql}
             ORDER BY ir.payment_date DESC
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (employee_id, start_date, end_date))
+            cursor.execute(query, (employee_id, start_date, end_date, *excl_params))
             return cursor.fetchall()
 
     def get_monthly_summary(self, year: int, month: int) -> dict:
@@ -134,7 +140,10 @@ class IncomeRepository:
         else:
             end_date = f"{year}-{month + 1:02d}-01"
 
-        query = """
+        # Widok administratora: salon-wide revenue shown to managers/accountants
+        # must omit the owner's takings unless admin view is ON. No table alias here.
+        excl_sql, excl_params = emp_exclusion_sql('employee_id')
+        query = f"""
             SELECT
                 COUNT(*) as total_appointments,
                 COALESCE(SUM(total_amount), 0) as total_revenue,
@@ -143,11 +152,11 @@ class IncomeRepository:
                 COALESCE(SUM(commission_total), 0) as total_commissions,
                 COALESCE(AVG(net_amount), 0) as avg_ticket
             FROM income_records
-            WHERE payment_date >= %s AND payment_date < %s
+            WHERE payment_date >= %s AND payment_date < %s {excl_sql}
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (start_date, end_date))
+            cursor.execute(query, (start_date, end_date, *excl_params))
             row = cursor.fetchone()
             return {
                 'total_appointments': row['total_appointments'],
@@ -166,7 +175,8 @@ class IncomeRepository:
         else:
             end_date = f"{year}-{month + 1:02d}-01"
 
-        query = """
+        excl_sql, excl_params = emp_exclusion_sql('ir.employee_id')
+        query = f"""
             SELECT
                 e.id as employee_id,
                 e.first_name || ' ' || e.last_name as employee_name,
@@ -176,13 +186,13 @@ class IncomeRepository:
                 COALESCE(SUM(ir.commission_total), 0) as total_commission
             FROM income_records ir
             JOIN employees e ON e.id = ir.employee_id
-            WHERE ir.payment_date >= %s AND ir.payment_date < %s
+            WHERE ir.payment_date >= %s AND ir.payment_date < %s {excl_sql}
             GROUP BY e.id
             ORDER BY total_revenue DESC
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (start_date, end_date))
+            cursor.execute(query, (start_date, end_date, *excl_params))
             return cursor.fetchall()
 
     def update(self, appointment_id: int, total_amount: Decimal,

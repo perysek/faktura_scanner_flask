@@ -353,6 +353,14 @@ def create_app():
             except Exception:
                 pass
 
+        # Widok administratora: expose whether the current viewer is a superuser
+        # (controls whether the sidebar checkbox renders at all) and whether the
+        # hidden-employee data is currently being revealed (checkbox state + any
+        # "tryb administratora" indicator). Both are cheap, exception-safe helpers.
+        from config.admin_view import admin_view_active as _admin_view_active, is_superuser as _is_superuser_fn
+        _admin_view_on = _admin_view_active()
+        _viewer_is_superuser = _is_superuser_fn()
+
         # Active-tone UI message map for the JS MSG() resolver. Only the active
         # tone crosses to the browser; '<' is escaped so a string can never
         # break out of the injecting <script> tag. (Catalog: config/ui_messages.py)
@@ -370,6 +378,8 @@ def create_app():
             'has_linked_employee': _has_linked_employee,
             'can_edit_price_history': _can_edit_price_history,
             'can_send_sms': _can_send_sms,
+            'admin_view_active': _admin_view_on,
+            'is_superuser': _viewer_is_superuser,
             'page_title': page_title_for(getattr(_request, 'endpoint', None)),
             'ui_messages_json': ui_messages_json,
             'ui_tone': ACTIVE_TONE,

@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from typing import Tuple, Dict, List
 from dateutil.relativedelta import relativedelta
 from config.database import DatabaseConnection
+from config.admin_view import emp_exclusion_sql_inline
 from config.appointment_statuses import AppointmentStatus
 
 
@@ -75,6 +76,7 @@ class AnalyticsRepository:
             LEFT JOIN income_records i ON i.appointment_id = a.id
             WHERE a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
+                {emp_exclusion_sql_inline('a.employee_id')}
         """
 
         conn = DatabaseConnection.get_connection()
@@ -153,6 +155,7 @@ class AnalyticsRepository:
                 GROUP BY employee_id
             ) sat ON sat.employee_id = e.id
             WHERE e.is_active = TRUE
+                {emp_exclusion_sql_inline('e.id')}
             GROUP BY e.id, e.first_name, e.last_name, e.base_salary, e.employer_cost_rate,
                      sat.avg_satisfaction, sat.scored_count
             ORDER BY revenue_generated DESC
@@ -188,6 +191,7 @@ class AnalyticsRepository:
             LEFT JOIN appointments a ON a.id = aps.appointment_id
             WHERE a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
+                {emp_exclusion_sql_inline('a.employee_id')}
             GROUP BY s.id, s.name, s.category
             ORDER BY revenue_generated DESC
         """
@@ -220,11 +224,13 @@ class AnalyticsRepository:
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date BETWEEN %s AND %s
+                  {emp_exclusion_sql_inline('employee_id')}
             ),
             first_appointments AS (
                 SELECT client_id, MIN(appointment_date) AS first_ever
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY client_id
             )
             SELECT
@@ -244,6 +250,7 @@ class AnalyticsRepository:
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date >= %s - INTERVAL '180 days'
+                  {emp_exclusion_sql_inline('employee_id')}
             )
             SELECT
                 COUNT(CASE WHEN (appointment_date - prev_visit) <= 90 THEN 1 END) * 100.0 /
@@ -531,14 +538,16 @@ class AnalyticsRepository:
             FROM appointments
             WHERE appointment_date BETWEEN %s AND %s
               AND status IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+              {emp_exclusion_sql_inline('employee_id')}
         """
 
-        capacity_query = """
+        capacity_query = f"""
             SELECT
                 COUNT(*)                               AS active_employees,
                 COALESCE(AVG(max_appointments_per_day), 8) AS avg_capacity
             FROM employees
             WHERE is_active = TRUE
+              {emp_exclusion_sql_inline('id')}
         """
 
         conn = DatabaseConnection.get_connection()
@@ -605,6 +614,7 @@ class AnalyticsRepository:
             WHERE a.status = '{AppointmentStatus.COMPLETED}'
               AND a.appointment_date BETWEEN %s AND %s
               AND a.start_time IS NOT NULL
+              {emp_exclusion_sql_inline('a.employee_id')}
             GROUP BY day_of_week, hour_of_day
             ORDER BY day_of_week, hour_of_day
         """
@@ -665,6 +675,7 @@ class AnalyticsRepository:
                 INNER JOIN appointments a ON a.id = aps.appointment_id
                     AND a.status = '{AppointmentStatus.COMPLETED}'
                     AND a.appointment_date BETWEEN %s AND %s
+                    {emp_exclusion_sql_inline('a.employee_id')}
             ) aps ON aps.service_id = s.id
             WHERE s.is_active = TRUE
             GROUP BY s.id, s.name, s.category, s.price, sph_start.price, sph_last.last_change
@@ -699,6 +710,7 @@ class AnalyticsRepository:
             LEFT JOIN income_records i ON i.appointment_id = a.id
             WHERE a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
+                {emp_exclusion_sql_inline('a.employee_id')}
             GROUP BY a.appointment_date
             ORDER BY a.appointment_date
         """
@@ -731,6 +743,7 @@ class AnalyticsRepository:
                 LEFT JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('a.employee_id')}
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             ),
             commission_by_month AS (
@@ -742,12 +755,14 @@ class AnalyticsRepository:
                 LEFT JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('a.employee_id')}
                 GROUP BY a.employee_id, DATE_TRUNC('month', a.appointment_date)::date
             ),
             active_employees AS (
                 SELECT id, base_salary, employer_cost_rate
                 FROM employees
                 WHERE is_active = TRUE
+                  {emp_exclusion_sql_inline('id')}
             ),
             employee_costs_by_month AS (
                 SELECT
@@ -806,6 +821,7 @@ class AnalyticsRepository:
             JOIN appointments a ON a.client_id = c.id
                 AND a.status = '{AppointmentStatus.COMPLETED}'
                 AND a.appointment_date BETWEEN %s AND %s
+                {emp_exclusion_sql_inline('a.employee_id')}
             LEFT JOIN income_records i ON i.appointment_id = a.id
             GROUP BY c.id, c.first_name, c.last_name
             HAVING COUNT(DISTINCT a.id) * COALESCE(SUM(i.net_amount), 0) > 0
@@ -833,14 +849,17 @@ class AnalyticsRepository:
                 )::date AS month_start
             ),
             first_appointments AS (
-                -- Intentionally unfiltered: MIN(appointment_date) must be the all-time first visit
-                -- to correctly classify a client as "new" vs "returning" in the given month.
-                -- Filtering by date here would incorrectly mark existing clients as new.
+                -- Intentionally date-unfiltered: MIN(appointment_date) must be the all-time first
+                -- visit to correctly classify a client as "new" vs "returning" in the given month.
+                -- Filtering by date here would incorrectly mark existing clients as new. The
+                -- employee exclusion below is a different axis (Widok administratora): the owner's
+                -- appointments must not count, so a client's "first visit" is their first non-owner one.
                 SELECT
                     client_id,
                     DATE_TRUNC('month', MIN(appointment_date))::date AS first_month
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY client_id
             )
             SELECT
@@ -882,6 +901,7 @@ class AnalyticsRepository:
                     ) AS noshow_pct
                 FROM appointments
                 WHERE appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY DATE_TRUNC('month', appointment_date)::date
             )
             SELECT
@@ -916,6 +936,7 @@ class AnalyticsRepository:
                 JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('a.employee_id')}
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             )
             SELECT
@@ -946,6 +967,7 @@ class AnalyticsRepository:
             WHERE a.status = '{AppointmentStatus.COMPLETED}'
               AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
               AND a.appointment_date <  DATE_TRUNC('month', CURRENT_DATE)
+              {emp_exclusion_sql_inline('a.employee_id')}
             GROUP BY DATE_TRUNC('month', a.appointment_date)::date, s.category
             ORDER BY month_start, s.category
         """
@@ -975,6 +997,7 @@ class AnalyticsRepository:
                 LEFT JOIN income_records i ON i.appointment_id = a.id
                 WHERE a.status = '{AppointmentStatus.COMPLETED}'
                   AND a.appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('a.employee_id')}
                 GROUP BY DATE_TRUNC('month', a.appointment_date)::date
             ),
             invoice_by_month AS (
@@ -1027,6 +1050,7 @@ class AnalyticsRepository:
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
             )
             SELECT
@@ -1044,6 +1068,7 @@ class AnalyticsRepository:
             LEFT JOIN appts_by_month ab
                 ON ab.month_start = m.month_start AND ab.employee_id = e.id
             WHERE e.is_active = TRUE
+              {emp_exclusion_sql_inline('e.id')}
             ORDER BY m.month_start, employee_name
         """
         conn = DatabaseConnection.get_connection()
@@ -1064,6 +1089,7 @@ class AnalyticsRepository:
                 FROM appointments
                 WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND appointment_date >= CURRENT_DATE - INTERVAL '12 months'
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY client_id
             )
             SELECT
@@ -1106,6 +1132,7 @@ class AnalyticsRepository:
                 WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND satisfaction_score IS NOT NULL
                   AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY DATE_TRUNC('month', appointment_date)::date
             )
             SELECT m.month_start,
@@ -1128,6 +1155,7 @@ class AnalyticsRepository:
                 WHERE status = '{AppointmentStatus.COMPLETED}'
                   AND satisfaction_score IS NOT NULL
                   AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+                  {emp_exclusion_sql_inline('employee_id')}
                 GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
             )
             SELECT
@@ -1140,6 +1168,7 @@ class AnalyticsRepository:
             LEFT JOIN emp_monthly em
                    ON em.month_start = m.month_start AND em.employee_id = e.id
             WHERE e.is_active = TRUE
+              {emp_exclusion_sql_inline('e.id')}
             ORDER BY m.month_start, employee_name
         """
 
