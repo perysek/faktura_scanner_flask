@@ -13,8 +13,7 @@
     .admin-view-row.is-active { background: var(--color-accent-muted); }
     .admin-view-label { color: var(--sidebar-text); }
     .admin-view-label:hover { background: var(--sidebar-hover-bg); }
-    .admin-view-row.is-active .admin-view-glyph,
-    .admin-view-row.is-active .admin-view-state { color: var(--color-accent); }
+    .admin-view-row.is-active .admin-view-glyph { color: var(--color-accent); }
     .admin-view-checkbox {
         width: 1.05rem;
         height: 1.05rem;
@@ -257,16 +256,12 @@
     {# "Widok administratora" — superuser-only. Flips the session flag that reveals
        the hidden owner-employee data app-wide; page reloads so every server render
        and client API re-runs under the new flag. #}
-    <div class="admin-view-row px-2 py-2 shrink-0 {{ 'is-active' if admin_view_active else '' }}">
+    <div class="admin-view-row px-4 shrink-0 {{ 'is-active' if admin_view_active else '' }}">
         <label for="admin-view-toggle"
-               class="admin-view-label flex items-center gap-2.5 px-4 py-2 rounded-[var(--radius-sm)] cursor-pointer select-none transition-all duration-200"
+               class="admin-view-label flex items-center gap-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer select-none transition-all duration-200"
                title="Pokaż/ukryj dane administratora w całej aplikacji">
             {{ icon('visibility', class='admin-view-glyph w-5 h-5 shrink-0') }}
-            <span class="flex-1 min-w-0">
-                <span class="block text-base font-medium truncate">Widok administratora</span>
-                <span class="admin-view-state block text-[11px] uppercase tracking-wide"
-                      style="{{ '' if admin_view_active else 'display:none;' }}">tryb aktywny</span>
-            </span>
+            <span class="flex-1 min-w-0 text-base font-medium truncate">Widok administratora</span>
             <input type="checkbox" id="admin-view-toggle"
                    class="admin-view-checkbox shrink-0"
                    {{ 'checked' if admin_view_active else '' }}
@@ -276,16 +271,12 @@
     {# "Dane własne" — show ONLY the logged-in user's own employee data everywhere.
        Editable only while admin view is ON (disabled + dimmed otherwise); the
        server enforces the same dependency. #}
-    <div class="admin-view-row own-data-row px-2 py-2 shrink-0 {{ 'is-active' if own_data_active else '' }} {{ '' if admin_view_active else 'is-disabled' }}">
+    <div class="admin-view-row own-data-row px-4 shrink-0 {{ 'is-active' if own_data_active else '' }} {{ '' if admin_view_active else 'is-disabled' }}">
         <label for="own-data-toggle"
-               class="admin-view-label own-data-label flex items-center gap-2.5 pl-7 pr-4 py-2 rounded-[var(--radius-sm)] select-none transition-all duration-200 {{ 'cursor-pointer' if admin_view_active else 'cursor-not-allowed' }}"
+               class="admin-view-label own-data-label flex items-center gap-2 py-1.5 rounded-[var(--radius-sm)] select-none transition-all duration-200 {{ 'cursor-pointer' if admin_view_active else 'cursor-not-allowed' }}"
                title="Pokaż wyłącznie dane zalogowanego użytkownika">
             {{ icon('badge', class='admin-view-glyph w-5 h-5 shrink-0') }}
-            <span class="flex-1 min-w-0">
-                <span class="block text-base font-medium truncate">Dane własne</span>
-                <span class="admin-view-state block text-[11px] uppercase tracking-wide"
-                      style="{{ '' if own_data_active else 'display:none;' }}">tylko moje</span>
-            </span>
+            <span class="flex-1 min-w-0 text-base font-medium truncate">Dane własne</span>
             <input type="checkbox" id="own-data-toggle"
                    class="admin-view-checkbox shrink-0"
                    {{ 'checked' if own_data_active else '' }}
@@ -294,9 +285,9 @@
         </label>
     </div>
     {% endif %}
-    <div class="p-2 shrink-0" style="border-top: 1px solid var(--sidebar-border);">
+    <div class="px-4 py-2 shrink-0" style="border-top: 1px solid var(--sidebar-border);">
         <a href="{{ url_for('auth.logout') }}"
-           class="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-base font-medium transition-all duration-200 group border border-transparent hover:border-red-800/30"
+           class="flex items-center gap-2 py-2 rounded-[var(--radius-sm)] text-base font-medium transition-all duration-200 group border border-transparent hover:border-red-800/30"
            style="color: var(--sidebar-text);"
            onmouseenter="this.style.color='var(--color-error)'; this.style.background='#fef2f2';"
            onmouseleave="this.style.color='var(--sidebar-text)'; this.style.background='transparent';">
