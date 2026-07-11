@@ -269,6 +269,144 @@ class TestCompleteAppointmentTransaction:
                 mock_conn.commit.assert_not_called()
 
 
+class TestResolvePastStatusTransaction:
+    """Verify resolve_past_status (Past Visits Scanner) creates income on
+    completion, using the visit's own date rather than today's date, and
+    rolls back atomically like complete_appointment/update_appointment."""
+
+    @patch('services.appointment_service.PricingService')
+    @patch('services.appointment_service.AppointmentServiceRepository')
+    @patch('services.appointment_service.AppointmentRepository')
+    @patch('services.appointment_service.IncomeRepository')
+    @patch('services.appointment_service.ClientRepository')
+    @patch('services.appointment_service.ServiceAddonRepository')
+    @patch('services.appointment_service.EmployeeServiceRepository')
+    def test_completing_a_past_visit_creates_income_dated_to_the_visit(
+            self, mock_emp_svc, mock_addon, mock_client, mock_income,
+            mock_appt, mock_appt_svc, mock_pricing, app):
+        """Regression for the Past Visits Scanner bug: resolving status to
+        'completed' must create an income record, and payment_date must be
+        the appointment's own date — not date.today() — so the revenue lands
+        in the month the visit actually happened, not the month it was
+        retroactively closed out in."""
+        from services.appointment_service import AppointmentBusinessService
+        from datetime import date, time
+
+        with app.app_context():
+            mock_conn = Mock()
+            with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
+                svc = AppointmentBusinessService()
+
+                visit_date = date(2026, 5, 3)  # a past month, distinct from "today"
+                svc.appt_repo.get_by_id.return_value = {
+                    'status': 'scheduled',
+                    'client_id': 7,
+                    'employee_id': 3,
+                    'appointment_date': visit_date,
+                    'start_time': time(10, 0),
+                    'discount_amount': Decimal('10'),
+                }
+                svc.appt_repo.update_status.return_value = True
+                svc.income_repo.get_by_appointment.return_value = None
+                svc.appt_svc_repo.get_appointment_totals.return_value = {
+                    'total_price': Decimal('100'),
+                    'total_commission': Decimal('10'),
+                    'main_total': Decimal('100'),
+                    'addon_total': Decimal('0'),
+                    'addon_count': 0,
+                }
+                svc.income_repo.create.return_value = 99
+
+                result = svc.resolve_past_status(appointment_id=42, new_status='completed')
+
+                assert result is True
+                svc.income_repo.create.assert_called_once()
+                income_record = svc.income_repo.create.call_args[0][0]
+                assert income_record.appointment_id == 42
+                assert income_record.payment_date == visit_date
+                assert income_record.total_amount == Decimal('100')
+                assert income_record.net_amount == Decimal('90')
+                mock_conn.commit.assert_called_once()
+
+    @patch('services.appointment_service.PricingService')
+    @patch('services.appointment_service.AppointmentServiceRepository')
+    @patch('services.appointment_service.AppointmentRepository')
+    @patch('services.appointment_service.IncomeRepository')
+    @patch('services.appointment_service.ClientRepository')
+    @patch('services.appointment_service.ServiceAddonRepository')
+    @patch('services.appointment_service.EmployeeServiceRepository')
+    def test_resolving_to_cancelled_does_not_create_income(
+            self, mock_emp_svc, mock_addon, mock_client, mock_income,
+            mock_appt, mock_appt_svc, mock_pricing, app):
+        """Non-completed resolutions (cancelled/no_show) must not touch income."""
+        from services.appointment_service import AppointmentBusinessService
+        from datetime import date, time
+
+        with app.app_context():
+            mock_conn = Mock()
+            with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
+                svc = AppointmentBusinessService()
+
+                svc.appt_repo.get_by_id.return_value = {
+                    'status': 'scheduled',
+                    'client_id': 7,
+                    'employee_id': 3,
+                    'appointment_date': date(2026, 5, 3),
+                    'start_time': time(10, 0),
+                    'discount_amount': Decimal('0'),
+                }
+                svc.appt_repo.update_status.return_value = True
+
+                result = svc.resolve_past_status(appointment_id=42, new_status='no_show')
+
+                assert result is True
+                svc.income_repo.create.assert_not_called()
+
+    @patch('services.appointment_service.PricingService')
+    @patch('services.appointment_service.AppointmentServiceRepository')
+    @patch('services.appointment_service.AppointmentRepository')
+    @patch('services.appointment_service.IncomeRepository')
+    @patch('services.appointment_service.ClientRepository')
+    @patch('services.appointment_service.ServiceAddonRepository')
+    @patch('services.appointment_service.EmployeeServiceRepository')
+    def test_rolls_back_if_income_creation_fails(
+            self, mock_emp_svc, mock_addon, mock_client, mock_income,
+            mock_appt, mock_appt_svc, mock_pricing, app):
+        """Status update must not survive if income creation fails right after it."""
+        from services.appointment_service import AppointmentBusinessService
+        from datetime import date, time
+
+        with app.app_context():
+            mock_conn = Mock()
+            with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
+                svc = AppointmentBusinessService()
+
+                svc.appt_repo.get_by_id.return_value = {
+                    'status': 'scheduled',
+                    'client_id': 7,
+                    'employee_id': 3,
+                    'appointment_date': date(2026, 5, 3),
+                    'start_time': time(10, 0),
+                    'discount_amount': Decimal('0'),
+                }
+                svc.appt_repo.update_status.return_value = True
+                svc.income_repo.get_by_appointment.return_value = None
+                svc.appt_svc_repo.get_appointment_totals.return_value = {
+                    'total_price': Decimal('100'),
+                    'total_commission': Decimal('10'),
+                    'main_total': Decimal('100'),
+                    'addon_total': Decimal('0'),
+                    'addon_count': 0,
+                }
+                svc.income_repo.create.side_effect = Exception("DB error on income insert")
+
+                with pytest.raises(Exception, match="DB error on income insert"):
+                    svc.resolve_past_status(appointment_id=42, new_status='completed')
+
+                mock_conn.rollback.assert_called_once()
+                mock_conn.commit.assert_not_called()
+
+
 class TestUpdateAppointmentTransaction:
     """Verify update_appointment rolls back on service reinsertion failure."""
 

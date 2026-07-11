@@ -1084,10 +1084,14 @@ def update_past_appointment_status(appointment_id):
         if row['status'] in AppointmentStatus.FINAL:
             raise ValidationError(f'Wizyta ma juz finalny status: {row["status"]}')
 
-        # Aktualizacja statusu bezpośrednio (omijamy transition_status)
+        # Aktualizacja statusu bezpośrednio (omijamy transition_status), ale
+        # przez serwis — 'completed' musi utworzyć rekord przychodu tak samo
+        # jak przy edycji wizyty (patrz AppointmentBusinessService.resolve_past_status).
         old_status = row['status']
         cancellation_reason = data.get('cancellation_reason') if new_status == AppointmentStatus.CANCELLED else None
-        success = repo.update_status(appointment_id, new_status, cancellation_reason)
+        success = AppointmentBusinessService().resolve_past_status(
+            appointment_id, new_status, cancellation_reason
+        )
 
         if success:
             appt_label = f"{row['appointment_date']} {row.get('start_time','')}"

@@ -264,6 +264,48 @@ class AppointmentBusinessService:
             appointment_id, new_status, cancellation_reason
         )
 
+    def resolve_past_status(self, appointment_id: int, new_status: str,
+                             cancellation_reason: Optional[str] = None) -> bool:
+        """Ustaw finalny status przeszłej wizyty (skaner przeszłych wizyt).
+
+        Pomija okna czasowe transition_status() (wizyta już się odbyła), ale
+        zachowuje tę samą regułę co update_appointment(): przejście NA
+        'completed' tworzy rekord przychodu z payment_date = data wizyty
+        (nie data operacji), aby przychód trafił do właściwego miesiąca
+        w podsumowaniu finansowym.
+        """
+        row = self.appt_repo.get_by_id(appointment_id)
+        if not row:
+            raise AppointmentError("Wizyta nie istnieje")
+
+        with managed_transaction():
+            success = self.appt_repo.update_status(
+                appointment_id, new_status, cancellation_reason
+            )
+
+            if success and new_status == AppointmentStatus.COMPLETED:
+                if not self.income_repo.get_by_appointment(appointment_id):
+                    appointment_date = row['appointment_date']
+                    if isinstance(appointment_date, str):
+                        appointment_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+
+                    totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
+                    disc = Decimal(str(row['discount_amount'] or '0'))
+                    income = IncomeRecord(
+                        appointment_id=appointment_id,
+                        client_id=row['client_id'],
+                        employee_id=row['employee_id'],
+                        total_amount=totals['total_price'],
+                        discount_amount=disc,
+                        net_amount=totals['total_price'] - disc,
+                        commission_total=totals['total_commission'],
+                        payment_method=None,
+                        payment_date=appointment_date
+                    )
+                    self.income_repo.create(income)
+
+        return success
+
     def complete_appointment(self, appointment_id: int,
                               payment_method: Optional[str] = None,
                               discount_amount: Optional[Decimal] = None) -> dict:
@@ -332,7 +374,7 @@ class AppointmentBusinessService:
                 net_amount=net_amount,
                 commission_total=commission_total,
                 payment_method=payment_method,
-                payment_date=date.today()
+                payment_date=appointment_date
             )
             income_id = self.income_repo.create(income)
 
@@ -737,7 +779,7 @@ class AppointmentBusinessService:
                         net_amount=total_price - disc,
                         commission_total=commission_total,
                         payment_method=None,
-                        payment_date=date.today()
+                        payment_date=appointment_date
                     )
                     self.income_repo.create(income)
 
