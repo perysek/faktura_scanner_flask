@@ -28,7 +28,7 @@
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      background: var(--mw-bg);
+      background: var(--mw-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E") repeat;
       font-family: 'Inter', sans-serif;
       color: var(--mw-ink);
       overflow-x: hidden;
@@ -76,6 +76,33 @@
     /* Section helpers */
     .mw-eyebrow { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--mw-gold-d); }
     .mw-section { max-width: 1280px; margin: 0 auto; }
+
+    /* ---- Warmth without photography: soft gold glows + a hand-drawn
+           "seed of life" bloom line-mark, echoed twice as a quiet brand
+           motif. Pure CSS/SVG, no external assets. ---- */
+    .mw-glow-tl { background-image: radial-gradient(ellipse 55% 50% at -4% 0%, rgba(201,162,39,0.09), transparent 60%); }
+    .mw-hero-warmth {
+      background-image:
+        radial-gradient(ellipse 60% 55% at 100% -10%, rgba(201,162,39,0.13), transparent 62%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-110 -110 220 220'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1' stroke-opacity='0.18'%3E%3Ccircle cx='0' cy='0' r='50'/%3E%3Ccircle cx='50' cy='0' r='50'/%3E%3Ccircle cx='25' cy='43.3' r='50'/%3E%3Ccircle cx='-25' cy='43.3' r='50'/%3E%3Ccircle cx='-50' cy='0' r='50'/%3E%3Ccircle cx='-25' cy='-43.3' r='50'/%3E%3Ccircle cx='25' cy='-43.3' r='50'/%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: no-repeat, no-repeat;
+      background-position: 0 0, 96% 58%;
+      background-size: 100% 100%, clamp(340px, 42vw, 620px) clamp(340px, 42vw, 620px);
+    }
+    .mw-warmth-dark {
+      background-image:
+        radial-gradient(ellipse 70% 60% at 22% -12%, rgba(201,162,39,0.16), transparent 58%),
+        linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    }
+    .mw-warmth-dark-bloom {
+      background-image:
+        radial-gradient(ellipse 65% 55% at 80% -10%, rgba(201,162,39,0.14), transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-110 -110 220 220'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1' stroke-opacity='0.13'%3E%3Ccircle cx='0' cy='0' r='50'/%3E%3Ccircle cx='50' cy='0' r='50'/%3E%3Ccircle cx='25' cy='43.3' r='50'/%3E%3Ccircle cx='-25' cy='43.3' r='50'/%3E%3Ccircle cx='-50' cy='0' r='50'/%3E%3Ccircle cx='-25' cy='-43.3' r='50'/%3E%3Ccircle cx='25' cy='-43.3' r='50'/%3E%3C/g%3E%3C/svg%3E"),
+        linear-gradient(135deg, #1a1a1a, #2a2a2a);
+      background-repeat: no-repeat, no-repeat, no-repeat;
+      background-position: 0 0, 6% 6%, 0 0;
+      background-size: 100% 100%, 360px 360px, 100% 100%;
+    }
 
     /* Browser-window mock */
     .mw-win {
@@ -153,7 +180,7 @@
 </nav>
 
 <!-- ============================ HERO ============================ -->
-<section id="top" class="mw-section" style="padding:clamp(48px,8vw,88px) clamp(20px,5vw,48px) clamp(40px,6vw,64px);display:flex;gap:clamp(32px,5vw,64px);align-items:center;flex-wrap:wrap">
+<section id="top" class="mw-section mw-hero-warmth" style="padding:clamp(48px,8vw,88px) clamp(20px,5vw,48px) clamp(40px,6vw,64px);display:flex;gap:clamp(32px,5vw,64px);align-items:center;flex-wrap:wrap">
   <div class="mw-fade-up" style="flex:1 1 440px;min-width:280px;max-width:560px">
     <div class="mw-eyebrow" style="margin:0 0 18px">System dla salonów beauty i spa</div>
     <h1 style="font-size:clamp(2.25rem,4.2vw,3.375rem);font-weight:700;letter-spacing:-0.02em;line-height:1.08;margin:0 0 20px">Prowadź salon.<br/>Resztą zajmie się MyWay Beauty.</h1>
@@ -258,7 +285,7 @@
 </section>
 
 <!-- ============================ KSeF ============================ -->
-<section id="ksef" style="background:linear-gradient(135deg,#1a1a1a,#2a2a2a);padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px)">
+<section id="ksef" class="mw-warmth-dark" style="padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px)">
   <div class="mw-reveal" style="max-width:820px;margin:0 auto;text-align:center">
     <div class="mw-eyebrow" style="color:var(--mw-gold);margin:0 0 18px">Obowiązek ustawowy</div>
     <h2 style="font-size:clamp(1.75rem,3.4vw,2.5rem);font-weight:600;letter-spacing:-0.02em;line-height:1.2;color:#fff;margin:0 0 20px">KSeF przestał być opcją.</h2>
@@ -268,7 +295,7 @@
 </section>
 
 <!-- ============================ FUNKCJE (tabs) ============================ -->
-<section id="funkcje" class="mw-section" style="padding:clamp(56px,8vw,100px) clamp(20px,5vw,48px)">
+<section id="funkcje" class="mw-section mw-glow-tl" style="padding:clamp(56px,8vw,100px) clamp(20px,5vw,48px)">
   <div class="mw-reveal" style="max-width:640px;margin:0 0 40px">
     <div class="mw-eyebrow" style="margin:0 0 16px">Funkcje</div>
     <h2 style="font-size:clamp(1.75rem,3.2vw,2.25rem);font-weight:600;letter-spacing:-0.02em;margin:0 0 14px">Wszystko, czego potrzebuje Twój salon</h2>
@@ -615,7 +642,7 @@
 </section>
 
 <!-- ============================ FOOTER / KONTAKT ============================ -->
-<footer id="kontakt" style="background:linear-gradient(135deg,#1a1a1a,#2a2a2a);padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px) 32px">
+<footer id="kontakt" class="mw-warmth-dark-bloom" style="padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px) 32px">
   <div style="max-width:1100px;margin:0 auto">
     <div class="mw-reveal" style="text-align:center;padding-bottom:clamp(40px,6vw,64px);border-bottom:1px solid rgba(255,255,255,0.12)">
       <h2 style="font-size:clamp(1.75rem,3.4vw,2.5rem);font-weight:600;letter-spacing:-0.02em;color:#fff;margin:0 0 16px;line-height:1.2">Zobacz, jak MyWay Beauty prowadzi salon za Ciebie.</h2>
