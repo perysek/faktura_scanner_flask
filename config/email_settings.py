@@ -64,14 +64,19 @@ class EmailSettings:
 			file_settings = {k: v for k, v in settings.items() if k != 'password'}
 			with open(self.config_file, 'w', encoding='utf-8') as f:
 				json.dump(file_settings, f, indent=4, ensure_ascii=False)
-			self.settings = settings
+			# Re-derive from disk + env (not the raw submitted dict) so a stale or
+			# mistyped password in the request can never override IMAP_PASSWORD.
+			self.settings = self.load_settings()
 			return True
 		except Exception as e:
 			print(f"Error saving email settings: {e}")
 			return False
 
 	def get_settings(self) -> dict:
-		"""Get current email settings"""
+		"""Get current email settings — always re-read so callers never see a copy
+		cached from process start, which can drift from the settings page after
+		env vars or the config file change."""
+		self.settings = self.load_settings()
 		return self.settings.copy()
 
 	def update_setting(self, key: str, value) -> bool:
