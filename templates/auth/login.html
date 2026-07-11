@@ -109,6 +109,14 @@
             color: var(--color-ink-subtle);
         }
 
+        /* Clickable logo → back to the public landing page */
+        .logo-home-link {
+            display: inline-block;
+            margin: 0 auto 1.5rem;
+            transition: opacity 0.2s var(--ease-out-expo);
+        }
+        .logo-home-link:hover { opacity: 0.72; }
+
         .flash-message {
             padding: 0.75rem 1rem;
             border-radius: 2px;
@@ -169,9 +177,11 @@
             <!-- Logo/Header -->
             <div class="text-center" style="margin-bottom: 2.5rem;">
                 {% if logo_data_uri %}
-                <img src="{{ logo_data_uri }}"
-                     alt="MyWay Nails &amp; Beauty"
-                     style="display: block; width: 100%; max-width: 220px; height: auto; margin: 0 auto 1.5rem; object-fit: contain;">
+                <a href="{{ url_for('main.index') }}" class="logo-home-link" title="Strona główna" aria-label="Wróć na stronę główną">
+                    <img src="{{ logo_data_uri }}"
+                         alt="MyWay Nails &amp; Beauty"
+                         style="display: block; width: 100%; max-width: 220px; height: auto; object-fit: contain;">
+                </a>
                 {% endif %}
                 <h1 class="refined-title">Beauty Salon</h1>
                 <p class="refined-subtitle">Management System</p>
