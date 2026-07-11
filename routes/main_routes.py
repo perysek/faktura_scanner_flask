@@ -72,10 +72,17 @@ def toggle_own_data():
 
 
 @main_bp.route('/')
-@login_required
 def index():
-    """Redirect to dashboard"""
-    return render_template('dashboard/index.html')
+    """Public entry point.
+
+    Anonymous visitors see the marketing landing page (with a "Zaloguj się"
+    button that routes to the login view); authenticated users get the app
+    dashboard exactly as before. This makes the landing page the first thing a
+    visitor hits at the site root, without disturbing the logged-in experience.
+    """
+    if current_user.is_authenticated:
+        return render_template('dashboard/index.html')
+    return render_template('landing/index.html')
 
 
 @main_bp.route('/invoices')
