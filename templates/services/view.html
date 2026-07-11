@@ -4,10 +4,12 @@
 {% block title %}{{ service.name }} — {{ app_name }}{% endblock %}
 
 {% block page_actions %}
-<a href="{{ url_for('main.edit_service', service_id=service.id) }}" class="refined-btn-primary refined-btn-sm">
-    {{ icon('edit') }}
-    Edytuj
-</a>
+<div style="width: 100%; max-width: 900px; margin: 0 auto; padding-right: 2rem; display: flex; justify-content: flex-end;">
+    <a href="{{ url_for('main.edit_service', service_id=service.id) }}" class="refined-btn-primary refined-btn-sm my-3">
+        {{ icon('edit') }}
+        Edytuj
+    </a>
+</div>
 {% endblock %}
 
 {% block extra_css %}
