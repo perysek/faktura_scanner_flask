@@ -134,6 +134,36 @@
     .doc-toc-link:hover { color: var(--mw-ink); }
     .doc-toc-link.is-active { color: var(--mw-gold-d); border-left-color: var(--mw-gold); font-weight: 600; }
 
+    /* Mobile in-page navigation — the sticky .doc-toc sidebar is dropped
+       below 900px (no room for it), so this collapsible <details> card
+       carries the exact same section list instead. Native <details> needs
+       no JS to open/close; a few lines later just auto-collapse it once a
+       link is tapped. Hidden on desktop, where the sticky sidebar already
+       covers this job. */
+    .doc-toc-mobile-wrap { display: none; }
+    .doc-toc-mobile {
+      background: #fff; border: 1px solid var(--mw-border); border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .doc-toc-mobile-summary {
+      list-style: none; cursor: pointer; user-select: none;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 14px 16px; font-size: 14px; font-weight: 600; color: var(--mw-ink);
+    }
+    .doc-toc-mobile-summary::-webkit-details-marker { display: none; }
+    .doc-toc-mobile-summary .doc-toc-mobile-count { font-size: 11px; font-weight: 500; color: var(--mw-muted); }
+    .doc-toc-mobile-chev { flex-shrink: 0; transition: transform 250ms var(--mw-ease); margin-left: auto; }
+    .doc-toc-mobile[open] .doc-toc-mobile-chev { transform: rotate(180deg); }
+    .doc-toc-mobile-body {
+      padding: 4px 16px 16px; border-top: 1px solid var(--mw-border);
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 18px;
+    }
+    .doc-toc-mobile-body .doc-toc-group { margin: 14px 0 0; }
+    .doc-toc-mobile-body .doc-toc-link { padding: 9px 0; font-size: 13.5px; }
+    @media (max-width: 480px) {
+      .doc-toc-mobile-body { grid-template-columns: 1fr; }
+    }
+
     .doc-content { flex: 1 1 auto; min-width: 0; max-width: 800px; padding-top: 8px; }
     .doc-section { padding: 50px 0; border-bottom: 1px solid var(--mw-border); scroll-margin-top: 84px; }
     .doc-section:first-child { padding-top: 8px; }
@@ -183,10 +213,31 @@
 
     @media (max-width: 900px) {
       .doc-toc { display: none; }
+      .doc-toc-mobile-wrap { display: block; padding: 0 clamp(16px,5vw,32px); margin: 22px 0; }
       .doc-shell { padding-left: clamp(16px,5vw,32px); padding-right: clamp(16px,5vw,32px); }
     }
     @media (max-width: 640px) {
       .doc-mock-grid { grid-template-columns: repeat(2, 1fr); }
+      /* Tighter section rhythm on phones — same content, less dead scroll. */
+      .doc-section { padding: 34px 0; }
+      .doc-h2 { margin-bottom: 10px; }
+      .doc-h3 { margin: 24px 0 8px; }
+      /* Nav quick-links duplicate the mobile TOC above — drop them here to
+         stop the header wrapping into a cramped two-line mess; the logo +
+         "Wróć do aplikacji" button stay. */
+      .mw-nav-links a.mw-nav-link { display: none; }
+      /* A subtle "there's more" fade on the right edge of any table that
+         needs horizontal scroll on a narrow screen — a static hint, not a
+         scroll-position-aware one, but enough to signal swipeability. */
+      .doc-table-wrap { position: relative; }
+      .doc-table-wrap::after {
+        content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 26px;
+        background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.92));
+        pointer-events: none;
+      }
+    }
+    @media (max-width: 420px) {
+      .mw-nav > a[href="#top"] span { display: none; }
     }
   </style>
 </head>
@@ -224,6 +275,52 @@
     </div>
   </div>
 </section>
+
+<!-- ============================ MOBILE TOC ============================
+     Same section list as the desktop .doc-toc sidebar (which is hidden
+     below 900px) — a collapsible <details> card so navigation isn't lost
+     on phones/tablets. Reuses the .doc-toc-link class so the existing
+     scroll-position JS highlights the active section here too. -->
+<div class="doc-toc-mobile-wrap">
+  <details class="doc-toc-mobile" id="doc-toc-mobile">
+    <summary class="doc-toc-mobile-summary">
+      <span>📖 Spis treści</span>
+      <span class="doc-toc-mobile-count">17 sekcji</span>
+      <svg class="doc-toc-mobile-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+    </summary>
+    <div class="doc-toc-mobile-body">
+      <div class="doc-toc-group">
+        <div class="doc-toc-label">Start</div>
+        <a class="doc-toc-link" href="#wprowadzenie">Wprowadzenie</a>
+        <a class="doc-toc-link" href="#pierwsze-kroki">Pierwsze kroki</a>
+      </div>
+      <div class="doc-toc-group">
+        <div class="doc-toc-label">Dostęp i role</div>
+        <a class="doc-toc-link" href="#rbac">Role i uprawnienia</a>
+      </div>
+      <div class="doc-toc-group">
+        <div class="doc-toc-label">Moduły</div>
+        <a class="doc-toc-link" href="#pulpit">Pulpit</a>
+        <a class="doc-toc-link" href="#faktury">Faktury i koszty</a>
+        <a class="doc-toc-link" href="#klienci">Klienci</a>
+        <a class="doc-toc-link" href="#uslugi">Usługi</a>
+        <a class="doc-toc-link" href="#pracownicy">Pracownicy</a>
+        <a class="doc-toc-link" href="#wizyty">Wizyty i kalendarz</a>
+        <a class="doc-toc-link" href="#rezerwacje">Rezerwacje online</a>
+        <a class="doc-toc-link" href="#sms">SMS</a>
+        <a class="doc-toc-link" href="#przychody">Przychody</a>
+        <a class="doc-toc-link" href="#analityka">Analityka</a>
+        <a class="doc-toc-link" href="#nieobecnosci">Nieobecności</a>
+        <a class="doc-toc-link" href="#ustawienia">Ustawienia</a>
+      </div>
+      <div class="doc-toc-group">
+        <div class="doc-toc-label">Dodatek</div>
+        <a class="doc-toc-link" href="#slownik">Słownik pojęć</a>
+        <a class="doc-toc-link" href="#quirki">Na co uważać</a>
+      </div>
+    </div>
+  </details>
+</div>
 
 <!-- ============================ BODY: TOC + CONTENT ============================ -->
 <div class="doc-shell">
@@ -901,6 +998,17 @@
       });
     }, { rootMargin: '-84px 0px -70% 0px', threshold: 0 });
     sections.forEach(function (s) { io.observe(s); });
+  })();
+
+  // ---- Mobile TOC: collapse the <details> once a link is tapped, so the
+  //      picked section lands under the sticky nav instead of under an
+  //      open accordion still holding its old scroll position. ----
+  (function () {
+    var toc = document.getElementById('doc-toc-mobile');
+    if (!toc) return;
+    toc.querySelectorAll('.doc-toc-link').forEach(function (a) {
+      a.addEventListener('click', function () { toc.open = false; });
+    });
   })();
 
   // ---- "Na co uważać" accordion (same pattern as the landing page's FAQ) ----
