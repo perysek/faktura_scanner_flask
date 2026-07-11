@@ -260,9 +260,29 @@ class AppointmentBusinessService:
                             f"Nieobecność możliwa od {earliest.strftime('%H:%M')}."
                         )
 
-        return self.appt_repo.update_status(
-            appointment_id, new_status, cancellation_reason
-        )
+        with managed_transaction():
+            success = self.appt_repo.update_status(
+                appointment_id, new_status, cancellation_reason
+            )
+
+            if success and new_status == AppointmentStatus.COMPLETED:
+                if not self.income_repo.get_by_appointment(appointment_id):
+                    totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
+                    disc = Decimal(str(row['discount_amount'] or '0'))
+                    income = IncomeRecord(
+                        appointment_id=appointment_id,
+                        client_id=row['client_id'],
+                        employee_id=row['employee_id'],
+                        total_amount=totals['total_price'],
+                        discount_amount=disc,
+                        net_amount=totals['total_price'] - disc,
+                        commission_total=totals['total_commission'],
+                        payment_method=None,
+                        payment_date=appt_date
+                    )
+                    self.income_repo.create(income)
+
+        return success
 
     def resolve_past_status(self, appointment_id: int, new_status: str,
                              cancellation_reason: Optional[str] = None) -> bool:
