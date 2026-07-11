@@ -886,10 +886,10 @@ async function loadInsights() {
         const icon = typeIcons[insight.type] || 'ℹ';
         return `
             <div class="flex items-start gap-3 p-3 rounded border ${style}">
-                <span class="text-lg leading-none mt-0.5">${icon}</span>
+                <span class="text-[1.52rem] leading-none mt-0.5">${icon}</span>
                 <div>
-                    <div class="font-semibold text-sm">${escapeHtml(insight.title)}</div>
-                    <div class="text-sm mt-0.5">${escapeHtml(insight.message)}</div>
+                    <div class="font-semibold text-[1.18rem]">${escapeHtml(insight.title)}</div>
+                    <div class="text-[1.18rem] mt-0.5">${escapeHtml(insight.message)}</div>
                 </div>
             </div>
         `;
