@@ -3,6 +3,13 @@
 {% from 'components/icons.html' import icon %}
 {% block title %}{{ service.name }} — {{ app_name }}{% endblock %}
 
+{% block page_actions %}
+<a href="{{ url_for('main.edit_service', service_id=service.id) }}" class="refined-btn-primary refined-btn-sm">
+    {{ icon('edit') }}
+    Edytuj
+</a>
+{% endblock %}
+
 {% block extra_css %}
 <style>
 .refined-page { max-width: 900px; margin: 0 auto; padding: 2rem; }
