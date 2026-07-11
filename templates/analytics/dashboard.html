@@ -9,6 +9,12 @@
 .refined-page {
     padding: 1rem 1.5rem;
 }
+/* Occupancy KPI badges (Obłożenie / Wskaźnik odwołań / Nieobecności) — bumped
+   +70% over the base .stat-value size and pinned equal across all three;
+   JS must not overwrite these elements' className or the override is lost. */
+#nav-occupancy .stat-value {
+    font-size: 2.125rem;
+}
 </style>
 {% endblock %}
 
