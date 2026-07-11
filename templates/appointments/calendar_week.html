@@ -65,7 +65,13 @@
     .wk-col.weekend { background: #faf9f8; }
     .wk-layer { position: absolute; inset: 0; }
 
-    .wk-block { position: absolute; left: 3px; right: 3px; border-radius: 2px; padding: 2px 4px; overflow: hidden; cursor: pointer; border-left: 3px solid var(--color-status-scheduled); }
+    .wk-block {
+        position: absolute; left: 3px; right: 3px; border-radius: 2px; padding: 2px 4px; overflow: hidden; cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.07); z-index: 1;
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+        border-left: 3px solid var(--color-status-scheduled);
+    }
+    .wk-block:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateX(2px); }
     .wk-block.scheduled   { background: #eff6ff; }
     .wk-block.confirmed   { background: #f0fdf4; }
     .wk-block.in_progress { background: #fffbeb; }
@@ -432,7 +438,10 @@ function updateViewLinks() {
     if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
-        if (link) link.href = `${baseUrl}?${params}`;
+        if (!link) return;
+        // "Dzień" always opens on today — it's a fresh entry point, not a
+        // continuation of the currently displayed week.
+        link.href = id === 'nav-day' ? baseUrl : `${baseUrl}?${params}`;
     });
 }
 

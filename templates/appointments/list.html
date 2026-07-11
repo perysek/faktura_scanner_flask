@@ -887,7 +887,10 @@ function updateViewLinks() {
     if (employeeId) params.set('employee_id', employeeId);
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
-        if (link) link.href = `${baseUrl}?${params}`;
+        if (!link) return;
+        // "Dzień" always opens on today — it's a fresh entry point, not a
+        // continuation of the currently displayed week.
+        link.href = id === 'nav-day' ? baseUrl : `${baseUrl}?${params}`;
     });
 }
 

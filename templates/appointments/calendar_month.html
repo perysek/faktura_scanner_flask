@@ -280,7 +280,10 @@ function updateViewLinks() {
     const dateStr = monthAnchorDate();
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
-        if (link) link.href = `${baseUrl}?date=${dateStr}`;
+        if (!link) return;
+        // "Dzień" always opens on today — it's a fresh entry point, not a
+        // continuation of the currently displayed month.
+        link.href = id === 'nav-day' ? baseUrl : `${baseUrl}?date=${dateStr}`;
     });
 }
 
