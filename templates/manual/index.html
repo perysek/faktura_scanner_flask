@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instrukcja obsługi — MyWay Beauty</title>
+  <meta name="description" content="Pełna instrukcja obsługi systemu MyWay Beauty: moduły, role i uprawnienia, przepływy pracy.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---- Same self-contained design language as templates/landing/index.html:
+           no dependency on the authenticated app's Tailwind build. Tokens,
+           buttons, nav, browser-window mocks and scroll-reveal are copied
+           verbatim so this page reads as the same product. ---- */
+    :root {
+      --mw-bg: #f7f6f3;
+      --mw-ink: #1a1a1a;
+      --mw-ink2: #525252;
+      --mw-muted: #8a8a8a;
+      --mw-border: #e8e6e1;
+      --mw-gold: #c9a227;
+      --mw-gold-d: #a07d1a;
+      --mw-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--mw-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E") repeat;
+      font-family: 'Inter', sans-serif;
+      color: var(--mw-ink);
+      overflow-x: hidden;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--mw-ink); text-decoration: none; }
+    a:hover { color: var(--mw-gold-d); }
+
+    @keyframes mw-fade-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .mw-fade-up { animation: mw-fade-up 0.5s var(--mw-ease) forwards; }
+
+    .mw-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 500; letter-spacing: 0.02em;
+      border-radius: 2px; white-space: nowrap; cursor: pointer;
+      transition: transform 200ms var(--mw-ease), box-shadow 200ms var(--mw-ease), all 200ms var(--mw-ease);
+      border: 1px solid transparent;
+    }
+    .mw-btn-dark { padding: 14px 26px; color: #fff; background: var(--mw-ink); border-color: var(--mw-ink); }
+    .mw-btn-dark:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
+    .mw-btn-light { padding: 14px 22px; color: var(--mw-ink2); background: #fff; border-color: var(--mw-border); }
+    .mw-btn-light:hover { border-color: var(--mw-gold); color: var(--mw-ink); background: #fffdf5; }
+    .mw-btn-white { padding: 13px 26px; color: var(--mw-ink); background: #fff; }
+    .mw-btn-white:hover { color: var(--mw-ink); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+    .mw-btn-sm { padding: 9px 18px; font-size: 13px; }
+
+    .mw-nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; flex-wrap: wrap;
+      padding: 14px clamp(20px, 5vw, 48px);
+      background: rgba(247, 246, 243, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--mw-border);
+      transition: box-shadow 300ms var(--mw-ease), background 300ms var(--mw-ease);
+    }
+    .mw-nav.mw-scrolled { box-shadow: 0 4px 20px rgba(26, 26, 26, 0.07); background: rgba(247, 246, 243, 0.98); }
+    .mw-nav-links { display: flex; align-items: center; gap: clamp(12px, 3vw, 26px); flex-wrap: wrap; }
+    .mw-nav-link { font-size: 13px; font-weight: 500; color: var(--mw-ink2); }
+    .mw-nav-link:hover { color: var(--mw-ink); }
+
+    .mw-eyebrow { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--mw-gold-d); }
+    .mw-section { max-width: 1280px; margin: 0 auto; }
+
+    .mw-hero-warmth {
+      background-image:
+        radial-gradient(ellipse 60% 55% at 100% -10%, rgba(201,162,39,0.13), transparent 62%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-110 -110 220 220'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1' stroke-opacity='0.18'%3E%3Ccircle cx='0' cy='0' r='50'/%3E%3Ccircle cx='50' cy='0' r='50'/%3E%3Ccircle cx='25' cy='43.3' r='50'/%3E%3Ccircle cx='-25' cy='43.3' r='50'/%3E%3Ccircle cx='-50' cy='0' r='50'/%3E%3Ccircle cx='-25' cy='-43.3' r='50'/%3E%3Ccircle cx='25' cy='-43.3' r='50'/%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: no-repeat, no-repeat;
+      background-position: 0 0, 96% 58%;
+      background-size: 100% 100%, clamp(280px, 34vw, 480px) clamp(280px, 34vw, 480px);
+    }
+    .mw-warmth-dark-bloom {
+      background-image:
+        radial-gradient(ellipse 65% 55% at 80% -10%, rgba(201,162,39,0.14), transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-110 -110 220 220'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1' stroke-opacity='0.13'%3E%3Ccircle cx='0' cy='0' r='50'/%3E%3Ccircle cx='50' cy='0' r='50'/%3E%3Ccircle cx='25' cy='43.3' r='50'/%3E%3Ccircle cx='-25' cy='43.3' r='50'/%3E%3Ccircle cx='-50' cy='0' r='50'/%3E%3Ccircle cx='-25' cy='-43.3' r='50'/%3E%3Ccircle cx='25' cy='-43.3' r='50'/%3E%3C/g%3E%3C/svg%3E"),
+        linear-gradient(135deg, #1a1a1a, #2a2a2a);
+      background-repeat: no-repeat, no-repeat, no-repeat;
+      background-position: 0 0, 6% 6%, 0 0;
+      background-size: 100% 100%, 300px 300px, 100% 100%;
+    }
+
+    /* Browser-window mock — the app's own screens are represented as small,
+       hand-built "screenshots" in this same idiom rather than pixel captures,
+       matching how the landing page itself depicts the UI (Pulpit/Wizyty
+       mocks in templates/landing/index.html) — self-contained, no image
+       assets, and free of any real client/business data. */
+    .mw-win { border-radius: 6px; border: 1px solid var(--mw-border); background: #fff; overflow: hidden; box-shadow: 0 14px 30px rgba(26, 26, 26, 0.07); }
+    .mw-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #efedea; border-bottom: 1px solid var(--mw-border); }
+    .mw-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .mw-url { margin-left: 8px; flex: 1; font-size: 10.5px; color: var(--mw-muted); background: #fff; border: 1px solid var(--mw-border); border-radius: 2px; padding: 3px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mw-mock-caption { font-size: 11.5px; color: var(--mw-muted); text-align: center; margin-top: 10px; font-style: italic; }
+
+    .mw-reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.6s var(--mw-ease), transform 0.6s var(--mw-ease); will-change: opacity, transform; }
+    .mw-reveal.mw-in { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .mw-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .mw-fade-up { animation: none !important; }
+    }
+
+    /* FAQ-style accordion, reused for "Na co uważać" */
+    .mw-faq-item { border-bottom: 1px solid var(--mw-border); }
+    .mw-faq-q { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 2px; cursor: pointer; font-size: 14.5px; font-weight: 500; color: var(--mw-ink); background: none; border: none; width: 100%; text-align: left; font-family: inherit; }
+    .mw-faq-chev { flex-shrink: 0; transition: transform 300ms cubic-bezier(0.4,0,0.2,1); }
+    .mw-faq-item.is-open .mw-faq-chev { transform: rotate(180deg); }
+    .mw-faq-a { padding: 0 2px 20px; font-size: 13.5px; line-height: 1.7; color: var(--mw-ink2); display: none; }
+    .mw-faq-item.is-open .mw-faq-a { display: block; }
+
+    /* ---- Manual-specific layout ---- */
+    .doc-hero-stats { display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; }
+    .doc-hero-stat { background:#fff; border:1px solid var(--mw-border); border-radius:2px; padding:10px 16px; font-size:12.5px; color:var(--mw-ink2); box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+    .doc-hero-stat b { color:var(--mw-ink); font-weight:600; }
+
+    .doc-shell { max-width: 1280px; margin: 0 auto; padding: 0 clamp(20px,5vw,48px) clamp(64px,8vw,110px); display: flex; gap: clamp(24px,4vw,56px); align-items: flex-start; }
+    .doc-toc { flex: 0 0 208px; position: sticky; top: 78px; max-height: calc(100vh - 100px); overflow-y: auto; padding: 22px 2px 40px 0; }
+    .doc-toc-group { margin-bottom: 22px; }
+    .doc-toc-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--mw-muted); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--mw-border); }
+    .doc-toc-link { display: block; font-size: 12.5px; font-weight: 500; color: var(--mw-ink2); padding: 5px 0 5px 11px; border-left: 2px solid transparent; margin-left: -1px; transition: color 150ms, border-color 150ms; }
+    .doc-toc-link:hover { color: var(--mw-ink); }
+    .doc-toc-link.is-active { color: var(--mw-gold-d); border-left-color: var(--mw-gold); font-weight: 600; }
+
+    .doc-content { flex: 1 1 auto; min-width: 0; max-width: 800px; padding-top: 8px; }
+    .doc-section { padding: 50px 0; border-bottom: 1px solid var(--mw-border); scroll-margin-top: 84px; }
+    .doc-section:first-child { padding-top: 8px; }
+    .doc-section:last-child { border-bottom: none; }
+    .doc-kicker { display:flex; align-items:center; gap:10px; margin: 0 0 14px; }
+    .doc-kicker-num { font-size:11px; font-weight:700; color:#fff; background:var(--mw-ink); border-radius:2px; padding:3px 8px; letter-spacing:0.04em; }
+    .doc-h2 { font-size: clamp(1.4rem, 2.4vw, 1.75rem); font-weight: 600; letter-spacing: -0.01em; margin: 0 0 14px; }
+    .doc-h3 { font-size: 16.5px; font-weight: 600; letter-spacing: -0.005em; margin: 30px 0 10px; }
+    .doc-p { font-size: 14px; font-weight: 300; line-height: 1.75; color: var(--mw-ink2); margin: 0 0 14px; }
+    .doc-p strong, .doc-p b { color: var(--mw-ink); font-weight: 600; }
+    .doc-p code, .doc-table code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.92em; background: #efedea; border-radius: 2px; padding: 1px 5px; color: var(--mw-ink); }
+    .doc-list { margin: 0 0 14px; padding-left: 20px; font-size: 14px; font-weight: 300; line-height: 1.75; color: var(--mw-ink2); }
+    .doc-list li { margin-bottom: 6px; }
+    .doc-list b { color: var(--mw-ink); font-weight: 600; }
+
+    .doc-callout { border-left: 3px solid var(--mw-gold); background: #fffdf5; padding: 16px 18px; border-radius: 2px; font-size: 13.5px; line-height: 1.65; color: var(--mw-ink2); margin: 20px 0; }
+    .doc-callout b { color: var(--mw-ink); }
+    .doc-callout-warn { border-left-color: #d97706; background: #fffbeb; }
+    .doc-callout-role { display:inline-block; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--mw-gold-d); background:rgba(201,162,39,0.12); border-radius:2px; padding:3px 8px; margin-bottom:8px; }
+
+    .doc-table-wrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--mw-border); border-radius: 4px; }
+    .doc-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .doc-table th, .doc-table td { padding: 10px 13px; border-bottom: 1px solid var(--mw-border); text-align: left; white-space: nowrap; }
+    .doc-table tr:last-child td { border-bottom: none; }
+    .doc-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mw-muted); font-weight: 600; background: #fafaf8; }
+    .doc-table td.center, .doc-table th.center { text-align: center; }
+    .doc-yes { color: #059669; font-weight: 700; }
+    .doc-no { color: #c2beb5; }
+    .doc-ro { font-size: 9.5px; color: var(--mw-gold-d); font-weight: 600; display:block; }
+
+    .doc-steps { counter-reset: doc-step; display: flex; flex-direction: column; gap: 16px; margin: 18px 0 22px; }
+    .doc-step { display: flex; gap: 14px; align-items: flex-start; }
+    .doc-step-num { counter-increment: doc-step; flex-shrink: 0; width: 25px; height: 25px; border-radius: 50%; background: var(--mw-ink); color: #fff; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-top:1px; }
+    .doc-step-num::before { content: counter(doc-step); }
+    .doc-step-body { font-size: 13.5px; font-weight: 300; line-height: 1.65; color: var(--mw-ink2); padding-top: 2px; }
+    .doc-step-body b { color: var(--mw-ink); font-weight: 600; }
+
+    .doc-flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; font-weight:600; margin:18px 0; }
+    .doc-flow-pill { background:#fff; border:1px solid var(--mw-border); border-radius:20px; padding:7px 14px; }
+    .doc-flow-pill.doc-final { background:var(--mw-ink); color:#fff; border-color:var(--mw-ink); }
+    .doc-flow-arrow { color:var(--mw-muted); font-weight:400; }
+
+    .doc-mock-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; }
+    .doc-stat-card { background:#fff; border:1px solid var(--mw-border); border-radius:2px; padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+    .doc-stat-val { font-size:18px; font-weight:600; line-height:1; margin-bottom:4px; }
+    .doc-stat-lbl { font-size:9px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--mw-muted); }
+
+    @media (max-width: 900px) {
+      .doc-toc { display: none; }
+      .doc-shell { padding-left: clamp(16px,5vw,32px); padding-right: clamp(16px,5vw,32px); }
+    }
+    @media (max-width: 640px) {
+      .doc-mock-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================ NAV ============================ -->
+<nav class="mw-nav">
+  <a href="#top" style="display:flex;align-items:center;gap:10px">
+    <img src="{{ url_for('static', filename='Logo.png') }}" alt="MyWay Beauty" style="height:30px;width:auto;display:block" />
+    <span style="font-size:12px;font-weight:600;color:var(--mw-muted);border-left:1px solid var(--mw-border);padding-left:10px">Instrukcja obsługi</span>
+  </a>
+  <div class="mw-nav-links">
+    <a href="#wprowadzenie" class="mw-nav-link">Start</a>
+    <a href="#rbac" class="mw-nav-link">Role i dostęp</a>
+    <a href="#moduly" class="mw-nav-link">Moduły</a>
+    <a href="#slownik" class="mw-nav-link">Dodatek</a>
+    <a href="{{ url_for('main.dashboard') }}" class="mw-btn mw-btn-dark mw-btn-sm">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      Wróć do aplikacji
+    </a>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<section id="top" class="mw-section mw-hero-warmth" style="padding:clamp(40px,6vw,64px) clamp(20px,5vw,48px) clamp(32px,5vw,48px)">
+  <div class="mw-fade-up" style="max-width:760px">
+    <div class="mw-eyebrow" style="margin:0 0 16px">Podręcznik użytkownika</div>
+    <h1 style="font-size:clamp(1.9rem,3.6vw,2.75rem);font-weight:700;letter-spacing:-0.02em;line-height:1.12;margin:0 0 18px">Wszystko o MyWay Beauty<br/>w jednym miejscu.</h1>
+    <p style="font-size:15px;font-weight:300;line-height:1.7;color:var(--mw-ink2);margin:0 0 8px;max-width:620px">Jak działa każdy moduł, jak łączą się ze sobą, jakie zasady pilnują poprawności danych i co dokładnie widzi każda rola — od recepcji po superadmina. Ta strona jest dostępna z menu bocznego aplikacji dla każdej zalogowanej osoby, niezależnie od roli.</p>
+    <div class="doc-hero-stats">
+      <div class="doc-hero-stat"><b>16</b> rozdziałów</div>
+      <div class="doc-hero-stat"><b>5</b> ról systemowych</div>
+      <div class="doc-hero-stat"><b>11</b> modułów aplikacji</div>
+      <div class="doc-hero-stat">Aktualizacja: <b>{{ manual_updated }}</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ BODY: TOC + CONTENT ============================ -->
+<div class="doc-shell">
+
+  <!-- ---- Sticky in-page navigation, styled like the "Panel aplikacji" sidebar mock ---- -->
+  <aside class="doc-toc" id="doc-toc">
+    <div class="doc-toc-group">
+      <div class="doc-toc-label">Start</div>
+      <a class="doc-toc-link" href="#wprowadzenie">Wprowadzenie</a>
+      <a class="doc-toc-link" href="#pierwsze-kroki">Pierwsze kroki</a>
+    </div>
+    <div class="doc-toc-group">
+      <div class="doc-toc-label">Dostęp i role</div>
+      <a class="doc-toc-link" href="#rbac">Role i uprawnienia</a>
+    </div>
+    <div class="doc-toc-group">
+      <div class="doc-toc-label">Moduły</div>
+      <a class="doc-toc-link" href="#pulpit">Pulpit</a>
+      <a class="doc-toc-link" href="#faktury">Faktury i koszty</a>
+      <a class="doc-toc-link" href="#klienci">Klienci</a>
+      <a class="doc-toc-link" href="#uslugi">Usługi</a>
+      <a class="doc-toc-link" href="#pracownicy">Pracownicy</a>
+      <a class="doc-toc-link" href="#wizyty">Wizyty i kalendarz</a>
+      <a class="doc-toc-link" href="#rezerwacje">Rezerwacje online</a>
+      <a class="doc-toc-link" href="#sms">SMS</a>
+      <a class="doc-toc-link" href="#przychody">Przychody</a>
+      <a class="doc-toc-link" href="#analityka">Analityka</a>
+      <a class="doc-toc-link" href="#nieobecnosci">Nieobecności</a>
+      <a class="doc-toc-link" href="#ustawienia">Ustawienia</a>
+    </div>
+    <div class="doc-toc-group" id="dodatek">
+      <div class="doc-toc-label">Dodatek</div>
+      <a class="doc-toc-link" href="#slownik">Słownik pojęć</a>
+      <a class="doc-toc-link" href="#quirki">Na co uważać</a>
+    </div>
+  </aside>
+
+  <!-- ================================================================ -->
+  <main class="doc-content">
+
+    <!-- ============================ 1. WPROWADZENIE ============================ -->
+    <section class="doc-section mw-reveal" id="wprowadzenie">
+      <div class="doc-kicker"><span class="doc-kicker-num">01</span><span class="mw-eyebrow">Wprowadzenie</span></div>
+      <h2 class="doc-h2">Dwa systemy pod jednym dachem</h2>
+      <p class="doc-p">MyWay Beauty to jedna aplikacja Flask, która realizuje dwa niezależne zadania: <b>skaner kosztów</b> — pierwotne przeznaczenie systemu, gdzie faktury od dostawców są skanowane (OCR), automatycznie odczytywane i rozliczane — oraz <b>pełny system zarządzania salonem</b>: klienci, usługi, pracownicy, kalendarz wizyt, publiczna rezerwacja online, automatyczne SMS-y, przychody i prowizje personelu, analityka biznesowa oraz zarządzanie nieobecnościami zespołu.</p>
+      <p class="doc-p">Obie połowy dzielą to samo logowanie, to samo menu boczne i ten sam system uprawnień, ale poza tym działają niezależnie — dane faktur nigdy nie mieszają się z danymi wizyt. Warto to zapamiętać już na starcie: jak opisano w rozdziale <a href="#pulpit">Pulpit</a>, główny ekran „Pulpit” pokazuje wyłącznie stronę fakturową — wskaźniki salonu znajdziesz osobno, w <a href="#analityka">Analityce</a> i <a href="#przychody">Przychodach</a>.</p>
+      <h3 class="doc-h3">Kto korzysta z systemu</h3>
+      <div class="doc-table-wrap">
+        <table class="doc-table">
+          <thead><tr><th>Rola</th><th>Typowa osoba</th></tr></thead>
+          <tbody>
+            <tr><td><b>superuser</b></td><td>Właściciel salonu — komplet uprawnień plus narzędzia wyłączne: role, twarde usuwanie, „Widok administratora”, Edytor mocy.</td></tr>
+            <tr><td><b>admin</b></td><td>Manager — niemal pełny dostęp operacyjny, bez zarządzania rolami i bez wglądu w konto superusera.</td></tr>
+            <tr><td><b>receptionist</b></td><td>Recepcja — wizyty i klienci, brak dostępu finansowego/kosztowego.</td></tr>
+            <tr><td><b>stylist</b></td><td>Pracownik świadczący usługi — wizyty i klienci, plus (jeśli jest przełożonym) ograniczone zatwierdzanie nieobecności.</td></tr>
+            <tr><td><b>accountant</b></td><td>Księgowość — faktury, raporty, historia cen usług tylko do odczytu.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="doc-p" style="font-size:13px">Superuser może dodatkowo tworzyć własne, niestandardowe role — patrz <a href="#rbac">Role i uprawnienia</a>.</p>
+    </section>
+
+    <!-- ============================ 2. PIERWSZE KROKI ============================ -->
+    <section class="doc-section mw-reveal" id="pierwsze-kroki">
+      <div class="doc-kicker"><span class="doc-kicker-num">02</span><span class="mw-eyebrow">Pierwsze kroki</span></div>
+      <h2 class="doc-h2">Logowanie i nawigacja</h2>
+      <p class="doc-p">Osoba niezalogowana, wchodząc na stronę główną, widzi stronę powitalną (hero, funkcje, sekcja o KSeF, FAQ) — nie samą aplikację. Jedyną drogą do środka jest przycisk <b>„Zaloguj się”</b> w górnej belce lub w stopce.</p>
+
+      <div class="mw-win" style="max-width:460px;margin:22px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/auth/login</span></div>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:15px;font-weight:600">Zaloguj się</div>
+          <div>
+            <div style="font-size:10.5px;font-weight:500;color:var(--mw-muted);margin-bottom:4px">Adres e-mail</div>
+            <div style="border:1px solid var(--mw-border);border-radius:2px;padding:8px 10px;font-size:12.5px;color:var(--mw-ink2);background:#fafaf8">właścicielka@mywaybeauty.pl</div>
+          </div>
+          <div>
+            <div style="font-size:10.5px;font-weight:500;color:var(--mw-muted);margin-bottom:4px">Hasło</div>
+            <div style="border:1px solid var(--mw-border);border-radius:2px;padding:8px 10px;font-size:12.5px;color:var(--mw-ink2);background:#fafaf8">••••••••••</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--mw-ink2)">
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span>Zapamiętaj mnie</span>
+            <span style="color:var(--mw-gold-d);font-weight:500">Zapomniałem hasła</span>
+          </div>
+          <div class="mw-btn mw-btn-dark" style="justify-content:center;padding:11px">Zaloguj się</div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Ekran logowania — pola i link „Zapomniałem hasła”.</div>
+
+      <p class="doc-p" style="margin-top:24px">Udane logowanie zawsze uruchamia <b>30-dniową, kroczącą sesję</b> — każde działanie w aplikacji resetuje ten licznik, więc dopóki korzystasz z systemu choć raz w miesiącu, pozostajesz zalogowana/y praktycznie bez końca, niezależnie od zaznaczenia „Zapamiętaj mnie” (ten checkbox wpływa tylko na dodatkowe ciasteczko przeglądarki, nie na długość sesji). Błędne dane logowania zawsze pokazują ten sam, ogólny komunikat — system nigdy nie zdradza, czy błędny był e-mail czy hasło.</p>
+
+      <h3 class="doc-h3">Zapomniane hasło</h3>
+      <p class="doc-p">Link „Zapomniałem hasła” prowadzi do procesu samoobsługowego bez wysyłki e-maila: po podaniu adresu, jeśli konto istnieje, kolejny ekran od razu pokazuje link resetujący (ważny <b>godzinę</b>) do skopiowania. Jeśli konto nie istnieje, pojawia się ten sam neutralny komunikat bez linku — dzięki temu nie da się w ten sposób sprawdzić, czy dany adres ma konto.</p>
+
+      <h3 class="doc-h3">Nawigacja</h3>
+      <p class="doc-p">Po zalogowaniu menu boczne pokazuje wyłącznie moduły, do których Twoja rola ma dostęp — recepcjonistka nigdy nie zobaczy linku „Faktury”, bo jej rola nie ma uprawnienia do modułu <code>invoices</code>. Filtrowanie dzieje się automatycznie, nic nie trzeba konfigurować ręcznie. Na telefonach i wąskich tabletach menu chowa się w wysuwaną szufladę, a każda strona pokazuje krótki tytuł w mobilnym nagłówku (np. „Kalendarz”, „Pulpit”), więc zawsze wiadomo, gdzie się jest.</p>
+      <p class="doc-p">Jeśli jesteś <b>superuserem</b>, na samym dole menu bocznego znajdują się dwa dodatkowe checkboxy opisane w rozdziale <a href="#rbac">Role i uprawnienia</a> — „Widok administratora” i „Dane własne”. Dla innych ról te przełączniki się nie pojawiają.</p>
+
+      <div class="doc-callout"><b>Ton aplikacji.</b> Komunikaty i potwierdzenia w całej aplikacji celowo mają charakter — spodziewaj się lekko przekornego, czasem złośliwego tonu, gdy to <i>Ty</i> popełnisz błąd (puste pole, zły NIP, zła data), i spokojniejszego, uspokajającego tonu, gdy coś nie zależy od Ciebie (błąd serwera, brak uprawnień, wygasła sesja). To celowa decyzja projektowa, nie usterka.</div>
+    </section>
+
+    <!-- ============================ 3. RBAC ============================ -->
+    <section class="doc-section mw-reveal" id="rbac">
+      <div class="doc-kicker"><span class="doc-kicker-num">03</span><span class="mw-eyebrow">Dostęp i role</span></div>
+      <h2 class="doc-h2">Role i uprawnienia (RBAC)</h2>
+      <p class="doc-p">Każdy ekran i każda operacja zapisu w aplikacji jest kontrolowana przez przynależność do <b>modułu</b>: <code>invoices</code>, <code>appointments</code>, <code>clients</code>, <code>employees</code>, <code>services</code>, <code>settings</code>, <code>reports</code>, <code>data_correction</code>, <code>data_import</code>, <code>absences</code> oraz <code>service_prices</code>.</p>
+      <p class="doc-p">Rola (np. <code>stylist</code>) otrzymuje dostęp do zestawu modułów. Dla większości to proste tak/nie, ale niektóre moduły wspierają dodatkowe flagi: <b>Tylko do odczytu</b> (widzi, ale nigdy nie edytuje/usuwa), <b>Tylko własne dane</b> (widzi wyłącznie rekordy powiązane z własnym kontem pracownika) oraz dwie flagi specjalne: „Edycja historii zmian ceny” (moduł <code>services</code>) i „Wysyłanie SMS” (moduł <code>appointments</code>).</p>
+
+      <h3 class="doc-h3">Domyślna macierz uprawnień</h3>
+      <p class="doc-p" style="font-size:13px">Stan wyjściowy — superuser może to w dowolnym momencie zmienić z ekranu Ról (patrz niżej).</p>
+      <div class="doc-table-wrap">
+        <table class="doc-table">
+          <thead><tr><th>Moduł</th><th class="center">superuser</th><th class="center">admin</th><th class="center">recepcja</th><th class="center">stylistka</th><th class="center">księgowa</th></tr></thead>
+          <tbody>
+            <tr><td>Faktury / Koszty</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-yes">✓</td></tr>
+            <tr><td>Wizyty <span class="doc-ro">(+SMS dla super/admin)</span></td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td></tr>
+            <tr><td>Klienci</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td></tr>
+            <tr><td>Pracownicy</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-no">–</td></tr>
+            <tr><td>Usługi <span class="doc-ro">(+historia cen)</span></td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-no">–</td></tr>
+            <tr><td>Ustawienia</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-no">–</td></tr>
+            <tr><td>Historia / Raporty</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-yes">✓</td></tr>
+            <tr><td>Korekta danych</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-no">–</td></tr>
+            <tr><td>Import danych</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-no">–</td></tr>
+            <tr><td>Nieobecności <span class="doc-ro">(pełne zarz.)</span></td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">– *</td><td class="center doc-no">–</td></tr>
+            <tr><td>Ceny usług — historia</td><td class="center doc-yes">✓</td><td class="center doc-yes">✓</td><td class="center doc-no">–</td><td class="center doc-no">–</td><td class="center doc-yes">✓<span class="doc-ro">tylko odczyt</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="doc-p" style="font-size:12.5px">* Stylistka bez modułu „Nieobecności” nadal może zatwierdzać wnioski swojego zespołu, jeśli jest ustawiona jako <b>przełożony</b> — patrz niżej. Zarówno <a href="#przychody">Przychody</a>, jak i <a href="#analityka">Analityka</a> nie mają własnego modułu — korzystają z uprawnienia <code>appointments</code>.</p>
+
+      <h3 class="doc-h3">Zarządzanie rolami (tylko superuser)</h3>
+      <p class="doc-p">Z menu bocznego, sekcja <b>System → Poziomy dostępu</b>, superuser może: utworzyć własną rolę (nazwa systemowa + nazwa wyświetlana + moduły), edytować uprawnienia dowolnej roli — łącznie z flagami „tylko odczyt” / „tylko własne dane” / edycją historii cen / wysyłką SMS — oraz usunąć rolę niestandardową (pięciu wbudowanych ról, w tym <code>superuser</code>, usunąć się nie da). Zmiana działa natychmiast dla każdej osoby z tą rolą, bez ponownego logowania.</p>
+
+      <div class="mw-win" style="max-width:560px;margin:20px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/system/roles/3/edit</span></div>
+        <div style="padding:18px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Edycja roli: Stylistka</div>
+          <div style="display:grid;grid-template-columns:1.4fr 0.7fr 0.7fr 0.7fr;gap:4px;font-size:10px;font-weight:600;color:var(--mw-muted);text-transform:uppercase;letter-spacing:0.04em;padding-bottom:6px;border-bottom:1px solid var(--mw-border)">
+            <div>Moduł</div><div style="text-align:center">Dostęp</div><div style="text-align:center">Odczyt</div><div style="text-align:center">Własne</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.4fr 0.7fr 0.7fr 0.7fr;gap:4px;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid #f0eeea"><div>Wizyty</div><div style="text-align:center;color:#059669">●</div><div style="text-align:center"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span></div><div style="text-align:center"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span></div></div>
+          <div style="display:grid;grid-template-columns:1.4fr 0.7fr 0.7fr 0.7fr;gap:4px;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid #f0eeea"><div>Klienci</div><div style="text-align:center;color:#059669">●</div><div style="text-align:center"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span></div><div style="text-align:center"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span></div></div>
+          <div style="display:grid;grid-template-columns:1.4fr 0.7fr 0.7fr 0.7fr;gap:4px;align-items:center;font-size:12px;padding:6px 0"><div>Faktury</div><div style="text-align:center;color:#c2beb5">○</div><div style="text-align:center;opacity:0.4"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span></div><div style="text-align:center;opacity:0.4"><span style="width:13px;height:13px;border:1.5px solid var(--mw-border);border-radius:2px;display:inline-block"></span></div></div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Ekran edycji roli — dostęp do modułu plus flagi „tylko odczyt” / „tylko własne dane”.</div>
+
+      <h3 class="doc-h3">Zarządzanie użytkownikami</h3>
+      <p class="doc-p"><b>System → Użytkownicy</b> (superuser i admin) pokazuje każde konto logowania: imię i nazwisko, e-mail, rolę, powiązanego pracownika, status aktywności i ostatnie logowanie. Admin może zarządzać wszystkimi kontami poza superuserem — nie utworzy nowego konta superusera, nie edytuje ani nie dezaktywuje istniejącego, a rola „superuser” po prostu nie pojawi się na jego liście wyboru. Tworząc konto, wybiera się pracownika do powiązania — na liście widać tylko tych bez istniejącego konta, bo relacja jest ściśle jeden-do-jednego.</p>
+
+      <h3 class="doc-h3">Konto logowania a rekord pracownika</h3>
+      <p class="doc-p">Warto od razu rozróżnić: <b>użytkownik</b> (login + rola) i <b>pracownik</b> (imię, stanowisko, wynagrodzenie, grafik, kalendarz) to dwa osobne rekordy, opcjonalnie połączone jeden-do-jednego przez pole „Konto użytkownika” na formularzu pracownika. Nie każdy pracownik potrzebuje loginu, a funkcje pracownicze (Moje wizyty, wnioski o nieobecność, bycie przełożonym) wymagają tego powiązania.</p>
+
+      <h3 class="doc-h3">„Widok administratora” i „Dane własne”</h3>
+      <p class="doc-p">To para przełączników sesji, wyłącznie dla superusera, rozwiązująca konkretny problem: <b>właścicielka salonu bywa też pracującą stylistką</b>, generując realne wizyty, przychód i prowizję — dane, które nie powinny po cichu zniekształcać statystyk zespołu, historii klientek ani analityki biznesowej dla nikogo (nawet dla samej właścicielki, domyślnie).</p>
+      <p class="doc-p">Domyślnie (oba przełączniki wyłączone) rekord pracownika powiązany z kontem superusera jest niewidoczny wszędzie tam, gdzie dane dotyczą pracowników: katalog pracowników, listy rozwijane kalendarza, statystyki wizyt klientek, podsumowania przychodów i niemal każda liczba w analityce. Nic nie jest usuwane z bazy — dane po prostu są wyłączane z wyników zapytań, a bezpośrednie wejście na profil takiego pracownika zwraca błąd „nie znaleziono”.</p>
+      <ul class="doc-list">
+        <li><b>„Widok administratora”</b> (checkbox na dole menu, tylko dla superusera) odsłania ukrytego pracownika wszędzie.</li>
+        <li><b>„Dane własne”</b>, zagnieżdżone pod nim i klikalne tylko gdy widok administratora jest włączony, <i>odwraca</i> filtr: pokazuje wyłącznie własne dane zalogowanej osoby, ukrywając resztę zespołu.</li>
+        <li>Wyłączenie „Widoku administratora” zawsze czyści też „Dane własne” — podrzędny przełącznik nigdy nie zostaje po cichu włączony bez rodzica.</li>
+      </ul>
+
+      <div class="mw-win" style="max-width:300px;margin:10px 0 6px">
+        <div style="padding:4px;background:#211f1b">
+          <div style="padding:10px 12px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(201,162,39,0.14);border-radius:2px;margin-bottom:2px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:#f3ead0;font-weight:500"><span style="width:13px;height:13px;background:var(--mw-gold);border-radius:2px;display:inline-block"></span>Widok administratora</div>
+          </div>
+          <div style="padding:8px 12px 10px 30px;opacity:0.85">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#cfcac0;font-weight:500"><span style="width:12px;height:12px;border:1.5px solid #565248;border-radius:2px;display:inline-block"></span>Dane własne</div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Stopka menu bocznego — oba przełączniki widoczne wyłącznie dla superusera, aktywny stan podświetlony na złoto.</div>
+
+      <div class="doc-callout"><b>Uwaga:</b> te przełączniki nie mają żadnego wpływu na ekrany niedotyczące pracowników — listę faktur, katalog usług, ustawienia czy ekrany Ról/Użytkowników.</div>
+
+      <h3 class="doc-h3">Przełożeni — relacja, nie rola</h3>
+      <p class="doc-p">Każdy pracownik może zostać ustawiony jako <b>przełożony</b> innych, niezależnie od swojej roli logowania. Stylistka nadzorująca troje młodszych koleżanek zyskuje ograniczone uprawnienia do zarządzania nieobecnościami (zatwierdzanie/odrzucanie wniosków zespołu, ręczne rejestrowanie nieobecności) bez awansu na <code>admin</code>. Relację ustawia się z profilu edycji <b>przełożonego</b>, nie podwładnego — interfejs aktywnie blokuje cykliczne hierarchie (nie da się ustawić dwóch osób wzajemnie swoimi przełożonymi). Bycie przełożonym daje dostęp do ekranów Nieobecności nawet bez uprawnienia do modułu <code>absences</code>, ale wyłącznie w zakresie własnego zespołu, nigdy do zakładki „Kategorie” — pełny opis w rozdziale <a href="#nieobecnosci">Nieobecności</a>.</p>
+    </section>
+
+    <!-- ============================ MODUŁY nagłówek ============================ -->
+    <div id="moduly" style="scroll-margin-top:84px"></div>
+
+    <!-- ============================ 4. PULPIT ============================ -->
+    <section class="doc-section mw-reveal" id="pulpit">
+      <div class="doc-kicker"><span class="doc-kicker-num">04</span><span class="mw-eyebrow">Moduł</span></div>
+      <h2 class="doc-h2">Pulpit</h2>
+      <p class="doc-p">Ekran <b>Pulpit</b> jest dostępny pod adresem głównym po zalogowaniu oraz z menu bocznego. Może go otworzyć każda zalogowana osoba — nie ma bramki uprawnień modułowych.</p>
+      <div class="doc-callout doc-callout-warn"><b>Ważne:</b> ten Pulpit dotyczy wyłącznie faktur i kosztów. Nie znajdziesz tu dzisiejszych wizyt, przychodu salonu ani wskaźników zespołu — te żyją osobno: <a href="#analityka">Analityka</a>, <a href="#przychody">Przychody</a>, a dla „co robię dziś” — mobilna strona <b>Moje wizyty</b> (rozdział <a href="#wizyty">Wizyty i kalendarz</a>).</div>
+      <p class="doc-p">Co faktycznie pokazuje: kartę <b>Brutto</b> (suma faktur) plus pięć mniejszych kart (Wszystkie / Opłacone / Nieopłacone / Netto / VAT), 12-miesięczny wykres słupkowy sum faktur, oraz cztery panele: ostatnie faktury, przeterminowane płatności, nadchodzące płatności i najczęstsi dostawcy.</p>
+
+      <div class="mw-win" style="margin:20px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/dashboard</span></div>
+        <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+          <div class="doc-mock-grid">
+            <div class="doc-stat-card" style="background:linear-gradient(135deg,#1a1a1a,#2a2a2a);color:#fff"><div class="doc-stat-val" style="color:#fff">42 180 zł</div><div class="doc-stat-lbl" style="color:rgba(255,255,255,0.6)">Brutto</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val">118</div><div class="doc-stat-lbl">Wszystkie</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val" style="color:#2d6a4f">96</div><div class="doc-stat-lbl">Opłacone</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val" style="color:#9a6700">22</div><div class="doc-stat-lbl">Nieopłacone</div></div>
+          </div>
+          <div style="height:70px;display:flex;align-items:flex-end;gap:5px;padding-top:6px">
+            <div style="flex:1;background:#e8e6e1;height:38%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:52%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:44%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:66%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:58%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:73%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:60%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:80%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:70%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:90%;border-radius:1px"></div><div style="flex:1;background:#e8e6e1;height:65%;border-radius:1px"></div><div style="flex:1;background:var(--mw-gold);height:84%;border-radius:1px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Pulpit — karty statystyk fakturowych i 12-miesięczny wykres sum.</div>
+    </section>
+
+    <!-- ============================ 5. FAKTURY ============================ -->
+    <section class="doc-section mw-reveal" id="faktury">
+      <div class="doc-kicker"><span class="doc-kicker-num">05</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">invoices</code></span></div>
+      <h2 class="doc-h2">Faktury i koszty</h2>
+      <p class="doc-p">To pierwotne przeznaczenie aplikacji: przechwytywanie faktur od dostawców — kosztów salonu — czy to wpisanych ręcznie, zeskanowanych z PDF-a/zdjęcia, czy pobranych automatycznie ze skrzynki e-mail.</p>
+      <ul class="doc-list">
+        <li><b>Faktura</b> zawsze należy do <b>Sprzedawcy</b> (dostawcy), identyfikowanego głównie po NIP.</li>
+        <li>Status faktury to zawsze dokładnie jedna z dwóch wartości: <b>Opłacona</b> lub <b>Nieopłacona</b>. Nie istnieje osobny status „przeterminowana” w bazie — to etykieta liczona na bieżąco, gdy faktura jest wciąż nieopłacona, a termin płatności już minął. Zmiana statusu to jedno kliknięcie na plakietkę na liście.</li>
+      </ul>
+
+      <h3 class="doc-h3">Skanowanie faktur (OCR)</h3>
+      <p class="doc-p">Strona <b>Wgraj</b> to trzystopniowy kreator: (1) wybór źródła — przeciągnij pliki PDF/JPG/PNG lub użyj karty „Import z e-mail”; (2) przegląd zestawionych plików przed przetworzeniem; (3) wyniki OCR — dla każdego pliku widać odczytane pola, kolorowaną plakietkę pewności OCR (zielona ≥80%, żółta ≥60%, czerwona poniżej) i ewentualną flagę duplikatu. Nic nie trafia na listę faktur, dopóki nie klikniesz „Zapisz i zakończ”.</p>
+
+      <div class="mw-win" style="max-width:560px;margin:20px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/upload · krok 3/3</span></div>
+        <div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12.5px;font-weight:600">Wyniki OCR — 2 pliki</div>
+          <div style="border:1px solid var(--mw-border);border-radius:2px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:12px;font-weight:500">FV/2026/07/0182 — Salon-Hurt Sp. z o.o.</div><div style="font-size:11px;color:var(--mw-ink2)">890,00 zł · termin 28.07.2026</div></div>
+            <span style="font-size:9.5px;font-weight:600;background:#ecfdf5;color:#059669;padding:3px 8px;border-radius:1px">94% pewności</span>
+          </div>
+          <div style="border:1px solid var(--mw-border);border-radius:2px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:12px;font-weight:500">FV 331/07/2026 — Kosmetyki Pro</div><div style="font-size:11px;color:var(--mw-ink2)">245,50 zł · termin 02.08.2026</div></div>
+            <span style="font-size:9.5px;font-weight:600;background:#fffbeb;color:#d97706;padding:3px 8px;border-radius:1px">67% pewności</span>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Kreator wgrywania, krok 3 — wyniki OCR z plakietką pewności odczytu.</div>
+
+      <p class="doc-p">Pliki tekstowe PDF czytane są bezpośrednio (zawsze 100% pewności — bez rozpoznawania obrazu). Skany/zdjęcia przechodzą przez OCR z automatycznym oczyszczaniem obrazu i ponawianiem próby przy innych profilach, jeśli pierwsza nie odczyta zbyt wielu pól. Numery, kwoty i daty są dopasowywane wzorcami dostrojonymi pod polskie faktury (format KSeF, NIP, IBAN, kilka formatów dat, „POBRANIE” jako termin płatności).</p>
+      <p class="doc-p"><b>Duplikaty</b> są wykrywane, gdy ten sam numer faktury pojawia się dla tego samego sprzedawcy (po NIP, w braku NIP — po nazwie) — inny dostawca używający tego samego numeru nigdy nie wywoła fałszywego alarmu.</p>
+      <p class="doc-p"><b>Zaszyfrowane PDF-y:</b> jeśli dostawca zawsze szyfruje faktury, zarejestruj hasło raz w <b>Sprzedawcy → (edycja) → Hasła PDF</b>, powiązane z konkretnym sprzedawcą albo ze wzorcem adresu nadawcy (np. <code>%@enea.pl</code>). Przy kolejnym pliku system odblokuje go automatycznie; bez pasującego hasła próbuje po kolei wszystkich zapisanych haseł.</p>
+
+      <h3 class="doc-h3">Automatyczny import z e-maila</h3>
+      <p class="doc-p">Import uruchamiany jest ręcznie z karty „Import z e-mail” na stronie Wgraj: wybierasz folder(y) skrzynki i zakres dat, system łączy się przez IMAP, szuka e-maili z frazą związaną z fakturą w temacie/treści i pobiera załączniki PDF. Pobrane pliki trafiają do tego samego kreatora OCR co pliki wgrane ręcznie. Dane logowania IMAP konfiguruje się raz w <a href="#ustawienia">Ustawienia → E-mail</a>.</p>
+
+      <h3 class="doc-h3">Sprzedawcy</h3>
+      <p class="doc-p">Katalog dostawców: nazwa, NIP, adres, licznik faktur. Z tego ekranu można dodać sprzedawcę (z bieżącym sprawdzaniem duplikatu NIP/nazwy), edytować dane, przejrzeć powiązane faktury i uruchomić narzędzia synchronizacji, które wychwytują rozjazdy — faktury bez poprawnego powiązania, sprzedawców usuniętych, ale wciąż wskazywanych przez stare faktury. <b>Usunięcie sprzedawcy kaskadowo usuwa wszystkie jego faktury</b> — ekran potwierdzenia pokazuje pełną listę przed zatwierdzeniem.</p>
+
+      <h3 class="doc-h3">Import danych z caldis.pl (superuser/admin)</h3>
+      <p class="doc-p">Osobne narzędzie pod <b>Import</b> (moduł <code>data_import</code>): migracja historycznych wizyt z zewnętrznej platformy rezerwacyjnej caldis.pl przez zautomatyzowaną sesję przeglądarki, wraz z tworzeniem brakujących klientów. Ponieważ serwis ma zabezpieczenia antybotowe, po wygaśnięciu zapisanej sesji (ok. 30 dni) trzeba raz kliknąć „Reconnect” i zalogować się ręcznie w otwartym oknie przeglądarki po stronie serwera — potem import dla wybranego zakresu dat działa samodzielnie, z podglądem postępu na żywo i historią ostatnich uruchomień.</p>
+    </section>
+
+    <!-- ============================ 6. KLIENCI ============================ -->
+    <section class="doc-section mw-reveal" id="klienci">
+      <div class="doc-kicker"><span class="doc-kicker-num">06</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">clients</code></span></div>
+      <h2 class="doc-h2">Klienci</h2>
+      <p class="doc-p">Lista <b>Klienci</b> ma wyszukiwarkę na żywo, filtry (<b>Aktywni</b> / <b>VIP</b> / <b>Nieaktywni</b>) i sortowalne kolumny, w tym ostatnią/następną wizytę, liczbę wizyt i liczbę nieobecności (no-show). Status VIP jest liczony automatycznie (aktywny + 3 lub więcej wizyt w ostatnich 8 tygodniach) i pokazany jako złota obwódka avatara; czerwona obwódka oznacza klientkę z ponad 2 nieobecnościami.</p>
+
+      <div class="mw-win" style="margin:20px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/clients</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:8px;font-size:11px;font-weight:600">
+            <span style="background:var(--mw-ink);color:#fff;padding:5px 12px;border-radius:20px">Aktywni</span>
+            <span style="background:#fff;border:1px solid var(--mw-border);padding:5px 12px;border-radius:20px;color:var(--mw-ink2)">VIP</span>
+            <span style="background:#fff;border:1px solid var(--mw-border);padding:5px 12px;border-radius:20px;color:var(--mw-ink2)">Nieaktywni</span>
+          </div>
+          <div style="border:1px solid var(--mw-border);border-radius:2px;overflow:hidden">
+            <div style="padding:9px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f0eeea">
+              <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--mw-gold),#a07d1a);display:inline-block;box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--mw-gold)"></span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:500">Katarzyna N.</div><div style="font-size:10.5px;color:var(--mw-muted)">Ostatnia wizyta: 09.07.2026</div></div>
+              <span style="font-size:9px;font-weight:600;background:rgba(201,162,39,0.15);color:var(--mw-gold-d);padding:3px 7px;border-radius:1px">VIP</span>
+            </div>
+            <div style="padding:9px 12px;display:flex;align-items:center;gap:10px">
+              <span style="width:26px;height:26px;border-radius:50%;background:#d8d5cd;display:inline-block"></span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:500">Marta W.</div><div style="font-size:10.5px;color:var(--mw-muted)">Ostatnia wizyta: 22.06.2026</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Lista klientów — filtry, obwódka VIP na avatarze, wskaźnik ostatniej wizyty.</div>
+
+      <h3 class="doc-h3">Dodawanie klienta</h3>
+      <p class="doc-p">Krótki formularz: imię i nazwisko (wymagane), telefon, e-mail, data urodzenia, notatki. W trakcie wpisywania system na bieżąco sprawdza duplikaty i pokazuje ostrzeżenia z rankingiem pewności (dokładne dopasowanie telefonu = wysokie; zamienione imię/nazwisko lub literówka = średnie; same inicjały = niskie). Dopasowanie wysokie/średnie wymaga jawnego potwierdzenia „Zapisać mimo to?” — to system ostrzegawczy, nigdy nie scala rekordów automatycznie.</p>
+      <div class="doc-callout"><b>Skąd biorą się duplikaty:</b> publiczna rezerwacja online (<a href="#rezerwacje">rozdział niżej</a>) też automatycznie tworzy klientów dla gości, którzy nie pasują po telefonie/e-mailu — i <b>nie</b> uruchamia tego samego ostrzeżenia co formularze dla personelu. Jeśli lista klientów ma więcej duplikatów niż się spodziewasz, to najbardziej prawdopodobne źródło.</div>
+
+      <h3 class="doc-h3">Historia i preferencje</h3>
+      <p class="doc-p">Profil klientki pokazuje dane podstawowe/kontaktowe, notatki oraz dwie daty zarządzane automatycznie (nieedytowalne ręcznie): <b>Pierwsza wizyta</b> i <b>Ostatnia wizyta</b> — obie ustawiane w momencie, gdy personel oznaczy wizytę jako <b>zakończoną</b>, nie w momencie rezerwacji. Niżej: <b>Historia wizyt</b> (ostatnie 50, z linkiem do szczegółów) oraz <b>Preferencje klienta</b> — możliwość zapisania, że dana klientka preferuje konkretną stylistkę do danej usługi lub całej kategorii; oba pola dropdown wzajemnie się filtrują, żeby nie dało się wybrać niepasującej kombinacji.</p>
+
+      <div class="doc-callout doc-callout-warn"><b>Znana usterka:</b> przycisk „Dezaktywuj” na dole profilu <i>aktywnej</i> klientki w rzeczywistości wykonuje pełne usunięcie (klientka znika ze wszystkich ekranów, nie tylko z domyślnego filtra), bez opcji cofnięcia w aplikacji. Do odwracalnej dezaktywacji służy przełącznik „Klient aktywny” na formularzu edycji lub mała ikona na liście klientów — oba działają poprawnie.</div>
+    </section>
+
+    <!-- ============================ 7. USŁUGI ============================ -->
+    <section class="doc-section mw-reveal" id="uslugi">
+      <div class="doc-kicker"><span class="doc-kicker-num">07</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">services</code></span></div>
+      <h2 class="doc-h2">Usługi</h2>
+      <p class="doc-p">Usługi grupowane są w <b>Kategorie</b> (np. „Fryzjerstwo”, „Manicure”), zarządzane w <b>Usługi → Kategorie</b>. Każda usługa jest jednego z dwóch typów:</p>
+      <ul class="doc-list">
+        <li><b>Główna</b> — samodzielna, rezerwowalna z góry; musi mieć kategorię.</li>
+        <li><b>Dodatkowa (mikrousługa)</b> — drobny dodatek, którego nie da się zarezerwować z wyprzedzeniem; można ją dodać wyłącznie do wizyty <b>już trwającej</b> (patrz <a href="#wizyty">Wizyty i kalendarz</a>). Nie ma własnej kategorii.</li>
+      </ul>
+      <p class="doc-p">Zmiana nazwy kategorii automatycznie propaguje się na wszystkie jej usługi; usunięcie kategorii z przypisanymi usługami daje wybór — usunąć samą kategorię (usługi zostają, z osieroconą etykietą) albo skasować kaskadowo razem z usługami.</p>
+
+      <h3 class="doc-h3">Kompatybilność mikrousług</h3>
+      <p class="doc-p">Domyślnie mikrousługa bez skonfigurowanych reguł jest oferowana przy <b>każdej</b> usłudze głównej. W chwili, gdy jawnie powiążesz ją z konkretnymi usługami głównymi (z profilu usługi głównej → „Kompatybilne mikrousługi” → „Dodaj mikrousługę”), zawęża się tylko do nich — usunięcie wszystkich powiązań przywraca uniwersalną kompatybilność.</p>
+
+      <div class="mw-win" style="max-width:460px;margin:20px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/service/12</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:13px;font-weight:600">Manicure hybrydowy · 120 zł · 60 min</div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--mw-muted);margin-top:4px">Kompatybilne mikrousługi</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <span style="font-size:11px;background:#fff;border:1px solid var(--mw-border);border-radius:20px;padding:5px 12px">+ Parafina dłoni · 25 zł</span>
+            <span style="font-size:11px;background:#fff;border:1px solid var(--mw-border);border-radius:20px;padding:5px 12px">+ Zdobienie 3D · 15 zł</span>
+            <span style="font-size:11px;color:var(--mw-gold-d);font-weight:600;border:1px dashed var(--mw-gold);border-radius:20px;padding:5px 12px">+ Dodaj mikrousługę</span>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Profil usługi głównej — karta kompatybilnych mikrousług.</div>
+
+      <h3 class="doc-h3">Ceny i historia cen</h3>
+      <p class="doc-p">Każda usługa ma cenę katalogową i czas trwania. Zmiana ceny nie nadpisuje starej liczby — system trzyma pełną, datowaną historię wszystkich cen usługi, z opcjonalnym „Powodem zmiany ceny”. Historia jest widoczna dla każdego z uprawnieniem <code>service_prices</code> (w tym księgowej, ale <b>tylko do odczytu</b> domyślnie); usuwanie wpisu jest zastrzeżone dla flagi „Edycja historii zmian ceny” (domyślnie superuser/admin) — usunięcie aktualnej ceny automatycznie przywraca poprzednią jako bieżącą, a ostatniego pozostałego wpisu usunąć się nie da.</p>
+    </section>
+
+    <!-- ============================ 8. PRACOWNICY ============================ -->
+    <section class="doc-section mw-reveal" id="pracownicy">
+      <div class="doc-kicker"><span class="doc-kicker-num">08</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">employees</code></span></div>
+      <h2 class="doc-h2">Pracownicy</h2>
+      <p class="doc-p">Poza danymi kontaktowymi rekord pracownika zawiera: stanowisko, status zatrudnienia (Aktywny / Na urlopie / Zwolniony), daty zatrudnienia/zwolnienia, wynagrodzenie podstawowe, stawkę prowizji, narzut kosztów pracodawcy (domyślnie 22%, model polskiego ZUS-u), umiejętności, specjalizacje, grafik pracy i dzienny limit wizyt.</p>
+      <p class="doc-p"><b>Formy zatrudnienia</b> (Pracownicy → Formy zatrudnienia) to mały słownik (np. Umowa o pracę, B2B, Umowa zlecenie) z trzema flagami informacyjnymi o strukturze wynagrodzenia. Formy używanej przez pracownika nie da się usunąć.</p>
+
+      <h3 class="doc-h3">Indywidualne ceny per pracownik</h3>
+      <p class="doc-p">Na profilu pracownika karta „Przypisane usługi” listuje wszystkie usługi, które wykonuje, z opcją nadpisania ceny, prowizji i czasu trwania <b>tylko dla tej osoby</b> — puste pole po prostu dziedziczy wartość domyślną. Mała <code>*</code> oznacza ceny indywidualnie nadpisane.</p>
+
+      <div class="mw-win" style="max-width:520px;margin:20px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/employee/4</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--mw-muted)">Przypisane usługi — Anna K.</div>
+          <div style="border:1px solid var(--mw-border);border-radius:2px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1.6fr 0.8fr 0.8fr;padding:8px 12px;font-size:12px;border-bottom:1px solid #f0eeea"><div>Manicure hybrydowy</div><div>135 zł *</div><div>40%</div></div>
+            <div style="display:grid;grid-template-columns:1.6fr 0.8fr 0.8fr;padding:8px 12px;font-size:12px"><div>Koloryzacja</div><div>220 zł</div><div>35%</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Profil pracownika — indywidualnie nadpisana cena oznaczona gwiazdką.</div>
+
+      <h3 class="doc-h3">Przypisywanie przełożonych i podwładnych</h3>
+      <p class="doc-p">Aby uczynić pracownika przełożonym innych, otwórz <b>jego własny</b> profil edycji i użyj listy „Podwładni (bezpośredni)” — osoby, które są już Twoimi przełożonymi, są wyszarzone z etykietą „konflikt”. Zapis <b>zastępuje</b> całą listę podwładnych, nie dodaje do niej.</p>
+    </section>
+
+    <!-- ============================ 9. WIZYTY I KALENDARZ ============================ -->
+    <section class="doc-section mw-reveal" id="wizyty">
+      <div class="doc-kicker"><span class="doc-kicker-num">09</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">appointments</code></span></div>
+      <h2 class="doc-h2">Wizyty i kalendarz</h2>
+      <p class="doc-p">To operacyjne serce salonowej połowy aplikacji.</p>
+
+      <h3 class="doc-h3">Statusy wizyty</h3>
+      <div class="doc-flow">
+        <span class="doc-flow-pill">scheduled</span><span class="doc-flow-arrow">→</span><span class="doc-flow-pill">confirmed</span><span class="doc-flow-arrow">→</span><span class="doc-flow-pill">in_progress</span><span class="doc-flow-arrow">→</span><span class="doc-flow-pill doc-final">completed</span>
+      </div>
+      <p class="doc-p" style="font-size:13px">Z każdego stanu poza „completed” możliwe jest też przejście do <code>cancelled</code>; z „confirmed” — dodatkowo do <code>no_show</code>. „in_progress” można zainicjować bezpośrednio z „scheduled” (np. dla klientki bez zapowiedzi, bez potwierdzenia SMS).</p>
+      <p class="doc-p">Kilka przejść jest <b>ograniczonych czasowo</b>: nie da się oznaczyć wizyty jako „in_progress” ani „no_show” więcej niż 30 minut przed jej planowanym początkiem, ani „completed” poza 30-minutowym oknem wokół planowanego końca. Do poprawiania zaległych wizyt służy Edytor mocy (patrz niżej), który celowo omija te okna.</p>
+
+      <h3 class="doc-h3">Widoki kalendarza</h3>
+      <div class="mw-win" style="margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/appointments/calendar</span></div>
+        <div style="padding:14px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:grid;grid-template-columns:44px repeat(3,1fr);gap:4px;font-size:10px;font-weight:600;color:var(--mw-muted);text-align:center"><div></div><div>Anna K.</div><div>Ola P.</div><div>Julia S.</div></div>
+          <div style="display:grid;grid-template-columns:44px repeat(3,1fr);gap:4px;align-items:stretch">
+            <div style="font-size:10px;color:var(--mw-muted);text-align:right;padding-top:4px">09:00</div>
+            <div style="background:#ecfdf5;border-left:3px solid #059669;border-radius:2px;padding:5px 7px;font-size:10.5px">Katarzyna N.<br><span style="color:var(--mw-ink2);font-weight:400">Manicure</span></div>
+            <div></div>
+            <div style="background:#eff6ff;border-left:3px solid #2563eb;border-radius:2px;padding:5px 7px;font-size:10.5px">Julia S.<br><span style="color:var(--mw-ink2);font-weight:400">Makijaż</span></div>
+            <div style="font-size:10px;color:var(--mw-muted);text-align:right;padding-top:4px">11:00</div>
+            <div></div>
+            <div style="background:#fffbeb;border-left:3px solid #d97706;border-radius:2px;padding:5px 7px;font-size:10.5px;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:translateX(2px)">Marta W.<br><span style="color:var(--mw-ink2);font-weight:400">Koloryzacja</span></div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Widok dnia — kolumny pracowników, bloczek wizyty podniesiony cieniem pod kursorem.</div>
+
+      <p class="doc-p">Trzy zamienne układy — <b>Dzień</b>, <b>Tydzień</b>, <b>Miesiąc</b> — plus zwykła sortowalna tabela (<b>Lista</b>) są dostępne z menu Wizyty. Wszystkie trzy widoki kalendarzowe nakładają na siatkę <b>zatwierdzone</b> nieobecności pracowników — zobacz zastrzeżenie o wnioskach oczekujących niżej.</p>
+
+      <h3 class="doc-h3">Rezerwacja wizyty (personel)</h3>
+      <p class="doc-p">„Nowy termin” otwiera formularz: klientka (wyszukiwarka), pracownik, jedna lub więcej usług, data i wolny slot czasowy. Cena, czas trwania i prowizja liczą się automatycznie z efektywnego cennika per pracownik.</p>
+      <p class="doc-p">Przed zapisem system sprawdza kolejno: czy termin mieści się w godzinach pracy pracownika, czy ani pracownik, ani klientka nie mają już nakładającej się wizyty, i wreszcie — czy pracownik nie ma nieobecności, <b>zatwierdzonej lub wciąż oczekującej</b>, obejmującej ten termin.</p>
+
+      <div class="doc-callout doc-callout-warn"><b>Ważna zasada:</b> zarówno zatwierdzona, jak i dopiero oczekująca nieobecność <b>blokują</b> zapisanie nowej wizyty dla danego pracownika w tym terminie — różni się tylko sposób prezentacji (zatwierdzona = twardy błąd z podświetleniem pola; oczekująca = lżejszy komunikat ostrzegawczy, bo decyzja jeszcze nie zapadła). Jednak <b>tylko zatwierdzone</b> nieobecności są pokazywane wizualnie na kalendarzach i wyłączane z dostępnych terminów na stronie publicznej rezerwacji — wniosek oczekujący nie blokuje niczego wizualnie, dopóki ktoś nie spróbuje faktycznie zarezerwować w ten termin.</div>
+
+      <h3 class="doc-h3">Dodawanie mikrousługi w trakcie wizyty</h3>
+      <p class="doc-p">Wyłącznie gdy status to <b>in_progress</b>, strona wizyty oferuje „Dodaj mikrousługę” z listą dodatków kompatybilnych z już zarezerwowanymi usługami głównymi i możliwych do wykonania przez przypisanego pracownika. Cena i prowizja są zapisywane w momencie dodania, nie przeliczane później.</p>
+
+      <h3 class="doc-h3">Zakończenie wizyty → przychód</h3>
+      <p class="doc-p">Oznaczenie wizyty jako <b>completed</b> — którąkolwiek z kilku dróg (rozwijana lista statusu, akcja „Zakończ wizytę”, albo pracownik kończący ją z własnego telefonu) — zawsze, dokładnie raz, tworzy rekord przychodu tej wizyty (<a href="#przychody">Przychody</a>) i aktualizuje datę ostatniej wizyty klientki. Cofnięcie statusu usuwa powiązany rekord przychodu, żeby oba pozostały spójne.</p>
+
+      <h3 class="doc-h3">„Moje wizyty” — mobilna strona pracownika</h3>
+      <p class="doc-p">Każda osoba z powiązanym kontem pracownika może otworzyć na telefonie <b>Moje wizyty</b> — duże karty z dzisiejszymi wizytami. Dla wizyty zaczynającej się w ciągu 20 minut (lub już trwającej) pojawia się przycisk „Pobierz link do wizyty”, dający osobisty, jednorazowy link do oznaczenia wizyty jako rozpoczętej i później zakończonej — bez pełnego interfejsu desktopowego.</p>
+
+      <div class="mw-win" style="max-width:300px;margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/my-visits</span></div>
+        <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:12px;font-weight:600">Dziś, 14 lipca</div>
+          <div style="border:1px solid var(--mw-border);border-radius:4px;padding:10px 12px">
+            <div style="font-size:13px;font-weight:600">10:30 · Julia S.</div>
+            <div style="font-size:11px;color:var(--mw-ink2);margin:2px 0 8px">Makijaż wieczorowy · 45 min</div>
+            <div class="mw-btn mw-btn-dark mw-btn-sm" style="width:100%;justify-content:center">Pobierz link do wizyty</div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Moje wizyty — mobilny widok dnia dla pracownika, z odblokowanym przyciskiem startu wizyty.</div>
+
+      <h3 class="doc-h3">Edytor mocy (korekta danych, superuser/admin)</h3>
+      <p class="doc-p">Moduł <code>data_correction</code> (domyślnie superuser) daje: pojedynczy edytor wizyty z opcją „zapisz mimo to” pomijającą zwykłe sprawdzanie konfliktów i okien czasowych, nawigację klawiaturową między sąsiednimi wizytami, oraz zbiorczą, edytowalną tabelę do poprawiania wielu wizyt naraz. Osobne narzędzie „skanera przeszłych wizyt” znajduje wizyty utknięte w statusie nie-końcowym długo po planowanym terminie i pozwala je rozwiązać zbiorczo, z poprawną historyczną datą płatności.</p>
+    </section>
+
+    <!-- ============================ 10. REZERWACJE ONLINE ============================ -->
+    <section class="doc-section mw-reveal" id="rezerwacje">
+      <div class="doc-kicker"><span class="doc-kicker-num">10</span><span class="mw-eyebrow">Publiczna strona</span></div>
+      <h2 class="doc-h2">Rezerwacje online</h2>
+      <p class="doc-p">Strona <code>/booking</code> nie wymaga logowania — to publiczny widżet rezerwacyjny do umieszczenia na stronie/w social mediach salonu. Prowadzi gościa przez pięć kroków: <b>Usługi</b> (do kilku usług głównych naraz, nigdy dodatków), <b>Specjalista</b> (tylko osoby wykonujące wybraną usługę, z cenami i godzinami pracy), <b>Termin</b> (kalendarz podświetlający dni z wolnym slotem, potem wybór godziny — tego samego dnia sloty w najbliższych 30 minutach są ukrywane jako bufor), <b>Dane kontaktowe</b> i <b>Potwierdzenie</b>.</p>
+
+      <div class="mw-win" style="max-width:420px;margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/booking</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="width:22px;height:22px;border-radius:50%;background:var(--mw-ink);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">✓</span><span style="height:1px;flex:1;background:var(--mw-gold)"></span>
+            <span style="width:22px;height:22px;border-radius:50%;background:var(--mw-ink);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">✓</span><span style="height:1px;flex:1;background:var(--mw-gold)"></span>
+            <span style="width:22px;height:22px;border-radius:50%;background:var(--mw-gold);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">3</span><span style="height:1px;flex:1;background:var(--mw-border)"></span>
+            <span style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--mw-border);color:var(--mw-muted);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">4</span>
+          </div>
+          <div style="font-size:12px;font-weight:600">Wybierz termin — Anna K.</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+            <div style="border:1px solid var(--mw-border);border-radius:2px;text-align:center;padding:7px 0;font-size:11px">09:00</div>
+            <div style="border:1px solid var(--mw-border);border-radius:2px;text-align:center;padding:7px 0;font-size:11px;background:var(--mw-ink);color:#fff">11:30</div>
+            <div style="border:1px solid var(--mw-border);border-radius:2px;text-align:center;padding:7px 0;font-size:11px">13:00</div>
+            <div style="border:1px solid #f0eeea;border-radius:2px;text-align:center;padding:7px 0;font-size:11px;color:#c2beb5">15:00</div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Kreator rezerwacji, krok 3 — wybór wolnego terminu.</div>
+
+      <p class="doc-p">Pod spodem działa dokładnie ta sama logika rezerwacji co po stronie personelu — te same sprawdzenia godzin pracy, podwójnych rezerwacji i konfliktów z nieobecnościami. Klient jest dopasowywany do istniejącego rekordu po telefonie, potem po e-mailu; dopiero brak dopasowania tworzy nowego klienta (patrz zastrzeżenie o duplikatach w rozdziale <a href="#klienci">Klienci</a>).</p>
+    </section>
+
+    <!-- ============================ 11. SMS ============================ -->
+    <section class="doc-section mw-reveal" id="sms">
+      <div class="doc-kicker"><span class="doc-kicker-num">11</span><span class="mw-eyebrow">Powiadomienia</span></div>
+      <h2 class="doc-h2">SMS</h2>
+      <p class="doc-p"><b>Ustawienia → SMS</b> przechowuje dane konta Twilio i główny wyłącznik <code>is_active</code> — gdy jest wyłączony, żaden SMS się nie wyśle, niezależnie od reszty konfiguracji.</p>
+      <div class="doc-table-wrap">
+        <table class="doc-table">
+          <thead><tr><th>Typ wiadomości</th><th>Domyślny moment</th><th>Cel</th></tr></thead>
+          <tbody>
+            <tr><td>Prośba o potwierdzenie</td><td>~48 godz. przed</td><td>Link do potwierdzenia/odwołania wizyty</td></tr>
+            <tr><td>Przypomnienie 1</td><td>24 godz. przed</td><td>Przypomnienie bez linku</td></tr>
+            <tr><td>Przypomnienie 2</td><td>2 godz. przed</td><td>Ostatnie przypomnienie</td></tr>
+            <tr><td>Wiadomość po wizycie</td><td>30 min po zakończeniu</td><td>Link do oceny wizyty</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="doc-p">Cykliczne zadanie co 15 minut wysyła to, co jest już należne. Niezależnie od powyższego, każda wizyta automatycznie planuje krótkie przypomnienie <b>do pracownika</b> ok. 20 minut przed startem, z jego osobistym linkiem „rozpocznij/zakończ wizytę” — to nie jest konfigurowalny typ wiadomości, tylko wbudowany element procesu rezerwacji.</p>
+      <p class="doc-p">Na stronie wizyty osoby z uprawnieniem do wysyłki SMS widzą listę „📱 Wyślij SMS” z już wysłanymi typami wyszarzonymi, by uniknąć duplikatów.</p>
+      <p class="doc-p">Każdy link wysyłany do klientki to unikalny, jednorazowy token, bez logowania: <b>potwierdź/odwołaj</b> wizytę oraz <b>oceń</b> wizytę (prosty widżet 1–5 gwiazdek, możliwy do wysłania tylko raz). Anulowanie wizyty natychmiast kasuje wszystkie jej zaplanowane, jeszcze niewysłane SMS-y.</p>
+    </section>
+
+    <!-- ============================ 12. PRZYCHODY ============================ -->
+    <section class="doc-section mw-reveal" id="przychody">
+      <div class="doc-kicker"><span class="doc-kicker-num">12</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">appointments</code></span></div>
+      <h2 class="doc-h2">Przychody</h2>
+      <p class="doc-p"><b>Przychody</b> to prosty raport miesięczny: wybierz miesiąc, zobacz przychód brutto, netto (po rabatach), sumę prowizji, sumę rabatów, liczbę wizyt i średni rachunek — plus te same liczby rozbite na pracownika w tabeli poniżej.</p>
+
+      <div class="mw-win" style="margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/income</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div class="doc-mock-grid">
+            <div class="doc-stat-card"><div class="doc-stat-val" style="color:#2d6a4f">16 750 zł</div><div class="doc-stat-lbl">Przychód brutto</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val" style="color:#2563eb">14 980 zł</div><div class="doc-stat-lbl">Przychód netto</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val" style="color:#a07d1a">4 210 zł</div><div class="doc-stat-lbl">Prowizje</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val">142</div><div class="doc-stat-lbl">Wizyty</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Przychody — podsumowanie miesięczne.</div>
+
+      <p class="doc-p">Rekordy przychodu nigdy nie są tworzone ani edytowane ręcznie — każdy powstaje automatycznie, dokładnie raz, w chwili oznaczenia wizyty jako zakończonej (patrz <a href="#wizyty">Wizyty i kalendarz</a>). Usunięcie wizyty usuwa (miękko) jej rekord przychodu, a przywrócenie wizyty przywraca go razem z nią.</p>
+      <p class="doc-p"><b>Prowizja</b> jest zamrażana w momencie dodania każdej usługi do wizyty (przy rezerwacji dla usług głównych, przy dodaniu dla mikrousług) — zmiana stawki prowizji pracownika później nigdy nie przelicza wstecz już zapisanych wizyt.</p>
+    </section>
+
+    <!-- ============================ 13. ANALITYKA ============================ -->
+    <section class="doc-section mw-reveal" id="analityka">
+      <div class="doc-kicker"><span class="doc-kicker-num">13</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">appointments</code></span></div>
+      <h2 class="doc-h2">Analityka</h2>
+      <p class="doc-p"><b>Analityka</b> to pulpit biznesowy salonu: wybierz okres (bieżący miesiąc, poprzedni miesiąc, rok do daty lub zakres własny), a cała strona — karty KPI, wykresy, tabele — aktualizuje się razem, z procentową zmianą względem poprzedniego, porównywalnego okresu.</p>
+
+      <div class="mw-win" style="margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/analytics</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div class="doc-mock-grid">
+            <div class="doc-stat-card"><div class="doc-stat-val">16 750 zł<span style="font-size:10px;color:#059669;font-weight:600;margin-left:4px">+12%</span></div><div class="doc-stat-lbl">Przychód</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val">142<span style="font-size:10px;color:#059669;font-weight:600;margin-left:4px">+5%</span></div><div class="doc-stat-lbl">Wizyty</div></div>
+            <div class="doc-stat-card"><div class="doc-stat-val">89<span style="font-size:10px;color:#dc2626;font-weight:600;margin-left:4px">-2%</span></div><div class="doc-stat-lbl">Klienci</div></div>
+          </div>
+          <div style="height:60px;display:flex;align-items:flex-end;gap:4px">
+            <div style="flex:1;background:rgba(37,99,235,0.35);height:40%;border-radius:1px"></div><div style="flex:1;background:rgba(37,99,235,0.35);height:55%;border-radius:1px"></div><div style="flex:1;background:rgba(37,99,235,0.35);height:48%;border-radius:1px"></div><div style="flex:1;background:rgba(37,99,235,0.35);height:70%;border-radius:1px"></div><div style="flex:1;background:rgba(37,99,235,0.35);height:62%;border-radius:1px"></div><div style="flex:1;background:rgba(37,99,235,0.35);height:85%;border-radius:1px"></div><div style="flex:1;background:rgba(37,99,235,0.6);height:95%;border-radius:1px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Analityka — karty KPI ze zmianą okresową i trend przychodów.</div>
+
+      <p class="doc-p">Od góry do dołu strona obejmuje: nagłówkowe KPI (przychód, wizyty, unikalni klienci, średni rachunek), rozbicie zysku (koszty pracownicze z narzutem ZUS-owym, koszty faktur, zysk netto), wykresy trendu przychodów i podziału usług, <b>trend 12-miesięczny</b> (zawsze ostatnie 12 miesięcy od dziś, niezależnie od wybranego okresu), tabelę wyników pracowników (wizyty, przychód, prowizja, wynagrodzenie brutto — wyższe z: pensji podstawowej lub zarobionej prowizji, nigdy suma obu — koszt pracodawcy, zysk netto), nowych i powracających klientów z wskaźnikiem retencji, listę klientek zagrożonych odejściem (brak wizyty od 90+ dni), mapę cieplną godzin szczytu, analizę cen usług oraz automatycznie generowane „Wskazówki biznesowe”.</p>
+      <p class="doc-p" style="font-size:13px">Osobna, bardziej szczegółowa analityka per pracownik znajduje się na profilu tego pracownika (rozdział <a href="#pracownicy">Pracownicy</a>), nie na tej stronie. Przełączniki <a href="#rbac">„Widok administratora” / „Dane własne”</a> działają tutaj tak samo jak wszędzie indziej, gdzie dane dotyczą pracowników.</p>
+    </section>
+
+    <!-- ============================ 14. NIEOBECNOŚCI ============================ -->
+    <section class="doc-section mw-reveal" id="nieobecnosci">
+      <div class="doc-kicker"><span class="doc-kicker-num">14</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">absences</code></span></div>
+      <h2 class="doc-h2">Nieobecności</h2>
+      <p class="doc-p">Kategorie nieobecności (Nieobecności → Kategorie, tylko superuser/admin) definiują np. „Urlop wypoczynkowy”, „Zwolnienie lekarskie (L4)”, „Wyjście prywatne” — każda jako <b>całodniowa</b> (zakres dat) albo <b>slot czasowy</b> (jeden dzień, konkretne godziny). Kategoria może być <b>śledzona</b>: system liczy bilans względem limitu, z konfigurowalnym okresem rozliczeniowym (rocznym, miesięcznym lub kroczącym oknem dni) i progiem ostrzegawczym.</p>
+
+      <h3 class="doc-h3">Wniosek pracownika (samoobsługa)</h3>
+      <div class="mw-win" style="max-width:420px;margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/my-absences</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:12.5px;font-weight:600">Nowy wniosek</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div style="font-size:10px;color:var(--mw-muted);margin-bottom:3px">Kategoria</div><div style="border:1px solid var(--mw-border);border-radius:2px;padding:7px 9px;font-size:11.5px;background:#fafaf8">Urlop wypoczynkowy</div></div>
+            <div><div style="font-size:10px;color:var(--mw-muted);margin-bottom:3px">Zatwierdzający</div><div style="border:1px solid var(--mw-border);border-radius:2px;padding:7px 9px;font-size:11.5px;background:#fafaf8">Anna K. (przełożona)</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div style="font-size:10px;color:var(--mw-muted);margin-bottom:3px">Od</div><div style="border:1px solid var(--mw-border);border-radius:2px;padding:7px 9px;font-size:11.5px;background:#fafaf8">28.07.2026</div></div>
+            <div><div style="font-size:10px;color:var(--mw-muted);margin-bottom:3px">Do</div><div style="border:1px solid var(--mw-border);border-radius:2px;padding:7px 9px;font-size:11.5px;background:#fafaf8">01.08.2026</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Moje nieobecności — formularz wniosku, wybór przełożonego z listy przypisanych.</div>
+
+      <p class="doc-p">Wybiera się kategorię, daty/godziny i jednego z przypisanych <b>przełożonych</b> jako zatwierdzającego (osoba bez żadnego przełożonego zobaczy ostrzeżenie zamiast formularza). Jeśli kategoria jest śledzona, a wniosek przekroczyłby limit — <b>wniosek zostaje odrzucony na starcie</b>, samoobsługa nigdy nie może przekroczyć bilansu; zbliżenie się do limitu bez przekroczenia przechodzi z samym ostrzeżeniem.</p>
+
+      <h3 class="doc-h3">Zatwierdzanie (przełożony/admin)</h3>
+      <p class="doc-p"><b>Nieobecności → Wnioski</b> to ekran z trzema zakładkami. Superuser/admin widzą wszystkie trzy w pełni i wnioski każdego pracownika; przełożony bez szerszego dostępu widzi tylko wnioski swojego zespołu na pierwszych dwóch zakładkach, nigdy trzeciej:</p>
+      <ol class="doc-list" style="list-style:decimal">
+        <li><b>Wnioski</b> — oczekujące, z akcją zatwierdź/odrzuć. Zatwierdzenie wniosku nakładającego się na istniejącą wizytę klientki najpierw pokazuje konflikt i wymaga jawnego potwierdzenia.</li>
+        <li><b>L4 / Manualne</b> — ten sam ekran służy do ręcznego zarejestrowania nieobecności (patrz niżej), plus lista wcześniejszych wpisów ręcznych.</li>
+        <li><b>Kategorie</b> — zarządzanie kategoriami, widoczne tylko dla superusera/admina.</li>
+      </ol>
+
+      <h3 class="doc-h3">Ręczne rejestrowanie (przełożony/admin)</h3>
+      <p class="doc-p">Zamiast czekać na wniosek pracownika, przełożony lub admin może od razu zarejestrować nieobecność z zakładki „L4 / Manualne” — przydatne np. przy zgłoszeniu L4 telefonicznie tego samego dnia. Wpisy ręczne są <b>automatycznie zatwierdzone</b>, bez etapu akceptacji, a przekroczenie limitu daje tylko ostrzeżenie, nie blokadę — bo rejestrowanie faktycznie zaistniałej nieobecności nie powinno być niemożliwe.</p>
+
+      <div class="doc-callout doc-callout-warn"><b>Znana usterka:</b> lista wyboru pracownika przy ręcznym wpisie pokazuje obecnie każdego aktywnego pracownika salonu, nie tylko bezpośrednich podwładnych osoby wykonującej wpis — traktuj hierarchię przełożonych na tym ekranie jako umowną, nie twardą granicę bezpieczeństwa.</div>
+
+      <h3 class="doc-h3">Bilanse i korekty</h3>
+      <p class="doc-p"><b>Bilanse nieobecności</b> pokazuje tabelę wykorzystano/limit per pracownik i kategoria, z paskiem postępu i statusem (ok / ostrzeżenie / przekroczono / bez limitu). Admin/superuser może tu ustawić indywidualny limit dla wybranej osoby oraz zapisać ręczną korektę bilansu (z obowiązkowym powodem) — korekty są kumulatywne i nie wygasają same z siebie przy resecie okresu.</p>
+    </section>
+
+    <!-- ============================ 15. USTAWIENIA ============================ -->
+    <section class="doc-section mw-reveal" id="ustawienia">
+      <div class="doc-kicker"><span class="doc-kicker-num">15</span><span class="mw-eyebrow">Moduł · <code style="font-size:11px">settings</code></span></div>
+      <h2 class="doc-h2">Ustawienia</h2>
+      <p class="doc-p"><b>Ustawienia → E-mail</b> konfiguruje skrzynkę, z której automatyczny import faktur (<a href="#faktury">Faktury i koszty</a>) pobiera załączniki: serwer i port IMAP, adres, hasło. Przycisk „Testuj połączenie” weryfikuje dane bez zapisu, a hasło nigdy nie trafia do pliku ustawień na dysku — jeśli na serwerze skonfigurowano dane logowania na poziomie zmiennych środowiskowych, zawsze mają one pierwszeństwo przed tym, co wpiszesz w formularzu.</p>
+
+      <div class="mw-win" style="max-width:420px;margin:18px 0 6px">
+        <div class="mw-bar"><span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span><span class="mw-url">app.mywaybeauty.pl/settings/email</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:12.5px;font-weight:600">Ustawienia e-mail</div>
+          <div><div style="font-size:10px;color:var(--mw-muted);margin-bottom:3px">Serwer IMAP</div><div style="border:1px solid var(--mw-border);border-radius:2px;padding:7px 9px;font-size:11.5px;background:#fafaf8">imap.gmail.com</div></div>
+          <div style="display:flex;gap:8px">
+            <div class="mw-btn mw-btn-dark mw-btn-sm">Zapisz ustawienia</div>
+            <div class="mw-btn mw-btn-light mw-btn-sm">Testuj połączenie</div>
+          </div>
+        </div>
+      </div>
+      <div class="mw-mock-caption">Ustawienia e-mail — konfiguracja IMAP i przycisk testu połączenia.</div>
+
+      <p class="doc-p">Konfiguracja SMS (dane Twilio, typy wiadomości, log wysyłek) opisana jest w rozdziale <a href="#sms">SMS</a> i mieszka pod <b>Ustawienia → SMS</b>.</p>
+    </section>
+
+    <!-- ============================ DODATEK ============================ -->
+    <!-- ============================ 16. SŁOWNIK ============================ -->
+    <section class="doc-section mw-reveal" id="slownik">
+      <div class="doc-kicker"><span class="doc-kicker-num">16</span><span class="mw-eyebrow">Dodatek</span></div>
+      <h2 class="doc-h2">Słownik pojęć</h2>
+      <div class="doc-table-wrap">
+        <table class="doc-table">
+          <thead><tr><th>Polski termin</th><th>Znaczenie</th></tr></thead>
+          <tbody>
+            <tr><td>Wizyta</td><td>Appointment / wizyta klientki</td></tr>
+            <tr><td>Nieobecność</td><td>Absence — urlop, L4, wyjście prywatne</td></tr>
+            <tr><td>Sprzedawca</td><td>Dostawca na fakturze zakupowej</td></tr>
+            <tr><td>Opłacona / Nieopłacona</td><td>Jedyne dwa statusy faktury</td></tr>
+            <tr><td>Przeterminowana</td><td>Etykieta liczona na bieżąco — nie jest zapisanym statusem</td></tr>
+            <tr><td>Mikrousługa / Dodatkowa</td><td>Usługa dodawana wyłącznie w trakcie trwającej wizyty</td></tr>
+            <tr><td>Bilans</td><td>Wykorzystanie limitu nieobecności względem okresu</td></tr>
+            <tr><td>Widok administratora</td><td>Przełącznik ujawniający dane pracownicze właściciela (superuser)</td></tr>
+            <tr><td>Dane własne</td><td>Podrzędny przełącznik — pokazuje wyłącznie dane zalogowanej osoby</td></tr>
+            <tr><td>Podwładni / Przełożony</td><td>Relacja hierarchii, niezależna od roli logowania</td></tr>
+            <tr><td>Korekta danych</td><td>Moduł Edytora mocy — poprawki historycznych wizyt</td></tr>
+            <tr><td>Pulpit</td><td>Ekran startowy — wyłącznie dane fakturowe</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================ 17. NA CO UWAŻAĆ ============================ -->
+    <section class="doc-section mw-reveal" id="quirki" style="border-bottom:none">
+      <div class="doc-kicker"><span class="doc-kicker-num">17</span><span class="mw-eyebrow">Dodatek</span></div>
+      <h2 class="doc-h2">Na co uważać</h2>
+      <p class="doc-p">Realne, aktualnie występujące zachowania aplikacji, zebrane w jednym miejscu — nie hipotetyczne przypadki brzegowe.</p>
+      <div id="mw-quirks"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="mw-warmth-dark-bloom" style="padding:clamp(48px,6vw,72px) clamp(20px,5vw,48px) 28px">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="mw-reveal" style="text-align:center;padding-bottom:clamp(32px,5vw,48px);border-bottom:1px solid rgba(255,255,255,0.12)">
+      <h2 style="font-size:clamp(1.5rem,2.8vw,2rem);font-weight:600;letter-spacing:-0.02em;color:#fff;margin:0 0 14px;line-height:1.2">Gotowa/y, żeby wrócić do pracy?</h2>
+      <a href="{{ url_for('main.dashboard') }}" class="mw-btn mw-btn-white">Wróć do aplikacji</a>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:22px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="MyWay Beauty" style="height:26px;width:auto;display:block;filter:invert(1);opacity:0.85" />
+        <span style="font-size:11px;color:rgba(255,255,255,0.4)">Instrukcja obsługi · aktualizacja {{ manual_updated }}</span>
+      </div>
+      <a href="#top" style="font-size:12px;color:rgba(255,255,255,0.5)">↑ Do góry</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ---- Scroll-reveal (identical mechanism to templates/landing/index.html) ----
+  (function () {
+    var revealables = document.querySelectorAll('.mw-reveal');
+    var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+      revealables.forEach(function (el) { el.classList.add('mw-in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('mw-in');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -6% 0px' });
+    revealables.forEach(function (el) { io.observe(el); });
+  })();
+
+  // ---- Nav elevation on scroll ----
+  (function () {
+    var nav = document.querySelector('.mw-nav');
+    if (!nav) return;
+    var onScroll = function () { nav.classList.toggle('mw-scrolled', window.scrollY > 8); };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+
+  // ---- In-page TOC: highlight the section currently in view ----
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.doc-toc-link'));
+    var sections = links
+      .map(function (a) { return document.querySelector(a.getAttribute('href')); })
+      .filter(Boolean);
+    if (!sections.length || !('IntersectionObserver' in window)) return;
+    var setActive = function (id) {
+      links.forEach(function (a) {
+        a.classList.toggle('is-active', a.getAttribute('href') === '#' + id);
+      });
+    };
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) { setActive(entry.target.id); }
+      });
+    }, { rootMargin: '-84px 0px -70% 0px', threshold: 0 });
+    sections.forEach(function (s) { io.observe(s); });
+  })();
+
+  // ---- "Na co uważać" accordion (same pattern as the landing page's FAQ) ----
+  (function () {
+    var quirks = [
+      { q: 'Pulpit ≠ wskaźniki salonu', a: 'Główny ekran "Pulpit" pokazuje wyłącznie faktury/koszty. Wskaźniki wizyt i przychodu salonu żyją osobno — na stronach Analityka i Przychody.' },
+      { q: 'Przycisk "Dezaktywuj" na profilu klientki usuwa, nie dezaktywuje', a: 'Kliknięcie tego przycisku na aktywnej klientce wykonuje pełne, nieodwracalne z poziomu aplikacji usunięcie. Do bezpiecznej, odwracalnej dezaktywacji użyj przełącznika na formularzu edycji albo ikony na liście klientów.' },
+      { q: 'Rezerwacje online omijają ostrzeżenie o duplikatach klientów', a: 'Formularz publicznej rezerwacji tworzy nowego klienta bez tego samego sprawdzenia duplikatów co formularze dla personelu. Jeśli baza klientów rośnie w duplikaty, to najbardziej prawdopodobne źródło.' },
+      { q: 'Nieobecności oczekujące nie są widoczne na kalendarzu', a: 'Tylko zatwierdzone nieobecności pokazują się na kalendarzach i blokują sloty w rezerwacji publicznej. Wniosek oczekujący wygląda na wolny termin — i tak zostanie odrzucony dopiero przy próbie zapisania wizyty.' },
+      { q: 'Ręczny wpis nieobecności nie jest ograniczony do własnego zespołu', a: 'Lista wyboru pracownika przy ręcznym rejestrowaniu nieobecności pokazuje każdego aktywnego pracownika, nie tylko bezpośrednich podwładnych — traktuj hierarchię przełożonych na tym ekranie jako umowną.' }
+    ];
+    var chev = '<svg class="mw-faq-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>';
+    var root = document.getElementById('mw-quirks');
+    quirks.forEach(function (item, i) {
+      var wrap = document.createElement('div');
+      wrap.className = 'mw-faq-item' + (i === 0 ? ' is-open' : '');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mw-faq-q';
+      btn.innerHTML = '<span>⚠️ ' + item.q + '</span>' + chev;
+      btn.addEventListener('click', function () { wrap.classList.toggle('is-open'); });
+      var ans = document.createElement('div');
+      ans.className = 'mw-faq-a';
+      ans.textContent = item.a;
+      wrap.appendChild(btn);
+      wrap.appendChild(ans);
+      root.appendChild(wrap);
+    });
+  })();
+</script>
+
+</body>
+</html>

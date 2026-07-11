@@ -540,3 +540,17 @@ def email_settings():
 def import_page():
     """Admin import page — caldis.pl Playwright import."""
     return render_template('data_import/index.html')
+
+
+# ============================================================================
+# USER MANUAL
+# ============================================================================
+
+@main_bp.route('/instrukcja')
+@login_required
+def user_manual():
+    """In-app user manual / help center. Self-contained page (landing-page
+    design language, no Tailwind/base.html dependency) open to every role —
+    no module_permission_required gate, since it documents the whole app."""
+    from datetime import date
+    return render_template('manual/index.html', manual_updated=date.today().strftime('%d.%m.%Y'))

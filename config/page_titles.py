@@ -53,6 +53,7 @@ PAGE_TITLES = {
     'sms.sms_log': 'Log SMS',
     'auth.profile': 'Profil',
     'auth.change_password': 'Zmiana hasła',
+    'main.user_manual': 'Instrukcja obsługi',
     # System (RBAC)
     'users.users_list': 'Użytkownicy',
     'users.create_user': 'Nowy użytkownik',
