@@ -20,7 +20,8 @@
     /* Month nav row */
     .month-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
-    .nav-btn:hover { border-color: var(--color-ink-muted); }
+    .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     /* Poprzedni / Ten miesiąc / Następny — same fixed width as the week view's
        nav row, so none of the three captions ever crowd each other. */
     .month-nav .nav-btn { width: 7rem; text-align: center; white-space: nowrap; }
@@ -260,7 +261,7 @@ function updateMonthLabel() {
     monthSubtitle.textContent = label;
     const now = new Date();
     const isThisMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear();
-    thisMonthBtn.style.display = isThisMonth ? 'none' : 'inline-flex';
+    thisMonthBtn.disabled = isThisMonth;
 }
 
 // The 1st of the displayed month stands in for "current period" in the URL.

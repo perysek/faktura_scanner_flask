@@ -166,6 +166,7 @@
         <div class="date-nav-center">
             <button id="prevDayBtn" class="nav-btn" type="button" aria-label="Poprzedni dzień">← Poprzedni</button>
             <input type="date" id="dateInput" aria-label="Wybierz datę">
+            <button id="thisDayBtn" class="nav-btn" type="button">Dziś</button>
             <button id="nextDayBtn" class="nav-btn" type="button" aria-label="Następny dzień">Następny →</button>
         </div>
         <!-- Employee pager appears only when the roster spans more than one page. -->
@@ -290,6 +291,7 @@ function plWizyt(n) {
 const dateInput = document.getElementById('dateInput');
 const prevDayBtn = document.getElementById('prevDayBtn');
 const nextDayBtn = document.getElementById('nextDayBtn');
+const thisDayBtn = document.getElementById('thisDayBtn');
 const prevEmployeesBtn = document.getElementById('prevEmployeesBtn');
 const nextEmployeesBtn = document.getElementById('nextEmployeesBtn');
 const employeesLabel = document.getElementById('employeesLabel');
@@ -309,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     daySubtitle.textContent = formatLongDate(currentDate);
     updateUrlState();
     updateViewLinks();
+    updateThisDayButton();
     setupEventListeners();
     loadSchedule();
 });
@@ -317,6 +320,7 @@ function setupEventListeners() {
     dateInput.addEventListener('change', handleDateChange);
     prevDayBtn.addEventListener('click', () => navigateDay(-1));
     nextDayBtn.addEventListener('click', () => navigateDay(1));
+    thisDayBtn.addEventListener('click', goToToday);
     prevEmployeesBtn.addEventListener('click', () => navigateEmployees(-1));
     nextEmployeesBtn.addEventListener('click', () => navigateEmployees(1));
 }
@@ -327,6 +331,7 @@ function handleDateChange() {
     daySubtitle.textContent = formatLongDate(currentDate);
     updateUrlState();
     updateViewLinks();
+    updateThisDayButton();
     loadSchedule();
 }
 
@@ -340,7 +345,25 @@ function navigateDay(offset) {
     currentPage = 0;
     updateUrlState();
     updateViewLinks();
+    updateThisDayButton();
     loadSchedule();
+}
+
+function goToToday() {
+    currentDate = formatLocalDate(new Date());
+    dateInput.value = currentDate;
+    daySubtitle.textContent = formatLongDate(currentDate);
+    currentPage = 0;
+    updateUrlState();
+    updateViewLinks();
+    updateThisDayButton();
+    loadSchedule();
+}
+
+// Disable "Dziś" once the displayed day already is today — mirrors the
+// month/week views' "Ten miesiąc"/"Ten tydzień" buttons.
+function updateThisDayButton() {
+    thisDayBtn.disabled = (currentDate === formatLocalDate(new Date()));
 }
 
 // Keep the address bar in sync with the displayed date so a hard reload (e.g.

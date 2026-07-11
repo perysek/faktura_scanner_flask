@@ -21,8 +21,9 @@
     .week-nav-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.625rem; flex-wrap: wrap; }
     .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
     .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
-    /* Poprzedni / Ten tydzień / Następny — same fixed width so none of the three
-       captions ever crowd or overlap each other as they toggle in/out. */
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Poprzedni / Ten tydzień / Następny — same fixed width so the three
+       captions line up evenly regardless of which one is disabled. */
     .week-nav-row .nav-btn { width: 7rem; text-align: center; white-space: nowrap; }
     .wk-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 0.125rem; }
     .wk-emp-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); }
@@ -471,7 +472,7 @@ function updateWeekLabel() {
 
 function updateThisWeekButton() {
     const thisWeekStart = getMonday(new Date());
-    thisWeekBtn.style.display = (currentWeekStart.getTime() === thisWeekStart.getTime()) ? 'none' : 'inline-flex';
+    thisWeekBtn.disabled = (currentWeekStart.getTime() === thisWeekStart.getTime());
 }
 
 function updateDayHeaders(countsByDay) {

@@ -17,6 +17,7 @@
     .date-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
     .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .date-nav-date { padding: 0.3125rem 0.5rem; font-family: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; }
     .date-nav-date:focus { outline: none; border-color: var(--color-ink-muted); }
     .date-nav-range { font-size: 0.75rem; font-weight: 500; color: var(--color-ink-muted); white-space: nowrap; }
@@ -182,7 +183,7 @@
         <button type="button" id="listPrevBtn" class="nav-btn">← Poprzedni</button>
         <input type="date" id="listDateInput" class="date-nav-date" aria-label="Wybierz tydzień">
         <span class="date-nav-range" id="listRangeLabel">—</span>
-        <button type="button" id="listTodayBtn" class="nav-btn" style="display:none;">Dziś</button>
+        <button type="button" id="listTodayBtn" class="nav-btn">Dziś</button>
         <button type="button" id="listNextBtn" class="nav-btn">Następny →</button>
         <div class="list-search">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -533,7 +534,7 @@ function weekEndDate() {
     return e;
 }
 
-// Sync the date picker value, the "24–30 cze 2026" range label, and hide the
+// Sync the date picker value, the "24–30 cze 2026" range label, and disable the
 // "Dziś" button when we're already on the current week.
 function updateWeekLabel() {
     const s = currentWeekStart, e = weekEndDate();
@@ -547,7 +548,7 @@ function updateWeekLabel() {
     const todayBtn = document.getElementById('listTodayBtn');
     if (todayBtn) {
         const thisMon = getMonday(new Date());
-        todayBtn.style.display = (currentWeekStart.getTime() === thisMon.getTime()) ? 'none' : 'inline-flex';
+        todayBtn.disabled = (currentWeekStart.getTime() === thisMon.getTime());
     }
 }
 
