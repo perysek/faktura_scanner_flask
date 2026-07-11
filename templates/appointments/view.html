@@ -245,6 +245,10 @@
 {% block extra_scripts %}
 <script>
 const APPT_ID = {{ appointment_id }};
+// Where the user came from (?from=calendar|week|month|list) plus the date/employee
+// they were viewing, so the back button and the Edytuj link can round-trip there
+// instead of resetting to today / this week / this month.
+const RETURN_PARAMS = new URLSearchParams(window.location.search);
 const SMS_ACTIVE = {{ settings_sms_active | tojson }};
 const SMS_TYPES = {{ sms_message_types | tojson }};
 const SMS_SENT_KEYS = new Set({{ sms_sent_type_keys | tojson }});
@@ -282,10 +286,9 @@ function isNoShowAllowed(dateStr, startTimeStr) {
 
 // Back button target depends on where the user came from (?from=).
 (function() {
-    const params = new URLSearchParams(window.location.search);
-    const from = params.get('from');
-    const date = params.get('date');
-    const employeeId = params.get('employee_id');
+    const from = RETURN_PARAMS.get('from');
+    const date = RETURN_PARAMS.get('date');
+    const employeeId = RETURN_PARAMS.get('employee_id');
     const backBtn = document.getElementById('back-button');
     const backText = document.getElementById('back-text');
 
@@ -295,12 +298,10 @@ function isNoShowAllowed(dateStr, startTimeStr) {
     else if (from === 'month')    { backUrl = "{{ url_for('main.appointments_calendar_month') }}"; backLabel = 'Wróć'; }
     else                          { backUrl = "{{ url_for('main.appointments_list') }}";           backLabel = 'Wróć'; }
 
-    if (from === 'calendar' || from === 'week' || from === 'month') {
-        const cp = new URLSearchParams();
-        if (date) cp.set('date', date);
-        if (employeeId) cp.set('employee_id', employeeId);
-        if (cp.toString()) backUrl += '?' + cp.toString();
-    }
+    const cp = new URLSearchParams();
+    if (date) cp.set('date', date);
+    if (employeeId) cp.set('employee_id', employeeId);
+    if (cp.toString()) backUrl += '?' + cp.toString();
     backBtn.href = backUrl;
     backText.textContent = backLabel;
 })();
@@ -377,7 +378,10 @@ async function loadAppointment() {
     let actionsHTML = '';
 
     if (a.status !== 'cancelled' && a.status !== 'completed') {
-        actionsHTML += `<a href="/appointment/${APPT_ID}/edit" class="btn-action">{{ icon('edit') }}Edytuj</a>`;
+        // Forward the origin (calendar/week/month/list + date/employee) so edit's
+        // own back/cancel button can round-trip to the same view, not reset it.
+        const editParams = new URLSearchParams(RETURN_PARAMS);
+        actionsHTML += `<a href="/appointment/${APPT_ID}/edit?${editParams}" class="btn-action">{{ icon('edit') }}Edytuj</a>`;
     }
     if (actions.length === 0) {
         if (actionsHTML === '') actionsHTML = '<span style="color:var(--color-ink-subtle);font-size:11px;">Brak dostępnych akcji</span>';

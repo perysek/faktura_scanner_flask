@@ -21,6 +21,9 @@
     .week-nav-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.625rem; flex-wrap: wrap; }
     .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
     .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
+    /* Poprzedni / Ten tydzień / Następny — same fixed width so none of the three
+       captions ever crowd or overlap each other as they toggle in/out. */
+    .week-nav-row .nav-btn { width: 7rem; text-align: center; white-space: nowrap; }
     .wk-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 0.125rem; }
     .wk-emp-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); }
     .wk-emp-pills { display: flex; gap: 0.25rem; flex-wrap: wrap; }
@@ -135,9 +138,9 @@
 
     <!-- Week navigation + employee selector -->
     <div class="week-nav-row">
-        <button id="prevWeekBtn" class="nav-btn" type="button">← Poprzedni tydzień</button>
+        <button id="prevWeekBtn" class="nav-btn" type="button">Poprzedni</button>
         <button id="thisWeekBtn" class="nav-btn" type="button">Ten tydzień</button>
-        <button id="nextWeekBtn" class="nav-btn" type="button">Następny →</button>
+        <button id="nextWeekBtn" class="nav-btn" type="button">Następny</button>
         <div class="wk-divider"></div>
         <span class="wk-emp-label">Pracownik:</span>
         <div class="wk-emp-pills" id="empPills"></div>
@@ -365,6 +368,7 @@ async function loadWeekAndFilterEmployees() {
 
         renderEmployeeSelector();
         updateViewLinks();
+        updateUrlState();
         updateNewAppointmentLink();
         renderWeek();
         updateSummary();
@@ -410,10 +414,12 @@ function selectEmployee(id) {
     if (idx !== -1) currentEmployeePage = idx;
     renderEmployeeSelector();
     updateViewLinks();
+    updateUrlState();
     updateNewAppointmentLink();
     loadWeekForCurrentEmployee();
 }
 
+// Carry the current week + employee across the Dzień/Tydzień/Miesiąc/Lista tab switch.
 function updateViewLinks() {
     const baseUrls = {
         'nav-day': '{{ url_for("main.appointments_calendar") }}',
@@ -421,10 +427,21 @@ function updateViewLinks() {
         'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
         'nav-list': '{{ url_for("main.appointments_list") }}'
     };
+    const params = new URLSearchParams({ date: formatLocalDate(currentWeekStart) });
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
-        if (link && currentEmployeeId) link.href = `${baseUrl}?employee_id=${currentEmployeeId}`;
+        if (link) link.href = `${baseUrl}?${params}`;
     });
+}
+
+// Keep the address bar in sync with the displayed week + employee so a hard
+// reload (e.g. the "widok administratora" toggle) or the browser back/forward
+// button lands back on the same week instead of resetting to the current one.
+function updateUrlState() {
+    const params = new URLSearchParams({ date: formatLocalDate(currentWeekStart) });
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
+    history.replaceState(null, '', `${window.location.pathname}?${params}`);
 }
 
 function navigateWeek(offset) {

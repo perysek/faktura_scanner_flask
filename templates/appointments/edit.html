@@ -176,7 +176,7 @@
     </div>
 
     <div class="btn-bar">
-        <a href="/appointment/{{ appointment_id }}" class="refined-btn-secondary">Anuluj</a>
+        <a href="/appointment/{{ appointment_id }}" class="refined-btn-secondary" id="btn-cancel-edit">Anuluj</a>
         <button id="btn-save" onclick="saveChanges()" class="refined-btn-primary">
             {{ icon('save') }}
             Zapisz zmiany
@@ -188,6 +188,12 @@
 {% block extra_scripts %}
 <script>
 const APPT_ID = {{ appointment_id }};
+// Carry the origin (?from=calendar|week|month|list&date=...&employee_id=...) through
+// to the view page so ITS back button also round-trips there instead of resetting.
+const RETURN_PARAMS = new URLSearchParams(window.location.search);
+const VIEW_URL = `/appointment/${APPT_ID}` + (RETURN_PARAMS.toString() ? `?${RETURN_PARAMS}` : '');
+document.getElementById('back-button').href = VIEW_URL;
+document.getElementById('btn-cancel-edit').href = VIEW_URL;
 let originalData = null;
 let currentServices = []; // {appointment_service_id, service_id, service_name, price_charged, duration_minutes, is_addon}
 let availableServices = [];
@@ -608,7 +614,7 @@ async function performSave(payload, timingChangeBy) {
 
     const data = await resp.json();
     if (data.success) {
-        window.location.href = `/appointment/${APPT_ID}`;
+        window.location.href = VIEW_URL;
     } else {
         // Parse error and show field-specific validation errors
         const errorMsg = data.error || 'Nieznany błąd';
@@ -731,7 +737,7 @@ document.addEventListener('keydown', function(e) {
         if (cm && !cm.classList.contains('hidden')) return;
         const tag = document.activeElement?.tagName;
         if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
-        window.location.href = '/appointment/{{ appointment_id }}';
+        window.location.href = VIEW_URL;
     }
 });
 

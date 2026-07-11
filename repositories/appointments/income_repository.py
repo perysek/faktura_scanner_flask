@@ -69,7 +69,7 @@ class IncomeRepository:
 
     def get_by_appointment(self, appointment_id: int) -> Optional[Any]:
         """Pobierz rekord przychodu dla wizyty"""
-        query = f"SELECT {self._COLUMNS} FROM income_records WHERE appointment_id = %s"
+        query = f"SELECT {self._COLUMNS} FROM income_records WHERE appointment_id = %s AND is_deleted = FALSE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))
@@ -99,7 +99,7 @@ class IncomeRepository:
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id
             JOIN employees e ON e.id = ir.employee_id
-            WHERE ir.payment_date BETWEEN %s AND %s {employee_filter} {excl_sql}
+            WHERE ir.is_deleted = FALSE AND ir.payment_date BETWEEN %s AND %s {employee_filter} {excl_sql}
             ORDER BY ir.payment_date DESC
         """
         with get_db_connection() as conn:
@@ -124,7 +124,7 @@ class IncomeRepository:
                 c.first_name || ' ' || c.last_name as client_name
             FROM income_records ir
             JOIN clients c ON c.id = ir.client_id
-            WHERE ir.employee_id = %s AND ir.payment_date >= %s AND ir.payment_date < %s {excl_sql}
+            WHERE ir.is_deleted = FALSE AND ir.employee_id = %s AND ir.payment_date >= %s AND ir.payment_date < %s {excl_sql}
             ORDER BY ir.payment_date DESC
         """
         with get_db_connection() as conn:
@@ -152,7 +152,7 @@ class IncomeRepository:
                 COALESCE(SUM(commission_total), 0) as total_commissions,
                 COALESCE(AVG(net_amount), 0) as avg_ticket
             FROM income_records
-            WHERE payment_date >= %s AND payment_date < %s {excl_sql}
+            WHERE is_deleted = FALSE AND payment_date >= %s AND payment_date < %s {excl_sql}
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -186,7 +186,7 @@ class IncomeRepository:
                 COALESCE(SUM(ir.commission_total), 0) as total_commission
             FROM income_records ir
             JOIN employees e ON e.id = ir.employee_id
-            WHERE ir.payment_date >= %s AND ir.payment_date < %s {excl_sql}
+            WHERE ir.is_deleted = FALSE AND ir.payment_date >= %s AND ir.payment_date < %s {excl_sql}
             GROUP BY e.id
             ORDER BY total_revenue DESC
         """
@@ -229,6 +229,24 @@ class IncomeRepository:
     def delete_by_appointment(self, appointment_id: int) -> bool:
         """Usuń rekord przychodu dla wizyty (używane przy cofnięciu statusu 'completed')"""
         query = "DELETE FROM income_records WHERE appointment_id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def soft_delete_by_appointment(self, appointment_id: int) -> bool:
+        """Ukryj rekord przychodu wraz z soft-delete wizyty (odwracalne przez restore_by_appointment)"""
+        query = "UPDATE income_records SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE appointment_id = %s AND is_deleted = FALSE"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def restore_by_appointment(self, appointment_id: int) -> bool:
+        """Przywróć wcześniej ukryty (soft-deleted) rekord przychodu"""
+        query = "UPDATE income_records SET is_deleted = FALSE, deleted_at = NULL WHERE appointment_id = %s AND is_deleted = TRUE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (appointment_id,))

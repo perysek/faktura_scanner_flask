@@ -1,0 +1,20 @@
+appointments views:
+
+dayily calendar:
+# move existing poprzedni/następny navigation button from current left and right end positions, to the left and right side of date picker. Remove 'dziś' button - it is already in date-picker pop-up
+
+week calendar:
+# 'poprzedni tydzień' nav-btn change caption to 'Poprzedni'
+# 'następny' nav-btn change to 'Następny'
+# add 'Ten tydzień' nav-btn between 'poprzedni' and 'następny'
+
+all 3 btns same fixed width (ensure the width big enough, so btn-texts have no overlaps)
+
+month calendar
+nav buttons position to be adjusted using same logic as for daily+weekly calendar requested above
+
+for all calendar-views must have state memory (especially for current time period displayed) during routing back and forth to another views (visit edit, visist view, cancel-new-visit, calendar view change).
+
+when superuser switches on and off the 'widok administratora' checkboxes, the current page-view reloads, but also time period displayed resets to default time range per each view (current date/time period). Ensure state memory also for 'admin view' page-reloads.
+
+in calendar list view - add action icon-btn which deletes the visit from calendar together with income record and other fk linked tables-rows.

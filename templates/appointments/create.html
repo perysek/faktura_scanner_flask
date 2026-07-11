@@ -403,12 +403,10 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (from === 'week')  backUrl = "{{ url_for('main.appointments_calendar_week') }}";
     else if (from === 'month') backUrl = "{{ url_for('main.appointments_calendar_month') }}";
     else                       backUrl = "{{ url_for('main.appointments_list') }}";
-    if (from === 'calendar' || from === 'week' || from === 'month') {
-        const bp = new URLSearchParams();
-        if (urlDate) bp.set('date', urlDate);
-        if (urlEmployeeId) bp.set('employee_id', urlEmployeeId);
-        if (bp.toString()) backUrl += '?' + bp.toString();
-    }
+    const bp = new URLSearchParams();
+    if (urlDate) bp.set('date', urlDate);
+    if (urlEmployeeId) bp.set('employee_id', urlEmployeeId);
+    if (bp.toString()) backUrl += '?' + bp.toString();
     document.getElementById('btn-cancel').href = backUrl;
     document.getElementById('btn-cancel-top').href = backUrl;
 

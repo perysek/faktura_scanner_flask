@@ -170,7 +170,7 @@
                 <a href="{{ url_for('main.appointments_calendar_month') }}" id="nav-month">Miesiąc</a>
                 <a href="{{ url_for('main.appointments_list') }}" class="active" id="nav-list">Lista</a>
             </div>
-            <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary">
+            <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
                 {{ icon('add') }}
                 Nowa wizyta
             </a>
@@ -554,12 +554,18 @@ function updateWeekLabel() {
 function navigateWeek(offset) {
     currentWeekStart.setDate(currentWeekStart.getDate() + offset * 7);
     updateWeekLabel();
+    updateViewLinks();
+    updateUrlState();
+    updateNewAppointmentLink();
     loadAppointments();
 }
 
 function goToToday() {
     currentWeekStart = getMonday(new Date());
     updateWeekLabel();
+    updateViewLinks();
+    updateUrlState();
+    updateNewAppointmentLink();
     loadAppointments();
 }
 
@@ -568,7 +574,26 @@ function onDatePick(value) {
     const [y, m, d] = value.split('-').map(Number);   // local — avoid UTC shift
     currentWeekStart = getMonday(new Date(y, m - 1, d));
     updateWeekLabel();
+    updateViewLinks();
+    updateUrlState();
+    updateNewAppointmentLink();
     loadAppointments();
+}
+
+// Keep the address bar in sync with the displayed week so a hard reload (e.g.
+// the "widok administratora" toggle) or the browser back/forward button lands
+// back on the same week instead of resetting to the current one.
+function updateUrlState() {
+    const params = new URLSearchParams({ date: fmtLocal(currentWeekStart) });
+    const urlEmp = new URLSearchParams(window.location.search).get('employee_id');
+    if (urlEmp) params.set('employee_id', urlEmp);
+    history.replaceState(null, '', `${window.location.pathname}?${params}`);
+}
+
+function updateNewAppointmentLink() {
+    const params = new URLSearchParams({ from: 'list', date: fmtLocal(currentWeekStart) });
+    const newAppointmentBtn = document.getElementById('newAppointmentBtn');
+    if (newAppointmentBtn) newAppointmentBtn.href = `/appointment/create?${params}`;
 }
 
 // ── Table rendering ───────────────────────────────────────────────────────────
@@ -576,6 +601,7 @@ function onDatePick(value) {
 function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
+    const weekParam = fmtLocal(currentWeekStart);
     if (sorted.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w tym tygodniu</p></td></tr>`;
         return;
@@ -603,17 +629,22 @@ function renderTable(appointments) {
                 <td data-label="Ocena"><span class="rating-desktop">${renderStarsDesktop(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
                 <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
-                        <a href="/appointment/${a.id}?from=list" class="action-icon-btn view-icon-btn" title="Szczegóły" aria-label="Szczegóły">
+                        <a href="/appointment/${a.id}?from=list&date=${weekParam}" class="action-icon-btn view-icon-btn" title="Szczegóły" aria-label="Szczegóły">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </a>
-                        <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list`}" class="action-icon-btn" title="Modyfikuj" aria-label="Modyfikuj">
+                        <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list&date=${weekParam}`}" class="action-icon-btn" title="Modyfikuj" aria-label="Modyfikuj">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </a>
+                        <button type="button" class="action-icon-btn delete-icon-btn" title="Usuń wizytę" aria-label="Usuń wizytę" data-appt-id="${a.id}" data-client="${escapeHtml(a.client_name || '')}" data-date="${a.appointment_date || ''}" data-time="${formatTime(a.start_time)}">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                            </svg>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -770,43 +801,105 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Delete icon opens a confirm dialog instead of navigating anywhere.
+        const delBtn = e.target.closest('.delete-icon-btn');
+        if (delBtn) {
+            confirmDeleteAppointment(delBtn.dataset.apptId, delBtn.dataset.client, delBtn.dataset.date, delBtn.dataset.time);
+            return;
+        }
+
         // Clicking a row (anywhere but an action icon or the status badge) opens
         // the visit — matches the mock's row.onClick. Action links keep their own
         // hrefs; the status badge above is handled first.
         if (e.target.closest('.action-icons') || e.target.closest('.status-badge')) return;
         const row = e.target.closest('tr[data-appt-id]');
         if (!row) return;
-        window.location.href = `/appointment/${row.dataset.apptId}?from=list`;
+        window.location.href = `/appointment/${row.dataset.apptId}?from=list&date=${fmtLocal(currentWeekStart)}`;
     });
 });
 
-// ── View links & init ─────────────────────────────────────────────────────────
+// ── Delete visit (soft-delete: also clears the income record; both restore
+// together via the undo toast) ──────────────────────────────────────────────
 
-function updateViewLinks() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const employeeId = urlParams.get('employee_id');
-    if (employeeId) {
-        const baseUrls = {
-            'nav-day': '{{ url_for("main.appointments_calendar") }}',
-            'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
-            'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
-            'nav-list': '{{ url_for("main.appointments_list") }}'
-        };
-        Object.entries(baseUrls).forEach(([id, baseUrl]) => {
-            const link = document.getElementById(id);
-            if (link) link.href = `${baseUrl}?employee_id=${employeeId}`;
-        });
+function confirmDeleteAppointment(id, clientName, date, time) {
+    Modals.confirm({
+        title: 'Usuń wizytę',
+        message: `Czy na pewno chcesz usunąć wizytę${clientName ? ` — ${clientName}` : ''}${date ? ` (${formatDate(date)}${time ? `, ${time}` : ''})` : ''}? Wraz z wizytą usunięty zostanie powiązany zapis przychodu.`,
+        confirmText: 'Usuń',
+        onConfirm: () => deleteAppointment(id)
+    });
+}
+
+async function deleteAppointment(id) {
+    try {
+        const resp = await fetch(`/api/appointments/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!data.success) {
+            if (window.Notifications) Notifications.error(data.error || 'Nie udało się usunąć wizyty');
+            return;
+        }
+        loadAppointments();
+        if (window.Notifications) {
+            const toast = Notifications.success('Wizyta usunięta', 8000);
+            const body = toast && toast.querySelector('.flex-1');
+            if (body && data.restore_url) {
+                const undoBtn = document.createElement('button');
+                undoBtn.type = 'button';
+                undoBtn.textContent = 'Cofnij';
+                undoBtn.style.cssText = 'margin-left:0.5rem;font-size:0.75rem;font-weight:600;text-decoration:underline;background:none;border:none;cursor:pointer;color:inherit;';
+                undoBtn.addEventListener('click', () => { restoreAppointment(data.restore_url); toast.remove(); });
+                body.appendChild(undoBtn);
+            }
+        }
+    } catch (err) {
+        if (window.Notifications) Notifications.error('Błąd połączenia z serwerem');
     }
 }
 
+async function restoreAppointment(restoreUrl) {
+    try {
+        const resp = await fetch(restoreUrl, { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            loadAppointments();
+            if (window.Notifications) Notifications.success('Wizyta przywrócona');
+        } else if (window.Notifications) {
+            Notifications.error(data.error || 'Nie udało się przywrócić wizyty');
+        }
+    } catch (err) {
+        if (window.Notifications) Notifications.error('Błąd połączenia z serwerem');
+    }
+}
+
+// ── View links & init ─────────────────────────────────────────────────────────
+
+// Carry the current week + employee across the Dzień/Tydzień/Miesiąc/Lista tab switch.
+function updateViewLinks() {
+    const employeeId = new URLSearchParams(window.location.search).get('employee_id');
+    const baseUrls = {
+        'nav-day': '{{ url_for("main.appointments_calendar") }}',
+        'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
+        'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
+        'nav-list': '{{ url_for("main.appointments_list") }}'
+    };
+    const params = new URLSearchParams({ date: fmtLocal(currentWeekStart) });
+    if (employeeId) params.set('employee_id', employeeId);
+    Object.entries(baseUrls).forEach(([id, baseUrl]) => {
+        const link = document.getElementById(id);
+        if (link) link.href = `${baseUrl}?${params}`;
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    updateViewLinks();
     // Optional deep-link: ?date=YYYY-MM-DD focuses the week containing that date.
     const urlDate = new URLSearchParams(window.location.search).get('date');
     if (urlDate) {
         const [y, m, d] = urlDate.split('-').map(Number);   // local — avoid UTC shift
         currentWeekStart = getMonday(new Date(y, m - 1, d));
     }
+    updateViewLinks();
+    updateUrlState();
+    updateNewAppointmentLink();
     // Wire the date-nav controls.
     document.getElementById('listPrevBtn').addEventListener('click', () => navigateWeek(-1));
     document.getElementById('listNextBtn').addEventListener('click', () => navigateWeek(1));

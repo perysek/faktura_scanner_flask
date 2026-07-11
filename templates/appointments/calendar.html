@@ -22,7 +22,6 @@
     .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
     .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
     .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .nav-btn.is-today { color: white; background: var(--color-ink); border-color: var(--color-ink); font-weight: 500; }
     .date-nav-center { flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem; min-width: 180px; }
     .date-nav-center input[type="date"] { padding: 0.3125rem 0.5rem; font-family: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-align: center; }
     .date-nav-center input[type="date"]:focus { outline: none; border-color: var(--color-ink-muted); }
@@ -164,12 +163,11 @@
 
     <!-- Date navigation -->
     <div class="date-nav">
-        <button id="prevDayBtn" class="nav-btn" type="button">← Poprzedni</button>
         <div class="date-nav-center">
+            <button id="prevDayBtn" class="nav-btn" type="button" aria-label="Poprzedni dzień">← Poprzedni</button>
             <input type="date" id="dateInput" aria-label="Wybierz datę">
+            <button id="nextDayBtn" class="nav-btn" type="button" aria-label="Następny dzień">Następny →</button>
         </div>
-        <button id="todayBtn" class="nav-btn" type="button">Dziś</button>
-        <button id="nextDayBtn" class="nav-btn" type="button">Następny →</button>
         <!-- Employee pager appears only when the roster spans more than one page. -->
         <div class="emp-pager" id="empPager" hidden>
             <button id="prevEmployeesBtn" class="nav-btn" type="button" title="Poprzedni pracownicy" aria-label="Poprzedni pracownicy">◀</button>
@@ -292,7 +290,6 @@ function plWizyt(n) {
 const dateInput = document.getElementById('dateInput');
 const prevDayBtn = document.getElementById('prevDayBtn');
 const nextDayBtn = document.getElementById('nextDayBtn');
-const todayBtn = document.getElementById('todayBtn');
 const prevEmployeesBtn = document.getElementById('prevEmployeesBtn');
 const nextEmployeesBtn = document.getElementById('nextEmployeesBtn');
 const employeesLabel = document.getElementById('employeesLabel');
@@ -310,6 +307,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dateInput.value = currentDate;
     daySubtitle.textContent = formatLongDate(currentDate);
+    updateUrlState();
+    updateViewLinks();
     setupEventListeners();
     loadSchedule();
 });
@@ -318,7 +317,6 @@ function setupEventListeners() {
     dateInput.addEventListener('change', handleDateChange);
     prevDayBtn.addEventListener('click', () => navigateDay(-1));
     nextDayBtn.addEventListener('click', () => navigateDay(1));
-    todayBtn.addEventListener('click', goToToday);
     prevEmployeesBtn.addEventListener('click', () => navigateEmployees(-1));
     nextEmployeesBtn.addEventListener('click', () => navigateEmployees(1));
 }
@@ -327,7 +325,8 @@ function handleDateChange() {
     currentDate = dateInput.value;
     currentPage = 0;
     daySubtitle.textContent = formatLongDate(currentDate);
-    refreshTodayBtn();
+    updateUrlState();
+    updateViewLinks();
     loadSchedule();
 }
 
@@ -339,21 +338,32 @@ function navigateDay(offset) {
     dateInput.value = currentDate;
     daySubtitle.textContent = formatLongDate(currentDate);
     currentPage = 0;
-    refreshTodayBtn();
+    updateUrlState();
+    updateViewLinks();
     loadSchedule();
 }
 
-function goToToday() {
-    currentDate = formatLocalDate(new Date());
-    dateInput.value = currentDate;
-    daySubtitle.textContent = formatLongDate(currentDate);
-    currentPage = 0;
-    refreshTodayBtn();
-    loadSchedule();
+// Keep the address bar in sync with the displayed date so a hard reload (e.g.
+// the "widok administratora" toggle) or the browser back/forward button lands
+// back on the same day instead of resetting to today.
+function updateUrlState() {
+    const params = new URLSearchParams();
+    params.set('date', currentDate);
+    history.replaceState(null, '', `${window.location.pathname}?${params}`);
 }
 
-function refreshTodayBtn() {
-    todayBtn.classList.toggle('is-today', currentDate === formatLocalDate(new Date()));
+// Carry the current date across the Dzień/Tydzień/Miesiąc/Lista tab switch.
+function updateViewLinks() {
+    const baseUrls = {
+        'nav-day': '{{ url_for("main.appointments_calendar") }}',
+        'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
+        'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
+        'nav-list': '{{ url_for("main.appointments_list") }}'
+    };
+    Object.entries(baseUrls).forEach(([id, baseUrl]) => {
+        const link = document.getElementById(id);
+        if (link) link.href = `${baseUrl}?date=${currentDate}`;
+    });
 }
 
 function navigateEmployees(direction) {
@@ -367,7 +377,6 @@ function navigateEmployees(direction) {
 async function loadSchedule() {
     if (!currentDate) return;
     showLoading(true);
-    refreshTodayBtn();
     try {
         const offset = currentPage * pageLimit;
         const params = new URLSearchParams({ date: currentDate, offset: offset, limit: pageLimit });

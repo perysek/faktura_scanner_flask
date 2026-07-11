@@ -21,7 +21,9 @@
     .month-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
     .nav-btn:hover { border-color: var(--color-ink-muted); }
-    .month-title { flex: 1; text-align: center; font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); }
+    /* Poprzedni / Ten miesiąc / Następny — same fixed width as the week view's
+       nav row, so none of the three captions ever crowd each other. */
+    .month-nav .nav-btn { width: 7rem; text-align: center; white-space: nowrap; }
 
     /* Month card */
     .month-card { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
@@ -101,10 +103,9 @@
 
     <!-- Month navigation -->
     <div class="month-nav">
-        <button id="prevMonthBtn" class="nav-btn" type="button">← Poprzedni</button>
+        <button id="prevMonthBtn" class="nav-btn" type="button">Poprzedni</button>
         <button id="thisMonthBtn" class="nav-btn" type="button">Ten miesiąc</button>
-        <span class="month-title" id="monthTitle">—</span>
-        <button id="nextMonthBtn" class="nav-btn" type="button">Następny →</button>
+        <button id="nextMonthBtn" class="nav-btn" type="button">Następny</button>
     </div>
 
     <!-- Month Calendar -->
@@ -170,7 +171,6 @@ const PL_MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipi
 const prevMonthBtn = document.getElementById('prevMonthBtn');
 const nextMonthBtn = document.getElementById('nextMonthBtn');
 const thisMonthBtn = document.getElementById('thisMonthBtn');
-const monthTitle = document.getElementById('monthTitle');
 const monthSubtitle = document.getElementById('monthSubtitle');
 const newAppointmentBtn = document.getElementById('newAppointmentBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -178,8 +178,17 @@ const emptyState = document.getElementById('emptyState');
 const monthGrid = document.getElementById('monthGrid');
 
 document.addEventListener('DOMContentLoaded', () => {
+    const urlDate = new URLSearchParams(window.location.search).get('date');
+    if (urlDate) {
+        const [y, m] = urlDate.split('-').map(Number);   // local — avoid UTC shift
+        currentYear = y;
+        currentMonth = m - 1;
+    }
+
     updateMonthLabel();
     updateNewAppointmentLink();
+    updateViewLinks();
+    updateUrlState();
     setupEventListeners();
     loadMonth();
 });
@@ -230,6 +239,8 @@ function navigateMonth(offset) {
     else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
     updateMonthLabel();
     updateNewAppointmentLink();
+    updateViewLinks();
+    updateUrlState();
     loadMonth();
 }
 
@@ -239,16 +250,45 @@ function goToThisMonth() {
     currentYear = now.getFullYear();
     updateMonthLabel();
     updateNewAppointmentLink();
+    updateViewLinks();
+    updateUrlState();
     loadMonth();
 }
 
 function updateMonthLabel() {
     const label = `${PL_MONTHS[currentMonth]} ${currentYear}`;
-    monthTitle.textContent = label;
     monthSubtitle.textContent = label;
     const now = new Date();
     const isThisMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear();
     thisMonthBtn.style.display = isThisMonth ? 'none' : 'inline-flex';
+}
+
+// The 1st of the displayed month stands in for "current period" in the URL.
+function monthAnchorDate() {
+    return formatLocalDate(new Date(currentYear, currentMonth, 1));
+}
+
+// Carry the current month across the Dzień/Tydzień/Miesiąc/Lista tab switch.
+function updateViewLinks() {
+    const baseUrls = {
+        'nav-day': '{{ url_for("main.appointments_calendar") }}',
+        'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
+        'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
+        'nav-list': '{{ url_for("main.appointments_list") }}'
+    };
+    const dateStr = monthAnchorDate();
+    Object.entries(baseUrls).forEach(([id, baseUrl]) => {
+        const link = document.getElementById(id);
+        if (link) link.href = `${baseUrl}?date=${dateStr}`;
+    });
+}
+
+// Keep the address bar in sync with the displayed month so a hard reload (e.g.
+// the "widok administratora" toggle) or the browser back/forward button lands
+// back on the same month instead of resetting to the current one.
+function updateUrlState() {
+    const params = new URLSearchParams({ date: monthAnchorDate() });
+    history.replaceState(null, '', `${window.location.pathname}?${params}`);
 }
 
 function updateNewAppointmentLink() {

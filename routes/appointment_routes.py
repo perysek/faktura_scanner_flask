@@ -17,6 +17,7 @@ from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
+from repositories.appointments.income_repository import IncomeRepository
 from repositories.audit_repository import AuditRepository
 
 
@@ -710,6 +711,10 @@ def delete_appointment(appointment_id):
         if not success:
             raise AppError('Nie udalo sie usunac wizyty')
 
+        # Hide the linked income record (if the visit was completed) so revenue
+        # reports stop counting it; restore_appointment below brings it back.
+        IncomeRepository().soft_delete_by_appointment(appointment_id)
+
         return jsonify({
             'success': True,
             'restore_url': f'/appointments/{appointment_id}/restore'
@@ -731,6 +736,9 @@ def restore_appointment(appointment_id):
         success = repo.restore(appointment_id)
         if not success:
             raise NotFoundError('Wizyta nie jest usunieta lub nie istnieje')
+
+        IncomeRepository().restore_by_appointment(appointment_id)
+
         return jsonify({'success': True, 'message': 'Wizyta zostala przywrocona'})
     except AppError:
         raise
