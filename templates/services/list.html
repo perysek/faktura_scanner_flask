@@ -30,6 +30,27 @@
 
     /* .refined-input (+ :focus) → shared (input.css @layer components). */
 
+    /* "Pokaż nieaktywne" toggle next to the type filter — page-specific, small footprint. */
+    .filter-checkbox-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 0;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        color: var(--color-ink);
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .filter-checkbox-label input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        cursor: pointer;
+        accent-color: var(--color-ink);
+    }
+
     .table-container {
         background: white;
         border: 1px solid var(--color-border);
@@ -224,6 +245,10 @@
                 <option value="main">Główne</option>
                 <option value="addon">Dodatkowe</option>
             </select>
+            <label class="filter-checkbox-label" for="filter-show-inactive">
+                <input type="checkbox" id="filter-show-inactive" onchange="loadServices()">
+                Pokaż nieaktywne
+            </label>
             <button onclick="loadServices()" class="refined-btn-secondary">
                 {{ icon('search') }}
                 Szukaj
@@ -419,6 +444,7 @@ async function loadServices() {
     saveFilterState('services', ['search-input', 'filter-type']);
     const searchQuery = document.getElementById('search-input').value.trim();
     const typeFilter = document.getElementById('filter-type').value;
+    const showInactive = document.getElementById('filter-show-inactive').checked;
     const tbody = document.getElementById('services-tbody');
 
     try {
@@ -426,6 +452,7 @@ async function loadServices() {
         const params = [];
         if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);
         if (typeFilter) params.push(`type=${encodeURIComponent(typeFilter)}`);
+        if (showInactive) params.push('active_only=false');
         if (params.length > 0) url += '?' + params.join('&');
 
         const response = await fetch(url);
