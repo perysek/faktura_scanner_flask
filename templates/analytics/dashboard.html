@@ -6,78 +6,75 @@
 #main-content {
     background: var(--color-surface-warm);
 }
-.analytics-page {
+.refined-page {
     padding: 1rem 1.5rem;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="analytics-page">
+<div class="refined-page">
 <!-- Page Header -->
-<div class="mb-6">
-    <!-- Header with Title and Actions -->
-    <div class="flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-900 mb-1">Analityka biznesowa</h1>
-            <p class="text-sm text-slate-500" id="periodDescription">Ten miesiąc</p>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Analityka biznesowa</h1>
+        <p class="page-subtitle" id="periodDescription">Ten miesiąc</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+        <!-- Period Navigation -->
+        <div class="flex items-center gap-2 border border-[var(--color-border)] p-1 bg-white">
+            <button id="prevPeriod" class="refined-btn-secondary refined-btn-sm" title="Poprzedni okres" aria-label="Poprzedni okres">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <button id="currentPeriod" class="refined-btn-secondary refined-btn-sm">
+                Dziś
+            </button>
+            <button id="nextPeriod" class="refined-btn-secondary refined-btn-sm" title="Następny okres" aria-label="Następny okres">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
         </div>
 
-        <div class="flex items-center gap-3">
-            <!-- Period Navigation -->
-            <div class="flex items-center gap-2 border border-slate-200 p-1 bg-white">
-                <button id="prevPeriod" class="refined-btn-secondary refined-btn-sm" title="Poprzedni okres" aria-label="Poprzedni okres">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <button id="currentPeriod" class="refined-btn-secondary refined-btn-sm">
-                    Dziś
-                </button>
-                <button id="nextPeriod" class="refined-btn-secondary refined-btn-sm" title="Następny okres" aria-label="Następny okres">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Period Selector -->
-            <div class="period-selector flex gap-2 border border-slate-200 p-1 bg-white">
-                <button data-period="current_month" class="refined-btn-secondary refined-btn-sm active">
-                    Ten miesiąc
-                </button>
-                <button data-period="last_month" class="refined-btn-secondary refined-btn-sm">
-                    Ostatni miesiąc
-                </button>
-                <button data-period="current_year" class="refined-btn-secondary refined-btn-sm">
-                    Rok do daty
-                </button>
-                <button data-period="custom" class="refined-btn-secondary refined-btn-sm">
-                    Własny zakres
-                </button>
-            </div>
+        <!-- Period Selector -->
+        <div class="period-selector flex gap-2 border border-[var(--color-border)] p-1 bg-white">
+            <button data-period="current_month" class="refined-btn-secondary refined-btn-sm active">
+                Ten miesiąc
+            </button>
+            <button data-period="last_month" class="refined-btn-secondary refined-btn-sm">
+                Ostatni miesiąc
+            </button>
+            <button data-period="current_year" class="refined-btn-secondary refined-btn-sm">
+                Rok do daty
+            </button>
+            <button data-period="custom" class="refined-btn-secondary refined-btn-sm">
+                Własny zakres
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Section Navigation Strip -->
 <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1 flex-nowrap">
-    <span class="text-xs text-slate-400 shrink-0">Przejdź do:</span>
-    <button onclick="scrollToSection('nav-profit')"     class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Zysk netto</button>
-    <button onclick="scrollToSection('nav-employees')"  class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Pracownicy</button>
-    <button onclick="scrollToSection('nav-clients')"    class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Klienci</button>
-    <button onclick="scrollToSection('nav-occupancy')"  class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Obłożenie</button>
-    <button onclick="scrollToSection('nav-peakhours')"  class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Szczyty</button>
-    <button onclick="scrollToSection('nav-services')"   class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Ceny usług</button>
-    <button onclick="scrollToSection('nav-insights')"   class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Wskazówki</button>
-    <button onclick="scrollToSection('nav-trends')"     class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Trendy roczne</button>
-    <button onclick="scrollToSection('nav-satisfaction-rating')" class="refined-btn-secondary refined-btn-sm shrink-0 border border-slate-300">Ocena klientów</button>
+    <span class="text-xs text-[var(--color-ink-subtle)] shrink-0">Przejdź do:</span>
+    <button onclick="scrollToSection('nav-profit')"     class="refined-btn-secondary refined-btn-sm shrink-0">Zysk netto</button>
+    <button onclick="scrollToSection('nav-employees')"  class="refined-btn-secondary refined-btn-sm shrink-0">Pracownicy</button>
+    <button onclick="scrollToSection('nav-clients')"    class="refined-btn-secondary refined-btn-sm shrink-0">Klienci</button>
+    <button onclick="scrollToSection('nav-occupancy')"  class="refined-btn-secondary refined-btn-sm shrink-0">Obłożenie</button>
+    <button onclick="scrollToSection('nav-peakhours')"  class="refined-btn-secondary refined-btn-sm shrink-0">Szczyty</button>
+    <button onclick="scrollToSection('nav-services')"   class="refined-btn-secondary refined-btn-sm shrink-0">Ceny usług</button>
+    <button onclick="scrollToSection('nav-insights')"   class="refined-btn-secondary refined-btn-sm shrink-0">Wskazówki</button>
+    <button onclick="scrollToSection('nav-trends')"     class="refined-btn-secondary refined-btn-sm shrink-0">Trendy roczne</button>
 </div>
 
 <!-- Back-to-top button (hidden until scrolled; moved to <body> by JS for reliable fixed positioning) -->
 <button id="backToTopBtn"
-    class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-full shadow-2xl ring-2 ring-blue-400 hover:bg-blue-700 transition-colors"
-    style="display:none">
+    class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 text-white text-sm font-semibold rounded-full transition-colors"
+    style="display:none; background: var(--color-ink); box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+    onmouseover="this.style.background='var(--color-ink-muted)'" onmouseout="this.style.background='var(--color-ink)'">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
     </svg>
@@ -127,48 +124,48 @@
 <div id="nav-kpi" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <!-- Revenue Card -->
     <div class="refined-card">
-        <div class="text-sm text-slate-500 mb-1">Przychód</div>
-        <div id="kpi-revenue" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div class="stat-label mb-1">Przychód</div>
+        <div id="kpi-revenue" class="stat-value mb-2">-</div>
         <div id="kpi-revenue-change" class="text-sm"></div>
     </div>
 
     <!-- Appointments Card -->
     <div class="refined-card">
-        <div class="text-sm text-slate-500 mb-1">Wizyty</div>
-        <div id="kpi-appointments" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div class="stat-label mb-1">Wizyty</div>
+        <div id="kpi-appointments" class="stat-value mb-2">-</div>
         <div id="kpi-appointments-change" class="text-sm"></div>
     </div>
 
     <!-- Clients Card -->
     <div class="refined-card">
-        <div class="text-sm text-slate-500 mb-1">Klienci</div>
-        <div id="kpi-clients" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div class="stat-label mb-1">Klienci</div>
+        <div id="kpi-clients" class="stat-value mb-2">-</div>
         <div id="kpi-clients-change" class="text-sm"></div>
     </div>
 
     <!-- Avg Ticket Card -->
     <div class="refined-card">
-        <div class="text-sm text-slate-500 mb-1">Średni rachunek</div>
-        <div id="kpi-avg-ticket" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+        <div class="stat-label mb-1">Średni rachunek</div>
+        <div id="kpi-avg-ticket" class="stat-value mb-2">-</div>
         <div id="kpi-avg-ticket-change" class="text-sm"></div>
     </div>
 </div>
 
 <!-- Profit Breakdown Row -->
 <div id="nav-profit" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="refined-card border-l-4 border-orange-400">
-        <div class="text-sm text-slate-500 mb-1">Koszty pracownicze</div>
-        <div id="kpi-employee-costs" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
-        <div class="text-xs text-slate-400">ZUS + wynagrodzenia</div>
+    <div class="refined-card" style="border-left: 4px solid var(--color-warning);">
+        <div class="stat-label mb-1">Koszty pracownicze</div>
+        <div id="kpi-employee-costs" class="stat-value mb-2">-</div>
+        <div class="text-xs text-[var(--color-ink-subtle)]">ZUS + wynagrodzenia</div>
     </div>
-    <div class="refined-card border-l-4 border-red-400">
-        <div class="text-sm text-slate-500 mb-1">Koszty faktur</div>
-        <div id="kpi-invoice-costs" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
-        <div id="kpi-invoice-unpaid" class="text-xs text-slate-400"></div>
+    <div class="refined-card" style="border-left: 4px solid var(--color-error);">
+        <div class="stat-label mb-1">Koszty faktur</div>
+        <div id="kpi-invoice-costs" class="stat-value mb-2">-</div>
+        <div id="kpi-invoice-unpaid" class="text-xs text-[var(--color-ink-subtle)]"></div>
     </div>
-    <div class="refined-card border-l-4 border-green-500">
-        <div class="text-sm text-slate-500 mb-1">Zysk netto</div>
-        <div id="kpi-net-profit" class="text-2xl font-semibold text-slate-900 mb-2">-</div>
+    <div class="refined-card" style="border-left: 4px solid var(--color-success);">
+        <div class="stat-label mb-1">Zysk netto</div>
+        <div id="kpi-net-profit" class="stat-value mb-2">-</div>
         <div id="kpi-net-profit-change" class="text-sm"></div>
     </div>
 </div>
@@ -205,7 +202,7 @@
     <div class="flex justify-between items-start mb-4">
         <div>
             <h3 class="text-lg font-medium">Trend 12 miesięcy — przychody / koszty / zysk</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Ruchome okno 12 miesięcy (niezależne od wybranego okresu)</p>
+            <p class="text-xs text-[var(--color-ink-subtle)] mt-0.5">Ruchome okno 12 miesięcy (niezależne od wybranego okresu)</p>
         </div>
     </div>
     <div style="height: 320px;">
@@ -232,7 +229,7 @@
             </thead>
             <tbody id="employeeTableBody">
                 <tr>
-                    <td colspan="8" class="text-center text-slate-500">Ładowanie...</td>
+                    <td colspan="8" class="text-center text-[var(--color-ink-muted)]">Ładowanie...</td>
                 </tr>
             </tbody>
         </table>
@@ -247,17 +244,17 @@
         <div style="height: 320px;">
             <canvas id="clientSplitChart"></canvas>
         </div>
-        <div id="retentionRate" class="text-center mt-4 text-sm text-slate-500"></div>
+        <div id="retentionRate" class="text-center mt-4 text-sm text-[var(--color-ink-muted)]"></div>
     </div>
 
     <!-- Top 10 Clients Table -->
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-1">Top 10 klientów</h3>
-        <p class="text-xs text-slate-400 mb-3">Ranking wg wyniku: wizyty × przychód</p>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-3">Ranking wg wyniku: wizyty × przychód</p>
         <div class="overflow-y-auto" style="max-height: 320px;">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="text-xs text-slate-500 border-b">
+                    <tr class="text-xs text-[var(--color-ink-muted)] border-b border-[var(--color-border)]">
                         <th class="text-left pb-2">#</th>
                         <th class="text-left pb-2">Klient</th>
                         <th class="text-right pb-2">Wizyty</th>
@@ -265,7 +262,7 @@
                     </tr>
                 </thead>
                 <tbody id="topClientsTableBody">
-                    <tr><td colspan="4" class="text-center text-slate-500 py-2">Ładowanie...</td></tr>
+                    <tr><td colspan="4" class="text-center text-[var(--color-ink-muted)] py-2">Ładowanie...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -275,7 +272,7 @@
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-4">Klienci zagrożeni utratą</h3>
         <div id="atRiskList" class="space-y-2 max-h-[300px] overflow-y-auto">
-            <p class="text-center text-slate-500">Ładowanie...</p>
+            <p class="text-center text-[var(--color-ink-muted)]">Ładowanie...</p>
         </div>
     </div>
 </div>
@@ -285,28 +282,28 @@
     <div class="refined-card flex-[3] min-w-0">
         <h3 class="text-lg font-medium mb-4">Szczyty rezerwacji</h3>
         <div id="peakHoursHeatmap" class="overflow-x-auto">
-            <p class="text-center text-slate-500">Ładowanie...</p>
+            <p class="text-center text-[var(--color-ink-muted)]">Ładowanie...</p>
         </div>
     </div>
 
     <!-- Occupancy KPI badges — 1/4 width, single card with 3 sections -->
-    <div id="nav-occupancy" class="flex-[1] min-w-0 flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <div class="flex-1 flex flex-col justify-center px-5 py-5 border-t-4 border-blue-500">
-            <div class="text-sm text-slate-500 mb-1">Obłożenie salonu</div>
-            <div id="kpi-occupancy" class="text-2xl font-semibold text-blue-600 mb-1">-</div>
-            <div id="kpi-occupancy-detail" class="text-xs text-slate-400"></div>
+    <div id="nav-occupancy" class="refined-card flex-[1] min-w-0 flex flex-col overflow-hidden p-0">
+        <div class="flex-1 flex flex-col justify-center px-5 py-5" style="border-top: 4px solid var(--color-info);">
+            <div class="stat-label mb-1">Obłożenie salonu</div>
+            <div id="kpi-occupancy" class="stat-value mb-1" style="color: var(--color-info);">-</div>
+            <div id="kpi-occupancy-detail" class="text-xs text-[var(--color-ink-subtle)]"></div>
         </div>
-        <div class="h-px bg-slate-100"></div>
-        <div class="flex-1 flex flex-col justify-center px-5 py-5 border-t-4 border-amber-400">
-            <div class="text-sm text-slate-500 mb-1">Wskaźnik odwołań</div>
-            <div id="kpi-cancellation-rate" class="text-2xl font-semibold text-amber-500 mb-1">-</div>
-            <div id="kpi-cancellation-detail" class="text-xs text-slate-400"></div>
+        <div class="h-px" style="background: var(--color-border-subtle);"></div>
+        <div class="flex-1 flex flex-col justify-center px-5 py-5" style="border-top: 4px solid var(--color-warning);">
+            <div class="stat-label mb-1">Wskaźnik odwołań</div>
+            <div id="kpi-cancellation-rate" class="stat-value mb-1" style="color: var(--color-warning);">-</div>
+            <div id="kpi-cancellation-detail" class="text-xs text-[var(--color-ink-subtle)]"></div>
         </div>
-        <div class="h-px bg-slate-100"></div>
-        <div class="flex-1 flex flex-col justify-center px-5 py-5 border-t-4 border-red-400">
-            <div class="text-sm text-slate-500 mb-1">Nieobecności (no-show)</div>
-            <div id="kpi-noshow-rate" class="text-2xl font-semibold text-red-500 mb-1">-</div>
-            <div id="kpi-noshow-detail" class="text-xs text-slate-400"></div>
+        <div class="h-px" style="background: var(--color-border-subtle);"></div>
+        <div class="flex-1 flex flex-col justify-center px-5 py-5" style="border-top: 4px solid var(--color-error);">
+            <div class="stat-label mb-1">Nieobecności (no-show)</div>
+            <div id="kpi-noshow-rate" class="stat-value mb-1" style="color: var(--color-error);">-</div>
+            <div id="kpi-noshow-detail" class="text-xs text-[var(--color-ink-subtle)]"></div>
         </div>
     </div>
 </div>
@@ -314,7 +311,7 @@
 <!-- Service Price Analysis -->
 <div id="nav-services" class="refined-card mb-6">
     <h3 class="text-lg font-medium mb-1">Analiza cen usług</h3>
-    <p class="text-sm text-slate-500 mb-4">Porównanie cen katalogowych z faktycznie pobranymi</p>
+    <p class="text-sm text-[var(--color-ink-muted)] mb-4">Porównanie cen katalogowych z faktycznie pobranymi</p>
     <div class="overflow-x-auto">
         <table class="refined-table">
             <thead>
@@ -331,7 +328,7 @@
                 </tr>
             </thead>
             <tbody id="servicePriceTableBody">
-                <tr><td colspan="9" class="text-center text-slate-500">Ładowanie...</td></tr>
+                <tr><td colspan="9" class="text-center text-[var(--color-ink-muted)]">Ładowanie...</td></tr>
             </tbody>
         </table>
     </div>
@@ -341,7 +338,7 @@
 <div id="nav-insights" class="refined-card mt-4">
     <h3 class="text-lg font-medium mb-4">Wskazówki biznesowe</h3>
     <div id="insightsList" class="space-y-3">
-        <p class="text-center text-slate-500">Ładowanie...</p>
+        <p class="text-center text-[var(--color-ink-muted)]">Ładowanie...</p>
     </div>
 </div>
 
@@ -349,22 +346,22 @@
      Trendy roczne (ruchome okno 12 miesięcy)
      ═══════════════════════════════════════════════ -->
 <div id="nav-trends" class="mt-8 mb-4">
-    <h2 class="text-xl font-semibold text-slate-800">Trendy roczne</h2>
-    <p class="text-xs text-slate-400 mt-0.5">Wszystkie wykresy poniżej — ruchome okno 12 miesięcy, niezależne od wybranego okresu</p>
+    <h2 class="page-title" style="font-size: 1.25rem;">Trendy roczne</h2>
+    <p class="page-subtitle mt-0.5">Wszystkie wykresy poniżej — ruchome okno 12 miesięcy, niezależne od wybranego okresu</p>
 </div>
 
 <!-- Row 1: New clients + Cancellation/no-show rate -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-1">Nowi klienci / miesiąc</h3>
-        <p class="text-xs text-slate-400 mb-4">Czy salon rośnie?</p>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Czy salon rośnie?</p>
         <div style="height: 280px;">
             <canvas id="newClientsChart"></canvas>
         </div>
     </div>
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-1">Wskaźnik odwołań i nieobecności</h3>
-        <p class="text-xs text-slate-400 mb-4">Czy niezawodność rezerwacji rośnie?</p>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Czy niezawodność rezerwacji rośnie?</p>
         <div style="height: 280px;">
             <canvas id="cancellationRateChart"></canvas>
         </div>
@@ -375,53 +372,17 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-1">Średni rachunek / miesiąc</h3>
-        <p class="text-xs text-slate-400 mb-4">Czy wartość wizyty rośnie?</p>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Czy wartość wizyty rośnie?</p>
         <div style="height: 280px;">
             <canvas id="avgTicketChart"></canvas>
         </div>
     </div>
     <div class="refined-card">
         <h3 class="text-lg font-medium mb-1">Udział kosztów faktur w przychodzie</h3>
-        <p class="text-xs text-slate-400 mb-4">Czy koszty dostawców pochłaniają więcej przychodu?</p>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Czy koszty dostawców pochłaniają więcej przychodu?</p>
         <div style="height: 280px;">
             <canvas id="costRatioChart"></canvas>
         </div>
-    </div>
-</div>
-
-<!-- Row 3: Service category mix (full width stacked bar) -->
-<div class="refined-card mb-6">
-    <h3 class="text-lg font-medium mb-1">Mix kategorii usług / miesiąc</h3>
-    <p class="text-xs text-slate-400 mb-4">Które kategorie rosną, a które zanikają?</p>
-    <div style="height: 320px;">
-        <canvas id="categoryMixChart"></canvas>
-    </div>
-</div>
-
-<!-- Row 4: Employee utilisation (full width multi-line) -->
-<div class="refined-card mb-6">
-    <h3 class="text-lg font-medium mb-1">Wykorzystanie pracowników / miesiąc</h3>
-    <p class="text-xs text-slate-400 mb-4">Kto jest przeciążony, a kto niedociążony? (22 dni rob. × max wizyt/dzień)</p>
-    <div style="height: 320px;">
-        <canvas id="employeeUtilisationChart"></canvas>
-    </div>
-</div>
-
-<!-- Row 5: Visit frequency histogram (full width) -->
-<div class="refined-card mb-6">
-    <h3 class="text-lg font-medium mb-1">Częstotliwość wizyt klientów</h3>
-    <p class="text-xs text-slate-400 mb-4">Ilu klientów odwiedziło salon 1×, 2×, 3×… w ostatnich 12 miesiącach</p>
-    <div style="height: 280px;">
-        <canvas id="visitFrequencyChart"></canvas>
-    </div>
-</div>
-
-<!-- Row 6: Satisfaction rating trend (full width multi-line) -->
-<div id="nav-satisfaction-rating" class="refined-card mb-6">
-    <h3 class="text-lg font-medium mb-1">Ocena klientów / miesiąc</h3>
-    <p class="text-xs text-slate-400 mb-4">Średnia ocena satysfakcji (1–5) — linia ogółem + per pracownik — ruchome okno 12 miesięcy</p>
-    <div style="height: 320px;">
-        <canvas id="satisfactionRatingChart"></canvas>
     </div>
 </div>
 </div>

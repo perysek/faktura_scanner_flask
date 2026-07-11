@@ -16,11 +16,7 @@ let monthlyTrendChart = null;
 let newClientsChart = null;
 let cancellationRateChart = null;
 let avgTicketChart = null;
-let categoryMixChart = null;
 let costRatioChart = null;
-let employeeUtilisationChart = null;
-let visitFrequencyChart = null;
-let satisfactionRatingChart = null;
 let topClientsLoaded = false;
 
 // Chart.js color palette — reads CSS custom properties at runtime
@@ -154,11 +150,7 @@ async function loadDashboard() {
             loadNewClients(),
             loadCancellationRate(),
             loadAvgTicket(),
-            loadCategoryMix(),
             loadCostRatio(),
-            loadEmployeeUtilisation(),
-            loadVisitFrequency(),
-            loadSatisfactionRating(),
             loadTopClients()
         ]);
     } catch (error) {
@@ -432,7 +424,7 @@ async function loadClients() {
             ctx.style.display = 'none';
             if (!wrapper.querySelector('.no-data-msg')) {
                 const msg = document.createElement('p');
-                msg.className = 'no-data-msg text-center text-sm text-slate-400 pt-16';
+                msg.className = 'no-data-msg text-center text-sm text-[var(--color-ink-subtle)] pt-16';
                 msg.textContent = 'Brak danych w wybranym okresie';
                 wrapper.appendChild(msg);
             }
@@ -537,7 +529,7 @@ async function loadEmployees() {
             <td class="text-right text-sm ${
                 emp.avg_satisfaction >= 4.5 ? 'text-green-600' :
                 emp.avg_satisfaction >= 3.5 ? 'text-amber-500' :
-                emp.avg_satisfaction ? 'text-red-500' : 'text-slate-400'
+                emp.avg_satisfaction ? 'text-red-500' : 'text-[var(--color-ink-subtle)]'
             }">${emp.avg_satisfaction ? `${parseFloat(emp.avg_satisfaction).toFixed(1)} ★` : '—'}</td>
         </tr>
     `).join('');
@@ -706,7 +698,7 @@ async function loadOccupancy() {
     if (cancEl) {
         cancEl.textContent = `${data.cancellation_rate.toFixed(1)}%`;
         cancEl.className = `text-2xl font-semibold mb-2 ${
-            data.cancellation_rate > 15 ? 'text-red-600' : 'text-slate-900'
+            data.cancellation_rate > 15 ? 'text-red-600' : 'text-[var(--color-ink)]'
         }`;
     }
     if (cancDetailEl) cancDetailEl.textContent = `${data.cancelled} odwołań`;
@@ -714,7 +706,7 @@ async function loadOccupancy() {
     if (nsEl) {
         nsEl.textContent = `${data.no_show_rate.toFixed(1)}%`;
         nsEl.className = `text-2xl font-semibold mb-2 ${
-            data.no_show_rate > 10 ? 'text-red-600' : 'text-slate-900'
+            data.no_show_rate > 10 ? 'text-red-600' : 'text-[var(--color-ink)]'
         }`;
     }
     if (nsDetailEl) nsDetailEl.textContent = `${data.no_shows} nieobecności`;
@@ -731,7 +723,7 @@ async function loadPeakHours() {
     const data = await response.json();
 
     if (!data.success || data.data.length === 0) {
-        container.innerHTML = '<p class="text-center text-slate-500 py-4">Brak danych</p>';
+        container.innerHTML = '<p class="text-center text-[var(--color-ink-muted)] py-4">Brak danych</p>';
         return;
     }
 
@@ -800,12 +792,12 @@ async function loadServiceAnalysis() {
     if (!tbody) return;
 
     if (!data.success) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-slate-500">Błąd ładowania danych</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-[var(--color-ink-muted)]">Błąd ładowania danych</td></tr>';
         return;
     }
 
     if (data.services.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-slate-500">Brak danych</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-[var(--color-ink-muted)]">Brak danych</td></tr>';
         return;
     }
 
@@ -813,7 +805,7 @@ async function loadServiceAnalysis() {
         const discount = parseFloat(s.avg_discount_pct) || 0;
         const discountColor = discount > 10 ? 'text-red-600' :
                               discount > 0  ? 'text-amber-600' : 'text-green-600';
-        const rowClass = s.bookings === 0 ? 'text-slate-400' : '';
+        const rowClass = s.bookings === 0 ? 'text-[var(--color-ink-subtle)]' : '';
         const hasBookings = s.bookings > 0;
 
         // last_price_change is a full ISO timestamp → new Date() is safe (no date-only shift)
@@ -823,11 +815,11 @@ async function loadServiceAnalysis() {
         // Trend over the period: current catalogue price vs price at period start
         const startPrice = s.price_at_period_start == null ? null : parseFloat(s.price_at_period_start);
         const catPrice = parseFloat(s.catalogue_price);
-        let trendIcon = '—', trendColor = 'text-slate-400';
+        let trendIcon = '—', trendColor = 'text-[var(--color-ink-subtle)]';
         if (startPrice != null) {
             if (catPrice > startPrice)      { trendIcon = '↑'; trendColor = 'text-red-600'; }
             else if (catPrice < startPrice) { trendIcon = '↓'; trendColor = 'text-green-600'; }
-            else                            { trendIcon = '='; trendColor = 'text-slate-400'; }
+            else                            { trendIcon = '='; trendColor = 'text-[var(--color-ink-subtle)]'; }
         }
         return `
             <tr class="${rowClass}">
@@ -859,7 +851,7 @@ async function loadInsights() {
     if (!listEl) return;
 
     if (!data.success || !data.insights || data.insights.length === 0) {
-        listEl.innerHTML = '<p class="text-center text-slate-500">Brak danych do analizy</p>';
+        listEl.innerHTML = '<p class="text-center text-[var(--color-ink-muted)]">Brak danych do analizy</p>';
         return;
     }
 
@@ -1219,311 +1211,6 @@ async function loadCostRatio() {
     });
 }
 
-async function loadCategoryMix() {
-    const response = await fetch('/api/analytics/rolling/category-mix');
-    const data = await response.json();
-    const ctx = document.getElementById('categoryMixChart');
-    if (!ctx || !data.success) return;
-
-    if (categoryMixChart) categoryMixChart.destroy();
-
-    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
-
-    // Generate 12 month keys ending at previous month (no current in-progress month)
-    const today = new Date();
-    const monthKeys = [];
-    for (let i = 12; i >= 1; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        monthKeys.push(`${d.getFullYear()}-${mm}-01`);
-    }
-    const labels = monthKeys.map(k => {
-        const [y, mo] = k.split('-').map(Number);
-        return `${PL_MONTHS[mo - 1]} ${y}`;
-    });
-
-    // Collect unique categories from response
-    const categories = [...new Set(data.rows.map(r => r.category))].sort();
-
-    // Build lookup: month_start_prefix → category → revenue
-    // month_start from DB may be "2026-03-01", key format must match monthKeys
-    const lookup = {};
-    data.rows.forEach(r => {
-        // Normalise key: take YYYY-MM from month_start and append -01
-        const key = r.month_start.substring(0, 7) + '-01';
-        if (!lookup[key]) lookup[key] = {};
-        lookup[key][r.category] = parseFloat(r.revenue);
-    });
-
-    const CATEGORY_COLORS = [
-        'color-chart-blue', 'color-chart-green', 'color-chart-orange',
-        'color-chart-purple', 'color-chart-pink', 'color-chart-teal',
-        'color-chart-amber', 'color-chart-red', 'color-chart-slate',
-        'color-chart-sky'
-    ].map(v => cssVarAlpha(v, 0.8));
-
-    const datasets = categories.map((cat, i) => ({
-        label: cat,
-        data: monthKeys.map(k => (lookup[k] && lookup[k][cat]) || 0),
-        backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-        borderWidth: 0
-    }));
-
-    categoryMixChart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
-                    }
-                }
-            },
-            scales: {
-                x: { stacked: true, grid: { display: false } },
-                y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
-                }
-            }
-        }
-    });
-}
-
-async function loadEmployeeUtilisation() {
-    const response = await fetch('/api/analytics/rolling/employee-utilisation');
-    const data = await response.json();
-    const ctx = document.getElementById('employeeUtilisationChart');
-    if (!ctx || !data.success) return;
-
-    if (employeeUtilisationChart) employeeUtilisationChart.destroy();
-
-    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
-
-    // Collect unique sorted months from response
-    const monthKeys = [...new Set(data.rows.map(r => r.month_start))].sort();
-    const labels = monthKeys.map(k => {
-        const [y, mo] = k.split('-').map(Number);
-        return `${PL_MONTHS[mo - 1]} ${y}`;
-    });
-
-    const employees = [...new Set(data.rows.map(r => r.employee_name))].sort();
-
-    // Build lookup: employee → month_start → utilisation_pct
-    const lookup = {};
-    data.rows.forEach(r => {
-        if (!lookup[r.employee_name]) lookup[r.employee_name] = {};
-        lookup[r.employee_name][r.month_start] = parseFloat(r.utilisation_pct);
-    });
-
-    const EMP_COLOR_KEYS = [
-        'color-chart-blue', 'color-chart-green', 'color-chart-orange',
-        'color-chart-purple', 'color-chart-pink', 'color-chart-teal',
-        'color-chart-amber', 'color-chart-slate'
-    ];
-
-    const datasets = employees.map((emp, i) => ({
-        label: emp,
-        data: monthKeys.map(k => (lookup[emp] && lookup[emp][k]) || 0),
-        borderColor: cssVar(EMP_COLOR_KEYS[i % EMP_COLOR_KEYS.length]),
-        backgroundColor: cssVarAlpha(EMP_COLOR_KEYS[i % EMP_COLOR_KEYS.length], 0.08),
-        borderWidth: 2,
-        pointRadius: 3,
-        fill: false,
-        tension: 0.3
-    }));
-
-    employeeUtilisationChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
-                    }
-                }
-            },
-            scales: {
-                x: { grid: { display: false } },
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: (val) => `${val}%` }
-                }
-            }
-        }
-    });
-}
-
-async function loadVisitFrequency() {
-    const response = await fetch('/api/analytics/rolling/visit-frequency');
-    const data = await response.json();
-    const ctx = document.getElementById('visitFrequencyChart');
-    if (!ctx || !data.success) return;
-
-    if (visitFrequencyChart) visitFrequencyChart.destroy();
-
-    // Group into 5-visit bands: 1-5, 6-10, 11-15, ..., 46-50
-    const BAND_SIZE = 5;
-    const BANDS = 10;  // 10 bands of 5 = covers 1..50
-    const bandCounts = new Array(BANDS).fill(0);
-    data.distribution.forEach(d => {
-        const count = parseInt(d.visit_count);
-        const bandIdx = Math.min(Math.floor((count - 1) / BAND_SIZE), BANDS - 1);
-        bandCounts[bandIdx] += parseInt(d.client_count);
-    });
-
-    const labels = [];
-    const values = [];
-    for (let i = 0; i < BANDS; i++) {
-        const lo = i * BAND_SIZE + 1;
-        const hi = lo + BAND_SIZE - 1;
-        labels.push(`${lo}-${hi}`);
-        values.push(bandCounts[i]);
-    }
-
-    visitFrequencyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Klienci',
-                data: values,
-                backgroundColor: cssVarAlpha('color-chart-blue', 0.75),
-                borderColor: cssVar('color-chart-blue'),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `Klienci: ${ctx.parsed.y}`,
-                        title: (items) => `${items[0].label} wizyt`
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    title: { display: true, text: 'Liczba wizyt w ostatnich 12 miesiącach' }
-                },
-                y: { beginAtZero: true, ticks: { stepSize: 1 } }
-            }
-        }
-    });
-}
-
-/**
- * Load 12-month rolling satisfaction rating chart.
- * Shows: one bold "Wszyscy" line (salon-wide avg) + one line per active employee.
- */
-async function loadSatisfactionRating() {
-    const response = await fetch('/api/analytics/rolling/satisfaction-rating');
-    const data = await response.json();
-    const ctx = document.getElementById('satisfactionRatingChart');
-    if (!ctx || !data.success) return;
-
-    if (satisfactionRatingChart) satisfactionRatingChart.destroy();
-
-    const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
-
-    // Build labels from overall array (all 12 months are present)
-    const labels = data.overall.map(row => {
-        const [y, mo] = row.month_start.split('-').map(Number);
-        return `${PL_MONTHS[mo - 1]} ${y}`;
-    });
-
-    // "Wszyscy" dataset — salon-wide average
-    const overallDataset = {
-        label: 'Wszyscy',
-        data: data.overall.map(row => row.avg_score != null ? parseFloat(row.avg_score) : null),
-        borderColor: cssVar('color-ink'),
-        backgroundColor: cssVarAlpha('color-ink', 0.06),
-        borderWidth: 3,
-        pointRadius: 4,
-        fill: false,
-        tension: 0.3,
-        spanGaps: true
-    };
-
-    // Per-employee datasets
-    const EMP_COLOR_KEYS_SAT = [
-        'color-chart-blue', 'color-chart-green', 'color-chart-orange',
-        'color-chart-purple', 'color-chart-pink', 'color-chart-teal',
-        'color-chart-amber', 'color-chart-slate'
-    ];
-
-    // Collect unique month keys (ordered) from overall
-    const monthKeys = data.overall.map(row => row.month_start);
-
-    // Build lookup: employee_name → month_start → avg_score
-    const lookup = {};
-    data.by_employee.forEach(row => {
-        if (!lookup[row.employee_name]) lookup[row.employee_name] = {};
-        lookup[row.employee_name][row.month_start] = row.avg_score != null ? parseFloat(row.avg_score) : null;
-    });
-
-    const employees = [...new Set(data.by_employee.map(r => r.employee_name))].sort();
-
-    const empDatasets = employees.map((emp, i) => ({
-        label: emp,
-        data: monthKeys.map(k => (lookup[emp] && lookup[emp][k] !== undefined) ? lookup[emp][k] : null),
-        borderColor: cssVar(EMP_COLOR_KEYS_SAT[i % EMP_COLOR_KEYS_SAT.length]),
-        backgroundColor: cssVarAlpha(EMP_COLOR_KEYS_SAT[i % EMP_COLOR_KEYS_SAT.length], 0.08),
-        borderWidth: 1.5,
-        pointRadius: 2.5,
-        fill: false,
-        tension: 0.3,
-        spanGaps: true
-    }));
-
-    satisfactionRatingChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [overallDataset, ...empDatasets] },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => {
-                            if (ctx.parsed.y == null) return null;
-                            return `${ctx.dataset.label}: ★ ${ctx.parsed.y.toFixed(2)}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { grid: { display: false } },
-                y: {
-                    min: 1,
-                    max: 5,
-                    ticks: {
-                        stepSize: 1,
-                        callback: (val) => `★ ${val}`
-                    }
-                }
-            }
-        }
-    });
-}
-
 async function loadTopClients() {
     const params = buildParams();
     const response = await fetch(`/api/analytics/top-clients?${params}`);
@@ -1532,16 +1219,16 @@ async function loadTopClients() {
     if (!tbody) return;
 
     if (!data.success || !data.clients.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-500 py-2">Brak danych</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-[var(--color-ink-muted)] py-2">Brak danych</td></tr>';
         return;
     }
 
     tbody.innerHTML = data.clients.map((c, i) => `
-        <tr class="border-b border-slate-100 hover:bg-slate-50">
-            <td class="py-1.5 text-slate-400 text-xs">${i + 1}</td>
+        <tr class="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-surface)]">
+            <td class="py-1.5 text-[var(--color-ink-subtle)] text-xs">${i + 1}</td>
             <td class="py-1.5 font-medium">${escapeHtml(c.client_name)}</td>
-            <td class="py-1.5 text-right text-slate-600">${c.visits}</td>
-            <td class="py-1.5 text-right text-slate-600">${formatCurrency(c.revenue)}</td>
+            <td class="py-1.5 text-right text-[var(--color-ink-muted)]">${c.visits}</td>
+            <td class="py-1.5 text-right text-[var(--color-ink-muted)]">${formatCurrency(c.revenue)}</td>
         </tr>
     `).join('');
 }
