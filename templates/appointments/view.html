@@ -15,7 +15,8 @@
     /* ── Dark gradient hero ── */
     .appt-hero { background: linear-gradient(135deg, #1a1a1a, #2a2a2a); padding: 1.25rem 1.75rem; }
     .hero-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-    .hero-avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,0.15); background: #475569; }
+    .hero-avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,0.15); background: #475569; text-decoration: none; cursor: pointer; transition: box-shadow 0.15s ease; }
+    .hero-avatar:hover { box-shadow: 0 0 0 3px rgba(255,255,255,0.35); }
     .hero-meta { flex: 1; min-width: 0; }
     .hero-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
     .hero-name { font-size: 1.375rem; font-weight: 600; color: #fff; margin: 0; letter-spacing: -0.02em; }
@@ -136,7 +137,7 @@
     <!-- Dark hero header -->
     <div class="appt-hero">
         <div class="hero-row">
-            <div class="hero-avatar" id="hero-avatar">—</div>
+            <a class="hero-avatar" id="hero-avatar" href="#" title="Zobacz kartę klienta" aria-label="Zobacz kartę klienta">—</a>
             <div class="hero-meta">
                 <div class="hero-name-row">
                     <h1 class="hero-name" id="hero-name">Wizyta #{{ appointment_id }}</h1>
@@ -326,6 +327,7 @@ async function loadAppointment() {
     const avatar = document.getElementById('hero-avatar');
     avatar.textContent = clientInitials(a.client_name);
     avatar.style.background = empColor(a.employee_id);
+    avatar.href = `/client/${a.client_id}`;
     document.getElementById('hero-name').textContent = a.client_name || `Wizyta #${APPT_ID}`;
     const heroStatus = document.getElementById('hero-status');
     heroStatus.textContent = STATUS_LABELS[a.status] || a.status;
