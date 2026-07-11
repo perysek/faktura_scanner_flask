@@ -57,6 +57,41 @@ class AppointmentBusinessService:
         if error:
             raise AppointmentError(error)
 
+    def _check_absence_conflicts(self, employee_id: int, appt_date: date,
+                                  start_time: time, end_time: time) -> None:
+        """Raise AppointmentError if the slot overlaps an employee absence.
+
+        Approved absences are a confirmed day off — hard block. Pending
+        absences aren't confirmed yet, but scheduling into a slot someone is
+        waiting to hear back on is asking for trouble, so those block too —
+        just with a distinct marker phrase ("oczekuje na akceptację") so the
+        frontend can show a lighter, toast-only warning instead of the full
+        field-reset treatment used for the other conflict types (same
+        stable-marker-phrase convention as utils/work_schedule.py).
+        Rejected/cancelled absences are excluded by the repository query and
+        never reach here.
+        """
+        conflicts = self.absence_repo.check_absence_conflicts(
+            employee_id, appt_date, appt_date, start_time, end_time
+        )
+        if not conflicts:
+            return
+
+        approved = next((c for c in conflicts if c['status'] == 'approved'), None)
+        if approved:
+            raise AppointmentError(
+                f"Konflikt z nieobecnością pracownika: "
+                f"{approved.get('category_name', 'nieobecność')} "
+                f"({approved.get('date_from', '')})"
+            )
+
+        pending = conflicts[0]
+        raise AppointmentError(
+            f"Wniosek o nieobecność pracownika oczekuje na akceptację w tym terminie: "
+            f"{pending.get('category_name', 'nieobecność')} ({pending.get('date_from', '')}). "
+            f"Wizyta nie została zapisana."
+        )
+
     def create_appointment(self, client_id: int, employee_id: int,
                             service_ids: List[int], appt_date: date,
                             start_time: time, notes: Optional[str] = None,
@@ -113,16 +148,7 @@ class AppointmentBusinessService:
             )
 
         # 3c. Sprawdź konflikty z nieobecnościami pracownika
-        absence_conflicts = self.absence_repo.check_absence_conflicts(
-            employee_id, appt_date, appt_date,
-            start_time, end_time
-        )
-        if absence_conflicts:
-            raise AppointmentError(
-                f"Konflikt z nieobecnością pracownika: "
-                f"{absence_conflicts[0].get('category_name', 'nieobecność')} "
-                f"({absence_conflicts[0].get('date_from', '')})"
-            )
+        self._check_absence_conflicts(employee_id, appt_date, start_time, end_time)
 
         # 4-5. Utwórz wizytę + usługi w jednej transakcji
         with managed_transaction():
@@ -729,17 +755,7 @@ class AppointmentBusinessService:
                 )
 
             # 2d. Sprawdź konflikty z nieobecnościami pracownika
-            absence_conflicts = self.absence_repo.check_absence_conflicts(
-                employee_id, appointment_date, appointment_date,
-                start_time, end_time,
-                exclude_id=None
-            )
-            if absence_conflicts:
-                raise AppointmentError(
-                    f"Konflikt z nieobecnością pracownika: "
-                    f"{absence_conflicts[0].get('category_name', 'nieobecność')} "
-                    f"({absence_conflicts[0].get('date_from', '')})"
-                )
+            self._check_absence_conflicts(employee_id, appointment_date, start_time, end_time)
 
         # 3. Policz sumę cen i czasu trwania
         total_price = sum(Decimal(str(s['price_charged'])) for s in services)

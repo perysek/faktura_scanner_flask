@@ -29,12 +29,12 @@
 
     /* Validation Error States */
     .form-group input.error, .form-group select.error, .form-group textarea.error {
-        border-color: var(--color-danger);
+        border-color: var(--color-error);
         box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
     }
     .field-error {
         display: block;
-        color: var(--color-danger);
+        color: var(--color-error);
         font-size: 0.6875rem;
         margin-top: 0.375rem;
         font-weight: 400;
@@ -50,8 +50,8 @@
     .service-item-badge.main { background: rgba(59,130,246,0.08); color: var(--color-status-scheduled); }
     .service-item-badge.addon { background: rgba(245,158,11,0.08); color: var(--color-status-in-progress); }
     .service-item-price { font-size: 0.875rem; font-weight: 600; margin-right: 1rem; }
-    .btn-remove { padding: 0.25rem 0.5rem; font-size: 0.75rem; background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; color: var(--color-danger); }
-    .btn-remove:hover { background: var(--color-status-cancelled-bg); border-color: var(--color-danger); }
+    .btn-remove { padding: 0.25rem 0.5rem; font-size: 0.75rem; background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; color: var(--color-error); }
+    .btn-remove:hover { background: var(--color-status-cancelled-bg); border-color: var(--color-error); }
 
     .add-service-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle); }
     .service-picker { max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 2px; margin-top: 0.5rem; }
@@ -68,7 +68,7 @@
     .summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
     .summary-row.total { font-weight: 600; font-size: 1rem; border-top: 1px solid var(--color-border); margin-top: 0.5rem; padding-top: 0.5rem; }
 
-    .conflict-warning { background: var(--color-status-cancelled-bg); border: 1px solid #fca5a5; border-radius: 2px; padding: 1rem; margin-top: 1rem; color: var(--color-danger); font-size: 0.8125rem; display: none; }
+    .conflict-warning { background: var(--color-status-cancelled-bg); border: 1px solid #fca5a5; border-radius: 2px; padding: 1rem; margin-top: 1rem; color: var(--color-error); font-size: 0.8125rem; display: none; }
 
     /* Conflict highlight — added via JS when navigating from absence conflict modal */
     .conflict-highlight {
@@ -221,11 +221,21 @@ function showFieldError(fieldId, errorMessage) {
 
     field.parentElement.appendChild(errorEl);
 
-    // Scroll to field with error
-    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // SearchableSelect hides the native <select> (display:none) behind a
+    // visible trigger button — scrolling/highlighting the hidden element is a
+    // no-op, so anchor on the wrapper/trigger instead when present (client-select
+    // and employee-select are both SearchableSelect-enhanced on this page).
+    const ssWrap = field.closest('.ss-wrap');
+    const ssTrigger = ssWrap ? ssWrap.querySelector('.ss-trigger') : null;
+    if (ssTrigger) ssTrigger.classList.add('error');
 
-    // Remove error on focus
+    // Scroll to field with error
+    (ssWrap || field).scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Remove error on focus (plain fields) or on value change — SearchableSelect
+    // dispatches 'change' on selection but never focuses the hidden select.
     field.addEventListener('focus', () => clearFieldError(fieldId), { once: true });
+    field.addEventListener('change', () => clearFieldError(fieldId), { once: true });
 }
 
 function clearFieldError(fieldId) {
@@ -233,6 +243,9 @@ function clearFieldError(fieldId) {
     if (!field) return;
 
     field.classList.remove('error');
+    const ssWrap = field.closest('.ss-wrap');
+    const ssTrigger = ssWrap ? ssWrap.querySelector('.ss-trigger') : null;
+    if (ssTrigger) ssTrigger.classList.remove('error');
     const errorEl = document.getElementById(`${fieldId}-error`);
     if (errorEl) errorEl.remove();
 }
@@ -623,7 +636,12 @@ async function performSave(payload, timingChangeBy) {
         const errLower = errorMsg.toLowerCase();
         // Bug #1: working-hours violation → toast + field error + reset. Checked
         // first because these messages also contain 'pracownik'/'godzin'.
-        if (errLower.includes('nie pracuje')) {
+        if (errLower.includes('oczekuje na akceptację')) {
+            // Pending absence request — still blocks the save (no db write),
+            // but nothing is confirmed yet, so skip the scroll/focus/reset
+            // treatment: just a heads-up toast.
+            if (window.Notifications) Notifications.warning(errorMsg);
+        } else if (errLower.includes('nie pracuje')) {
             if (window.Notifications) Notifications.warning(errorMsg);
             showFieldError('appt-date', errorMsg);
             resetFieldToOriginal('appt-date');

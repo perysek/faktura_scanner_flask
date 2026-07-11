@@ -5,7 +5,7 @@
 const Notifications = {
     container: null,
     maxNotifications: 3,
-    defaultDuration: 5000,
+    defaultDuration: 3000,
 
     /**
      * Initialize notification system

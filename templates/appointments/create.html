@@ -28,6 +28,14 @@
     }
     .form-group textarea { font-weight: 300; resize: vertical; min-height: 80px; }
     .form-group select:focus, .form-group input:focus, .form-group textarea:focus { border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,0.04); }
+    .form-group select.error, .form-group input.error, .form-group textarea.error {
+        border-color: var(--color-error);
+        box-shadow: 0 0 0 3px rgba(155,44,44,0.1);
+    }
+    .field-error { display: block; color: var(--color-error); font-size: 0.6875rem; margin-top: 5px; font-weight: 400; }
+    /* #appt-time is a hidden input backing the visible slot-grid picker, so the
+       error highlight has to land on the grid itself, not the hidden field. */
+    .slot-grid.error { outline: 1px solid var(--color-error); outline-offset: 6px; border-radius: 2px; }
 
     /* Service checkbox list */
     .svc-picker { border: 1px solid var(--color-border); border-radius: 2px; overflow: hidden; }
@@ -179,6 +187,47 @@ function fmtDatePl(dateStr){
     return `${d}.${m}.${y}`;
 }
 
+// ── Field-level validation error hint (scroll + highlight + message) ──
+// Mirrors the showFieldError/clearFieldError pattern in appointments/edit.html
+// so a given error message gets the same on-page treatment whether it comes
+// back from the create or the edit form.
+function showFieldError(fieldId, errorMessage) {
+    clearFieldError(fieldId);
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    field.classList.add('error');
+    const errorEl = document.createElement('span');
+    errorEl.className = 'field-error';
+    errorEl.id = `${fieldId}-error`;
+    errorEl.textContent = errorMessage;
+    field.parentElement.appendChild(errorEl);
+
+    // SearchableSelect hides the native <select> (display:none) behind a
+    // visible trigger button — scrolling/highlighting the hidden element is a
+    // no-op, so anchor on the wrapper/trigger instead when present.
+    const ssWrap = field.closest('.ss-wrap');
+    const ssTrigger = ssWrap ? ssWrap.querySelector('.ss-trigger') : null;
+    if (ssTrigger) ssTrigger.classList.add('error');
+    (ssWrap || field).scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Clear on focus (plain fields) or on value change — SearchableSelect
+    // dispatches 'change' on selection but never focuses the hidden select.
+    field.addEventListener('focus', () => clearFieldError(fieldId), { once: true });
+    field.addEventListener('change', () => clearFieldError(fieldId), { once: true });
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    field.classList.remove('error');
+    const ssWrap = field.closest('.ss-wrap');
+    const ssTrigger = ssWrap ? ssWrap.querySelector('.ss-trigger') : null;
+    if (ssTrigger) ssTrigger.classList.remove('error');
+    const errorEl = document.getElementById(`${fieldId}-error`);
+    if (errorEl) errorEl.remove();
+}
+
 // ── Load clients / employees (searchable — the roster is large) ──
 async function loadClients() {
     const resp = await fetch('/api/clients');
@@ -290,6 +339,7 @@ function renderSlots() {
 function selectSlot(t) {
     selectedTime = t;
     document.getElementById('appt-time').value = t;
+    clearFieldError('slots-container');
     renderSlots();
     refreshSummary();
 }
@@ -352,16 +402,41 @@ async function saveAppointment() {
             window.location.href = `/appointment/${data.appointment_id}`;
         } else {
             const errLower = (data.error || '').toLowerCase();
-            if (errLower.includes('nie pracuje') || errLower.includes('poza godzinami')) {
+            // Order matters: more specific marker phrases first, since several
+            // messages also contain the generic word "pracownik" (e.g. the
+            // working-hours and pending-absence messages both do).
+            if (errLower.includes('oczekuje na akceptację')) {
+                // Pending absence request — still blocks the save (no db write),
+                // but it's not a confirmed conflict yet, so no scroll/focus/reset
+                // theatrics: just a heads-up toast.
                 if (window.Notifications) Notifications.warning(data.error);
-                if (errLower.includes('poza godzinami')) {
-                    selectedTime = '';
-                    document.getElementById('appt-time').value = '';
-                    renderSlots();
-                    refreshSummary();
-                } else {
-                    document.getElementById('appt-date').focus();
-                }
+            } else if (errLower.includes('nie pracuje')) {
+                if (window.Notifications) Notifications.warning(data.error);
+                showFieldError('appt-date', data.error);
+            } else if (errLower.includes('poza godzinami')) {
+                if (window.Notifications) Notifications.warning(data.error);
+                // #appt-time is a hidden input — the visible surface for "the
+                // time field" is the slot-grid picker, so the highlight/scroll
+                // targets that instead.
+                showFieldError('slots-container', data.error);
+                selectedTime = '';
+                document.getElementById('appt-time').value = '';
+                renderSlots();
+                refreshSummary();
+            } else if (errLower.includes('klient')) {
+                if (window.Notifications) Notifications.warning(data.error);
+                showFieldError('client-select', data.error);
+                SearchableSelect.setValue('client-select', '');
+                refreshSummary();
+            } else if (errLower.includes('pracownik')) {
+                if (window.Notifications) Notifications.warning(data.error);
+                // Reset (and let it reload services/slots) BEFORE showFieldError
+                // attaches its one-time 'change' clear-listener — otherwise this
+                // synthetic event would immediately clear the error we're about
+                // to show.
+                SearchableSelect.setValue('employee-select', '');
+                document.getElementById('employee-select').dispatchEvent(new Event('change'));
+                showFieldError('employee-select', data.error);
             } else {
                 Modals.alert({ title: 'Błąd rezerwacji', message: data.error, type: 'error' });
             }

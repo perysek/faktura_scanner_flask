@@ -95,6 +95,10 @@
         }
         .ss-trigger:focus { outline: none; border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,.04); }
         .ss-trigger--placeholder { color: var(--color-ink-subtle); }
+        /* The underlying <select> is display:none once SearchableSelect enhances
+           it, so a validation-error state on the select itself is invisible —
+           mirror it onto the trigger the user actually sees. */
+        .ss-trigger.error { border-color: var(--color-error); box-shadow: 0 0 0 3px rgba(155,44,44,0.1); }
         .ss-chevron { flex-shrink: 0; color: var(--color-ink-subtle); transition: transform 0.18s ease; }
         .ss-wrap.ss-open .ss-chevron { transform: rotate(180deg); }
         .ss-panel {
