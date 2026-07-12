@@ -6,6 +6,10 @@
 let currentPeriod = 'current_month';
 let customStartDate = null;
 let customEndDate = null;
+// Drives prev/next arithmetic: 'month' and 'year' shift by calendar units
+// (not day-counts, which drift across months of different lengths); 'range'
+// shifts an arbitrary user-picked window by its own length.
+let periodGranularity = 'month';
 
 // Chart instances
 let revenueTrendChart = null;
@@ -17,6 +21,8 @@ let newClientsChart = null;
 let cancellationRateChart = null;
 let avgTicketChart = null;
 let costRatioChart = null;
+let categoryMixChart = null;
+let satisfactionRatingChart = null;
 let topClientsLoaded = false;
 
 /**
@@ -78,12 +84,26 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * Format a local Date as 'YYYY-MM-DD' without going through UTC (Date#toISOString
+ * converts to UTC first, which silently shifts the calendar day for any timezone
+ * ahead of UTC — see date-formatting rule: always build/read date strings from
+ * local y/m/d components, never through a UTC round-trip).
+ */
+function toISODate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+/**
  * Select period and reload dashboard
  */
 function selectPeriod(period) {
     currentPeriod = period;
     customStartDate = null;
     customEndDate = null;
+    periodGranularity = period === 'current_year' ? 'year' : 'month';
 
     // Update active button
     document.querySelectorAll('.period-selector button').forEach(btn => {
@@ -97,35 +117,68 @@ function selectPeriod(period) {
 }
 
 /**
- * Navigate to previous or next period
+ * Navigate to previous or next period.
+ *
+ * Shifts by whole calendar months/years (not day-counts) so repeated clicks stay
+ * aligned to month/year boundaries. When the target window lands back on today's
+ * month/year, folds back into the named preset (re-highlighting its button)
+ * instead of staying stuck on an equivalent 'custom' range.
  */
 function navigatePeriod(direction) {
     const today = new Date();
 
-    if (currentPeriod === 'current_month') {
-        // Navigate months
-        const targetMonth = new Date(today.getFullYear(), today.getMonth() + direction, 1);
-        customStartDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1).toISOString().split('T')[0];
-        customEndDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).toISOString().split('T')[0];
-        currentPeriod = 'custom';
+    if (periodGranularity === 'year') {
+        const anchorYear = currentPeriod === 'current_year'
+            ? today.getFullYear()
+            : new Date(customStartDate + 'T00:00:00').getFullYear();
+        const targetYear = anchorYear + direction;
 
-        // Clear active buttons
-        document.querySelectorAll('.period-selector button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-    } else if (currentPeriod === 'custom' && customStartDate && customEndDate) {
-        // Navigate by the current range length
-        const start = new Date(customStartDate);
-        const end = new Date(customEndDate);
-        const rangeDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        if (targetYear === today.getFullYear()) {
+            selectPeriod('current_year');
+            return;
+        }
+
+        customStartDate = `${targetYear}-01-01`;
+        customEndDate = `${targetYear}-12-31`;
+        currentPeriod = 'custom';
+        document.querySelectorAll('.period-selector button').forEach(btn => btn.classList.remove('active'));
+    } else if (periodGranularity === 'month') {
+        let anchor;
+        if (currentPeriod === 'current_month') {
+            anchor = new Date(today.getFullYear(), today.getMonth(), 1);
+        } else if (currentPeriod === 'last_month') {
+            anchor = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        } else {
+            anchor = new Date(customStartDate + 'T00:00:00');
+        }
+
+        const target = new Date(anchor.getFullYear(), anchor.getMonth() + direction, 1);
+        const lastMonthAnchor = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const isCurrentMonth = target.getFullYear() === today.getFullYear() && target.getMonth() === today.getMonth();
+        const isLastMonth = target.getFullYear() === lastMonthAnchor.getFullYear() && target.getMonth() === lastMonthAnchor.getMonth();
+
+        if (isCurrentMonth) { selectPeriod('current_month'); return; }
+        if (isLastMonth) { selectPeriod('last_month'); return; }
+
+        const monthEnd = new Date(target.getFullYear(), target.getMonth() + 1, 0);
+        customStartDate = toISODate(target);
+        customEndDate = toISODate(monthEnd);
+        currentPeriod = 'custom';
+        document.querySelectorAll('.period-selector button').forEach(btn => btn.classList.remove('active'));
+    } else {
+        // Arbitrary user-picked range (from the custom-range modal) — shift by its own length
+        if (!customStartDate || !customEndDate) return;
+        const start = new Date(customStartDate + 'T00:00:00');
+        const end = new Date(customEndDate + 'T00:00:00');
+        const rangeDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
 
         const newStart = new Date(start);
-        newStart.setDate(newStart.getDate() + (direction * rangeDays));
+        newStart.setDate(newStart.getDate() + direction * (rangeDays + 1));
         const newEnd = new Date(newStart);
         newEnd.setDate(newEnd.getDate() + rangeDays);
 
-        customStartDate = newStart.toISOString().split('T')[0];
-        customEndDate = newEnd.toISOString().split('T')[0];
+        customStartDate = toISODate(newStart);
+        customEndDate = toISODate(newEnd);
     }
 
     updatePeriodDescription();
@@ -133,21 +186,32 @@ function navigatePeriod(direction) {
 }
 
 /**
- * Update period description text
+ * Update period description text. Called immediately on period change (shows the
+ * static label right away), then again once loadSummary() resolves the exact
+ * start/end dates from the server — appended so the label always states precisely
+ * what window is on screen, not just its named category.
  */
-function updatePeriodDescription() {
+function updatePeriodDescription(startISO, endISO) {
     const descEl = document.getElementById('periodDescription');
     if (!descEl) return;
 
+    let label;
     if (currentPeriod === 'current_month') {
-        descEl.textContent = 'Ten miesiąc';
+        label = 'Ten miesiąc';
     } else if (currentPeriod === 'last_month') {
-        descEl.textContent = 'Ostatni miesiąc';
+        label = 'Ostatni miesiąc';
     } else if (currentPeriod === 'current_year') {
-        descEl.textContent = 'Rok do daty';
+        label = 'Rok do daty';
     } else if (currentPeriod === 'custom' && customStartDate && customEndDate) {
-        descEl.textContent = `${formatDateLabel(customStartDate)} - ${formatDateLabel(customEndDate)}`;
+        descEl.textContent = `${formatDateLabel(customStartDate)} – ${formatDateLabel(customEndDate)}`;
+        return;
+    } else {
+        return;
     }
+
+    descEl.textContent = (startISO && endISO)
+        ? `${label} · ${formatDateLabel(startISO)} – ${formatDateLabel(endISO)}`
+        : label;
 }
 
 /**
@@ -171,6 +235,8 @@ async function loadDashboard() {
             loadCancellationRate(),
             loadAvgTicket(),
             loadCostRatio(),
+            loadCategoryMix(),
+            loadSatisfactionTrend(),
             loadTopClients()
         ]);
     } catch (error) {
@@ -201,6 +267,9 @@ async function loadSummary() {
     updateKPI('appointments', data.current.total_appointments, data.change?.appointments_pct);
     updateKPI('clients', data.current.unique_clients, data.change?.clients_pct);
     updateKPI('avg-ticket', data.current.avg_ticket, data.change?.avg_ticket_pct);
+
+    // Enrich the period label with the exact resolved dates now that we have them
+    updatePeriodDescription(data.current.start_date, data.current.end_date);
 }
 
 /**
@@ -223,7 +292,7 @@ function updateKPI(key, value, changePct) {
         const color = changePct >= 0 ? 'text-green-600' : 'text-red-600';
         const arrow = changePct >= 0 ? '↑' : '↓';
 
-        changeEl.textContent = `${sign}${changePct.toFixed(1)}% ${arrow}`;
+        changeEl.textContent = `${sign}${changePct.toFixed(1)}% ${arrow} vs poprzedni okres`;
         changeEl.className = `text-sm font-medium ${color}`;
     } else {
         changeEl.textContent = '';
@@ -284,6 +353,7 @@ function applyCustomRange() {
     currentPeriod = 'custom';
     customStartDate = startDate;
     customEndDate = endDate;
+    periodGranularity = 'range';
 
     // Update active button
     document.querySelectorAll('.period-selector button').forEach(btn => {
@@ -347,7 +417,9 @@ async function loadRevenueTrend() {
  * Format date for chart labels
  */
 function formatDateLabel(dateStr) {
-    const date = new Date(dateStr);
+    // Parse as local time per date-formatting rules (avoids UTC day-shift)
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
     return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 }
 
@@ -375,19 +447,20 @@ async function loadServices() {
     }
 
     // Create new chart
+    // Single sequential hue — these bars are one measure (revenue) ranked by
+    // magnitude, not distinct categories, so a rainbow-per-bar would imply an
+    // identity distinction that isn't there. Each bar is already labeled on the
+    // axis, so color adds no information beyond what a single hue conveys.
     servicesChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: topServices.map(s => s.service_name),
             datasets: [{
                 data: topServices.map(s => s.revenue_generated),
-                backgroundColor: [
-                    CHART_COLORS.primary,
-                    CHART_COLORS.purple,
-                    CHART_COLORS.pink,
-                    CHART_COLORS.orange,
-                    CHART_COLORS.green
-                ]
+                backgroundColor: chartColorAlpha('color-chart-blue', 0.75),
+                borderColor: chartColor('color-chart-blue'),
+                borderWidth: 1,
+                borderRadius: 2
             }]
         },
         options: {
@@ -612,16 +685,20 @@ async function loadProfit() {
         }
     }
 
-    // Period change badge
+    // Period change badge + margin (profit_margin_pct was computed server-side but
+    // never surfaced anywhere in the UI — shown here regardless of whether a
+    // period-over-period comparison is available, since it's a standalone figure)
+    const marginText = `marża ${data.profit_margin_pct}%`;
     if (changeEl && data.change) {
         const pct = data.change.net_profit_pct;
         const sign = pct >= 0 ? '+' : '';
         const color = pct >= 0 ? 'text-green-600' : 'text-red-600';
         const arrow = pct >= 0 ? '↑' : '↓';
-        changeEl.textContent = `${sign}${pct.toFixed(1)}% ${arrow} vs poprzedni okres`;
+        changeEl.textContent = `${sign}${pct.toFixed(1)}% ${arrow} vs poprzedni okres · ${marginText}`;
         changeEl.className = `text-sm font-medium ${color}`;
     } else if (changeEl) {
-        changeEl.textContent = '';
+        changeEl.textContent = marginText;
+        changeEl.className = 'text-sm font-medium text-[var(--color-ink-subtle)]';
     }
 
     // Profit breakdown chart
@@ -632,8 +709,14 @@ async function loadProfit() {
         profitBreakdownChart.destroy();
     }
 
+    // Same 3 tokens as the KPI cards' left-border accents just above (warning =
+    // employee costs, error = invoice costs, success = net profit) — the entity
+    // must keep the same color everywhere it appears on the page, not just here.
+    // Raw tokens (cssVar*, not the chartColor* 0.4-toward-white blend) — validated
+    // with scripts/validate_palette.js; the muted version fails the chroma floor
+    // on all three, the raw one passes CVD separation and contrast cleanly.
     const netProfit = data.net_profit;
-    const netColor = netProfit >= 0 ? chartColorAlpha('color-chart-green', 0.75) : chartColorAlpha('color-chart-red', 0.75);
+    const netColor = netProfit >= 0 ? cssVarAlpha('color-success', 0.75) : cssVarAlpha('color-error', 0.75);
     const netLabel = netProfit >= 0 ? 'Zysk netto' : 'Strata netto';
 
     profitBreakdownChart = new Chart(ctx, {
@@ -644,15 +727,15 @@ async function loadProfit() {
                 {
                     label: 'Koszty pracownicze',
                     data: [data.employee_costs],
-                    backgroundColor: chartColorAlpha('color-chart-orange', 0.75),
-                    borderColor: chartColor('color-chart-orange'),
+                    backgroundColor: cssVarAlpha('color-warning', 0.75),
+                    borderColor: cssVar('color-warning'),
                     borderWidth: 1
                 },
                 {
                     label: 'Koszty faktur',
                     data: [data.invoice_costs],
-                    backgroundColor: chartColorAlpha('color-chart-red', 0.75),
-                    borderColor: chartColor('color-chart-red'),
+                    backgroundColor: cssVarAlpha('color-error', 0.75),
+                    borderColor: cssVar('color-error'),
                     borderWidth: 1
                 },
                 {
@@ -794,6 +877,8 @@ async function loadPeakHours() {
     }
 
     html += '</tbody></table>';
+    html += '<p style="margin-top:8px;font-size:11px;color:var(--color-ink-subtle);text-align:right">' +
+        'Ciemniejszy odcień = więcej rezerwacji w tym przedziale</p>';
     container.innerHTML = html;
 }
 
@@ -871,25 +956,23 @@ async function loadInsights() {
         return;
     }
 
-    const typeStyles = {
-        alert:   'bg-red-50 border-red-200 text-red-700',
-        warning: 'bg-amber-50 border-amber-200 text-amber-700',
-        success: 'bg-green-50 border-green-200 text-green-700',
-        info:    'bg-blue-50 border-blue-200 text-blue-700'
-    };
-    const typeIcons = {
-        alert: '⚠️', warning: '⚡', success: '✓', info: 'ℹ'
+    // No emoji in this UI (design system rule) — inline SVG + the same status
+    // tokens used everywhere else, not Tailwind's generic red/amber/green scale.
+    const TYPE_STYLE = {
+        alert:   { icon: 'error',        color: 'var(--color-error)',     bg: 'rgba(155,44,44,0.08)',   border: 'rgba(155,44,44,0.2)' },
+        warning: { icon: 'warning',      color: 'var(--color-warning)',   bg: 'rgba(154,103,0,0.08)',   border: 'rgba(154,103,0,0.2)' },
+        success: { icon: 'check_circle', color: 'var(--color-success)',   bg: 'rgba(45,106,79,0.08)',   border: 'rgba(45,106,79,0.2)' },
+        info:    { icon: 'info',         color: 'var(--color-info-text)', bg: 'var(--color-info-bg)',   border: 'var(--color-info-border)' }
     };
 
     listEl.innerHTML = data.insights.map(insight => {
-        const style = typeStyles[insight.type] || typeStyles.info;
-        const icon = typeIcons[insight.type] || 'ℹ';
+        const style = TYPE_STYLE[insight.type] || TYPE_STYLE.info;
         return `
-            <div class="flex items-start gap-3 p-3 rounded border ${style}">
-                <span class="text-[1.52rem] leading-none mt-0.5">${icon}</span>
+            <div class="flex items-start gap-3 p-3 rounded border" style="background:${style.bg};border-color:${style.border}">
+                <span class="shrink-0" style="font-size:1.35rem;color:${style.color}">${Icons.svg(style.icon)}</span>
                 <div>
-                    <div class="font-semibold text-[1.18rem]">${escapeHtml(insight.title)}</div>
-                    <div class="text-[1.18rem] mt-0.5">${escapeHtml(insight.message)}</div>
+                    <div class="font-semibold text-[1.18rem]" style="color:${style.color}">${escapeHtml(insight.title)}</div>
+                    <div class="text-[1.18rem] mt-0.5 text-[var(--color-ink-muted)]">${escapeHtml(insight.message)}</div>
                 </div>
             </div>
         `;
@@ -932,8 +1015,8 @@ async function loadMonthlyTrend() {
                     type: 'bar',
                     label: 'Koszty pracownicze',
                     data: data.months.map(m => m.employee_costs),
-                    backgroundColor: chartColorAlpha('color-chart-orange', 0.75),
-                    borderColor: chartColor('color-chart-orange'),
+                    backgroundColor: cssVarAlpha('color-warning', 0.75),
+                    borderColor: cssVar('color-warning'),
                     borderWidth: 1,
                     order: 2
                 },
@@ -941,8 +1024,8 @@ async function loadMonthlyTrend() {
                     type: 'bar',
                     label: 'Koszty faktur',
                     data: data.months.map(m => m.invoice_costs),
-                    backgroundColor: chartColorAlpha('color-chart-red', 0.75),
-                    borderColor: chartColor('color-chart-red'),
+                    backgroundColor: cssVarAlpha('color-error', 0.75),
+                    borderColor: cssVar('color-error'),
                     borderWidth: 1,
                     order: 2
                 },
@@ -950,12 +1033,12 @@ async function loadMonthlyTrend() {
                     type: 'line',
                     label: 'Zysk netto',
                     data: data.months.map(m => m.profit),
-                    borderColor: chartColor('color-chart-green'),
-                    backgroundColor: chartColorAlpha('color-chart-green', 0.08),
+                    borderColor: cssVar('color-success'),
+                    backgroundColor: cssVarAlpha('color-success', 0.08),
                     borderWidth: 2.5,
                     pointRadius: 4,
                     pointBackgroundColor: data.months.map(m =>
-                        m.profit >= 0 ? chartColor('color-chart-green') : chartColor('color-chart-red')
+                        m.profit >= 0 ? cssVar('color-success') : cssVar('color-error')
                     ),
                     fill: false,
                     tension: 0.3,
@@ -1054,10 +1137,13 @@ async function loadCancellationRate() {
             labels,
             datasets: [
                 {
+                    // Same tokens as the "Wskaźnik odwołań" / "Nieobecności" Occupancy
+                    // KPI badges (nav-occupancy) — this is their historical trend, so
+                    // the entity keeps the same color everywhere it appears.
                     label: 'Odwołania',
                     data: data.months.map(m => m.cancellation_pct),
-                    borderColor: chartColor('color-chart-orange'),
-                    backgroundColor: chartColorAlpha('color-chart-orange', 0.08),
+                    borderColor: cssVar('color-warning'),
+                    backgroundColor: cssVarAlpha('color-warning', 0.08),
                     borderWidth: 2,
                     pointRadius: 4,
                     fill: false,
@@ -1066,8 +1152,8 @@ async function loadCancellationRate() {
                 {
                     label: 'Nieobecności',
                     data: data.months.map(m => m.noshow_pct),
-                    borderColor: chartColor('color-chart-red'),
-                    backgroundColor: chartColorAlpha('color-chart-red', 0.08),
+                    borderColor: cssVar('color-error'),
+                    backgroundColor: cssVarAlpha('color-error', 0.08),
                     borderWidth: 2,
                     pointRadius: 4,
                     fill: false,
@@ -1163,65 +1249,204 @@ async function loadCostRatio() {
         return `${PL_MONTHS[mo - 1]} ${y}`;
     });
 
+    // Single axis only — revenue is already shown in the 12-month rolling trend
+    // chart above, so this chart's one job is the cost-ratio %. Revenue and the
+    // absolute invoice cost still surface in the tooltip for context, without
+    // forcing a second y-scale onto the chart (dual-axis charts invite comparing
+    // two incommensurable scales that happen to overlap on screen by coincidence).
     costRatioChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels,
-            datasets: [
-                {
-                    type: 'bar',
-                    label: 'Przychód',
-                    data: data.months.map(m => m.revenue),
-                    backgroundColor: chartColorAlpha('color-chart-blue', 0.5),
-                    borderColor: chartColor('color-chart-blue'),
-                    borderWidth: 1,
-                    yAxisID: 'yPLN',
-                    order: 2
-                },
-                {
-                    type: 'line',
-                    label: 'Udział faktur (%)',
-                    data: data.months.map(m => m.ratio_pct),
-                    borderColor: chartColor('color-chart-red'),
-                    backgroundColor: chartColorAlpha('color-chart-red', 0.08),
-                    borderWidth: 2,
-                    pointRadius: 4,
-                    fill: false,
-                    tension: 0.3,
-                    yAxisID: 'yPct',
-                    order: 1
-                }
-            ]
+            datasets: [{
+                label: 'Udział kosztów faktur w przychodzie',
+                data: data.months.map(m => m.ratio_pct),
+                borderColor: cssVar('color-warning'),
+                backgroundColor: cssVarAlpha('color-warning', 0.1),
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: true,
+                tension: 0.3,
+                _revenue: data.months.map(m => m.revenue),
+                _invoiceCosts: data.months.map(m => m.invoice_costs)
+            }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { position: 'bottom' },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ctx.dataset.yAxisID === 'yPct'
-                            ? `${ctx.dataset.label}: ${ctx.parsed.y ?? 0}%`
-                            : `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                        label: (ctx) => `Udział faktur: ${ctx.parsed.y ?? 0}%`,
+                        afterLabel: (ctx) => {
+                            const cost = ctx.dataset._invoiceCosts[ctx.dataIndex];
+                            const rev = ctx.dataset._revenue[ctx.dataIndex];
+                            return `${formatCurrency(cost)} z ${formatCurrency(rev)} przychodu`;
+                        }
                     }
                 }
             },
             scales: {
                 x: { grid: { display: false } },
-                yPLN: {
-                    type: 'linear',
-                    position: 'left',
+                y: {
                     beginAtZero: true,
-                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
-                },
-                yPct: {
-                    type: 'linear',
-                    position: 'right',
-                    beginAtZero: true,
-                    grid: { drawOnChartArea: false },
                     ticks: { callback: (val) => `${val}%` }
                 }
+            }
+        }
+    });
+}
+
+/**
+ * Load and render service category revenue mix (12-month rolling, stacked bar).
+ * Endpoint doesn't zero-fill months the way the other /rolling/* endpoints do, so
+ * the month axis is reconstructed here; categories are ranked by total revenue and
+ * capped at a fixed palette size — extras fold into "Inne" rather than generating
+ * new hues (a 9th+ series is never a new color, per the categorical color rule).
+ */
+async function loadCategoryMix() {
+    const response = await fetch('/api/analytics/rolling/category-mix');
+    const data = await response.json();
+    const ctx = document.getElementById('categoryMixChart');
+    if (!ctx || !data.success) return;
+
+    if (categoryMixChart) categoryMixChart.destroy();
+
+    const PL_MONTHS = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
+    const today = new Date();
+    const months = [];
+    for (let i = 12; i >= 1; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+    }
+    const labels = months.map(key => {
+        const [y, mo] = key.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    const totals = {};
+    data.rows.forEach(r => { totals[r.category] = (totals[r.category] || 0) + Number(r.revenue); });
+    const ranked = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+    const TOP_N = 5;
+    const topCategories = ranked.slice(0, TOP_N);
+    const hasOther = ranked.length > TOP_N;
+
+    const byMonthCategory = {};
+    data.rows.forEach(r => {
+        byMonthCategory[r.month_start] = byMonthCategory[r.month_start] || {};
+        byMonthCategory[r.month_start][r.category] = Number(r.revenue);
+    });
+
+    // Fixed order, validated with scripts/validate_palette.js (dataviz skill) —
+    // this exact sequence clears the CVD-adjacency check; chart-blue and
+    // chart-purple sit too close together for deuteranopia so purple/sky are
+    // deliberately excluded from this set rather than muted. Raw tokens (not the
+    // 0.4-toward-white blend used elsewhere in this file) — that blend compresses
+    // chroma/lightness enough to fail the floor and separation checks on a 5+
+    // slot categorical set, even though it reads fine on a single translucent
+    // line fill.
+    const PALETTE = ['color-chart-green', 'color-chart-pink', 'color-chart-amber', 'color-chart-blue', 'color-chart-teal'];
+
+    const datasets = topCategories.map((cat, i) => ({
+        label: cat,
+        data: months.map(m => (byMonthCategory[m] && byMonthCategory[m][cat]) || 0),
+        backgroundColor: cssVarAlpha(PALETTE[i % PALETTE.length], 0.85),
+        borderRadius: 2
+    }));
+
+    if (hasOther) {
+        // Intentionally low-chroma — "Inne" is a catch-all, not a peer category,
+        // and is excluded from the categorical validation above for that reason.
+        datasets.push({
+            label: 'Inne',
+            data: months.map(m => {
+                const monthData = byMonthCategory[m] || {};
+                return Object.keys(monthData)
+                    .filter(cat => !topCategories.includes(cat))
+                    .reduce((sum, cat) => sum + monthData[cat], 0);
+            }),
+            backgroundColor: cssVarAlpha('color-chart-slate', 0.5),
+            borderRadius: 2
+        });
+    }
+
+    categoryMixChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { callback: (val) => `${val.toLocaleString('pl-PL')} zł` }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Load and render average client satisfaction rating (12-month rolling, 1–5 scale).
+ */
+async function loadSatisfactionTrend() {
+    const response = await fetch('/api/analytics/rolling/satisfaction-rating');
+    const data = await response.json();
+    const ctx = document.getElementById('satisfactionRatingChart');
+    if (!ctx || !data.success) return;
+
+    if (satisfactionRatingChart) satisfactionRatingChart.destroy();
+
+    const PL_MONTHS = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
+    const labels = data.overall.map(m => {
+        const [y, mo] = m.month_start.split('-').map(Number);
+        return `${PL_MONTHS[mo - 1]} ${y}`;
+    });
+
+    satisfactionRatingChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Śr. ocena klientów',
+                data: data.overall.map(m => m.avg_score != null ? Number(m.avg_score) : null),
+                borderColor: chartColor('color-accent'),
+                backgroundColor: chartColorAlpha('color-accent', 0.12),
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: true,
+                tension: 0.3,
+                spanGaps: true,
+                _scoredCount: data.overall.map(m => m.scored_count)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.parsed.y != null
+                            ? `Śr. ocena: ${ctx.parsed.y.toFixed(2)} / 5 (${ctx.dataset._scoredCount[ctx.dataIndex]} ocen)`
+                            : 'Brak ocen w tym miesiącu'
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { min: 1, max: 5, ticks: { stepSize: 1 } }
             }
         }
     });

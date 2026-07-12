@@ -66,6 +66,7 @@
 <!-- Section Navigation Strip -->
 <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1 flex-nowrap">
     <span class="text-xs text-[var(--color-ink-subtle)] shrink-0">Przejdź do:</span>
+    <button onclick="scrollToSection('nav-kpi')"        class="refined-btn-secondary refined-btn-sm shrink-0">Przegląd</button>
     <button onclick="scrollToSection('nav-profit')"     class="refined-btn-secondary refined-btn-sm shrink-0">Zysk netto</button>
     <button onclick="scrollToSection('nav-employees')"  class="refined-btn-secondary refined-btn-sm shrink-0">Pracownicy</button>
     <button onclick="scrollToSection('nav-clients')"    class="refined-btn-secondary refined-btn-sm shrink-0">Klienci</button>
@@ -388,6 +389,24 @@
         <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Czy koszty dostawców pochłaniają więcej przychodu?</p>
         <div style="height: 280px;">
             <canvas id="costRatioChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Service category mix + Satisfaction rating -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-1">Struktura przychodu wg kategorii usług</h3>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Które linie usług rosną, a które kurczą się?</p>
+        <div style="height: 280px;">
+            <canvas id="categoryMixChart"></canvas>
+        </div>
+    </div>
+    <div class="refined-card">
+        <h3 class="text-lg font-medium mb-1">Średnia ocena satysfakcji klientów</h3>
+        <p class="text-xs text-[var(--color-ink-subtle)] mb-4">Skala 1–5, wg ocen wystawionych po wizycie</p>
+        <div style="height: 280px;">
+            <canvas id="satisfactionRatingChart"></canvas>
         </div>
     </div>
 </div>
