@@ -138,6 +138,49 @@ class ClientPreferenceRepository:
 
         return None
 
+    def get_preferred_employee_ids(self, client_id: int, service_id: Optional[int] = None,
+                                    category: Optional[str] = None) -> set:
+        """Wszyscy preferowani pracownicy klienta pasujący do usługi/kategorii
+        (nie tylko najlepsze dopasowanie jak get_suggested_employee) — używane do
+        oznaczania kandydatów na zastępstwo jako 'niepreferowany' (Faza 0/3)."""
+        excl_sql, excl_params = emp_exclusion_sql('cp.preferred_employee_id')
+        ids: set = set()
+
+        if service_id:
+            query = f"""
+                SELECT cp.preferred_employee_id
+                FROM client_preferences cp
+                WHERE cp.client_id = %s AND cp.service_id = %s {excl_sql}
+            """
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (client_id, service_id, *excl_params))
+                ids.update(r['preferred_employee_id'] for r in cursor.fetchall())
+
+        if category:
+            query = f"""
+                SELECT cp.preferred_employee_id
+                FROM client_preferences cp
+                WHERE cp.client_id = %s AND cp.service_category = %s AND cp.service_id IS NULL {excl_sql}
+            """
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (client_id, category, *excl_params))
+                ids.update(r['preferred_employee_id'] for r in cursor.fetchall())
+
+        if not service_id and not category:
+            query = f"""
+                SELECT cp.preferred_employee_id
+                FROM client_preferences cp
+                WHERE cp.client_id = %s {excl_sql}
+            """
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (client_id, *excl_params))
+                ids.update(r['preferred_employee_id'] for r in cursor.fetchall())
+
+        return ids
+
     def get_clients_preferring_employee(self, employee_id: int) -> List[Any]:
         """Pobierz klientów, którzy preferują danego pracownika"""
         excl_sql, excl_params = emp_exclusion_sql('cp.preferred_employee_id')

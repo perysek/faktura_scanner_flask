@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request, Response, stream_with_context
 from flask_login import login_required, current_user
 
 from config.appointment_statuses import AppointmentStatus
-from config.auth_config import module_permission_required, role_required
+from config.auth_config import module_permission_required, role_required, absence_management_required
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
@@ -74,6 +74,148 @@ def _send_confirmation_request_sms(appointment_id: int) -> None:
                           sender_user_id=uid, sender_name=uname, base_url=base_url)
     except Exception as exc:
         logging.error('_send_confirmation_request_sms failed appt_id=%s: %s', appointment_id, exc)
+
+
+def _services_payload_for(appointment_id: int) -> list:
+    """Build the `services` list update_appointment() requires, from an
+    appointment's existing appointment_services rows (used by the absence
+    reassign/reschedule helpers below, which change timing/employee only)."""
+    rows = AppointmentServiceRepository().get_all_for_appointment(appointment_id)
+    return [{
+        'service_id': s['service_id'],
+        'price_charged': float(s['price_charged']),
+        'duration_minutes': s['duration_minutes'],
+        'is_addon': s['is_addon'],
+    } for s in rows]
+
+
+def _do_reassign(appointment_id: int, absence_id: int, new_employee_id: int) -> int:
+    """Reassign one appointment to new_employee_id, write a resolution row, and
+    fire-and-forget notify the new employee. Raises AppError if the reassignment
+    itself fails (e.g. the slot was taken between candidate-fetch and this call —
+    force_save stays False so update_appointment's own conflict checks apply)."""
+    from datetime import timedelta
+    row = AppointmentRepository().get_by_id(appointment_id)
+    if not row:
+        raise NotFoundError('Wizyta nie istnieje')
+    previous_employee_id = row['employee_id']
+
+    start_time = row['start_time']
+    if isinstance(start_time, timedelta):
+        start_time = (datetime.min + start_time).time()
+    end_time = row['end_time']
+    if isinstance(end_time, timedelta):
+        end_time = (datetime.min + end_time).time()
+    appt_date = row['appointment_date']
+    if isinstance(appt_date, str):
+        appt_date = datetime.strptime(appt_date, '%Y-%m-%d').date()
+
+    AppointmentBusinessService().update_appointment(
+        appointment_id=appointment_id,
+        client_id=row['client_id'],
+        employee_id=new_employee_id,
+        appointment_date=appt_date,
+        start_time=start_time,
+        end_time=end_time,
+        status=row['status'],
+        notes=row['notes'],
+        services=_services_payload_for(appointment_id),
+        force_save=False,
+        discount_amount=row['discount_amount'] or 0,
+        satisfaction_score=row['satisfaction_score'],
+    )
+
+    from repositories.absences.absence_conflict_resolution_repository import (
+        AbsenceConflictResolutionRepository,
+    )
+    AbsenceConflictResolutionRepository().create(
+        absence_id=absence_id, appointment_id=appointment_id,
+        resolution_type='reassigned',
+        previous_employee_id=previous_employee_id, new_employee_id=new_employee_id,
+        resolved_by_user_id=current_user.id,
+    )
+
+    from routes.absence_routes import _notify_reassigned_employee
+    _notify_reassigned_employee(appointment_id, new_employee_id)
+
+    return appointment_id
+
+
+def _do_reschedule(appointment_id: int, absence_id: int,
+                   new_date, new_start_time, new_end_time) -> int:
+    """Reschedule one appointment to a new date/time (same employee), write a
+    resolution row. Raises AppError if update_appointment's own checks reject it."""
+    from datetime import timedelta
+    row = AppointmentRepository().get_by_id(appointment_id)
+    if not row:
+        raise NotFoundError('Wizyta nie istnieje')
+
+    previous_date = row['appointment_date']
+    if isinstance(previous_date, str):
+        previous_date = datetime.strptime(previous_date, '%Y-%m-%d').date()
+    previous_start = row['start_time']
+    if isinstance(previous_start, timedelta):
+        previous_start = (datetime.min + previous_start).time()
+    previous_end = row['end_time']
+    if isinstance(previous_end, timedelta):
+        previous_end = (datetime.min + previous_end).time()
+
+    AppointmentBusinessService().update_appointment(
+        appointment_id=appointment_id,
+        client_id=row['client_id'],
+        employee_id=row['employee_id'],
+        appointment_date=new_date,
+        start_time=new_start_time,
+        end_time=new_end_time,
+        status=row['status'],
+        notes=row['notes'],
+        services=_services_payload_for(appointment_id),
+        force_save=False,
+        discount_amount=row['discount_amount'] or 0,
+        satisfaction_score=row['satisfaction_score'],
+    )
+
+    from repositories.absences.absence_conflict_resolution_repository import (
+        AbsenceConflictResolutionRepository,
+    )
+    AbsenceConflictResolutionRepository().create(
+        absence_id=absence_id, appointment_id=appointment_id,
+        resolution_type='rescheduled',
+        previous_date=previous_date, previous_start_time=previous_start,
+        previous_end_time=previous_end,
+        new_date=new_date, new_start_time=new_start_time, new_end_time=new_end_time,
+        resolved_by_user_id=current_user.id,
+    )
+
+    return appointment_id
+
+
+def _do_cancel(appointment_id: int, absence_id: int,
+              cancellation_reason: str, send_sms: bool) -> int:
+    """Cancel one appointment (keeps the reason, per AppointmentBusinessService.
+    cancel_appointment — not the hard-delete route), write a resolution row, and
+    optionally notify the client by SMS."""
+    row = AppointmentRepository().get_by_id(appointment_id)
+    if not row:
+        raise NotFoundError('Wizyta nie istnieje')
+
+    AppointmentBusinessService().cancel_appointment(appointment_id, cancellation_reason)
+
+    from repositories.absences.absence_conflict_resolution_repository import (
+        AbsenceConflictResolutionRepository,
+    )
+    AbsenceConflictResolutionRepository().create(
+        absence_id=absence_id, appointment_id=appointment_id,
+        resolution_type='cancelled',
+        cancellation_reason=cancellation_reason,
+        resolved_by_user_id=current_user.id,
+    )
+
+    if send_sms:
+        from routes.absence_routes import _send_absence_cancellation_sms
+        _send_absence_cancellation_sms(appointment_id)
+
+    return appointment_id
 
 
 def _audit(entity_type, action, entity_id=None, entity_label=None,
@@ -771,6 +913,132 @@ def get_available_slots():
         raise AppError('Wystapil blad serwera')
 
 
+# ── Supervisor conflict-resolution modal (Faza 3) ────────────────────────────
+
+@appointment_bp.route('/appointments/<int:appointment_id>/reassignment-candidates', methods=['GET'])
+@login_required
+@absence_management_required
+def reassignment_candidates(appointment_id):
+    """Eligible replacement employees for a conflicting appointment — see
+    AppointmentBusinessService.get_reassignment_candidates for the eligibility
+    rule (can perform every service ∩ not absence-approved ∩ not double-booked)."""
+    try:
+        service = AppointmentBusinessService()
+        candidates = service.get_reassignment_candidates(appointment_id)
+        return jsonify({'success': True, 'candidates': candidates})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in reassignment_candidates')
+        raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/reassign-for-absence', methods=['POST'])
+@login_required
+@absence_management_required
+def reassign_for_absence(appointment_id):
+    """Reassign a conflicting appointment to a different employee. bulk=true also
+    applies the same replacement to every other still-conflicting appointment on
+    this absence for which the replacement is a valid candidate (AD-10 — reassign
+    and cancel support bulk, reschedule doesn't: there's no single "same new time"
+    that's valid across appointments originally at different times)."""
+    try:
+        data = request.get_json() or {}
+        if not data.get('absence_id') or not data.get('new_employee_id'):
+            raise ValidationError('Wymagane: absence_id, new_employee_id')
+        absence_id = int(data['absence_id'])
+        new_employee_id = int(data['new_employee_id'])
+        bulk = bool(data.get('bulk', False))
+
+        applied = [_do_reassign(appointment_id, absence_id, new_employee_id)]
+        skipped = []
+
+        if bulk:
+            from services.absence_service import AbsenceService
+            for conflict in AbsenceService().get_live_conflicts(absence_id):
+                other_id = conflict['appointment_id']
+                candidates = AppointmentBusinessService().get_reassignment_candidates(other_id)
+                if not any(c['employee_id'] == new_employee_id for c in candidates):
+                    skipped.append(other_id)
+                    continue
+                try:
+                    applied.append(_do_reassign(other_id, absence_id, new_employee_id))
+                except AppError:
+                    skipped.append(other_id)
+
+        return jsonify({'success': True, 'applied': applied, 'skipped': skipped})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in reassign_for_absence')
+        raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/reschedule-for-absence', methods=['POST'])
+@login_required
+@absence_management_required
+def reschedule_for_absence(appointment_id):
+    """Reschedule a conflicting appointment to a new date/time (same employee).
+    No bulk option — see AD-10."""
+    try:
+        data = request.get_json() or {}
+        if not data.get('absence_id'):
+            raise ValidationError('Wymagane: absence_id')
+        new_date = _parse_date(data.get('new_date'))
+        new_start_time = _parse_time(data.get('new_start_time'))
+        new_end_time = _parse_time(data.get('new_end_time'))
+        if not new_date or not new_start_time or not new_end_time:
+            raise ValidationError('Wymagane: new_date, new_start_time, new_end_time')
+
+        appointment_id = _do_reschedule(
+            appointment_id, int(data['absence_id']), new_date, new_start_time, new_end_time
+        )
+        return jsonify({'success': True, 'appointment_id': appointment_id})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in reschedule_for_absence')
+        raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/cancel-for-absence', methods=['POST'])
+@login_required
+@absence_management_required
+def cancel_for_absence(appointment_id):
+    """Cancel a conflicting appointment (no replacement available), with an
+    opt-in client SMS notice. bulk=true cancels every other still-conflicting
+    appointment on this absence too — no eligibility re-check needed, unlike
+    reassign."""
+    try:
+        data = request.get_json() or {}
+        if not data.get('absence_id'):
+            raise ValidationError('Wymagane: absence_id')
+        absence_id = int(data['absence_id'])
+        cancellation_reason = (data.get('cancellation_reason') or 'Nieobecność pracownika').strip()
+        send_sms = bool(data.get('send_sms', False))
+        bulk = bool(data.get('bulk', False))
+
+        applied = [_do_cancel(appointment_id, absence_id, cancellation_reason, send_sms)]
+
+        if bulk:
+            from services.absence_service import AbsenceService
+            for conflict in AbsenceService().get_live_conflicts(absence_id):
+                try:
+                    applied.append(
+                        _do_cancel(conflict['appointment_id'], absence_id, cancellation_reason, send_sms)
+                    )
+                except AppError:
+                    logging.warning('cancel_for_absence bulk: failed to cancel appt_id=%s',
+                                    conflict['appointment_id'])
+
+        return jsonify({'success': True, 'applied': applied})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in cancel_for_absence')
+        raise AppError('Wystapil blad serwera')
+
+
 @appointment_bp.route('/appointments/employees', methods=['GET'])
 @login_required
 @module_permission_required('appointments')
@@ -818,7 +1086,7 @@ def get_absences_for_calendar():
 
         from repositories.absences.absence_repository import AbsenceRepository
         rows = AbsenceRepository().list_all(
-            status_in=['approved'],
+            status_in=['approved', 'pending'],
             date_from=start_date,
             date_to=end_date,
         )
@@ -832,6 +1100,7 @@ def get_absences_for_calendar():
                 'time_from':     str(ab['time_from'])[:5] if ab['time_from'] else None,
                 'time_to':       str(ab['time_to'])[:5]   if ab['time_to']   else None,
                 'category_name': ab.get('category_name', 'Nieobecność'),
+                'status':        ab['status'],
             })
 
         return jsonify({'success': True, 'absences': absences})
@@ -914,7 +1183,7 @@ def get_multi_employee_schedule():
             from repositories.absences.absence_repository import AbsenceRepository
             from repositories.employees.employee_repository import EmployeeRepository
             absence_rows = AbsenceRepository().list_all(
-                status_in=['approved'],
+                status_in=['approved', 'pending'],
                 date_from=schedule_date,
                 date_to=schedule_date,
             )
@@ -956,7 +1225,7 @@ def get_multi_employee_schedule():
         try:
             from repositories.absences.absence_repository import AbsenceRepository
             abs_rows = AbsenceRepository().list_all(
-                status_in=['approved'],
+                status_in=['approved', 'pending'],
                 date_from=schedule_date,
                 date_to=schedule_date,
             )
@@ -969,6 +1238,7 @@ def get_multi_employee_schedule():
                     'category_name': ab.get('category_name', 'Nieobecność'),
                     'time_from': str(ab['time_from'])[:5] if ab['time_from'] else None,
                     'time_to':   str(ab['time_to'])[:5]   if ab['time_to']   else None,
+                    'status': ab['status'],
                 })
         except Exception:
             logging.warning('Could not load absences for calendar', exc_info=True)

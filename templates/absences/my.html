@@ -180,7 +180,7 @@
                 Brak przypisanego przełożonego. Skontaktuj się z administratorem — nie możesz składać wniosków.
             </div>
             {% else %}
-            <form method="POST" action="{{ url_for('absence.submit_request') }}">
+            <form id="absence-request-form" method="POST" action="{{ url_for('absence.submit_request') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-grid">
                     <!-- Category -->

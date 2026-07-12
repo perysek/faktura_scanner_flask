@@ -63,7 +63,8 @@ class SmsMessageTypeRepository(BaseRepository):
 
     def create_custom(self, name: str, send_hours_before: int,
                       template_text: str, include_confirm_link: bool,
-                      include_cancel_link: bool = False) -> int:
+                      include_cancel_link: bool = False,
+                      include_booking_link: bool = False) -> int:
         count_row = self._fetch_one(
             "SELECT COUNT(*) AS c FROM sms_message_types WHERE is_custom = TRUE", ()
         )
@@ -72,12 +73,13 @@ class SmsMessageTypeRepository(BaseRepository):
         query = """
             INSERT INTO sms_message_types
                 (type_key, name, is_enabled, send_hours_before, template_text,
-                 include_confirm_link, include_cancel_link, is_custom, sort_order)
-            VALUES (%s, %s, FALSE, %s, %s, %s, %s, TRUE, 99)
+                 include_confirm_link, include_cancel_link, include_booking_link,
+                 is_custom, sort_order)
+            VALUES (%s, %s, FALSE, %s, %s, %s, %s, %s, TRUE, 99)
         """
         return self._execute_insert(query, (
             type_key, name, send_hours_before,
-            template_text, include_confirm_link, include_cancel_link
+            template_text, include_confirm_link, include_cancel_link, include_booking_link
         ))
 
     def get_event_triggered_by_status(self, trigger_on_status: str) -> List[dict]:

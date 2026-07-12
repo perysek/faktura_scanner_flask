@@ -51,11 +51,13 @@ class SmsService:
 
     def create_custom_type(self, name: str, send_hours_before: int,
                            template_text: str, include_confirm_link: bool,
-                           include_cancel_link: bool = False) -> int:
+                           include_cancel_link: bool = False,
+                           include_booking_link: bool = False) -> int:
         return self._type_repo.create_custom(
             name=name, send_hours_before=send_hours_before,
             template_text=template_text, include_confirm_link=include_confirm_link,
             include_cancel_link=include_cancel_link,
+            include_booking_link=include_booking_link,
         )
 
     def delete_custom_type(self, type_id: int) -> bool:
@@ -138,8 +140,10 @@ class SmsService:
             base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
         confirm_url = f"{base_url}/confirm/{token}"
         cancel_url = f"{base_url}/cancel/{token}"
+        booking_url = f"{base_url.rstrip('/')}/booking"
 
-        message_body = self._build_message(appt, client, msg_type, confirm_url, cancel_url, base_url)
+        message_body = self._build_message(appt, client, msg_type, confirm_url, cancel_url,
+                                            base_url, booking_url)
 
         reminder_id = self._reminder_repo.create(
             appointment_id=appointment_id,
@@ -255,6 +259,39 @@ class SmsService:
             from twilio.rest import Client as TwilioClient
             twilio = TwilioClient(settings['account_sid'], settings['auth_token'])
             send_kwargs = {'body': body, 'to': employee_phone}
+            if settings.get('messaging_service_sid'):
+                send_kwargs['messaging_service_sid'] = settings['messaging_service_sid']
+            else:
+                send_kwargs['from_'] = settings['from_number']
+            twilio.messages.create(**send_kwargs)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def notify_employee_direct(self, employee_id: int, body: str) -> dict:
+        """Plain-text SMS straight to an employee's own phone, bypassing the
+        sms_message_types lookup entirely — for internal staff notices (e.g. 'you
+        were reassigned a visit') that aren't a client-facing configurable
+        template. Mirrors _send_employee_reminder_direct's Twilio-call shape.
+        Returns {success, error?} instead of raising — callers treat this as a
+        best-effort notification, never a reason to fail the caller's own action.
+        """
+        from repositories.employees.employee_repository import EmployeeRepository
+
+        settings = self.get_settings()
+        if not settings.get('is_active') or not settings.get('account_sid') or not settings.get('auth_token'):
+            return {'success': False, 'error': 'SMS wyłączone lub brak konfiguracji Twilio'}
+        if not settings.get('messaging_service_sid') and not settings.get('from_number'):
+            return {'success': False, 'error': 'Brak numeru nadawcy SMS'}
+
+        employee = EmployeeRepository().get_by_id(employee_id)
+        if not employee or not employee['phone']:
+            return {'success': False, 'error': 'Brak numeru telefonu pracownika'}
+
+        try:
+            from twilio.rest import Client as TwilioClient
+            twilio = TwilioClient(settings['account_sid'], settings['auth_token'])
+            send_kwargs = {'body': body, 'to': self._normalize_phone(employee['phone'])}
             if settings.get('messaging_service_sid'):
                 send_kwargs['messaging_service_sid'] = settings['messaging_service_sid']
             else:
@@ -381,7 +418,7 @@ class SmsService:
 
     def _build_message(self, appt: dict, client, msg_type: dict,
                        confirm_url: str, cancel_url: str = '',
-                       base_url: str = '') -> str:
+                       base_url: str = '', booking_url: str = '') -> str:
         from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
         services_rows = AppointmentServiceRepository().get_all_for_appointment(appt['id'])
         service_names = ', '.join(s['service_name'] for s in services_rows) if services_rows else ''
@@ -402,6 +439,7 @@ class SmsService:
         has_confirm_placeholder = '{confirm_url}' in template
         has_cancel_placeholder = '{cancel_url}' in template
         has_rate_placeholder = '{rate_url}' in template
+        has_booking_placeholder = '{booking_url}' in template
 
         rating_token = appt.get('rating_token', '')
         rate_url = f"{base_url.rstrip('/')}/rate/{rating_token}" if rating_token else ''
@@ -416,6 +454,7 @@ class SmsService:
             .replace('{confirm_url}', confirm_url if msg_type['include_confirm_link'] else '')
             .replace('{cancel_url}', cancel_url if msg_type.get('include_cancel_link') else '')
             .replace('{rate_url}', rate_url if msg_type.get('include_rate_link') else '')
+            .replace('{booking_url}', booking_url if msg_type.get('include_booking_link') else '')
         )
 
         if msg_type['include_confirm_link'] and not has_confirm_placeholder:
@@ -426,5 +465,8 @@ class SmsService:
 
         if msg_type.get('include_rate_link') and not has_rate_placeholder and rate_url:
             body = body.rstrip() + '\n' + rate_url
+
+        if msg_type.get('include_booking_link') and not has_booking_placeholder and booking_url:
+            body = body.rstrip() + '\n' + booking_url
 
         return body.strip()

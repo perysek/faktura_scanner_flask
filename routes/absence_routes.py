@@ -75,6 +75,50 @@ def _svc():
     return AbsenceService()
 
 
+def _notify_reassigned_employee(appointment_id: int, new_employee_id: int) -> None:
+    """Direct SMS to the newly-assigned employee about their new appointment —
+    an internal staff notice, not a client-facing configurable template (see
+    SmsService.notify_employee_direct). Never raises: a notification failure
+    must not fail the reassignment that triggered it."""
+    try:
+        from repositories.appointments.appointment_repository import AppointmentRepository
+        from repositories.clients.client_repository import ClientRepository
+        from services.sms_service import SmsService
+
+        appt = AppointmentRepository().get_by_id(appointment_id)
+        if not appt:
+            return
+        client = ClientRepository().get_by_id(appt['client_id'])
+        client_name = f"{client['first_name']} {client['last_name']}" if client else 'klient'
+        start_time = str(appt['start_time'])[:5]
+        appt_date = appt['appointment_date']
+        date_fmt = appt_date.strftime('%d.%m.%Y') if hasattr(appt_date, 'strftime') else str(appt_date)
+
+        body = (
+            f"Zostałeś przypisany do wizyty: {client_name}, {date_fmt} godz. {start_time}. "
+            f"Sprawdź grafik w systemie."
+        )
+        SmsService().notify_employee_direct(new_employee_id, body)
+    except Exception:
+        logger.exception('_notify_reassigned_employee failed appt_id=%s new_employee_id=%s',
+                         appointment_id, new_employee_id)
+
+
+def _send_absence_cancellation_sms(appointment_id: int) -> None:
+    """Client-facing cancellation notice, sent through the ordinary SMS type
+    machinery (type_key='absence_cancellation', seeded in Faza 0 — admin opts in
+    from the SMS settings page like any other custom type). Mirrors
+    _send_confirmation_request_sms's error-swallowing convention: a failed
+    notice must never fail the cancellation itself."""
+    try:
+        from services.sms_service import SmsService
+        from flask import current_app
+        base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
+        SmsService().send(appointment_id, 'absence_cancellation', base_url=base_url)
+    except Exception:
+        logger.exception('_send_absence_cancellation_sms failed appt_id=%s', appointment_id)
+
+
 # ── employee self-service ─────────────────────────────────────────────────────
 
 @absence_bp.route('/my-absences')
@@ -99,6 +143,27 @@ def my_absences():
         supervisors=supervisors,
         employee=emp,
     )
+
+
+@absence_bp.route('/my-absences/preview-conflicts', methods=['GET'])
+@login_required
+def preview_conflicts():
+    """Nieblokujący podgląd konfliktów z wizytami przed złożeniem wniosku (Faza 2).
+
+    Zawsze rozwiązuje employee_id z zalogowanego użytkownika — nigdy z parametru
+    żądania, żeby nie dało się podejrzeć konfliktów cudzego grafiku."""
+    emp = get_linked_employee(current_user)
+    if not emp:
+        return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
+    try:
+        date_from = _parse_date(request.args.get('date_from'))
+        date_to = _parse_date(request.args.get('date_to', request.args.get('date_from')))
+        time_from = _parse_time_opt(request.args.get('time_from'))
+        time_to = _parse_time_opt(request.args.get('time_to'))
+        conflicts = _svc().preview_conflicts(emp['id'], date_from, date_to, time_from, time_to)
+        return jsonify({'success': True, 'conflicts': conflicts})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
 
 
 @absence_bp.route('/my-absences/submit', methods=['POST'])
@@ -266,6 +331,50 @@ def cancel_approved_absence(absence_id: int):
         return jsonify({'success': True, 'status': 'cancelled'})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@absence_bp.route('/absences/<int:absence_id>/conflicts', methods=['GET'])
+@absence_management_required
+def live_conflicts(absence_id: int):
+    """Żywy odczyt aktualnych konfliktów wniosku — re-fetched przez modal po
+    każdej akcji rozwiązania konfliktu (Faza 3 / AD-8). Pusta lista = wszystko
+    rozwiązane = przycisk 'Zatwierdź' może się odblokować."""
+    try:
+        conflicts = _svc().get_live_conflicts(absence_id)
+        return jsonify({'success': True, 'conflicts': conflicts})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@absence_bp.route('/absences/<int:absence_id>/resolutions', methods=['GET'])
+@absence_management_required
+def resolution_history(absence_id: int):
+    """Historia rozwiązań konfliktów dla tego wniosku (Faza 3 — widok 'Historia
+    rozwiązań' w modalu, tylko do odczytu)."""
+    from repositories.absences.absence_conflict_resolution_repository import (
+        AbsenceConflictResolutionRepository,
+    )
+    rows = AbsenceConflictResolutionRepository().list_for_absence(absence_id)
+    resolutions = []
+    for r in rows:
+        resolutions.append({
+            'id': r['id'],
+            'resolution_type': r['resolution_type'],
+            'client_name': r['client_name'],
+            'service_name': r['service_name'],
+            'previous_employee_name': r['previous_employee_name'],
+            'new_employee_name': r['new_employee_name'],
+            'previous_date': str(r['previous_date']) if r['previous_date'] else None,
+            'previous_start_time': str(r['previous_start_time'])[:5] if r['previous_start_time'] else None,
+            'previous_end_time': str(r['previous_end_time'])[:5] if r['previous_end_time'] else None,
+            'new_date': str(r['new_date']) if r['new_date'] else None,
+            'new_start_time': str(r['new_start_time'])[:5] if r['new_start_time'] else None,
+            'new_end_time': str(r['new_end_time'])[:5] if r['new_end_time'] else None,
+            'cancellation_reason': r['cancellation_reason'],
+            'resolved_by_name': r['resolved_by_name'],
+            'resolved_at': r['resolved_at'].strftime('%d.%m.%Y %H:%M') if r['resolved_at'] else None,
+        })
+    return jsonify({'success': True, 'resolutions': resolutions})
 
 
 @absence_bp.route('/absences/manual', methods=['POST'])

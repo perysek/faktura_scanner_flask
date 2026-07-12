@@ -60,6 +60,9 @@
     .emp-cell { display: flex; align-items: center; gap: 0.375rem; }
     .emp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .emp-name { font-weight: 300; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .absence-indicator { display: inline-flex; flex-shrink: 0; width: 0.875rem; height: 0.875rem; }
+    .absence-indicator--pending { color: #b45309; }
+    .absence-indicator--approved { color: #991b1b; }
     .stars-desktop { color: #c9a227; letter-spacing: 0.05em; white-space: nowrap; }
     .stars-none { color: var(--color-ink-subtle); }
 
@@ -300,6 +303,7 @@ function empColor(id) {
 // time (same model as the week calendar); prev/next page ±7 days and re-fetch.
 // getMonday is a hoisted function declaration, so calling it here is safe.
 let allAppointments = [];
+let allAbsences = [];
 let searchQuery = '';
 let sortState = { column: 'appointment_date', direction: 'asc' };
 let currentWeekStart = getMonday(new Date());
@@ -597,6 +601,36 @@ function updateNewAppointmentLink() {
     if (newAppointmentBtn) newAppointmentBtn.href = `/appointment/create?${params}`;
 }
 
+// ── Absence indicator (client-side merge — AD-3) ────────────────────────────
+
+// Absences for the employee overlapping this appointment's date/time. Full-day
+// absences (time_from == null) match on date alone; slot absences must overlap
+// the appointment's own start/end. Prefers an 'approved' match over 'pending'
+// when both happen to apply (approved is the stronger signal).
+function findAbsenceMatch(appt, absences) {
+    let match = null;
+    for (const ab of absences) {
+        if (ab.employee_id !== appt.employee_id) continue;
+        if (appt.appointment_date < ab.date_from || appt.appointment_date > ab.date_to) continue;
+        if (ab.time_from) {
+            const apptStart = String(appt.start_time || '').slice(0, 5);
+            const apptEnd = String(appt.end_time || '').slice(0, 5);
+            if (!(ab.time_from < apptEnd && ab.time_to > apptStart)) continue;
+        }
+        if (!match || (match.status === 'pending' && ab.status === 'approved')) match = ab;
+    }
+    return match;
+}
+
+function renderAbsenceIndicator(appt) {
+    const match = findAbsenceMatch(appt, allAbsences);
+    if (!match) return '';
+    if (match.status === 'pending') {
+        return `<span class="absence-indicator absence-indicator--pending" role="img" aria-label="Pracownik ma nierozpatrzony wniosek o nieobecność w tym terminie" title="Oczekujący wniosek o nieobecność">${Icons.svg('schedule')}</span>`;
+    }
+    return `<span class="absence-indicator absence-indicator--approved" role="img" aria-label="Pracownik ma zatwierdzoną nieobecność w tym terminie" title="Zatwierdzona nieobecność — konflikt z wizytą">${Icons.svg('event_busy')}</span>`;
+}
+
 // ── Table rendering ───────────────────────────────────────────────────────────
 
 function renderTable(appointments) {
@@ -623,7 +657,7 @@ function renderTable(appointments) {
                 <td class="cell-name">${escapeHtml(a.client_name)}</td>
                 <td data-label="Usługa" class="cell-service">${escapeHtml(serviceName)}</td>
                 <td data-label="Pracownik">
-                    <span class="emp-cell"><span class="emp-dot" style="background:${dot};"></span><span class="emp-name">${escapeHtml(a.employee_name)}</span></span>
+                    <span class="emp-cell"><span class="emp-dot" style="background:${dot};"></span><span class="emp-name">${escapeHtml(a.employee_name)}</span>${renderAbsenceIndicator(a)}</span>
                 </td>
                 <td data-label="Kwota" class="cell-price cell-hide-sm">${formatCurrency(a.total_price)}</td>
                 <td data-label="Status"><span class="status-badge ${a.status} ${badgeClass}" ${badgeData} title="${hasTransitions ? 'Kliknij aby zmienić status' : ''}">${statusLabel}</span></td>
@@ -668,8 +702,19 @@ async function loadAppointments() {
     if (urlEmp) params.set('employee_id', urlEmp);
 
     try {
-        const response = await fetch(`/api/appointments?${params}`);
+        const absParams = new URLSearchParams({
+            start_date: fmtLocal(currentWeekStart),
+            end_date: fmtLocal(weekEndDate()),
+        });
+        const [response, absResponse] = await Promise.all([
+            fetch(`/api/appointments?${params}`),
+            fetch(`/api/appointments/absences?${absParams}`),
+        ]);
         const data = await response.json();
+        if (absResponse.ok) {
+            const absData = await absResponse.json();
+            allAbsences = absData.absences || [];
+        }
         if (data.success) {
             allAppointments = data.appointments;
             applyFilters();

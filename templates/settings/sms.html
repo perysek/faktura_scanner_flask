@@ -378,6 +378,11 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
                        {% if mt.include_cancel_link %}checked{% endif %}>
                 <label class="form-label" for="cxl-{{ mt.id }}">Dołącz link anulowania ({cancel_url})</label>
             </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_booking_link" id="bkl-{{ mt.id }}"
+                       {% if mt.include_booking_link %}checked{% endif %}>
+                <label class="form-label" for="bkl-{{ mt.id }}">Dołącz link do rezerwacji online ({booking_url})</label>
+            </div>
             {% if mt.is_event_triggered %}
             <div class="form-field form-field--inline">
                 <input type="checkbox" name="include_rate_link" id="rl-{{ mt.id }}"
@@ -408,6 +413,7 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
         <code>{salon_name}</code> <code>{client_name}</code> <code>{date}</code>
         <code>{time}</code> <code>{employee_name}</code> <code>{services}</code>
         <code>{hours_before}</code> <code>{confirm_url}</code> <code>{cancel_url}</code> <code>{rate_url}</code>
+        <code>{booking_url}</code>
     </div>
 
     <!-- Add custom type -->
@@ -434,6 +440,10 @@ details[open] > summary .btn-delete-type { opacity: 0; pointer-events: none; }
             <div class="form-field form-field--inline">
                 <input type="checkbox" name="include_cancel_link" id="new-cxl">
                 <label class="form-label" for="new-cxl">Dołącz link anulowania</label>
+            </div>
+            <div class="form-field form-field--inline">
+                <input type="checkbox" name="include_booking_link" id="new-bkl">
+                <label class="form-label" for="new-bkl">Dołącz link do rezerwacji online</label>
             </div>
             <button type="submit" class="btn-primary">Dodaj typ</button>
         </form>
@@ -502,14 +512,20 @@ document.querySelectorAll('[id^="cxl-"]').forEach(cb => {
     const ta = document.getElementById('tmpl-' + cb.id.replace('cxl-', ''));
     if (ta) wireUrlCheckbox(cb, '{cancel_url}', ta);
 });
+document.querySelectorAll('[id^="bkl-"]').forEach(cb => {
+    const ta = document.getElementById('tmpl-' + cb.id.replace('bkl-', ''));
+    if (ta) wireUrlCheckbox(cb, '{booking_url}', ta);
+});
 
 // New-type form
 const _newTa = document.querySelector('#add-custom-type textarea[name="template_text"]');
 if (_newTa) {
     const _newCl  = document.getElementById('new-cl');
     const _newCxl = document.getElementById('new-cxl');
+    const _newBkl = document.getElementById('new-bkl');
     if (_newCl)  wireUrlCheckbox(_newCl,  '{confirm_url}', _newTa);
     if (_newCxl) wireUrlCheckbox(_newCxl, '{cancel_url}',  _newTa);
+    if (_newBkl) wireUrlCheckbox(_newBkl, '{booking_url}', _newTa);
 }
 
 function deleteMessageType(id, e) {

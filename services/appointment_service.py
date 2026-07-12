@@ -38,6 +38,8 @@ class AppointmentBusinessService:
         self.pricing = PricingService()
         from repositories.absences.absence_repository import AbsenceRepository
         self.absence_repo = AbsenceRepository()
+        from repositories.clients.client_preference_repository import ClientPreferenceRepository
+        self.pref_repo = ClientPreferenceRepository()
 
     def _validate_working_hours(self, employee_id: int, appt_date: date,
                                 start_time: time, end_time: time = None) -> None:
@@ -834,3 +836,75 @@ class AppointmentBusinessService:
             'total_duration': total_duration,
             'service_count': len(services)
         }
+
+    def get_reassignment_candidates(self, appointment_id: int) -> List[dict]:
+        """Kandydaci na zastępstwo dla wizyty kolidującej z nieobecnością (Faza 3).
+
+        Przecięcie: potrafi wykonać KAŻDĄ usługę główną wizyty ∩ brak zatwierdzonej
+        nieobecności w tym terminie ∩ brak innej kolidującej wizyty w tym terminie.
+        Ocalali są oznaczani ``is_preferred`` względem preferencji klienta (unia po
+        wszystkich usługach wizyty — klient mógł wskazać innego preferowanego
+        pracownika dla każdej z nich).
+        """
+        appt_row = self.appt_repo.get_by_id(appointment_id)
+        if not appt_row:
+            raise AppointmentError("Wizyta nie istnieje")
+
+        main_services = self.appt_svc_repo.get_main_services(appointment_id)
+        service_ids = [row['service_id'] for row in main_services]
+        if not service_ids:
+            return []
+
+        candidate_sets = []
+        candidates_by_id = {}
+        for service_id in service_ids:
+            rows = self.emp_svc_repo.get_employees_for_service(service_id, active_only=True)
+            ids = set()
+            for row in rows:
+                ids.add(row['employee_id'])
+                candidates_by_id[row['employee_id']] = row
+            candidate_sets.append(ids)
+
+        eligible_ids = set.intersection(*candidate_sets) if candidate_sets else set()
+        eligible_ids.discard(appt_row['employee_id'])
+
+        appt_date = appt_row['appointment_date']
+        start_time = appt_row['start_time']
+        end_time = appt_row['end_time']
+        if isinstance(appt_date, str):
+            appt_date = datetime.strptime(appt_date, '%Y-%m-%d').date()
+        if isinstance(start_time, timedelta):
+            start_time = (datetime.min + start_time).time()
+        elif isinstance(start_time, str):
+            start_time = datetime.strptime(start_time, '%H:%M:%S').time()
+        if isinstance(end_time, timedelta):
+            end_time = (datetime.min + end_time).time()
+        elif isinstance(end_time, str):
+            end_time = datetime.strptime(end_time, '%H:%M:%S').time()
+
+        survivors = []
+        for emp_id in eligible_ids:
+            if self.absence_repo.has_approved_absence(emp_id, appt_date, start_time, end_time):
+                continue
+            conflicts = self.appt_repo.find_conflicting_appointments(
+                emp_id, appt_date, start_time, end_time,
+                exclude_appointment_id=appointment_id,
+            )
+            if conflicts:
+                continue
+            survivors.append(emp_id)
+
+        preferred_ids = set()
+        for service_id in service_ids:
+            preferred_ids |= self.pref_repo.get_preferred_employee_ids(
+                appt_row['client_id'], service_id=service_id
+            )
+
+        result = [{
+            'employee_id': emp_id,
+            'name': f"{candidates_by_id[emp_id]['first_name']} {candidates_by_id[emp_id]['last_name']}",
+            'position': candidates_by_id[emp_id]['position'],
+            'is_preferred': emp_id in preferred_ids,
+        } for emp_id in survivors]
+        result.sort(key=lambda c: c['name'])
+        return result

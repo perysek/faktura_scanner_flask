@@ -296,6 +296,45 @@ class AbsenceRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
+    def has_approved_absence(self, employee_id: int, check_date: date,
+                              time_from: Optional[time] = None,
+                              time_to: Optional[time] = None) -> bool:
+        """Czy pracownik ma zatwierdzoną (status='approved') nieobecność nakładającą
+        się na podany dzień/slot. Węższe niż check_absence_conflicts — celowo pomija
+        'pending', bo kandydat na zastępstwo jest wykluczany tylko przez nieobecności
+        już zatwierdzone (spec: "not absence-approved")."""
+        params: list = [employee_id, check_date.isoformat(), check_date.isoformat()]
+
+        if time_from is None:
+            time_clause = ''
+        else:
+            time_clause = """
+                AND (
+                    ea.time_from IS NULL
+                    OR (ea.time_from < %s AND ea.time_to > %s)
+                )
+            """
+            params.extend([
+                time_to.strftime('%H:%M:%S'),
+                time_from.strftime('%H:%M:%S'),
+            ])
+
+        query = f"""
+            SELECT 1
+            FROM employee_absences ea
+            WHERE ea.employee_id = %s
+              AND ea.is_deleted = FALSE
+              AND ea.status = 'approved'
+              AND ea.date_from <= %s
+              AND ea.date_to   >= %s
+              {time_clause}
+            LIMIT 1
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(params))
+            return cursor.fetchone() is not None
+
     # ── writes ────────────────────────────────────────────────────────────────
 
     def create(self, absence: EmployeeAbsence) -> int:

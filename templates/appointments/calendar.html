@@ -96,6 +96,10 @@
     .cal-absence-label { font-size: 0.5625rem; font-weight: 600; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cal-absence-time { font-size: 0.5rem; color: var(--color-ink-subtle); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+    /* Pending absence request — same hatched family, dashed + lighter = "not yet decided". */
+    .cal-absence--pending { border-left-style: dashed; opacity: 0.55; }
+    .cal-absence-pending-icon { width: 0.75em; height: 0.75em; vertical-align: -0.05em; }
+
     /* Red "now" line (today only). */
     .cal-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 10; pointer-events: none; }
     .cal-now-dot { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
@@ -547,8 +551,9 @@ function createAppointmentBlock(appointment) {
 
 function createAbsenceBlock(absence) {
     const block = document.createElement('div');
-    block.className = 'cal-absence';
-    block.title = absence.category_name;
+    const isPending = absence.status === 'pending';
+    block.className = isPending ? 'cal-absence cal-absence--pending' : 'cal-absence';
+    block.title = isPending ? `${absence.category_name} — oczekuje na akceptację` : absence.category_name;
 
     const startStr = absence.time_from ? absence.time_from + ':00' : '07:00:00';
     const endStr   = absence.time_to   ? absence.time_to   + ':00' : '22:00:00';
@@ -561,7 +566,9 @@ function createAbsenceBlock(absence) {
 
     const label = document.createElement('div');
     label.className = 'cal-absence-label';
-    label.textContent = absence.category_name;
+    label.innerHTML = isPending
+        ? `${Icons.svg('schedule', 'cal-absence-pending-icon')} ${escapeHtml(absence.category_name)}`
+        : escapeHtml(absence.category_name);
     block.appendChild(label);
     if (absence.time_from) {
         const t = document.createElement('div');

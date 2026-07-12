@@ -24,6 +24,19 @@ class AbsenceError(AppError):
     status_code = 400
 
 
+def format_appt_conflict(row) -> dict:
+    """Ujednolicony kształt konfliktu wizyta/nieobecność — współdzielony przez
+    approve(), preview_conflicts() i get_live_conflicts()."""
+    return {
+        'appointment_id': row['id'],
+        'date': row['appointment_date'].isoformat() if hasattr(row['appointment_date'], 'isoformat') else str(row['appointment_date']),
+        'start_time': str(row['start_time']),
+        'end_time': str(row['end_time']),
+        'client_name': row['client_name'],
+        'service_name': row['service_name'],
+    }
+
+
 class AbsenceService:
     """Orkiestracja wniosków o nieobecności i manualnych rejestracji."""
 
@@ -152,7 +165,8 @@ class AbsenceService:
         if appt_conflicts:
             return {
                 'status': 'conflict',
-                'conflicts': [self._format_appt_conflict(c) for c in appt_conflicts],
+                'conflicts': [format_appt_conflict(c) for c in appt_conflicts],
+                'employee_id': row['employee_id'],
             }
 
         self.absence_repo.respond(absence_id, 'approved', approver_employee_id)
@@ -349,7 +363,7 @@ class AbsenceService:
         )
         return {
             'absence_id': absence_id,
-            'conflicts': [self._format_appt_conflict(c) for c in appt_conflicts],
+            'conflicts': [format_appt_conflict(c) for c in appt_conflicts],
             'balance_warning': balance_warning,
         }
 
@@ -402,7 +416,7 @@ class AbsenceService:
         appt_conflicts = self.absence_repo.get_overlapping_appointments(
             row['employee_id'], date_from, date_to, time_from, time_to
         )
-        return {'conflicts': [self._format_appt_conflict(c) for c in appt_conflicts]}
+        return {'conflicts': [format_appt_conflict(c) for c in appt_conflicts]}
 
     def soft_delete(self, absence_id: int, deleted_by: Optional[int] = None) -> None:
         row = self.absence_repo.get_by_id(absence_id)
@@ -508,6 +522,33 @@ class AbsenceService:
     def list_all(self, **filters) -> List[dict]:
         return [dict(r) for r in self.absence_repo.list_all(**filters)]
 
+    # ── conflict preview / live refetch (Faza 2/3) ──────────────────────────────
+
+    def preview_conflicts(self, employee_id: int, date_from: date, date_to: date,
+                           time_from: Optional[time] = None,
+                           time_to: Optional[time] = None) -> List[dict]:
+        """Nieblokujący podgląd konfliktów z wizytami dla proponowanego zakresu —
+        używany przed złożeniem wniosku (Faza 2), nie wymaga istniejącej nieobecności."""
+        appt_conflicts = self.absence_repo.get_overlapping_appointments(
+            employee_id, date_from, date_to, time_from, time_to
+        )
+        return [format_appt_conflict(c) for c in appt_conflicts]
+
+    def get_live_conflicts(self, absence_id: int) -> List[dict]:
+        """Aktualna lista konfliktów wniosku 'pending' — odświeżana po każdej
+        akcji rozwiązania konfliktu w modalu przełożonego (Faza 3 / AD-8).
+        Pusta lista oznacza, że wszystkie konflikty zostały rozwiązane."""
+        row = self.absence_repo.get_by_id(absence_id)
+        if not row:
+            raise AbsenceError("Wniosek nie istnieje")
+        if row['status'] != 'pending':
+            raise AbsenceError(f"Wniosek ma status '{row['status']}' — brak aktywnych konfliktów")
+        appt_conflicts = self.absence_repo.get_overlapping_appointments(
+            row['employee_id'], row['date_from'], row['date_to'],
+            row['time_from'], row['time_to'],
+        )
+        return [format_appt_conflict(c) for c in appt_conflicts]
+
     # ── private ───────────────────────────────────────────────────────────────
 
     def _get_pending_or_raise(self, absence_id: int, approver_employee_id: int):
@@ -533,13 +574,3 @@ class AbsenceService:
             return secs / 3600.0
         return 0.0
 
-    @staticmethod
-    def _format_appt_conflict(row) -> dict:
-        return {
-            'appointment_id': row['id'],
-            'date': row['appointment_date'].isoformat() if hasattr(row['appointment_date'], 'isoformat') else str(row['appointment_date']),
-            'start_time': str(row['start_time']),
-            'end_time': str(row['end_time']),
-            'client_name': row['client_name'],
-            'service_name': row['service_name'],
-        }

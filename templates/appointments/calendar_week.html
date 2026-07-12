@@ -84,6 +84,10 @@
     .wk-absence { position: absolute; left: 3px; right: 3px; border-left: 3px solid var(--color-ink-subtle); border-radius: 2px; padding: 2px 4px; overflow: hidden; opacity: 0.82; background: repeating-linear-gradient(45deg, rgba(138,138,138,0.06), rgba(138,138,138,0.06) 6px, rgba(138,138,138,0.13) 6px, rgba(138,138,138,0.13) 12px); }
     .wk-absence-label { font-size: 0.5rem; font-weight: 600; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+    /* Pending absence request — dashed + lighter, mirrors the day view's --pending variant. */
+    .wk-absence--pending { border-left-style: dashed; opacity: 0.55; }
+    .wk-absence-pending-icon { width: 0.7em; height: 0.7em; vertical-align: -0.05em; }
+
     .wk-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 10; pointer-events: none; }
 
     .week-summary-bar { display: flex; align-items: center; gap: 1.25rem; padding: 0.375rem 0.875rem; border-top: 1px solid var(--color-border); background: var(--color-surface); flex-shrink: 0; flex-wrap: wrap; }
@@ -618,14 +622,18 @@ function createAppointmentBlock(appointment) {
 
 function createAbsenceBlock(absence) {
     const block = document.createElement('div');
-    block.className = 'wk-absence';
-    block.title = absence.category_name;
+    const isPending = absence.status === 'pending';
+    block.className = isPending ? 'wk-absence wk-absence--pending' : 'wk-absence';
+    block.title = isPending ? `${absence.category_name} — oczekuje na akceptację` : absence.category_name;
     const startStr = absence.time_from ? absence.time_from + ':00' : '07:00:00';
     const endStr   = absence.time_to   ? absence.time_to   + ':00' : '22:00:00';
     const pos = calculatePosition(startStr, endStr);
     block.style.top = pos.top + 'px';
     block.style.height = Math.max(pos.height, 14) + 'px';
-    block.innerHTML = `<div class="wk-absence-label">${escapeHtml(absence.category_name)}</div>`;
+    const labelHtml = isPending
+        ? `${Icons.svg('schedule', 'wk-absence-pending-icon')} ${escapeHtml(absence.category_name)}`
+        : escapeHtml(absence.category_name);
+    block.innerHTML = `<div class="wk-absence-label">${labelHtml}</div>`;
     return block;
 }
 
