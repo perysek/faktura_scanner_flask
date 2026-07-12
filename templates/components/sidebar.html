@@ -198,7 +198,7 @@
             {% if user_permissions.settings %}
             {# Settings icon has two paths — use inline instead of macro #}
             <a href="{{ url_for('main.email_settings') }}"
-               class="sidebar-link nav-mobile-hide flex items-center gap-2.5 px-4 py-2 min-h-[44px] lg:min-h-0 text-base font-medium transition-all duration-200 group
+               class="sidebar-link nav-mobile-hide flex items-center gap-2.5 px-4 py-[0.425rem] min-h-[44px] lg:min-h-0 text-base font-medium transition-all duration-200 group
                {{ 'sidebar-link--active rounded-[var(--radius-sm)]' if request.endpoint == 'main.email_settings' else 'sidebar-link--default rounded-[var(--radius-sm)]' }}"
                {% if request.endpoint == 'main.email_settings' %}aria-current="page"{% endif %}>
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -254,6 +254,16 @@
                 <p class="text-base font-medium truncate" style="color: var(--color-ink);">{{ current_user.full_name }}</p>
                 <p class="text-[13px]" style="color: var(--sidebar-text);">{{ {'superuser': 'Superadmin', 'admin': 'Administrator', 'accountant': 'Księgowa', 'receptionist': 'Recepcjonistka', 'stylist': 'Stylistka'}.get(current_user.role, current_user.role | capitalize) }}</p>
             </div>
+            <a href="{{ url_for('auth.logout') }}"
+               class="flex items-center justify-center w-10 h-10 shrink-0 rounded-[var(--radius-sm)] border border-transparent transition-all duration-200"
+               style="color: var(--sidebar-text);"
+               onmouseenter="this.style.color='var(--color-error)'; this.style.background='#fef2f2';"
+               onmouseleave="this.style.color='var(--sidebar-text)'; this.style.background='transparent';"
+               title="Wyloguj" aria-label="Wyloguj">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+            </a>
         </div>
     </div>
     {% if is_superuser %}
@@ -289,18 +299,6 @@
         </label>
     </div>
     {% endif %}
-    <div class="px-4 py-2 shrink-0" style="border-top: 1px solid var(--sidebar-border);">
-        <a href="{{ url_for('auth.logout') }}"
-           class="flex items-center gap-2 py-2 rounded-[var(--radius-sm)] text-base font-medium transition-all duration-200 group border border-transparent hover:border-red-800/30"
-           style="color: var(--sidebar-text);"
-           onmouseenter="this.style.color='var(--color-error)'; this.style.background='#fef2f2';"
-           onmouseleave="this.style.color='var(--sidebar-text)'; this.style.background='transparent';">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Wyloguj
-        </a>
-    </div>
     {% endif %}
 </aside>
 
