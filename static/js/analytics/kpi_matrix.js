@@ -21,6 +21,11 @@
     const currentBtn = document.getElementById('currentYear');
     const hoverTip = document.getElementById('kpiHoverTip');
 
+    const MONTH_LABELS = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
+    const TABLE_COLS = 18;
+    let expandedKey = null;
+    let expandedChart = null;
+
     function fmtValue(value, unit) {
         if (value === null || value === undefined) return '–';
         let text;
@@ -68,6 +73,104 @@
         });
     }
 
+    function collapseExpanded() {
+        if (expandedChart) {
+            expandedChart.destroy();
+            expandedChart = null;
+        }
+        const existingDetail = tbody.querySelector('.kpi-detail-row');
+        if (existingDetail) existingDetail.remove();
+        const existingActive = tbody.querySelector('.kpi-row-expanded');
+        if (existingActive) existingActive.classList.remove('kpi-row-expanded');
+        expandedKey = null;
+    }
+
+    function renderIndicatorChart(canvas, ind) {
+        const values = [];
+        for (let m = 1; m <= MONTH_COUNT; m++) {
+            values.push(ind.months[String(m)] !== undefined ? ind.months[String(m)] : ind.months[m]);
+        }
+        const barColors = values.map(function (v) {
+            const met = metTarget(v, ind.direction, ind.target);
+            if (met === null) return 'rgba(137,135,129,0.35)';
+            return met ? 'rgba(45,106,79,0.75)' : 'rgba(155,44,44,0.7)';
+        });
+
+        return new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: MONTH_LABELS,
+                datasets: [
+                    {
+                        label: ind.name,
+                        data: values,
+                        backgroundColor: barColors,
+                        borderRadius: 2,
+                        order: 2
+                    },
+                    {
+                        label: 'Cel',
+                        type: 'line',
+                        data: new Array(MONTH_COUNT).fill(ind.target),
+                        borderColor: '#c0392b',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        pointHitRadius: 0,
+                        fill: false,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 200 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                if (ctx.dataset.label === 'Cel') {
+                                    return 'Cel: ' + ind.direction + ' ' + fmtValue(ind.target, ind.unit) + ' ' + ind.unit;
+                                }
+                                return fmtValue(ctx.parsed.y, ind.unit) + ' ' + ind.unit;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: false, ticks: { font: { size: 11 } } },
+                    x: { ticks: { font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    function toggleExpand(ind, tr) {
+        const key = ind.key;
+        const wasOpen = expandedKey === key;
+        collapseExpanded();
+        if (wasOpen) return;
+
+        expandedKey = key;
+        tr.classList.add('kpi-row-expanded');
+
+        const detailTr = document.createElement('tr');
+        detailTr.className = 'kpi-detail-row';
+        const td = document.createElement('td');
+        td.colSpan = TABLE_COLS;
+        const box = document.createElement('div');
+        box.className = 'kpi-chart-box';
+        const canvas = document.createElement('canvas');
+        box.appendChild(canvas);
+        td.appendChild(box);
+        detailTr.appendChild(td);
+        tr.insertAdjacentElement('afterend', detailTr);
+
+        expandedChart = renderIndicatorChart(canvas, ind);
+    }
+
     function buildRow(proc, ind, isFirstOfPair) {
         const tr = document.createElement('tr');
         tr.className = isFirstOfPair ? 'proc-band-a' : 'proc-band-b';
@@ -102,6 +205,11 @@
             return tr;
         }
 
+        tr.classList.add('kpi-row-clickable');
+        tr.addEventListener('click', function () {
+            toggleExpand(ind, tr);
+        });
+
         const tdY1 = document.createElement('td');
         tdY1.className = 'cell-yprior';
         tdY1.textContent = fmtValue(ind.y_prior, ind.unit);
@@ -129,6 +237,11 @@
     }
 
     function render(data) {
+        if (expandedChart) {
+            expandedChart.destroy();
+            expandedChart = null;
+        }
+        expandedKey = null;
         tbody.innerHTML = '';
         data.processes.forEach(function (proc) {
             proc.indicators.forEach(function (ind, idx) {
@@ -172,7 +285,7 @@
             })
             .catch(function (err) {
                 subtitle.textContent = 'Błąd ładowania danych';
-                tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:2rem;color:var(--color-error);">' +
+                tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;padding:2rem;color:var(--color-error);">' +
                     'Nie udało się wczytać wskaźników (' + err.message + ')</td></tr>';
             });
     }

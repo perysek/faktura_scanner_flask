@@ -90,6 +90,16 @@ table.kpi-table tbody tr.proc-band-a td { border-top: 2px solid var(--color-ink-
 table.kpi-table td.status-good { background: rgba(45, 106, 79, 0.10); }
 table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
 
+table.kpi-table tbody tr.kpi-row-clickable { cursor: pointer; }
+table.kpi-table tbody tr.kpi-row-clickable:hover td { background: var(--color-accent-muted, rgba(138,109,26,0.08)); }
+table.kpi-table tbody tr.kpi-row-expanded td { background: var(--color-accent-muted, rgba(138,109,26,0.10)); }
+table.kpi-table tr.kpi-detail-row td {
+    cursor: default;
+    background: var(--color-surface-warm, #f6f4f0);
+    padding: 1rem 1.25rem;
+}
+.kpi-chart-box { height: 240px; position: relative; }
+
 .kpi-legend { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: var(--color-ink-subtle); flex-wrap: wrap; }
 .kpi-legend .dot { display:inline-block; width:0.7em; height:0.7em; border-radius: 1px; margin-right: 0.25em; vertical-align: -0.05em; }
 .kpi-legend .dot.good { background: rgba(45, 106, 79, 0.45); }
@@ -173,7 +183,7 @@ table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
                 </tr>
             </thead>
             <tbody id="kpiTbody">
-                <tr><td colspan="19" style="text-align:center; padding:2rem;">Ładowanie danych…</td></tr>
+                <tr><td colspan="18" style="text-align:center; padding:2rem;">Ładowanie danych…</td></tr>
             </tbody>
         </table>
     </div>
@@ -183,5 +193,6 @@ table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{{ asset_url('js/analytics/kpi_matrix.js') }}"></script>
 {% endblock %}
