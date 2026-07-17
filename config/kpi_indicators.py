@@ -1,7 +1,7 @@
 """
-Definicje 16 miesięcznych wskaźników biznesowych (8 procesów × effectiveness +
-efficiency), zgodnie z ramą ISO 9001 / IATF 16949 opisaną w
-BUSINESS_PROCESS_KPI_REVIEW.md.
+Definicje 17 miesięcznych wskaźników biznesowych (8 procesów × effectiveness +
+efficiency, plus dodatkowy wskaźnik "Obrót" w P7), zgodnie z ramą ISO 9001 /
+IATF 16949 opisaną w BUSINESS_PROCESS_KPI_REVIEW.md.
 
 Każdy wskaźnik ma unikalny `key`, który musi mieć odpowiadającą metodę
 obliczeniową w `repositories/analytics/kpi_matrix_repository.py`
@@ -127,6 +127,15 @@ PROCESSES = [
              'description': 'Co pokazuje: jaki procent przychodu zostaje jako zysk netto po odjęciu kosztów personelu i faktur zakupowych. '
                              'Jak liczony: (przychód − koszty personelu − koszty faktur) ÷ przychód × 100%. '
                              'Jak poprawić: zwiększaj przychód (obłożenie, ceny) szybciej niż koszty, kontroluj koszty zakupowe.'},
+            {'key': 'p7_turnover', 'name': 'Obrót',
+             'kind': 'eff', 'unit': 'PLN', 'direction': '>', 'target': 20000,
+             'description': 'Co pokazuje: obrót wypracowany przez salon w danym miesiącu — przychód z zakończonych wizyt '
+                             'pomniejszony o prowizje wypłacone pracownikom od tych konkretnych wizyt. Pensja podstawowa '
+                             'pracownika (jeśli zdefiniowana) NIE jest tu odejmowana — to koszt stały, ujęty osobno '
+                             'we wskaźniku kosztów całkowitych. '
+                             'Jak liczony: suma kwot netto z zakończonych wizyt − suma prowizji pracowników od tych wizyt. '
+                             'Jak poprawić: zwiększaj liczbę i wartość wizyt szybciej niż rośnie łączna prowizja zespołu. '
+                             '(Cel domyślny — dostosuj w config/kpi_indicators.py do realnej skali salonu.)'},
             {'key': 'p7_cost_ratio', 'name': 'Wskaźnik kosztów całkowitych',
              'kind': 'effic', 'unit': '%', 'direction': '<', 'target': 70,
              'description': 'Co pokazuje: jaki procent przychodu pochłaniają łączne koszty (personel + faktury) — odwrotność marży. '

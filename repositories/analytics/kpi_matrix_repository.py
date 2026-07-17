@@ -1,6 +1,6 @@
 """
 Repozytorium macierzy wskaźników biznesowych (12 miesięcy × rok, nawigacja
-rok-do-roku). Każdy z 16 wskaźników z config/kpi_indicators.py ma tu funkcję
+rok-do-roku). Każdy z 17 wskaźników z config/kpi_indicators.py ma tu funkcję
 obliczeniową zwracającą surowe składowe (licznik, mianownik) na miesiąc, aby
 wartość roczna była prawdziwym przeliczeniem sum (nie naiwną średnią z 12
 wartości procentowych) — zgodnie z metodologią opisaną w
@@ -127,6 +127,11 @@ class KpiMatrixRepository:
             # num is already a sum of per-employee percentages; den is employee
             # count — averaging, not a share-of-total ratio, so no *100 here.
             return round(num / den, 1)
+        if key in ('p7_turnover',):
+            # den is a constant 1.0 per contributing month (see _p7_turnover) so
+            # summing across months yields a true annual SUM, not an average —
+            # correct for a raw currency total, unlike every other indicator here.
+            return round(num, 2)
         return round(num / den * 100, 1)
 
     @staticmethod
@@ -426,7 +431,8 @@ class KpiMatrixRepository:
         cursor.execute(f"""
             SELECT EXTRACT(MONTH FROM a.appointment_date)::int AS month,
                    COUNT(*) FILTER (WHERE a.status = 'completed') AS completed_count,
-                   COALESCE(SUM(i.net_amount), 0) AS revenue
+                   COALESCE(SUM(i.net_amount), 0) AS revenue,
+                   COALESCE(SUM(i.commission_total), 0) AS total_commission
             FROM appointments a
             LEFT JOIN income_records i ON i.appointment_id = a.id
             WHERE a.status = 'completed'
@@ -472,6 +478,7 @@ class KpiMatrixRepository:
         for m in range(1, 13):
             rev_row = revenue_by_month.get(m)
             revenue = float(rev_row['revenue']) if rev_row else 0.0
+            total_commission = float(rev_row['total_commission']) if rev_row else 0.0
             completed_count = int(rev_row['completed_count']) if rev_row else 0
             employee_costs = 0.0
             for e in active_emps:
@@ -483,6 +490,7 @@ class KpiMatrixRepository:
                 'employee_costs': employee_costs,
                 'invoice_costs': invoice_costs,
                 'completed_count': completed_count,
+                'total_commission': total_commission,
             }
 
         self._financials_cache = {'year': year, 'data': out}
@@ -496,6 +504,21 @@ class KpiMatrixRepository:
             revenue = f.get('revenue', 0.0)
             net_profit = revenue - f.get('employee_costs', 0.0) - f.get('invoice_costs', 0.0)
             out[m] = (float(net_profit), float(revenue))
+        return out
+
+    def _p7_turnover(self, year, employees, services_count) -> Dict[int, Component]:
+        """Obrót = przychód z zakończonych wizyt − prowizje pracowników od tych
+        wizyt (income_records.commission_total), bez pensji podstawowej — patrz
+        opis wskaźnika w config/kpi_indicators.py. den=1.0 dla każdego miesiąca
+        (zamiast prawdziwego mianownika) celowo: to sprawia, że _ratio() zwraca
+        surową sumę zamiast ilorazu, a suma miesięcy sumuje się do prawdziwej
+        wartości rocznej (patrz komentarz przy _ratio)."""
+        financials = self._monthly_financials(year)
+        out = _empty_months()
+        for m in range(1, 13):
+            f = financials.get(m, {})
+            turnover = f.get('revenue', 0.0) - f.get('total_commission', 0.0)
+            out[m] = (float(turnover), 1.0)
         return out
 
     def _p7_cost_ratio(self, year, employees, services_count) -> Dict[int, Component]:
@@ -553,6 +576,7 @@ class KpiMatrixRepository:
         'p6_noshow_despite_reminder': _p6_noshow_despite_reminder,
         'p6_sms_delivery_rate': _p6_sms_delivery_rate,
         'p7_net_margin': _p7_net_margin,
+        'p7_turnover': _p7_turnover,
         'p7_cost_ratio': _p7_cost_ratio,
         'p8_invoice_settlement': _p8_invoice_settlement,
         'p8_ocr_confidence': _p8_ocr_confidence,

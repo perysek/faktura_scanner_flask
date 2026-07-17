@@ -39,6 +39,44 @@
         return text;
     }
 
+    // Raw monthly PLN totals (unit 'PLN', e.g. "Obrót") can span a wide
+    // magnitude range, so above a threshold they're shown in "tys. zł"
+    // (thousands) instead of full digits — decided ONCE per row from that
+    // row's own min/max across the year so every column (months + Rok/Rok-1
+    // + Cel) renders in the same, comparable unit rather than flipping
+    // scale from cell to cell.
+    const PLN_THOUSANDS_THRESHOLD = 10000;
+
+    function plnNeedsThousands(ind) {
+        let max = 0;
+        for (let m = 1; m <= MONTH_COUNT; m++) {
+            const v = ind.months[String(m)] !== undefined ? ind.months[String(m)] : ind.months[m];
+            if (v !== null && v !== undefined) max = Math.max(max, Math.abs(v));
+        }
+        if (ind.y_prior !== null && ind.y_prior !== undefined) max = Math.max(max, Math.abs(ind.y_prior));
+        if (ind.y_current !== null && ind.y_current !== undefined) max = Math.max(max, Math.abs(ind.y_current));
+        return max >= PLN_THOUSANDS_THRESHOLD;
+    }
+
+    function fmtPln(value, useThousands) {
+        if (value === null || value === undefined) return '–';
+        if (useThousands) {
+            return (value / 1000).toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+        return Math.round(value).toLocaleString('pl-PL');
+    }
+
+    // Single place that decides "how to print this indicator's numbers" —
+    // shared by the table row and its expanded chart so both always agree.
+    function getFormatter(ind) {
+        if (ind.unit === 'PLN') {
+            const useThousands = plnNeedsThousands(ind);
+            const unitLabel = useThousands ? 'tys. zł' : 'zł';
+            return { unitLabel: unitLabel, fmt: function (v) { return fmtPln(v, useThousands); } };
+        }
+        return { unitLabel: ind.unit, fmt: function (v) { return fmtValue(v, ind.unit); } };
+    }
+
     function metTarget(value, direction, target) {
         if (value === null || value === undefined) return null;
         if (direction === '>') return value >= target;
@@ -95,6 +133,7 @@
             if (met === null) return 'rgba(137,135,129,0.35)';
             return met ? 'rgba(45,106,79,0.75)' : 'rgba(155,44,44,0.7)';
         });
+        const formatter = getFormatter(ind);
 
         return new Chart(canvas.getContext('2d'), {
             type: 'bar',
@@ -132,9 +171,9 @@
                         callbacks: {
                             label: function (ctx) {
                                 if (ctx.dataset.label === 'Cel') {
-                                    return 'Cel: ' + ind.direction + ' ' + fmtValue(ind.target, ind.unit) + ' ' + ind.unit;
+                                    return 'Cel: ' + ind.direction + ' ' + formatter.fmt(ind.target) + ' ' + formatter.unitLabel;
                                 }
-                                return fmtValue(ctx.parsed.y, ind.unit) + ' ' + ind.unit;
+                                return formatter.fmt(ctx.parsed.y) + ' ' + formatter.unitLabel;
                             }
                         }
                     }
@@ -171,14 +210,14 @@
         expandedChart = renderIndicatorChart(canvas, ind);
     }
 
-    function buildRow(proc, ind, isFirstOfPair) {
+    function buildRow(proc, ind, isFirst) {
         const tr = document.createElement('tr');
-        tr.className = isFirstOfPair ? 'proc-band-a' : 'proc-band-b';
+        tr.className = isFirst ? 'proc-band-a' : 'proc-band-b';
 
-        if (isFirstOfPair) {
+        if (isFirst) {
             const tdProc = document.createElement('td');
             tdProc.className = 'cell-process';
-            tdProc.rowSpan = 2;
+            tdProc.rowSpan = proc.indicators.length;
             tdProc.textContent = proc.id + ' · ' + proc.name;
             tr.appendChild(tdProc);
         }
@@ -191,9 +230,11 @@
         tdInd.appendChild(nameSpan);
         tr.appendChild(tdInd);
 
+        const formatter = getFormatter(ind);
+
         const tdUnit = document.createElement('td');
         tdUnit.className = 'cell-unit';
-        tdUnit.textContent = ind.unit;
+        tdUnit.textContent = formatter.unitLabel;
         tr.appendChild(tdUnit);
 
         if (ind.unavailable_note) {
@@ -212,25 +253,25 @@
 
         const tdY1 = document.createElement('td');
         tdY1.className = 'cell-yprior';
-        tdY1.textContent = fmtValue(ind.y_prior, ind.unit);
+        tdY1.textContent = formatter.fmt(ind.y_prior);
         tr.appendChild(tdY1);
 
         for (let m = 1; m <= MONTH_COUNT; m++) {
             const v = ind.months[String(m)] !== undefined ? ind.months[String(m)] : ind.months[m];
             const td = document.createElement('td');
             td.className = statusClass(v, ind.direction, ind.target);
-            td.textContent = fmtValue(v, ind.unit);
+            td.textContent = formatter.fmt(v);
             tr.appendChild(td);
         }
 
         const tdYear = document.createElement('td');
         tdYear.className = 'cell-year ' + statusClass(ind.y_current, ind.direction, ind.target);
-        tdYear.textContent = fmtValue(ind.y_current, ind.unit);
+        tdYear.textContent = formatter.fmt(ind.y_current);
         tr.appendChild(tdYear);
 
         const tdTarget = document.createElement('td');
         tdTarget.className = 'cell-target';
-        tdTarget.textContent = ind.direction + ' ' + fmtValue(ind.target, ind.unit);
+        tdTarget.textContent = ind.direction + ' ' + formatter.fmt(ind.target);
         tr.appendChild(tdTarget);
 
         return tr;
@@ -243,13 +284,16 @@
         }
         expandedKey = null;
         tbody.innerHTML = '';
+        let totalIndicators = 0;
         data.processes.forEach(function (proc) {
+            totalIndicators += proc.indicators.length;
             proc.indicators.forEach(function (ind, idx) {
                 tbody.appendChild(buildRow(proc, ind, idx === 0));
             });
         });
         yearHeader.textContent = 'Rok ' + data.year;
-        subtitle.textContent = 'Rok ' + data.year + ' — 8 procesów × 2 wskaźniki (skuteczność + efektywność)';
+        subtitle.textContent = 'Rok ' + data.year + ' — ' + data.processes.length + ' procesów, ' +
+            totalIndicators + ' wskaźników (skuteczność + efektywność)';
     }
 
     function populateYearPicker() {
