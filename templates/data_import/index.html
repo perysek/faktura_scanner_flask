@@ -152,16 +152,17 @@
     </div>
   </div>
 
-  <!-- Conflict scan: reschedule duplicates among past visits -->
+  <!-- Conflict scan: reschedule duplicates among past AND future visits -->
   <div class="rounded-[3px] border p-4" style="background: var(--card-bg); border-color: var(--card-border);">
     <h2 class="text-sm font-semibold mb-1" style="color: var(--text-primary);">
-      Skan konfliktów przeszłych wizyt
+      Skan konfliktów wizyt
     </h2>
     <p class="text-xs mb-3" style="color: var(--text-secondary);">
-      Znajduje wizyty zdublowane przez przekładanie terminu w caldis.pl: (1) ten sam
-      klient/pracownik/usługa z nakładającymi się terminami, (2) ta sama usługa u
-      innego fryzjera tego samego dnia. W każdej grupie wizyta o najwyższym numerze
-      jest uznawana za ostateczną — reszta zostaje ukryta (odwracalnie).
+      Znajduje wizyty zdublowane przez przekładanie terminu (w caldis.pl lub ręcznie):
+      (1) ten sam klient/pracownik/usługa z nakładającymi się terminami, (2) ta sama
+      usługa u innego fryzjera tego samego dnia. W każdej grupie wizyta o najwyższym
+      numerze jest uznawana za ostateczną — reszta zostaje usunięta (odwracalnie):
+      nadchodzące wizyty są anulowane, a wizyty, które już się odbyły, są ukrywane.
     </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -182,7 +183,7 @@
       </button>
       <button id="scan-apply-btn" type="button" class="refined-btn-danger hidden">
         {{ icon('delete', class='w-4 h-4') }}
-        <span id="scan-apply-btn-label">Zastosuj (ukryj duplikaty)</span>
+        <span id="scan-apply-btn-label">Zastosuj (usuń duplikaty)</span>
       </button>
       <span id="scan-status-msg" class="text-xs" style="color: var(--text-secondary);"></span>
     </div>
@@ -492,7 +493,7 @@ document.getElementById('import-btn').addEventListener('click', async function()
     };
 });
 
-// ── Conflict scan (reschedule duplicates among past visits) ──────────────────
+// ── Conflict scan (reschedule duplicates among past and future visits) ───────
 var _lastScanRange = null; // { date_start, date_end } of the scan currently shown
 
 function escapeHtml(s) {
@@ -522,9 +523,14 @@ function renderScanGroups(groups) {
 
         const rows = g.appointments.map(function(a) {
             const rowStyle = a.is_keeper ? '' : 'opacity:0.6; text-decoration: line-through;';
-            const tag = a.is_keeper
-                ? '<span style="color:#4ade80;">Zachowana (ostatnia)</span>'
-                : '<span style="color:#f87171;">Nadpisana</span>';
+            let tag;
+            if (a.is_keeper) {
+                tag = '<span style="color:#4ade80;">Zachowana (ostatnia)</span>';
+            } else if (a.planned_action === 'cancel') {
+                tag = '<span style="color:#f87171;">Nadpisana — zostanie anulowana</span>';
+            } else {
+                tag = '<span style="color:#f87171;">Nadpisana — zostanie ukryta</span>';
+            }
             return `<tr style="${rowStyle}">
                 <td class="py-1 pr-3">#${a.id}</td>
                 <td class="py-1 pr-3">${escapeHtml(a.appointment_date)}</td>
@@ -593,7 +599,7 @@ async function runConflictScan() {
         document.getElementById('scan-results').classList.remove('hidden');
         document.getElementById('scan-summary').textContent =
             `Sprawdzono ${data.candidate_count} wizyt. Znaleziono ${data.group_count} grup konfliktów ` +
-            `(${data.superseded_count} wizyt zostałoby ukrytych jako nadpisane).`;
+            `(${data.superseded_count} wizyt zostałoby usuniętych jako nadpisane).`;
         renderScanGroups(data.groups);
 
         if (data.group_count > 0) {
@@ -612,8 +618,9 @@ async function runConflictScan() {
 async function applyConflictScan() {
     if (!_lastScanRange) return;
     const ok = window.confirm(
-        'Wybrane nadpisane wizyty zostaną ukryte (i ich przychód przestanie się liczyć w raportach). ' +
-        'Można to cofnąć ręcznie ze szczegółów wizyty. Kontynuować?'
+        'Wybrane nadpisane wizyty zostaną usunięte: nadchodzące zostaną anulowane, a te, które już się ' +
+        'odbyły, zostaną ukryte (i ich przychód przestanie się liczyć w raportach). Można to cofnąć ' +
+        'ręcznie ze szczegółów wizyty. Kontynuować?'
     );
     if (!ok) return;
 
@@ -633,7 +640,11 @@ async function applyConflictScan() {
             return;
         }
 
-        setScanStatusMsg(`Ukryto ${data.removed_count} nadpisanych wizyt w ${data.group_count} grupach.`, 'success');
+        setScanStatusMsg(
+            `Usunięto ${data.removed_count} nadpisanych wizyt w ${data.group_count} grupach ` +
+            `(${data.cancelled_count} anulowanych, ${data.soft_deleted_count} ukrytych).`,
+            'success'
+        );
         await runConflictScan(); // re-scan same range to confirm 0 remaining
     } catch (e) {
         setScanStatusMsg('Błąd połączenia z serwerem.', 'error');
@@ -656,8 +667,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const scanNinetyDaysAgo = new Date(today);
     scanNinetyDaysAgo.setDate(today.getDate() - 90);
+    const scanNinetyDaysAhead = new Date(today);
+    scanNinetyDaysAhead.setDate(today.getDate() + 90);
     document.getElementById('scan-date-start').value = fmtDate(scanNinetyDaysAgo);
-    document.getElementById('scan-date-end').value   = fmtDate(today);
+    document.getElementById('scan-date-end').value   = fmtDate(scanNinetyDaysAhead);
 
     loadSessionStatus();
     loadHistory();

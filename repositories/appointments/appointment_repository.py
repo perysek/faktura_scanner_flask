@@ -1004,7 +1004,7 @@ class AppointmentRepository:
             return cursor.fetchone()
 
     def get_candidates_for_conflict_scan(self, date_start: date, date_end: date) -> List[Any]:
-        """Wizyty-kandydaci do skanu konfliktów przeszłych wizyt (duplikaty/przełożenia).
+        """Wizyty-kandydaci do skanu konfliktów (duplikaty/przełożenia), przeszłe i przyszłe.
 
         Zwraca jedną wizytę = jeden wiersz, dołączoną do jej głównej usługi
         (is_addon = FALSE). Import z caldis.pl zawsze tworzy dokładnie jedną

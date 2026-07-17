@@ -1,7 +1,9 @@
 """
-Skan konfliktów przeszłych wizyt — wykrywa duplikaty powstałe z przekładania
-terminów w caldis.pl (poprzedni termin nie został poprawnie zamknięty przy
-przełożeniu, więc w bazie zostają dwie/trzy wizyty zamiast jednej ostatecznej).
+Skan konfliktów wizyt (przeszłych i przyszłych) — wykrywa duplikaty powstałe
+z przekładania terminów w caldis.pl (poprzedni termin nie został poprawnie
+zamknięty przy przełożeniu, więc w bazie zostają dwie/trzy wizyty zamiast
+jednej ostatecznej). Ten sam wzorzec potrafi też powstać przy ręcznym
+przełożeniu przyszłej wizyty na innego fryzjera bez zamknięcia starego wpisu.
 
 Dwie heurystyki:
   H1 time_overlap                — ten sam klient + pracownik + usługa,
@@ -10,14 +12,22 @@ Dwie heurystyki:
                                     różni pracownicy.
 
 W obu przypadkach wizyta o najwyższym id w grupie ("ostatni zapis") jest
-uznawana za ostateczny termin; reszta w grupie jest nadpisana (superseded)
-i przy apply() soft-deletowana — tak samo odwracalnie jak ręczne usunięcie
-wizyty (patrz routes/appointment_routes.py: delete_appointment/restore_appointment).
+uznawana za ostateczny termin; reszta w grupie jest nadpisana (superseded).
+Przy apply() nadpisana wizyta jest:
+  - ANULOWANA (status → 'cancelled') przez zwykłe przejście stanu, jeśli jej
+    obecny status na to pozwala (AppointmentStatus.VALID_TRANSITIONS) — czyli
+    dla wizyt, które się jeszcze nie odbyły (scheduled/pending/confirmed/
+    in_progress). Widoczne na kalendarzu, tak jak ręczne anulowanie.
+  - SOFT-DELETOWANA (jak dotąd), gdy status jest terminalny (completed/
+    no_show) i przejście do 'cancelled' jest niedozwolone — odwracalnie,
+    tak samo jak ręczne usunięcie wizyty (patrz routes/appointment_routes.py:
+    delete_appointment/restore_appointment).
 """
 from collections import defaultdict
 from datetime import date
 from typing import Any, Dict, List, Tuple
 
+from config.appointment_statuses import AppointmentStatus
 from config.database import managed_transaction
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.income_repository import IncomeRepository
@@ -34,6 +44,13 @@ def _minutes(value: Any) -> int:
     """Parsuje TIME/timedelta/str (patrz repositories/db_utils.py) na minuty od północy."""
     parts = str(value).split(':')
     return int(parts[0]) * 60 + int(parts[1])
+
+
+def _planned_action(status: str) -> str:
+    """Co się stanie z nadpisaną wizytą o tym statusie przy apply()."""
+    if AppointmentStatus.can_transition(status, AppointmentStatus.CANCELLED):
+        return 'cancel'
+    return 'soft_delete'
 
 
 class _UnionFind:
@@ -62,8 +79,6 @@ class VisitConflictScanService:
     def _validate_range(self, date_start: date, date_end: date) -> None:
         if date_start > date_end:
             raise ValidationError('date_start musi być przed lub równy date_end')
-        if date_end > date.today():
-            raise ValidationError('Skan dotyczy tylko przeszłych wizyt — data do nie może być w przyszłości')
 
     def _build_groups(self, rows: List[Any]) -> List[Dict[str, Any]]:
         n = len(rows)
@@ -118,6 +133,7 @@ class VisitConflictScanService:
                     'status': r['status'],
                     'total_price': str(r['total_price']),
                     'is_keeper': r['id'] == keeper['id'],
+                    'planned_action': None if r['id'] == keeper['id'] else _planned_action(r['status']),
                 }
                 for r in members
             ), key=lambda a: a['id'])
@@ -149,13 +165,21 @@ class VisitConflictScanService:
         }
 
     def apply(self, date_start: date, date_end: date) -> Dict[str, Any]:
-        """Ponownie skanuje (nie ufa danym z frontu) i soft-deletuje nadpisane wizyty.
+        """Ponownie skanuje (nie ufa danym z frontu) i usuwa nadpisane wizyty —
+        anulując te, które jeszcze się nie odbyły, i soft-deletując resztę.
 
-        Odwracalne przez POST /appointments/<id>/restore (istniejący endpoint) —
+        Wywołuje appt_repo.update_status() bezpośrednio zamiast
+        AppointmentBusinessService.cancel_appointment(), bo ta druga otwiera
+        własny managed_transaction() — zagnieżdżenie przedwcześnie zamknęłoby
+        (i częściowo scommitowało) transakcję otwartą tutaj.
+
+        Anulowanie odwracalne ręcznie (zmiana statusu z powrotem); soft-delete
+        odwracalny przez POST /appointments/<id>/restore (istniejący endpoint) —
         przywraca zarówno wizytę, jak i jej rekord przychodu.
         """
         result = self.scan(date_start, date_end)
-        removed_ids: List[int] = []
+        cancelled_ids: List[int] = []
+        soft_deleted_ids: List[int] = []
 
         with managed_transaction():
             for group in result['groups']:
@@ -165,12 +189,21 @@ class VisitConflictScanService:
                         continue
                     note = (f"[Skan konfliktów] Nadpisana przez wizytę #{group['keeper_id']} "
                             f"({reasons}).")
-                    self.appt_repo.soft_delete_as_superseded(appt['id'], note)
-                    self.income_repo.soft_delete_by_appointment(appt['id'])
-                    removed_ids.append(appt['id'])
+                    if appt['planned_action'] == 'cancel':
+                        self.appt_repo.update_status(appt['id'], AppointmentStatus.CANCELLED, note)
+                        cancelled_ids.append(appt['id'])
+                    else:
+                        self.appt_repo.soft_delete_as_superseded(appt['id'], note)
+                        self.income_repo.soft_delete_by_appointment(appt['id'])
+                        soft_deleted_ids.append(appt['id'])
 
+        removed_ids = cancelled_ids + soft_deleted_ids
         return {
             'group_count': result['group_count'],
             'removed_count': len(removed_ids),
             'removed_ids': removed_ids,
+            'cancelled_count': len(cancelled_ids),
+            'cancelled_ids': cancelled_ids,
+            'soft_deleted_count': len(soft_deleted_ids),
+            'soft_deleted_ids': soft_deleted_ids,
         }

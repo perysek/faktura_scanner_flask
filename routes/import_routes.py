@@ -8,8 +8,8 @@ Endpoints:
   POST /api/import/reconnect-session     — Headed re-login         [phase 07]
   POST /api/import/start                 — Kick off import         [phase 08]
   GET  /api/import/history               — Last 20 runs            [phase 08]
-  GET  /api/import/conflict-scan         — Scan past visits for reschedule duplicates
-  POST /api/import/conflict-scan/apply   — Soft-delete the superseded duplicates found above
+  GET  /api/import/conflict-scan         — Scan a date range (past or future) for reschedule duplicates
+  POST /api/import/conflict-scan/apply   — Cancel/soft-delete the superseded duplicates found above
 
 All routes are admin-only via @module_permission_required('data_import').
 The page route GET /import lives on main_bp (routes/main_routes.py).
@@ -333,7 +333,7 @@ def _parse_scan_range(date_start_str: str, date_end_str: str) -> tuple:
 @login_required
 @module_permission_required('data_import')
 def conflict_scan():
-    """Skanuj przeszłe wizyty pod kątem duplikatów/przełożeń (tylko odczyt)."""
+    """Skanuj wizyty (przeszłe i przyszłe) pod kątem duplikatów/przełożeń (tylko odczyt)."""
     try:
         date_start, date_end = _parse_scan_range(
             request.args.get('date_start'), request.args.get('date_end'))
@@ -350,13 +350,15 @@ def conflict_scan():
 @login_required
 @module_permission_required('data_import')
 def conflict_scan_apply():
-    """Soft-delete wizyt nadpisanych przez przełożenia w zadanym zakresie (odwracalne)."""
+    """Anuluj/soft-deletuj wizyty nadpisane przez przełożenia w zadanym zakresie (odwracalne)."""
     try:
         data = request.get_json() or {}
         date_start, date_end = _parse_scan_range(data.get('date_start'), data.get('date_end'))
         result = VisitConflictScanService().apply(date_start, date_end)
-        logger.info('Conflict scan apply: %d appointments superseded (range %s to %s) by user %s',
-                    result['removed_count'], date_start, date_end, current_user.id)
+        logger.info('Conflict scan apply: %d appointments superseded (%d cancelled, %d soft-deleted) '
+                    'in range %s to %s by user %s',
+                    result['removed_count'], result['cancelled_count'], result['soft_deleted_count'],
+                    date_start, date_end, current_user.id)
         return jsonify({'success': True, **result})
     except AppError:
         raise
