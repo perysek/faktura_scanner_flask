@@ -1,5 +1,5 @@
 /**
- * Wskaźniki biznesowe — 20-indicator ISO 9001/IATF-style monthly KPI matrix.
+ * Wskaźniki biznesowe — 16-indicator ISO 9001/IATF-style monthly KPI matrix.
  * Fetches /api/analytics/kpi-matrix?year=YYYY and renders a full-width table:
  * the wrapper scrolls both axes with a sticky header row, so column count /
  * row height are not constrained to one screenful.
@@ -249,7 +249,7 @@
             });
         });
         yearHeader.textContent = 'Rok ' + data.year;
-        subtitle.textContent = 'Rok ' + data.year + ' — 10 procesów × 2 wskaźniki (skuteczność + efektywność)';
+        subtitle.textContent = 'Rok ' + data.year + ' — 8 procesów × 2 wskaźniki (skuteczność + efektywność)';
     }
 
     function populateYearPicker() {

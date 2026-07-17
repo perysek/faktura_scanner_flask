@@ -1,6 +1,6 @@
 """
 Repozytorium macierzy wskaźników biznesowych (12 miesięcy × rok, nawigacja
-rok-do-roku). Każdy z 20 wskaźników z config/kpi_indicators.py ma tu funkcję
+rok-do-roku). Każdy z 16 wskaźników z config/kpi_indicators.py ma tu funkcję
 obliczeniową zwracającą surowe składowe (licznik, mianownik) na miesiąc, aby
 wartość roczna była prawdziwym przeliczeniem sum (nie naiwną średnią z 12
 wartości procentowych) — zgodnie z metodologią opisaną w
@@ -26,7 +26,7 @@ def _empty_months() -> Dict[int, Component]:
 
 
 class KpiMatrixRepository:
-    """Oblicza 20 wskaźników biznesowych dla wybranego roku + rok-1."""
+    """Oblicza 16 wskaźników biznesowych dla wybranego roku + rok-1."""
 
     def get_available_year_range(self) -> Tuple[int, int]:
         """(min_year, max_year) na podstawie danych + roku bieżącego (nigdy przyszłość)."""
@@ -119,7 +119,7 @@ class KpiMatrixRepository:
             return round(num / den, 2)
         if key in ('p2_revenue_per_hour',):
             return round(num / (den / 60.0), 2) if den else None
-        if key in ('p3_visits_per_client', 'p9_import_duration'):
+        if key in ('p3_visits_per_client',):
             return round(num / den, 1)
         if key in ('p5_cost_per_visit',):
             return round(num / den, 2)
@@ -543,36 +543,6 @@ class KpiMatrixRepository:
         return self._bucket(query, (start, end), 'conf_sum', 'conf_count')
 
     # ------------------------------------------------------------------
-    # P9 — Zarządzanie danymi i dostępem
-    # ------------------------------------------------------------------
-
-    def _p9_import_success(self, year, employees, services_count) -> Dict[int, Component]:
-        start, end = _year_bounds(year)
-        query = """
-            SELECT EXTRACT(MONTH FROM started_at)::int AS month,
-                   COUNT(*) FILTER (WHERE status = 'completed') AS completed,
-                   COUNT(*) FILTER (WHERE status IN ('completed', 'failed', 'cancelled')) AS total
-            FROM import_logs
-            WHERE started_at::date BETWEEN %s AND %s
-            GROUP BY 1
-        """
-        return self._bucket(query, (start, end), 'completed', 'total')
-
-    def _p9_import_duration(self, year, employees, services_count) -> Dict[int, Component]:
-        start, end = _year_bounds(year)
-        query = """
-            SELECT EXTRACT(MONTH FROM started_at)::int AS month,
-                   SUM(EXTRACT(EPOCH FROM (finished_at - started_at)) / 60.0) AS dur_sum,
-                   COUNT(*) AS dur_count
-            FROM import_logs
-            WHERE status = 'completed'
-              AND finished_at IS NOT NULL
-              AND started_at::date BETWEEN %s AND %s
-            GROUP BY 1
-        """
-        return self._bucket(query, (start, end), 'dur_sum', 'dur_count')
-
-    # ------------------------------------------------------------------
     # Dispatch table
     # ------------------------------------------------------------------
 
@@ -593,6 +563,4 @@ class KpiMatrixRepository:
         'p7_cost_ratio': _p7_cost_ratio,
         'p8_invoice_settlement': _p8_invoice_settlement,
         'p8_ocr_confidence': _p8_ocr_confidence,
-        'p9_import_success': _p9_import_success,
-        'p9_import_duration': _p9_import_duration,
     }

@@ -406,7 +406,7 @@ def get_rolling_satisfaction_rating():
 @login_required
 @module_permission_required('appointments')
 def get_kpi_matrix():
-    """Macierz 20 wskaźników biznesowych (10 procesów × eff./effic.) dla wybranego roku."""
+    """Macierz 16 wskaźników biznesowych (8 procesów × eff./effic.) dla wybranego roku."""
     kpi_repo = KpiMatrixRepository()
     min_year, max_year = kpi_repo.get_available_year_range()
 

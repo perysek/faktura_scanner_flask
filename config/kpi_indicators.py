@@ -1,5 +1,5 @@
 """
-Definicje 20 miesięcznych wskaźników biznesowych (10 procesów × effectiveness +
+Definicje 16 miesięcznych wskaźników biznesowych (8 procesów × effectiveness +
 efficiency), zgodnie z ramą ISO 9001 / IATF 16949 opisaną w
 BUSINESS_PROCESS_KPI_REVIEW.md.
 
@@ -147,38 +147,11 @@ PROCESSES = [
                              'Jak poprawić: popraw jakość skanów/zdjęć faktur, standaryzuj format dokumentów od dostawców.'},
         ],
     },
-    {
-        'id': 'P9',
-        'name': 'Zarządzanie danymi i dostępem',
-        'indicators': [
-            {'key': 'p9_import_success', 'name': 'Wskaźnik powodzenia importów',
-             'kind': 'eff', 'unit': '%', 'direction': '>', 'target': 90,
-             'description': 'Co pokazuje: niezawodność procesu importu danych z systemu Caldis. '
-                             'Jak liczony: importy zakończone sukcesem ÷ wszystkie zakończone próby importu × 100%. '
-                             'Jak poprawić: monitoruj przyczyny błędów (wygasła sesja, zmiany w źródle danych), stabilizuj proces.'},
-            {'key': 'p9_import_duration', 'name': 'Średni czas trwania importu',
-             'kind': 'effic', 'unit': 'min', 'direction': '<', 'target': 15,
-             'description': 'Co pokazuje: jak długo trwa jedno zakończone sukcesem zadanie importu danych. '
-                             'Jak liczony: średnia z (czas zakończenia − czas rozpoczęcia) w minutach dla udanych importów. '
-                             'Jak poprawić: importuj częściej mniejsze zakresy dat zamiast rzadziej duże partie.'},
-        ],
-    },
-    {
-        'id': 'P10',
-        'name': 'Analiza biznesowa i przegląd zarządzania',
-        'indicators': [
-            {'key': 'p10_targets_met', 'name': 'Odsetek wskaźników z osiągniętym celem',
-             'kind': 'eff', 'unit': '%', 'direction': '>', 'target': 80,
-             'unavailable_note': 'Wymaga rejestru corocznego przeglądu zarządzania (§5 BUSINESS_PROCESS_KPI_REVIEW.md) — brak jeszcze takiej tabeli w bazie.',
-             'description': 'Co ma pokazywać: jaki odsetek z 20 wskaźników osiągnął swój roczny cel. '
-                             'Jak miałby być liczony: wskaźniki z Actual ≥ Target w danym roku ÷ 20 × 100%, na podstawie rejestru przeglądu zarządzania. '
-                             'Obecnie niedostępny: brak w bazie tabeli przechowującej wyniki corocznego przeglądu i cele.'},
-            {'key': 'p10_corrective_action_timeliness', 'name': 'Terminowość działań korygujących',
-             'kind': 'effic', 'unit': '%', 'direction': '>', 'target': 80,
-             'unavailable_note': 'Wymaga rejestru corocznego przeglądu zarządzania (§5 BUSINESS_PROCESS_KPI_REVIEW.md) — brak jeszcze takiej tabeli w bazie.',
-             'description': 'Co ma pokazywać: jaki odsetek działań korygujących (ze zeszłorocznego przeglądu) zamknięto w terminie. '
-                             'Jak miałby być liczony: działania zamknięte w terminie ÷ wszystkie otwarte działania × 100%. '
-                             'Obecnie niedostępny: brak w bazie rejestru działań korygujących.'},
-        ],
-    },
 ]
+
+# P9 (Zarządzanie danymi i dostępem — import success/duration) and P10
+# (Analiza biznesowa i przegląd zarządzania) were removed 2026-07-17:
+# P9 tracked the Caldis migration-period import tooling, not a permanent
+# process. P10 needs a dedicated management-review page (with its own
+# corrective-action register) before it can show real numbers — planned as
+# a separate feature, not folded into this matrix in the meantime.
