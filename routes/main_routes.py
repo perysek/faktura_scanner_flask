@@ -487,6 +487,14 @@ def analytics_dashboard():
     return render_template('analytics/dashboard.html')
 
 
+@main_bp.route('/analytics/wskazniki-biznesowe')
+@login_required
+@module_permission_required('appointments')
+def kpi_matrix():
+    """ISO 9001/IATF-style monthly business KPI matrix, one process row-group per indicator pair."""
+    return render_template('analytics/kpi_matrix.html')
+
+
 # ============================================================================
 # SETTINGS ROUTES
 # ============================================================================

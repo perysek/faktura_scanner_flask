@@ -78,7 +78,7 @@
 
     {% if current_user.is_authenticated %}
 
-    {% set finanse_active = request.endpoint in ['main.dashboard', 'main.invoices_list', 'main.sellers_list', 'main.upload', 'main.analytics_dashboard'] %}
+    {% set finanse_active = request.endpoint in ['main.dashboard', 'main.invoices_list', 'main.sellers_list', 'main.upload', 'main.analytics_dashboard', 'main.kpi_matrix'] %}
     {% set salon_active = request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment', 'main.clients_list'] %}
     {% set zarzadzanie_active = request.endpoint in ['main.employees_list', 'main.services_list', 'main.formy_zatrudnienia_list', 'main.service_categories_list', 'absence.management_index', 'absence.my_absences', 'absence_balance.balances_index'] %}
     {% set korekta_active = request.endpoint in ['main.superadmin_edit_latest', 'main.superadmin_edit_visit', 'main.superadmin_edit_table'] %}
@@ -110,6 +110,10 @@
                 url_for('main.analytics_dashboard'), 'Analiza biznesowa',
                 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
                 request.endpoint == 'main.analytics_dashboard', extra_class='nav-mobile-hide') }}
+            {{ sidebar_link(
+                url_for('main.kpi_matrix'), 'Wskaźniki biznesowe',
+                'M9 17V9m0 8H5a2 2 0 01-2-2V9a2 2 0 012-2h4m0 10h6m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v12m0 0h4a2 2 0 002-2v-4a2 2 0 00-2-2h-4',
+                request.endpoint == 'main.kpi_matrix', extra_class='nav-mobile-hide') }}
         {{ sidebar_section_end() }}
         {% endif %}
 

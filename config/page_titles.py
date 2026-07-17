@@ -14,6 +14,7 @@ PAGE_TITLES = {
     'main.dashboard': 'Pulpit',
     'main.index': 'Pulpit',
     'main.analytics_dashboard': 'Analityka',
+    'main.kpi_matrix': 'Wskaźniki biznesowe',
     'main.income_dashboard': 'Przychody',
     'main.history': 'Historia',
     'main.import_page': 'Import danych',

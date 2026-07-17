@@ -7,6 +7,7 @@ from datetime import date
 
 from config.auth_config import module_permission_required
 from repositories.analytics.analytics_repository import AnalyticsRepository
+from repositories.analytics.kpi_matrix_repository import KpiMatrixRepository
 
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -399,6 +400,34 @@ def get_rolling_satisfaction_rating():
     """Średnia ocena klientów (1–5) ogółem + per pracownik — ruchome okno 12M"""
     data = repo.get_satisfaction_rating_monthly()
     return jsonify({"success": True, **data})
+
+
+@analytics_bp.route('/analytics/kpi-matrix', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_kpi_matrix():
+    """Macierz 20 wskaźników biznesowych (10 procesów × eff./effic.) dla wybranego roku."""
+    kpi_repo = KpiMatrixRepository()
+    min_year, max_year = kpi_repo.get_available_year_range()
+
+    year_param = request.args.get('year')
+    try:
+        year = int(year_param) if year_param else max_year
+    except ValueError:
+        return jsonify({"success": False, "error": "Nieprawidłowy rok"}), 400
+
+    if year < min_year or year > max_year:
+        return jsonify({"success": False, "error": f"Rok poza zakresem danych ({min_year}-{max_year})"}), 400
+
+    matrix = kpi_repo.get_kpi_matrix(year)
+
+    return jsonify({
+        "success": True,
+        "year": year,
+        "min_year": min_year,
+        "max_year": max_year,
+        "processes": matrix['processes'],
+    })
 
 
 @analytics_bp.route('/analytics/insights', methods=['GET'])

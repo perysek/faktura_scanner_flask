@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Wskaźniki biznesowe — {{ app_name }}{% endblock %}
+{% block mobile_title %}Wskaźniki biznesowe{% endblock %}
+
+{% block extra_css %}
+<style>
+/* This page must show all 20 indicators × 12 months in one screen, no
+   scrollbars, on desktop/laptop (>=1024px) — the JS auto-fit routine scales
+   the whole table down uniformly (transform: scale) until it fits both the
+   width and height of #kpiTableWrap, rather than guessing a fixed font-size
+   that would break on shorter viewports. Below 1024px a rowspan-based ISO
+   matrix doesn't translate cleanly to the app's .stack-cards mobile pattern
+   (each stacked "card" would need to repeat the process name and a rowspan
+   cell only lives in one DOM row) — falls back to a normal scrollable table.
+*/
+#main-content { overflow: hidden !important; }
+
+.kpi-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+}
+.kpi-header.page-header { margin-bottom: 0.625rem; flex: 0 0 auto; }
+
+.kpi-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--color-border);
+    background: white;
+}
+.kpi-table-scale {
+    transform-origin: top left;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+table.kpi-table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    white-space: nowrap;
+}
+table.kpi-table th,
+table.kpi-table td {
+    border: 1px solid var(--color-border);
+    padding: 5px 6px;
+    text-align: right;
+    line-height: 1.2;
+}
+table.kpi-table thead th {
+    background: var(--color-surface-warm, #f6f4f0);
+    color: var(--color-ink-subtle);
+    font-weight: 600;
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+    white-space: normal;
+}
+table.kpi-table col.col-process { width: 158px; }
+table.kpi-table col.col-indicator { width: 200px; }
+table.kpi-table col.col-unit { width: 62px; }
+table.kpi-table col.col-month { width: 56px; }
+table.kpi-table col.col-year { width: 62px; }
+table.kpi-table col.col-target { width: 56px; }
+
+table.kpi-table td.cell-process {
+    text-align: left;
+    font-weight: 600;
+    white-space: normal;
+    vertical-align: middle;
+    background: var(--color-surface-warm, #f6f4f0);
+}
+table.kpi-table td.cell-indicator {
+    text-align: left;
+    white-space: normal;
+}
+table.kpi-table td.cell-indicator .kind-tag {
+    display: inline-block;
+    font-size: 0.68em;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0 4px;
+    border-radius: var(--radius-sm, 2px);
+    margin-right: 4px;
+    color: white;
+}
+table.kpi-table td.cell-indicator .kind-tag.kind-eff { background: var(--color-accent, #8a6d1a); }
+table.kpi-table td.cell-indicator .kind-tag.kind-effic { background: var(--color-ink-subtle, #6b6459); }
+table.kpi-table td.cell-unit { text-align: center; color: var(--color-ink-subtle); font-size: 0.85em; }
+table.kpi-table td.cell-yprior { color: var(--color-ink-subtle); font-style: italic; }
+table.kpi-table td.cell-year { font-weight: 700; }
+table.kpi-table td.cell-target { color: var(--color-ink-subtle); text-align: center; }
+table.kpi-table td.cell-na { color: var(--color-ink-subtle); text-align: center; font-style: italic; }
+
+table.kpi-table tbody tr.proc-band-b { border-top: none; }
+table.kpi-table tbody tr.proc-band-a td { border-top: 2px solid var(--color-ink-subtle); }
+
+table.kpi-table td.status-good { background: rgba(45, 106, 79, 0.10); }
+table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
+
+.kpi-legend { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: var(--color-ink-subtle); flex-wrap: wrap; }
+.kpi-legend .dot { display:inline-block; width:0.7em; height:0.7em; border-radius: 1px; margin-right: 0.25em; vertical-align: -0.05em; }
+.kpi-legend .dot.good { background: rgba(45, 106, 79, 0.45); }
+.kpi-legend .dot.bad { background: rgba(155, 44, 44, 0.45); }
+
+@media (max-width: 1023px) {
+    #main-content { overflow: auto !important; }
+    .kpi-page { height: auto; }
+    .kpi-table-wrap { overflow: auto !important; height: auto !important; border: 1px solid var(--color-border); }
+    .kpi-table-scale { position: static !important; transform: none !important; }
+    table.kpi-table { table-layout: auto; min-width: 1500px; font-size: 12px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-page">
+    <div class="page-header kpi-header">
+        <div>
+            <h1 class="page-title">Wskaźniki biznesowe</h1>
+            <p class="page-subtitle" id="kpiSubtitle">Ładowanie…</p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+            <div class="kpi-legend">
+                <span><span class="dot good"></span>cel osiągnięty</span>
+                <span><span class="dot bad"></span>cel niespełniony</span>
+            </div>
+
+            <div class="flex items-center gap-2 border border-[var(--color-border)] p-1 bg-white">
+                <button id="prevYear" class="refined-btn-secondary refined-btn-sm" title="Poprzedni rok" aria-label="Poprzedni rok">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <select id="yearPicker" class="form-select refined-btn-sm" style="min-height:0; border:none;" aria-label="Wybierz rok"></select>
+                <button id="currentYear" class="refined-btn-secondary refined-btn-sm">Aktualny</button>
+                <button id="nextYear" class="refined-btn-secondary refined-btn-sm" title="Następny rok" aria-label="Następny rok">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-table-wrap" id="kpiTableWrap">
+        <div class="kpi-table-scale" id="kpiTableScale">
+            <table class="kpi-table" id="kpiTable">
+                <colgroup>
+                    <col class="col-process">
+                    <col class="col-indicator">
+                    <col class="col-unit">
+                    <col class="col-year">
+                    <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
+                    <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
+                    <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
+                    <col class="col-year">
+                    <col class="col-target">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Proces</th>
+                        <th>Wskaźnik</th>
+                        <th>Jedn.</th>
+                        <th>Rok-1</th>
+                        <th>Sty</th><th>Lut</th><th>Mar</th><th>Kwi</th>
+                        <th>Maj</th><th>Cze</th><th>Lip</th><th>Sie</th>
+                        <th>Wrz</th><th>Paź</th><th>Lis</th><th>Gru</th>
+                        <th id="kpiYearColHeader">Rok</th>
+                        <th>Cel</th>
+                    </tr>
+                </thead>
+                <tbody id="kpiTbody">
+                    <tr><td colspan="19" style="text-align:center; padding:2rem;">Ładowanie danych…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ asset_url('js/analytics/kpi_matrix.js') }}"></script>
+{% endblock %}
