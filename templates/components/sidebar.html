@@ -23,6 +23,43 @@
     }
     .admin-view-checkbox:disabled { opacity: 0.5; }
 
+    /* Pending-absences count pill (supervisors only, see zarzadzanie-active
+       memory). Amber "needs attention" palette, matching .ab-tab-count on the
+       absences management page — same semantic (pending count), same look. */
+    .sidebar-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        padding: 0 0.375rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        line-height: 1;
+        background: rgba(251, 191, 36, .22);
+        color: #92400e;
+        border-radius: var(--radius-sm);
+        text-decoration: none;
+    }
+    .sidebar-badge:hover { background: rgba(251, 191, 36, .34); }
+
+    /* Section-header placement: a sibling of the accordion toggle button (not
+       nested inside it, which would be invalid HTML and would make the pill's
+       click ambiguous with the toggle). Shown only while collapsed — driven
+       purely by the button's aria-expanded, which the existing accordion JS
+       already keeps current, so no extra JS wiring is required here. */
+    .sidebar-section { position: relative; }
+    .sidebar-badge-collapsed {
+        display: none;
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 2;
+    }
+    .sidebar-section-header[aria-expanded="false"] + .sidebar-badge-collapsed {
+        display: inline-flex;
+    }
+
     /* "Dane własne" — a sub-toggle nested under admin view. No top divider (it
        reads as a child of the row above); dimmed + non-interactive until admin
        view is ON, which is the only state where it is editable. */
@@ -43,6 +80,12 @@
 
         /* Drop the section grouping — hide the accordion header (and its chevron). */
         .sidebar-nav .sidebar-section-header { display: none !important; }
+
+        /* Sections are always force-expanded on mobile (see below), so the
+           collapsed-only pill would otherwise float with no header behind it.
+           The pending count still shows via the Nieobecnosci navlink itself,
+           which is force-visible in the flattened list. */
+        .sidebar-nav .sidebar-badge-collapsed { display: none !important; }
 
         /* Force every section body open regardless of the JS accordion state,
            which pins max-height inline (only !important beats an inline style). */
@@ -137,7 +180,10 @@
 
         <!-- Zarzadzanie -->
         {% if user_permissions.employees or user_permissions.services or is_supervisor or has_linked_employee %}
-        {{ sidebar_section_start('zarzadzanie', 'Zarzadzanie', zarzadzanie_active) }}
+        {% set show_pending_badge = is_supervisor and pending_absence_count and pending_absence_count > 0 %}
+        {{ sidebar_section_start('zarzadzanie', 'Zarzadzanie', zarzadzanie_active,
+            badge_count=(pending_absence_count if show_pending_badge else none),
+            badge_url=url_for('absence.management_index')) }}
             {% if user_permissions.employees %}
             {{ sidebar_link(
                 url_for('main.employees_list'), 'Pracownicy',
@@ -148,7 +194,8 @@
             {{ sidebar_link(
                 url_for('absence.management_index'), 'Nieobecnosci',
                 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-                request.endpoint == 'absence.management_index') }}
+                request.endpoint == 'absence.management_index',
+                badge=(pending_absence_count if show_pending_badge else none)) }}
             {{ sidebar_link(
                 url_for('absence_balance.balances_index'), 'Bilanse urlopow',
                 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',

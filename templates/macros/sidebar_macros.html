@@ -8,7 +8,7 @@
 {# ── Single navigation link ──
    extra_class: optional utility class(es) appended to the link — e.g.
    `nav-mobile-hide` to drop the link from the mobile drawer (< lg). #}
-{% macro sidebar_link(url, label, icon_path, is_active=false, extra_class='') %}
+{% macro sidebar_link(url, label, icon_path, is_active=false, extra_class='', badge=none) %}
 <a href="{{ url }}"
    class="sidebar-link flex items-center gap-2.5 px-4 py-[0.425rem] min-h-[44px] lg:min-h-0 text-base font-medium transition-all duration-200 group {{ extra_class }}
    {{ 'sidebar-link--active rounded-[var(--radius-sm)]' if is_active else 'sidebar-link--default rounded-[var(--radius-sm)]' }}"
@@ -17,6 +17,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}" />
     </svg>
     {{ label }}
+    {% if badge %}
+    <span class="sidebar-badge ml-auto shrink-0">{{ badge }}</span>
+    {% endif %}
 </a>
 {% endmacro %}
 
@@ -24,7 +27,7 @@
 {# ── Section opener (accordion header) ──
    extra_class: optional utility class(es) on the section wrapper — e.g.
    `nav-mobile-hide` to drop the whole section from the mobile drawer. #}
-{% macro sidebar_section_start(id, title, is_active=false, extra_class='') %}
+{% macro sidebar_section_start(id, title, is_active=false, extra_class='', badge_count=none, badge_url=none) %}
 <div class="sidebar-section mt-4 first:mt-2 {{ extra_class }}" data-active="{{ 'true' if is_active else 'false' }}">
     <button type="button"
             class="sidebar-section-header w-full px-2 mb-1 text-base font-semibold uppercase tracking-wider flex items-center gap-1 select-none transition-colors duration-200 py-1"
@@ -37,6 +40,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
     </button>
+    {% if badge_count %}
+    {# Visible only while the section is collapsed — CSS keys off the toggle
+       button's aria-expanded, which the accordion JS already keeps in sync, so
+       no extra JS is needed. A sibling of the button (not nested inside it) so
+       it stays independently clickable without invalid button-in-button HTML. #}
+    <a href="{{ badge_url }}" class="sidebar-badge sidebar-badge-collapsed"
+       title="Nieobecności oczekujące na akceptację"
+       aria-label="{{ badge_count }} nieobecności oczekujących na akceptację">{{ badge_count }}</a>
+    {% endif %}
     <div class="sidebar-section-items overflow-hidden transition-[max-height] duration-300 ease-in-out space-y-0.5"
          id="sidebar-{{ id }}-items"
          role="region"

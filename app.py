@@ -330,6 +330,7 @@ def create_app():
         _has_linked_employee = False
         _can_edit_price_history = False
         _can_send_sms = False
+        _pending_absence_count = 0
 
         if current_user.is_authenticated:
             try:
@@ -350,6 +351,9 @@ def create_app():
                 if emp:
                     from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
                     _is_supervisor = EmployeeSupervisorRepository().is_supervisor(emp['id'])
+                    if _is_supervisor:
+                        from services.absence_service import AbsenceService
+                        _pending_absence_count = AbsenceService().count_pending_for_approver(emp['id'])
             except Exception:
                 pass
 
@@ -381,6 +385,7 @@ def create_app():
             'user_permissions': user_permissions,
             'is_supervisor': _is_supervisor,
             'has_linked_employee': _has_linked_employee,
+            'pending_absence_count': _pending_absence_count,
             'can_edit_price_history': _can_edit_price_history,
             'can_send_sms': _can_send_sms,
             'admin_view_active': _admin_view_on,

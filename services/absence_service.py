@@ -519,6 +519,9 @@ class AbsenceService:
                            status_in: Optional[List[str]] = None) -> List[dict]:
         return [dict(r) for r in self.absence_repo.list_for_approver(approver_employee_id, status_in)]
 
+    def count_pending_for_approver(self, approver_employee_id: int) -> int:
+        return self.absence_repo.count_pending_for_approver(approver_employee_id)
+
     def list_all(self, **filters) -> List[dict]:
         return [dict(r) for r in self.absence_repo.list_all(**filters)]
 

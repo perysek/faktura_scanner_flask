@@ -132,6 +132,25 @@ class AbsenceRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
+    def count_pending_for_approver(self, approver_employee_id: int) -> int:
+        """Liczba wniosków 'pending' skierowanych do danego przełożonego —
+        lekkie zapytanie pod pill-count w sidebarze (odpytywane na każdym
+        żądaniu przez context processor)."""
+        excl_sql, excl_params = emp_exclusion_sql('ea.employee_id')
+        query = f"""
+            SELECT COUNT(*) AS cnt
+            FROM employee_absences ea
+            WHERE ea.approver_id = %s
+              AND ea.status = 'pending'
+              AND ea.is_deleted = FALSE
+              {excl_sql}
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (approver_employee_id, *excl_params))
+            row = cursor.fetchone()
+            return row['cnt'] if row else 0
+
     def list_all(self, status_in: Optional[List[str]] = None,
                  employee_id: Optional[int] = None,
                  date_from: Optional[date] = None,
