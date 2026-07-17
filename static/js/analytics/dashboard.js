@@ -795,7 +795,7 @@ async function loadOccupancy() {
     if (occupancyEl) occupancyEl.textContent = `${data.occupancy_rate.toFixed(1)}%`;
     if (occupancyDetailEl) {
         occupancyDetailEl.textContent =
-            `${data.completed} wizyt z ${data.theoretical_capacity} możliwych`;
+            `${data.booked_hours.toFixed(0)} godz. z ${data.theoretical_capacity.toFixed(0)} dostępnych`;
     }
 
     if (cancEl) {

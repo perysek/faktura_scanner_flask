@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 from config.database import DatabaseConnection
 from config.admin_view import emp_exclusion_sql_inline
 from config.appointment_statuses import AppointmentStatus
+from services import capacity_engine
 
 
 class AnalyticsRepository:
@@ -466,8 +467,13 @@ class AnalyticsRepository:
             })
 
         # 8. Low salon occupancy
+        # Threshold recalibrated for the hours-based occupancy model (real
+        # work_schedule hours vs. a flat appointment-slot guess) — typical
+        # observed values run ~20-35%, not the 60-80% the old slot-count
+        # model produced, so the old ">60% is fine" bar no longer means
+        # anything. 25% is a placeholder pending an owner-set target.
         occupancy_rate = float(occupancy_data.get('occupancy_rate', 0) or 0)
-        if occupancy_data.get('theoretical_capacity', 0) > 0 and occupancy_rate < 60:
+        if occupancy_data.get('theoretical_capacity', 0) > 0 and occupancy_rate < 25:
             insights.append({
                 'type': 'warning',
                 'title': 'Niskie obłożenie salonu',
@@ -517,13 +523,21 @@ class AnalyticsRepository:
         """
         Oblicz wskaźniki obłożenia salonu dla zakresu dat.
 
+        Obłożenie liczone w godzinach (zarezerwowane ÷ realnie dostępne), nie w
+        "slotach wizyt" — dostępność pochodzi z faktycznego grafiku każdego
+        pracownika (`employees.work_schedule`), tylko za okres jego
+        rzeczywistego zatrudnienia (hire_date/termination_date, nie dzisiejszy
+        stan is_active), pomniejszona o zatwierdzone nieobecności. Patrz
+        `services/capacity_engine.py`.
+
         Zwraca:
             {
                 'completed': int,
                 'cancelled': int,
                 'no_shows': int,
                 'total_scheduled': int,
-                'theoretical_capacity': int,
+                'booked_hours': float,
+                'theoretical_capacity': float,  # dostępne godziny (nie sloty)
                 'occupancy_rate': float,      # %
                 'cancellation_rate': float,   # %
                 'no_show_rate': float         # %
@@ -541,15 +555,6 @@ class AnalyticsRepository:
               {emp_exclusion_sql_inline('employee_id')}
         """
 
-        capacity_query = f"""
-            SELECT
-                COUNT(*)                               AS active_employees,
-                COALESCE(AVG(max_appointments_per_day), 8) AS avg_capacity
-            FROM employees
-            WHERE is_active = TRUE
-              {emp_exclusion_sql_inline('id')}
-        """
-
         conn = DatabaseConnection.get_connection()
         cursor = conn.cursor()
 
@@ -561,16 +566,13 @@ class AnalyticsRepository:
         no_shows = int(row['no_shows'] or 0)
         total_scheduled = int(row['total_scheduled'] or 0)
 
-        cursor.execute(capacity_query)
-        cap_row = cursor.fetchone()
-        active_employees = int(cap_row['active_employees'] or 0)
-        avg_capacity = float(cap_row['avg_capacity'] or 8)
-
-        working_days = (end_date - start_date).days + 1
-        theoretical_capacity = int(active_employees * avg_capacity * working_days)
+        capacity_daily = capacity_engine.get_daily_capacity(start_date, end_date)
+        booked_daily = capacity_engine.get_booked_hours_by_employee_day(start_date, end_date)
+        theoretical_capacity = round(capacity_engine.sum_hours(capacity_daily), 1)
+        booked_hours = round(capacity_engine.sum_hours(booked_daily), 1)
 
         occupancy_rate = min(
-            round(completed / theoretical_capacity * 100, 1) if theoretical_capacity > 0 else 0.0,
+            round(booked_hours / theoretical_capacity * 100, 1) if theoretical_capacity > 0 else 0.0,
             100.0
         )
         cancellation_rate = round(
@@ -585,6 +587,7 @@ class AnalyticsRepository:
             'cancelled': cancelled,
             'no_shows': no_shows,
             'total_scheduled': total_scheduled,
+            'booked_hours': booked_hours,
             'theoretical_capacity': theoretical_capacity,
             'occupancy_rate': occupancy_rate,
             'cancellation_rate': cancellation_rate,
@@ -1030,51 +1033,64 @@ class AnalyticsRepository:
 
     def get_employee_utilisation_monthly(self) -> List[Dict]:
         """
-        Wykorzystanie pracowników wg miesiąca — ostatnie 12 miesięcy.
-        Formuła: appointments / (22 dni rob. × max_appointments_per_day) × 100.
-        Zwraca wiersze (month_start, employee_name, utilisation_pct).
+        Wykorzystanie pracowników wg miesiąca — ostatnie 12 pełnych miesięcy
+        (bez bieżącego, w toku). Wykorzystanie = godziny zarezerwowane ÷
+        godziny realnie dostępne (grafik pracownika z work_schedule, tylko za
+        okres faktycznego zatrudnienia, pomniejszone o zatwierdzone
+        nieobecności) × 100%. Patrz services/capacity_engine.py — ten sam
+        silnik co macierz KPI i get_occupancy_stats.
+
+        Zwraca wiersze (month_start, employee_name, booked_hours,
+        available_hours, utilisation_pct). utilisation_pct is None where
+        available_hours is 0 (not yet hired / already left / fully absent
+        that month) — a row is still emitted so a month×employee grid stays
+        complete, matching get_satisfaction_rating_monthly's pattern.
         """
-        query = f"""
-            WITH months AS (
-                SELECT generate_series(
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months'),
-                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month'),
-                    '1 month'::interval
-                )::date AS month_start
-            ),
-            appts_by_month AS (
-                SELECT
-                    DATE_TRUNC('month', appointment_date)::date AS month_start,
-                    employee_id,
-                    COUNT(DISTINCT id) AS appointments_count
-                FROM appointments
-                WHERE status = '{AppointmentStatus.COMPLETED}'
-                  AND appointment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
-                  {emp_exclusion_sql_inline('employee_id')}
-                GROUP BY DATE_TRUNC('month', appointment_date)::date, employee_id
-            )
-            SELECT
-                m.month_start,
-                e.first_name || ' ' || e.last_name         AS employee_name,
-                COALESCE(ab.appointments_count, 0)          AS appointments_count,
-                COALESCE(e.max_appointments_per_day, 8)     AS max_per_day,
-                ROUND(
-                    (COALESCE(ab.appointments_count, 0) * 100.0
-                    / (22 * COALESCE(e.max_appointments_per_day, 8)))::numeric,
-                    1
-                ) AS utilisation_pct
-            FROM months m
-            CROSS JOIN employees e
-            LEFT JOIN appts_by_month ab
-                ON ab.month_start = m.month_start AND ab.employee_id = e.id
-            WHERE e.is_active = TRUE
-              {emp_exclusion_sql_inline('e.id')}
-            ORDER BY m.month_start, employee_name
-        """
+        range_end = date.today().replace(day=1) - timedelta(days=1)
+        range_start = range_end.replace(day=1) - relativedelta(months=11)
+
+        capacity_daily = capacity_engine.get_daily_capacity(range_start, range_end)
+        booked_daily = capacity_engine.get_booked_hours_by_employee_day(range_start, range_end)
+        capacity_by_emp_month = capacity_engine.bucket_by_employee_month(capacity_daily)
+        booked_by_emp_month = capacity_engine.bucket_by_employee_month(booked_daily)
+
+        employee_ids = sorted(capacity_daily.keys())
+        if not employee_ids:
+            return []
+
         conn = DatabaseConnection.get_connection()
         cursor = conn.cursor()
-        cursor.execute(query)
-        return [dict(row) for row in cursor.fetchall()]
+        placeholders = ','.join(['%s'] * len(employee_ids))
+        cursor.execute(
+            f"SELECT id, first_name || ' ' || last_name AS employee_name "
+            f"FROM employees WHERE id IN ({placeholders})",
+            employee_ids
+        )
+        names = {row['id']: row['employee_name'] for row in cursor.fetchall()}
+
+        rows = []
+        month_starts = []
+        cursor_month = range_start.replace(day=1)
+        while cursor_month <= range_end:
+            month_starts.append(cursor_month)
+            cursor_month = (cursor_month + relativedelta(months=1))
+
+        for month_start in month_starts:
+            m = month_start.month
+            for emp_id in employee_ids:
+                available_hours = round(capacity_by_emp_month.get((emp_id, m), 0.0), 1)
+                booked_hours = round(booked_by_emp_month.get((emp_id, m), 0.0), 1)
+                utilisation_pct = (
+                    round(booked_hours / available_hours * 100, 1) if available_hours > 0 else None
+                )
+                rows.append({
+                    'month_start': month_start,
+                    'employee_name': names.get(emp_id, f'#{emp_id}'),
+                    'booked_hours': booked_hours,
+                    'available_hours': available_hours,
+                    'utilisation_pct': utilisation_pct,
+                })
+        return rows
 
     def get_visit_frequency_distribution(self) -> List[Dict]:
         """

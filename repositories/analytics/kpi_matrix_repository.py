@@ -6,13 +6,13 @@ wartość roczna była prawdziwym przeliczeniem sum (nie naiwną średnią z 12
 wartości procentowych) — zgodnie z metodologią opisaną w
 BUSINESS_PROCESS_KPI_REVIEW.md §4.
 """
-import calendar
 from datetime import date
 from typing import Dict, List, Optional, Tuple
 
 from config.database import DatabaseConnection
 from config.admin_view import emp_exclusion_sql_inline
 from config.kpi_indicators import PROCESSES
+from services import capacity_engine
 
 Component = Tuple[float, float]  # (numerator, denominator)
 
@@ -161,6 +161,37 @@ class KpiMatrixRepository:
                 out[m] = (float(row[num_col] or 0), float(row[den_col] or 0))
         return out
 
+    def _year_capacity(self, year: int) -> Dict:
+        """Real available/booked hours for the calendar year via
+        services.capacity_engine, bucketed by month and by (employee, month)
+        — cached per instance so P1 (occupancy) and P5 (utilisation) share
+        one pair of engine calls per year instead of recomputing
+        independently. For the current year, the range is capped at today
+        so an in-progress month only counts its elapsed days' capacity
+        (and strictly future months naturally come out empty here, on top
+        of the uniform _zero_incomplete_months safety net)."""
+        if not hasattr(self, '_capacity_cache'):
+            self._capacity_cache = {}
+        if year in self._capacity_cache:
+            return self._capacity_cache[year]
+
+        start = date(year, 1, 1)
+        today = date.today()
+        end = date(year, 12, 31) if year < today.year else min(date(year, 12, 31), today)
+
+        capacity_daily = capacity_engine.get_daily_capacity(start, end)
+        booked_daily = capacity_engine.get_booked_hours_by_employee_day(start, end)
+
+        result = {
+            'capacity_by_month': capacity_engine.bucket_by_month(capacity_daily),
+            'capacity_by_emp_month': capacity_engine.bucket_by_employee_month(capacity_daily),
+            'booked_by_month': capacity_engine.bucket_by_month(booked_daily),
+            'booked_by_emp_month': capacity_engine.bucket_by_employee_month(booked_daily),
+            'employee_ids': set(capacity_daily.keys()),
+        }
+        self._capacity_cache[year] = result
+        return result
+
     # ------------------------------------------------------------------
     # P1 — Rezerwacja i realizacja wizyt
     # ------------------------------------------------------------------
@@ -180,40 +211,13 @@ class KpiMatrixRepository:
         return self._bucket(query, (start, end), 'completed', 'total')
 
     def _p1_occupancy(self, year, employees, services_count) -> Dict[int, Component]:
-        start, end = _year_bounds(year)
-        query = f"""
-            SELECT EXTRACT(MONTH FROM appointment_date)::int AS month,
-                   COUNT(*) FILTER (WHERE status = 'completed') AS completed
-            FROM appointments
-            WHERE appointment_date BETWEEN %s AND %s
-              AND status = 'completed'
-              {emp_exclusion_sql_inline('employee_id')}
-            GROUP BY 1
-        """
-        conn = DatabaseConnection.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(query, (start, end))
-        completed_by_month = {int(r['month']): int(r['completed']) for r in cursor.fetchall()}
-
-        active_count = len(employees)
-        avg_capacity = (sum(e['max_per_day'] for e in employees) / active_count) if active_count else 8.0
-
-        today = date.today()
+        """Booked hours ÷ real available hours (per-employee work_schedule,
+        historically-accurate headcount, absences subtracted) — see
+        _year_capacity(). Both sides are in hours, not appointment counts."""
+        cap = self._year_capacity(year)
         out = _empty_months()
         for m in range(1, 13):
-            days_in_month = calendar.monthrange(year, m)[1]
-            if year == today.year and m == today.month:
-                # In-progress month: capacity so far this month, not the full
-                # month — otherwise day 5 of a 31-day month always reads as a
-                # deflated ~16% occupancy no matter how fully booked it is.
-                # (Strictly future months are zeroed afterwards by
-                # _zero_incomplete_months, so they never reach this branch's
-                # "else" with a misleadingly full-month denominator.)
-                days_for_capacity = min(today.day, days_in_month)
-            else:
-                days_for_capacity = days_in_month
-            capacity = active_count * avg_capacity * days_for_capacity
-            out[m] = (float(completed_by_month.get(m, 0)), float(capacity))
+            out[m] = (cap['booked_by_month'].get(m, 0.0), cap['capacity_by_month'].get(m, 0.0))
         return out
 
     # ------------------------------------------------------------------
@@ -330,36 +334,25 @@ class KpiMatrixRepository:
     # ------------------------------------------------------------------
 
     def _p5_utilisation(self, year, employees, services_count) -> Dict[int, Component]:
-        start, end = _year_bounds(year)
-        query = f"""
-            SELECT EXTRACT(MONTH FROM appointment_date)::int AS month,
-                   employee_id,
-                   COUNT(*) AS cnt
-            FROM appointments
-            WHERE status = 'completed'
-              AND appointment_date BETWEEN %s AND %s
-              {emp_exclusion_sql_inline('employee_id')}
-            GROUP BY 1, 2
-        """
-        conn = DatabaseConnection.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(query, (start, end))
-        counts = {}  # (month, employee_id) -> cnt
-        for r in cursor.fetchall():
-            counts[(int(r['month']), r['employee_id'])] = int(r['cnt'])
-
-        max_per_day = {e['id']: e['max_per_day'] for e in employees}
+        """Average per-employee (booked hours ÷ real available hours) across
+        every employee who actually had available hours that month — an
+        employee not yet hired, already left, or fully absent that month
+        contributes nothing (excluded, not averaged in as 0%)."""
+        cap = self._year_capacity(year)
         out = _empty_months()
-        if not employees:
-            return out
         for m in range(1, 13):
-            util_sum = 0.0
-            for emp_id, cap in max_per_day.items():
-                cnt = counts.get((m, emp_id), 0)
-                util_sum += (cnt * 100.0) / (22 * cap) if cap else 0.0
+            pct_sum = 0.0
+            emp_count = 0
+            for emp_id in cap['employee_ids']:
+                cap_m = cap['capacity_by_emp_month'].get((emp_id, m), 0.0)
+                if cap_m <= 0:
+                    continue
+                booked_m = cap['booked_by_emp_month'].get((emp_id, m), 0.0)
+                pct_sum += booked_m / cap_m * 100.0
+                emp_count += 1
             # avg utilisation across employees, expressed as num/den = avg/1 so
             # _ratio()'s generic *100 path is bypassed by treating den as employee count
-            out[m] = (util_sum, float(len(employees)))
+            out[m] = (pct_sum, float(emp_count))
         return out
 
     def _p5_cost_per_visit(self, year, employees, services_count) -> Dict[int, Component]:

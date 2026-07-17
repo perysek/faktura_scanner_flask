@@ -27,10 +27,12 @@ PROCESSES = [
                              'Jak poprawić: ogranicz odwołania (elastyczniejsze zasady rezerwacji, przypomnienia SMS) '
                              'i nieobecności (potwierdzenia wizyt, listy oczekujących na wolne terminy).'},
             {'key': 'p1_occupancy', 'name': 'Obłożenie salonu',
-             'kind': 'effic', 'unit': '%', 'direction': '>', 'target': 60,
-             'description': 'Co pokazuje: jaka część teoretycznej zdolności usługowej salonu jest faktycznie wykorzystana. '
-                             'Jak liczony: zrealizowane wizyty ÷ (liczba pracowników × śr. maks. wizyt dziennie × dni robocze) × 100%. '
-                             'Bieżący miesiąc liczony proporcjonalnie do liczby dni, które już minęły. '
+             'kind': 'effic', 'unit': '%', 'direction': '>', 'target': 35,
+             'description': 'Co pokazuje: jaka część realnie dostępnego czasu pracy salonu jest faktycznie wykorzystana. '
+                             'Jak liczony: suma godzin zarezerwowanych w zrealizowanych wizytach ÷ suma godzin faktycznie dostępnych × 100%. '
+                             'Dostępne godziny liczone per pracownik z jego indywidualnego grafiku (godziny pracy wg dnia tygodnia), '
+                             'tylko za okres faktycznego zatrudnienia w danym miesiącu (data zatrudnienia/zwolnienia), '
+                             'pomniejszone o zatwierdzone nieobecności. Bieżący miesiąc liczy tylko dni, które już minęły. '
                              'Jak poprawić: aktywna sprzedaż wolnych terminów, promocje w godzinach mniejszego ruchu, lepsze planowanie grafików.'},
         ],
     },
@@ -87,9 +89,11 @@ PROCESSES = [
         'name': 'Zarządzanie zasobami ludzkimi',
         'indicators': [
             {'key': 'p5_utilisation', 'name': 'Średnie wykorzystanie zespołu',
-             'kind': 'eff', 'unit': '%', 'direction': '>', 'target': 70,
-             'description': 'Co pokazuje: średnie wykorzystanie mocy usługowej pracowników w danym miesiącu. '
-                             'Jak liczony: dla każdego pracownika wizyty ÷ (22 dni robocze × maks. wizyt dziennie) × 100%, uśrednione po aktywnych pracownikach. '
+             'kind': 'eff', 'unit': '%', 'direction': '>', 'target': 40,
+             'description': 'Co pokazuje: średnie wykorzystanie realnego czasu pracy zespołu w danym miesiącu. '
+                             'Jak liczony: dla każdego zatrudnionego wtedy pracownika — godziny zarezerwowane ÷ godziny dostępne '
+                             '(wg jego grafiku, pomniejszone o zatwierdzone nieobecności) × 100%, uśrednione po pracownikach z jakimikolwiek '
+                             'godzinami dostępnymi w tym miesiącu (nieobecni cały miesiąc lub jeszcze niezatrudnieni nie liczą się jako 0%). '
                              'Jak poprawić: wyrównuj obłożenie między pracownikami, planuj urlopy poza szczytem sezonowym.'},
             {'key': 'p5_cost_per_visit', 'name': 'Koszt personelu na wizytę',
              'kind': 'effic', 'unit': 'PLN/wiz.', 'direction': '<', 'target': 80,
