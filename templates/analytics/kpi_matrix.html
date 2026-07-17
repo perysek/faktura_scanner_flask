@@ -4,17 +4,21 @@
 
 {% block extra_css %}
 <style>
-/* Full-width dense table: horizontal scroll for the 19 columns, vertical
-   scroll for the 21 rows within its own wrapper (not the whole page), with
-   a sticky header row so the month labels stay visible while scrolling
-   down. Row height/font are generous since we're no longer fitting
-   everything into one screenful without scrollbars. */
+/* Full-width dense table: fixed table-layout + width:100% + no min-width
+   means the browser always proportionally scales the <col> ratios below to
+   fit whatever width #kpiTableWrap actually has — the table can never be
+   wider than its container, so horizontal scroll never triggers. Only
+   vertical scroll (for row overflow) is allowed, with a sticky header row
+   so the month labels stay visible while scrolling down. Column ratios are
+   deliberately uneven: "Wskaźnik" and the month-value columns only need
+   enough room for their actual content (short numbers), not equal shares. */
 .kpi-page { padding: 0.75rem 1rem; }
 .kpi-header.page-header { margin-bottom: 0.75rem; }
 
 .kpi-table-wrap {
     max-height: calc(100vh - 180px);
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     border: 1px solid var(--color-border);
     background: white;
     position: relative;
@@ -24,19 +28,20 @@ table.kpi-table {
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
-    min-width: 1900px;
     table-layout: fixed;
     font-variant-numeric: tabular-nums;
-    font-size: 16px;
+    font-size: 13px;
 }
 table.kpi-table th,
 table.kpi-table td {
     border-right: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
-    padding: 10px 12px;
+    padding: 7px 5px;
     text-align: right;
-    line-height: 1.3;
+    line-height: 1.25;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 table.kpi-table thead th {
     position: sticky;
@@ -46,18 +51,18 @@ table.kpi-table thead th {
     background: var(--color-surface-warm, #f6f4f0);
     color: var(--color-ink-subtle);
     font-weight: 600;
-    font-size: 0.68em;
+    font-size: 10.5px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     text-align: center;
     white-space: normal;
 }
-table.kpi-table col.col-process { width: 240px; }
-table.kpi-table col.col-indicator { width: 340px; }
-table.kpi-table col.col-unit { width: 84px; }
-table.kpi-table col.col-month { width: 82px; }
-table.kpi-table col.col-year { width: 100px; }
-table.kpi-table col.col-target { width: 96px; }
+table.kpi-table col.col-process { width: 12%; }
+table.kpi-table col.col-indicator { width: 16%; }
+table.kpi-table col.col-unit { width: 6%; }
+table.kpi-table col.col-month { width: 4.1%; }
+table.kpi-table col.col-year { width: 5.5%; }
+table.kpi-table col.col-target { width: 5.5%; }
 
 table.kpi-table td.cell-process {
     text-align: left;
