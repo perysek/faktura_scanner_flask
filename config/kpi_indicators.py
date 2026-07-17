@@ -128,7 +128,7 @@ PROCESSES = [
                              'Jak liczony: (przychód − koszty personelu − koszty faktur) ÷ przychód × 100%. '
                              'Jak poprawić: zwiększaj przychód (obłożenie, ceny) szybciej niż koszty, kontroluj koszty zakupowe.'},
             {'key': 'p7_turnover', 'name': 'Obrót',
-             'kind': 'eff', 'unit': 'PLN', 'direction': '>', 'target': 20000,
+             'kind': 'eff', 'unit': 'PLN', 'direction': '>', 'target': 35000,
              'description': 'Co pokazuje: obrót wypracowany przez salon w danym miesiącu — przychód z zakończonych wizyt '
                              'pomniejszony o prowizje wypłacone pracownikom od tych konkretnych wizyt. Pensja podstawowa '
                              'pracownika (jeśli zdefiniowana) NIE jest tu odejmowana — to koszt stały, ujęty osobno '
