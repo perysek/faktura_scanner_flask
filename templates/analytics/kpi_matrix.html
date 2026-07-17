@@ -4,72 +4,60 @@
 
 {% block extra_css %}
 <style>
-/* This page must show all 20 indicators × 12 months in one screen, no
-   scrollbars, on desktop/laptop (>=1024px) — the JS auto-fit routine scales
-   the whole table down uniformly (transform: scale) until it fits both the
-   width and height of #kpiTableWrap, rather than guessing a fixed font-size
-   that would break on shorter viewports. Below 1024px a rowspan-based ISO
-   matrix doesn't translate cleanly to the app's .stack-cards mobile pattern
-   (each stacked "card" would need to repeat the process name and a rowspan
-   cell only lives in one DOM row) — falls back to a normal scrollable table.
-*/
-#main-content { overflow: hidden !important; }
-
-.kpi-page {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    padding: 0.75rem 1rem;
-    box-sizing: border-box;
-}
-.kpi-header.page-header { margin-bottom: 0.625rem; flex: 0 0 auto; }
+/* Full-width dense table: horizontal scroll for the 19 columns, vertical
+   scroll for the 21 rows within its own wrapper (not the whole page), with
+   a sticky header row so the month labels stay visible while scrolling
+   down. Row height/font are generous since we're no longer fitting
+   everything into one screenful without scrollbars. */
+.kpi-page { padding: 0.75rem 1rem; }
+.kpi-header.page-header { margin-bottom: 0.75rem; }
 
 .kpi-table-wrap {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-    position: relative;
+    max-height: calc(100vh - 180px);
+    overflow: auto;
     border: 1px solid var(--color-border);
     background: white;
-}
-.kpi-table-scale {
-    transform-origin: top left;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
 }
 
 table.kpi-table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: 1900px;
     table-layout: fixed;
     font-variant-numeric: tabular-nums;
-    font-size: 13px;
-    white-space: nowrap;
+    font-size: 16px;
 }
 table.kpi-table th,
 table.kpi-table td {
-    border: 1px solid var(--color-border);
-    padding: 5px 6px;
+    border-right: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    padding: 10px 12px;
     text-align: right;
-    line-height: 1.2;
+    line-height: 1.3;
+    white-space: nowrap;
 }
 table.kpi-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    border-top: 1px solid var(--color-border);
     background: var(--color-surface-warm, #f6f4f0);
     color: var(--color-ink-subtle);
     font-weight: 600;
-    font-size: 0.72em;
+    font-size: 0.68em;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     text-align: center;
     white-space: normal;
 }
-table.kpi-table col.col-process { width: 158px; }
-table.kpi-table col.col-indicator { width: 200px; }
-table.kpi-table col.col-unit { width: 62px; }
-table.kpi-table col.col-month { width: 56px; }
-table.kpi-table col.col-year { width: 62px; }
-table.kpi-table col.col-target { width: 56px; }
+table.kpi-table col.col-process { width: 240px; }
+table.kpi-table col.col-indicator { width: 340px; }
+table.kpi-table col.col-unit { width: 84px; }
+table.kpi-table col.col-month { width: 82px; }
+table.kpi-table col.col-year { width: 100px; }
+table.kpi-table col.col-target { width: 96px; }
 
 table.kpi-table td.cell-process {
     text-align: left;
@@ -82,25 +70,16 @@ table.kpi-table td.cell-indicator {
     text-align: left;
     white-space: normal;
 }
-table.kpi-table td.cell-indicator .kind-tag {
-    display: inline-block;
-    font-size: 0.68em;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    padding: 0 4px;
-    border-radius: var(--radius-sm, 2px);
-    margin-right: 4px;
-    color: white;
+table.kpi-table td.cell-indicator .kpi-tip {
+    border-bottom: 1px dotted var(--color-ink-subtle);
+    cursor: help;
 }
-table.kpi-table td.cell-indicator .kind-tag.kind-eff { background: var(--color-accent, #8a6d1a); }
-table.kpi-table td.cell-indicator .kind-tag.kind-effic { background: var(--color-ink-subtle, #6b6459); }
 table.kpi-table td.cell-unit { text-align: center; color: var(--color-ink-subtle); font-size: 0.85em; }
 table.kpi-table td.cell-yprior { color: var(--color-ink-subtle); font-style: italic; }
 table.kpi-table td.cell-year { font-weight: 700; }
 table.kpi-table td.cell-target { color: var(--color-ink-subtle); text-align: center; }
-table.kpi-table td.cell-na { color: var(--color-ink-subtle); text-align: center; font-style: italic; }
+table.kpi-table td.cell-na { color: var(--color-ink-subtle); text-align: center; font-style: italic; white-space: normal; }
 
-table.kpi-table tbody tr.proc-band-b { border-top: none; }
 table.kpi-table tbody tr.proc-band-a td { border-top: 2px solid var(--color-ink-subtle); }
 
 table.kpi-table td.status-good { background: rgba(45, 106, 79, 0.10); }
@@ -111,12 +90,22 @@ table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
 .kpi-legend .dot.good { background: rgba(45, 106, 79, 0.45); }
 .kpi-legend .dot.bad { background: rgba(155, 44, 44, 0.45); }
 
-@media (max-width: 1023px) {
-    #main-content { overflow: auto !important; }
-    .kpi-page { height: auto; }
-    .kpi-table-wrap { overflow: auto !important; height: auto !important; border: 1px solid var(--color-border); }
-    .kpi-table-scale { position: static !important; transform: none !important; }
-    table.kpi-table { table-layout: auto; min-width: 1500px; font-size: 12px; }
+/* Hover tooltip — positioned via JS (fixed), so it escapes the scrolling
+   table wrapper instead of being clipped by its overflow:auto. */
+.kpi-hover-tip {
+    position: fixed;
+    z-index: 100;
+    max-width: 380px;
+    background: var(--color-ink, #1a1a1a);
+    color: #fff;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm, 4px);
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: normal;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+    display: none;
 }
 </style>
 {% endblock %}
@@ -153,39 +142,39 @@ table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
     </div>
 
     <div class="kpi-table-wrap" id="kpiTableWrap">
-        <div class="kpi-table-scale" id="kpiTableScale">
-            <table class="kpi-table" id="kpiTable">
-                <colgroup>
-                    <col class="col-process">
-                    <col class="col-indicator">
-                    <col class="col-unit">
-                    <col class="col-year">
-                    <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
-                    <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
-                    <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
-                    <col class="col-year">
-                    <col class="col-target">
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th>Proces</th>
-                        <th>Wskaźnik</th>
-                        <th>Jedn.</th>
-                        <th>Rok-1</th>
-                        <th>Sty</th><th>Lut</th><th>Mar</th><th>Kwi</th>
-                        <th>Maj</th><th>Cze</th><th>Lip</th><th>Sie</th>
-                        <th>Wrz</th><th>Paź</th><th>Lis</th><th>Gru</th>
-                        <th id="kpiYearColHeader">Rok</th>
-                        <th>Cel</th>
-                    </tr>
-                </thead>
-                <tbody id="kpiTbody">
-                    <tr><td colspan="19" style="text-align:center; padding:2rem;">Ładowanie danych…</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <table class="kpi-table" id="kpiTable">
+            <colgroup>
+                <col class="col-process">
+                <col class="col-indicator">
+                <col class="col-unit">
+                <col class="col-year">
+                <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
+                <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
+                <col class="col-month"><col class="col-month"><col class="col-month"><col class="col-month">
+                <col class="col-year">
+                <col class="col-target">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Proces</th>
+                    <th>Wskaźnik</th>
+                    <th>Jedn.</th>
+                    <th>Rok-1</th>
+                    <th>Sty</th><th>Lut</th><th>Mar</th><th>Kwi</th>
+                    <th>Maj</th><th>Cze</th><th>Lip</th><th>Sie</th>
+                    <th>Wrz</th><th>Paź</th><th>Lis</th><th>Gru</th>
+                    <th id="kpiYearColHeader">Rok</th>
+                    <th>Cel</th>
+                </tr>
+            </thead>
+            <tbody id="kpiTbody">
+                <tr><td colspan="19" style="text-align:center; padding:2rem;">Ładowanie danych…</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
+
+<div class="kpi-hover-tip" id="kpiHoverTip"></div>
 {% endblock %}
 
 {% block extra_scripts %}

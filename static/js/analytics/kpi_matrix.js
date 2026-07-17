@@ -1,9 +1,8 @@
 /**
  * Wskaźniki biznesowe — 20-indicator ISO 9001/IATF-style monthly KPI matrix.
- * Fetches /api/analytics/kpi-matrix?year=YYYY and renders a dense table that
- * fills #kpiTableWrap with no scrollbars: the table renders at a comfortable
- * base font-size, then a uniform CSS transform scales it down (never up)
- * until both its width and height fit the wrapper.
+ * Fetches /api/analytics/kpi-matrix?year=YYYY and renders a full-width table:
+ * the wrapper scrolls both axes with a sticky header row, so column count /
+ * row height are not constrained to one screenful.
  */
 (function () {
     'use strict';
@@ -20,9 +19,7 @@
     const prevBtn = document.getElementById('prevYear');
     const nextBtn = document.getElementById('nextYear');
     const currentBtn = document.getElementById('currentYear');
-    const wrap = document.getElementById('kpiTableWrap');
-    const scaleEl = document.getElementById('kpiTableScale');
-    const table = document.getElementById('kpiTable');
+    const hoverTip = document.getElementById('kpiHoverTip');
 
     function fmtValue(value, unit) {
         if (value === null || value === undefined) return '–';
@@ -51,6 +48,26 @@
         return met ? 'status-good' : 'status-bad';
     }
 
+    // Fixed-position tooltip (not CSS-only) so it escapes the scrolling
+    // table wrapper's overflow:auto clipping instead of being cut off.
+    function attachTip(el, text) {
+        if (!text) return;
+        el.classList.add('kpi-tip');
+        el.addEventListener('mouseenter', function () {
+            hoverTip.textContent = text;
+            hoverTip.style.display = 'block';
+            const r = el.getBoundingClientRect();
+            const tipW = hoverTip.offsetWidth;
+            let left = r.left;
+            if (left + tipW > window.innerWidth - 12) left = window.innerWidth - tipW - 12;
+            hoverTip.style.left = Math.max(12, left) + 'px';
+            hoverTip.style.top = (r.bottom + 6) + 'px';
+        });
+        el.addEventListener('mouseleave', function () {
+            hoverTip.style.display = 'none';
+        });
+    }
+
     function buildRow(proc, ind, isFirstOfPair) {
         const tr = document.createElement('tr');
         tr.className = isFirstOfPair ? 'proc-band-a' : 'proc-band-b';
@@ -65,12 +82,10 @@
 
         const tdInd = document.createElement('td');
         tdInd.className = 'cell-indicator';
-        const kindTag = document.createElement('span');
-        kindTag.className = 'kind-tag ' + (ind.kind === 'eff' ? 'kind-eff' : 'kind-effic');
-        kindTag.textContent = ind.kind === 'eff' ? 'SKUT' : 'EFEK';
-        kindTag.title = ind.kind === 'eff' ? 'Wskaźnik skuteczności (effectiveness)' : 'Wskaźnik efektywności (efficiency)';
-        tdInd.appendChild(kindTag);
-        tdInd.appendChild(document.createTextNode(ind.name));
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = ind.name;
+        attachTip(nameSpan, ind.description || ind.unavailable_note);
+        tdInd.appendChild(nameSpan);
         tr.appendChild(tdInd);
 
         const tdUnit = document.createElement('td');
@@ -83,7 +98,6 @@
             tdNa.className = 'cell-na';
             tdNa.colSpan = 15;
             tdNa.textContent = 'brak danych źródłowych';
-            tdNa.title = ind.unavailable_note;
             tr.appendChild(tdNa);
             return tr;
         }
@@ -123,19 +137,6 @@
         });
         yearHeader.textContent = 'Rok ' + data.year;
         subtitle.textContent = 'Rok ' + data.year + ' — 10 procesów × 2 wskaźniki (skuteczność + efektywność)';
-        autoFit();
-    }
-
-    function autoFit() {
-        // Reset before measuring so a previous shrink doesn't compound.
-        scaleEl.style.transform = 'none';
-        const wrapW = wrap.clientWidth;
-        const wrapH = wrap.clientHeight;
-        const tableW = table.scrollWidth;
-        const tableH = table.scrollHeight;
-        if (!wrapW || !wrapH || !tableW || !tableH) return;
-        const scale = Math.min(1, wrapW / tableW, wrapH / tableH);
-        scaleEl.style.transform = 'scale(' + scale + ')';
     }
 
     function populateYearPicker() {
@@ -187,12 +188,6 @@
     });
     yearPicker.addEventListener('change', function () {
         loadYear(parseInt(yearPicker.value, 10));
-    });
-
-    let resizeTimer;
-    window.addEventListener('resize', function () {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(autoFit, 100);
     });
 
     loadYear(null);

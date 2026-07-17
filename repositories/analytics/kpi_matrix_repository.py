@@ -66,6 +66,7 @@ class KpiMatrixRepository:
 
                 compute = self._COMPUTE[key]
                 current_components = compute(self, year, active_employees, active_services_count)
+                current_components = self._zero_incomplete_months(current_components, year)
                 prior_components = compute(self, year - 1, active_employees, active_services_count)
 
                 months_out = {}
@@ -128,6 +129,27 @@ class KpiMatrixRepository:
             return round(num / den, 1)
         return round(num / den * 100, 1)
 
+    @staticmethod
+    def _zero_incomplete_months(components: Dict[int, Component], year: int) -> Dict[int, Component]:
+        """Strictly-future months must not contribute a synthetic zero to the
+        current year's total. Indicators like occupancy, price-update coverage
+        and team utilisation derive their denominator from the calendar (days
+        in month / active headcount) rather than from real event rows, so an
+        unstarted month would otherwise silently drag the YTD ratio down —
+        e.g. viewing 2026 in July would count Aug-Dec as "0% occupancy"
+        instead of "no data yet". Event-based indicators are unaffected (their
+        denominator is already naturally 0 for months with no rows).
+        The in-progress current month is left untouched here — indicators
+        whose denominator needs day-level proration (occupancy) handle that
+        themselves in their own compute function."""
+        today = date.today()
+        if year != today.year:
+            return components
+        out = dict(components)
+        for m in range(today.month + 1, 13):
+            out[m] = (0.0, 0.0)
+        return out
+
     def _bucket(self, query: str, params: tuple, num_col: str, den_col: str) -> Dict[int, Component]:
         conn = DatabaseConnection.get_connection()
         cursor = conn.cursor()
@@ -176,10 +198,21 @@ class KpiMatrixRepository:
         active_count = len(employees)
         avg_capacity = (sum(e['max_per_day'] for e in employees) / active_count) if active_count else 8.0
 
+        today = date.today()
         out = _empty_months()
         for m in range(1, 13):
             days_in_month = calendar.monthrange(year, m)[1]
-            capacity = active_count * avg_capacity * days_in_month
+            if year == today.year and m == today.month:
+                # In-progress month: capacity so far this month, not the full
+                # month — otherwise day 5 of a 31-day month always reads as a
+                # deflated ~16% occupancy no matter how fully booked it is.
+                # (Strictly future months are zeroed afterwards by
+                # _zero_incomplete_months, so they never reach this branch's
+                # "else" with a misleadingly full-month denominator.)
+                days_for_capacity = min(today.day, days_in_month)
+            else:
+                days_for_capacity = days_in_month
+            capacity = active_count * avg_capacity * days_for_capacity
             out[m] = (float(completed_by_month.get(m, 0)), float(capacity))
         return out
 
