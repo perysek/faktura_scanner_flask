@@ -162,12 +162,17 @@
 
         <!-- Salon -->
         {% if user_permissions.appointments or user_permissions.clients %}
-        {{ sidebar_section_start('salon', 'Salon', salon_active) }}
+        {% set show_past_pending_badge = can_write_appointments and past_pending_appointments_count and past_pending_appointments_count > 0 %}
+        {{ sidebar_section_start('salon', 'Salon', salon_active,
+            badge_count=(past_pending_appointments_count if show_past_pending_badge else none),
+            badge_url=url_for('main.appointments_list'),
+            badge_label='Przeszłe wizyty do rozliczenia') }}
             {% if user_permissions.appointments %}
             {{ sidebar_link(
                 url_for('main.appointments_list'), 'Wizyty',
                 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-                request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment']) }}
+                request.endpoint in ['main.appointments_list', 'main.appointments_calendar', 'main.create_appointment', 'main.view_appointment'],
+                badge=(past_pending_appointments_count if show_past_pending_badge else none)) }}
             {% endif %}
             {% if user_permissions.clients %}
             {{ sidebar_link(
@@ -183,7 +188,8 @@
         {% set show_pending_badge = is_supervisor and pending_absence_count and pending_absence_count > 0 %}
         {{ sidebar_section_start('zarzadzanie', 'Zarzadzanie', zarzadzanie_active,
             badge_count=(pending_absence_count if show_pending_badge else none),
-            badge_url=url_for('absence.management_index')) }}
+            badge_url=url_for('absence.management_index'),
+            badge_label='Nieobecności oczekujące na akceptację') }}
             {% if user_permissions.employees %}
             {{ sidebar_link(
                 url_for('main.employees_list'), 'Pracownicy',

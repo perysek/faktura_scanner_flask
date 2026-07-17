@@ -322,7 +322,8 @@ def create_app():
         from flask import request as _request
         from config.auth_config import (
             get_user_module_permissions, is_supervisor, get_linked_employee,
-            can_edit_service_price_history, can_send_appointment_sms
+            can_edit_service_price_history, can_send_appointment_sms,
+            get_permission_flags
         )
 
         user_permissions = {}
@@ -331,6 +332,8 @@ def create_app():
         _can_edit_price_history = False
         _can_send_sms = False
         _pending_absence_count = 0
+        _can_write_appointments = False
+        _past_pending_appointments_count = 0
 
         if current_user.is_authenticated:
             try:
@@ -354,6 +357,14 @@ def create_app():
                     if _is_supervisor:
                         from services.absence_service import AbsenceService
                         _pending_absence_count = AbsenceService().count_pending_for_approver(emp['id'])
+            except Exception:
+                pass
+            try:
+                flags = get_permission_flags(current_user.role, 'appointments')
+                _can_write_appointments = flags['has_access'] and not flags['read_only']
+                if _can_write_appointments:
+                    from repositories.appointments.appointment_repository import AppointmentRepository
+                    _past_pending_appointments_count = AppointmentRepository().count_past_pending_appointments()
             except Exception:
                 pass
 
@@ -386,6 +397,8 @@ def create_app():
             'is_supervisor': _is_supervisor,
             'has_linked_employee': _has_linked_employee,
             'pending_absence_count': _pending_absence_count,
+            'can_write_appointments': _can_write_appointments,
+            'past_pending_appointments_count': _past_pending_appointments_count,
             'can_edit_price_history': _can_edit_price_history,
             'can_send_sms': _can_send_sms,
             'admin_view_active': _admin_view_on,

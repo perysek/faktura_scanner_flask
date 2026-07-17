@@ -895,6 +895,25 @@ class AppointmentRepository:
             cursor.execute(query, tuple(excl_params))
             return cursor.fetchall()
 
+    def count_past_pending_appointments(self) -> int:
+        """Liczba przeszłych wizyt bez finalnego statusu — lekki wariant
+        get_past_pending_appointments() (bez joinów/GROUP BY) pod pill-count
+        w sidebarze (odpytywane na każdym żądaniu przez context processor)."""
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
+        query = f"""
+            SELECT COUNT(*) AS cnt
+            FROM appointments a
+            WHERE
+                (a.appointment_date + a.end_time) < NOW()
+                AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+                AND a.is_deleted = FALSE {excl_sql}
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(excl_params))
+            row = cursor.fetchone()
+            return row['cnt'] if row else 0
+
     # ------------------------------------------------------------------
     # Visit rating methods (P03a)
     # ------------------------------------------------------------------
