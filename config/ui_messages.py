@@ -129,6 +129,11 @@ MESSAGES = {
         'current':  'Nieobecności to nie Twoja działka. Ręce przy sobie.',
         'new':      'Zarządzanie nieobecnościami jest poza Twoim zasięgiem — w razie potrzeby poproś szefa.',
     },
+    'auth.permission.read_only': {
+        'previous': 'Masz dostęp tylko do odczytu w module: {module}',
+        'current':  'Moduł „{module}" masz tylko do podglądu — zmieniać go nie możesz.',
+        'new':      'W module „{module}" masz dostęp tylko do odczytu — jeśli potrzebujesz edycji, poproś szefa.',
+    },
     'users.edit.owner_denied': {
         'previous': 'Brak uprawnień do edycji konta właściciela',
         'current':  'Konta właściciela nie ruszasz. Próbowałeś, widzieliśmy.',

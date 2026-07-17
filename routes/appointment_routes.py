@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request, Response, stream_with_context
 from flask_login import login_required, current_user
 
 from config.appointment_statuses import AppointmentStatus
-from config.auth_config import module_permission_required, role_required, absence_management_required
+from config.auth_config import module_permission_required, role_required, absence_management_required, own_data_employee_id
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
 from repositories.appointments.appointment_repository import AppointmentRepository
@@ -287,6 +287,13 @@ def get_appointments():
         mode = request.args.get('mode')
         employee_id = request.args.get('employee_id', type=int)
         status = request.args.get('status')
+
+        # own_data: a role restricted to its own data may only see appointments for
+        # its own linked employee, regardless of any employee_id passed by the client.
+        own_emp = own_data_employee_id(current_user, 'appointments')
+        if own_emp is not None:
+            employee_id = own_emp
+
         repo = AppointmentRepository()
 
         if mode == 'latest':
@@ -1174,8 +1181,12 @@ def get_multi_employee_schedule():
 
         repo = AppointmentRepository()
 
+        # own_data: restrict the whole schedule to the caller's own linked employee.
+        own_emp = own_data_employee_id(current_user, 'appointments')
+        scope_ids = None if own_emp is None else [own_emp]
+
         # Pobierz wszystkich pracowników z wizytami tego dnia
-        all_data = repo.get_multi_employee_schedule(schedule_date, employee_ids=None)
+        all_data = repo.get_multi_employee_schedule(schedule_date, employee_ids=scope_ids)
         all_employees = all_data['employees']
 
         # Also include employees who have approved absences on this day but no appointments
@@ -1191,6 +1202,9 @@ def get_multi_employee_schedule():
             emp_repo = EmployeeRepository()
             for ab_row in absence_rows:
                 emp_id = ab_row['employee_id']
+                # Respect own_data scoping: don't reintroduce out-of-scope employees.
+                if scope_ids is not None and emp_id not in scope_ids:
+                    continue
                 if emp_id not in existing_ids:
                     emp = emp_repo.get_by_id(emp_id)
                     if emp and emp['is_active']:

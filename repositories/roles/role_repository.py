@@ -243,6 +243,42 @@ class RoleRepository:
             return role_name in ('superuser', 'admin')
         return bool(row['has_access']) and bool(row['can_send_sms'])
 
+    def get_all_flags(self, role_name: str) -> dict:
+        """Zwraca {module: {has_access, read_only, own_data}} dla roli, jednym
+        zapytaniem. Moduły bez wiersza w DB dziedziczą statyczny MODULE_PERMISSIONS
+        (read_only/own_data = False)."""
+        query = """
+            SELECT rp.module_name, rp.has_access, rp.read_only, rp.own_data
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            WHERE r.name = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (role_name,))
+            rows = cursor.fetchall()
+
+        db_perms = {
+            row['module_name']: {
+                'has_access': bool(row['has_access']),
+                'read_only': bool(row['read_only']),
+                'own_data': bool(row['own_data']),
+            }
+            for row in rows
+        }
+        from config.auth_config import MODULE_PERMISSIONS
+        out = {}
+        for m in ALL_MODULES:
+            if m in db_perms:
+                out[m] = db_perms[m]
+            else:
+                out[m] = {
+                    'has_access': role_name in MODULE_PERMISSIONS.get(m, []),
+                    'read_only': False,
+                    'own_data': False,
+                }
+        return out
+
     def get_user_module_permissions(self, role_name: str) -> dict:
         """
         Zwraca dict {module_name: bool} dla danej roli.

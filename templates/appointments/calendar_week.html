@@ -138,12 +138,14 @@
                 <a href="{{ url_for('main.appointments_calendar_month') }}" id="nav-month">Miesiąc</a>
                 <a href="{{ url_for('main.appointments_list') }}" id="nav-list">Lista</a>
             </div>
+            {% if user_write_permissions.get('appointments') %}
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
                 <svg style="width: 13px; height: 13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 Nowa wizyta
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -510,7 +512,7 @@ function updateNewAppointmentLink() {
     params.set('from', 'week');
     if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     if (currentWeekStart) params.set('date', formatLocalDate(currentWeekStart));
-    newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
+    if (newAppointmentBtn) newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
 }
 
 async function loadWeekForCurrentEmployee() {

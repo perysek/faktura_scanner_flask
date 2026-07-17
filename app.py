@@ -321,12 +321,13 @@ def create_app():
         from flask_login import current_user
         from flask import request as _request
         from config.auth_config import (
-            get_user_module_permissions, is_supervisor, get_linked_employee,
+            get_all_permission_flags, is_supervisor, get_linked_employee,
             can_edit_service_price_history, can_send_appointment_sms,
             get_permission_flags
         )
 
         user_permissions = {}
+        user_write_permissions = {}
         _is_supervisor = False
         _has_linked_employee = False
         _can_edit_price_history = False
@@ -337,7 +338,13 @@ def create_app():
 
         if current_user.is_authenticated:
             try:
-                user_permissions = get_user_module_permissions(current_user.role)
+                # One query → both access ({module: bool}) and write-capability
+                # ({module: bool} = has_access AND NOT read_only) for the templates.
+                _flags = get_all_permission_flags(current_user.role)
+                user_permissions = {m: v['has_access'] for m, v in _flags.items()}
+                user_write_permissions = {
+                    m: (v['has_access'] and not v['read_only']) for m, v in _flags.items()
+                }
             except Exception:
                 pass
             try:
@@ -394,6 +401,7 @@ def create_app():
             'now': datetime.now,
             'logo_data_uri': logo_data_uri,
             'user_permissions': user_permissions,
+            'user_write_permissions': user_write_permissions,
             'is_supervisor': _is_supervisor,
             'has_linked_employee': _has_linked_employee,
             'pending_absence_count': _pending_absence_count,

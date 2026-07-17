@@ -192,10 +192,12 @@
             <h1 class="page-title">Usługi</h1>
             <p class="page-subtitle">Zarządzanie katalogiem usług salonu</p>
         </div>
+        {% if user_write_permissions.get('services') %}
         <a href="{{ url_for('main.create_service') }}" class="refined-btn-primary">
             {{ icon('add') }}
             Dodaj usługę
         </a>
+        {% endif %}
     </header>
 
     <!-- Statistics Cards -->
@@ -285,6 +287,9 @@
 
 {% block extra_scripts %}
 <script>
+// Write-capability for the services module (has_access AND NOT read_only). Gates the
+// JS-rendered row edit control; the backend enforces the same rule.
+const CAN_WRITE_SERVICES = {{ user_write_permissions.get('services') | tojson }};
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -428,11 +433,11 @@ function renderServices() {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </a>
-                        <a href="/service/${service.id}/edit" class="action-icon-btn" title="Edytuj" aria-label="Edytuj">
+                        ${CAN_WRITE_SERVICES ? `<a href="/service/${service.id}/edit" class="action-icon-btn" title="Edytuj" aria-label="Edytuj">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
-                        </a>
+                        </a>` : ''}
                     </div>
                 </td>
             </tr>

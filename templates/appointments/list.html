@@ -174,10 +174,12 @@
                 <a href="{{ url_for('main.appointments_calendar_month') }}" id="nav-month">Miesiąc</a>
                 <a href="{{ url_for('main.appointments_list') }}" class="active" id="nav-list">Lista</a>
             </div>
+            {% if user_write_permissions.get('appointments') %}
             <a href="{{ url_for('main.create_appointment') }}" class="refined-btn-primary" id="newAppointmentBtn">
                 {{ icon('add') }}
                 Nowa wizyta
             </a>
+            {% endif %}
         </div>
     </header>
 

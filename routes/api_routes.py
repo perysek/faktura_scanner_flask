@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request, current_app, send_file, session
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
-from config.auth_config import module_permission_required, role_required
+from config.auth_config import module_permission_required, role_required, own_data_employee_id
 from config.database import managed_transaction
 from database.models import Invoice
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
@@ -3752,6 +3752,11 @@ def get_employees():
             rows = current_app.employee_repo.get_by_position(position, active_only)
         else:
             rows = current_app.employee_repo.get_all(active_only)
+
+        # own_data: a role restricted to its own data sees only its own employee record.
+        own_emp = own_data_employee_id(current_user, 'employees')
+        if own_emp is not None:
+            rows = [r for r in rows if r['id'] == own_emp]
 
         # Convert Row objects to Employee objects
         employees = [current_app.employee_repo.row_to_employee(row) for row in rows]

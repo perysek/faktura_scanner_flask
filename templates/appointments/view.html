@@ -255,6 +255,10 @@ const SMS_TYPES = {{ sms_message_types | tojson }};
 const SMS_SENT_KEYS = new Set({{ sms_sent_type_keys | tojson }});
 // RBAC sub-permission: only roles with the "Wysyłanie SMS" flag see the send button
 const CAN_SEND_SMS = {{ can_send_sms | tojson }};
+// Write-capability for the appointments module (has_access AND NOT read_only). A
+// read_only role sees the appointment but no edit/status/complete actions. Backend
+// enforces the same rule on the mutating endpoints.
+const CAN_WRITE_APPOINTMENTS = {{ user_write_permissions.get('appointments') | tojson }};
 
 // Deterministic per-employee avatar colour (shared palette with list/calendars).
 const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
@@ -379,21 +383,24 @@ async function loadAppointment() {
     const bar = document.getElementById('action-bar');
     let actionsHTML = '';
 
-    if (a.status !== 'cancelled' && a.status !== 'completed') {
-        // Forward the origin (calendar/week/month/list + date/employee) so edit's
-        // own back/cancel button can round-trip to the same view, not reset it.
-        const editParams = new URLSearchParams(RETURN_PARAMS);
-        actionsHTML += `<a href="/appointment/${APPT_ID}/edit?${editParams}" class="btn-action">{{ icon('edit') }}Edytuj</a>`;
+    if (CAN_WRITE_APPOINTMENTS) {
+        if (a.status !== 'cancelled' && a.status !== 'completed') {
+            // Forward the origin (calendar/week/month/list + date/employee) so edit's
+            // own back/cancel button can round-trip to the same view, not reset it.
+            const editParams = new URLSearchParams(RETURN_PARAMS);
+            actionsHTML += `<a href="/appointment/${APPT_ID}/edit?${editParams}" class="btn-action">{{ icon('edit') }}Edytuj</a>`;
+        }
+        if (actions.length > 0) {
+            actionsHTML += actions.map(act => {
+                if (act.status === 'completed') {
+                    return `<button class="btn-action ${act.cls}" onclick="completeAppointment()">{{ icon('check_circle') }}${act.label}</button>`;
+                }
+                return `<button class="btn-action ${act.cls}" onclick="changeStatus('${act.status}')">${Icons.svg(act.cls==='danger'?'cancel':'arrow_forward')}${act.label}</button>`;
+            }).join('');
+        }
     }
-    if (actions.length === 0) {
-        if (actionsHTML === '') actionsHTML = '<span style="color:var(--color-ink-subtle);font-size:11px;">Brak dostępnych akcji</span>';
-    } else {
-        actionsHTML += actions.map(act => {
-            if (act.status === 'completed') {
-                return `<button class="btn-action ${act.cls}" onclick="completeAppointment()">{{ icon('check_circle') }}${act.label}</button>`;
-            }
-            return `<button class="btn-action ${act.cls}" onclick="changeStatus('${act.status}')">${Icons.svg(act.cls==='danger'?'cancel':'arrow_forward')}${act.label}</button>`;
-        }).join('');
+    if (actionsHTML === '') {
+        actionsHTML = '<span style="color:var(--color-ink-subtle);font-size:11px;">Brak dostępnych akcji</span>';
     }
     bar.innerHTML = actionsHTML;
 
@@ -559,6 +566,14 @@ function initSatisfactionWidget(currentScore) {
         renderStars(currentScore);
         saveBtn.disabled = false;
         saveBtn.style.opacity = '1';
+    }
+
+    if (!CAN_WRITE_APPOINTMENTS) {
+        // Read-only role: display the existing score but no editing/saving. The
+        // backend rejects the PATCH for read_only roles regardless.
+        stars.forEach(btn => { btn.disabled = true; btn.style.cursor = 'default'; });
+        if (saveBtn) saveBtn.style.display = 'none';
+        return;
     }
 
     stars.forEach(btn => {
