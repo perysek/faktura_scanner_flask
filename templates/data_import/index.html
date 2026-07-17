@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'components/icons.html' import icon %}
 {% block title %}Import danych — {{ app_name }}{% endblock %}
 
 {% block content %}
@@ -148,6 +149,47 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Conflict scan: reschedule duplicates among past visits -->
+  <div class="rounded-[3px] border p-4" style="background: var(--card-bg); border-color: var(--card-border);">
+    <h2 class="text-sm font-semibold mb-1" style="color: var(--text-primary);">
+      Skan konfliktów przeszłych wizyt
+    </h2>
+    <p class="text-xs mb-3" style="color: var(--text-secondary);">
+      Znajduje wizyty zdublowane przez przekładanie terminu w caldis.pl: (1) ten sam
+      klient/pracownik/usługa z nakładającymi się terminami, (2) ta sama usługa u
+      innego fryzjera tego samego dnia. W każdej grupie wizyta o najwyższym numerze
+      jest uznawana za ostateczną — reszta zostaje ukryta (odwracalnie).
+    </p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="scan-date-start" class="form-label">Data od</label>
+        <input type="date" id="scan-date-start" name="scan_date_start" class="form-input">
+      </div>
+      <div>
+        <label for="scan-date-end" class="form-label">Data do</label>
+        <input type="date" id="scan-date-end" name="scan_date_end" class="form-input">
+      </div>
+    </div>
+
+    <div class="mt-4 flex items-center gap-3 flex-wrap">
+      <button id="scan-btn" type="button" class="refined-btn-secondary">
+        {{ icon('search', class='w-4 h-4') }}
+        <span id="scan-btn-label">Skanuj</span>
+      </button>
+      <button id="scan-apply-btn" type="button" class="refined-btn-danger hidden">
+        {{ icon('delete', class='w-4 h-4') }}
+        <span id="scan-apply-btn-label">Zastosuj (ukryj duplikaty)</span>
+      </button>
+      <span id="scan-status-msg" class="text-xs" style="color: var(--text-secondary);"></span>
+    </div>
+
+    <div id="scan-results" class="hidden mt-4">
+      <p id="scan-summary" class="text-xs mb-3" style="color: var(--text-secondary);"></p>
+      <div id="scan-groups" class="space-y-3"></div>
     </div>
   </div>
 
@@ -450,6 +492,159 @@ document.getElementById('import-btn').addEventListener('click', async function()
     };
 });
 
+// ── Conflict scan (reschedule duplicates among past visits) ──────────────────
+var _lastScanRange = null; // { date_start, date_end } of the scan currently shown
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+const REASON_BADGES = {
+    time_overlap: 'Nakładający się termin',
+    same_day_different_stylist: 'Ten sam dzień, inny fryzjer',
+};
+
+function setScanStatusMsg(msg, level) {
+    const el = document.getElementById('scan-status-msg');
+    const colours = { info: 'var(--text-secondary)', error: '#f87171', success: '#4ade80' };
+    el.textContent = msg;
+    el.style.color = colours[level] || colours.info;
+}
+
+function renderScanGroups(groups) {
+    const container = document.getElementById('scan-groups');
+    container.innerHTML = groups.map(function(g) {
+        const badges = g.reasons.map(function(r) {
+            return `<span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-surface-warm,#f3f0ea);color:var(--text-secondary);">${escapeHtml(REASON_BADGES[r] || r)}</span>`;
+        }).join(' ');
+
+        const rows = g.appointments.map(function(a) {
+            const rowStyle = a.is_keeper ? '' : 'opacity:0.6; text-decoration: line-through;';
+            const tag = a.is_keeper
+                ? '<span style="color:#4ade80;">Zachowana (ostatnia)</span>'
+                : '<span style="color:#f87171;">Nadpisana</span>';
+            return `<tr style="${rowStyle}">
+                <td class="py-1 pr-3">#${a.id}</td>
+                <td class="py-1 pr-3">${escapeHtml(a.appointment_date)}</td>
+                <td class="py-1 pr-3">${escapeHtml(a.start_time)}–${escapeHtml(a.end_time)}</td>
+                <td class="py-1 pr-3">${escapeHtml(a.employee_name)}</td>
+                <td class="py-1 pr-3">${escapeHtml(a.status)}</td>
+                <td class="py-1 pr-3 text-right">${escapeHtml(a.total_price)} zł</td>
+                <td class="py-1 text-right">${tag}</td>
+            </tr>`;
+        }).join('');
+
+        return `<div class="rounded-[3px] border p-3" style="border-color: var(--card-border);">
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <div class="text-sm font-medium" style="color: var(--text-primary);">
+                    ${escapeHtml(g.client_name)} — ${escapeHtml(g.service_name)}
+                </div>
+                <div class="flex gap-1.5 flex-wrap">${badges}</div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="text-left" style="color: var(--text-secondary);">
+                            <th class="pb-1 pr-3 font-medium">#</th>
+                            <th class="pb-1 pr-3 font-medium">Data</th>
+                            <th class="pb-1 pr-3 font-medium">Godz.</th>
+                            <th class="pb-1 pr-3 font-medium">Pracownik</th>
+                            <th class="pb-1 pr-3 font-medium">Status</th>
+                            <th class="pb-1 pr-3 font-medium text-right">Cena</th>
+                            <th class="pb-1 font-medium text-right">Wynik</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function runConflictScan() {
+    const dateStart = document.getElementById('scan-date-start').value;
+    const dateEnd   = document.getElementById('scan-date-end').value;
+    const btn = document.getElementById('scan-btn');
+    const applyBtn = document.getElementById('scan-apply-btn');
+
+    if (!dateStart || !dateEnd) {
+        setScanStatusMsg('Wybierz zakres dat.', 'error'); return;
+    }
+    if (dateStart > dateEnd) {
+        setScanStatusMsg('Data od musi być wcześniejsza niż data do.', 'error'); return;
+    }
+
+    btn.disabled = true;
+    applyBtn.classList.add('hidden');
+    setScanStatusMsg('Skanuję...', 'info');
+    document.getElementById('scan-results').classList.add('hidden');
+
+    try {
+        const resp = await fetch('/api/import/conflict-scan?date_start=' + dateStart + '&date_end=' + dateEnd);
+        const data = await resp.json();
+        if (!resp.ok) {
+            setScanStatusMsg(data.error || 'Błąd skanowania.', 'error');
+            return;
+        }
+
+        _lastScanRange = { date_start: dateStart, date_end: dateEnd };
+        document.getElementById('scan-results').classList.remove('hidden');
+        document.getElementById('scan-summary').textContent =
+            `Sprawdzono ${data.candidate_count} wizyt. Znaleziono ${data.group_count} grup konfliktów ` +
+            `(${data.superseded_count} wizyt zostałoby ukrytych jako nadpisane).`;
+        renderScanGroups(data.groups);
+
+        if (data.group_count > 0) {
+            applyBtn.classList.remove('hidden');
+            setScanStatusMsg('Skan zakończony — sprawdź wyniki poniżej.', 'success');
+        } else {
+            setScanStatusMsg('Skan zakończony — brak konfliktów.', 'success');
+        }
+    } catch (e) {
+        setScanStatusMsg('Błąd połączenia z serwerem.', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function applyConflictScan() {
+    if (!_lastScanRange) return;
+    const ok = window.confirm(
+        'Wybrane nadpisane wizyty zostaną ukryte (i ich przychód przestanie się liczyć w raportach). ' +
+        'Można to cofnąć ręcznie ze szczegółów wizyty. Kontynuować?'
+    );
+    if (!ok) return;
+
+    const applyBtn = document.getElementById('scan-apply-btn');
+    applyBtn.disabled = true;
+    setScanStatusMsg('Usuwam duplikaty...', 'info');
+
+    try {
+        const resp = await fetch('/api/import/conflict-scan/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(_lastScanRange),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            setScanStatusMsg(data.error || 'Błąd usuwania duplikatów.', 'error');
+            return;
+        }
+
+        setScanStatusMsg(`Ukryto ${data.removed_count} nadpisanych wizyt w ${data.group_count} grupach.`, 'success');
+        await runConflictScan(); // re-scan same range to confirm 0 remaining
+    } catch (e) {
+        setScanStatusMsg('Błąd połączenia z serwerem.', 'error');
+    } finally {
+        applyBtn.disabled = false;
+    }
+}
+
+document.getElementById('scan-btn').addEventListener('click', runConflictScan);
+document.getElementById('scan-apply-btn').addEventListener('click', applyConflictScan);
+
 // ── Init ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     // Set date defaults using local time (not UTC) per date-formatting rule
@@ -458,6 +653,11 @@ document.addEventListener('DOMContentLoaded', function() {
     ninetyDaysAgo.setDate(today.getDate() - 90);
     document.getElementById('date-start').value = fmtDate(ninetyDaysAgo);
     document.getElementById('date-end').value   = fmtDate(today);
+
+    const scanNinetyDaysAgo = new Date(today);
+    scanNinetyDaysAgo.setDate(today.getDate() - 90);
+    document.getElementById('scan-date-start').value = fmtDate(scanNinetyDaysAgo);
+    document.getElementById('scan-date-end').value   = fmtDate(today);
 
     loadSessionStatus();
     loadHistory();

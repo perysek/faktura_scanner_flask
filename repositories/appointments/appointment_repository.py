@@ -1002,3 +1002,54 @@ class AppointmentRepository:
             cursor = conn.cursor()
             cursor.execute(sql, (token,))
             return cursor.fetchone()
+
+    def get_candidates_for_conflict_scan(self, date_start: date, date_end: date) -> List[Any]:
+        """Wizyty-kandydaci do skanu konfliktów przeszłych wizyt (duplikaty/przełożenia).
+
+        Zwraca jedną wizytę = jeden wiersz, dołączoną do jej głównej usługi
+        (is_addon = FALSE). Import z caldis.pl zawsze tworzy dokładnie jedną
+        taką usługę na wizytę, więc to złączenie nie mnoży wierszy w praktyce.
+        Anulowane i już usunięte wizyty są pomijane — nie są kandydatami na
+        "ostateczny" ani "nadpisany" termin.
+        """
+        query = f"""
+            SELECT
+                a.id, a.client_id, a.employee_id, a.appointment_date,
+                a.start_time, a.end_time, a.status, a.total_price,
+                c.first_name || ' ' || c.last_name AS client_name,
+                e.first_name || ' ' || e.last_name AS employee_name,
+                aps.service_id,
+                s.name AS service_name
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            JOIN employees e ON e.id = a.employee_id
+            JOIN appointment_services aps ON aps.appointment_id = a.id AND aps.is_addon = FALSE
+            JOIN services s ON s.id = aps.service_id
+            WHERE a.is_deleted = FALSE
+              AND a.status != '{AppointmentStatus.CANCELLED}'
+              AND a.appointment_date BETWEEN %s AND %s
+            ORDER BY a.client_id, aps.service_id, a.appointment_date, a.start_time
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (date_start.isoformat(), date_end.isoformat()))
+            return cursor.fetchall()
+
+    def soft_delete_as_superseded(self, appointment_id: int, note: str) -> bool:
+        """Soft-delete wizyty nadpisanej przez późniejsze przełożenie (skan konfliktów).
+
+        Odwracalne przez istniejący restore() — tak jak ręczne usunięcie wizyty.
+        Dopisuje `note` do notatek, żeby odróżnić to od ręcznego usunięcia.
+        """
+        query = """
+            UPDATE appointments
+            SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP,
+                notes = CASE WHEN notes IS NULL OR notes = '' THEN %s
+                             ELSE notes || E'\n' || %s END
+            WHERE id = %s AND is_deleted = FALSE
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (note, note, appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0

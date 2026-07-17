@@ -8,6 +8,8 @@ Endpoints:
   POST /api/import/reconnect-session     — Headed re-login         [phase 07]
   POST /api/import/start                 — Kick off import         [phase 08]
   GET  /api/import/history               — Last 20 runs            [phase 08]
+  GET  /api/import/conflict-scan         — Scan past visits for reschedule duplicates
+  POST /api/import/conflict-scan/apply   — Soft-delete the superseded duplicates found above
 
 All routes are admin-only via @module_permission_required('data_import').
 The page route GET /import lives on main_bp (routes/main_routes.py).
@@ -30,6 +32,7 @@ from config.auth_config import module_permission_required
 from exceptions import AppError, NotFoundError, ValidationError, ConflictError
 from repositories.data_import.import_log_repository import ImportLogRepository
 from services.data_import_runner import IMPORT_RUNNER
+from services.visit_conflict_scan_service import VisitConflictScanService
 
 logger = logging.getLogger(__name__)
 
@@ -308,4 +311,55 @@ def import_history():
         raise
     except Exception:
         logger.exception('Unexpected error in import_history')
+        raise AppError('Wystapil blad serwera')
+
+
+# ─── conflict scan (duplicate/rescheduled past visits) ─────────────────────────
+
+def _parse_scan_range(date_start_str: str, date_end_str: str) -> tuple:
+    date_start_str = (date_start_str or '').strip()
+    date_end_str   = (date_end_str or '').strip()
+    if not date_start_str or not date_end_str:
+        raise ValidationError('Wymagane: date_start, date_end')
+    try:
+        date_start = datetime.strptime(date_start_str, '%Y-%m-%d').date()
+        date_end   = datetime.strptime(date_end_str, '%Y-%m-%d').date()
+    except ValueError:
+        raise ValidationError('Nieprawidlowy format daty (oczekiwano YYYY-MM-DD)')
+    return date_start, date_end
+
+
+@import_bp.route('/import/conflict-scan', methods=['GET'])
+@login_required
+@module_permission_required('data_import')
+def conflict_scan():
+    """Skanuj przeszłe wizyty pod kątem duplikatów/przełożeń (tylko odczyt)."""
+    try:
+        date_start, date_end = _parse_scan_range(
+            request.args.get('date_start'), request.args.get('date_end'))
+        result = VisitConflictScanService().scan(date_start, date_end)
+        return jsonify({'success': True, **result})
+    except AppError:
+        raise
+    except Exception:
+        logger.exception('Unexpected error in conflict_scan')
+        raise AppError('Wystapil blad serwera')
+
+
+@import_bp.route('/import/conflict-scan/apply', methods=['POST'])
+@login_required
+@module_permission_required('data_import')
+def conflict_scan_apply():
+    """Soft-delete wizyt nadpisanych przez przełożenia w zadanym zakresie (odwracalne)."""
+    try:
+        data = request.get_json() or {}
+        date_start, date_end = _parse_scan_range(data.get('date_start'), data.get('date_end'))
+        result = VisitConflictScanService().apply(date_start, date_end)
+        logger.info('Conflict scan apply: %d appointments superseded (range %s to %s) by user %s',
+                    result['removed_count'], date_start, date_end, current_user.id)
+        return jsonify({'success': True, **result})
+    except AppError:
+        raise
+    except Exception:
+        logger.exception('Unexpected error in conflict_scan_apply')
         raise AppError('Wystapil blad serwera')

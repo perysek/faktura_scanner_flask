@@ -118,3 +118,33 @@ class TestSerializeRow:
         from routes.import_routes import _serialize_row
         row = _make_fake_row(dry_run=0)
         assert _serialize_row(row)['dry_run'] is False
+
+
+# ── Conflict scan date-range parsing ────────────────────────────────────────
+
+class TestParseScanRange:
+
+    def test_valid_range_parses_to_dates(self):
+        from routes.import_routes import _parse_scan_range
+        from datetime import date
+        date_start, date_end = _parse_scan_range('2026-01-01', '2026-01-31')
+        assert date_start == date(2026, 1, 1)
+        assert date_end == date(2026, 1, 31)
+
+    def test_missing_date_start_raises_validation_error(self):
+        from routes.import_routes import _parse_scan_range
+        from exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            _parse_scan_range('', '2026-01-31')
+
+    def test_missing_date_end_raises_validation_error(self):
+        from routes.import_routes import _parse_scan_range
+        from exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            _parse_scan_range('2026-01-01', None)
+
+    def test_malformed_date_raises_validation_error(self):
+        from routes.import_routes import _parse_scan_range
+        from exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            _parse_scan_range('01/01/2026', '2026-01-31')
