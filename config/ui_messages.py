@@ -367,6 +367,12 @@ MESSAGES = {
     'emp.deactivated':          {'previous': 'Pracownik został dezaktywowany', 'current': 'Pracownik dezaktywowany. Pa, pa.', 'new': 'Pracownik dezaktywowany. Pa, pa.'},
     'emp.server_500':           {'previous': 'Błąd połączenia z serwerem (500)', 'current': 'Serwer padł (500). Klasyka gatunku.', 'new': 'Serwer chwilowo padł (500) — to nie Ty, odśwież za moment.'},
     'emp.limit_near':           {'previous': 'Uwaga: limit nieobecności przekroczony lub bliski przekroczenia', 'current': 'Limit nieobecności na granicy. Ktoś tu lubi wolne.', 'new': 'Limit nieobecności na granicy. Ktoś tu lubi wolne.'},
+    'emp.pin.status_load_warn': {'previous': 'Nie można wczytać statusu PIN-u', 'current': 'Status PIN-u się nie ładuje. Cierpliwości.', 'new': 'Statusu PIN-u nie udało się wczytać — odśwież za moment.'},
+    'emp.pin.reset_ok':         {'previous': 'PIN pracownika został zresetowany', 'current': 'PIN skasowany. Niech se ustawi nowy.', 'new': 'PIN skasowany. Niech se ustawi nowy.'},
+    'emp.pin.reset_failed':     {'previous': 'Nie udało się zresetować PIN-u', 'current': 'Reset PIN-u nie wyszedł. Spróbuj jeszcze raz.', 'new': 'Resetu PIN-u nie udało się zapisać — spróbuj jeszcze raz.'},
+    'emp.pin.change_ok':        {'previous': 'PIN pracownika został zmieniony', 'current': 'Nowy PIN ustawiony. Gratulacje.', 'new': 'Nowy PIN ustawiony.'},
+    'emp.pin.change_failed':    {'previous': 'Nie udało się zmienić PIN-u', 'current': 'Zmiana PIN-u nie wyszła. Spróbuj jeszcze raz.', 'new': 'Zmiany PIN-u nie udało się zapisać — spróbuj jeszcze raz.'},
+    'emp.pin.invalid_format':   {'previous': 'PIN musi mieć od 4 do 6 cyfr', 'current': 'PIN to 4-6 cyfr. Nie litery, nie znaki, cyfry.', 'new': 'PIN to 4-6 cyfr. Cyfry, nic więcej.'},
 
     # ── Appointments ────────────────────────────────────────────────────────
     'appt.rating_saved':  {'previous': 'Ocena {score}/5 zapisana', 'current': 'Ocena {score}/5 zapisana. Sąd okrutny, ale sprawiedliwy.', 'new': 'Ocena {score}/5 zapisana. Sąd okrutny, ale sprawiedliwy.'},

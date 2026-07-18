@@ -4131,6 +4131,85 @@ def delete_employee(employee_id):
         raise AppError('Wystapil blad serwera')
 
 
+@api_bp.route('/employees/<int:employee_id>/mobile-pin', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee_mobile_pin(employee_id):
+    """PIN status for the employee-edit page — never the PIN/hash itself, only
+    whether one is set, when it was (re)set, and the last mobile-app login."""
+    try:
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+
+        status = current_app.employee_repo.get_mobile_pin_status(employee_id)
+        return jsonify({
+            'success': True,
+            'has_pin': status['has_pin'],
+            'pin_set_at': status['pin_set_at'].isoformat() if status['pin_set_at'] else None,
+            'last_login_at': status['last_login_at'].isoformat() if status['last_login_at'] else None,
+        })
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in get_employee_mobile_pin')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/employees/<int:employee_id>/mobile-pin/reset', methods=['POST'])
+@login_required
+@module_permission_required('employees')
+def reset_employee_mobile_pin(employee_id):
+    """Clear the employee's mobile PIN — they set a fresh one next time they pick
+    themselves in the mobile app. Requires write access to the employees module
+    (module_permission_required already blocks read_only roles from this POST)."""
+    try:
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+        if not existing['is_active']:
+            return jsonify({'success': False, 'error': 'Pracownik jest nieaktywny — nie ma PIN-u do zresetowania'}), 409
+
+        current_app.employee_repo.reset_mobile_pin(employee_id)
+        return jsonify({'success': True, 'message': 'PIN pracownika został zresetowany'})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in reset_employee_mobile_pin')
+        raise AppError('Wystapil blad serwera')
+
+
+@api_bp.route('/employees/<int:employee_id>/mobile-pin', methods=['PUT'])
+@login_required
+@module_permission_required('employees')
+def change_employee_mobile_pin(employee_id):
+    """Admin sets a specific new mobile PIN for the employee. Requires write access
+    to the employees module."""
+    import re
+    import bcrypt
+
+    try:
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+        if not existing['is_active']:
+            return jsonify({'success': False, 'error': 'Pracownik jest nieaktywny — nie można ustawić PIN-u'}), 409
+
+        data = request.get_json(silent=True) or {}
+        pin = str(data.get('pin', ''))
+        if not re.match(r'^\d{4,6}$', pin):
+            return jsonify({'success': False, 'error': 'PIN musi mieć od 4 do 6 cyfr'}), 400
+
+        pin_hash = bcrypt.hashpw(pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        current_app.employee_repo.admin_set_mobile_pin_hash(employee_id, pin_hash)
+        return jsonify({'success': True, 'message': 'PIN pracownika został zmieniony'})
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in change_employee_mobile_pin')
+        raise AppError('Wystapil blad serwera')
+
+
 @api_bp.route('/employees/<int:employee_id>/permanent', methods=['DELETE'])
 @login_required
 @role_required('superuser')
