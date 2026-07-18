@@ -441,9 +441,11 @@
     if (state.detailError) body.push(h('p', { class: 'error-msg' }, [state.detailError]));
 
     if (state.detailSuccessStatus !== null) {
-      body.push(h('div', { class: 'status-icon' }, ['✅']));
-      body.push(h('h1', null, ['Status zaktualizowany']));
-      body.push(h('p', { class: 'status-message' }, [successMessageFor(state.detailSuccessStatus)]));
+      body.push(h('div', { class: 'status-view' }, [
+        h('div', { class: 'status-icon' }, ['✅']),
+        h('h1', null, ['Status zaktualizowany']),
+        h('p', { class: 'status-message' }, [successMessageFor(state.detailSuccessStatus)]),
+      ]));
       body.push(h('button', { class: 'btn-secondary', style: { marginTop: '1.5rem' }, onClick: backToToday }, ['← Wróć do dzisiejszych wizyt']));
     } else if (appt.state === 'too_early') {
       if (appt.unlockAtLocalMs && appt.unlockAtLocalMs - now <= 0 && !state.detailExpiredHandled) {
@@ -453,22 +455,28 @@
           setState({ detailAppt: Object.assign({}, appt, anchorTimers(result)) });
         });
       }
-      body.push(h('div', { class: 'status-icon' }, ['⏳']));
-      body.push(h('h1', null, ['Za wcześnie']));
       var countdownText = appt.unlockAtLocalMs ? formatCountdown(appt.unlockAtLocalMs - now) : '—';
-      body.push(h('p', { class: 'status-message' }, [
-        'Formularz odblokuje się automatycznie za ',
-        h('strong', null, [countdownText]),
-        ' (20 minut przed wizytą).',
+      body.push(h('div', { class: 'status-view' }, [
+        h('div', { class: 'status-icon' }, ['⏳']),
+        h('h1', null, ['Za wcześnie']),
+        h('p', { class: 'status-message' }, [
+          'Formularz odblokuje się automatycznie za ',
+          h('strong', null, [countdownText]),
+          ' (20 minut przed wizytą).',
+        ]),
       ]));
     } else if (appt.state === 'already_done') {
-      body.push(h('div', { class: 'status-icon' }, ['✅']));
-      body.push(h('h1', null, ['Wizyta już zakończona']));
-      body.push(h('p', { class: 'status-message' }, ['Ta wizyta ma już finalny status. Brak dostępnych akcji.']));
+      body.push(h('div', { class: 'status-view' }, [
+        h('div', { class: 'status-icon' }, ['✅']),
+        h('h1', null, ['Wizyta już zakończona']),
+        h('p', { class: 'status-message' }, ['Ta wizyta ma już finalny status. Brak dostępnych akcji.']),
+      ]));
     } else if (appt.state === 'wrong_status') {
-      body.push(h('div', { class: 'status-icon' }, ['⚠️']));
-      body.push(h('h1', null, ['Nieprawidłowy status']));
-      body.push(h('p', { class: 'status-message' }, ['Wizyta ma status, który nie pozwala na zmianę przez ten formularz.']));
+      body.push(h('div', { class: 'status-view' }, [
+        h('div', { class: 'status-icon' }, ['⚠️']),
+        h('h1', null, ['Nieprawidłowy status']),
+        h('p', { class: 'status-message' }, ['Wizyta ma status, który nie pozwala na zmianę przez ten formularz.']),
+      ]));
     } else if (appt.state === 'start_visit' || appt.state === 'end_visit') {
       var isStart = appt.state === 'start_visit';
       body.push(h('h1', null, [isStart ? 'Rozpocznij wizytę' : 'Zakończ wizytę']));
