@@ -308,10 +308,10 @@ def create_app():
         return render_template('errors/500.html'), 500
 
     # Pre-encode sidebar logo as base64 data URI (eliminates flash on navigation)
-    logo_path = app.static_folder + '/Logo.png'
+    logo_path = app.static_folder + '/Logo-web.webp'
     try:
         with open(logo_path, 'rb') as f:
-            logo_data_uri = 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
+            logo_data_uri = 'data:image/webp;base64,' + base64.b64encode(f.read()).decode()
     except FileNotFoundError:
         logo_data_uri = ''
 
