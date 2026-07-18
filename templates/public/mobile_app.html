@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Wizyty — MyWay Beauty Salon</title>
+
+    <!-- "Add to Home Screen" (iOS has no native install prompt like Android/Chrome) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Wizyty">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f7f6f3">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='Logo.png') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a1a;
+            --ink-muted: #525252;
+            --ink-subtle: #8a8a8a;
+            --surface: #fafafa;
+            --surface-warm: #f7f6f3;
+            --border: #e8e6e1;
+            --border-subtle: #f0eeea;
+            --error: #9b2c2c;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--surface-warm);
+            min-height: 100vh;
+            min-height: 100dvh;
+            -webkit-font-smoothing: antialiased;
+        }
+        #app {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 2.5rem 1rem;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-width: 420px;
+            width: 100%;
+        }
+        .card-padded { padding: 2rem 1.5rem; }
+        .logo { display: block; height: 24px; width: auto; }
+        .logo-lg { display: block; height: 44px; width: auto; margin-bottom: 12px; }
+        h1 { font-size: 1.25rem; font-weight: 600; color: var(--ink); margin: 0 0 0.5rem 0; }
+        p { margin: 0; }
+        .subheading { font-size: 0.875rem; color: var(--ink-muted); }
+        .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        a.link { font-size: 0.8125rem; color: var(--ink-muted); text-decoration: none; cursor: pointer; }
+        a.link:active { color: var(--ink); }
+
+        .btn-primary, .btn-secondary {
+            display: block; width: 100%; padding: 0.875rem;
+            font-family: inherit; font-size: 0.9375rem; letter-spacing: 0.02em;
+            border-radius: 2px; cursor: pointer; margin-top: 0.75rem; text-align: center;
+        }
+        .btn-primary { background: var(--ink); color: #fff; border: none; }
+        .btn-primary:active { background: var(--ink-muted); transform: scale(0.97); }
+        .btn-primary:disabled { opacity: 0.6; }
+        .btn-secondary { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+        .btn-secondary:active { border-color: var(--ink-muted); background: var(--surface); }
+        .btn-secondary.muted { color: var(--ink-muted); }
+
+        input[type="text"], input[type="password"], input[type="tel"] {
+            width: 100%; font-family: inherit; font-size: 1.125rem; font-weight: 300;
+            color: var(--ink); background: #fff; border: 1px solid var(--border);
+            border-radius: 2px; padding: 0.875rem 1rem; margin-top: 0.75rem;
+            text-align: center; letter-spacing: 0.2em;
+        }
+        input::placeholder { color: var(--ink-subtle); letter-spacing: normal; }
+
+        .error-msg { font-size: 0.875rem; color: var(--error); margin-bottom: 1rem; }
+        .hint-msg { font-size: 0.8125rem; color: var(--error); margin-top: 0.5rem; }
+
+        .picker-row {
+            padding: 0.875rem 1.5rem; border-top: 1px solid var(--border-subtle);
+            font-size: 0.9375rem; font-weight: 500; color: var(--ink); cursor: pointer;
+        }
+        .picker-row:active { background: var(--surface); }
+        .picker-rows { margin-top: 1rem; }
+
+        .list-header { padding: 2rem 1.5rem 1rem; }
+        .list-row {
+            display: flex; align-items: center; gap: 0.875rem;
+            padding: 0.875rem 1.5rem; border-top: 1px solid var(--border-subtle); cursor: pointer;
+        }
+        .list-row:active { background: var(--surface); }
+        .list-time { min-width: 48px; font-size: 0.9375rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+        .list-main { flex: 1; min-width: 0; }
+        .list-client { font-size: 0.875rem; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-service { font-size: 0.75rem; color: var(--ink-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pill {
+            display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0;
+            padding: 0.25rem 0.625rem; border-radius: 999px;
+            font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+        }
+        .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+        .switch-row { padding: 0.875rem 1.5rem; border-top: 1px solid var(--border-subtle); text-align: center; }
+
+        .status-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .status-message { font-size: 0.875rem; color: var(--ink-muted); margin-top: 0.5rem; }
+        .status-message strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+        .details-block { background: var(--surface); border-radius: 6px; padding: 1rem; margin: 1rem 0 1.5rem; }
+        .detail-row { display: flex; justify-content: space-between; padding: 0.375rem 0; font-size: 0.875rem; }
+        .detail-label { color: var(--ink-subtle); }
+        .detail-value { font-weight: 500; color: var(--ink); }
+
+        .centered { text-align: center; padding: 2rem 0; color: var(--ink-muted); font-size: 0.875rem; }
+        .empty-msg { padding: 2rem 1.5rem; font-size: 0.875rem; color: var(--ink-muted); }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="{{ url_for('static', filename='js/mobile-app.js') }}"></script>
+</body>
+</html>

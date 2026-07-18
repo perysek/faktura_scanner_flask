@@ -12,6 +12,17 @@ from repositories.audit_repository import AuditRepository
 public_bp = Blueprint('public', __name__)
 
 
+@public_bp.route('/wizyty', methods=['GET'])
+def mobile_web_app():
+    """PWA-style web version of the employee picker/PIN/today-list/detail app.
+
+    Same /api/mobile/* backend as the native app — this exists so iPhone
+    staff (no Apple Developer account to distribute a real iOS build) can
+    "Add to Home Screen" in Safari and get an equivalent experience.
+    """
+    return render_template('public/mobile_app.html')
+
+
 @public_bp.route('/confirm/<token>', methods=['GET'])
 def appointment_confirm_view(token):
     repo = AppointmentRepository()
