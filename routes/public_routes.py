@@ -264,8 +264,16 @@ def appointment_rate_submit(token):
 
 def _employee_visit_state(appt: dict) -> tuple:
     """Return (state_str, context_dict) for the employee visit form."""
-    from datetime import datetime, time as _time, timedelta
-    now       = datetime.now()
+    from datetime import datetime, time as _time, timedelta, timezone
+    from zoneinfo import ZoneInfo
+    # This server's system clock is UTC, but appointment_date/start_time are
+    # entered and always meant as Warsaw wall-clock (the salon's own time).
+    # datetime.now() would silently compare naive-UTC "now" against a
+    # naive-Warsaw appt_dt with zero conversion -- off by the UTC offset
+    # (2h in summer CEST, 1h in winter CET). Converting now() into Warsaw
+    # wall-clock (then dropping tzinfo) puts both sides of every subtraction
+    # below in the same frame.
+    now = datetime.now(timezone.utc).astimezone(ZoneInfo('Europe/Warsaw')).replace(tzinfo=None)
     start_time = appt['start_time']
     appt_date  = appt['appointment_date']
 
