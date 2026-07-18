@@ -293,6 +293,14 @@ def _employee_visit_state(appt: dict) -> tuple:
     if status == 'in_progress':
         return 'end_visit', {}
     if status in ('scheduled', 'confirmed', 'pending'):
+        # seconds_until_start: the today-list badge counts down to the actual
+        # appointment time (what a person expects from a bare countdown),
+        # valid in both too_early and start_visit -- only its background
+        # color follows the 20-min gate (already implied by which of the two
+        # states it's in). Computed fresh every response; clients anchor it
+        # to their own Date.now() once, on receipt (see seconds_remaining
+        # below for why -- never parse a timestamp string for this).
+        seconds_until_start = max(0, int((appt_dt - now).total_seconds()))
         if minutes_until > 20:
             # seconds_remaining is a pure duration, computed fresh on every
             # response -- deliberately NOT unlock_dt.isoformat(). That naive
@@ -306,9 +314,13 @@ def _employee_visit_state(appt: dict) -> tuple:
             return 'too_early', {
                 'minutes_remaining': int(minutes_until - 20),
                 'seconds_remaining': max(0, int((unlock_dt - now).total_seconds())),
+                'seconds_until_start': seconds_until_start,
                 'unlock_at': unlock_dt.isoformat(),
             }
-        return 'start_visit', {'can_no_show': AppointmentStatus.can_transition(status, AppointmentStatus.NO_SHOW)}
+        return 'start_visit', {
+            'can_no_show': AppointmentStatus.can_transition(status, AppointmentStatus.NO_SHOW),
+            'seconds_until_start': seconds_until_start,
+        }
     return 'wrong_status', {}
 
 

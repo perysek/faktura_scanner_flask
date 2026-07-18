@@ -27,23 +27,36 @@ export interface TodayAppointment {
   state: VisitState;
   minutes_remaining?: number;
   seconds_remaining?: number;
+  seconds_until_start?: number;
   unlock_at?: string;
   can_no_show?: boolean;
-  /** Client-computed at receipt time: Date.now() + seconds_remaining*1000.
-   * Always use this for countdown math -- never parse unlock_at. The
-   * server runs in UTC but appointment times are Polish local, so that
-   * naive ISO string reads as local time on-device and lands ~2h off
-   * (CEST), making every too_early row look already-expired and looping
-   * the "refetch on expiry" logic forever. seconds_remaining is a pure
-   * duration, immune to that mismatch. */
+  /** Both client-computed at receipt time, from the *_seconds_* durations
+   * above -- never parse unlock_at. The server runs in UTC but appointment
+   * times are Polish local, so that naive ISO string reads as local time
+   * on-device and lands ~2h off (CEST), making every too_early row look
+   * already-expired and looping the "refetch on expiry" logic forever.
+   * A plain duration is immune to that mismatch. */
   unlockAtLocalMs?: number;
+  /** Time until the actual appointment start -- what the today-list badge
+   * counts down to (in both too_early and start_visit), vs unlockAtLocalMs
+   * which only gates the too_early -> start_visit transition. */
+  startAtLocalMs?: number;
 }
 
-function anchorUnlock<T extends { state?: VisitState; seconds_remaining?: number }>(appt: T): T {
+function anchorTimers<T extends { state?: VisitState; seconds_remaining?: number; seconds_until_start?: number }>(
+  appt: T
+): T {
+  const patch: Partial<TodayAppointment> = {};
   if (appt.state === 'too_early' && typeof appt.seconds_remaining === 'number') {
-    return { ...appt, unlockAtLocalMs: Date.now() + appt.seconds_remaining * 1000 };
+    patch.unlockAtLocalMs = Date.now() + appt.seconds_remaining * 1000;
   }
-  return appt;
+  if (
+    (appt.state === 'too_early' || appt.state === 'start_visit') &&
+    typeof appt.seconds_until_start === 'number'
+  ) {
+    patch.startAtLocalMs = Date.now() + appt.seconds_until_start * 1000;
+  }
+  return { ...appt, ...patch };
 }
 
 async function parseJson(res: Response): Promise<any> {
@@ -106,7 +119,7 @@ export async function fetchToday(sessionToken: string): Promise<TodayResult> {
     const body = await parseJson(res);
     return {
       ...body,
-      appointments: Array.isArray(body.appointments) ? body.appointments.map(anchorUnlock) : [],
+      appointments: Array.isArray(body.appointments) ? body.appointments.map(anchorTimers) : [],
     };
   } catch {
     return { success: false, appointments: [], error: 'network_error' };
@@ -121,8 +134,10 @@ export interface AppointmentStateResult {
   state?: VisitState;
   minutes_remaining?: number;
   seconds_remaining?: number;
+  seconds_until_start?: number;
   unlock_at?: string;
   unlockAtLocalMs?: number;
+  startAtLocalMs?: number;
   can_no_show?: boolean;
   error?: string;
 }
@@ -139,7 +154,7 @@ export async function fetchAppointmentState(
       return { success: false, error: 'unauthorized' };
     }
     const body = await parseJson(res);
-    return anchorUnlock(body);
+    return anchorTimers(body);
   } catch {
     return { success: false, error: 'network_error' };
   }
@@ -152,8 +167,10 @@ export interface ActionResult {
   error?: string;
   minutes_remaining?: number;
   seconds_remaining?: number;
+  seconds_until_start?: number;
   unlock_at?: string;
   unlockAtLocalMs?: number;
+  startAtLocalMs?: number;
   can_no_show?: boolean;
 }
 
@@ -172,7 +189,7 @@ export async function submitAppointmentAction(
       return { success: false, error: 'unauthorized' };
     }
     const body = await parseJson(res);
-    return anchorUnlock(body);
+    return anchorTimers(body);
   } catch {
     return { success: false, error: 'network_error' };
   }

@@ -73,16 +73,27 @@
       });
   }
 
-  // Anchors a server-sent duration to this device's own clock, once, at
+  // Anchors server-sent durations to this device's own clock, once, at
   // receipt time. Never derive countdown math from unlock_at (a naive
   // datetime string with no timezone marker) -- the server runs in UTC
   // while appointment times are Polish local, so `new Date(unlock_at)`
   // parses it as local time on-device and lands ~2h off (CEST), making
   // every too_early row look already-expired and looping the
   // refetch-on-expiry logic forever (network-round-trip-speed blinking).
-  function anchorUnlock(appt) {
-    if (appt && appt.state === 'too_early' && typeof appt.seconds_remaining === 'number') {
+  //
+  // unlockAtLocalMs gates the too_early -> start_visit transition (20 min
+  // before start). startAtLocalMs is what the today-list badge counts down
+  // to instead -- the actual appointment time, valid in both states.
+  function anchorTimers(appt) {
+    if (!appt) return appt;
+    if (appt.state === 'too_early' && typeof appt.seconds_remaining === 'number') {
       appt.unlockAtLocalMs = Date.now() + appt.seconds_remaining * 1000;
+    }
+    if (
+      (appt.state === 'too_early' || appt.state === 'start_visit') &&
+      typeof appt.seconds_until_start === 'number'
+    ) {
+      appt.startAtLocalMs = Date.now() + appt.seconds_until_start * 1000;
     }
     return appt;
   }
@@ -148,8 +159,15 @@
 
   function pillLabelFor(appt, now) {
     var meta = PILL_COLORS[appt.state] || PILL_COLORS.wrong_status;
-    if (appt.state === 'too_early' && appt.unlockAtLocalMs) {
-      return formatCountdown(appt.unlockAtLocalMs - now);
+    // The badge always counts down to the actual appointment start (in both
+    // too_early and start_visit) -- only its color follows the 20-min gate,
+    // via which of those two states it's currently in.
+    if (
+      (appt.state === 'too_early' || appt.state === 'start_visit') &&
+      appt.startAtLocalMs &&
+      appt.startAtLocalMs - now > 0
+    ) {
+      return formatCountdown(appt.startAtLocalMs - now);
     }
     return meta.label || '';
   }
@@ -223,7 +241,7 @@
       }
       setState({
         todayLoading: false,
-        appointments: (result.appointments || []).map(anchorUnlock),
+        appointments: (result.appointments || []).map(anchorTimers),
         todayLabel: formatIsoDateLocal(result.today),
         todayExpiredHandled: false,
       });
@@ -251,7 +269,7 @@
         if (result.state) {
           setState({
             detailSubmitting: null,
-            detailAppt: Object.assign({}, appt, anchorUnlock(result)),
+            detailAppt: Object.assign({}, appt, anchorTimers(result)),
             detailError: result.error || null,
           });
           return;
@@ -432,7 +450,7 @@
         state.detailExpiredHandled = true;
         fetchAppointmentState(state.session.sessionToken, appt.appointment_id).then(function (result) {
           if (!result.success) { if (result.error === 'unauthorized') handleUnauthorized(); return; }
-          setState({ detailAppt: Object.assign({}, appt, anchorUnlock(result)) });
+          setState({ detailAppt: Object.assign({}, appt, anchorTimers(result)) });
         });
       }
       body.push(h('div', { class: 'status-icon' }, ['⏳']));

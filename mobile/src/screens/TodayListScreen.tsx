@@ -26,8 +26,15 @@ function formatTodayLabel(isoDate: string | undefined): string {
 }
 
 function pillLabelFor(appt: TodayAppointment, now: number): string {
-  if (appt.state === 'too_early' && appt.unlockAtLocalMs) {
-    return formatCountdown(appt.unlockAtLocalMs - now);
+  // The badge always counts down to the actual appointment start (in both
+  // too_early and start_visit) -- only its color follows the 20-min gate,
+  // via which of those two states it's currently in.
+  if (
+    (appt.state === 'too_early' || appt.state === 'start_visit') &&
+    appt.startAtLocalMs &&
+    appt.startAtLocalMs - now > 0
+  ) {
+    return formatCountdown(appt.startAtLocalMs - now);
   }
   switch (appt.state) {
     case 'already_done':
