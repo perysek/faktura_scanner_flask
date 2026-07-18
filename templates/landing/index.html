@@ -212,9 +212,15 @@
         right: 0 !important;
         bottom: auto !important;
         height: 46% !important;
-        opacity: .38 !important;
+        opacity: .5 !important;
         -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 88%) !important;
         mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 88%) !important;
+      }
+      /* The desktop blur radius (26px) was tuned for a much taller display
+         box; on this shorter band it smears away almost all color, so it's
+         reduced here to keep the photo's warmth actually visible. */
+      .mw-ambient-photo img {
+        filter: blur(9px) saturate(0.92) brightness(0.98) !important;
       }
     }
     @media (max-width: 640px) {
