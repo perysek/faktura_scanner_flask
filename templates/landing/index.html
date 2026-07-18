@@ -165,6 +165,37 @@
     @media (max-width: 768px) {
       .mw-panel-sidebar { display: none; }
     }
+
+    /* Photography: real nail/service photos, blurred + edge-faded so they read
+       as ambient warmth behind a section rather than hard-edged stock boxes. */
+    .mw-ambient-photo {
+      position: absolute;
+      object-fit: cover;
+      pointer-events: none;
+      filter: blur(26px) saturate(0.85) brightness(0.95);
+      z-index: 0;
+    }
+    .mw-photo-fade {
+      display: block;
+      width: 100%;
+      object-fit: cover;
+      -webkit-mask-image: radial-gradient(ellipse 84% 84% at 50% 50%, #000 48%, transparent 92%);
+      mask-image: radial-gradient(ellipse 84% 84% at 50% 50%, #000 48%, transparent 92%);
+      filter: saturate(0.95);
+    }
+    .mw-photo-band {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr 1fr;
+      gap: clamp(14px, 2.5vw, 28px);
+      align-items: center;
+    }
+    @media (max-width: 768px) {
+      .mw-ambient-photo { display: none; }
+    }
+    @media (max-width: 640px) {
+      .mw-photo-band { grid-template-columns: 1fr; }
+      .mw-photo-band > img { max-width: 320px; margin: 0 auto; }
+    }
   </style>
 </head>
 <body>
@@ -189,8 +220,9 @@
 </nav>
 
 <!-- ============================ HERO ============================ -->
-<section id="top" class="mw-section mw-hero-warmth" style="padding:clamp(48px,8vw,88px) clamp(20px,5vw,48px) clamp(40px,6vw,64px);display:flex;gap:clamp(32px,5vw,64px);align-items:center;flex-wrap:wrap">
-  <div class="mw-fade-up" style="flex:1 1 440px;min-width:280px;max-width:560px">
+<section id="top" class="mw-section mw-hero-warmth" style="position:relative;overflow:hidden;padding:clamp(48px,8vw,88px) clamp(20px,5vw,48px) clamp(40px,6vw,64px);display:flex;gap:clamp(32px,5vw,64px);align-items:center;flex-wrap:wrap">
+  <img class="mw-ambient-photo" src="{{ url_for('static', filename='hero-web.webp') }}" alt="" style="top:-8%;right:-6%;bottom:-8%;left:38%;-webkit-mask-image:radial-gradient(ellipse 70% 88% at 82% 48%, #000 20%, transparent 76%);mask-image:radial-gradient(ellipse 70% 88% at 82% 48%, #000 20%, transparent 76%)">
+  <div class="mw-fade-up" style="position:relative;z-index:1;flex:1 1 440px;min-width:280px;max-width:560px">
     <div class="mw-eyebrow" style="margin:0 0 18px">System dla salonów beauty i spa</div>
     <h1 style="font-size:clamp(2.25rem,4.2vw,3.375rem);font-weight:700;letter-spacing:-0.02em;line-height:1.08;margin:0 0 20px">Prowadź salon.<br/>Resztą zajmie się MyWay Beauty.</h1>
     <p style="font-size:16px;font-weight:300;line-height:1.6;color:var(--mw-ink2);margin:0 0 32px;max-width:480px">Rezerwacje, klienci, grafik pracowników, wypłaty, faktury i obowiązkowy KSeF: wszystko w jednym systemie zaprojektowanym dla salonów beauty.</p>
@@ -199,7 +231,7 @@
       <a href="#funkcje" class="mw-btn mw-btn-light">Zobacz funkcje ↓</a>
     </div>
   </div>
-  <div class="mw-fade-up" style="flex:1 1 480px;min-width:280px;max-width:760px;width:100%">
+  <div class="mw-fade-up" style="position:relative;z-index:1;flex:1 1 480px;min-width:280px;max-width:760px;width:100%">
     <div class="mw-win">
       <div class="mw-bar">
         <span class="mw-dot" style="background:#f0605f"></span><span class="mw-dot" style="background:#f7bd4f"></span><span class="mw-dot" style="background:#61c554"></span>
@@ -293,9 +325,19 @@
   </div>
 </section>
 
+<!-- ============================ ATMOSFERA (photo band) ============================ -->
+<section class="mw-section mw-reveal" style="padding:0 clamp(20px,5vw,48px) clamp(48px,7vw,80px);overflow:hidden">
+  <div class="mw-photo-band">
+    <img class="mw-photo-fade" src="{{ url_for('static', filename='nails-manicure-table-web.webp') }}" alt="Manicure w trakcie zabiegu na marmurowym blacie" loading="lazy" style="aspect-ratio:4/5">
+    <img class="mw-photo-fade" src="{{ url_for('static', filename='nails-brush-1-web.webp') }}" alt="Stylistka nakładająca lakier hybrydowy" loading="lazy" style="aspect-ratio:3/4;margin-top:clamp(20px,4vw,48px)">
+    <img class="mw-photo-fade" src="{{ url_for('static', filename='nails-brush-2-web.webp') }}" alt="Detal pracy przy manicure" loading="lazy" style="aspect-ratio:5/6">
+  </div>
+</section>
+
 <!-- ============================ KSeF ============================ -->
-<section id="ksef" class="mw-warmth-dark" style="padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px)">
-  <div class="mw-reveal" style="max-width:820px;margin:0 auto;text-align:center">
+<section id="ksef" class="mw-warmth-dark" style="position:relative;overflow:hidden;padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px)">
+  <img class="mw-ambient-photo" src="{{ url_for('static', filename='ambiance-web.webp') }}" alt="" style="top:-12%;bottom:-12%;left:-6%;right:58%;opacity:.55;-webkit-mask-image:radial-gradient(ellipse 64% 82% at 20% 50%, #000 20%, transparent 78%);mask-image:radial-gradient(ellipse 64% 82% at 20% 50%, #000 20%, transparent 78%)">
+  <div class="mw-reveal" style="position:relative;z-index:1;max-width:820px;margin:0 auto;text-align:center">
     <h2 style="font-size:clamp(1.75rem,3.4vw,2.5rem);font-weight:600;letter-spacing:-0.02em;line-height:1.2;color:#fff;margin:0 0 20px">KSeF przestał być opcją.</h2>
     <p style="font-size:15px;font-weight:300;line-height:1.75;color:rgba(255,255,255,0.7);margin:0 0 32px">Od lutego 2026 każda firma VAT musi umieć odbierać faktury przez Krajowy System e-Faktur, a od kwietnia 2026 obowiązek obejmuje pełne rozliczenia elektroniczne. Faktura doręczona przez KSeF jest prawnie doręczona, nawet jeśli nikt jej nie otworzy. Kary za brak zgodności mogą sięgać 100% kwoty VAT. MyWay Beauty łączy się z KSeF i pobiera faktury od dostawców automatycznie, obok poczty e-mail i skanów OCR, więc żadna faktura nie ginie w skrzynce.</p>
     <a href="mailto:kontakt@mywaybeauty.pl" class="mw-btn mw-btn-white">Zapytaj o wdrożenie KSeF</a>
@@ -649,8 +691,9 @@
 </section>
 
 <!-- ============================ FOOTER / KONTAKT ============================ -->
-<footer id="kontakt" class="mw-warmth-dark-bloom" style="padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px) 32px">
-  <div style="max-width:1100px;margin:0 auto">
+<footer id="kontakt" class="mw-warmth-dark-bloom" style="position:relative;overflow:hidden;padding:clamp(56px,7vw,88px) clamp(20px,5vw,48px) 32px">
+  <img class="mw-ambient-photo" src="{{ url_for('static', filename='nails-heart-web.webp') }}" alt="" loading="lazy" style="top:-14%;bottom:38%;left:-4%;right:62%;-webkit-mask-image:radial-gradient(ellipse 58% 74% at 24% 40%, #000 18%, transparent 78%);mask-image:radial-gradient(ellipse 58% 74% at 24% 40%, #000 18%, transparent 78%)">
+  <div style="position:relative;z-index:1;max-width:1100px;margin:0 auto">
     <div class="mw-reveal" style="text-align:center;padding-bottom:clamp(40px,6vw,64px);border-bottom:1px solid rgba(255,255,255,0.12)">
       <h2 style="font-size:clamp(1.75rem,3.4vw,2.5rem);font-weight:600;letter-spacing:-0.02em;color:#fff;margin:0 0 16px;line-height:1.2">Zobacz, jak MyWay Beauty prowadzi salon za Ciebie.</h2>
       <p style="font-size:15px;font-weight:300;color:rgba(255,255,255,0.65);margin:0 0 28px">Krótka prezentacja, bez zobowiązań.</p>
