@@ -3,7 +3,7 @@ Public routes — no authentication required.
 Client-facing pages accessed via SMS confirmation links.
 """
 import logging
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, jsonify
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.audit_repository import AuditRepository
@@ -277,50 +277,34 @@ def _employee_visit_state(appt: dict) -> tuple:
     return 'wrong_status', {}
 
 
-@public_bp.route('/visit/<token>', methods=['GET'])
-def employee_visit_status_view(token):
-    """Employee mobile form — time-gated visit status transition."""
-    appt = AppointmentRepository().get_by_employee_token(token)
-    if not appt:
-        return render_template('public/confirm_invalid.html'), 404
-
-    appt = dict(appt)
-    state, ctx = _employee_visit_state(appt)
-    return render_template(
-        'public/appointment_employee_status.html',
-        appointment=appt, state=state, **ctx,
-    )
+def _serialize_appt(appt: dict) -> dict:
+    """JSON-safe appointment fields for the companion mobile app."""
+    return {
+        'first_name': appt.get('first_name'),
+        'last_name': appt.get('last_name'),
+        'appointment_date': str(appt.get('appointment_date')),
+        'start_time': str(appt.get('start_time'))[:5],
+        'status': appt.get('status'),
+    }
 
 
-@public_bp.route('/visit/<token>', methods=['POST'])
-def employee_visit_status_submit(token):
-    """Process employee start/end visit action."""
-    repo = AppointmentRepository()
-    appt = repo.get_by_employee_token(token)
-    if not appt:
-        return render_template('public/confirm_invalid.html'), 404
+def _process_visit_action(repo: AppointmentRepository, appt: dict, token: str, action: str) -> dict:
+    """Validate + apply a start/end action; shared by the HTML form and the JSON API.
 
-    appt = dict(appt)
-    action = request.form.get('action')   # 'start' | 'end'
+    Returns {'state', 'ctx', 'error', 'new_status'}. On success mutates
+    appt['status'] in place and sets error=None, new_status='in_progress'|'completed'.
+    """
     state, ctx = _employee_visit_state(appt)
 
-    # Server-side re-validation (never trust client-only guards)
+    if action not in ('start', 'end'):
+        return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
     if action == 'start' and state != 'start_visit':
-        return render_template(
-            'public/appointment_employee_status.html',
-            appointment=appt, state=state,
-            error='Akcja niedostepna w biezacym stanie wizyty.', **ctx,
-        )
+        return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
     if action == 'end' and state != 'end_visit':
-        return render_template(
-            'public/appointment_employee_status.html',
-            appointment=appt, state=state,
-            error='Akcja niedostepna w biezacym stanie wizyty.', **ctx,
-        )
+        return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
 
     old_status = appt['status']
-    new_status  = 'in_progress' if action == 'start' else 'completed'
-
+    new_status = 'in_progress' if action == 'start' else 'completed'
     repo.update_status(appt['id'], new_status)
 
     # Real-time notification event
@@ -351,7 +335,76 @@ def employee_visit_status_submit(token):
             logging.exception("_schedule_post_visit_sms failed appt=%s", appt['id'])
 
     appt['status'] = new_status
+    return {'state': 'success', 'ctx': {}, 'error': None, 'new_status': new_status}
+
+
+@public_bp.route('/visit/<token>', methods=['GET'])
+def employee_visit_status_view(token):
+    """Employee mobile form — time-gated visit status transition."""
+    appt = AppointmentRepository().get_by_employee_token(token)
+    if not appt:
+        return render_template('public/confirm_invalid.html'), 404
+
+    appt = dict(appt)
+    state, ctx = _employee_visit_state(appt)
     return render_template(
         'public/appointment_employee_status.html',
-        appointment=appt, state='success', new_status=new_status,
+        appointment=appt, state=state, **ctx,
     )
+
+
+@public_bp.route('/visit/<token>', methods=['POST'])
+def employee_visit_status_submit(token):
+    """Process employee start/end visit action (HTML form, reached via SMS link)."""
+    repo = AppointmentRepository()
+    appt = repo.get_by_employee_token(token)
+    if not appt:
+        return render_template('public/confirm_invalid.html'), 404
+
+    appt = dict(appt)
+    action = request.form.get('action')   # 'start' | 'end'
+    result = _process_visit_action(repo, appt, token, action)
+
+    if result['error']:
+        return render_template(
+            'public/appointment_employee_status.html',
+            appointment=appt, state=result['state'],
+            error=result['error'], **result['ctx'],
+        )
+    return render_template(
+        'public/appointment_employee_status.html',
+        appointment=appt, state='success', new_status=result['new_status'],
+    )
+
+
+@public_bp.route('/api/visit/<token>', methods=['GET'])
+def employee_visit_status_api(token):
+    """JSON status lookup for the companion mobile app."""
+    appt = AppointmentRepository().get_by_employee_token(token)
+    if not appt:
+        return jsonify({'success': False, 'error': 'not_found'}), 404
+
+    appt = dict(appt)
+    state, ctx = _employee_visit_state(appt)
+    return jsonify({'success': True, 'state': state, 'appointment': _serialize_appt(appt), **ctx})
+
+
+@public_bp.route('/api/visit/<token>', methods=['POST'])
+def employee_visit_status_api_submit(token):
+    """JSON start/end action for the companion mobile app."""
+    repo = AppointmentRepository()
+    appt = repo.get_by_employee_token(token)
+    if not appt:
+        return jsonify({'success': False, 'error': 'not_found'}), 404
+
+    appt = dict(appt)
+    action = (request.get_json(silent=True) or {}).get('action')
+    result = _process_visit_action(repo, appt, token, action)
+
+    if result['error']:
+        return jsonify({'success': False, 'state': result['state'], 'error': result['error'], **result['ctx']})
+
+    return jsonify({
+        'success': True, 'state': 'success', 'new_status': result['new_status'],
+        'appointment': _serialize_appt(appt),
+    })

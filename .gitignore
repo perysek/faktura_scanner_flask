@@ -19,6 +19,7 @@ faktury.db
 # Node.js
 node_modules/
 package-lock.json
+!mobile/package-lock.json
 
 # IDE
 .idea/
