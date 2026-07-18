@@ -12,33 +12,38 @@
             background: #f5f5f0;
             min-height: 100vh;
             display: flex; align-items: center; justify-content: center;
-            padding: 1rem;
+            padding: 1.5rem 1rem;
         }
         .card {
             background: white; border-radius: 8px;
-            padding: 2rem 1.5rem; max-width: 420px; width: 100%;
-            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+            padding: 2.25rem 1.75rem; max-width: 420px; width: 100%;
+            border: 1px solid rgba(0,0,0,.04);
+            box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.09);
         }
-        .salon-name { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.1em;
-                      text-transform: uppercase; color: #888; margin-bottom: 1.5rem; }
-        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem; }
-        .subheading { font-size: 0.875rem; color: #666; margin-bottom: 1.5rem; }
+        .salon-name { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.12em;
+                      text-transform: uppercase; color: #888; margin-bottom: 1.75rem; }
+        .status-view { text-align: center; }
+        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; line-height: 1.35; margin-bottom: 0.5rem; }
+        .subheading { font-size: 0.875rem; color: #666; line-height: 1.55; margin-bottom: 1.75rem; }
         .details-block { background: #f9f9f7; border-radius: 6px;
-                         padding: 1rem; margin-bottom: 1.5rem; }
-        .detail-row { display: flex; justify-content: space-between;
-                      padding: 0.375rem 0; font-size: 0.875rem; }
+                         padding: 0.25rem 1.125rem; margin-bottom: 1.75rem; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center;
+                      padding: 0.625rem 0; font-size: 0.875rem; }
+        .detail-row + .detail-row { border-top: 1px solid rgba(0,0,0,.05); }
         .detail-label { color: #888; }
         .detail-value { font-weight: 500; color: #1a1a1a; }
         .btn-confirm {
-            display: block; width: 100%; padding: 0.875rem;
+            display: block; width: 100%; padding: 1rem;
             background: #1a1a1a; color: white; border: none; border-radius: 6px;
-            font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+            font-family: inherit; font-size: 0.9375rem; font-weight: 500; letter-spacing: 0.01em;
             cursor: pointer; margin-bottom: 0.75rem;
+            transition: background 0.15s ease;
         }
         .btn-confirm:active { background: #333; }
-        .status-icon { font-size: 2rem; margin-bottom: 0.75rem; }
-        .status-message { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
-        .error-msg { color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem; }
+        .status-icon { font-size: 2.5rem; margin-bottom: 0.875rem; }
+        .status-message { font-size: 0.875rem; color: #666; line-height: 1.55; margin-top: 0.5rem;
+                           max-width: 300px; margin-left: auto; margin-right: auto; }
+        .error-msg { color: #dc2626; font-size: 0.875rem; margin-bottom: 1.25rem; }
     </style>
 </head>
 <body>
@@ -50,31 +55,39 @@
     {% endif %}
 
     {% if state == 'too_early' %}
-        <div class="status-icon">⏳</div>
-        <h1 class="heading">Za wcześnie</h1>
-        <p class="status-message">
-            Formularz będzie dostępny
-            {% if minutes_remaining is defined %}za {{ minutes_remaining }} min{% endif %}
-            (30 minut przed wizytą).
-        </p>
+        <div class="status-view">
+            <div class="status-icon">⏳</div>
+            <h1 class="heading">Za wcześnie</h1>
+            <p class="status-message">
+                Formularz będzie dostępny
+                {% if minutes_remaining is defined %}za {{ minutes_remaining }} min{% endif %}
+                (30 minut przed wizytą).
+            </p>
+        </div>
 
     {% elif state == 'already_done' %}
-        <div class="status-icon">✅</div>
-        <h1 class="heading">Wizyta już zakończona</h1>
-        <p class="status-message">Ta wizyta ma już finalny status. Brak dostępnych akcji.</p>
+        <div class="status-view">
+            <div class="status-icon">✅</div>
+            <h1 class="heading">Wizyta już zakończona</h1>
+            <p class="status-message">Ta wizyta ma już finalny status. Brak dostępnych akcji.</p>
+        </div>
 
     {% elif state == 'wrong_status' %}
-        <div class="status-icon">⚠️</div>
-        <h1 class="heading">Nieprawidłowy status</h1>
-        <p class="status-message">Wizyta ma status, który nie pozwala na zmianę przez ten formularz.</p>
+        <div class="status-view">
+            <div class="status-icon">⚠️</div>
+            <h1 class="heading">Nieprawidłowy status</h1>
+            <p class="status-message">Wizyta ma status, który nie pozwala na zmianę przez ten formularz.</p>
+        </div>
 
     {% elif state == 'success' %}
-        <div class="status-icon">✅</div>
-        <h1 class="heading">Status zaktualizowany</h1>
-        <p class="status-message" id="success-msg">
-            Wizyta oznaczona jako
-            <strong>{% if new_status == 'in_progress' %}W trakcie{% else %}Zakończona{% endif %}</strong>.
-        </p>
+        <div class="status-view">
+            <div class="status-icon">✅</div>
+            <h1 class="heading">Status zaktualizowany</h1>
+            <p class="status-message" id="success-msg">
+                Wizyta oznaczona jako
+                <strong>{% if new_status == 'in_progress' %}W trakcie{% else %}Zakończona{% endif %}</strong>.
+            </p>
+        </div>
         <script>
             setTimeout(function () {
                 var el = document.getElementById('success-msg');
