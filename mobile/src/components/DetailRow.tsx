@@ -20,11 +20,11 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: colors.inkSubtle,
   },
   value: {
     fontFamily: fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: colors.ink,
   },
 });

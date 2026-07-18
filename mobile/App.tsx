@@ -80,8 +80,8 @@ export default function App() {
 
   if (!fontsLoaded) {
     return (
-      <View style={[styles.splash, { backgroundColor: colors.pageBackground }]}>
-        <ActivityIndicator color={colors.textPrimary} />
+      <View style={[styles.splash, { backgroundColor: colors.surfaceWarm }]}>
+        <ActivityIndicator color={colors.ink} />
       </View>
     );
   }
@@ -91,8 +91,8 @@ export default function App() {
       <StatusBar style="dark" />
 
       {screen.kind === 'bootstrapping' && (
-        <View style={[styles.splash, { backgroundColor: colors.pageBackground }]}>
-          <ActivityIndicator color={colors.textPrimary} />
+        <View style={[styles.splash, { backgroundColor: colors.surfaceWarm }]}>
+          <ActivityIndicator color={colors.ink} />
         </View>
       )}
 

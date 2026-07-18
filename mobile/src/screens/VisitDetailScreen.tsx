@@ -3,7 +3,7 @@ import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenCard } from '../components/ScreenCard';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { DetailRow } from '../components/DetailRow';
-import { colors, fonts } from '../theme';
+import { colors, fonts, radii } from '../theme';
 import {
   TodayAppointment,
   VisitState,
@@ -122,7 +122,10 @@ export function VisitDetailScreen({ sessionToken, appointment, onBack, onDone, o
           <Text style={styles.icon}>✅</Text>
           <Text style={styles.heading}>Status zaktualizowany</Text>
           <Text style={styles.message}>{successMessageFor(successNewStatus)}</Text>
-          <Pressable onPress={onDone} style={styles.secondaryButton}>
+          <Pressable
+            onPress={onDone}
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}
+          >
             <Text style={styles.secondaryButtonText}>← Wróć do dzisiejszych wizyt</Text>
           </Pressable>
         </View>
@@ -179,7 +182,11 @@ export function VisitDetailScreen({ sessionToken, appointment, onBack, onDone, o
             <Pressable
               onPress={handleNoShow}
               disabled={submitting !== null}
-              style={[styles.secondaryButton, submitting !== null && styles.secondaryButtonDisabled]}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed && styles.secondaryButtonPressed,
+                submitting !== null && styles.secondaryButtonDisabled,
+              ]}
             >
               <Text style={styles.secondaryButtonTextMuted}>Klient się nie stawił</Text>
             </Pressable>
@@ -204,7 +211,7 @@ const styles = StyleSheet.create({
   backLink: {
     fontFamily: fonts.regular,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
   },
   icon: {
     fontSize: 32,
@@ -213,41 +220,47 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: fonts.semiBold,
     fontSize: 20,
-    color: colors.textPrimary,
+    color: colors.ink,
     marginBottom: 8,
   },
   subheading: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
     marginBottom: 24,
   },
   message: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
     marginTop: 8,
   },
   messageBold: {
     fontFamily: fonts.semiBold,
-    color: colors.textPrimary,
+    color: colors.ink,
     fontVariant: ['tabular-nums'],
   },
   detailsBlock: {
-    backgroundColor: colors.detailsBlockBackground,
+    backgroundColor: colors.surface,
     borderRadius: 6,
     padding: 16,
     marginBottom: 24,
   },
+  // .btn-refined-secondary (GUI-GOLDEN-BOOK.md §6): white fill, border token,
+  // 2px radius; pressed mirrors the hover (border darkens to ink-muted, bg -> surface).
   secondaryButton: {
     marginTop: 12,
     width: '100%',
     paddingVertical: 14,
-    borderRadius: 6,
+    borderRadius: radii.control,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     backgroundColor: colors.cardBackground,
     alignItems: 'center',
+  },
+  secondaryButtonPressed: {
+    borderColor: colors.inkMuted,
+    backgroundColor: colors.surface,
   },
   secondaryButtonDisabled: {
     opacity: 0.6,
@@ -255,12 +268,12 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: colors.ink,
   },
   secondaryButtonTextMuted: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
   },
   errorMsg: {
     fontFamily: fonts.regular,

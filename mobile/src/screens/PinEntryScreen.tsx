@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenCard } from '../components/ScreenCard';
 import { ConfirmButton } from '../components/ConfirmButton';
-import { colors, fonts } from '../theme';
+import { colors, fonts, radii } from '../theme';
 import { EmployeeSummary, submitPin } from '../api/mobileApi';
 import { StoredSession } from '../storage/session';
 
@@ -77,7 +77,7 @@ export function PinEntryScreen({ employee, onSuccess, onBack }: Props) {
         value={pin}
         onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 6))}
         placeholder="PIN"
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={colors.inkSubtle}
         keyboardType="number-pad"
         secureTextEntry
         style={styles.pinInput}
@@ -91,7 +91,7 @@ export function PinEntryScreen({ employee, onSuccess, onBack }: Props) {
           value={confirmPin}
           onChangeText={(v) => setConfirmPin(v.replace(/\D/g, '').slice(0, 6))}
           placeholder="Powtórz PIN"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.inkSubtle}
           keyboardType="number-pad"
           secureTextEntry
           style={styles.pinInput}
@@ -128,27 +128,29 @@ const styles = StyleSheet.create({
   backLink: {
     fontFamily: fonts.regular,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
   },
   heading: {
     fontFamily: fonts.semiBold,
     fontSize: 20,
-    color: colors.textPrimary,
+    color: colors.ink,
     marginBottom: 8,
   },
   subheading: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
     marginBottom: 24,
   },
   pinInput: {
-    fontFamily: fonts.regular,
+    fontFamily: fonts.light,
     fontSize: 20,
     letterSpacing: 4,
-    color: colors.textPrimary,
-    backgroundColor: colors.detailsBlockBackground,
-    borderRadius: 6,
+    color: colors.ink,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.control,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,

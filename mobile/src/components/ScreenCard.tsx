@@ -21,7 +21,7 @@ export function ScreenCard({ children, noPadding }: Props) {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: colors.pageBackground,
+    backgroundColor: colors.surfaceWarm,
   },
   scrollContent: {
     flexGrow: 1,
@@ -34,13 +34,10 @@ const styles = StyleSheet.create({
     maxWidth: spacing.cardMaxWidth,
     backgroundColor: colors.cardBackground,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: spacing.cardPaddingVertical,
     paddingHorizontal: spacing.cardPaddingHorizontal,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 4,
   },
   cardNoPadding: {
     paddingVertical: 0,

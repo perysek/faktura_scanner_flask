@@ -21,7 +21,7 @@ export function EmployeePickerScreen({ employees, loading, error, onSelect, onRe
 
       {loading && (
         <View style={styles.centered}>
-          <ActivityIndicator color={colors.textPrimary} />
+          <ActivityIndicator color={colors.ink} />
         </View>
       )}
 
@@ -66,13 +66,13 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: fonts.semiBold,
     fontSize: 20,
-    color: colors.textPrimary,
+    color: colors.ink,
     marginBottom: 4,
   },
   subheading: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
   },
   centered: {
     paddingVertical: 24,
@@ -84,15 +84,15 @@ const styles = StyleSheet.create({
   row: {
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: colors.rowBorder,
+    borderTopColor: colors.borderSubtle,
   },
   rowPressed: {
-    backgroundColor: colors.detailsBlockBackground,
+    backgroundColor: colors.surface,
   },
   rowText: {
     fontFamily: fonts.medium,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: colors.ink,
   },
   errorMsg: {
     fontFamily: fonts.regular,
@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
   retryLink: {
     fontFamily: fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: colors.ink,
     textDecorationLine: 'underline',
   },
   emptyMsg: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
     paddingVertical: 24,
   },
 });

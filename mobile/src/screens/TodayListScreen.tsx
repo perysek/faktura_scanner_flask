@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenCard } from '../components/ScreenCard';
 import { PulseDot } from '../components/PulseDot';
-import { colors, fonts, pillColors } from '../theme';
+import { colors, fonts, pillColors, radii } from '../theme';
 import { fetchToday, TodayAppointment, TodayResult } from '../api/mobileApi';
 import { useTicker } from '../hooks/useTicker';
 import { formatCountdown } from '../utils/countdown';
@@ -35,7 +35,7 @@ function pillLabelFor(appt: TodayAppointment, now: number): string {
     case 'end_visit':
       return 'W trakcie';
     case 'start_visit':
-      return 'Gotowe';
+      return 'Gotowość';
     case 'wrong_status':
       return 'Sprawdź';
     default:
@@ -103,7 +103,7 @@ export function TodayListScreen({
 
       {loading && (
         <View style={styles.centered}>
-          <ActivityIndicator color={colors.textPrimary} />
+          <ActivityIndicator color={colors.ink} />
         </View>
       )}
 
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   subheading: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
   },
   centered: {
     paddingVertical: 32,
@@ -186,13 +186,13 @@ const styles = StyleSheet.create({
   retryLink: {
     fontFamily: fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: colors.ink,
     textDecorationLine: 'underline',
   },
   emptyMsg: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
     paddingHorizontal: 24,
     paddingBottom: 32,
   },
@@ -203,16 +203,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderTopWidth: 1,
-    borderTopColor: colors.rowBorder,
+    borderTopColor: colors.borderSubtle,
   },
   rowPressed: {
-    backgroundColor: colors.detailsBlockBackground,
+    backgroundColor: colors.surface,
   },
   time: {
     minWidth: 48,
     fontFamily: fonts.semiBold,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: colors.ink,
     fontVariant: ['tabular-nums'],
   },
   rowMain: {
@@ -222,12 +222,12 @@ const styles = StyleSheet.create({
   client: {
     fontFamily: fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: colors.ink,
   },
   service: {
     fontFamily: fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: colors.inkSubtle,
   },
   pill: {
     flexDirection: 'row',
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 99,
+    borderRadius: radii.badge,
   },
   pillText: {
     fontFamily: fonts.semiBold,
@@ -247,12 +247,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderTopWidth: 1,
-    borderTopColor: colors.rowBorder,
+    borderTopColor: colors.borderSubtle,
   },
   switchLink: {
     fontFamily: fonts.regular,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
 });
