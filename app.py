@@ -246,6 +246,7 @@ def create_app():
     from routes.absence_balance_routes import absence_balance_bp
     from routes.sms_routes import sms_bp
     from routes.public_routes import public_bp
+    from routes.mobile_routes import mobile_bp
     from routes.import_routes import import_bp
 
     app.register_blueprint(main_bp)
@@ -265,6 +266,7 @@ def create_app():
     app.register_blueprint(absence_balance_bp)
     app.register_blueprint(sms_bp)
     app.register_blueprint(public_bp)
+    app.register_blueprint(mobile_bp, url_prefix='/api/mobile')
     app.register_blueprint(import_bp, url_prefix='/api')
 
     # CSRF exemptions — anonymous, non-session endpoints whose security boundary
@@ -274,8 +276,12 @@ def create_app():
     #                  meaningless here, and its 1h token expiry would break SMS
     #                  links opened hours later.
     #   • booking_bp — open public booking API; no privileged session to forge.
+    #   • mobile_bp  — employee app, authenticated by a bearer session token
+    #                  (issued after PIN verification) sent in a header, never
+    #                  a cookie; there is no ambient session for CSRF to protect.
     csrf.exempt(public_bp)
     csrf.exempt(booking_bp)
+    csrf.exempt(mobile_bp)
 
     # Error handlers
     from exceptions import AppError

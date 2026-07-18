@@ -4,6 +4,7 @@ Client-facing pages accessed via SMS confirmation links.
 """
 import logging
 from flask import Blueprint, render_template, request, jsonify
+from config.appointment_statuses import AppointmentStatus
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.audit_repository import AuditRepository
@@ -273,7 +274,7 @@ def _employee_visit_state(appt: dict) -> tuple:
     if status in ('scheduled', 'confirmed', 'pending'):
         if minutes_until > 20:
             return 'too_early', {'minutes_remaining': int(minutes_until - 20)}
-        return 'start_visit', {}
+        return 'start_visit', {'can_no_show': AppointmentStatus.can_transition(status, AppointmentStatus.NO_SHOW)}
     return 'wrong_status', {}
 
 
@@ -296,15 +297,17 @@ def _process_visit_action(repo: AppointmentRepository, appt: dict, token: str, a
     """
     state, ctx = _employee_visit_state(appt)
 
-    if action not in ('start', 'end'):
+    if action not in ('start', 'end', 'no_show'):
         return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
     if action == 'start' and state != 'start_visit':
         return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
     if action == 'end' and state != 'end_visit':
         return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
+    if action == 'no_show' and (state != 'start_visit' or not ctx.get('can_no_show')):
+        return {'state': state, 'ctx': ctx, 'error': 'Akcja niedostepna w biezacym stanie wizyty.', 'new_status': None}
 
     old_status = appt['status']
-    new_status = 'in_progress' if action == 'start' else 'completed'
+    new_status = {'start': 'in_progress', 'end': 'completed', 'no_show': 'no_show'}[action]
     repo.update_status(appt['id'], new_status)
 
     # Real-time notification event

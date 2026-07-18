@@ -111,6 +111,30 @@ class EmployeeRepository(AuditableMixin):
             cursor.execute(query, (employee_id,))
             return cursor.fetchone()
 
+    def get_mobile_pin_hash(self, employee_id: int) -> Optional[str]:
+        """Bcrypt hash of the employee's mobile-app PIN, or None if not set yet.
+
+        Kept out of _COLUMNS / the Employee dataclass on purpose — this must
+        never surface through the admin employee-edit forms or any other
+        existing serialization path.
+        """
+        excl = emp_exclusion_sql_inline('id')
+        query = f"SELECT mobile_pin_hash FROM employees WHERE id = %s AND is_active = TRUE {excl}"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (employee_id,))
+            row = cursor.fetchone()
+            return row['mobile_pin_hash'] if row else None
+
+    def set_mobile_pin_hash(self, employee_id: int, pin_hash: str) -> None:
+        """Set the employee's mobile-app PIN hash. Only ever called when none exists yet."""
+        excl = emp_exclusion_sql_inline('id')
+        query = f"UPDATE employees SET mobile_pin_hash = %s, updated_at = %s WHERE id = %s AND is_active = TRUE {excl}"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (pin_hash, datetime.now(), employee_id))
+            safe_commit(conn)
+
     def get_by_user_id(self, user_id: int) -> Optional[Any]:
         """Pobierz pracownika po user_id"""
         query = f"SELECT {self._COLUMNS} FROM employees WHERE user_id = %s"
