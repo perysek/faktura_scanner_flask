@@ -112,12 +112,20 @@ class EmployeeRepository(AuditableMixin):
             return cursor.fetchone()
 
     def list_for_mobile_picker(self) -> List[Any]:
-        """Active, non-hidden employees for the mobile app's picker screen,
-        each flagged with whether they've already set a mobile PIN."""
-        excl = emp_exclusion_sql_inline('id')
+        """Active employees for the mobile app's picker screen, each flagged
+        with whether they've already set a mobile PIN.
+
+        Deliberately does NOT apply emp_exclusion_sql_inline (Widok
+        administratora). That mechanism hides the superuser-linked employee's
+        revenue-generating activity from staff-facing analytics/rosters — it
+        was never applied to the equivalent SMS-token flow in
+        public_routes.py (get_by_employee_token has no such filter), and the
+        mobile picker is the same kind of thing: an operational roster so
+        someone can mark their own visit status, not a reporting surface.
+        """
         query = (
             "SELECT id, first_name, last_name, (mobile_pin_hash IS NOT NULL) AS has_pin "
-            f"FROM employees WHERE is_active = TRUE {excl} ORDER BY last_name, first_name"
+            "FROM employees WHERE is_active = TRUE ORDER BY last_name, first_name"
         )
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -129,10 +137,10 @@ class EmployeeRepository(AuditableMixin):
 
         Kept out of _COLUMNS / the Employee dataclass on purpose — this must
         never surface through the admin employee-edit forms or any other
-        existing serialization path.
+        existing serialization path. See list_for_mobile_picker for why this
+        does not apply the Widok administratora exclusion.
         """
-        excl = emp_exclusion_sql_inline('id')
-        query = f"SELECT mobile_pin_hash FROM employees WHERE id = %s AND is_active = TRUE {excl}"
+        query = "SELECT mobile_pin_hash FROM employees WHERE id = %s AND is_active = TRUE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (employee_id,))
@@ -141,8 +149,7 @@ class EmployeeRepository(AuditableMixin):
 
     def set_mobile_pin_hash(self, employee_id: int, pin_hash: str) -> None:
         """Set the employee's mobile-app PIN hash. Only ever called when none exists yet."""
-        excl = emp_exclusion_sql_inline('id')
-        query = f"UPDATE employees SET mobile_pin_hash = %s, updated_at = %s WHERE id = %s AND is_active = TRUE {excl}"
+        query = "UPDATE employees SET mobile_pin_hash = %s, updated_at = %s WHERE id = %s AND is_active = TRUE"
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (pin_hash, datetime.now(), employee_id))

@@ -51,7 +51,11 @@ def _authenticated_employee_id():
 
 @mobile_bp.route('/employees', methods=['GET'])
 def list_employees():
-    """Picker list — active employees only (superuser's linked employee stays hidden).
+    """Picker list — every active employee, including the superuser-linked one.
+
+    Widok administratora intentionally does NOT apply here (see
+    EmployeeRepository.list_for_mobile_picker) — this is an operational
+    roster, not a staff-facing analytics/reporting surface.
 
     has_pin lets the app show "set a new PIN" (with confirmation) vs
     "enter your PIN" before the employee types anything.
@@ -78,10 +82,10 @@ def employee_pin(employee_id):
     existing_hash = repo.get_mobile_pin_hash(employee_id)
     if existing_hash is None:
         # get_mobile_pin_hash returns None for "no PIN yet" AND for "doesn't
-        # exist / inactive / hidden" alike — disambiguate against the same
-        # active+visible set the picker list uses, so a hidden/inactive id
-        # 404s instead of silently minting a session nothing will ever use.
-        visible_ids = {r['id'] for r in repo.get_all(active_only=True)}
+        # exist / inactive" alike — disambiguate against the same active set
+        # the picker list uses, so an inactive/unknown id 404s instead of
+        # silently minting a session nothing will ever use.
+        visible_ids = {r['id'] for r in repo.list_for_mobile_picker()}
         if employee_id not in visible_ids:
             return jsonify({'success': False, 'error': 'not_found'}), 404
 
@@ -119,7 +123,10 @@ def today():
     if employee_id is None:
         return jsonify({'success': False, 'error': 'unauthorized'}), 401
 
-    rows = [dict(r) for r in AppointmentRepository().get_today_for_employee(employee_id)]
+    rows = [
+        dict(r)
+        for r in AppointmentRepository().get_today_for_employee(employee_id, bypass_admin_view_hiding=True)
+    ]
     appointments = [
         {
             **_serialize_appointment_state(row),

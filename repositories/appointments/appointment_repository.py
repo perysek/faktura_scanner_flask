@@ -958,12 +958,19 @@ class AppointmentRepository:
             safe_commit(conn)
             return cursor.rowcount > 0
 
-    def get_today_for_employee(self, employee_id: int) -> List[Any]:
-        """Today's appointments for an employee, ordered by start time."""
-        # Widok administratora: the owner's own "Moje wizyty" page also hides their
-        # day unless ON — the spec keeps the activity invisible even to the owner's
-        # own normal views. Harmless for any other employee (id never in the set).
-        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
+    def get_today_for_employee(self, employee_id: int, bypass_admin_view_hiding: bool = False) -> List[Any]:
+        """Today's appointments for an employee, ordered by start time.
+
+        Widok administratora: by default the owner's own day hides too (the
+        spec keeps their revenue-generating activity invisible even from
+        their own normal views) — harmless for any other employee, since
+        their id is never in the hidden set. The mobile PIN app passes
+        bypass_admin_view_hiding=True: unlike a browsed desktop self-view,
+        that request is already scoped to exactly one PIN-authenticated
+        employee_id, so there is no "other viewer" for the hiding to protect
+        against — the owner explicitly asked to see their own day there.
+        """
+        excl_sql, excl_params = ('', []) if bypass_admin_view_hiding else emp_exclusion_sql('a.employee_id')
         sql = f"""
             SELECT a.id, a.appointment_date, a.start_time, a.end_time,
                    a.status, a.employee_token,
