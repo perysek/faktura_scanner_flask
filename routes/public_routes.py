@@ -14,11 +14,10 @@ public_bp = Blueprint('public', __name__)
 
 @public_bp.route('/wizyty', methods=['GET'])
 def mobile_web_app():
-    """PWA-style web version of the employee picker/PIN/today-list/detail app.
-
-    Same /api/mobile/* backend as the native app — this exists so iPhone
-    staff (no Apple Developer account to distribute a real iOS build) can
-    "Add to Home Screen" in Safari and get an equivalent experience.
+    """Employee picker/PIN/today-list/detail app — PWA-style web page against
+    the /api/mobile/* backend. Staff "Add to Home Screen" in their phone's
+    browser (Safari on iOS, Chrome on Android) for a full-screen, app-like
+    experience with no install/app-store step on either platform.
     """
     return render_template('public/mobile_app.html')
 

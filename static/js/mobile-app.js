@@ -1,7 +1,7 @@
 /**
- * Web twin of mobile/App.tsx — same /api/mobile/* backend, same state
- * machine (picker -> pin -> today -> detail), built for iPhone staff to
- * "Add to Home Screen" in Safari without needing an Apple Developer account.
+ * Employee visit-status app: picker -> PIN -> today's list -> detail,
+ * against the /api/mobile/* backend. Meant to be used via "Add to Home
+ * Screen" for a full-screen, app-like feel on any phone.
  * Vanilla JS/DOM to match this codebase's existing static/js/* convention.
  */
 (function () {
