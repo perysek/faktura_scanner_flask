@@ -286,8 +286,18 @@ def _employee_visit_state(appt: dict) -> tuple:
         return 'end_visit', {}
     if status in ('scheduled', 'confirmed', 'pending'):
         if minutes_until > 20:
+            # seconds_remaining is a pure duration, computed fresh on every
+            # response -- deliberately NOT unlock_dt.isoformat(). That naive
+            # string has no timezone marker; this server runs in UTC while
+            # appointment times are entered as Polish local time, so a phone
+            # parsing it via `new Date(str)` reads it as ITS OWN local time
+            # and sees the unlock moment as ~2h earlier than intended (CEST).
+            # Clients anchor seconds_remaining to their own Date.now() once,
+            # on receipt, and tick down locally -- no timestamp string to
+            # misinterpret. unlock_at kept for logging/debugging only.
             return 'too_early', {
                 'minutes_remaining': int(minutes_until - 20),
+                'seconds_remaining': max(0, int((unlock_dt - now).total_seconds())),
                 'unlock_at': unlock_dt.isoformat(),
             }
         return 'start_visit', {'can_no_show': AppointmentStatus.can_transition(status, AppointmentStatus.NO_SHOW)}

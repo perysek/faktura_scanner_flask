@@ -26,8 +26,24 @@ export interface TodayAppointment {
   status: string;
   state: VisitState;
   minutes_remaining?: number;
+  seconds_remaining?: number;
   unlock_at?: string;
   can_no_show?: boolean;
+  /** Client-computed at receipt time: Date.now() + seconds_remaining*1000.
+   * Always use this for countdown math -- never parse unlock_at. The
+   * server runs in UTC but appointment times are Polish local, so that
+   * naive ISO string reads as local time on-device and lands ~2h off
+   * (CEST), making every too_early row look already-expired and looping
+   * the "refetch on expiry" logic forever. seconds_remaining is a pure
+   * duration, immune to that mismatch. */
+  unlockAtLocalMs?: number;
+}
+
+function anchorUnlock<T extends { state?: VisitState; seconds_remaining?: number }>(appt: T): T {
+  if (appt.state === 'too_early' && typeof appt.seconds_remaining === 'number') {
+    return { ...appt, unlockAtLocalMs: Date.now() + appt.seconds_remaining * 1000 };
+  }
+  return appt;
 }
 
 async function parseJson(res: Response): Promise<any> {
@@ -88,7 +104,10 @@ export async function fetchToday(sessionToken: string): Promise<TodayResult> {
       return { success: false, appointments: [], error: 'unauthorized' };
     }
     const body = await parseJson(res);
-    return { appointments: [], ...body };
+    return {
+      ...body,
+      appointments: Array.isArray(body.appointments) ? body.appointments.map(anchorUnlock) : [],
+    };
   } catch {
     return { success: false, appointments: [], error: 'network_error' };
   }
@@ -101,7 +120,9 @@ export interface AppointmentStateResult {
   status?: string;
   state?: VisitState;
   minutes_remaining?: number;
+  seconds_remaining?: number;
   unlock_at?: string;
+  unlockAtLocalMs?: number;
   can_no_show?: boolean;
   error?: string;
 }
@@ -117,7 +138,8 @@ export async function fetchAppointmentState(
     if (res.status === 401) {
       return { success: false, error: 'unauthorized' };
     }
-    return await parseJson(res);
+    const body = await parseJson(res);
+    return anchorUnlock(body);
   } catch {
     return { success: false, error: 'network_error' };
   }
@@ -129,7 +151,9 @@ export interface ActionResult {
   new_status?: string;
   error?: string;
   minutes_remaining?: number;
+  seconds_remaining?: number;
   unlock_at?: string;
+  unlockAtLocalMs?: number;
   can_no_show?: boolean;
 }
 
@@ -147,7 +171,8 @@ export async function submitAppointmentAction(
     if (res.status === 401) {
       return { success: false, error: 'unauthorized' };
     }
-    return await parseJson(res);
+    const body = await parseJson(res);
+    return anchorUnlock(body);
   } catch {
     return { success: false, error: 'network_error' };
   }

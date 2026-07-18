@@ -26,8 +26,8 @@ function formatTodayLabel(isoDate: string | undefined): string {
 }
 
 function pillLabelFor(appt: TodayAppointment, now: number): string {
-  if (appt.state === 'too_early' && appt.unlock_at) {
-    return formatCountdown(new Date(appt.unlock_at).getTime() - now);
+  if (appt.state === 'too_early' && appt.unlockAtLocalMs) {
+    return formatCountdown(appt.unlockAtLocalMs - now);
   }
   switch (appt.state) {
     case 'already_done':
@@ -86,7 +86,7 @@ export function TodayListScreen({
   useEffect(() => {
     if (expiredRef.current) return;
     const anyExpired = appointments.some(
-      (a) => a.state === 'too_early' && a.unlock_at && new Date(a.unlock_at).getTime() - now <= 0
+      (a) => a.state === 'too_early' && a.unlockAtLocalMs && a.unlockAtLocalMs - now <= 0
     );
     if (anyExpired) {
       expiredRef.current = true;

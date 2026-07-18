@@ -61,7 +61,7 @@ export function VisitDetailScreen({ sessionToken, appointment, onBack, onDone, o
   // state instead of a stale "too early" screen sitting there forever.
   useEffect(() => {
     if (successNewStatus || expiredRef.current) return;
-    if (appt.state === 'too_early' && appt.unlock_at && new Date(appt.unlock_at).getTime() - now <= 0) {
+    if (appt.state === 'too_early' && appt.unlockAtLocalMs && appt.unlockAtLocalMs - now <= 0) {
       expiredRef.current = true;
       (async () => {
         const result = await fetchAppointmentState(sessionToken, appt.appointment_id);
@@ -138,7 +138,7 @@ export function VisitDetailScreen({ sessionToken, appointment, onBack, onDone, o
           <Text style={styles.message}>
             Formularz odblokuje się automatycznie za{' '}
             <Text style={styles.messageBold}>
-              {appt.unlock_at ? formatCountdown(new Date(appt.unlock_at).getTime() - now) : '—'}
+              {appt.unlockAtLocalMs ? formatCountdown(appt.unlockAtLocalMs - now) : '—'}
             </Text>{' '}
             (20 minut przed wizytą).
           </Text>

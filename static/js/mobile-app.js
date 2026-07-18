@@ -73,6 +73,20 @@
       });
   }
 
+  // Anchors a server-sent duration to this device's own clock, once, at
+  // receipt time. Never derive countdown math from unlock_at (a naive
+  // datetime string with no timezone marker) -- the server runs in UTC
+  // while appointment times are Polish local, so `new Date(unlock_at)`
+  // parses it as local time on-device and lands ~2h off (CEST), making
+  // every too_early row look already-expired and looping the
+  // refetch-on-expiry logic forever (network-round-trip-speed blinking).
+  function anchorUnlock(appt) {
+    if (appt && appt.state === 'too_early' && typeof appt.seconds_remaining === 'number') {
+      appt.unlockAtLocalMs = Date.now() + appt.seconds_remaining * 1000;
+    }
+    return appt;
+  }
+
   function fetchEmployees() {
     return apiFetch('/api/mobile/employees');
   }
@@ -134,8 +148,8 @@
 
   function pillLabelFor(appt, now) {
     var meta = PILL_COLORS[appt.state] || PILL_COLORS.wrong_status;
-    if (appt.state === 'too_early' && appt.unlock_at) {
-      return formatCountdown(new Date(appt.unlock_at).getTime() - now);
+    if (appt.state === 'too_early' && appt.unlockAtLocalMs) {
+      return formatCountdown(appt.unlockAtLocalMs - now);
     }
     return meta.label || '';
   }
@@ -209,7 +223,7 @@
       }
       setState({
         todayLoading: false,
-        appointments: result.appointments,
+        appointments: (result.appointments || []).map(anchorUnlock),
         todayLabel: formatIsoDateLocal(result.today),
         todayExpiredHandled: false,
       });
@@ -237,7 +251,7 @@
         if (result.state) {
           setState({
             detailSubmitting: null,
-            detailAppt: Object.assign({}, appt, result),
+            detailAppt: Object.assign({}, appt, anchorUnlock(result)),
             detailError: result.error || null,
           });
           return;
@@ -372,7 +386,7 @@
         if (meta.dot) pill.appendChild(h('span', { class: 'pill-dot' }));
         pill.appendChild(h('span', null, [pillLabelFor(appt, now)]));
 
-        if (appt.state === 'too_early' && appt.unlock_at && new Date(appt.unlock_at).getTime() - now <= 0) {
+        if (appt.state === 'too_early' && appt.unlockAtLocalMs && appt.unlockAtLocalMs - now <= 0) {
           anyExpired = true;
         }
 
@@ -414,16 +428,16 @@
       body.push(h('p', { class: 'status-message' }, [successMessageFor(state.detailSuccessStatus)]));
       body.push(h('button', { class: 'btn-secondary', style: { marginTop: '1.5rem' }, onClick: backToToday }, ['← Wróć do dzisiejszych wizyt']));
     } else if (appt.state === 'too_early') {
-      if (appt.unlock_at && new Date(appt.unlock_at).getTime() - now <= 0 && !state.detailExpiredHandled) {
+      if (appt.unlockAtLocalMs && appt.unlockAtLocalMs - now <= 0 && !state.detailExpiredHandled) {
         state.detailExpiredHandled = true;
         fetchAppointmentState(state.session.sessionToken, appt.appointment_id).then(function (result) {
           if (!result.success) { if (result.error === 'unauthorized') handleUnauthorized(); return; }
-          setState({ detailAppt: Object.assign({}, appt, result) });
+          setState({ detailAppt: Object.assign({}, appt, anchorUnlock(result)) });
         });
       }
       body.push(h('div', { class: 'status-icon' }, ['⏳']));
       body.push(h('h1', null, ['Za wcześnie']));
-      var countdownText = appt.unlock_at ? formatCountdown(new Date(appt.unlock_at).getTime() - now) : '—';
+      var countdownText = appt.unlockAtLocalMs ? formatCountdown(appt.unlockAtLocalMs - now) : '—';
       body.push(h('p', { class: 'status-message' }, [
         'Formularz odblokuje się automatycznie za ',
         h('strong', null, [countdownText]),
