@@ -1,6 +1,7 @@
 """
 Repository dla operacji na wizytach (appointments)
 """
+import uuid
 from decimal import Decimal
 from typing import Any, List, Optional
 from datetime import datetime, date, time
@@ -989,6 +990,13 @@ class AppointmentRepository:
 
     def get_by_employee_token(self, token: str) -> Optional[Any]:
         """Public lookup by employee_token. Used by employee mobile form route."""
+        try:
+            uuid.UUID(token)
+        except (ValueError, AttributeError, TypeError):
+            # employee_token is a uuid column — a malformed token would otherwise
+            # raise psycopg2.errors.InvalidTextRepresentation instead of "not found"
+            return None
+
         sql = """
             SELECT a.*,
                    c.first_name, c.last_name, c.phone,
