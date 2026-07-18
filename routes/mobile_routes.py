@@ -51,12 +51,16 @@ def _authenticated_employee_id():
 
 @mobile_bp.route('/employees', methods=['GET'])
 def list_employees():
-    """Picker list — active employees only (superuser's linked employee stays hidden)."""
-    rows = EmployeeRepository().get_all(active_only=True)
+    """Picker list — active employees only (superuser's linked employee stays hidden).
+
+    has_pin lets the app show "set a new PIN" (with confirmation) vs
+    "enter your PIN" before the employee types anything.
+    """
+    rows = EmployeeRepository().list_for_mobile_picker()
     return jsonify({
         'success': True,
         'employees': [
-            {'id': r['id'], 'name': f"{r['first_name']} {r['last_name']}"}
+            {'id': r['id'], 'name': f"{r['first_name']} {r['last_name']}", 'has_pin': bool(r['has_pin'])}
             for r in rows
         ],
     })
@@ -97,6 +101,18 @@ def employee_pin(employee_id):
     })
 
 
+def _serialize_appointment_state(row: dict) -> dict:
+    """Shared shape for a /today row and a single-appointment refetch."""
+    state, ctx = _employee_visit_state(row)
+    return {
+        'appointment_id': row['id'],
+        'start_time': str(row['start_time'])[:5],
+        'status': row['status'],
+        'state': state,
+        **ctx,
+    }
+
+
 @mobile_bp.route('/today', methods=['GET'])
 def today():
     employee_id = _authenticated_employee_id()
@@ -104,19 +120,30 @@ def today():
         return jsonify({'success': False, 'error': 'unauthorized'}), 401
 
     rows = [dict(r) for r in AppointmentRepository().get_today_for_employee(employee_id)]
-    appointments = []
-    for row in rows:
-        state, ctx = _employee_visit_state(row)
-        appointments.append({
-            'appointment_id': row['id'],
-            'start_time': str(row['start_time'])[:5],
+    appointments = [
+        {
+            **_serialize_appointment_state(row),
             'client_name': row['client_name'],
             'service_name': row.get('service_name'),
-            'status': row['status'],
-            'state': state,
-            **ctx,
-        })
+        }
+        for row in rows
+    ]
     return jsonify({'success': True, 'appointments': appointments, 'today': date.today().isoformat()})
+
+
+@mobile_bp.route('/appointments/<int:appointment_id>', methods=['GET'])
+def get_appointment(appointment_id):
+    """Refresh one appointment's computed state — used when the detail screen's
+    live countdown reaches zero, without navigating back to the list."""
+    employee_id = _authenticated_employee_id()
+    if employee_id is None:
+        return jsonify({'success': False, 'error': 'unauthorized'}), 401
+
+    appt = AppointmentRepository().get_by_id(appointment_id)
+    if not appt or appt['employee_id'] != employee_id:
+        return jsonify({'success': False, 'error': 'not_found'}), 404
+
+    return jsonify({'success': True, **_serialize_appointment_state(dict(appt))})
 
 
 @mobile_bp.route('/appointments/<int:appointment_id>/action', methods=['POST'])

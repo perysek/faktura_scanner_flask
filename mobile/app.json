@@ -1,14 +1,18 @@
 {
   "expo": {
     "name": "MyWay — Wizyty",
-    "slug": "myway-visit-status",
+    "slug": "perysek",
     "scheme": "mywayvisit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.mywayvisitstatus",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,16 +21,22 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.mywayvisitstatus"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "https://www.my-way-solutions.com"
-    }
+      "apiBaseUrl": "https://www.my-way-solutions.com",
+      "eas": {
+        "projectId": "d3e37676-a744-4373-b201-4240ce3108c3"
+      }
+    },
+    "owner": "my-way-solutions"
   }
 }

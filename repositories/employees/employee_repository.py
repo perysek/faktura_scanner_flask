@@ -111,6 +111,19 @@ class EmployeeRepository(AuditableMixin):
             cursor.execute(query, (employee_id,))
             return cursor.fetchone()
 
+    def list_for_mobile_picker(self) -> List[Any]:
+        """Active, non-hidden employees for the mobile app's picker screen,
+        each flagged with whether they've already set a mobile PIN."""
+        excl = emp_exclusion_sql_inline('id')
+        query = (
+            "SELECT id, first_name, last_name, (mobile_pin_hash IS NOT NULL) AS has_pin "
+            f"FROM employees WHERE is_active = TRUE {excl} ORDER BY last_name, first_name"
+        )
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            return cursor.fetchall()
+
     def get_mobile_pin_hash(self, employee_id: int) -> Optional[str]:
         """Bcrypt hash of the employee's mobile-app PIN, or None if not set yet.
 

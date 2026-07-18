@@ -253,7 +253,7 @@ def appointment_rate_submit(token):
 
 def _employee_visit_state(appt: dict) -> tuple:
     """Return (state_str, context_dict) for the employee visit form."""
-    from datetime import datetime, time as _time
+    from datetime import datetime, time as _time, timedelta
     now       = datetime.now()
     start_time = appt['start_time']
     appt_date  = appt['appointment_date']
@@ -264,6 +264,8 @@ def _employee_visit_state(appt: dict) -> tuple:
         h, m = str(start_time)[:5].split(':')
         appt_dt = datetime.combine(appt_date, _time(int(h), int(m)))
 
+    gate = timedelta(minutes=20)
+    unlock_dt = appt_dt - gate
     minutes_until = (appt_dt - now).total_seconds() / 60
     status = appt['status']
 
@@ -273,7 +275,10 @@ def _employee_visit_state(appt: dict) -> tuple:
         return 'end_visit', {}
     if status in ('scheduled', 'confirmed', 'pending'):
         if minutes_until > 20:
-            return 'too_early', {'minutes_remaining': int(minutes_until - 20)}
+            return 'too_early', {
+                'minutes_remaining': int(minutes_until - 20),
+                'unlock_at': unlock_dt.isoformat(),
+            }
         return 'start_visit', {'can_no_show': AppointmentStatus.can_transition(status, AppointmentStatus.NO_SHOW)}
     return 'wrong_status', {}
 
