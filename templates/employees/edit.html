@@ -106,6 +106,9 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
+    .pin-status-value { color: var(--color-ink); font-size: 0.9375rem; font-weight: 400; }
+    .pin-status-value.empty { color: var(--color-ink-subtle); font-style: italic; }
+
     .schedule-grid { display: flex; flex-direction: column; gap: 0.375rem; }
     .schedule-row {
         display: grid;
@@ -258,6 +261,33 @@
                         <input type="text" id="photo_path" name="photo_path" class="refined-input" value="{{ employee.photo_path if employee.photo_path else '' }}" placeholder="np. /static/photos/anna.jpg">
                     </div>
                 </div>
+            </section>
+
+            <!-- Mobile app PIN -->
+            <section>
+                <h2 class="section-title">PIN aplikacji mobilnej</h2>
+                <div class="form-grid form-grid-2">
+                    <div>
+                        <label class="refined-label">Status PIN-u</label>
+                        <p class="pin-status-value" id="pin-status-value">Ładowanie…</p>
+                    </div>
+                    <div>
+                        <label class="refined-label">Ostatnie logowanie PIN-em</label>
+                        <p class="pin-status-value" id="pin-last-login-value">Ładowanie…</p>
+                    </div>
+                </div>
+                {% if user_write_permissions.get('employees') %}
+                <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+                    <button type="button" onclick="resetMobilePin()" class="refined-btn-secondary refined-btn-sm" style="flex: unset;">
+                        {{ icon('restore') }}
+                        Zresetuj PIN
+                    </button>
+                    <button type="button" onclick="changeMobilePin()" class="refined-btn-secondary refined-btn-sm" style="flex: unset;">
+                        {{ icon('edit') }}
+                        Zmień PIN
+                    </button>
+                </div>
+                {% endif %}
             </section>
 
             <!-- Compensation -->
@@ -518,7 +548,107 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
 document.addEventListener('DOMContentLoaded', () => {
     populateSchedule(INITIAL_SCHED);
     updateDrDisplay();
+    loadMobilePinStatus();
 });
+
+// ── Mobile app PIN management ────────────────────
+const CAN_WRITE_EMPLOYEES = {{ user_write_permissions.get('employees') | tojson }};
+
+function formatPinTimestamp(iso) {
+    if (!iso) return 'Nigdy';
+    return new Date(iso).toLocaleString('pl-PL', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+async function loadMobilePinStatus() {
+    const statusEl = document.getElementById('pin-status-value');
+    const loginEl = document.getElementById('pin-last-login-value');
+    try {
+        const response = await fetch('/api/employees/{{ employee.id }}/mobile-pin');
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'unknown');
+
+        statusEl.textContent = data.has_pin ? 'Ustawiony' : 'Nie ustawiony';
+        statusEl.classList.toggle('empty', !data.has_pin);
+        loginEl.textContent = formatPinTimestamp(data.last_login_at);
+        loginEl.classList.toggle('empty', !data.last_login_at);
+    } catch (error) {
+        console.error('Error loading PIN status:', error);
+        statusEl.textContent = 'Błąd wczytywania';
+        loginEl.textContent = '—';
+        if (typeof Notifications !== 'undefined') {
+            Notifications.warning(MSG('emp.pin.status_load_warn'));
+        }
+    }
+}
+
+function resetMobilePin() {
+    if (!CAN_WRITE_EMPLOYEES) return;
+    Modals.confirm({
+        title: 'Reset PIN-u',
+        message: 'Czy na pewno chcesz zresetować PIN pracownika? Będzie musiał ustawić nowy przy najbliższym logowaniu w aplikacji mobilnej.',
+        confirmText: 'Zresetuj PIN',
+        onConfirm: async () => {
+            try {
+                const response = await fetch('/api/employees/{{ employee.id }}/mobile-pin/reset', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    if (typeof Notifications !== 'undefined') Notifications.success(MSG('emp.pin.reset_ok'));
+                    loadMobilePinStatus();
+                } else {
+                    if (typeof Notifications !== 'undefined') Notifications.error(MSG('common.error_detail') + data.error);
+                }
+            } catch (error) {
+                console.error('Error resetting PIN:', error);
+                if (typeof Notifications !== 'undefined') Notifications.error(MSG('emp.pin.reset_failed'));
+            }
+        }
+    });
+}
+
+function changeMobilePin() {
+    if (!CAN_WRITE_EMPLOYEES) return;
+    const overlay = Modals.show({
+        title: 'Zmień PIN',
+        size: 'small',
+        content: `
+            <label class="refined-label" for="new-pin-input">Nowy PIN (4-6 cyfr)</label>
+            <input type="text" id="new-pin-input" class="refined-input" inputmode="numeric" pattern="\\d*" maxlength="6" autocomplete="off">
+        `,
+        buttons: [
+            { text: 'Anuluj', type: 'secondary', onClick: (e, ov) => Modals.close(ov) },
+            {
+                text: 'Zmień PIN', type: 'primary',
+                onClick: async (e, ov) => {
+                    const pin = ov.querySelector('#new-pin-input').value.trim();
+                    if (!/^\d{4,6}$/.test(pin)) {
+                        if (typeof Notifications !== 'undefined') Notifications.warning(MSG('emp.pin.invalid_format'));
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/employees/{{ employee.id }}/mobile-pin', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pin }),
+                        });
+                        const data = await response.json();
+                        Modals.close(ov);
+                        if (data.success) {
+                            if (typeof Notifications !== 'undefined') Notifications.success(MSG('emp.pin.change_ok'));
+                            loadMobilePinStatus();
+                        } else {
+                            if (typeof Notifications !== 'undefined') Notifications.error(MSG('common.error_detail') + data.error);
+                        }
+                    } catch (error) {
+                        console.error('Error changing PIN:', error);
+                        Modals.close(ov);
+                        if (typeof Notifications !== 'undefined') Notifications.error(MSG('emp.pin.change_failed'));
+                    }
+                }
+            }
+        ]
+    });
+    setTimeout(() => overlay.querySelector('#new-pin-input')?.focus(), 50);
+}
 
 // ── Direct-reports custom dropdown ───────────────
 function toggleDrPanel(e) {

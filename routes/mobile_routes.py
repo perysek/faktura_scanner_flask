@@ -91,6 +91,7 @@ def employee_pin(employee_id):
 
         pin_hash = bcrypt.hashpw(pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         repo.set_mobile_pin_hash(employee_id, pin_hash)
+        repo.record_mobile_login(employee_id)
         return jsonify({
             'success': True, 'first_time': True,
             'session_token': _issue_session_token(employee_id),
@@ -99,6 +100,7 @@ def employee_pin(employee_id):
     if not bcrypt.checkpw(pin.encode('utf-8'), existing_hash.encode('utf-8')):
         return jsonify({'success': False, 'error': 'wrong_pin'}), 401
 
+    repo.record_mobile_login(employee_id)
     return jsonify({
         'success': True, 'first_time': False,
         'session_token': _issue_session_token(employee_id),

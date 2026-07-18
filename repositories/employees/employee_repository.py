@@ -148,12 +148,77 @@ class EmployeeRepository(AuditableMixin):
             return row['mobile_pin_hash'] if row else None
 
     def set_mobile_pin_hash(self, employee_id: int, pin_hash: str) -> None:
-        """Set the employee's mobile-app PIN hash. Only ever called when none exists yet."""
-        query = "UPDATE employees SET mobile_pin_hash = %s, updated_at = %s WHERE id = %s AND is_active = TRUE"
+        """Set the employee's mobile-app PIN hash. Only ever called when none exists yet
+        (self-service first-use from the mobile picker) — not audited, same as before."""
+        now = datetime.now()
+        query = ("UPDATE employees SET mobile_pin_hash = %s, mobile_pin_set_at = %s, "
+                 "updated_at = %s WHERE id = %s AND is_active = TRUE")
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (pin_hash, datetime.now(), employee_id))
+            cursor.execute(query, (pin_hash, now, now, employee_id))
             safe_commit(conn)
+
+    def record_mobile_login(self, employee_id: int) -> None:
+        """Stamp the moment an employee successfully authenticates in the mobile app
+        (first PIN set or later verify alike) — surfaced on the admin edit page."""
+        query = "UPDATE employees SET mobile_last_login_at = %s WHERE id = %s AND is_active = TRUE"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (datetime.now(), employee_id))
+            safe_commit(conn)
+
+    def get_mobile_pin_status(self, employee_id: int) -> Optional[dict]:
+        """PIN status for the admin employee-edit page: whether one is set and when,
+        plus the last successful mobile login — never the hash itself.
+
+        Unlike get/set_mobile_pin_hash this does NOT filter on is_active: the edit
+        page must still show status for a deactivated employee (e.g. "was set
+        before termination"), even though reset/change themselves stay
+        active-only, matching the mobile app's own restriction.
+        """
+        query = ("SELECT (mobile_pin_hash IS NOT NULL) AS has_pin, mobile_pin_set_at, "
+                 "mobile_last_login_at FROM employees WHERE id = %s")
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (employee_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return {
+                'has_pin': bool(row['has_pin']),
+                'pin_set_at': parse_dt(row['mobile_pin_set_at']),
+                'last_login_at': parse_dt(row['mobile_last_login_at']),
+            }
+
+    def reset_mobile_pin(self, employee_id: int) -> bool:
+        """Admin-triggered PIN reset: clears the hash so the employee sets a fresh one
+        next time they pick themselves in the mobile app. Audited — this revokes an
+        existing credential on someone else's behalf."""
+        query = ("UPDATE employees SET mobile_pin_hash = NULL, mobile_pin_set_at = NULL, "
+                 "updated_at = %s WHERE id = %s AND is_active = TRUE")
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (datetime.now(), employee_id))
+            changed = cursor.rowcount > 0
+            safe_commit(conn)
+        if changed:
+            self._audit('UPDATE', employee_id, field_name='mobile_pin', old='set', new='reset')
+        return changed
+
+    def admin_set_mobile_pin_hash(self, employee_id: int, pin_hash: str) -> bool:
+        """Admin-triggered PIN change: sets a specific new hash chosen by the admin.
+        Audited — same reasoning as reset_mobile_pin. Never logs the plaintext/hash."""
+        now = datetime.now()
+        query = ("UPDATE employees SET mobile_pin_hash = %s, mobile_pin_set_at = %s, "
+                 "updated_at = %s WHERE id = %s AND is_active = TRUE")
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (pin_hash, now, now, employee_id))
+            changed = cursor.rowcount > 0
+            safe_commit(conn)
+        if changed:
+            self._audit('UPDATE', employee_id, field_name='mobile_pin', old='***', new='changed')
+        return changed
 
     def get_by_user_id(self, user_id: int) -> Optional[Any]:
         """Pobierz pracownika po user_id"""
