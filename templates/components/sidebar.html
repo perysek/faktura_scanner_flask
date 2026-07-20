@@ -106,15 +106,14 @@
     .theme-swatch {
         width: 1.25rem;
         height: 1.25rem;
-        border-radius: 50%;
-        border: 1px solid rgba(0,0,0,.08);
+        border-radius: 2px;
+        border: 1px solid var(--color-border);
         flex-shrink: 0;
     }
-    .theme-swatch[data-swatch="light"] { background: linear-gradient(135deg, #f7f6f3 50%, #c9a227 50%); }
-    .theme-swatch[data-swatch="dark"]  { background: linear-gradient(135deg, #1a1917 50%, #d4af37 50%); }
-    .theme-swatch[data-swatch="blue"]  { background: linear-gradient(135deg, #eef3fa 50%, #3b6ea5 50%); }
-    .theme-swatch[data-swatch="green"] { background: linear-gradient(135deg, #eef5eb 50%, #4a7a4e 50%); }
-    .theme-swatch[data-swatch="brown"] { background: linear-gradient(135deg, #362a1c 50%, #b8763a 50%); }
+    .theme-swatch[data-swatch="light"]    { background: linear-gradient(135deg, #f7f6f3 50%, #c9a227 50%); }
+    .theme-swatch[data-swatch="blue"]     { background: linear-gradient(135deg, #eef3fa 50%, #3b6ea5 50%); }
+    .theme-swatch[data-swatch="green"]    { background: linear-gradient(135deg, #eef5eb 50%, #4a7a4e 50%); }
+    .theme-swatch[data-swatch="graphite"] { background: linear-gradient(135deg, #eeeef0 50%, #6b4c6f 50%); }
 
     /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present the
        deliberately-limited link set as one flat list. The accordion section
@@ -380,11 +379,6 @@
                         <span class="flex-1 text-left">Jasny</span>
                         {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
                     </button>
-                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="dark" aria-checked="false">
-                        <span class="theme-swatch" data-swatch="dark" aria-hidden="true"></span>
-                        <span class="flex-1 text-left">Ciemny</span>
-                        {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
-                    </button>
                     <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="blue" aria-checked="false">
                         <span class="theme-swatch" data-swatch="blue" aria-hidden="true"></span>
                         <span class="flex-1 text-left">Niebieski</span>
@@ -395,9 +389,9 @@
                         <span class="flex-1 text-left">Zielony</span>
                         {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
                     </button>
-                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="brown" aria-checked="false">
-                        <span class="theme-swatch" data-swatch="brown" aria-hidden="true"></span>
-                        <span class="flex-1 text-left">Przygaszony brąz</span>
+                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="graphite" aria-checked="false">
+                        <span class="theme-swatch" data-swatch="graphite" aria-hidden="true"></span>
+                        <span class="flex-1 text-left">Grafitowy</span>
                         {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
                     </button>
                 </div>

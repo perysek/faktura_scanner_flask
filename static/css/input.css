@@ -124,56 +124,22 @@
 
   /* ── Theme system ──────────────────────────────────────────────────
      :root above IS the "light" theme (unchanged, default, no [data-theme]
-     attribute needed). The four blocks below override the same token names
-     for [data-theme="…"] on <html>, set by static/js/theme.js + the no-FOUC
+     attribute needed). The blocks below override the same token names for
+     [data-theme="…"] on <html>, set by static/js/theme.js + the no-FOUC
      inline script in base.html <head>. Every value here was checked against
      WCAG AA (4.5:1 body text, 3:1 large text/UI) before shipping.
 
+     All four themes are light-family (light surfaces, dark ink) — the dark
+     and dimmed-brown variants were removed 2026-07-20. --color-on-accent /
+     --color-on-ink stay defined (both default to white in :root) because
+     they're the correct general pattern for "text painted on a colored
+     fill", not something specific to a dark theme — kept for the ~70
+     call-sites already wired to them and for any future theme.
+
      Deliberately UNCHANGED across every theme (categorical data semantics —
      an operations-console must not let a theme reassign what a color means):
-     --color-success*, --color-warning, --color-error, --color-info-text*,
-     --color-status-* (text/badge), --color-chart-*, --color-star-*. Dark-family
-     themes only swap the solid pale "-bg" chip tints for the existing
-     translucent "-badge" values, which already read correctly on any surface. */
-
-  [data-theme="dark"] {
-      --color-ink: #f1efe9;
-      --color-ink-muted: #b8b3a8;
-      --color-ink-subtle: #948f83;
-
-      --color-surface: #232220;
-      --color-surface-warm: #1a1917;
-      --color-surface-elevated: #242320;
-
-      --color-border: #38352f;
-      --color-border-subtle: #2c2a26;
-
-      --color-accent: #d4af37;
-      --color-accent-muted: rgba(212, 175, 55, 0.16);
-      --color-accent-deep: #a8842a;
-      --color-on-accent: #1a1917;
-      --color-on-ink: #1a1917;      /* ink is near-white here, so text painted on an ink fill must go dark */
-      --color-focus-ring: #60a5fa;  /* brighter than the shared #2563eb — needed for 3:1 on a near-black surface */
-
-      --color-info-bg: rgba(59, 130, 246, 0.15);
-      --color-purple-bg: rgba(126, 34, 206, 0.15);
-      --color-status-scheduled-bg: rgba(59, 130, 246, 0.15);
-      --color-status-confirmed-bg: rgba(16, 185, 129, 0.15);
-      --color-status-in-progress-bg: rgba(245, 158, 11, 0.15);
-      --color-status-completed-bg: rgba(45, 106, 79, 0.18);
-      --color-status-cancelled-bg: rgba(220, 38, 38, 0.15);
-
-      --sidebar-bg: #141311;
-      --sidebar-bg-deep: #0e0d0c;
-      --sidebar-text: #b8b3a8;
-      --sidebar-text-hover: #f1efe9;
-      --sidebar-text-active: #f1efe9;
-      --sidebar-heading: #8f8a7f;
-      --sidebar-border: #2c2a26;
-      --sidebar-hover-bg: #1f1e1b;
-      --sidebar-active-bg: var(--color-accent-muted);
-      --sidebar-active-border: var(--color-accent);
-  }
+     --color-success*, --color-warning, --color-error, --color-info*,
+     --color-status-*, --color-chart-*, --color-star-*, --color-focus-ring. */
 
   [data-theme="blue"] {
       --color-ink: #1a2233;
@@ -238,43 +204,36 @@
       --sidebar-active-border: var(--color-accent);
   }
 
-  [data-theme="brown"] {
-      /* "Dimmed" = mid-dark and desaturated, distinct from the near-black
-         neutral of [data-theme="dark"] — a warm sepia/walnut reading surface. */
-      --color-ink: #ece3d6;
-      --color-ink-muted: #b8a890;
-      --color-ink-subtle: #a4937a;
+  [data-theme="graphite"] {
+      /* Premium light: cool graphite ink + a muted, desaturated plum accent —
+         deliberately NOT --color-purple (#7e22ce, a much brighter semantic
+         hue used elsewhere) and not a warm tone like the other three themes,
+         so it reads as its own quiet, editorial identity rather than a
+         variation on gold/blue/green. */
+      --color-ink: #24262b;
+      --color-ink-muted: #5b5e66;
+      --color-ink-subtle: #666970;
 
-      --color-surface: #2e2418;
-      --color-surface-warm: #362a1c;
-      --color-surface-elevated: #3d3122;
+      --color-surface: #f1f1f3;
+      --color-surface-warm: #eeeef0;
+      --color-surface-elevated: #ffffff;
 
-      --color-border: #4a3c29;
-      --color-border-subtle: #40331f;
+      --color-border: #dcdce0;
+      --color-border-subtle: #e7e7ea;
 
-      --color-accent: #b8763a;
-      --color-accent-muted: rgba(184, 118, 58, 0.18);
-      --color-accent-deep: #8f5a2c;
-      --color-on-accent: #241b12;
-      --color-on-ink: #241b12;      /* ink is near-cream here, so text painted on an ink fill must go dark */
-      --color-focus-ring: #60a5fa;  /* brighter than the shared #2563eb — needed for 3:1 on a dark brown surface */
+      --color-accent: #6b4c6f;
+      --color-accent-muted: rgba(107, 76, 111, 0.12);
+      --color-accent-deep: #533a56;
+      --color-on-accent: #ffffff;
 
-      --color-info-bg: rgba(59, 130, 246, 0.15);
-      --color-purple-bg: rgba(126, 34, 206, 0.15);
-      --color-status-scheduled-bg: rgba(59, 130, 246, 0.15);
-      --color-status-confirmed-bg: rgba(16, 185, 129, 0.15);
-      --color-status-in-progress-bg: rgba(245, 158, 11, 0.15);
-      --color-status-completed-bg: rgba(45, 106, 79, 0.18);
-      --color-status-cancelled-bg: rgba(220, 38, 38, 0.15);
-
-      --sidebar-bg: #241b12;
-      --sidebar-bg-deep: #1a130c;
-      --sidebar-text: #b8a890;
-      --sidebar-text-hover: #ece3d6;
-      --sidebar-text-active: #ece3d6;
-      --sidebar-heading: #96876f;
-      --sidebar-border: #40331f;
-      --sidebar-hover-bg: #2c2116;
+      --sidebar-bg: #e2e2e6;
+      --sidebar-bg-deep: #d5d5da;
+      --sidebar-text: #5b5e66;
+      --sidebar-text-hover: #24262b;
+      --sidebar-text-active: #24262b;
+      --sidebar-heading: #666970;
+      --sidebar-border: #d2d2d7;
+      --sidebar-hover-bg: #e8e8eb;
       --sidebar-active-bg: var(--color-accent-muted);
       --sidebar-active-border: var(--color-accent);
   }

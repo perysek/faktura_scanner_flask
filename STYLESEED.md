@@ -26,32 +26,37 @@
 
 ## Theme system (this feature)
 
-Five themes, switched at runtime via `<html data-theme="...">`, persisted client-side
+Four themes, switched at runtime via `<html data-theme="...">`, persisted client-side
 (localStorage — device-level preference, no account sync). Applied via a no-FOUC inline
 script in `templates/base.html <head>` (reads localStorage before first paint) plus
 `static/js/theme.js` for the popover UI.
 
+**2026-07-20 revision:** `dark` and `brown` (dimmed sepia) were removed at the user's request
+— all four remaining themes are light-family (light surfaces, dark ink). `graphite` was added
+as the replacement 4th option: cool graphite ink + a muted, desaturated plum accent, chosen
+for a quiet/premium feel distinct from the other three (not bright, not a warm/gold variant).
+Swatch previews in the popover changed from circles to `border-radius: 2px` rounded rects with
+a 1px `var(--color-border)` outline, matching the app's global flat/sharp radius language.
+
 | Theme | `data-theme` value | Identity |
 |---|---|---|
 | Light (current default) | *(absent — `:root` default)* | Unchanged. Zero visual diff from today. |
-| Dark | `dark` | Neutral warm-charcoal surfaces, brighter gold accent for legibility. |
 | Light blue | `blue` | Cool light surfaces, steel-blue accent (deliberately distinct from the existing `--color-status-scheduled` blue so status badges keep their own meaning). |
 | Light green | `green` | Warm-cool light surfaces, sage-green accent (deliberately distinct from `--color-success`). |
-| Dimmed brown | `brown` | Muted dark sepia/walnut surfaces — dimmed, not near-black like `dark` — copper accent. |
+| Graphite | `graphite` | Cool graphite-gray surfaces, muted plum accent (deliberately distinct from `--color-purple`, the brighter semantic hue used elsewhere) — premium/editorial, not a warm variant like the other three. |
 
 Tokens that vary per theme: `--color-ink[-muted|-subtle]`, `--color-surface[-warm|-elevated]`,
 `--color-border[-subtle]`, `--color-accent[-muted|-deep]`, `--color-on-accent`, all `--sidebar-*`.
-Dark-family themes (`dark`, `brown`) additionally override the solid pale `*-bg` status/info/purple
-tokens with the existing translucent `*-badge` values (already alpha-blended, so they read
-correctly regardless of the underlying surface).
 
-Tokens that stay constant across all 5 themes (by grammar rule — categorical data semantics
-must not shift): `--color-success*`, `--color-warning`, `--color-error`, `--color-info*`,
-`--color-status-*` (text/badge — only the solid `-bg` fallback tint changes for dark-family),
-`--color-chart-*`, `--color-star-*`, `--color-focus-ring` (except a brighter dark-mode variant
-on `dark`/`brown` only, needed to clear 3:1 against a near-black background — same hue family).
+Tokens that stay constant across all 4 themes (by grammar rule — categorical data semantics
+must not shift, and now also because every theme is light-family): `--color-success*`,
+`--color-warning`, `--color-error`, `--color-info*`, `--color-status-*`, `--color-chart-*`,
+`--color-star-*`, `--color-focus-ring`. `--color-on-ink`/`--color-on-accent` are kept as
+tokens (both resolve to white in every current theme) rather than reverted to hardcoded
+`white` — they're the correct general pattern for "text on a colored fill" and the ~70
+call-sites already wired to them, not something specific to the now-removed dark themes.
 
-All five palettes were checked against WCAG AA (4.5:1 body text / 3:1 large text & UI) before
+All four palettes were checked against WCAG AA (4.5:1 body text / 3:1 large text & UI) before
 implementation; see the "Fix first" section of the shipped `/ss-score` run for anything
 outstanding.
 
