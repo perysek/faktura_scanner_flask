@@ -51,9 +51,9 @@
     }
     .mw-btn-dark { padding: 14px 26px; color: #fff; background: var(--mw-ink); border-color: var(--mw-ink); }
     .mw-btn-dark:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
-    .mw-btn-light { padding: 14px 22px; color: var(--mw-ink2); background: #fff; border-color: var(--mw-border); }
+    .mw-btn-light { padding: 14px 22px; color: var(--mw-ink2); background: var(--color-surface-elevated); border-color: var(--mw-border); }
     .mw-btn-light:hover { border-color: var(--mw-gold); color: var(--mw-ink); background: #fffdf5; }
-    .mw-btn-white { padding: 13px 26px; color: var(--mw-ink); background: #fff; }
+    .mw-btn-white { padding: 13px 26px; color: var(--mw-ink); background: var(--color-surface-elevated); }
     .mw-btn-white:hover { color: var(--mw-ink); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
     .mw-btn-sm { padding: 9px 18px; font-size: 13px; }
 
@@ -98,10 +98,10 @@
        matching how the landing page itself depicts the UI (Pulpit/Wizyty
        mocks in templates/landing/index.html) — self-contained, no image
        assets, and free of any real client/business data. */
-    .mw-win { border-radius: 6px; border: 1px solid var(--mw-border); background: #fff; overflow: hidden; box-shadow: 0 14px 30px rgba(26, 26, 26, 0.07); }
+    .mw-win { border-radius: 6px; border: 1px solid var(--mw-border); background: var(--color-surface-elevated); overflow: hidden; box-shadow: 0 14px 30px rgba(26, 26, 26, 0.07); }
     .mw-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #efedea; border-bottom: 1px solid var(--mw-border); }
     .mw-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .mw-url { margin-left: 8px; flex: 1; font-size: 10.5px; color: var(--mw-muted); background: #fff; border: 1px solid var(--mw-border); border-radius: 2px; padding: 3px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mw-url { margin-left: 8px; flex: 1; font-size: 10.5px; color: var(--mw-muted); background: var(--color-surface-elevated); border: 1px solid var(--mw-border); border-radius: 2px; padding: 3px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mw-mock-caption { font-size: 11.5px; color: var(--mw-muted); text-align: center; margin-top: 10px; font-style: italic; }
 
     .mw-reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.6s var(--mw-ease), transform 0.6s var(--mw-ease); will-change: opacity, transform; }
@@ -123,7 +123,7 @@
 
     /* ---- Manual-specific layout ---- */
     .doc-hero-stats { display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; }
-    .doc-hero-stat { background:#fff; border:1px solid var(--mw-border); border-radius:2px; padding:10px 16px; font-size:12.5px; color:var(--mw-ink2); box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+    .doc-hero-stat { background:var(--color-surface-elevated); border:1px solid var(--mw-border); border-radius:2px; padding:10px 16px; font-size:12.5px; color:var(--mw-ink2); box-shadow:0 1px 3px rgba(0,0,0,0.04); }
     .doc-hero-stat b { color:var(--mw-ink); font-weight:600; }
 
     .doc-shell { max-width: 1280px; margin: 0 auto; padding: 0 clamp(20px,5vw,48px) clamp(64px,8vw,110px); display: flex; gap: clamp(24px,4vw,56px); align-items: flex-start; }
@@ -142,7 +142,7 @@
        covers this job. */
     .doc-toc-mobile-wrap { display: none; }
     .doc-toc-mobile {
-      background: #fff; border: 1px solid var(--mw-border); border-radius: 6px;
+      background: var(--color-surface-elevated); border: 1px solid var(--mw-border); border-radius: 6px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .doc-toc-mobile-summary {
@@ -202,12 +202,12 @@
     .doc-step-body b { color: var(--mw-ink); font-weight: 600; }
 
     .doc-flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; font-weight:600; margin:18px 0; }
-    .doc-flow-pill { background:#fff; border:1px solid var(--mw-border); border-radius:20px; padding:7px 14px; }
+    .doc-flow-pill { background:var(--color-surface-elevated); border:1px solid var(--mw-border); border-radius:20px; padding:7px 14px; }
     .doc-flow-pill.doc-final { background:var(--mw-ink); color:#fff; border-color:var(--mw-ink); }
     .doc-flow-arrow { color:var(--mw-muted); font-weight:400; }
 
     .doc-mock-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; }
-    .doc-stat-card { background:#fff; border:1px solid var(--mw-border); border-radius:2px; padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+    .doc-stat-card { background:var(--color-surface-elevated); border:1px solid var(--mw-border); border-radius:2px; padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
     .doc-stat-val { font-size:18px; font-weight:600; line-height:1; margin-bottom:4px; }
     .doc-stat-lbl { font-size:9px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--mw-muted); }
 
@@ -583,8 +583,8 @@
         <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;gap:8px;font-size:11px;font-weight:600">
             <span style="background:var(--mw-ink);color:#fff;padding:5px 12px;border-radius:20px">Aktywni</span>
-            <span style="background:#fff;border:1px solid var(--mw-border);padding:5px 12px;border-radius:20px;color:var(--mw-ink2)">VIP</span>
-            <span style="background:#fff;border:1px solid var(--mw-border);padding:5px 12px;border-radius:20px;color:var(--mw-ink2)">Nieaktywni</span>
+            <span style="background:var(--color-surface-elevated);border:1px solid var(--mw-border);padding:5px 12px;border-radius:20px;color:var(--mw-ink2)">VIP</span>
+            <span style="background:var(--color-surface-elevated);border:1px solid var(--mw-border);padding:5px 12px;border-radius:20px;color:var(--mw-ink2)">Nieaktywni</span>
           </div>
           <div style="border:1px solid var(--mw-border);border-radius:2px;overflow:hidden">
             <div style="padding:9px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f0eeea">
@@ -631,8 +631,8 @@
           <div style="font-size:13px;font-weight:600">Manicure hybrydowy · 120 zł · 60 min</div>
           <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--mw-muted);margin-top:4px">Kompatybilne mikrousługi</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
-            <span style="font-size:11px;background:#fff;border:1px solid var(--mw-border);border-radius:20px;padding:5px 12px">+ Parafina dłoni · 25 zł</span>
-            <span style="font-size:11px;background:#fff;border:1px solid var(--mw-border);border-radius:20px;padding:5px 12px">+ Zdobienie 3D · 15 zł</span>
+            <span style="font-size:11px;background:var(--color-surface-elevated);border:1px solid var(--mw-border);border-radius:20px;padding:5px 12px">+ Parafina dłoni · 25 zł</span>
+            <span style="font-size:11px;background:var(--color-surface-elevated);border:1px solid var(--mw-border);border-radius:20px;padding:5px 12px">+ Zdobienie 3D · 15 zł</span>
             <span style="font-size:11px;color:var(--mw-gold-d);font-weight:600;border:1px dashed var(--mw-gold);border-radius:20px;padding:5px 12px">+ Dodaj mikrousługę</span>
           </div>
         </div>

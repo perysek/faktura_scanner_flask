@@ -11,7 +11,7 @@
 
     /* Card */
     .card {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         box-shadow: 0 1px 3px rgba(0,0,0,.04);
@@ -51,7 +51,7 @@
         font-size: 0.8125rem;
         font-weight: 300;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -82,7 +82,7 @@
         display: inline-flex; align-items: center; gap: 0.375rem;
         padding: 0.625rem 1.25rem;
         font-family: var(--font-body); font-size: 0.8125rem; font-weight: 500;
-        background: var(--color-ink); color: white;
+        background: var(--color-ink); color: var(--color-on-ink);
         border: none; border-radius: 2px; cursor: pointer;
         transition: all 0.2s ease; text-decoration: none;
     }
@@ -93,7 +93,7 @@
         display: inline-flex; align-items: center; gap: 0.375rem;
         padding: 0.625rem 1rem;
         font-family: var(--font-body); font-size: 0.8125rem; font-weight: 400;
-        background: white; color: var(--color-ink-muted);
+        background: var(--color-surface-elevated); color: var(--color-ink-muted);
         border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer;
         transition: all 0.2s ease;
     }
@@ -102,7 +102,7 @@
     .form-actions { display: flex; align-items: center; gap: 0.75rem; padding-top: 0.5rem; }
 
     /* Table */
-    .table-container { border: 1px solid var(--color-border); border-radius: 2px; overflow: auto; background: white; }
+    .table-container { border: 1px solid var(--color-border); border-radius: 2px; overflow: auto; background: var(--color-surface-elevated); }
     .refined-table { width: 100%; border-collapse: collapse; min-width: 700px; }
     .refined-table thead { background: var(--color-surface); }
     .refined-table th {

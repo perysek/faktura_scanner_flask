@@ -55,7 +55,7 @@
 
     .btn-refined-primary {
         background: var(--color-ink);
-        color: white;
+        color: var(--color-on-ink);
         border: none;
     }
     .btn-refined-primary:hover {
@@ -65,7 +65,7 @@
     }
 
     .btn-refined-secondary {
-        background: white;
+        background: var(--color-surface-elevated);
         color: var(--color-ink);
         border: 1px solid var(--color-border);
     }
@@ -95,7 +95,7 @@
         padding: 0.5rem 1rem 0.5rem 2.5rem;
         font-size: 0.8125rem;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         transition: all 0.3s var(--ease-out-expo);
@@ -121,7 +121,7 @@
     }
 
     .table-container {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         display: flex;
@@ -327,7 +327,7 @@
     }
 
     .sync-stat-card {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         padding: 1rem;
@@ -368,7 +368,7 @@
     }
 
     .sync-card {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         margin-bottom: 1.5rem;
@@ -1162,7 +1162,7 @@ async function openPasswordsPanel() {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                         <div>
                             <label style="display: block; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink-subtle); margin-bottom: 0.25rem;">Sprzedawca</label>
-                            <select id="pwd-panel-seller" style="width: 100%; padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; background: white;">
+                            <select id="pwd-panel-seller" style="width: 100%; padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; background: var(--color-surface-elevated);">
                                 <option value="">— brak (wzorzec e-mail) —</option>
                                 ${sellersOptions}
                             </select>

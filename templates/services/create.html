@@ -8,14 +8,14 @@
 <style>
 .refined-page { max-width: 900px; margin: 0 auto; padding: 2rem; }
     .page-title { margin-bottom: 0.5rem; }
-.refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); }
+.refined-card { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; padding: 2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); }
     .section-title { font-size: 1rem; font-weight: 600; color: var(--color-ink); margin-bottom: 1.25rem; }
     .form-grid { display: grid; gap: 1.25rem; margin-bottom: 1.5rem; }
     .form-grid-2 { grid-template-columns: 1fr 1fr; }
     @media (max-width: 768px) { .form-grid-2 { grid-template-columns: 1fr; } }
     .refined-label { display: block; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 0.5rem; }
     .required-mark { color: var(--color-error); }
-    .refined-input, .refined-select { width: 100%; padding: 0.625rem 1rem; font-size: 0.8125rem; font-weight: 300; color: var(--color-ink); background: white; border: 1px solid var(--color-border); border-radius: 2px; transition: all 0.3s var(--ease-out-expo); }
+    .refined-input, .refined-select { width: 100%; padding: 0.625rem 1rem; font-size: 0.8125rem; font-weight: 300; color: var(--color-ink); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; transition: all 0.3s var(--ease-out-expo); }
     .refined-input:focus, .refined-select:focus { outline: none; border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04); }
     textarea.refined-input { resize: vertical; min-height: 100px; }
     .form-actions { display: flex; gap: 0.75rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border-subtle); margin-top: 1.5rem; }

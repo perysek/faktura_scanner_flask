@@ -8,7 +8,7 @@
 <style>
     /* ── Back bar (above the hero) ── */
     .appt-topbar { padding: 12px 16px 0; }
-    .appt-back { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
+    .appt-back { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; color: var(--color-ink-muted); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
     .appt-back:hover { border-color: var(--color-ink-muted); color: var(--color-ink); }
     .appt-back svg { width: 12px; height: 12px; }
 
@@ -29,7 +29,7 @@
 
     /* ── Card grid ── */
     .appt-body { padding: 1.25rem 1.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; max-width: 1100px; }
-    .appt-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 18px; }
+    .appt-card { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; padding: 18px; }
     /* Full-width card (SMS history). Inherits the base .appt-card 18px padding
        so its title + table inset like every other section. */
     .appt-card.span-2 { grid-column: 1 / -1; }
@@ -64,11 +64,11 @@
     .totals-row.grand { font-weight: 600; font-size: 14px; color: var(--color-ink); border-top: 1px solid var(--color-border); margin-top: 6px; padding-top: 8px; }
 
     .action-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-    .btn-action { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; font-weight: 400; border-radius: 2px; border: 1px solid var(--color-border); background: white; color: var(--color-ink-muted); cursor: pointer; transition: all 0.15s; text-decoration: none; }
+    .btn-action { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px; font-weight: 400; border-radius: 2px; border: 1px solid var(--color-border); background: var(--color-surface-elevated); color: var(--color-ink-muted); cursor: pointer; transition: all 0.15s; text-decoration: none; }
     .btn-action:hover { border-color: var(--color-ink-muted); color: var(--color-ink); }
     .btn-action svg { width: 12px; height: 12px; }
-    .btn-action.primary { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
-    .btn-action.primary:hover { background: var(--color-ink-muted); color: white; }
+    .btn-action.primary { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); font-weight: 500; }
+    .btn-action.primary:hover { background: var(--color-ink-muted); color: var(--color-on-ink); }
     .btn-action.success { background: #2d6a4f; color: white; border-color: #2d6a4f; font-weight: 500; }
     .btn-action.success:hover { background: #245c43; color: white; }
     .btn-action.danger { color: #991b1b; background: rgba(155,44,44,0.08); border-color: rgba(155,44,44,0.2); }
@@ -76,7 +76,7 @@
 
     .addon-section { margin-top: 1rem; padding: 1rem; background: rgba(245,158,11,0.04); border: 1px dashed rgba(245,158,11,0.3); border-radius: 2px; }
     .addon-section h3 { font-size: 11px; font-weight: 600; color: var(--color-status-in-progress); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
-    .addon-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: white; cursor: pointer; margin: 0.25rem; }
+    .addon-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: var(--color-surface-elevated); cursor: pointer; margin: 0.25rem; }
     .addon-btn:hover { border-color: var(--color-status-in-progress); background: rgba(245,158,11,0.06); }
     .addon-btn svg { width: 12px; height: 12px; }
 
@@ -98,7 +98,7 @@
 
     /* SMS dropdown */
     .dropdown { position: relative; display: inline-block; }
-    .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; min-width: 200px; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 4px 16px rgba(0,0,0,.12); z-index: 100; list-style: none; padding: 0.25rem 0; margin: 0; }
+    .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; min-width: 200px; background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 4px 16px rgba(0,0,0,.12); z-index: 100; list-style: none; padding: 0.25rem 0; margin: 0; }
     .dropdown.open .dropdown-menu { display: block; }
     .dropdown-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0.5rem 0.875rem; font-size: 0.8125rem; color: var(--color-ink); background: none; border: none; cursor: pointer; text-align: left; font-family: var(--font-body); }
     .dropdown-item:hover { background: var(--color-surface); }

@@ -93,7 +93,7 @@
         width: 100%; padding: 0.45rem 0.6rem;
         font-family: var(--pp-body); font-size: 0.8125rem;
         border: 1px solid var(--pp-border); border-radius: 2px;
-        background: white; color: var(--pp-ink); box-sizing: border-box;
+        background: var(--color-surface-elevated); color: var(--pp-ink); box-sizing: border-box;
         transition: border-color 0.15s, box-shadow 0.15s;
     }
     .pp-input:focus, .pp-select:focus, .pp-textarea:focus {
@@ -126,7 +126,7 @@
         display: flex; align-items: center; gap: 0.5rem;
         padding: 0.45rem 0.6rem;
         border: 1px solid var(--pp-border); border-radius: 2px;
-        margin-bottom: 0.3rem; background: white;
+        margin-bottom: 0.3rem; background: var(--color-surface-elevated);
     }
     .pp-service-item.addon { background: rgba(245,158,11,0.03); border-color: rgba(245,158,11,0.2); }
     .pp-svc-info { flex: 1; min-width: 0; }
@@ -137,12 +137,12 @@
     .svc-field-group { display: flex; flex-direction: column; align-items: center; min-width: 0; }
     .svc-inline-input {
         width: 70px; padding: 0.3rem 0.4rem; font-size: 0.8rem; font-family: var(--pp-mono);
-        border: 1px solid var(--pp-border); border-radius: 2px; background: white;
+        border: 1px solid var(--pp-border); border-radius: 2px; background: var(--color-surface-elevated);
         text-align: right; box-sizing: border-box; transition: border-color 0.12s, box-shadow 0.12s;
     }
     .svc-inline-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
 
-    .btn-svc-remove { padding: 0.25rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; transition: all 0.1s; flex-shrink: 0; }
+    .btn-svc-remove { padding: 0.25rem; background: var(--color-surface-elevated); border: 1px solid var(--pp-border); border-radius: 2px; cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; transition: all 0.1s; flex-shrink: 0; }
     .btn-svc-remove:hover { background: var(--color-status-cancelled-bg); border-color: var(--pp-danger); color: var(--pp-danger); }
     .btn-svc-remove svg { width: 13px; height: 13px; }
 
@@ -164,13 +164,13 @@
         border: 1px solid transparent; border-radius: 2px; background: transparent;
         text-align: right; color: var(--pp-ink); transition: border-color 0.15s, background 0.15s;
     }
-    .sum-price-input:hover { border-color: var(--pp-border); background: white; }
-    .sum-price-input:focus { outline: none; border-color: var(--pp-blue); background: white; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    .sum-price-input:hover { border-color: var(--pp-border); background: var(--color-surface-elevated); }
+    .sum-price-input:focus { outline: none; border-color: var(--pp-blue); background: var(--color-surface-elevated); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
 
     /* ── Bottom action bar ── */
     .pp-btn-bar {
         flex-shrink: 0;
-        background: white; border-top: 1px solid var(--pp-border);
+        background: var(--color-surface-elevated); border-top: 1px solid var(--pp-border);
         padding: 0.5rem 1.25rem;
         display: flex; align-items: center; gap: 0.75rem;
         box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
@@ -180,7 +180,7 @@
     .bar-nav-btn {
         display: inline-flex; align-items: center; gap: 0.3rem;
         padding: 0.45rem 0.8rem;
-        background: white; border: 1px solid var(--pp-border); border-radius: 3px;
+        background: var(--color-surface-elevated); border: 1px solid var(--pp-border); border-radius: 3px;
         color: var(--pp-ink-muted); cursor: pointer;
         transition: all 0.15s; white-space: nowrap;
     }
@@ -202,7 +202,7 @@
     .pp-btn-primary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1.25rem; background: var(--pp-blue); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 0.15s; }
     .pp-btn-primary:hover:not(:disabled) { background: var(--color-chart-blue-dark); }
     .pp-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-    .pp-btn-secondary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: white; color: var(--pp-ink-muted); border: 1px solid var(--pp-border); border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
+    .pp-btn-secondary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: var(--color-surface-elevated); color: var(--pp-ink-muted); border: 1px solid var(--pp-border); border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
     .pp-btn-secondary:hover { background: var(--pp-surface-warm); color: var(--pp-ink); }
     .pp-btn-danger { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: var(--pp-danger); color: white; border: none; border-radius: 3px; font-family: var(--pp-body); font-size: 0.875rem; cursor: pointer; transition: background 0.15s; }
     .pp-btn-danger:hover { background: var(--color-status-cancelled-dark); }
@@ -212,7 +212,7 @@
     /* ── Conflict modal ── */
     .pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; animation: modalBackdropIn 0.2s var(--ease-out-expo); }
     .pp-modal-overlay.open { display: flex; }
-    .pp-modal { background: white; border-radius: 3px; width: 480px; max-width: 92vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden; animation: modalIn 0.25s var(--ease-out-expo); }
+    .pp-modal { background: var(--color-surface-elevated); border-radius: 3px; width: 480px; max-width: 92vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden; animation: modalIn 0.25s var(--ease-out-expo); }
     .pp-modal-header { padding: 0.875rem 1.1rem; border-bottom: 1px solid var(--pp-border); display: flex; align-items: center; gap: 0.5rem; background: var(--color-status-cancelled-bg); }
     .pp-modal-title { font-size: 0.9rem; font-weight: 600; color: var(--pp-danger); flex: 1; }
     .pp-modal-body { padding: 1.1rem; font-size: 0.8125rem; line-height: 1.6; color: var(--pp-ink-muted); }
@@ -988,7 +988,7 @@ function showToast(msg, type = 'info', duration = 2500) {
     toast.id = 'pp-toast';
     toast.style.cssText = `
         position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;
-        background:white;border:1px solid ${colors[type]};border-left:4px solid ${colors[type]};
+        background:var(--color-surface-elevated);border:1px solid ${colors[type]};border-left:4px solid ${colors[type]};
         border-radius:3px;padding:0.7rem 1.1rem;
         font-family:var(--pp-mono);font-size:0.78rem;color:#111;
         box-shadow:0 4px 20px rgba(0,0,0,0.15);

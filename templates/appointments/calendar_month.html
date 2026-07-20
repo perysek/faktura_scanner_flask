@@ -14,12 +14,12 @@
     .view-toggle { display: flex; gap: 0.375rem; }
     .view-toggle a { padding: 0.375rem 0.5rem; font-size: 0.6875rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-ink-muted); text-decoration: none; transition: all 0.2s ease; }
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
-    .view-toggle a.active { background: var(--color-ink); color: white; border-color: var(--color-ink); font-weight: 500; }
+    .view-toggle a.active { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); font-weight: 500; }
     @media (max-width: 640px) { .view-toggle { display: none !important; } }
 
     /* Month nav row */
     .month-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
-    .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
+    .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
     .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
     .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     /* Poprzedni / Ten miesiąc / Następny — same fixed width as the week view's
@@ -27,13 +27,13 @@
     .month-nav .nav-btn { width: 7rem; text-align: center; white-space: nowrap; }
 
     /* Month card */
-    .month-card { position: relative; background: white; border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+    .month-card { position: relative; background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
     .month-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
     .wd { padding: 0.5rem 0.625rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); text-align: center; }
     .wd.weekend { color: #9b2c2c; }
 
     .month-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--color-border); }
-    .m-cell { background: white; padding: 0.375rem 0.5rem; min-height: 92px; cursor: pointer; overflow: hidden; }
+    .m-cell { background: var(--color-surface-elevated); padding: 0.375rem 0.5rem; min-height: 92px; cursor: pointer; overflow: hidden; }
     .m-cell.other-month { background: #f8fafc; cursor: default; }
     .m-cell.weekend { background: #faf9f8; }
     .m-cell.today { background: rgba(59,130,246,0.04); }

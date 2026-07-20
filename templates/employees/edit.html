@@ -10,7 +10,7 @@
     .page-title { margin-bottom: 0.5rem; }
 
     .refined-card {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         padding: 2rem;
@@ -47,7 +47,7 @@
         font-size: 0.8125rem;
         font-weight: 300;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         transition: all 0.3s var(--ease-out-expo);
@@ -123,7 +123,7 @@
         font-size: 0.8125rem;
         border: 1px solid var(--color-border);
         border-radius: 2px;
-        background: white;
+        background: var(--color-surface-elevated);
         color: var(--color-ink);
     }
     .schedule-time:disabled { background: var(--color-surface-warm); color: var(--color-ink-subtle); }
@@ -358,7 +358,7 @@
                             </div>
                             <div id="dr-panel"
                                  style="display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;
-                                        background:white;border:1px solid var(--color-ink-muted);border-radius:2px;
+                                        background:var(--color-surface-elevated);border:1px solid var(--color-ink-muted);border-radius:2px;
                                         box-shadow:0 6px 20px rgba(0,0,0,0.1);z-index:200;
                                         max-height:220px;overflow-y:auto;">
                                 {% for emp in other_employees %}

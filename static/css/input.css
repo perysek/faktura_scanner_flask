@@ -16,6 +16,7 @@
       /* Surface Colors */
       --color-surface: #fafafa;
       --color-surface-warm: #f7f6f3;
+      --color-surface-elevated: #ffffff;  /* cards/inputs/modals — was hardcoded "white" */
 
       /* Border Colors */
       --color-border: #e8e6e1;
@@ -28,9 +29,19 @@
       /* Brand / Accent */
       --color-accent: #c9a227;            /* DECORATIVE gold — logo flourish, hover marks */
       --color-accent-muted: rgba(201, 162, 39, 0.12);
+      --color-accent-deep: #a07d1a;       /* second gradient stop (sidebar avatar) */
+      --color-on-accent: #ffffff;         /* text/icon color painted on top of --color-accent */
+      --color-on-ink: #ffffff;            /* text/icon color painted on top of a var(--color-ink)
+                                              fill — the widespread "dark pill/button/toast" idiom.
+                                              Needed because --color-ink itself is theme-reactive
+                                              (flips light in dark-family themes) while text sitting
+                                              on that fill must flip the OTHER way to stay readable. */
       /* FUNCTIONAL accent = blue (Tailwind primary-600): focus rings, links,
          primary buttons. The gold above is decorative only. Declared so the
-         accent system is unambiguous (F-008). */
+         accent system is unambiguous (F-008). Kept the SAME blue across every
+         theme below (incl. themes named after other colors) — it is a
+         functional signal, not brand decoration, and staying constant is what
+         keeps focus/links recognizable app-wide. */
       --color-focus-ring: #2563eb;
 
       /* Semantic Colors */
@@ -109,6 +120,163 @@
       --sidebar-hover-bg: #e6e2db;
       --sidebar-active-bg: var(--color-accent-muted);   /* rgba(201,162,39,.12) */
       --sidebar-active-border: var(--color-accent);     /* #c9a227 gold */
+  }
+
+  /* ── Theme system ──────────────────────────────────────────────────
+     :root above IS the "light" theme (unchanged, default, no [data-theme]
+     attribute needed). The four blocks below override the same token names
+     for [data-theme="…"] on <html>, set by static/js/theme.js + the no-FOUC
+     inline script in base.html <head>. Every value here was checked against
+     WCAG AA (4.5:1 body text, 3:1 large text/UI) before shipping.
+
+     Deliberately UNCHANGED across every theme (categorical data semantics —
+     an operations-console must not let a theme reassign what a color means):
+     --color-success*, --color-warning, --color-error, --color-info-text*,
+     --color-status-* (text/badge), --color-chart-*, --color-star-*. Dark-family
+     themes only swap the solid pale "-bg" chip tints for the existing
+     translucent "-badge" values, which already read correctly on any surface. */
+
+  [data-theme="dark"] {
+      --color-ink: #f1efe9;
+      --color-ink-muted: #b8b3a8;
+      --color-ink-subtle: #948f83;
+
+      --color-surface: #232220;
+      --color-surface-warm: #1a1917;
+      --color-surface-elevated: #242320;
+
+      --color-border: #38352f;
+      --color-border-subtle: #2c2a26;
+
+      --color-accent: #d4af37;
+      --color-accent-muted: rgba(212, 175, 55, 0.16);
+      --color-accent-deep: #a8842a;
+      --color-on-accent: #1a1917;
+      --color-on-ink: #1a1917;      /* ink is near-white here, so text painted on an ink fill must go dark */
+      --color-focus-ring: #60a5fa;  /* brighter than the shared #2563eb — needed for 3:1 on a near-black surface */
+
+      --color-info-bg: rgba(59, 130, 246, 0.15);
+      --color-purple-bg: rgba(126, 34, 206, 0.15);
+      --color-status-scheduled-bg: rgba(59, 130, 246, 0.15);
+      --color-status-confirmed-bg: rgba(16, 185, 129, 0.15);
+      --color-status-in-progress-bg: rgba(245, 158, 11, 0.15);
+      --color-status-completed-bg: rgba(45, 106, 79, 0.18);
+      --color-status-cancelled-bg: rgba(220, 38, 38, 0.15);
+
+      --sidebar-bg: #141311;
+      --sidebar-bg-deep: #0e0d0c;
+      --sidebar-text: #b8b3a8;
+      --sidebar-text-hover: #f1efe9;
+      --sidebar-text-active: #f1efe9;
+      --sidebar-heading: #8f8a7f;
+      --sidebar-border: #2c2a26;
+      --sidebar-hover-bg: #1f1e1b;
+      --sidebar-active-bg: var(--color-accent-muted);
+      --sidebar-active-border: var(--color-accent);
+  }
+
+  [data-theme="blue"] {
+      --color-ink: #1a2233;
+      --color-ink-muted: #4a5568;
+      --color-ink-subtle: #5b6b82;
+
+      --color-surface: #f0f5fb;
+      --color-surface-warm: #eef3fa;
+      --color-surface-elevated: #ffffff;
+
+      --color-border: #d7e3f0;
+      --color-border-subtle: #e6edf6;
+
+      /* Steel blue — deliberately NOT the same hex as --color-status-scheduled
+         (#2563eb), so a "scheduled" badge still reads as its own signal and
+         not just "the theme color". */
+      --color-accent: #3b6ea5;
+      --color-accent-muted: rgba(59, 110, 165, 0.12);
+      --color-accent-deep: #2c5480;
+      --color-on-accent: #ffffff;
+
+      --sidebar-bg: #dde7f4;
+      --sidebar-bg-deep: #cddaed;
+      --sidebar-text: #4a5568;
+      --sidebar-text-hover: #1a2233;
+      --sidebar-text-active: #1a2233;
+      --sidebar-heading: #5b6b82;
+      --sidebar-border: #c3d3e8;
+      --sidebar-hover-bg: #e5edf7;
+      --sidebar-active-bg: var(--color-accent-muted);
+      --sidebar-active-border: var(--color-accent);
+  }
+
+  [data-theme="green"] {
+      --color-ink: #1a2419;
+      --color-ink-muted: #4b5d47;
+      --color-ink-subtle: #5a6e55;
+
+      --color-surface: #f0f6ee;
+      --color-surface-warm: #eef5eb;
+      --color-surface-elevated: #ffffff;
+
+      --color-border: #d9e7d3;
+      --color-border-subtle: #e7f0e3;
+
+      /* Sage green — deliberately NOT --color-success (#2d6a4f), so "paid" /
+         "confirmed" states keep their own meaning distinct from the theme. */
+      --color-accent: #4a7a4e;
+      --color-accent-muted: rgba(74, 122, 78, 0.12);
+      --color-accent-deep: #396138;
+      --color-on-accent: #ffffff;
+
+      --sidebar-bg: #dbe9d6;
+      --sidebar-bg-deep: #cbdec4;
+      --sidebar-text: #4b5d47;
+      --sidebar-text-hover: #1a2419;
+      --sidebar-text-active: #1a2419;
+      --sidebar-heading: #5a6e55;
+      --sidebar-border: #c5dabd;
+      --sidebar-hover-bg: #e3efdf;
+      --sidebar-active-bg: var(--color-accent-muted);
+      --sidebar-active-border: var(--color-accent);
+  }
+
+  [data-theme="brown"] {
+      /* "Dimmed" = mid-dark and desaturated, distinct from the near-black
+         neutral of [data-theme="dark"] — a warm sepia/walnut reading surface. */
+      --color-ink: #ece3d6;
+      --color-ink-muted: #b8a890;
+      --color-ink-subtle: #a4937a;
+
+      --color-surface: #2e2418;
+      --color-surface-warm: #362a1c;
+      --color-surface-elevated: #3d3122;
+
+      --color-border: #4a3c29;
+      --color-border-subtle: #40331f;
+
+      --color-accent: #b8763a;
+      --color-accent-muted: rgba(184, 118, 58, 0.18);
+      --color-accent-deep: #8f5a2c;
+      --color-on-accent: #241b12;
+      --color-on-ink: #241b12;      /* ink is near-cream here, so text painted on an ink fill must go dark */
+      --color-focus-ring: #60a5fa;  /* brighter than the shared #2563eb — needed for 3:1 on a dark brown surface */
+
+      --color-info-bg: rgba(59, 130, 246, 0.15);
+      --color-purple-bg: rgba(126, 34, 206, 0.15);
+      --color-status-scheduled-bg: rgba(59, 130, 246, 0.15);
+      --color-status-confirmed-bg: rgba(16, 185, 129, 0.15);
+      --color-status-in-progress-bg: rgba(245, 158, 11, 0.15);
+      --color-status-completed-bg: rgba(45, 106, 79, 0.18);
+      --color-status-cancelled-bg: rgba(220, 38, 38, 0.15);
+
+      --sidebar-bg: #241b12;
+      --sidebar-bg-deep: #1a130c;
+      --sidebar-text: #b8a890;
+      --sidebar-text-hover: #ece3d6;
+      --sidebar-text-active: #ece3d6;
+      --sidebar-heading: #96876f;
+      --sidebar-border: #40331f;
+      --sidebar-hover-bg: #2c2116;
+      --sidebar-active-bg: var(--color-accent-muted);
+      --sidebar-active-border: var(--color-accent);
   }
 
   html {
@@ -509,7 +677,7 @@
       font-weight: 500;
       letter-spacing: 0.02em;
       background: var(--color-ink);
-      color: white;
+      color: var(--color-on-ink);
       border-radius: var(--radius-sm);
       border: none;
       cursor: pointer;
@@ -537,7 +705,7 @@
       font-family: var(--font-body);
       font-size: 0.8125rem;
       font-weight: 400;
-      background: white;
+      background: var(--color-surface-elevated);
       color: var(--color-ink-muted);
       border-radius: var(--radius-sm);
       border: 1px solid var(--color-border);
@@ -567,7 +735,7 @@
   /* Refined Button - Active state for period selector (flat: ink fill) */
   .refined-btn-secondary.active {
       background: var(--color-ink);
-      color: white;
+      color: var(--color-on-ink);
       border-color: var(--color-ink);
   }
 
@@ -749,7 +917,7 @@
   }
 
   .stat-card {
-    background: white;
+    background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: 2px;
     padding: 1.5rem;
@@ -780,7 +948,7 @@
 
   /* Search / filter card */
   .search-card {
-    background: white;
+    background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: 2px;
     padding: 1.5rem;
@@ -806,7 +974,7 @@
     font-size: 0.8125rem;
     font-weight: 300;
     color: var(--color-ink);
-    background: white;
+    background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: 2px;
     transition: all 0.3s var(--ease-out-expo);
@@ -863,7 +1031,7 @@
     font-size: 0.8125rem;
     font-weight: 300;
     color: var(--color-ink);
-    background: white;
+    background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: 2px;
     cursor: pointer;
@@ -877,7 +1045,7 @@
 
   /* Table scroll shell */
   .table-container {
-    background: white;
+    background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: 2px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -1006,7 +1174,7 @@
   .form-input, .form-select, .form-textarea {
       width: 100%; padding: 0.5rem 0.75rem;
       font-family: var(--font-body); font-size: 0.875rem; font-weight: 400;
-      color: var(--color-ink); background: white;
+      color: var(--color-ink); background: var(--color-surface-elevated);
       border: 1px solid var(--color-border); border-radius: var(--radius-sm);
       transition: border-color 0.2s ease, box-shadow 0.2s ease; outline: none;
   }
@@ -1017,13 +1185,13 @@
   .form-input:disabled, .form-input[readonly] { background: var(--color-surface); cursor: not-allowed; }
   .form-select { appearance: none; cursor: pointer; padding-right: 2.5rem; }
   .form-card {
-      background: white; border: 1px solid var(--color-border);
+      background: var(--color-surface-elevated); border: 1px solid var(--color-border);
       border-radius: var(--radius-md); padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
   }
   .form-btn-primary {
       display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
       padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;
-      color: white; background: var(--color-ink); border: none; border-radius: var(--radius-sm);
+      color: var(--color-on-ink); background: var(--color-ink); border: none; border-radius: var(--radius-sm);
       cursor: pointer; transition: all 0.25s var(--ease-out-expo); text-decoration: none;
   }
   .form-btn-primary:hover { background: var(--color-ink-muted); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
@@ -1031,7 +1199,7 @@
   .form-btn-secondary {
       display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
       padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;
-      color: var(--color-ink-muted); background: white;
+      color: var(--color-ink-muted); background: var(--color-surface-elevated);
       border: 1px solid var(--color-border); border-radius: var(--radius-sm);
       cursor: pointer; transition: all 0.2s ease; text-decoration: none;
   }
@@ -1042,7 +1210,7 @@
       border: 1px solid var(--color-border); border-radius: var(--radius-sm);
       cursor: pointer; flex-shrink: 0; transition: color 0.2s ease, background 0.2s ease;
   }
-  .form-paste-btn:hover { color: var(--color-ink); background: white; }
+  .form-paste-btn:hover { color: var(--color-ink); background: var(--color-surface-elevated); }
 
   /* ============================================
      MODAL DIALOG SYSTEM
@@ -1094,7 +1262,7 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      background: white;
+      background: var(--color-surface-elevated);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -1119,7 +1287,7 @@
       justify-content: space-between;
       padding: 1.25rem 1.5rem;
       border-bottom: 1px solid var(--color-border);
-      background: white;
+      background: var(--color-surface-elevated);
   }
 
   .modal-header h3 {
@@ -1168,7 +1336,7 @@
       gap: 0.5rem;
       padding: 1rem 1.5rem;
       border-top: 1px solid var(--color-border);
-      background: white;
+      background: var(--color-surface-elevated);
       border-radius: 0 0 3px 3px;
   }
 
@@ -1179,7 +1347,7 @@
       padding: 0.625rem 1.25rem;
       font-size: 0.8125rem;
       font-weight: 500;
-      color: white;
+      color: var(--color-on-ink);
       background: var(--color-ink);
       border: none;
       border-radius: var(--radius-sm);
@@ -1214,7 +1382,7 @@
       font-size: 0.8125rem;
       font-weight: 500;
       color: var(--color-ink-muted);
-      background: white;
+      background: var(--color-surface-elevated);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       cursor: pointer;
@@ -1453,7 +1621,7 @@
       table.stack-cards tbody { display: block !important; }
       table.stack-cards tbody tr {
           display: block !important;
-          background: white; border: 1px solid var(--color-border);
+          background: var(--color-surface-elevated); border: 1px solid var(--color-border);
           border-radius: var(--radius-sm); padding: 0.75rem 1rem;
           margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
       }
@@ -1524,7 +1692,7 @@
       position: fixed; bottom: 1.25rem; right: 1.25rem;
       width: 2.75rem; height: 2.75rem;
       display: flex; align-items: center; justify-content: center;
-      background: var(--color-ink); color: white;
+      background: var(--color-ink); color: var(--color-on-ink);
       border: none; border-radius: 50%;
       box-shadow: 0 4px 16px rgba(0,0,0,0.22);
       cursor: pointer; z-index: 40;
@@ -1631,7 +1799,7 @@
       flex: 0 0 11rem; scroll-snap-align: start;
       display: flex; flex-direction: column; gap: 0.25rem;
       padding: 0.625rem;
-      background: white;
+      background: var(--color-surface-elevated);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
   }

@@ -26,7 +26,7 @@
         overflow: hidden;
         margin-bottom: 0.875rem;
     }
-    .stat-strip-item { flex: 1; background: white; padding: 0.75rem 1rem; min-width: 0; }
+    .stat-strip-item { flex: 1; background: var(--color-surface-elevated); padding: 0.75rem 1rem; min-width: 0; }
     .stat-strip-value {
         font-family: var(--font-display);
         font-size: 1.5rem;
@@ -67,7 +67,7 @@
         letter-spacing: 0.04em;
         text-transform: uppercase;
         color: var(--color-ink-muted);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         cursor: pointer;
@@ -78,7 +78,7 @@
     .filter-chip.active {
         background: var(--color-ink);
         border-color: var(--color-ink);
-        color: white;
+        color: var(--color-on-ink);
         font-weight: 500;
     }
 
@@ -125,7 +125,7 @@
         font-size: 0.8125rem;
         font-weight: 300;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         transition: all 0.3s var(--ease-out-expo);
@@ -329,7 +329,7 @@
         left: 50%;
         transform: translateX(-50%) translateY(100px);
         background: var(--color-ink);
-        color: white;
+        color: var(--color-on-ink);
         padding: 0.875rem 1.5rem;
         border-radius: 4px;
         font-size: 0.875rem;

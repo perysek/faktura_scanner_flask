@@ -6,7 +6,7 @@
 <style>
 .refined-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.refined-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.refined-card { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
     .refined-table { width: 100%; border-collapse: collapse; }
     .refined-table th { padding: 0.625rem 1rem; text-align: left; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); border-bottom: 1px solid var(--color-border); }
     .refined-table td { padding: 0.875rem 1rem; font-size: 0.8125rem; border-bottom: 1px solid var(--color-border-subtle, var(--color-border-subtle)); vertical-align: middle; }
@@ -17,11 +17,11 @@
     .badge-inactive { background: var(--color-surface); color: var(--color-ink-subtle); }
     .badge-role { background: var(--color-status-scheduled-bg); color: var(--color-chart-blue-dark); }
     .badge-superuser { background: var(--color-status-in-progress-bg); color: var(--color-warning); }
-    .btn-primary { background: var(--color-ink); color: white; border: none; padding: 0.5rem 1rem; border-radius: 2px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; text-decoration: none; transition: opacity 0.15s; }
+    .btn-primary { background: var(--color-ink); color: var(--color-on-ink); border: none; padding: 0.5rem 1rem; border-radius: 2px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; text-decoration: none; transition: opacity 0.15s; }
     .btn-primary:hover { opacity: 0.8; }
     .btn-ghost { background: none; border: 1px solid var(--color-border); color: var(--color-ink-muted); padding: 0.375rem 0.75rem; border-radius: 2px; font-size: 0.75rem; cursor: pointer; text-decoration: none; transition: all 0.15s; }
     .btn-ghost:hover { border-color: var(--color-ink); color: var(--color-ink); }
-    .search-input { border: 1px solid var(--color-border); border-radius: 2px; padding: 0.5rem 0.75rem; font-size: 0.8125rem; background: white; color: var(--color-ink); outline: none; width: 240px; }
+    .search-input { border: 1px solid var(--color-border); border-radius: 2px; padding: 0.5rem 0.75rem; font-size: 0.8125rem; background: var(--color-surface-elevated); color: var(--color-ink); outline: none; width: 240px; }
     .search-input:focus { border-color: var(--color-ink); }
     #loading-state, #empty-state { text-align: center; padding: 3rem; color: var(--color-ink-muted); font-size: 0.875rem; }
     .btn-reset { background: none; border: 1px solid #fca5a5; color: var(--color-status-cancelled-dark); padding: 0.375rem 0.75rem; border-radius: 2px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; margin-left: 0.375rem; }
@@ -78,7 +78,7 @@
     }
     #reset-pw-backdrop.is-open { opacity: 1; }
     #reset-pw-panel {
-        background: #fff;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 3px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.18);
@@ -123,14 +123,14 @@
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem;" for="reset-pw-new">Nowe hasło</label>
                     <input type="password" id="reset-pw-new" minlength="8" autocomplete="new-password"
-                           style="width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: var(--color-ink); background: white; outline: none; box-sizing: border-box;"
+                           style="width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: var(--color-ink); background: var(--color-surface-elevated); outline: none; box-sizing: border-box;"
                            placeholder="Minimum 8 znaków"
                            onfocus="this.style.borderColor='var(--color-ink)'" onblur="this.style.borderColor='var(--color-border)'">
                 </div>
                 <div>
                     <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem;" for="reset-pw-confirm">Potwierdź hasło</label>
                     <input type="password" id="reset-pw-confirm" autocomplete="new-password"
-                           style="width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: var(--color-ink); background: white; outline: none; box-sizing: border-box;"
+                           style="width: 100%; border: 1px solid var(--color-border); border-radius: 2px; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: var(--color-ink); background: var(--color-surface-elevated); outline: none; box-sizing: border-box;"
                            placeholder="Powtórz nowe hasło"
                            onfocus="this.style.borderColor='var(--color-ink)'" onblur="this.style.borderColor='var(--color-border)'">
                 </div>

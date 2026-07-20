@@ -67,6 +67,55 @@
     .admin-view-row.is-disabled { opacity: 0.55; }
     .admin-view-row.is-disabled .admin-view-label:hover { background: transparent; }
 
+    /* Theme switcher popover (sidebar footer icon button). Swatch previews are
+       intentionally literal per-theme hex, not the live tokens above — they
+       must show what each theme looks like regardless of which one is active. */
+    .theme-menu {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        margin-bottom: 0.5rem;
+        min-width: 12rem;
+        padding: 0.375rem;
+        background: var(--color-surface-elevated);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: 0 6px 20px rgba(0,0,0,.14), 0 1px 4px rgba(0,0,0,.06);
+        z-index: 50;
+    }
+    .theme-menu.hidden { display: none; }
+    .theme-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        width: 100%;
+        padding: 0.5rem 0.625rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--color-ink);
+        background: transparent;
+        border: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .theme-menu-item:hover,
+    .theme-menu-item:focus-visible { background: var(--color-surface); }
+    .theme-menu-check { visibility: hidden; color: var(--color-accent); }
+    .theme-menu-item[aria-checked="true"] .theme-menu-check { visibility: visible; }
+    .theme-swatch {
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 50%;
+        border: 1px solid rgba(0,0,0,.08);
+        flex-shrink: 0;
+    }
+    .theme-swatch[data-swatch="light"] { background: linear-gradient(135deg, #f7f6f3 50%, #c9a227 50%); }
+    .theme-swatch[data-swatch="dark"]  { background: linear-gradient(135deg, #1a1917 50%, #d4af37 50%); }
+    .theme-swatch[data-swatch="blue"]  { background: linear-gradient(135deg, #eef3fa 50%, #3b6ea5 50%); }
+    .theme-swatch[data-swatch="green"] { background: linear-gradient(135deg, #eef5eb 50%, #4a7a4e 50%); }
+    .theme-swatch[data-swatch="brown"] { background: linear-gradient(135deg, #362a1c 50%, #b8763a 50%); }
+
     /* Mobile drawer (< lg, where the sidebar is a slide-in panel): present the
        deliberately-limited link set as one flat list. The accordion section
        headers are removed and all section bodies are forced open, but the
@@ -303,18 +352,60 @@
     <div class="px-4 py-3 shrink-0"
          style="border-top: 1px solid var(--sidebar-border); background: var(--sidebar-bg-deep);">
         <div class="flex items-center gap-2">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold text-white shadow-lg"
-                 style="background: linear-gradient(135deg, var(--color-accent), #a07d1a);">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold shadow-lg"
+                 style="background: linear-gradient(135deg, var(--color-accent), var(--color-accent-deep)); color: var(--color-on-accent);">
                 {{ current_user.full_name[:2].upper() }}
             </div>
             <div class="flex-1 min-w-0">
                 <p class="text-base font-medium truncate" style="color: var(--color-ink);">{{ current_user.full_name }}</p>
                 <p class="text-[13px]" style="color: var(--sidebar-text);">{{ {'superuser': 'Superadmin', 'admin': 'Administrator', 'accountant': 'Księgowa', 'receptionist': 'Recepcjonistka', 'stylist': 'Stylistka'}.get(current_user.role, current_user.role | capitalize) }}</p>
             </div>
+            <div class="relative shrink-0" id="theme-switcher">
+                <button type="button"
+                        id="theme-toggle-btn"
+                        class="flex items-center justify-center w-10 h-10 shrink-0 rounded-[var(--radius-sm)] border border-transparent transition-all duration-200"
+                        style="color: var(--sidebar-text);"
+                        onmouseenter="this.style.color='var(--sidebar-text-hover)'; this.style.background='var(--sidebar-hover-bg)';"
+                        onmouseleave="this.style.color='var(--sidebar-text)'; this.style.background='transparent';"
+                        aria-haspopup="menu"
+                        aria-expanded="false"
+                        aria-controls="theme-menu"
+                        title="Zmień motyw kolorystyczny"
+                        aria-label="Zmień motyw kolorystyczny">
+                    {{ icon('palette', class='w-5 h-5 shrink-0') }}
+                </button>
+                <div id="theme-menu" class="theme-menu hidden" role="menu" aria-label="Motyw kolorystyczny">
+                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="" aria-checked="true">
+                        <span class="theme-swatch" data-swatch="light" aria-hidden="true"></span>
+                        <span class="flex-1 text-left">Jasny</span>
+                        {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
+                    </button>
+                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="dark" aria-checked="false">
+                        <span class="theme-swatch" data-swatch="dark" aria-hidden="true"></span>
+                        <span class="flex-1 text-left">Ciemny</span>
+                        {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
+                    </button>
+                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="blue" aria-checked="false">
+                        <span class="theme-swatch" data-swatch="blue" aria-hidden="true"></span>
+                        <span class="flex-1 text-left">Niebieski</span>
+                        {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
+                    </button>
+                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="green" aria-checked="false">
+                        <span class="theme-swatch" data-swatch="green" aria-hidden="true"></span>
+                        <span class="flex-1 text-left">Zielony</span>
+                        {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
+                    </button>
+                    <button type="button" class="theme-menu-item" role="menuitemradio" data-theme-value="brown" aria-checked="false">
+                        <span class="theme-swatch" data-swatch="brown" aria-hidden="true"></span>
+                        <span class="flex-1 text-left">Przygaszony brąz</span>
+                        {{ icon('check', class='theme-menu-check w-4 h-4 shrink-0') }}
+                    </button>
+                </div>
+            </div>
             <a href="{{ url_for('auth.logout') }}"
                class="flex items-center justify-center w-10 h-10 shrink-0 rounded-[var(--radius-sm)] border border-transparent transition-all duration-200"
                style="color: var(--sidebar-text);"
-               onmouseenter="this.style.color='var(--color-error)'; this.style.background='#fef2f2';"
+               onmouseenter="this.style.color='var(--color-error)'; this.style.background='var(--color-status-cancelled-bg)';"
                onmouseleave="this.style.color='var(--sidebar-text)'; this.style.background='transparent';"
                title="Wyloguj" aria-label="Wyloguj">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

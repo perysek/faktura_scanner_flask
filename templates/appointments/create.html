@@ -10,20 +10,20 @@
     .create-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .create-header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ink); margin: 0 0 2px; }
     .create-header p { font-size: 12px; font-weight: 300; color: var(--color-ink-muted); margin: 0; }
-    .hdr-back { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 11px; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
+    .hdr-back { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 11px; color: var(--color-ink-muted); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; text-decoration: none; }
     .hdr-back:hover { border-color: var(--color-ink-muted); }
     .hdr-back svg { width: 12px; height: 12px; }
 
     .create-grid { max-width: 860px; display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
 
-    .form-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 20px; margin-bottom: 12px; }
+    .form-card { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; padding: 20px; margin-bottom: 12px; }
     .fc-title { font-size: 11px; font-weight: 600; color: var(--color-ink); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border-subtle); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-group label { display: block; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle); margin-bottom: 5px; }
     .form-group .req { color: var(--color-error); }
     .form-group select, .form-group input[type="date"], .form-group textarea {
         width: 100%; padding: 8px 10px; font-family: var(--font-body); font-size: 12px;
-        color: var(--color-ink); background: white; border: 1px solid var(--color-border);
+        color: var(--color-ink); background: var(--color-surface-elevated); border: 1px solid var(--color-border);
         border-radius: 2px; outline: none; box-sizing: border-box;
     }
     .form-group textarea { font-weight: 300; resize: vertical; min-height: 80px; }
@@ -43,7 +43,7 @@
     .svc-option:last-child { border-bottom: none; }
     .svc-option:hover { background: var(--color-surface); }
     .svc-cb { position: absolute; opacity: 0; width: 1px; height: 1px; }
-    .svc-box { width: 16px; height: 16px; border-radius: 2px; border: 2px solid var(--color-border); background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .svc-box { width: 16px; height: 16px; border-radius: 2px; border: 2px solid var(--color-border); background: var(--color-surface-elevated); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .svc-box svg { width: 10px; height: 10px; display: none; }
     .svc-cb:checked + .svc-box { border-color: var(--color-ink); background: var(--color-ink); }
     .svc-cb:checked + .svc-box svg { display: block; }
@@ -55,23 +55,23 @@
 
     /* Time-slot grid */
     .slot-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-    .slot-btn { padding: 5px 10px; font-size: 11px; border: 1px solid var(--color-border); border-radius: 2px; background: white; color: var(--color-ink); cursor: pointer; font-family: var(--font-body); }
+    .slot-btn { padding: 5px 10px; font-size: 11px; border: 1px solid var(--color-border); border-radius: 2px; background: var(--color-surface-elevated); color: var(--color-ink); cursor: pointer; font-family: var(--font-body); }
     .slot-btn:hover:not(.taken):not(.selected) { border-color: var(--color-ink); background: var(--color-surface); }
     .slot-btn.taken { background: var(--color-surface); color: var(--color-ink-subtle); cursor: not-allowed; opacity: 0.4; text-decoration: line-through; }
-    .slot-btn.selected { background: var(--color-ink); color: white; border-color: var(--color-ink); }
+    .slot-btn.selected { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
 
     /* Sticky summary */
-    .summary-card { background: white; border: 1px solid var(--color-border); border-radius: 2px; padding: 18px; position: sticky; top: 12px; }
+    .summary-card { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; padding: 18px; position: sticky; top: 12px; }
     .summary-line { font-size: 12px; font-weight: 300; color: var(--color-ink-muted); margin-bottom: 6px; }
     .summary-line strong { font-weight: 500; color: var(--color-ink); }
     .summary-totals { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 10px 12px; margin: 8px 0 16px; }
     .summary-totals .row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 300; color: var(--color-ink-muted); margin-bottom: 4px; }
     .summary-totals .row.total { font-size: 14px; font-weight: 600; color: var(--color-ink); border-top: 1px solid var(--color-border); margin-top: 4px; padding-top: 8px; margin-bottom: 0; }
 
-    .btn-save { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 9px 16px; font-size: 12px; font-weight: 500; color: white; background: var(--color-ink); border: none; border-radius: 2px; cursor: pointer; }
+    .btn-save { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 9px 16px; font-size: 12px; font-weight: 500; color: var(--color-on-ink); background: var(--color-ink); border: none; border-radius: 2px; cursor: pointer; }
     .btn-save:disabled { color: rgba(255,255,255,0.5); background: rgba(26,26,26,0.4); cursor: not-allowed; }
     .btn-save svg { width: 14px; height: 14px; }
-    .btn-cancel { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 8px 16px; font-size: 12px; font-weight: 400; color: var(--color-ink-muted); background: white; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; margin-top: 6px; text-decoration: none; }
+    .btn-cancel { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 8px 16px; font-size: 12px; font-weight: 400; color: var(--color-ink-muted); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; margin-top: 6px; text-decoration: none; }
     .btn-cancel:hover { border-color: var(--color-ink-muted); }
 
     .icon { font-size: 1rem; vertical-align: middle; }

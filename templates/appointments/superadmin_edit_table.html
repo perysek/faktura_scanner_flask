@@ -42,12 +42,12 @@
     .te-toolbar {
         display: flex; align-items: center; gap: 0.75rem;
         padding: 0.4rem 1.25rem; flex-shrink: 0;
-        background: white; border-bottom: 1px solid var(--pp-border);
+        background: var(--color-surface-elevated); border-bottom: 1px solid var(--pp-border);
     }
     .te-btn {
         display: inline-flex; align-items: center; gap: 0.3rem;
         padding: 0.4rem 0.75rem; font-size: 0.75rem; font-weight: 500;
-        background: white; color: var(--pp-ink-muted);
+        background: var(--color-surface-elevated); color: var(--pp-ink-muted);
         border: 1px solid var(--pp-border); border-radius: 2px;
         cursor: pointer; transition: all 0.15s; white-space: nowrap;
         font-family: var(--pp-body);
@@ -64,7 +64,7 @@
     /* ── Table wrapper ── */
     .te-table-wrap {
         flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-        background: white;
+        background: var(--color-surface-elevated);
     }
     .te-table-wrap::-webkit-scrollbar { width: 6px; }
     .te-table-wrap::-webkit-scrollbar-track { background: transparent; }
@@ -108,7 +108,7 @@
     .te-filter-input {
         width: 100%; padding: 0.25rem 0.4rem; font-size: 0.7rem;
         border: 1px solid var(--pp-border); border-radius: 2px;
-        background: white; color: var(--pp-ink); box-sizing: border-box;
+        background: var(--color-surface-elevated); color: var(--pp-ink); box-sizing: border-box;
         font-family: var(--pp-body);
     }
     .te-filter-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
@@ -139,8 +139,8 @@
         font-family: var(--pp-body);
         transition: border-color 0.12s, background 0.12s;
     }
-    .te-cell-input:hover { border-color: var(--pp-border); background: white; }
-    .te-cell-input:focus { outline: none; border-color: var(--pp-blue); background: white; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+    .te-cell-input:hover { border-color: var(--pp-border); background: var(--color-surface-elevated); }
+    .te-cell-input:focus { outline: none; border-color: var(--pp-blue); background: var(--color-surface-elevated); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
     .te-cell-input[type="number"] { text-align: right; font-family: var(--pp-mono); }
     .te-cell-input[type="date"], .te-cell-input[type="time"] { font-family: var(--pp-mono); font-size: 0.72rem; }
     select.te-cell-input { padding-right: 1.2rem; cursor: pointer; }
@@ -149,7 +149,7 @@
     .te-dropdown-wrap { position: relative; overflow: visible; }
     .te-dropdown-panel {
         display: none; position: fixed;
-        z-index: 100; background: white; border: 1px solid var(--pp-border);
+        z-index: 100; background: var(--color-surface-elevated); border: 1px solid var(--pp-border);
         border-radius: 2px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         min-width: 240px; max-width: 340px;
     }
@@ -179,8 +179,8 @@
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         transition: border-color 0.12s, background 0.12s;
     }
-    .te-dropdown-trigger:hover { border-color: var(--pp-border); background: white; }
-    .te-dropdown-trigger:focus { outline: none; border-color: var(--pp-blue); background: white; }
+    .te-dropdown-trigger:hover { border-color: var(--pp-border); background: var(--color-surface-elevated); }
+    .te-dropdown-trigger:focus { outline: none; border-color: var(--pp-blue); background: var(--color-surface-elevated); }
 
     /* ── Star rating in table ── */
     .te-stars { display: flex; gap: 1px; border-radius: 4px; padding: 2px; }
@@ -236,7 +236,7 @@
     /* ── Services Modal ── */
     .te-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; animation: modalBackdropIn 0.2s var(--ease-out-expo); }
     .te-modal-overlay.open { display: flex; }
-    .te-modal { background: white; border-radius: 3px; width: 560px; max-width: 94vw; max-height: 85vh; box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden; display: flex; flex-direction: column; animation: modalIn 0.25s var(--ease-out-expo); }
+    .te-modal { background: var(--color-surface-elevated); border-radius: 3px; width: 560px; max-width: 94vw; max-height: 85vh; box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden; display: flex; flex-direction: column; animation: modalIn 0.25s var(--ease-out-expo); }
     .te-modal-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--pp-border); display: flex; align-items: center; gap: 0.5rem; background: var(--pp-surface-warm); flex-shrink: 0; }
     .te-modal-title { font-family: var(--pp-mono); font-size: 0.82rem; font-weight: 600; flex: 1; }
     .te-modal-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--pp-ink-subtle); padding: 0.2rem; line-height: 1; }
@@ -249,7 +249,7 @@
     .te-msvc-item {
         display: flex; align-items: center; gap: 0.5rem;
         padding: 0.45rem 0.5rem; border: 1px solid var(--pp-border); border-radius: 2px;
-        margin-bottom: 0.3rem; background: white;
+        margin-bottom: 0.3rem; background: var(--color-surface-elevated);
     }
     .te-msvc-item.addon { background: rgba(245,158,11,0.03); border-color: rgba(245,158,11,0.2); }
     .te-msvc-name { flex: 1; font-size: 0.78rem; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -265,7 +265,7 @@
     .te-msvc-input:focus { outline: none; border-color: var(--pp-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
     .te-msvc-input.dur { width: 54px; }
     .te-msvc-remove {
-        padding: 0.2rem; background: white; border: 1px solid var(--pp-border); border-radius: 2px;
+        padding: 0.2rem; background: var(--color-surface-elevated); border: 1px solid var(--pp-border); border-radius: 2px;
         cursor: pointer; color: var(--pp-ink-subtle); line-height: 1; flex-shrink: 0;
     }
     .te-msvc-remove:hover { background: rgba(220,38,38,0.05); border-color: var(--pp-danger); color: var(--pp-danger); }
@@ -343,7 +343,7 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Resetuj filtry
         </button>
-        <select class="te-cell-input" id="global-status-filter" onchange="loadTableData(true)" style="width:auto;border-color:var(--pp-border);background:white;font-size:0.75rem;">
+        <select class="te-cell-input" id="global-status-filter" onchange="loadTableData(true)" style="width:auto;border-color:var(--pp-border);background:var(--color-surface-elevated);font-size:0.75rem;">
             <option value="">Wszystkie statusy</option>
             <option value="scheduled">Zaplanowana</option>
             <option value="confirmed">Potwierdzona</option>
@@ -530,7 +530,7 @@ function showToast(msg, type='info', duration=2500) {
     if (old) old.remove();
     const t = document.createElement('div');
     t.id = 'te-toast';
-    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:white;border:1px solid ${colors[type]};border-left:4px solid ${colors[type]};border-radius:3px;padding:0.6rem 1rem;font-family:var(--pp-mono);font-size:0.75rem;color:#111;box-shadow:0 4px 20px rgba(0,0,0,0.15);opacity:0;transition:opacity 0.15s;max-width:350px;`;
+    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:var(--color-surface-elevated);border:1px solid ${colors[type]};border-left:4px solid ${colors[type]};border-radius:3px;padding:0.6rem 1rem;font-family:var(--pp-mono);font-size:0.75rem;color:#111;box-shadow:0 4px 20px rgba(0,0,0,0.15);opacity:0;transition:opacity 0.15s;max-width:350px;`;
     t.textContent = msg;
     document.body.appendChild(t);
     requestAnimationFrame(() => t.style.opacity = '1');

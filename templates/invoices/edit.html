@@ -51,7 +51,7 @@
     }
 
     .form-card {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         padding: 1rem;
@@ -112,7 +112,7 @@
         font-family: var(--font-body);
         font-size: 0.8125rem;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         transition: all 0.2s ease;
@@ -134,7 +134,7 @@
         font-family: var(--font-body);
         font-size: 0.8125rem;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         transition: all 0.2s ease;
@@ -166,7 +166,7 @@
     }
 
     .btn-paste:hover {
-        background: white;
+        background: var(--color-surface-elevated);
         color: var(--color-ink);
         border-color: var(--color-ink-muted);
     }
@@ -199,7 +199,7 @@
 
     .btn-refined-primary {
         background: var(--color-ink);
-        color: white;
+        color: var(--color-on-ink);
     }
 
     .btn-refined-primary:hover {
@@ -208,7 +208,7 @@
     }
 
     .btn-refined-secondary {
-        background: white;
+        background: var(--color-surface-elevated);
         color: var(--color-ink);
         border: 1px solid var(--color-border);
     }
@@ -263,7 +263,7 @@
 
     /* Viewer */
     .viewer-card {
-        background: white;
+        background: var(--color-surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: 2px;
         overflow: hidden;
@@ -313,7 +313,7 @@
     .viewer-footer {
         padding: 1rem;
         border-top: 1px solid var(--color-border);
-        background: white;
+        background: var(--color-surface-elevated);
         flex-shrink: 0;
     }
 
@@ -373,7 +373,7 @@
         transition: all 0.2s ease;
     }
     .seller-lookup-btn:hover {
-        background: white;
+        background: var(--color-surface-elevated);
         color: var(--color-ink);
         border-color: var(--color-ink-muted);
     }
@@ -388,7 +388,7 @@
         margin-bottom: 1rem;
         border: 1px solid var(--color-border);
         border-radius: 2px;
-        background: white;
+        background: var(--color-surface-elevated);
         overflow: hidden;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
@@ -415,7 +415,7 @@
         font-family: var(--font-body);
         font-size: 0.8125rem;
         color: var(--color-ink);
-        background: white;
+        background: var(--color-surface-elevated);
         border: none;
         outline: none;
         box-sizing: border-box;
@@ -985,7 +985,7 @@ function showSellerConflictModal({ nip, existingName, newName }) {
 
         const modal = document.createElement('div');
         modal.style.cssText = `
-            background: white;
+            background: var(--color-surface-elevated);
             border-radius: 3px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
             max-width: 500px;
@@ -1193,7 +1193,7 @@ function showNewSellerModal({ nip, name }) {
 
         const modal = document.createElement('div');
         modal.style.cssText = `
-            background: white;
+            background: var(--color-surface-elevated);
             border-radius: 3px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
             max-width: 500px;
