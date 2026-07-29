@@ -1556,10 +1556,52 @@
       }
   }
 
+  /* Page content: fade + slight upward slide on route change.
+     Named on #main-content (not :root) so the persistent sidebar/header
+     chrome never moves — only the routed content crossfades. Old and new
+     run concurrently (that's how the API works), giving the "outgoing
+     slides up/out while incoming slides up/into place" effect at once. */
+  #main-content {
+      view-transition-name: main-page-content;
+  }
+
+  ::view-transition-new(main-page-content) {
+      animation: page-content-in 340ms var(--ease-out-expo) both;
+  }
+  ::view-transition-old(main-page-content) {
+      animation: page-content-out 320ms var(--ease-out-expo) both;
+  }
+
+  @keyframes page-content-in {
+      from {
+          opacity: 0;
+          transform: translateY(10px);
+      }
+      to {
+          opacity: 1;
+          transform: translateY(0);
+      }
+  }
+
+  @keyframes page-content-out {
+      from {
+          opacity: 1;
+          transform: translateY(0);
+      }
+      to {
+          opacity: 0;
+          transform: translateY(-10px);
+      }
+  }
+
   /* Respect reduced motion */
   @media (prefers-reduced-motion: reduce) {
       .sidebar-link--active,
       .sidebar-link--active::before {
+          animation: none;
+      }
+      ::view-transition-new(main-page-content),
+      ::view-transition-old(main-page-content) {
           animation: none;
       }
   }
