@@ -109,6 +109,13 @@
         <button id="prevMonthBtn" class="nav-btn" type="button">Poprzedni</button>
         <button id="thisMonthBtn" class="nav-btn" type="button">Ten miesiąc</button>
         <button id="nextMonthBtn" class="nav-btn" type="button">Następny</button>
+        <div class="empf-divider"></div>
+        <span class="empf-label">Pracownik:</span>
+        <div class="empf-pills" id="empPills"></div>
+        <div class="empf-dropdown" id="empDropdownWrap" hidden>
+            <span class="empf-dd-dot" id="empDropdownDot"></span>
+            <select id="employeeSelect"></select>
+        </div>
     </div>
 
     <!-- Month Calendar -->
@@ -150,13 +157,9 @@
 
 {% block extra_scripts %}
 <script>
-// The month is an all-employees overview (matches the mock): every appointment
-// is shown, coloured by employee. No per-employee filter here.
-const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
-function empColor(id) {
-    if (id == null) return '#64748b';
-    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
-}
+// EMP_COLORS / empColor() come from the shared static/js/employee-filter.js.
+// Month defaults to an all-employees overview ("Wszyscy"), coloured by
+// employee; the selector below lets a receptionist narrow to one.
 
 // Status → block background tint (mock day/month palette).
 const STATUS_BG = {
@@ -166,6 +169,10 @@ const STATUS_BG = {
 
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
+let currentEmployeeId = null;
+let allEmployees = [];
+let employees = [];
+let allMonthAppointments = [];
 let appointments = [];
 
 const PL_MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
@@ -179,22 +186,72 @@ const newAppointmentBtn = document.getElementById('newAppointmentBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const emptyState = document.getElementById('emptyState');
 const monthGrid = document.getElementById('monthGrid');
+const empPills = document.getElementById('empPills');
+const empDropdownWrap = document.getElementById('empDropdownWrap');
+const empDropdownDot = document.getElementById('empDropdownDot');
+const employeeSelect = document.getElementById('employeeSelect');
 
 document.addEventListener('DOMContentLoaded', () => {
-    const urlDate = new URLSearchParams(window.location.search).get('date');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('date');
     if (urlDate) {
         const [y, m] = urlDate.split('-').map(Number);   // local — avoid UTC shift
         currentYear = y;
         currentMonth = m - 1;
     }
+    const urlEmployeeId = urlParams.get('employee_id');
+    if (urlEmployeeId) currentEmployeeId = urlEmployeeId;
 
     updateMonthLabel();
     updateNewAppointmentLink();
     updateViewLinks();
     updateUrlState();
     setupEventListeners();
-    loadMonth();
+    loadEmployees();
 });
+
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/appointments/employees');
+        if (!response.ok) throw new Error('Failed to load employees');
+        allEmployees = await response.json();
+    } catch (error) {
+        console.error('Error loading employees:', error);
+    }
+    loadMonth();
+}
+
+function renderEmployeeSelector() {
+    EmployeeFilter.render({
+        pillsEl: empPills,
+        dropdownWrapEl: empDropdownWrap,
+        dropdownSelectEl: employeeSelect,
+        dropdownDotEl: empDropdownDot,
+        employees,
+        selectedId: currentEmployeeId,
+        allowAll: true,
+        onSelect: (id) => selectEmployee(id)
+    });
+}
+
+// "Wszyscy" (null) persists as a real state — unlike Tydzień, Miesiąc never
+// force-switches away from what the receptionist picked.
+function selectEmployee(id) {
+    currentEmployeeId = id;
+    updateViewLinks();
+    updateUrlState();
+    updateNewAppointmentLink();
+    applyEmployeeFilter();
+    renderEmployeeSelector();
+    renderMonth();
+    updateSummary();
+}
+
+function applyEmployeeFilter() {
+    appointments = currentEmployeeId
+        ? allMonthAppointments.filter(a => a.employee_id == currentEmployeeId)
+        : allMonthAppointments;
+}
 
 function setupEventListeners() {
     prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
@@ -279,13 +336,14 @@ function updateViewLinks() {
         'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
         'nav-list': '{{ url_for("main.appointments_list") }}'
     };
-    const dateStr = monthAnchorDate();
+    const params = new URLSearchParams({ date: monthAnchorDate() });
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
         if (!link) return;
         // "Dzień" always opens on today — it's a fresh entry point, not a
         // continuation of the currently displayed month.
-        link.href = id === 'nav-day' ? baseUrl : `${baseUrl}?date=${dateStr}`;
+        link.href = id === 'nav-day' ? baseUrl : `${baseUrl}?${params}`;
     });
 }
 
@@ -294,11 +352,13 @@ function updateViewLinks() {
 // back on the same month instead of resetting to the current one.
 function updateUrlState() {
     const params = new URLSearchParams({ date: monthAnchorDate() });
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     history.replaceState(null, '', `${window.location.pathname}?${params}`);
 }
 
 function updateNewAppointmentLink() {
     const params = new URLSearchParams({ from: 'month', date: formatLocalDate(new Date(currentYear, currentMonth, 1)) });
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     if (newAppointmentBtn) newAppointmentBtn.href = `/appointment/create?${params.toString()}`;
 }
 
@@ -310,7 +370,16 @@ async function loadMonth() {
         const response = await fetch(`/api/appointments?${params}`);
         if (!response.ok) throw new Error('Failed to load appointments');
         const data = await response.json();
-        appointments = (data.appointments || []).filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+        allMonthAppointments = (data.appointments || []).filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+
+        // Only offer employees with activity this month — plus whoever's
+        // currently selected, even if their month is empty, so picking them
+        // doesn't make their own pill disappear.
+        const idsWithActivity = new Set(allMonthAppointments.map(a => a.employee_id));
+        employees = allEmployees.filter(emp => idsWithActivity.has(emp.id) || emp.id == currentEmployeeId);
+
+        applyEmployeeFilter();
+        renderEmployeeSelector();
         renderMonth();
         updateSummary();
     } catch (error) {

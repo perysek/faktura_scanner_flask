@@ -190,6 +190,13 @@
         <span class="date-nav-range" id="listRangeLabel">—</span>
         <button type="button" id="listTodayBtn" class="nav-btn">Dziś</button>
         <button type="button" id="listNextBtn" class="nav-btn">Następny →</button>
+        <div class="empf-divider"></div>
+        <span class="empf-label">Pracownik:</span>
+        <div class="empf-pills" id="empPills"></div>
+        <div class="empf-dropdown" id="empDropdownWrap" hidden>
+            <span class="empf-dd-dot" id="empDropdownDot"></span>
+            <select id="employeeSelect"></select>
+        </div>
         <div class="list-search">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input type="text" id="list-search-input" placeholder="Szukaj klienta, usługi..." aria-label="Szukaj wizyt" oninput="onSearchInput(this.value)">
@@ -292,14 +299,7 @@ const VALID_TRANSITIONS = {
     'no_show': []
 };
 
-// Deterministic employee colour — the mock hardcodes per-employee colours; real
-// rows only carry employee_id, so we hash it onto a fixed palette. Same employee
-// → same dot every render, no schema/API change required.
-const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
-function empColor(id) {
-    if (id == null || id === '') return '#9ca3af';
-    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
-}
+// EMP_COLORS / empColor() come from the shared static/js/employee-filter.js.
 
 // Search + sort + date-window state. The list shows one Monday–Sunday week at a
 // time (same model as the week calendar); prev/next page ±7 days and re-fetch.
@@ -309,6 +309,9 @@ let allAbsences = [];
 let searchQuery = '';
 let sortState = { column: 'appointment_date', direction: 'asc' };
 let currentWeekStart = getMonday(new Date());
+let currentEmployeeId = null;
+let allEmployees = [];
+let employees = [];
 
 // Status modal state
 let modalAppointmentId = null;
@@ -494,6 +497,7 @@ function onSearchInput(value) {
 // subtitle + footer summary. The week window is the scope now (no pills).
 function applyFilters() {
     let rows = allAppointments;
+    if (currentEmployeeId) rows = rows.filter(a => a.employee_id == currentEmployeeId);
     const q = searchQuery.trim().toLowerCase();
     if (q) {
         rows = rows.filter(a =>
@@ -592,13 +596,13 @@ function onDatePick(value) {
 // back on the same week instead of resetting to the current one.
 function updateUrlState() {
     const params = new URLSearchParams({ date: fmtLocal(currentWeekStart) });
-    const urlEmp = new URLSearchParams(window.location.search).get('employee_id');
-    if (urlEmp) params.set('employee_id', urlEmp);
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     history.replaceState(null, '', `${window.location.pathname}?${params}`);
 }
 
 function updateNewAppointmentLink() {
     const params = new URLSearchParams({ from: 'list', date: fmtLocal(currentWeekStart) });
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     const newAppointmentBtn = document.getElementById('newAppointmentBtn');
     if (newAppointmentBtn) newAppointmentBtn.href = `/appointment/create?${params}`;
 }
@@ -691,17 +695,49 @@ function renderTable(appointments) {
 
 // ── Data loading ──────────────────────────────────────────────────────────────
 
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/appointments/employees');
+        if (!response.ok) throw new Error('Failed to load employees');
+        allEmployees = await response.json();
+    } catch (error) {
+        console.error('Error loading employees:', error);
+    }
+    loadAppointments();
+}
+
+function renderEmployeeSelector() {
+    EmployeeFilter.render({
+        pillsEl: document.getElementById('empPills'),
+        dropdownWrapEl: document.getElementById('empDropdownWrap'),
+        dropdownSelectEl: document.getElementById('employeeSelect'),
+        dropdownDotEl: document.getElementById('empDropdownDot'),
+        employees,
+        selectedId: currentEmployeeId,
+        allowAll: true,
+        onSelect: (id) => selectEmployee(id)
+    });
+}
+
+function selectEmployee(id) {
+    currentEmployeeId = id;
+    updateViewLinks();
+    updateUrlState();
+    updateNewAppointmentLink();
+    renderEmployeeSelector();
+    applyFilters();
+}
+
 async function loadAppointments() {
     const tbody = document.getElementById('appointments-tbody');
-    // Fetch exactly the current Monday–Sunday window; search + sort run
-    // client-side over it. Same start_date/end_date contract the calendars use.
+    // Fetch exactly the current Monday–Sunday window, UNFILTERED — the
+    // employee scope is applied client-side (applyFilters) so the same
+    // response also tells us which employees have activity this week, for
+    // the selector's roster.
     const params = new URLSearchParams({
         start_date: fmtLocal(currentWeekStart),
         end_date: fmtLocal(weekEndDate()),
     });
-    // Preserve the "filter to one employee" deep-link the calendar views pass.
-    const urlEmp = new URLSearchParams(window.location.search).get('employee_id');
-    if (urlEmp) params.set('employee_id', urlEmp);
 
     try {
         const absParams = new URLSearchParams({
@@ -719,6 +755,12 @@ async function loadAppointments() {
         }
         if (data.success) {
             allAppointments = data.appointments;
+            // Only offer employees with activity this week — plus whoever's
+            // currently selected, even if their week is empty, so picking
+            // them doesn't make their own pill disappear.
+            const idsWithActivity = new Set(allAppointments.map(a => a.employee_id));
+            employees = allEmployees.filter(emp => idsWithActivity.has(emp.id) || emp.id == currentEmployeeId);
+            renderEmployeeSelector();
             applyFilters();
         }
     } catch (error) {
@@ -923,7 +965,6 @@ async function restoreAppointment(restoreUrl) {
 
 // Carry the current week + employee across the Dzień/Tydzień/Miesiąc/Lista tab switch.
 function updateViewLinks() {
-    const employeeId = new URLSearchParams(window.location.search).get('employee_id');
     const baseUrls = {
         'nav-day': '{{ url_for("main.appointments_calendar") }}',
         'nav-week': '{{ url_for("main.appointments_calendar_week") }}',
@@ -931,7 +972,7 @@ function updateViewLinks() {
         'nav-list': '{{ url_for("main.appointments_list") }}'
     };
     const params = new URLSearchParams({ date: fmtLocal(currentWeekStart) });
-    if (employeeId) params.set('employee_id', employeeId);
+    if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
         if (!link) return;
@@ -943,11 +984,15 @@ function updateViewLinks() {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Optional deep-link: ?date=YYYY-MM-DD focuses the week containing that date.
-    const urlDate = new URLSearchParams(window.location.search).get('date');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('date');
     if (urlDate) {
         const [y, m, d] = urlDate.split('-').map(Number);   // local — avoid UTC shift
         currentWeekStart = getMonday(new Date(y, m - 1, d));
     }
+    const urlEmployeeId = urlParams.get('employee_id');
+    if (urlEmployeeId) currentEmployeeId = urlEmployeeId;
+
     updateViewLinks();
     updateUrlState();
     updateNewAppointmentLink();
@@ -959,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateWeekLabel();
     updateSortHeaders();
-    loadAppointments();
+    loadEmployees();
     initScrollToTopButton('scroll-top-btn');
 });
 

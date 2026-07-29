@@ -260,12 +260,7 @@ const CAN_SEND_SMS = {{ can_send_sms | tojson }};
 // enforces the same rule on the mutating endpoints.
 const CAN_WRITE_APPOINTMENTS = {{ user_write_permissions.get('appointments') | tojson }};
 
-// Deterministic per-employee avatar colour (shared palette with list/calendars).
-const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
-function empColor(id) {
-    if (id == null) return '#475569';
-    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
-}
+// EMP_COLORS / empColor() come from the shared static/js/employee-filter.js.
 
 const STATUS_LABELS = {
     'scheduled':'Zaplanowana','confirmed':'Potwierdzona','in_progress':'W trakcie',

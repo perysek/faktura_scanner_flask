@@ -25,17 +25,8 @@
     /* Poprzedni / Ten tydzień / Następny — same fixed width so the three
        captions line up evenly regardless of which one is disabled. */
     .week-nav-row .nav-btn { width: 7rem; text-align: center; white-space: nowrap; }
-    .wk-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 0.125rem; }
-    .wk-emp-label { font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); }
-    .wk-emp-pills { display: flex; gap: 0.25rem; flex-wrap: wrap; }
-    .wk-emp-pills[hidden] { display: none; }
-    .wk-pill { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; font-size: 0.6875rem; font-weight: 400; border: 1px solid var(--color-border); border-radius: 2px; background: var(--color-surface-elevated); color: var(--color-ink-muted); cursor: pointer; }
-    .wk-pill.active { font-weight: 500; }
-    .wk-pill-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .wk-emp-dropdown { position: relative; display: flex; align-items: center; }
-    .wk-emp-dropdown[hidden] { display: none; }
-    .wk-emp-dropdown .wk-dd-dot { position: absolute; left: 9px; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; }
-    .wk-emp-dropdown select { padding: 0.3125rem 0.625rem 0.3125rem 1.375rem; font-family: inherit; font-size: 0.6875rem; font-weight: 500; color: var(--color-ink); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; outline: none; max-width: 220px; }
+    /* Employee-scope selector (.empf-*) now lives in the shared @layer
+       components (static/css/input.css) — reused by Miesiąc/Lista too. */
 
     /* Week timeline card */
     .week-timeline { display: flex; flex-direction: column; background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; position: relative; }
@@ -154,11 +145,11 @@
         <button id="prevWeekBtn" class="nav-btn" type="button">Poprzedni</button>
         <button id="thisWeekBtn" class="nav-btn" type="button">Ten tydzień</button>
         <button id="nextWeekBtn" class="nav-btn" type="button">Następny</button>
-        <div class="wk-divider"></div>
-        <span class="wk-emp-label">Pracownik:</span>
-        <div class="wk-emp-pills" id="empPills"></div>
-        <div class="wk-emp-dropdown" id="empDropdownWrap" hidden>
-            <span class="wk-dd-dot" id="empDropdownDot"></span>
+        <div class="empf-divider"></div>
+        <span class="empf-label">Pracownik:</span>
+        <div class="empf-pills" id="empPills"></div>
+        <div class="empf-dropdown" id="empDropdownWrap" hidden>
+            <span class="empf-dd-dot" id="empDropdownDot"></span>
             <select id="employeeSelect"></select>
         </div>
     </div>
@@ -237,11 +228,7 @@ const WORK_START_MIN = 7 * 60;
 const WORK_END_MIN   = 22 * 60;
 const LANE_HEIGHT    = 900;
 
-const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
-function empColor(id) {
-    if (id == null) return '#64748b';
-    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
-}
+// EMP_COLORS / empColor() come from the shared static/js/employee-filter.js.
 
 const PL_MONTHS = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
 const PL_MONTHS_SHORT = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
@@ -310,7 +297,6 @@ function plWizyt(n) {
 }
 
 function setupEventListeners() {
-    employeeSelect.addEventListener('change', () => selectEmployee(employeeSelect.value));
     prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
     nextWeekBtn.addEventListener('click', () => navigateWeek(1));
     thisWeekBtn.addEventListener('click', goToThisWeek);
@@ -393,31 +379,18 @@ async function loadWeekAndFilterEmployees() {
     }
 }
 
-// ≤5 active employees → pills (single-click switch); >5 → dropdown (mock rule).
 function renderEmployeeSelector() {
-    if (employees.length === 0) {
-        empPills.hidden = false; empPills.innerHTML = '<span class="wk-emp-label">Brak wizyt w tym tygodniu</span>';
-        empDropdownWrap.hidden = true;
-        return;
-    }
-    if (employees.length <= 5) {
-        empDropdownWrap.hidden = true;
-        empPills.hidden = false;
-        empPills.innerHTML = employees.map(e => {
-            const active = e.id == currentEmployeeId;
-            const c = empColor(e.id);
-            const style = active ? `background:${c};border-color:${c};color:#fff;` : '';
-            const dot = active ? 'rgba(255,255,255,0.9)' : c;
-            return `<button type="button" class="wk-pill${active ? ' active' : ''}" data-emp="${e.id}" style="${style}"><span class="wk-pill-dot" style="background:${dot};"></span>${escapeHtml(e.full_name)}</button>`;
-        }).join('');
-        empPills.querySelectorAll('.wk-pill').forEach(b => b.addEventListener('click', () => selectEmployee(b.dataset.emp)));
-    } else {
-        empPills.hidden = true;
-        empDropdownWrap.hidden = false;
-        empDropdownDot.style.background = empColor(currentEmployeeId);
-        employeeSelect.innerHTML = employees.map(e => `<option value="${e.id}">${escapeHtml(e.full_name)}</option>`).join('');
-        employeeSelect.value = currentEmployeeId;
-    }
+    EmployeeFilter.render({
+        pillsEl: empPills,
+        dropdownWrapEl: empDropdownWrap,
+        dropdownSelectEl: employeeSelect,
+        dropdownDotEl: empDropdownDot,
+        employees,
+        selectedId: currentEmployeeId,
+        allowAll: false,
+        emptyLabel: 'Brak wizyt w tym tygodniu',
+        onSelect: (id) => selectEmployee(id)
+    });
 }
 
 function selectEmployee(id) {

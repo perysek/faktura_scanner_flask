@@ -247,13 +247,7 @@ const WORK_START_MIN = 7 * 60;   // 07:00 → y=0
 const WORK_END_MIN   = 22 * 60;  // 22:00 → y=900
 const LANE_HEIGHT    = 900;      // px
 
-// Deterministic per-employee colour (the mock hardcodes colours; real rows only
-// carry an id). Same employee → same avatar/lane colour every render.
-const EMP_COLORS = ['#1d4ed8', '#047857', '#7e22ce', '#b45309', '#0e7490', '#be185d', '#4338ca', '#15803d'];
-function empColor(id) {
-    if (id == null) return '#64748b';
-    return EMP_COLORS[Math.abs(Number(id)) % EMP_COLORS.length];
-}
+// EMP_COLORS / empColor() come from the shared static/js/employee-filter.js.
 
 // State
 let currentDate = formatLocalDate(new Date());
