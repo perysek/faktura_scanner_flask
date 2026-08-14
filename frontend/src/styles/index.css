@@ -1,0 +1,11 @@
+/* Import order matters (DESIGN.md §0): fonts, then tokens, then base reset,
+   then named components, and ONLY THEN Tailwind's utility layer — so Tailwind
+   utilities can still override spacing/layout case-by-case, but never become
+   the source of a color/radius/shadow value. */
+@import '@fontsource-variable/geist';
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

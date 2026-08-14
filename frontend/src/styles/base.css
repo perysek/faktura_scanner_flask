@@ -1,0 +1,91 @@
+/*
+ * Global reset + cross-cutting a11y/motion rules. DESIGN.md §3 (typography/
+ * input-zoom guard), §10.1 (global transition rule), §11.1 (focus-visible).
+ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  font-weight: 300;
+  background: var(--color-surface-warm);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Full-viewport-frame layout, not page-scroll layout (DESIGN.md §5). The app
+   shell owns the viewport; individual content regions own their own scroll. */
+html, body, #root {
+  height: 100%;
+}
+
+#root {
+  overflow: hidden;
+}
+
+/* Global transition rule (§10.1) — most hover/focus states don't need their
+   own `transition` declaration because of this. */
+* {
+  transition-property: background-color, border-color, color, fill, stroke,
+    opacity, box-shadow, transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Keyboard-only focus ring (§11.1) — never fires for a mouse click. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Mobile input-zoom guard (§3) — any focused control under 16px triggers an
+   iOS Safari auto-zoom on focus that never zooms back out. Never remove this;
+   extend the selector list when a new input-like class is added. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea,
+  .refined-input,
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Locks background scroll while a modal/drawer/overlay is open. */
+body.scroll-lock {
+  overflow: hidden;
+}
+
+/* Visually-hidden but screen-reader-accessible (skip links, sr-only labels). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
