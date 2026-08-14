@@ -22,9 +22,7 @@ export class ApiError extends Error {
   }
 }
 
-type JsonBody = Record<string, unknown> | unknown[];
-
-async function request<T>(method: string, path: string, body?: JsonBody): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {
     'X-Requested-With': 'XMLHttpRequest',
   };
@@ -71,7 +69,7 @@ export const api = {
     }
     return request<T>('GET', url);
   },
-  post: <T>(path: string, body?: JsonBody): Promise<T> => request<T>('POST', path, body ?? {}),
-  put: <T>(path: string, body?: JsonBody): Promise<T> => request<T>('PUT', path, body ?? {}),
+  post: <T>(path: string, body?: unknown): Promise<T> => request<T>('POST', path, body ?? {}),
+  put: <T>(path: string, body?: unknown): Promise<T> => request<T>('PUT', path, body ?? {}),
   del: <T>(path: string): Promise<T> => request<T>('DELETE', path),
 };

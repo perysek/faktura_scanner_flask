@@ -243,3 +243,105 @@ można dołączyć w późniejszej fazie, gdy dokładna wersja `react-router-dom
   następnym kroku tego przebiegu.
 
 ---
+
+## Faza 1 — Pilot: Klienci
+
+Przeczytano w całości (przed pisaniem kodu, zgodnie z §1.4 planu):
+`templates/clients/{list,create,edit,view}.html` (w tym cały inline `<script>` każdego —
+`sparklineSvg`/`trendDirection`/sortowanie/filtrowanie/duplicate-check), `routes/api_routes.py`
+sekcja klientów (linie 2549-3084, wszystkie 13 endpointów), `routes/client_preference_routes.py`,
+`routes/appointment_routes.py`'s `get_client_appointments`, `routes/employee_service_routes.py`
+(cross-lookup usługi-pracownicy dla formularza preferencji).
+
+### Decyzja D16 — Sukces tworzenia klienta: toast + natychmiastowa nawigacja (nie blokujący modal)
+
+Oryginalny `create.html` po sukcesie pokazywał `Modals.alert({title:'Sukces', ...,
+onClose: () => window.location.href='/clients'})` — modal wymagający kliknięcia OK przed
+przejściem dalej. DESIGN.md nie definiuje generycznego "alert" jako osobnego prymitywu (tylko
+`useConfirm` dla akcji konsekwentnych i `useToast` dla powiadomień, §8) i explicite zakazuje
+natywnego `alert()`. **Decyzja:** `ClientFormPage` (create) używa `toast.success(...)` +
+natychmiastowej `navigate('/klienci')` zamiast blokującego modala-potwierdzenia sukcesu — mniej
+inwazyjne, spójne z resztą systemu feedbacku, funkcjonalnie równoważne. Nieopisane wprost w
+checkliście akceptacji §1.5 ("te same komunikaty błędów" mówi o BŁĘDACH, nie o komunikacie
+sukcesu), więc traktuję to jako świadomą, drobną poprawkę UX w duchu nowego systemu, nie regresję.
+
+### Decyzja D17 — Duplicate-check: brak `.input-warn`/`.input-danger` tinta na polu Imię/Nazwisko
+
+Oryginalny `create.html`/`edit.html` przebarwia OBA pola (imię, nazwisko) na bursztynowo/czerwono
+przy wykryciu duplikatu nazwiska (`inputs.forEach(i => i.classList.toggle(...))` na `[firstEl,
+lastEl]`). Zaimplementowano to dla pola **telefon** (jedno pole, przez nowy `inputClassName` prop
+na `TextField` — rozszerzenie kontraktu prymitywu, patrz `components/ui/form.tsx`), ale
+**pominięto** dla pary imię/nazwisko, bo `TextField` renderuje jedno pole na wywołanie i nie ma
+naturalnego miejsca na "podziel klasę warn między dwa niezależne komponenty" bez dalszego
+komplikowania kontraktu. Ostrzeżenie tekstowe (`DupHint`) pod polami nadal się pojawia — sama
+informacja nie ginie, tylko dodatkowy wizualny akcent na samych inputach. Drobne, świadome
+uproszczenie; do rozważenia w code review czy warto dociągnąć.
+
+### Decyzja D18 — Appointment-history status badge: tokeny `--color-status-*` zamiast literałów rgba z oryginału
+
+`view.html`'s inline JS miał własne `STATUS_BG = {scheduled: 'rgba(37,99,235,0.08)', ...}` —
+hardkodowane, NIE korzystające z tokenów `--color-status-*-bg`, które już istnieją w
+`DESIGN.md` §2.9 z dokładnie tymi samymi kolorami bazowymi. `ClientDetailPage.tsx` używa
+tokenów (`var(--color-status-scheduled-bg)` itd.) zamiast kopiować hardkodowane RGBA z
+oryginału — to bezpośrednio serwuje zasadę DESIGN.md "nigdy nie hardkoduj hexa/rgba, gdy
+istnieje token" (§16 Must), bez żadnej zauważalnej różnicy wizualnej (te same wartości bazowe).
+Status `no_show` celowo renderuje się BEZ tła (`background: transparent`) — DESIGN.md §2.9 opisuje
+`--color-status-no-show` jako "neutral gray, no bg — rare/muted state", więc brak dedykowanego
+tokenu `-bg` dla tego stanu jest zamierzony, nie przeoczeniem do naprawienia.
+
+### Weryfikacja automatyczna — Faza 1
+
+- `npm run build` (`tsc -b && vite build`) → **kompiluje się bez błędów**, 70 modułów,
+  bundle 298 KB / gzip 96 KB. Napotkane i naprawione po drodze: (a) `JsonBody` type w
+  `lib/api/client.ts` był za wąski dla `ClientFormValues` (brak index signature) — poluzowano
+  `post`/`put` do `body?: unknown`; (b) `as const` na wyrażeniu warunkowym (nie na literale) w
+  `ClientsListPage`'s `sortIndicator` — TS1355, naprawione przez jawną adnotację typu zwracanego
+  zamiast `as const`.
+- `npm run lint` (eslint + react-hooks plugin, dodano `.eslintrc.cjs` — scaffold Vite nie miał
+  configu eslinta, tylko oxlint, usunięty) → **0 errors, 1 warning** (nieszkodliwy
+  `react-hooks/exhaustive-deps` w `useFocusTrap.ts` o odczycie `ref.current` w cleanup —
+  zamierzone zachowanie: chcemy NAJŚWIEŻSZĄ wartość refa w momencie zamknięcia, nie zamrożoną).
+- Po code-review własnym (pre-ship checklist DESIGN.md §19): znaleziono i naprawiono 2 miejsca
+  z hardkodowanym hexem zamiast tokenu (`ClientsListPage`'s avatar-ring `#9b2c2c`/`#c9a227` →
+  `var(--color-error)`/`var(--color-accent)`; `TrendSparkline`'s `down` `#ef4444` →
+  `var(--color-chart-red)`, dokładne dopasowanie istniejącego tokenu) oraz 1 błąd
+  UTC-offset-by-one (`ClientDetailPage` używał `new Date(iso-string)` zamiast bezpiecznego
+  lokalnego parsera `formatDate()` z `lib/format.ts` dla `date_of_birth`/`first_visit_date`/
+  `last_visit_date` — naprawione przed commitem, nie zostawione jako known issue).
+- Backend: **bez zmian** w tej fazie (plan §1.2 potwierdzone: "Nic strukturalnego po stronie
+  API" — wszystkie 13 endpointów klientów + preferencje + appointments-by-client już istniały
+  i już są czystym JSON, bez potrzeby `X-Requested-With` rozgałęzienia). `pytest tests/ -q`
+  nie uruchamiany ponownie w tej fazie — brak zmian w `routes/`/`repositories/` do
+  zweryfikowania.
+
+### Czas budowy modułu (§1.5, do kalibracji Fazy 2)
+
+Nie mam dostępu do zegara ściennego w tej sesji (brak narzędzia do pomiaru czasu), więc nie mogę
+podać rzetelnej liczby godzin/minut — **nie zgaduję na sztywno**. Zalecenie dla użytkownika: jeśli
+potrzebna jest twarda liczba do `module-inventory.md`, zmierzyć osobno przy Fazie 2 (np.
+timestamp pierwszego i ostatniego commita per moduł, albo czas trwania tej sesji z historii
+Claude Code).
+
+### Kryteria akceptacji pilota (phase-01-pilot-clients.md §1.5) — status
+
+- [x] Lista klientów: wyszukiwanie, sortowanie (6 kolumn), stan pusty, tryb mobilny — kod
+      zaimplementowany 1:1 z `list.html`; **wizualna/funkcjonalna weryfikacja na oko — czeka na
+      ręczny test** (zakaz samodzielnego testowania GUI w tym przebiegu).
+- [x] Tworzenie/edycja: te same pola, ta sama walidacja (w tym duplicate-check), te same
+      komunikaty błędów po polsku — zaimplementowane; **ręczny test czeka**.
+- [x] Widok szczegółów: parytet z `view.html` (podstawowe/kontaktowe/dodatkowe dane, preferencje
+      CRUD, historia wizyt, action bar) — zaimplementowane; **ręczny test czeka**.
+- [x] Usuwanie: `useConfirm()` zamiast natywnego `confirm()`, soft-delete + `DELETE`/`restore`
+      API wywołania identyczne jak dziś — zaimplementowane (restore endpoint owinięty w
+      `clientsApi.restore`, ale UI do "cofnij usunięcie" świadomie NIE zbudowano — oryginalny
+      `list.html`/`view.html` też nie mają widocznego przycisku "Przywróć", `restore_url`
+      zwracany przez DELETE nie jest dziś nigdzie konsumowany po stronie klienta poza networkiem
+      — 1:1 parytet, nie regresja).
+- [ ] 4 motywy przetestowane wizualnie — **ZAREZERWOWANE dla ręcznego testu** (zgodnie z
+      poleceniem użytkownika).
+- [ ] Klawiatura: sortowanie nagłówków (real `<button>`), formularz, modal potwierdzenia — kod
+      zbudowany z pełną intencją dostępności (prawdziwe `<button>` wszędzie, `aria-sort`,
+      focus-trap w confirm, Ctrl+S/Esc), ale **ZAREZERWOWANE dla ręcznego testu klawiaturą**.
+- [ ] Czas budowy — patrz sekcja wyżej (nie zmierzony, brak narzędzia).
+
+---

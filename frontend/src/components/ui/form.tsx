@@ -55,9 +55,13 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   helper?: string;
   fullWidth?: boolean;
   id?: string;
+  /** Extra class appended to the <input> itself — escape hatch for a
+   * page-specific soft-warning tone (e.g. live duplicate-detection) that
+   * isn't part of this primitive's error/helper contract. */
+  inputClassName?: string;
 }
 
-export function TextField({ label, error, helper, fullWidth, id, required, ...rest }: TextFieldProps) {
+export function TextField({ label, error, helper, fullWidth, id, required, inputClassName, ...rest }: TextFieldProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   return (
@@ -65,7 +69,7 @@ export function TextField({ label, error, helper, fullWidth, id, required, ...re
       <input
         id={fieldId}
         required={required}
-        className={`form-input${error ? ' error' : ''}`}
+        className={`form-input${error ? ' error' : ''}${inputClassName ? ` ${inputClassName}` : ''}`}
         {...rest}
       />
     </FieldWrapper>
