@@ -1,0 +1,116 @@
+/* Page-specific styles for ClientDetailPage — ported 1:1 from
+   templates/clients/view.html's inline <style>. */
+
+.client-detail-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.client-avatar-large {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-status-scheduled) 0%, var(--color-chart-blue-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+
+.detail-section-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) {
+  .field-grid-2 { grid-template-columns: 1fr 1fr; }
+}
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-subtle);
+  margin-bottom: 0.5rem;
+}
+.field-value { color: var(--color-ink); font-size: 0.9375rem; font-weight: 400; line-height: 1.5; }
+.field-value.empty { color: var(--color-ink-subtle); font-style: italic; }
+
+.action-bar { display: flex; gap: 0.75rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border-subtle); flex-wrap: wrap; }
+@media (max-width: 768px) {
+  .action-bar { flex-direction: column; }
+}
+
+.detail-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
+.detail-section-header .detail-section-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+.pref-table { width: 100%; border-collapse: collapse; }
+.pref-table thead { background: var(--color-surface); }
+.pref-table th { padding: 0.625rem 0.75rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-subtle); text-align: left; border-bottom: 1px solid var(--color-border); }
+.pref-table td { padding: 0.625rem 0.75rem; font-size: 0.8125rem; color: var(--color-ink); border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
+.pref-table tbody tr:last-child td { border-bottom: none; }
+.pref-table tbody tr:hover { background: var(--color-surface); }
+
+.action-link-sm { font-size: 0.75rem; color: var(--color-ink-muted); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
+.action-link-sm:hover { color: var(--color-error); }
+
+.empty-preferences { text-align: center; padding: 2rem; color: var(--color-ink-subtle); font-size: 0.8125rem; }
+
+.add-pref-form { margin-top: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.pref-form-row { display: grid; grid-template-columns: 2fr 2fr auto; gap: 0.75rem; align-items: end; margin-bottom: 0.75rem; }
+.pref-form-row.full { grid-template-columns: 1fr; }
+@media (max-width: 768px) {
+  .pref-form-row { grid-template-columns: 1fr; }
+}
+
+.appt-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.appt-table thead tr { background: var(--color-surface); }
+.appt-table th { padding: 0.5rem 0.75rem; text-align: left; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); border-bottom: 1px solid var(--color-border); }
+.appt-table th:last-child { text-align: right; }
+.appt-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
+.appt-status-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 1px; }
+
+/* On mobile the three top cards merge into one "Dane podstawowe" section. */
+@media (max-width: 640px) {
+  .basic-info-group {
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+  }
+  .basic-info-group .detail-card { border: none; box-shadow: none; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+  .basic-info-group .detail-card:first-child { padding-top: 1.5rem; }
+  .basic-info-group .detail-card:last-child { padding-bottom: 1.5rem; }
+  .basic-info-group .detail-card:not(:first-child) .detail-section-title { display: none; }
+  .basic-info-group .detail-card + .detail-card .field-grid { margin-top: 1.25rem; }
+
+  .pref-table th:nth-child(3), .pref-table td:nth-child(3),
+  .pref-table th:nth-child(4), .pref-table td:nth-child(4) { display: none; }
+  .add-pref-btn { display: none; }
+  .history-visits-card { display: none; }
+}
