@@ -1,0 +1,128 @@
+/* Page-specific styles for ClientsListPage — ported 1:1 from
+   templates/clients/list.html's inline <style> "design canvas" section
+   (everything that ISN'T already a shared components.css class). */
+
+.clients-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.stat-strip {
+  display: flex;
+  gap: 1px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.875rem;
+}
+.stat-strip-item { flex: 1; background: var(--color-surface-elevated); padding: 0.75rem 1rem; min-width: 0; }
+.stat-strip-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  margin: 0 0 0.1875rem;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip-value.green { color: var(--color-success); }
+.stat-strip-value.info { color: var(--color-info); }
+.stat-strip-value.pink { color: var(--color-pink); }
+.stat-strip-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-subtle);
+}
+@media (max-width: 640px) {
+  .stat-strip { flex-wrap: wrap; }
+  .stat-strip-item { flex-basis: calc(50% - 0.5px); }
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.filter-chips { display: flex; gap: 0.25rem; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-chip:hover { border-color: var(--color-ink-muted); color: var(--color-ink); }
+.filter-chip .chip-count { font-weight: 600; }
+.filter-chip.active { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-ink); font-weight: 500; }
+
+.search-box-inline { position: relative; flex: 1; max-width: 360px; margin-left: auto; }
+.search-box-inline svg {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--color-ink-subtle);
+  pointer-events: none;
+}
+.search-box-inline .refined-input { width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; }
+@media (max-width: 640px) {
+  .search-box-inline { max-width: none; margin-left: 0; flex-basis: 100%; }
+}
+
+.vip-tag { font-size: 0.625rem; color: var(--color-accent); font-weight: 600; letter-spacing: 0.02em; margin-left: 0.25rem; white-space: nowrap; }
+
+.next-visit-desk { line-height: 1.35; }
+.next-visit-desk .nv-emp { font-size: 0.625rem; color: var(--color-ink-subtle); margin-top: 0.0625rem; }
+
+.clients-table { min-width: 860px; table-layout: fixed; }
+.clients-table th:last-child { text-align: right; }
+
+.client-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-status-scheduled) 0%, var(--color-chart-blue-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+.client-info { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.client-info > div:last-child { min-width: 0; overflow: hidden; }
+.client-name { font-weight: 500; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-phone { font-size: 0.75rem; color: var(--color-ink-muted); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) {
+  .client-phone { display: none; }
+}
+
+.visit-count { font-weight: 500; color: var(--color-ink); }
+.noshow-count-danger { font-weight: 600; color: var(--color-error); }
+
+.trend-cell { line-height: 0; }
+
+.clients-table td.status-cell { overflow: visible; text-overflow: clip; }
+
+@media (max-width: 768px) {
+  .clients-page .page-header { flex-direction: column; align-items: flex-start; }
+}
