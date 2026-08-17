@@ -1,0 +1,34 @@
+/* Page-specific styles for ClientFormPage — ported 1:1 from
+   templates/clients/{create,edit}.html's inline duplicate-detection styles. */
+
+.client-form-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form-input.input-warn {
+  border-color: #d4a017;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+}
+.form-input.input-danger {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px rgba(155, 44, 44, 0.1);
+}
+
+.dup-hint {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  border: 1px solid #eddcaa;
+  background: #fdf9ed;
+  color: #7a5600;
+  border-radius: var(--radius-sm);
+  animation: fade-in 0.25s var(--ease-out-expo) forwards;
+}
+.dup-hint.is-danger { border-color: #f0c8c8; background: #fdf3f3; color: var(--color-error); }
+.dup-hint ul { margin: 0; padding: 0; list-style: none; }
+.dup-hint li { display: flex; align-items: baseline; gap: 0.4rem; margin-top: 0.15rem; }
+.dup-hint li:first-child { margin-top: 0; }
+.dup-hint a { color: inherit; font-weight: 600; text-decoration: underline; white-space: nowrap; }
+.dup-hint .dh-icon { flex-shrink: 0; }
