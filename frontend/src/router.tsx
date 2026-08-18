@@ -8,6 +8,17 @@ import { ComingSoonPage } from './pages/ComingSoonPage';
 import { ClientsListPage } from './pages/clients/ClientsListPage';
 import { ClientFormPage } from './pages/clients/ClientFormPage';
 import { ClientDetailPage } from './pages/clients/ClientDetailPage';
+import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { SellersListPage } from './pages/sellers/SellersListPage';
+import { SellerFormPage } from './pages/sellers/SellerFormPage';
+import { ServicesListPage } from './pages/services/ServicesListPage';
+import { ServiceFormPage } from './pages/services/ServiceFormPage';
+import { ServiceDetailPage } from './pages/services/ServiceDetailPage';
+import { ServiceCategoriesPage } from './pages/services/ServiceCategoriesPage';
+import { EmployeesListPage } from './pages/employees/EmployeesListPage';
+import { EmployeeFormPage } from './pages/employees/EmployeeFormPage';
+import { EmployeeDetailPage } from './pages/employees/EmployeeDetailPage';
+import { FormyZatrudnieniaPage } from './pages/employees/FormyZatrudnieniaPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -37,8 +48,8 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/dashboard" replace /> },
 
           // No module gate on the backend (@login_required only) — any
-          // authenticated user (D14 point 5).
-          { path: 'dashboard', element: <ComingSoonPage title="Koszty" /> },
+          // authenticated user (D14 point 5). Faza 2, moduł Dashboard/Pulpit.
+          { path: 'dashboard', element: <DashboardPage /> },
           { path: 'instrukcja', element: <ComingSoonPage title="Instrukcja obsługi" /> },
           { path: 'profil', element: <ComingSoonPage title="Profil" /> },
 
@@ -48,7 +59,12 @@ export const router = createBrowserRouter([
             element: <ProtectedRoute requireModule="invoices" />,
             children: [
               { path: 'faktury', element: <ComingSoonPage title="Lista faktur" /> },
-              { path: 'sprzedawcy', element: <ComingSoonPage title="Sprzedawcy" /> },
+              // Sprzedawcy — Faza 2. URL-e po polsku (/sprzedawcy/nowy,
+              // /sprzedawcy/:id/edytuj), wzorem Klientów z Fazy 1 — nie 1:1
+              // kopia starych angielskich /seller/create, /seller/<id>/edit.
+              { path: 'sprzedawcy', element: <SellersListPage /> },
+              { path: 'sprzedawcy/nowy', element: <SellerFormPage mode="create" /> },
+              { path: 'sprzedawcy/:id/edytuj', element: <SellerFormPage mode="edit" /> },
               { path: 'import-dokumentow', element: <ComingSoonPage title="Import dokumentów" /> },
               { path: 'historia', element: <ComingSoonPage title="Historia zmian" /> },
               { path: 'ustawienia/email', element: <ComingSoonPage title="Ustawienia" /> },
@@ -80,8 +96,14 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute requireModule="employees" />,
             children: [
-              { path: 'pracownicy', element: <ComingSoonPage title="Pracownicy" /> },
-              { path: 'formy-zatrudnienia', element: <ComingSoonPage title="Rodzaje zatrudnienia" /> },
+              // Pracownicy — Faza 2, największy moduł dotąd. URL-e po polsku,
+              // wzorem Klientów/Sprzedawców/Usług. Zakładki analityczne strony
+              // szczegółów świadomie odłożone — patrz EmployeeDetailPage.tsx.
+              { path: 'pracownicy', element: <EmployeesListPage /> },
+              { path: 'pracownicy/nowy', element: <EmployeeFormPage mode="create" /> },
+              { path: 'pracownicy/:id/edytuj', element: <EmployeeFormPage mode="edit" /> },
+              { path: 'pracownicy/:id', element: <EmployeeDetailPage /> },
+              { path: 'formy-zatrudnienia', element: <FormyZatrudnieniaPage /> },
             ],
           },
 
@@ -101,8 +123,13 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute requireModule="services" />,
             children: [
-              { path: 'uslugi', element: <ComingSoonPage title="Usługi" /> },
-              { path: 'kategorie-uslug', element: <ComingSoonPage title="Kategorie usług" /> },
+              // Usługi — Faza 2. URL-e po polsku (/uslugi/nowa, /uslugi/:id,
+              // /uslugi/:id/edytuj), wzorem Klientów/Sprzedawców.
+              { path: 'uslugi', element: <ServicesListPage /> },
+              { path: 'uslugi/nowa', element: <ServiceFormPage mode="create" /> },
+              { path: 'uslugi/:id/edytuj', element: <ServiceFormPage mode="edit" /> },
+              { path: 'uslugi/:id', element: <ServiceDetailPage /> },
+              { path: 'kategorie-uslug', element: <ServiceCategoriesPage /> },
             ],
           },
 

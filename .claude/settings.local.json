@@ -108,6 +108,14 @@
     "deny": [],
     "ask": []
   },
+  "skillOverrides": {
+    "drawio-mcp": "off",
+    "gstack-upgrade": "off",
+    "guard": "user-invocable-only",
+    "connect-chrome": "off",
+    "open-gstack-browser": "off",
+    "office-hours": "off"
+  },
   "disableAllHooks": false,
   "outputStyle": "Explanatory",
   "prefersReducedMotion": false

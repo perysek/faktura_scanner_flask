@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Icon } from '../../lib/icons/Icon';
-import { useEscapeClaim } from '../../lib/a11y/escapeScope';
+import { useEscapeClose } from '../../lib/a11y/useEscapeClose';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
 
 export type ConfirmType = 'danger' | 'warning' | 'info';
@@ -47,7 +47,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const isOpen = pending !== null;
 
-  useEscapeClaim(isOpen);
   useFocusTrap(isOpen, panelRef);
 
   const close = useCallback(
@@ -58,18 +57,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     [pending],
   );
 
-  // The layer's own Escape handler — useEscapeClaim above only reserves the
-  // key so nothing else fires; this is what actually closes the dialog.
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeydown(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return;
-      event.stopPropagation();
-      close(false);
-    }
-    document.addEventListener('keydown', handleKeydown);
-    return () => document.removeEventListener('keydown', handleKeydown);
-  }, [isOpen, close]);
+  // Claims Escape (so page-level bindings back off) and closes itself
+  // unconditionally while open — DESIGN.md §11.2.
+  useEscapeClose(isOpen, () => close(false));
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {

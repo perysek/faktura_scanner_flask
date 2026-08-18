@@ -12,6 +12,7 @@ import { Button, ButtonLink } from '../../components/ui/Button';
 import { SelectField, TextareaField } from '../../components/ui/form';
 import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatPhone } from '../../lib/format';
+import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'Zaplanowana',
@@ -67,6 +68,7 @@ export function ClientDetailPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = auth.hasModuleWrite('clients');
+  useEscapeBack('/klienci');
 
   const clientState = useApiData(() => clientsApi.get(clientId), [clientId]);
   const preferencesState = useApiData(() => clientsApi.preferences(clientId), [clientId]);
@@ -337,6 +339,7 @@ export function ClientDetailPage() {
         )}
 
         {preferencesState.data && preferencesState.data.length > 0 ? (
+          <div className="scroll-thin" style={{ maxHeight: '320px' }}>
           <table className="pref-table">
             <thead>
               <tr>
@@ -371,6 +374,7 @@ export function ClientDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <div className="empty-preferences">
             <Icon name="person_search" size="2rem" />
@@ -397,7 +401,7 @@ export function ClientDetailPage() {
             <p style={{ color: 'var(--color-ink-subtle)', fontSize: '0.8125rem', marginTop: '0.5rem' }}>Brak historii wizyt</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="scroll-thin" style={{ maxHeight: '420px' }}>
             <table className="appt-table">
               <thead>
                 <tr>
@@ -411,7 +415,13 @@ export function ClientDetailPage() {
               </thead>
               <tbody>
                 {appointmentsState.data.map((a) => (
-                  <tr key={a.id}>
+                  // "Szczegóły" is a plain <a href> — Wizyty is still a Jinja
+                  // page, not an SPA route (router.tsx) — row-click mirrors it
+                  // via window.location, same as clicking the icon would.
+                  <tr key={a.id} className="row-clickable" onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('a')) return;
+                    window.location.href = `/appointment/${a.id}`;
+                  }}>
                     <td style={{ fontWeight: 500 }}>{formatAppointmentDate(a.appointment_date)}</td>
                     <td style={{ color: 'var(--color-ink-muted)' }}>
                       {a.start_time?.slice(0, 5)}–{a.end_time?.slice(0, 5)}

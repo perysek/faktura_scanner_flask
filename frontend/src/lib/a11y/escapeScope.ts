@@ -39,15 +39,26 @@ export function useEscapeClaim(isOpen: boolean): void {
   }, [isOpen]);
 }
 
-export function useEscapeAction(action: () => void, enabled = true): void {
+/**
+ * `guardTyping` (default true) skips the action while focus is inside an
+ * INPUT/TEXTAREA/SELECT — ported from the original app's create/edit Escape
+ * handlers (e.g. templates/employees/create.html), which never let Escape
+ * discard an in-progress form field. Pass `false` for bindings that should
+ * fire regardless (rare — most "go back"/"cancel" actions want the guard).
+ */
+export function useEscapeAction(action: () => void, enabled = true, guardTyping = true): void {
   useEffect(() => {
     if (!enabled) return;
     function handleKeydown(event: KeyboardEvent) {
       if (event.key !== 'Escape') return;
       if (isEscapeClaimed()) return;
+      if (guardTyping) {
+        const tag = (event.target as HTMLElement | null)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      }
       action();
     }
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
-  }, [action, enabled]);
+  }, [action, enabled, guardTyping]);
 }

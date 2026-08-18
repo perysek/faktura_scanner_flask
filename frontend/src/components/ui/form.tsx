@@ -7,6 +7,7 @@ import type {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
+import { useEscapeAction } from '../../lib/a11y/escapeScope';
 
 /**
  * Typed form primitives — DESIGN.md §7. Never hand-roll a raw
@@ -200,10 +201,23 @@ export interface FormActionsProps {
   cancelHref?: string;
   onCancel?: () => void;
   cancelLabel?: string;
+  /** Extra button(s) rendered in the SAME row, between Submit and Cancel —
+   * e.g. SellerFormPage's "Propaguj zmiany". Keeps the plain submit+cancel
+   * shape the default (and the only thing every other form page has to
+   * think about) while still giving a page room for one page-specific
+   * extra action without it falling outside `.form-actions`'s flex row
+   * (a bare sibling `<Button>` after this component renders on its own
+   * line, unaligned with — and with no gap from — the row above: exactly
+   * what happened here before this prop existed). */
+  middleActions?: ReactNode;
 }
 
 /** Submit + optional cancel button row. Submit shows a "Zapisywanie…"-style
- * busy label when isLoading (§7). */
+ * busy label when isLoading (§7). The "Anuluj" button also binds Escape to
+ * the same action — DESIGN.md §11.2, ported from the original app's
+ * create/edit inline Escape handlers (e.g. templates/employees/edit.html) —
+ * centralised here so every form page gets it for free instead of
+ * reimplementing it per page. */
 export function FormActions({
   submitLabel = 'Zapisz',
   savingLabel = 'Zapisywanie…',
@@ -211,22 +225,22 @@ export function FormActions({
   cancelHref,
   onCancel,
   cancelLabel = 'Anuluj',
+  middleActions,
 }: FormActionsProps) {
   const navigate = useNavigate();
+  const handleCancel = cancelHref ? () => navigate(cancelHref) : onCancel;
+  useEscapeAction(handleCancel ?? (() => {}), !!handleCancel);
   return (
     <div className="form-actions">
       <Button type="submit" variant="primary" icon="save" isLoading={isLoading} loadingText={savingLabel}>
         {submitLabel}
       </Button>
-      {cancelHref ? (
-        <Button type="button" variant="secondary" onClick={() => navigate(cancelHref)}>
+      {middleActions}
+      {handleCancel && (
+        <Button type="button" variant="secondary" onClick={handleCancel}>
           {cancelLabel}
         </Button>
-      ) : onCancel ? (
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          {cancelLabel}
-        </Button>
-      ) : null}
+      )}
     </div>
   );
 }

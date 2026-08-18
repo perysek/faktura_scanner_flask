@@ -7,12 +7,12 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 
 | Moduł | Trasy Jinja (plik) | API (plik) | Gotowość API | Złożoność UI (szac.) | Status |
 |---|---|---|---|---|---|
-| **Klienci** | `main_routes.py` | `api_routes.py` | Kompletna | Średnia | **Pilot — Faza 1** |
-| Sprzedawcy | `main_routes.py` | `api_routes.py` | Kompletna | Średnia | Nie rozpoczęto |
-| Usługi + kategorie | `main_routes.py` | `api_routes.py` | Kompletna | Średnia | Nie rozpoczęto |
-| Pracownicy + formy zatrudnienia | `main_routes.py` | `api_routes.py` | Kompletna | Wysoka (mobile-pin, bulk-services, direct-reports) | Nie rozpoczęto |
+| **Klienci** | `main_routes.py` | `api_routes.py` | Kompletna | Średnia | **✅ Zakończony — Faza 1 (zatwierdzony 2026-08-17; UI/nawigacja/tabele/karty statystyk ponownie ręcznie zweryfikowane na żywo 2026-08-18 przy okazji UX-passu, patrz log)** |
+| Sprzedawcy | `main_routes.py` | `api_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — patrz niżej) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
+| Usługi + kategorie | `main_routes.py` | `api_routes.py` + `service_addon_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — 4 pod-strony, patrz log) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
+| Pracownicy + formy zatrudnienia | `main_routes.py` | `api_routes.py` | Kompletna (+2 nowe endpointy 2026-08-17: `direct-reports`, `user-options`) | Wysoka (mobile-pin, bulk-services, direct-reports; analizy/wykresy świadomie odłożone) | **✅ Zbudowany (Faza 2, 2026-08-18) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
 | Faktury | `main_routes.py` + upload | `api_routes.py` | Kompletna (+PDF/email/export) | Wysoka (OCR upload flow) | Nie rozpoczęto |
-| Dashboard/Pulpit | `main_routes.py` | `api_routes.py` | Kompletna (5 widgetów) | Niska–średnia | Nie rozpoczęto |
+| Dashboard/Pulpit | `main_routes.py` | `api_routes.py` | Kompletna (5 widgetów) | Niska–średnia | **✅ Zbudowany (Faza 2, 2026-08-17) — czeka na ręczny test** |
 | Wizyty (lista + CRUD) | `main_routes.py`? | `appointment_routes.py` (35 jsonify, 0 render) | Prawdopodobnie kompletna | — | **Wymaga audytu** |
 | Kalendarz wizyt (tydzień/miesiąc) | `main_routes.py`? | `appointment_routes.py` | Prawdopodobnie kompletna | **Wysoka** (drag&drop, widok siatki) | **Wymaga audytu** |
 | Analityka / KPI / Przychody | `main_routes.py` | `analytics_routes.py` (44 jsonify, 0 render) | Prawdopodobnie kompletna | Wysoka (wykresy — patrz `dataviz` skill przy budowie) | **Wymaga audytu** |
@@ -26,6 +26,24 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 | Booking (publiczne, bez logowania) | `booking_routes.py` (12/1) | częściowo | Nieznana | Nieznana | **Poza zakresem? — patrz `plan.md` §5 pkt 1** |
 | Landing/public | `templates/landing`, `templates/public` | brak dedykowanego | — | — | **Poza zakresem? — patrz `plan.md` §5 pkt 1** |
 | Mobile API (`mobile_routes.py`) | brak `templates/mobile/` znalezionego | `mobile_routes.py` (15/0) | — | — | **Prawdopodobnie inna aplikacja, nie ten frontend — potwierdzić i wykluczyć** |
+
+## Korekta złożoności — Sprzedawcy (2026-08-17, przy starcie budowy w Fazie 2)
+
+Etykieta "Średnia" pochodziła z samego audytu `plan.md` §0 (liczba `jsonify`/`render_template`) —
+sygnał, nie mini-gap-analysis. Po realnym przeczytaniu `templates/sellers/list_refined.html`
+(1308 linii — CSS 445 / HTML 200 / JS ~655) okazuje się, że to **trzy osobne pod-funkcje** na
+jednej stronie, nie jeden wzorzec list+CRUD jak Klienci:
+
+1. Lista sprzedawców + CRUD (sort/search/stats-bar) — analogiczne do Klientów.
+2. **Workflow synchronizacji** z fakturami: `syncSellers()` → osobny pełnoekranowy widok wyników
+   (`sync-results-view`) z dwiema tabelami — "Niezgodności nazw" (fix per-wiersz: użyj nazwy z bazy
+   / z faktury) i "Brakujący sprzedawcy" (dodaj per-wiersz) — patrz `plan.md` §0 "sync (3 warianty)".
+3. **Panel haseł PDF** (`openPasswordsPanel()`) — osobne, w pełni odrębne CRUD na
+   `SellerPdfPassword` (`database/models.py`), wysuwane jako panel nad listą sprzedawców, nie
+   wspomniane w ogóle w tej tabeli przed tą korektą.
+
+Budowa w React: trzy odrębne komponenty/podstrony (`SellersListPage`, `SellerSyncResultsView`,
+`SellerPasswordsPanel`), nie jeden `SellersListPage` na wzór Klientów.
 
 ## Gotowe prompty do audytu modułów oznaczonych "Wymaga audytu"
 

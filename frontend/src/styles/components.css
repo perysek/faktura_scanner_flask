@@ -427,11 +427,24 @@
 }
 .search-wrapper {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
 @media (max-width: 768px) {
-  .search-wrapper { flex-direction: column; }
+  .search-wrapper { flex-direction: column; align-items: stretch; }
+}
+/* `.form-select` is written for block-context form grids (`width: 100%`
+   filling its grid cell). Reused as-is inside this flex row, that `width:
+   100%` is read as a flex-basis of 100% of the ROW — every filter then
+   demands the whole row's width and `flex-wrap: wrap` drops each one onto
+   its own line, regardless of viewport (Pracownicy/Usługi "1-column"
+   bug). Filters/checkboxes here should size to their own content instead —
+   only the free-text search box (`.search-input-wrap`, `flex: 1`) grows to
+   fill the row. */
+.search-wrapper > .form-select {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 .refined-input {
@@ -464,12 +477,112 @@
 }
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
+/* `.table-container` is the shared scroll region for every data table in the
+   app (DESIGN.md §20 "Tabele przewijalne"): sticky `<thead>`, bounded height
+   with an internal scrollbar (never the browser's unstyled native one), and
+   — for pages built around one primary table (`.page-fills-viewport` on the
+   page root, desktop-only) — the table stretches to fill the remaining
+   viewport height instead of letting the whole page grow past it. Smaller
+   tables nested inside a Detail page (price history, appointment history,
+   …) just get an explicit `max-height` on this same class instead — see
+   each page for its own bound. */
 .table-container {
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   overflow: auto;
+}
+/* `.scroll-thin` is the same custom scrollbar without the card chrome
+   (border/bg/shadow) — for a scroll region already nested inside another
+   card, e.g. EmployeeDetailPage's balance-adjustment history. */
+.table-container,
+.scroll-thin {
+  /* Firefox custom scrollbar — thin track/thumb from theme tokens. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+/* Custom scrollbar — WebKit/Blink (Chrome, Edge, Safari). Matches the
+   Firefox rule above token-for-token; never the browser's default chrome. */
+.table-container::-webkit-scrollbar,
+.scroll-thin::-webkit-scrollbar { width: 10px; height: 10px; }
+.table-container::-webkit-scrollbar-track,
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+.table-container::-webkit-scrollbar-thumb,
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 999px;
+  border: 2px solid var(--color-surface-elevated);
+}
+.table-container::-webkit-scrollbar-thumb:hover,
+.scroll-thin::-webkit-scrollbar-thumb:hover { background-color: var(--color-ink-subtle); }
+.table-container::-webkit-scrollbar-corner,
+.scroll-thin::-webkit-scrollbar-corner { background: transparent; }
+.scroll-thin { overflow: auto; }
+
+/* Opt-in on a page's root element (alongside `.refined-page`) — desktop
+   only (§ mobile always keeps natural page scroll, see media query below;
+   nested scroll regions are a touch-UX papercut on phones). Header/stats/
+   search stay pinned at their natural height; the LAST `.table-container`
+   child stretches to eat the rest of the viewport and scrolls internally. */
+@media (min-width: 1024px) {
+  .page-fills-viewport {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* Two DOM shapes to support: `.table-container` as a direct child of the
+     page root (Klienci/Sprzedawcy/Usługi/Pracownicy lists), or nested inside
+     a wrapping `.form-card` alongside a section title (Kategorie usług/Formy
+     zatrudnienia, which stack a create-form card above the table card).
+     Either way, the block holding the table becomes the flexible region
+     that eats the remaining viewport height.
+
+     IMPORTANT: `.table-container` itself must keep `overflow: auto` (its
+     base rule below) — it's the element that actually scrolls. Only the
+     WRAPPING `.form-card` (shape 2) gets `overflow: hidden`, because IT
+     isn't the scroll region, its child `.table-container` is; giving both
+     shapes the same `overflow: hidden` here was the bug that made every
+     table's scrollbar disappear (content was clipped, not scrolled). */
+  .page-fills-viewport > .table-container {
+    flex: 1;
+    min-height: 0;
+  }
+  .page-fills-viewport > .form-card:has(> .table-container) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page-fills-viewport > .form-card:has(> .table-container) > .table-container {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* Shape 2 above (`.table-container` nested inside a wrapping `.form-card`,
+   Kategorie usług/Formy zatrudnienia) also needs a purely visual fix, at
+   every viewport width, not just desktop: `.form-card`'s own `padding:
+   1rem 1.125rem` (components.css "Card shell") applies to ALL its
+   children, so the table sat inset inside that padding — its own
+   border/background/shadow drawn a second time inside the outer card's,
+   a visible "box inside a box." The negative margins below exactly cancel
+   that padding so the table bleeds flush to the form-card's edges, and it
+   drops its own now-redundant chrome since the wrapping form-card already
+   supplies it — same idea as `.scroll-thin` (§20.1: a table already inside
+   another card that provides the chrome), applied here as an override
+   instead of a class swap so the shared scrollbar rules (keyed off
+   `.table-container`) still apply. Only the section title above keeps the
+   card's normal padding. Must stay in sync with `.form-card`'s padding
+   value above. */
+.form-card > .table-container {
+  margin: 0 -1.125rem -1rem;
+  border: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: none;
 }
 
 .refined-table {
@@ -485,6 +598,13 @@
   letter-spacing: 0.12em;
   color: var(--color-ink-subtle);
   border-bottom: 1px solid var(--color-border);
+  /* Sticky header row (DESIGN.md §20) — background must live on the <th>
+     itself, not just the (non-sticky) <thead>, or scrolled-past rows show
+     through the gaps between sticky cells. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
 }
 .refined-table td {
   padding: 0.75rem 1rem;
@@ -498,6 +618,10 @@
 .refined-table tbody tr { transition: background-color 0.2s ease; }
 .refined-table tbody tr:hover { background: var(--color-surface); }
 .refined-table tbody tr:last-child td { border-bottom: none; }
+/* Row acts as the primary "view" (or "edit", if the row has no separate view
+   action) affordance — DESIGN.md §20. Buttons/links inside the row stop
+   propagation so their own, more specific action still wins. */
+.refined-table tbody tr.row-clickable { cursor: pointer; }
 
 .th-sortable { cursor: pointer; user-select: none; transition: color 0.2s ease; }
 .th-sortable:hover { color: var(--color-ink); }
@@ -1061,7 +1185,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
   border: none;
   cursor: pointer;
   color: var(--sidebar-heading);
-  font-size: 0.6875rem;
+  font-size: 1rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
