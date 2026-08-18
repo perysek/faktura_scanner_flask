@@ -19,6 +19,14 @@ import { EmployeesListPage } from './pages/employees/EmployeesListPage';
 import { EmployeeFormPage } from './pages/employees/EmployeeFormPage';
 import { EmployeeDetailPage } from './pages/employees/EmployeeDetailPage';
 import { FormyZatrudnieniaPage } from './pages/employees/FormyZatrudnieniaPage';
+import { FakturyListPage } from './pages/faktury/FakturyListPage';
+import { FakturaFormPage } from './pages/faktury/FakturaFormPage';
+import { WizytyListPage } from './pages/appointments/WizytyListPage';
+import { WizytaDetailPage } from './pages/appointments/WizytaDetailPage';
+import { WizytaFormPage } from './pages/appointments/WizytaFormPage';
+import { CalendarDayPage } from './pages/appointments/CalendarDayPage';
+import { CalendarWeekPage } from './pages/appointments/CalendarWeekPage';
+import { CalendarMonthPage } from './pages/appointments/CalendarMonthPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -58,7 +66,13 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute requireModule="invoices" />,
             children: [
-              { path: 'faktury', element: <ComingSoonPage title="Lista faktur" /> },
+              // Faktury — Faza 2, piąty moduł, największa dotąd złożoność
+              // backendu. Tylko list+CRUD+konflikt-sprzedawcy+sync+eksport —
+              // import-dokumentow/historia/ustawienia-email zostają
+              // ComingSoonPage, patrz implementation-log.md (decyzja o zakresie).
+              { path: 'faktury', element: <FakturyListPage /> },
+              { path: 'faktury/nowa', element: <FakturaFormPage mode="create" /> },
+              { path: 'faktury/:id/edytuj', element: <FakturaFormPage mode="edit" /> },
               // Sprzedawcy — Faza 2. URL-e po polsku (/sprzedawcy/nowy,
               // /sprzedawcy/:id/edytuj), wzorem Klientów z Fazy 1 — nie 1:1
               // kopia starych angielskich /seller/create, /seller/<id>/edit.
@@ -76,7 +90,19 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute requireModule="appointments" />,
             children: [
-              { path: 'wizyty', element: <ComingSoonPage title="Wizyty" /> },
+              // Wizyty + Kalendarz — Faza 2, szósty moduł, największy w apce
+              // (module-inventory.md). Zakres: lista, widok szczegółów,
+              // create/edit, 3 widoki kalendarza (dzień/tydzień/miesiąc) +
+              // boczny pasek month-cards (dzień+lista). Poza zakresem:
+              // integracja z nieobecnościami, SMS na widoku szczegółów,
+              // "rozlicz przeszłe wizyty" — patrz implementation-log.md.
+              { path: 'wizyty', element: <WizytyListPage /> },
+              { path: 'wizyty/kalendarz', element: <CalendarDayPage /> },
+              { path: 'wizyty/kalendarz/tydzien', element: <CalendarWeekPage /> },
+              { path: 'wizyty/kalendarz/miesiac', element: <CalendarMonthPage /> },
+              { path: 'wizyty/nowa', element: <WizytaFormPage mode="create" /> },
+              { path: 'wizyty/:id/edytuj', element: <WizytaFormPage mode="edit" /> },
+              { path: 'wizyty/:id', element: <WizytaDetailPage /> },
               { path: 'analiza-biznesowa', element: <ComingSoonPage title="Analiza biznesowa" /> },
               { path: 'wskazniki-biznesowe', element: <ComingSoonPage title="Wskaźniki biznesowe" /> },
             ],

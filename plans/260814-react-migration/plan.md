@@ -1,9 +1,11 @@
 # Plan: migracja GUI z Flask/Jinja2/vanilla JS na React (big-bang)
 
-**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-17)
+**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-18)
 **Status:** Faza 0 (fundamenty) i Faza 1 (pilot: Klienci) zaimplementowane, ręcznie przetestowane
 i **zatwierdzone przez użytkownika 2026-08-17** — szczegóły weryfikacji w `implementation-log.md`.
-Faza 2 (rollout pozostałych modułów) jeszcze nie wystartowała.
+Faza 2 (rollout pozostałych modułów) **w toku** — Dashboard, Sprzedawcy, Usługi, Pracownicy,
+Faktury (częściowo) i Wizyty+Kalendarz (częściowo, największy moduł w apce) zbudowane;
+szczegółowy status per moduł w `module-inventory.md`.
 **Reguły docelowego stacku:** `DESIGN.md` (React 18 + TS + Vite + React Router, tokeny/komponenty
 opisane tam §0–§19) — **traktowany jako źródło prawdy dla tego, JAK ma wyglądać i działać nowy
 frontend**, nie dla tego, co dziś istnieje w backendzie (to ten dokument, `plan.md`, ustala).

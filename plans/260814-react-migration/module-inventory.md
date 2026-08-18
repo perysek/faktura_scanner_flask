@@ -11,10 +11,10 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 | Sprzedawcy | `main_routes.py` | `api_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — patrz niżej) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
 | Usługi + kategorie | `main_routes.py` | `api_routes.py` + `service_addon_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — 4 pod-strony, patrz log) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
 | Pracownicy + formy zatrudnienia | `main_routes.py` | `api_routes.py` | Kompletna (+2 nowe endpointy 2026-08-17: `direct-reports`, `user-options`) | Wysoka (mobile-pin, bulk-services, direct-reports; analizy/wykresy świadomie odłożone) | **✅ Zbudowany (Faza 2, 2026-08-18) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
-| Faktury | `main_routes.py` + upload | `api_routes.py` | Kompletna (+PDF/email/export) | Wysoka (OCR upload flow) | Nie rozpoczęto |
+| Faktury | `main_routes.py` + upload | `api_routes.py` | Kompletna (+PDF/email/export) | Wysoka (OCR upload flow) | **✅ Częściowo zbudowany (Faza 2, 2026-08-18) — lista + CRUD + konflikt sprzedawcy + sync + eksport gotowe; podgląd PDF w panelu, `/import-dokumentow` (OCR+SSE), `/historia`, `/ustawienia/email` świadomie odłożone jako osobny przebieg, patrz korekta niżej i implementation-log.md** |
 | Dashboard/Pulpit | `main_routes.py` | `api_routes.py` | Kompletna (5 widgetów) | Niska–średnia | **✅ Zbudowany (Faza 2, 2026-08-17) — czeka na ręczny test** |
-| Wizyty (lista + CRUD) | `main_routes.py`? | `appointment_routes.py` (35 jsonify, 0 render) | Prawdopodobnie kompletna | — | **Wymaga audytu** |
-| Kalendarz wizyt (tydzień/miesiąc) | `main_routes.py`? | `appointment_routes.py` | Prawdopodobnie kompletna | **Wysoka** (drag&drop, widok siatki) | **Wymaga audytu** |
+| Wizyty (lista + CRUD) | `main_routes.py` | `appointment_routes.py` (28 endpointów) | Kompletna | **Bardzo wysoka** (skorygowano 2026-08-18 — 9449 linii w 10 szablonach, patrz korekta niżej) | **✅ Zbudowany częściowo (Faza 2, 2026-08-18) — lista + widok szczegółów + create/edit gotowe** |
+| Kalendarz wizyt (dzień/tydzień/miesiąc) | `main_routes.py` | `appointment_routes.py` | Kompletna | **Wysoka, ale BEZ drag&drop** (odkrycie audytu 2026-08-18 — patrz korekta niżej) | **✅ Zbudowany (Faza 2, 2026-08-18)** — 3 widoki + boczny pasek month-cards |
 | Analityka / KPI / Przychody | `main_routes.py` | `analytics_routes.py` (44 jsonify, 0 render) | Prawdopodobnie kompletna | Wysoka (wykresy — patrz `dataviz` skill przy budowie) | **Wymaga audytu** |
 | Nieobecności (wnioski) | `absence` blueprint | `absence_routes.py` (40/2) | Prawdopodobnie kompletna | Średnia | **Wymaga audytu** |
 | Bilanse urlopowe | `absence_balance` blueprint | `absence_balance_routes.py` (39/1) | Prawdopodobnie kompletna | Średnia | **Wymaga audytu** |
@@ -44,6 +44,64 @@ jednej stronie, nie jeden wzorzec list+CRUD jak Klienci:
 
 Budowa w React: trzy odrębne komponenty/podstrony (`SellersListPage`, `SellerSyncResultsView`,
 `SellerPasswordsPanel`), nie jeden `SellersListPage` na wzór Klientów.
+
+## Korekta zakresu — Faktury (2026-08-18, przy starcie budowy w Fazie 2)
+
+Etykieta "Wysoka (OCR upload flow)" z audytu `plan.md` §0 okazała się, po realnym przeczytaniu
+`templates/invoices/{list_refined,create,edit,upload}.html` (5074 linii łącznie) +
+`routes/upload_routes.py` (staging/SSE-streaming `process`/`finalize`), niedoszacowaniem — to
+największy moduł Fazy 2 dotąd, wyraźnie złożony z **dwóch niezależnych rodzin funkcji**, nie
+jednego wzorca list+form jak Klienci/Sprzedawcy/Usługi/Pracownicy:
+
+1. **List+CRUD+konflikt sprzedawcy+sync+eksport** — dokładnie ten sam wzorzec co reszta Fazy 2,
+   tylko z jednym naprawdę nowym elementem: dwuetapowy przepływ 409 "konflikt sprzedawcy"
+   (`seller_conflict`/`seller_info` z `POST/PUT /api/invoices*`) wymagający modala decyzji +
+   resubmitu (multipart dla create, JSON przez `/confirm-seller` dla edit) — nieobecny w żadnym
+   innym module Fazy 2. Osobny mini-sync (`/api/invoices/seller-sync-check|apply`, prostszy niż
+   Sprzedawców własny `/api/sellers/sync` — tylko łączenie z ISTNIEJĄCYM sprzedawcą, nigdy
+   tworzenie nowego) zbudowany jako modal (`SellerSyncModal.tsx`), nie osobna podstrona.
+2. **Import/OCR** (`/import-dokumentow` — staging wielu plików, SSE-streamowany progress OCR,
+   finalize, podgląd PDF w bocznym panelu, `/historia`, `/ustawienia/email`) — architektonicznie
+   zupełnie inny rodzaj UI (streaming, wieloplikowy staging), bliższy Kalendarzowi wizyt
+   (drag&drop) niż wzorcowi list+form. **Świadomie odłożone jako osobny, następny przebieg** —
+   patrz `implementation-log.md` dla pełnego uzasadnienia i listy tego, co konkretnie zostało poza
+   zakresem tej sesji.
+
+Zbudowane w tym przebiegu: `FakturyListPage`/`FakturaFormPage`/`SellerSyncModal` (`pages/faktury/`),
+pełny `invoicesApi` (`lib/api/invoices.ts`), typy w `types/invoice.ts`, plus dwie zmiany
+infrastrukturalne w `lib/api/client.ts` (pierwsze w SPA wsparcie dla `FormData`/upload plików;
+`ApiError.data` niosące pełne ciało JSON błędu — potrzebne, żeby czytać `seller_conflict`/
+`seller_info` ze statusu 409, nie tylko string wiadomości).
+
+## Korekta zakresu — Wizyty + Kalendarz (2026-08-18, przy starcie budowy w Fazie 2)
+
+Audyt z `module-inventory.md`'s prompta dla "Kalendarz wizyt" zakładał drag&drop jako
+najwyższe ryzyko. Po realnym przeczytaniu 10 szablonów (`templates/appointments/*.html`,
+9449 linii łącznie) + `routes/appointment_routes.py` (28 endpointów) okazało się:
+
+1. **Żaden z 3 widoków kalendarza nie ma drag&drop.** `calendar.html`/`calendar_week.html`/
+   `calendar_month.html` renderują bloki wizyt jako pozycjonowane czasowo `<div>`y
+   (position:absolute wg godziny), klikalne — klik = `window.location.href` do
+   `/appointment/:id`. Zero `dragstart`/`draggable`/`ondrop` w całym katalogu. Ryzyko z
+   audytu wstępnego było przesadzone w JEDNYM wymiarze (interakcja), ale
+   niedoszacowane w INNYM: to i tak największy moduł w apce po prostu z racji
+   objętości — 10 szablonów, nie 3-4 jak inne moduły.
+2. Moduł to w rzeczywistości **znacznie więcej niż "lista + kalendarz"**: osobny
+   "power editor" dla superadmina (`superadmin_edit.html` 1125 linii +
+   `superadmin_edit_table.html` 1666 linii, gated `data_correction`, już poprawnie
+   poza zakresem w routerze), mobilny self-service pracownika (`my_visits.html`,
+   `/my-visits`, bez bramki modułowej — inna apka), integracja z nieobecnościami
+   (reassign/reschedule/cancel-for-absence — `@absence_management_required`, jawnie
+   oznaczone w kodzie jako "Faza 3" supervisor-tool), wysyłka/log SMS.
+
+**Zbudowane w tym przebiegu:** lista (tydzień + tryb "day-chain" z bocznego paska),
+widok szczegółów, create/edit, 3 widoki kalendarza, boczny pasek month-cards
+(`calendar-sidebar-redesign-prompt.md`, wpięty w dzień-widok i listę na życzenie
+użytkownika). **Poza zakresem** (świadomie, do osobnego przebiegu): integracja z
+nieobecnościami, wysyłka/log SMS na widoku szczegółów, "Rozlicz przeszłe wizyty"
+(skaner `past-pending`/`past-status`), `status-events` polling (globalne
+powiadomienia, nie specyficzne dla tych stron). Pełna lista decyzji i uzasadnień w
+`implementation-log.md`.
 
 ## Gotowe prompty do audytu modułów oznaczonych "Wymaga audytu"
 
