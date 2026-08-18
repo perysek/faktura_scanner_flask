@@ -11,6 +11,18 @@
   margin: 0 auto;
 }
 
+/* Bug fix, found while building Faktury (module-inventory.md, 2026-08-18):
+ * `.search-wrapper` below has NO local override here, so it was inheriting
+ * the DIFFERENT global `.search-wrapper` from components.css (a multi-filter
+ * flex ROW for the Klienci-family pages) — `display:flex`, no `position:
+ * relative`. `.search-icon` right below IS `position: absolute`, so without
+ * a positioned ancestor it was landing relative to the nearest ancestor that
+ * DOES set `position` (whichever one that is up the tree — not this search
+ * box), while `.search-input` still reserved left padding for an icon that
+ * visually wasn't there. Scoped to `.sellers-page` only — SellerFormPage.tsx
+ * doesn't use this class, so this can't affect anything else. */
+.sellers-page .search-wrapper { position: relative; }
+
 .header-actions {
   display: flex;
   gap: 0.5rem;

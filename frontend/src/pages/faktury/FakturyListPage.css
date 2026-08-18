@@ -1,0 +1,314 @@
+/* Faktury — lista. Ported 1:1 from templates/invoices/list_refined.html's
+ * <style> block (module-inventory.md: piąty moduł Fazy 2) — tylko klasy
+ * WYŚWIETLANIA DANYCH i filter-pills; mechanika samej tabeli (.table-container/
+ * .refined-table/.th-sortable/.tbody-scroll/sticky <thead>) to już gotowy
+ * globalny komponent (DESIGN.md §20, components.css) z przebudowy tabel
+ * 2026-08-18 — oryginalny hand-rolled dwu-tabelowy sticky-header hack z
+ * Jinja NIE jest tu powielany, bo React ma już generyczne rozwiązanie tego
+ * samego problemu. `.row-actions`/`.action-btn` (nie kanoniczne globalne
+ * `.action-icons`/`.action-icon-btn` z Klientów) świadomie, bo TA konkretna
+ * strona (`list_refined.html`) ma własne, inne nazwy klas niż `clients/list.html`
+ * — ten sam wzorzec co SellersListPage.css (też "_refined" rodzina szablonów),
+ * małe util-klasy duplikowane per-moduł, nie promowane do components.css. */
+
+.invoice-number {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.seller-name {
+  font-weight: 400;
+  color: var(--color-ink);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nip-number {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.date-value {
+  color: var(--color-ink-muted);
+  font-weight: 300;
+}
+
+.amount-value {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.currency-code {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-ink-subtle);
+  margin-left: 0.25rem;
+}
+
+.col-amount { text-align: right; }
+
+/* Search box — deliberately its own `.invoice-search-*` names, NOT the
+ * `.search-wrapper`/`.search-bar` classes SellersListPage.css uses. Those
+ * collide with a DIFFERENT, unrelated global `.search-wrapper` in
+ * components.css (a multi-filter flex ROW for the Klienci-family pages —
+ * `display:flex`, no `position:relative`), while the "_refined" template
+ * family (Sellers/Invoices) needs `.search-wrapper` to be `position:
+ * relative` so its absolutely-positioned `.search-icon` lands inside the
+ * box. SellersListPage.css relies on the global flex-row rule and never
+ * adds `position:relative` back — its search icon is actually positioned
+ * relative to a more distant ancestor, a real latent bug (out of scope to
+ * fix here; noted for a future pass). Not repeating that mistake — this
+ * page owns a fully self-contained wrapper instead of fighting the global
+ * class's cascade. */
+.invoice-search-bar { margin-bottom: 0.75rem; }
+.invoice-search-wrapper { position: relative; flex: 1; max-width: 400px; }
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-subtle);
+  width: 1rem;
+  height: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  transition: all 0.3s var(--ease-out-expo);
+}
+.search-input::placeholder { color: var(--color-ink-subtle); }
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-ink-muted);
+  box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+}
+
+/* Status badges — combines with the global `.status-badge` base
+ * (components.css) which today only carries Pracownicy's
+ * active/on-leave/terminated/inactive modifiers; these three are new. */
+.clickable-status {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.clickable-status:hover { transform: scale(1.05); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); }
+.clickable-status:active { transform: scale(0.98); }
+
+.status-paid { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
+.status-paid:hover { background: rgba(45, 106, 79, 0.15); }
+.status-unpaid { background: var(--color-accent-muted); color: var(--color-warning); }
+.status-unpaid:hover { background: rgba(201, 162, 39, 0.2); }
+.status-overdue { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
+.status-overdue:hover { background: rgba(155, 44, 44, 0.15); }
+
+/* Row actions */
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.action-btn {
+  padding: 0.5rem;
+  color: var(--color-ink-subtle);
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+}
+
+.action-btn:hover { color: var(--color-ink); background: var(--color-surface); }
+.action-btn.delete:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.06); }
+.action-btn svg { width: 1.125rem; height: 1.125rem; }
+
+/* Filter pills */
+.filter-pills {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-ink-muted);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill:hover { border-color: var(--color-ink-muted); }
+.filter-pill.active { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
+.filter-pill .count { font-weight: 500; }
+
+/* Export dropdown — first use of this pattern in the SPA (no prior module
+ * had a multi-choice toolbar menu); click-outside handled in the component. */
+.dropdown { position: relative; }
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  min-width: 180px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 3px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  padding: 0.25rem;
+  z-index: 20;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink);
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dropdown-item:hover { background: var(--color-surface); }
+.dropdown-item svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+/* Seller-sync modal table (SellerSyncModal.tsx) — checkbox-select rows,
+ * ported from list_refined.html's showSellerSyncModal(). */
+.sync-modal-intro {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-warm);
+  border-radius: var(--radius-md, 3px);
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+
+.sync-modal-toggle-row {
+  margin-bottom: 0.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.sync-modal-toggle-row button {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.sync-modal-table-wrap {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 3px);
+}
+
+.sync-modal-table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.sync-modal-table-wrap thead tr { background: var(--color-surface-warm); position: sticky; top: 0; }
+.sync-modal-table-wrap th { padding: 0.4rem 0.5rem; text-align: left; font-weight: 600; color: var(--color-ink-muted); }
+.sync-modal-table-wrap td { padding: 0.5rem; vertical-align: middle; border-bottom: 1px solid var(--color-border-subtle); }
+.sync-modal-match-badge {
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.sync-modal-match-badge.by-name { background: #e8f4fd; color: #1a6fa8; }
+.sync-modal-match-badge.by-nip { background: #f0f9f0; color: var(--color-success); }
+
+/* Faktura form (FakturaFormPage) — two-column layout: fields left, document
+ * viewer/upload right. Ported from create.html/edit.html's grid-template. */
+.invoice-form-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .invoice-form-layout { grid-template-columns: 1fr; }
+}
+
+.invoice-doc-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 3px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+
+.invoice-doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.invoice-doc-body { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 280px; }
+.invoice-doc-body iframe, .invoice-doc-body img { width: 100%; height: 100%; border: 0; object-fit: contain; }
+
+.invoice-upload-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  cursor: pointer;
+  color: var(--color-ink-subtle);
+  text-align: center;
+}
+.invoice-upload-placeholder:hover { color: var(--color-ink-muted); }
+.invoice-upload-placeholder svg { width: 2.5rem; height: 2.5rem; }
+.invoice-upload-hint { font-size: 0.75rem; }
+
+.ocr-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ocr-badge.ocr-high { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
+.ocr-badge.ocr-medium { background: var(--color-accent-muted); color: var(--color-warning); }
+.ocr-badge.ocr-low { background: rgba(155, 44, 44, 0.1); color: var(--color-error); }

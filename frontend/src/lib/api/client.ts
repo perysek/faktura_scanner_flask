@@ -14,11 +14,18 @@
 
 export class ApiError extends Error {
   status: number;
+  /** Full parsed JSON error body, when there was one — beyond `.message`
+   * (always just `data.error`), a handler needs this for structured 409
+   * payloads that carry more than a string (e.g. Faktury's `seller_conflict`/
+   * `seller_info` — routes/api_routes.py:313-505 — the caller re-shows a
+   * decision modal built from these fields, not just an error toast). */
+  data: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -51,7 +58,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {
     'X-Requested-With': 'XMLHttpRequest',
   };
-  if (body !== undefined) {
+  // FormData (Faktury manual-entry PDF upload, first use of file upload in
+  // the SPA) must NOT get a JSON Content-Type or a JSON.stringify pass — the
+  // browser sets its own `multipart/form-data; boundary=…` header from the
+  // FormData instance, and setting Content-Type manually here would omit
+  // that boundary and make the server unable to parse the body at all.
+  const isFormData = body instanceof FormData;
+  if (body !== undefined && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
   if (method !== 'GET') {
@@ -64,7 +77,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       method,
       credentials: 'include',
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
     });
   } catch {
     // Network failure (server unreachable, offline, …) — same fallback string
@@ -86,7 +99,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (!response.ok) {
     const message = (data && (data.error as string)) || `Błąd serwera (${response.status})`;
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, data);
   }
 
   return data as T;
@@ -107,5 +120,9 @@ export const api = {
   },
   post: <T>(path: string, body?: unknown): Promise<T> => request<T>('POST', path, body ?? {}),
   put: <T>(path: string, body?: unknown): Promise<T> => request<T>('PUT', path, body ?? {}),
+  /** First PATCH caller: Wizyty's satisfaction-score endpoint (`PATCH
+   * /api/appointments/<id>/satisfaction`) — genuinely a partial update, not
+   * a full-resource PUT, so it gets its own verb rather than reusing `put`. */
+  patch: <T>(path: string, body?: unknown): Promise<T> => request<T>('PATCH', path, body ?? {}),
   del: <T>(path: string): Promise<T> => request<T>('DELETE', path),
 };
