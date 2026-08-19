@@ -14,6 +14,7 @@ import { formatPLN } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
 import { StatusChangeModal } from './StatusChangeModal';
 import { CompleteVisitModal } from './CompleteVisitModal';
+import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { STATUS_LABELS, VALID_TRANSITIONS } from '../../types/appointment';
 import type { AppointmentFormService, AppointmentStatus } from '../../types/appointment';
 
@@ -40,6 +41,7 @@ export function WizytaDetailPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = auth.hasModuleWrite('appointments');
+  useEscapeBack('/wizyty');
 
   const detailState = useApiData(() => appointmentsApi.get(appointmentId), [appointmentId]);
   const [statusTarget, setStatusTarget] = useState<AppointmentStatus | null>(null);
@@ -81,6 +83,22 @@ export function WizytaDetailPage() {
       toast.error(err instanceof ApiError ? err.message : 'Błąd zapisu oceny');
     } finally {
       setSavingScore(false);
+    }
+  }
+
+  function handleStatusSelect(next: AppointmentStatus) {
+    // Dropdown is a pure action menu, not a persisted field — its `value` stays
+    // bound to `appt.status` (never local state), so picking an option never
+    // "sticks" on its own. Nothing is written until the modal it opens is
+    // confirmed; cancelling either modal leaves `appt.status` (and therefore
+    // the select) exactly where it started. `completed` needs payment-method
+    // info the plain status modal doesn't collect, so it keeps routing to
+    // CompleteVisitModal — same split the old per-status buttons used.
+    if (next === appt?.status) return;
+    if (next === 'completed') {
+      setCompleteOpen(true);
+    } else {
+      setStatusTarget(next);
     }
   }
 
@@ -151,18 +169,24 @@ export function WizytaDetailPage() {
             Edytuj
           </ButtonLink>
         )}
-        {canWrite &&
-          visibleTransitions.map((s) =>
-            s === 'completed' ? (
-              <Button key={s} variant="primary" icon="check_circle" onClick={() => setCompleteOpen(true)}>
+        <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
+          Powrót do listy
+        </ButtonLink>
+        {canWrite && visibleTransitions.length > 0 && (
+          <select
+            className="status-select"
+            aria-label="Zmień status wizyty"
+            value={appt.status}
+            onChange={(e) => handleStatusSelect(e.target.value as AppointmentStatus)}
+          >
+            <option value={appt.status}>{STATUS_LABELS[appt.status]}</option>
+            {visibleTransitions.map((s) => (
+              <option key={s} value={s}>
                 {STATUS_LABELS[s]}
-              </Button>
-            ) : (
-              <Button key={s} variant={s === 'cancelled' ? 'danger' : 'secondary'} onClick={() => setStatusTarget(s)}>
-                {STATUS_LABELS[s]}
-              </Button>
-            ),
-          )}
+              </option>
+            ))}
+          </select>
+        )}
         {canWrite && (
           <Button variant="ghost" icon="delete" onClick={handleDelete}>
             Usuń

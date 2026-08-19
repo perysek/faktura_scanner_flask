@@ -260,23 +260,31 @@ export function WizytyListPage() {
   const error = mode === 'week' ? weekError : null;
 
   return (
-    <div className="refined-page cal-grid-page fade-in">
-      <div className="cal-main">
-        <header className="page-header">
-          <div>
-            <h1 className="page-title">Wizyty</h1>
-            <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
-          </div>
-          <div>
-            <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
-            {canWrite && (
-              <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">
-                Nowa wizyta
-              </ButtonLink>
-            )}
-          </div>
-        </header>
+    <div className="refined-page page-fills-viewport fade-in">
+      {/* Page header lives at the TRUE page root now, spanning the full width
+          (main content + sidebar), not just `.cal-main`'s narrower column —
+          otherwise its `justify-content: space-between` button row only
+          reaches `.cal-main`'s right edge, short of the sidebar's, instead of
+          the actual viewport-aligned edge (user clarification, 2026-08-19:
+          "page header buttons row był dosunięty do prawej strony viewport",
+          same fix applied to CalendarDayPage.tsx). */}
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Wizyty</h1>
+          <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
+        </div>
+        <div>
+          <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
+          {canWrite && (
+            <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">
+              Nowa wizyta
+            </ButtonLink>
+          )}
+        </div>
+      </header>
 
+      <div className="cal-grid-page">
+      <div className="cal-main">
         <div className="date-nav">
           <button type="button" className="nav-btn" onClick={() => goWeek(-1)}>
             ← Poprzedni
@@ -300,7 +308,7 @@ export function WizytyListPage() {
           </div>
         </div>
 
-        <div className="table-container page-fills-viewport" style={{ flex: 1 }}>
+        <div className="table-container stack-cards-wrap">
           <table className="refined-table stack-cards">
             <thead>
               <tr>
@@ -401,6 +409,7 @@ export function WizytyListPage() {
       </div>
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />
+      </div>
 
       {statusModalAppt && (
         <StatusChangeModal

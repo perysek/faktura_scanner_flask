@@ -598,6 +598,14 @@
   letter-spacing: 0.12em;
   color: var(--color-ink-subtle);
   border-bottom: 1px solid var(--color-border);
+  /* `<th>` centers itself in every browser's UA stylesheet by default —
+     `<td>` doesn't. Without this, any column that doesn't pass an explicit
+     `align` (DESIGN.md §20: header alignment should follow its column's row
+     alignment, not the other way around) silently mismatches its left-
+     aligned body text (fix #2, implementation-log.md 2026-08-19 — found on
+     Sprzedawcy's "Nazwa"/"Aktualizacja" columns, same latent bug on every
+     other `.refined-table` that has a non-first, non-numeric column). */
+  text-align: left;
   /* Sticky header row (DESIGN.md §20) — background must live on the <th>
      itself, not just the (non-sticky) <thead>, or scrolled-past rows show
      through the gaps between sticky cells. */

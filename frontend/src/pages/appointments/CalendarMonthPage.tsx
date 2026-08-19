@@ -4,6 +4,7 @@ import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
+import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
 const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
@@ -93,7 +94,7 @@ export function CalendarMonthPage() {
   }
 
   return (
-    <div className="refined-page fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="refined-page page-fills-viewport fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
       <header className="page-header">
         <div>
           <h1 className="page-title">Wizyty</h1>
@@ -140,11 +141,18 @@ export function CalendarMonthPage() {
               return (
                 <div key={cell.dateStr} className={`month-cell${cell.outside ? ' outside' : ''}${cell.dateStr === today ? ' today' : ''}`} onClick={() => navigate(`/wizyty/kalendarz?date=${cell.dateStr}`)}>
                   <span className="month-cell-num">{cell.day}</span>
-                  {visible.map((a) => (
-                    <span key={a.id} className="month-cell-appt" title={`${a.start_time.slice(0, 5)} ${a.client_name ?? ''}`}>
-                      {a.start_time.slice(0, 5)} {a.client_name?.split(' ')[0] ?? ''}
-                    </span>
-                  ))}
+                  {visible.map((a) => {
+                    const stylistFirst = a.employee_name?.split(' ')[0] ?? '—';
+                    return (
+                      <span
+                        key={a.id}
+                        className={`month-cell-appt ${a.status}`}
+                        title={`${STATUS_LABELS[a.status]} — ${a.start_time.slice(0, 5)} — ${a.client_name ?? 'Bez klienta'} (${stylistFirst})`}
+                      >
+                        {a.client_name ?? 'Bez klienta'} ({stylistFirst})
+                      </span>
+                    );
+                  })}
                   {more > 0 && <span className="month-cell-more">+{more} więcej</span>}
                 </div>
               );

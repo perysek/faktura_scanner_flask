@@ -233,7 +233,7 @@ export function FakturaFormPage({ mode }: FakturaFormPageProps) {
   const existingIsImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'].includes(existingPdfExt);
 
   return (
-    <div className="refined-page animate-fade-up">
+    <div className="refined-page page-fills-viewport animate-fade-up">
       <header className="page-header">
         <div>
           <h1 className="page-title">{mode === 'create' ? 'Nowa faktura' : 'Edytuj fakturę'}</h1>
@@ -295,7 +295,13 @@ export function FakturaFormPage({ mode }: FakturaFormPageProps) {
               {file && filePreviewUrl ? (
                 <div className="invoice-doc-body">
                   {isPdfFile ? (
-                    <iframe src={filePreviewUrl} title="Podgląd pliku" />
+                    // `#navpanes=0` (fix #5, react-ui-corrections_19080026.txt) —
+                    // Chrome's built-in PDF viewer shows its own page-thumbnails
+                    // sidebar by default, eating into this already-narrow panel's
+                    // width and shrinking the actual page view. This is a
+                    // browser-native PDF-viewer URL param (not our app's CSS),
+                    // same fix applied to the edit-mode preview below.
+                    <iframe src={`${filePreviewUrl}#navpanes=0`} title="Podgląd pliku" />
                   ) : isImageFile ? (
                     <img src={filePreviewUrl} alt="Podgląd pliku" />
                   ) : (
@@ -326,7 +332,7 @@ export function FakturaFormPage({ mode }: FakturaFormPageProps) {
                   existingIsImage ? (
                     <img src={invoicesApi.pdfUrl(invoice.id)} alt="Podgląd faktury" />
                   ) : (
-                    <iframe src={invoicesApi.pdfUrl(invoice.id)} title="Podgląd PDF faktury" />
+                    <iframe src={`${invoicesApi.pdfUrl(invoice.id)}#navpanes=0`} title="Podgląd PDF faktury" />
                   )
                 ) : (
                   <p className="empty-text">Ta faktura nie ma załączonego pliku</p>

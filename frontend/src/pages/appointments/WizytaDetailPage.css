@@ -19,6 +19,29 @@
 
 .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
 
+/* Status-change dropdown (fix #3 Task 2, implementation-log.md 2026-08-19) —
+   sized to match `.refined-btn-secondary`'s own box (padding/font-size,
+   components.css) so it sits flush in height with its action-bar siblings.
+   Native appearance kept (no `appearance: none`) — same choice as
+   EmployeeFilter's `.empf-dropdown select` (Appointments.css), the only
+   other inline, non-form-field `<select>` in this module; `.form-select`
+   strips the arrow but relies on a wrapper this action-bar doesn't have. */
+.status-select {
+  padding: 0.625rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.status-select:hover { border-color: var(--color-ink-muted); }
+.status-select:focus-visible { border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
+
 .appt-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
 .appt-detail-grid p:last-child { font-size: 0.875rem; color: var(--color-ink); }
 

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { empColor } from '../../lib/appointments/employeeColor';
+import { useElementHeight } from '../../lib/useElementHeight';
 import { ViewSwitcher } from './ViewSwitcher';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { STATUS_LABELS } from '../../types/appointment';
@@ -10,18 +11,26 @@ import type { MultiEmployeeScheduleResponse } from '../../types/appointment';
 
 const LANE_START_MIN = 7 * 60;
 const LANE_END_MIN = 22 * 60;
-const LANE_HEIGHT = 900;
+// Fallback/mobile lane height — see CalendarWeekPage.tsx's identical constant
+// for the full rationale (fix #6, implementation-log.md 2026-08-19).
+const LANE_HEIGHT_FALLBACK = 900;
 
 function toMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
-function position(start: string, end: string) {
+function hourTop(h: number, laneHeight: number): number {
+  return ((h * 60 - LANE_START_MIN) / (LANE_END_MIN - LANE_START_MIN)) * laneHeight;
+}
+function position(start: string, end: string, laneHeight: number) {
   const s = Math.max(LANE_START_MIN, toMinutes(start));
   const e = Math.min(LANE_END_MIN, toMinutes(end));
-  const top = ((s - LANE_START_MIN) / (LANE_END_MIN - LANE_START_MIN)) * LANE_HEIGHT;
-  const height = Math.max(16, ((e - s) / (LANE_END_MIN - LANE_START_MIN)) * LANE_HEIGHT);
+  const top = ((s - LANE_START_MIN) / (LANE_END_MIN - LANE_START_MIN)) * laneHeight;
+  const height = Math.max(16, ((e - s) / (LANE_END_MIN - LANE_START_MIN)) * laneHeight);
   return { top, height };
+}
+function durationMin(start: string, end: string): number {
+  return toMinutes(end) - toMinutes(start);
 }
 function todayIso(): string {
   const n = new Date();
@@ -54,6 +63,7 @@ export function CalendarDayPage() {
   const [page, setPage] = useState(0);
   const [data, setData] = useState<MultiEmployeeScheduleResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [laneRef, laneHeight] = useElementHeight<HTMLDivElement>(LANE_HEIGHT_FALLBACK);
 
   useEffect(() => {
     setLoading(true);
@@ -77,18 +87,24 @@ export function CalendarDayPage() {
   }
 
   return (
-    <div className="refined-page cal-grid-page fade-in">
-      <div className="cal-main">
-        <header className="page-header">
-          <div>
-            <h1 className="page-title">Wizyty</h1>
-            <p className="page-subtitle">{formatLong(date)}</p>
-          </div>
-          <div>
-            <ViewSwitcher active="day" date={date} />
-          </div>
-        </header>
+    <div className="refined-page page-fills-viewport fade-in">
+      {/* Page header at the true page root, spanning main content + sidebar
+          — see WizytyListPage.tsx's identical relocation for the full
+          rationale (user clarification 2026-08-19: header buttons row must
+          reach the actual viewport-aligned right edge, not just
+          `.cal-main`'s narrower one). */}
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Wizyty</h1>
+          <p className="page-subtitle">{formatLong(date)}</p>
+        </div>
+        <div>
+          <ViewSwitcher active="day" date={date} />
+        </div>
+      </header>
 
+      <div className="cal-grid-page">
+      <div className="cal-main">
         <div className="date-nav">
           <button type="button" className="nav-btn" onClick={() => goDay(-1)}>
             ← Poprzedni
@@ -131,11 +147,31 @@ export function CalendarDayPage() {
             <p className="empty-text">Brak wizyt zaplanowanych na ten dzień.</p>
           </div>
         ) : (
-          <div className="table-container" style={{ flex: 1, overflow: 'auto' }}>
-            <div style={{ display: 'flex' }}>
-              <div style={{ width: '3rem', flexShrink: 0, position: 'relative', height: LANE_HEIGHT + 24 }}>
+          <div className="table-container" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            {/* Employee-name header row, own row so it never shrinks — split
+                out from the lane row below for the same reason as
+                CalendarWeekPage.tsx's day-name header (fix #5): lets the
+                time-label column sit in the SAME row as the lanes, aligned
+                exactly to their hour-lines, no fudge-offset guessing.
+                `cal-grid-header-cell` (fix #3d) gives it a background
+                distinct from the grid below. */}
+            <div className="cal-grid-header-cell" style={{ display: 'flex', flexShrink: 0 }}>
+              <div style={{ width: '3rem', flexShrink: 0 }} />
+              {data.employees.map((emp) => (
+                <div key={emp.id} style={{ flex: 1, minWidth: 160, padding: '0.5rem', textAlign: 'center', borderLeft: '1px solid var(--color-border-subtle)', borderBottom: '1px solid var(--color-border-subtle)', fontSize: '0.75rem', fontWeight: 600, color: empColor(emp.id) }}>
+                  {emp.full_name}
+                </div>
+              ))}
+            </div>
+            {/* Lane row — `flex: 1; minHeight: 0` claims all remaining height
+                inside `.table-container` (bounded by `.page-fills-viewport`
+                on desktop). `laneHeight` is this row's own measured pixel
+                height (useElementHeight, ref below), so the 7am–10pm range
+                always exactly fills whatever space is actually available. */}
+            <div ref={laneRef} style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+              <div style={{ width: '3rem', flexShrink: 0, position: 'relative' }}>
                 {HOURS.map((h) => (
-                  <div key={h} className="cal-time-label" style={{ position: 'absolute', top: ((h * 60 - LANE_START_MIN) / (LANE_END_MIN - LANE_START_MIN)) * LANE_HEIGHT }}>
+                  <div key={h} className="cal-time-label" style={{ position: 'absolute', top: hourTop(h, laneHeight) }}>
                     {h}:00
                   </div>
                 ))}
@@ -145,13 +181,12 @@ export function CalendarDayPage() {
                 const absences = data.absences[emp.id] ?? [];
                 return (
                   <div key={emp.id} style={{ flex: 1, minWidth: 160, borderLeft: '1px solid var(--color-border-subtle)' }}>
-                    <div style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--color-border-subtle)', fontSize: '0.75rem', fontWeight: 600, color: empColor(emp.id) }}>{emp.full_name}</div>
-                    <div className="cal-day-col" style={{ height: LANE_HEIGHT, position: 'relative' }}>
+                    <div className="cal-day-col" style={{ height: laneHeight, position: 'relative' }}>
                       {HOURS.map((h) => (
-                        <div key={h} className="cal-hour-line" style={{ top: ((h * 60 - LANE_START_MIN) / (LANE_END_MIN - LANE_START_MIN)) * LANE_HEIGHT }} />
+                        <div key={h} className="cal-hour-line" style={{ top: hourTop(h, laneHeight) }} />
                       ))}
                       {absences.map((ab) => {
-                        const pos = position(ab.time_from ?? '07:00', ab.time_to ?? '22:00');
+                        const pos = position(ab.time_from ?? '07:00', ab.time_to ?? '22:00', laneHeight);
                         return (
                           <div key={ab.id} className={`day-absence${ab.status === 'pending' ? ' day-absence--pending' : ''}`} style={{ top: pos.top, height: pos.height }}>
                             {ab.category_name}
@@ -159,11 +194,22 @@ export function CalendarDayPage() {
                         );
                       })}
                       {appts.map((a) => {
-                        const pos = position(a.start_time, a.end_time);
+                        const pos = position(a.start_time, a.end_time, laneHeight);
+                        const dur = durationMin(a.start_time, a.end_time);
+                        const stylistFirst = emp.full_name.split(' ')[0];
                         return (
-                          <div key={a.id} className={`day-block ${a.status}`} style={{ top: pos.top, height: pos.height, borderLeftColor: empColor(emp.id) }} onClick={() => navigate(`/wizyty/${a.id}`)} title={`${STATUS_LABELS[a.status]} — ${a.client_name ?? ''}`}>
-                            <div className="day-block-client">{(a.client_name ?? 'Bez klienta').split(' ')[0]}</div>
-                            <div className="day-block-time">{a.start_time.slice(0, 5)}</div>
+                          <div
+                            key={a.id}
+                            className={`day-block ${a.status}`}
+                            style={{ top: pos.top, height: pos.height }}
+                            onClick={() => navigate(`/wizyty/${a.id}`)}
+                            title={`${STATUS_LABELS[a.status]} — ${a.client_name ?? 'Bez klienta'}${a.service_name ? ` — ${a.service_name}` : ''} — ${stylistFirst} — ${a.start_time.slice(0, 5)} (${dur} min)`}
+                          >
+                            <div className="day-block-client">{a.client_name ?? 'Bez klienta'}</div>
+                            {a.service_name && <div className="day-block-service">{a.service_name}</div>}
+                            <div className="day-block-time">
+                              {stylistFirst} · {a.start_time.slice(0, 5)} · {dur} min
+                            </div>
                           </div>
                         );
                       })}
@@ -177,6 +223,7 @@ export function CalendarDayPage() {
       </div>
 
       <CalendarMonthSidebar selectedDate={date} onDayClick={handleSidebarDayClick} />
+      </div>
     </div>
   );
 }

@@ -974,3 +974,373 @@ badge, i force-save conflict flow to trzy niezależne nowe mechanizmy nigdy wcze
 przetestowane w tej apce poza automatycznym build/lint.
 
 ---
+
+## Naprawa loginu (kolizja portów) + commit/push Faktur i Wizyt — 2026-08-19
+
+### Bug: "nie mogę się zalogować na dotychczasowych credentials"
+
+Root cause: **nie to, co brzmiało na pierwszy rzut oka** (błędne hasło) — kolizja portów między
+tym projektem a zupełnie niepowiązanym `~/PycharmProjects/human-solutions` ("HR system"), którego
+własny `run_dev.py` też miał na sztywno port 5001. Który proces zbindował się pierwszy, wygrywał
+port po cichu — frontend tego projektu (`:5173`, proxy) trafiał wtedy w REALNOŚCI w backend
+`human-solutions`, który poprawnie (ale mylnie z punktu widzenia użytkownika) odrzucał znane
+credentials jako "nieprawidłowy email lub hasło", bo sprawdzał je względem zupełnie innej tabeli
+użytkowników. Zdiagnozowane przez curl unikalnej trasy tej apki (`/api/invoices/statistics`) — 404
+zamiast oczekiwanego 401/302 zdradziło, że odpowiada inny kod. Pełny opis + procedura sanity-check
+w [[react-migration-local-dev-setup]].
+
+**Fix:** `run_dev.py` czyta teraz `DEV_SERVER_PORT` (domyślnie nadal 5001, wsteczne kompatybilne)
+zamiast portu na sztywno. Backend tego projektu przeniesiony na `:5002` (za zgodą użytkownika —
+"Zmień port faktury zamiast tego", explicite NIE ruszać `human-solutions`), Vite wskazany na niego
+przez `VITE_API_PROXY_TARGET`. Zweryfikowane end-to-end (curl: prawdziwy banner apki, unikalna
+trasa nie-404, działający CSRF token, działający łańcuch proxy) — użytkownik potwierdził, że
+logowanie znów działa.
+
+**Uwaga środowiskowa (może się powtórzyć w kolejnej sesji):** dwa kolejne uruchomienia backendu
+przez Bash-owy `run_in_background:true` zostały ubite przez harness/sandbox między turami rozmowy
+(potwierdzone `<task-notification>` ze statusem `killed`). Backend ostatecznie odpalony przez
+PowerShell `Start-Process -WindowStyle Hidden` (proces w pełni odłączony od Claude Code, output do
+`.flask_dev.log`/`.flask_dev.err.log`) — zweryfikowany jako działający, ale **nieprzetestowany, czy
+przetrwa przez granicę kolejnej tury/sesji**; jeśli backend znowu "zniknie", to pierwszy podejrzany.
+
+### Commit + push — 4 commity na branch `invoices-app`
+
+```
+d51ee8b fix(dev): port serwera dev konfigurowalny przez DEV_SERVER_PORT
+69f9d5a feat(react-migration): Wizyty + Kalendarz — lista, szczegoly, create/edit, 3 widoki kalendarza, pasek month-cards
+2ca59ba feat(react-migration): Faktury — lista, create/edit, sync sprzedawcow, eksport
+d7e8c83 chore: usun przestarzaly scaffold planningowy (ai-devkit)
+```
+Wypchnięte na `origin/invoices-app` — potwierdzone (`HEAD` == `origin/invoices-app`). Po drodze
+dwie pomyłki przy commitowaniu złapane i naprawione PRZED pushem (opisane w podsumowaniu sesji, nie
+tutaj — nieistotne dla stanu kodu): przypadkowo za szeroki `git commit --amend` cofnięty przez
+`git reset --soft HEAD~1`, oraz problem z cudzysłowami w wiadomości committa w Bashu, obejście przez
+plik tymczasowy + `git commit -F`.
+
+### Pierwszy ręczny QA na żywo — Faktury / Sprzedawcy / Wizyty — 2026-08-19
+
+Po naprawie loginu użytkownik faktycznie przeklikał (pierwszy raz) moduł Faktury i moduł Wizyty +
+Kalendarz (oba zbudowane dzień wcześniej, 2026-08-18, nigdy wcześniej nie klikane — patrz sekcje
+wyżej "**Ręczny test na żywo nie wykonany**") plus wrócił do już wcześniej zweryfikowanych
+Sprzedawców. Notatki zostawione w pliku roboczym **`react-UI-issues-fixes_19082026.txt`** (korzeń
+repo, NIEZACOMMITOWANY — `git status` pokazuje go jako `??`; ten plik jest źródłem tej sekcji, nie
+duplikatem do zignorowania — sprawdzić, czy nadal istnieje na dysku, jeśli potrzebny kontekst
+źródłowy 1:1). Znaleziono **7 konkretnych usterek UI**, żadna jeszcze nie naprawiona:
+
+1. **Faktury, edycja — panel podglądu PDF za mały i źle proporcjonowany.** Dziś: ~1/4 szerokości
+   strony, kwadratowy (height=width). Oczekiwane: wysokość = od górnej krawędzi panelu w dół do
+   stopki page-view (z zachowaniem obecnych odstępów), szerokość dobrana z proporcji A4 do TEJ
+   wysokości (nie kwadrat). PDF ma się w pełni mieścić. Prawdopodobnie wymaga też przełożenia
+   layoutu reszty formularza (węższe kolumny/pola), żeby nic nie wymagało scrolla pionowego —
+   wszystko w jednym viewport. **Najbardziej inwazyjna zmiana z tej listy** (dotyka i panelu PDF, i
+   układu formularza) — `FakturaFormPage.tsx`.
+2. **Sprzedawcy, lista — nagłówki kolumn nie zawsze wyrównane tak jak wartości wierszy** (np.
+   kolumna "Nazwa": nagłówek wyśrodkowany, wartość w wierszu do lewej). Naprawić: wyrównanie
+   nagłówka ma iść za wyrównaniem jego kolumny w wierszach, nie odwrotnie — `SellersListPage.tsx`/
+   CSS, prawdopodobnie reguła bazowa `.refined-table th` nieuwzględniająca wyrównania per-kolumna.
+3. **Wizyta, widok szczegółów — brak przycisku "Powrót"** do poprzedniego widoku, i Escape też nie
+   działa. Ten sam wzorzec co luka znaleziona 2026-08-18 (Escape-infra istniała, nie wszędzie
+   podpięta) — `WizytaDetailPage.tsx` prawdopodobnie nigdy nie dostał `useEscapeBack(href)`
+   (hook już istnieje, użyty gdzie indziej, patrz [[react-migration-ux-polish-2026-08-18]]).
+   **Task 2 tej samej usterki:** przyciski zmiany statusu wizyty mają niejasne znaczenie/działanie —
+   zastąpić pojedynczym dropdownem, wartość początkowa = aktualny status przy załadowaniu strony.
+   ⚠️ **Niejednoznaczne, wymaga pytania doprecyzowującego przed implementacją** (zgodnie z
+   `CLAUDE.md`'s "clarification policy") — m.in.: czy zmiana w dropdownie od razu zapisuje (PATCH/PUT
+   natychmiast po `onChange`), czy wymaga osobnego przycisku "Zapisz"/potwierdzenia; czy dropdown ma
+   pokazywać WYŁĄCZNIE statusy dozwolone wg `AppointmentStatus.VALID_TRANSITIONS`
+   (`config/appointment_statuses.py`) czy wszystkie z nieprawidłowymi wyszarzonymi/disabled.
+3.1. **Kalendarz, widok tygodnia** — siatka wyższa niż viewport, strona scrolluje w pionie.
+   Oczekiwane: wysokość dopasowana do dostępnej przestrzeni, responsywnie, zero scrolla pionowego —
+   cały kalendarz widoczny naraz. `CalendarWeekPage.tsx`.
+3.2. **Kalendarz, widok dnia** — ta sama naprawa wysokości/viewportu co wyżej. DODATKOWO: istniejący
+   lewy panel month-cards (`CalendarMonthSidebar`) ma się przenieść na PRAWĄ stronę widoku kalendarza
+   (notatka użytkownika wymienia to wprost tylko dla widoku dnia — do potwierdzenia przy
+   implementacji, czy dotyczy też tygodnia/listy, czy tylko dnia). `CalendarDayPage.tsx`.
+3.3. **Wizyty, lista** — brakuje dokładnie tego wzorca tabel (sticky header, scrollowane wiersze,
+   `.table-container` wypełniający dostępną wysokość, zero scrolla strony poza custom-stylowanym
+   scrollbarem wierszy), który już powstał i został zastosowany na ~16 innych tabelach w przebiegu
+   UX z 2026-08-18 (DESIGN.md §20, patrz [[react-migration-ux-polish-2026-08-18]]) — `WizytyListPage`
+   był budowany PO tamtym przebiegu, tego samego dnia, i nigdy nie dostał retrofitu. Użytkownik
+   explicite: *"refer strictly to existing clients-table"* — czysty przepis wzorca z
+   `ClientsListPage`, żadnego nowego projektowania. `WizytyListPage.tsx`.
+
+### Zaproponowana kolejność napraw dla następnej sesji
+
+Rosnąco wg ryzyka/inwazyjności, z priorytetem dla mechanicznych retrofitów istniejącego wzorca
+(szybkie, niskie ryzyko, budują pewność) przed nowym UX-em i najbardziej złożonym layoutem na
+końcu:
+
+1. **#7 Wizyty lista — retrofit `.table-container`/sticky-header wzorem `ClientsListPage`** —
+   czysto mechaniczne, dokładny precedens sprzed doby, najniższe ryzyko.
+2. **#2 Sprzedawcy — wyrównanie nagłówek/wartość** — trywialna, izolowana poprawka CSS.
+3. **#3 (część 1) Wizyta detail — `useEscapeBack` + przycisk "Powrót"** — ponowne użycie istniejącego
+   hooka, mechaniczne.
+4. **#3 (Task 2) Wizyta detail — dropdown zmiany statusu** — ⚠️ najpierw zadać pytanie
+   doprecyzowujące (patrz wyżej), dopiero potem implementować.
+5. **#3.1 Kalendarz tydzień — dopasowanie wysokości do viewportu.**
+6. **#3.2 Kalendarz dzień — to samo dopasowanie wysokości + przeniesienie sidebaru na prawo**
+   (rób od razu po #5, bo dzieli tę samą naprawę CSS wysokości — różnica tylko w przeniesieniu
+   sidebaru).
+7. **#1 Faktury edycja — panel podglądu PDF (proporcja A4) + reflow formularza** — najbardziej
+   inwazyjna, największe ryzyko efektów ubocznych na layout formularza — na koniec.
+
+Backend: żadna z tych 7 usterek nie wymaga zmian w `routes/`/`repositories/` — to wyłącznie CSS/
+layout/component-level fixes na już istniejących, poprawnie zabezpieczonych endpointach. Po każdej
+grupie napraw: `npm run build`/`lint` + wizualna weryfikacja (idealnie `/browse` albo ponowne
+ręczne klikanie przez użytkownika — poprzedni bug z `overflow: hidden` z 2026-08-18 pokazał, że ten
+rodzaj usterki przechodzi build/lint czysto).
+
+---
+
+## Wszystkie 7 usterek z pierwszego ręcznego QA — naprawione, 2026-08-19
+
+Kontynuacja tej samej sesji. Wykonano wszystkie 7 poprawek w zaproponowanej kolejności (rosnąco
+wg ryzyka). `npm run build`/`lint` → **0 errors** po każdej pojedynczej poprawce (ten sam 1
+nieszkodliwy pre-existing warning `useFocusTrap.ts` przez cały czas, bez zmian). Backend nietknięty
+— potwierdzone: żadna z siedmiu nie dotyka `routes/`/`repositories/`.
+
+**Wizualna weryfikacja na żywo — NIE wykonana w tej sesji.** Zarówno `/browse` (gstack — katalog
+`~/.claude/skills/browse/` ma tylko `SKILL.md`, brak `dist/`/`bin/`/`setup`, nie do zbudowania), jak
+i `mcp__claude-in-chrome__*` (rozszerzenie Chrome zgłasza "not connected") okazały się niedostępne w
+tym środowisku. Za zgodą użytkownika: dalsze poprawki szły na samym build/lint + code-review, bez
+możliwości zobaczenia efektu — **to jest jawnie zwiększone ryzyko** (dokładnie ten rodzaj usterki,
+który już raz przeszedł build/lint czysto i okazał się złamany na żywo — `overflow: hidden` bug,
+2026-08-18). Pierwszy ręczny click-through przez użytkownika jest teraz PRIORYTETOWYM następnym
+krokiem, nie opcjonalnym.
+
+### #1 Wizyty lista — retrofit `.table-container`/sticky-header (DESIGN.md §20)
+
+Root cause: `page-fills-viewport` klasa siedziała na złym elemencie — na samym `.table-container`
+zamiast na korzeniu strony (`.cal-grid-page`), więc globalna reguła `.page-fills-viewport >
+.table-container` nigdy nie dopasowywała (te dwie klasy były na TYM SAMYM elemencie, nie w relacji
+rodzic→dziecko). Naprawione: `page-fills-viewport` przeniesiona na root, plus nowa reguła w
+`Appointments.css` (`.page-fills-viewport.cal-grid-page { flex-direction: row }` +
+`> .cal-main > .table-container { flex:1; min-height:0 }`) — bo `.cal-grid-page`'s layout to ROW
+(main + sidebar month-cards), nie kolumna jak zakłada wzorzec Klientów/Sprzedawców/Usług/
+Pracowników (jedyne dwa DOM-kształty opisane w DESIGN.md §20.2). *(Ta reguła została później
+usunięta i zastąpiona prostszą wersją przy okazji poprawki #6 — patrz niżej.)*
+
+### #2 Sprzedawcy — wyrównanie nagłówków kolumn
+
+Root cause (systemowy, nie tylko Sprzedawcy): `<th>` centruje się domyślnie w UA-stylesheet
+KAŻDEJ przeglądarki (`<td>` — nie). `.refined-table th` (components.css) nigdy nie nadpisywał
+`text-align`, więc każda kolumna BEZ jawnego `align` (tylko `:first-child` miał osobną regułę)
+cicho dziedziczyła center, niezależnie od tego czy jej wartości w wierszach są wyrównane do lewej.
+Naprawione JEDNĄ linią w bazowej regule (`text-align: left` na `.refined-table th`) — systemowy fix
+w współdzielonym komponencie, nie page-owned override; naprawia też Wizyty (kolumny Klient/Usługa/
+Pracownik/Ocena miały ten sam utajony bug, nigdy niezgłoszony osobno).
+
+### #3 Wizyta detail — "Powrót do listy" + Escape, oraz dropdown zmiany statusu
+
+`useEscapeBack('/wizyty')` + `<ButtonLink icon="arrow_back">Powrót do listy</ButtonLink>` w
+action-bar — 1:1 wzorzec z `ClientDetailPage`/`EmployeeDetailPage` (import + wywołanie hooka +
+button, ten sam układ: Edytuj → Powrót → akcja destrukcyjna).
+
+**Task 2 (dropdown statusu) — zadano pytanie doprecyzowujące przed implementacją** (zgodnie z
+`CLAUDE.md`, log sam to flagował jako niejednoznaczne). Odpowiedzi użytkownika: (a) wybór w
+dropdownie NIE zapisuje od razu — otwiera istniejący `StatusChangeModal`/`CompleteVisitModal`
+(zachowuje pole "powód" dla anulowania, chroni przed przypadkowym wyborem); (b) dropdown pokazuje
+WYŁĄCZNIE `VALID_TRANSITIONS` (ten sam filtr `visibleTransitions`, którego już używały stare
+przyciski) — jeden model reguł przejść w jednym miejscu, nie duplikowany. Zaimplementowane: rząd
+przycisków zastąpiony jednym `<select className="status-select">` (nowa klasa w
+`WizytaDetailPage.css`, rozmiar dopasowany do `.refined-btn-secondary`, natywna strzałka — wzorem
+`EmployeeFilter`'s `.empf-dropdown select`, nie `.form-select`, bo ten wymaga `FieldWrapper`
+którego action-bar nie ma). `value` dropdowna to zawsze `appt.status` (nie osobny local state) —
+wybór inny niż bieżący status od razu otwiera odpowiedni modal; anulowanie modala "odskakuje" z
+powrotem do prawdziwego statusu za darmo, bo select jest w pełni controlled przez dane z API, nie
+przez tymczasowy wybór użytkownika.
+
+### #4/#5 Kalendarz tydzień/dzień — dopasowanie wysokości siatki do viewportu
+
+Root cause: `LANE_HEIGHT = 900` (px) był STAŁĄ na poziomie modułu, używaną do pozycjonowania KAŻDEGO
+elementu absolutnego (linie godzin, bloki wizyt, nieobecności) — siatka zawsze renderowała się na
+900px wysoka, niezależnie od realnej wysokości viewportu, więc CAŁA STRONA (nie tylko tabela)
+scrollowała się w pionie.
+
+Nowy współdzielony hook `lib/useElementHeight.ts` (callback-ref + `ResizeObserver`, nie zwykły
+`useRef` — element mierzony renderuje się warunkowo za `loading`, więc zwykły ref nigdy by nie
+"złapał" węzła, który zamontował się PO pierwszym efekcie) mierzy REALNĄ wysokość rzędu siatki na
+żywo. `LANE_HEIGHT` stała → `LANE_HEIGHT_FALLBACK` (seed przed pierwszym pomiarem I stabilna
+wartość na mobile, gdzie `.page-fills-viewport` się nie stosuje — DESIGN.md §20.2 celowo gate'uje to
+tylko na desktop, więc mobile ma zostać dokładnie takie jak było). `position()`/nowy helper
+`hourTop()` przyjmują `laneHeight` jako parametr zamiast czytać stałą z zamknięcia modułu.
+
+Restrukturyzacja DOM (obie strony): nagłówek dnia/pracownika wydzielony do WŁASNEGO rzędu
+(`flexShrink:0`) NAD rzędem siatki (`flex:1; minHeight:0`, tam gdzie podpięty jest
+`useElementHeight`'s ref) — usuwa stary fudge-offset `+24` (kolumna godzin startowała na górze
+CAŁEGO kontenera, podczas gdy kolumny dni miały własny nagłówek nad sobą; teraz kolumna godzin jest
+w TYM SAMYM rzędzie co kolumny dni, więc linie godzin wyrównują się z siatką day-column co do
+piksela, bez zgadywania offsetu).
+
+### #6 Kalendarz dzień — przeniesienie sidebaru + wyrównanie page-header
+
+**Odkrycie przy implementacji — kod przeczył notatce.** Notatka użytkownika: "existing LEFT panel
+... move to right". Kod: `CalendarMonthSidebar` był DRUGIM dzieckiem w zwykłym `display:flex` rzędzie
+(`.cal-grid-page`, brak `order`/`row-reverse` gdziekolwiek) — w standardowym LTR flexboksie to
+oznacza, że POWINIEN renderować się po prawej już dziś, nie po lewej. **Zadano pytanie
+doprecyzowujące zamiast zgadywać** (dokładnie zasada z `CLAUDE.md` — "which element" tu było "które
+'lewo'"). Odpowiedź użytkownika: zostaw pozycję jak jest (== nie przesuwaj — notatka była
+prawdopodobnie błędnym wspomnieniem z klikania), ALE dodatkowo: (a) górna/dolna krawędź sidebaru ma
+się wyrównać z głównym oknem kalendarza/tabeli, (b) rząd przycisków page-header ma sięgać do
+prawdziwej prawej krawędzi viewportu, nie tylko do krawędzi węższej kolumny `.cal-main`.
+
+(a) okazało się **darmowym efektem ubocznym** naprawy wysokości: `.cal-grid-page` już miał
+`align-items: stretch` w bazowej regule — wystarczyło, że rząd dostał realnie ograniczoną wysokość
+(przez #4/#5), żeby `.cal-main` i `CalendarMonthSidebar` (rodzeństwo w tym samym rzędzie) zaczęły
+kończyć się na tej samej wysokości automatycznie, bez dodatkowego CSS.
+
+(b) wymagało realnej restrukturyzacji: `<header className="page-header">` był ZAGNIEŻDŻONY w
+`.cal-main` (węższym niż pełna szerokość, bo nie obejmuje kolumny sidebaru) w OBU stronach
+(`WizytyListPage.tsx` I `CalendarDayPage.tsx` — notatka użytkownika explicite: "day-calendar view
+page (lub tabeli wizyt)", czyli obie). Przeniesiony na prawdziwy korzeń strony (nad
+`.cal-grid-page`, nie w nim) w obu plikach — `justify-content: space-between` w `.page-header` teraz
+faktycznie sięga do prawej krawędzi całej strony, łącznie z szerokością sidebaru. Skutek uboczny:
+uproszczenie CSS — skoro `.page-fills-viewport` siedzi teraz na PRAWDZIWYM korzeniu (zwykła kolumna,
+bez konfliktu row/column), specjalna reguła compound-selector z poprawki #1
+(`.page-fills-viewport.cal-grid-page`) stała się zbędna i została zastąpiona prostszą wersją
+(`.page-fills-viewport .cal-main > .table-container`) w `Appointments.css`.
+
+### #7 Faktury edycja — panel podglądu PDF, proporcja A4 (najbardziej inwazyjna, zrobiona ostatnia)
+
+Root cause: `.invoice-doc-card` nie miał żadnej jawnej wysokości — tylko `min-height: 320px` jako
+podłoga, obok STAŁEJ szerokości 380px z grida (`grid-template-columns: 1fr 380px`) — stąd zawsze
+renderował się mniej więcej kwadratowo, niezależnie od realnie dostępnej wysokości viewportu.
+
+Naprawione BEZ JavaScriptu (w przeciwieństwie do #4/#5) — czysty CSS `aspect-ratio: 210 / 297`
+(proporcja A4 portrait) na `.invoice-doc-card`, którego `height: 100%` liczy się teraz względem
+realnie ograniczonej wysokości strony (`page-fills-viewport` na korzeniu, desktop-only jak wszędzie
+indziej). Różnica względem #4/#5: tam JS był konieczny (`Math.max(16, ...)` na elementach
+absolutnie pozycjonowanych potrzebuje prawdziwej liczby px w skrypcie), tutaj wystarczy JEDNA
+deklaracja CSS, bo to dokładnie przypadek, do którego `aspect-ratio` został zaprojektowany — jeden
+wymiar jawny (wysokość), drugi (szerokość) wyliczony z proporcji.
+
+`.invoice-form-layout` przepisany z CSS Grid na flex (funkcjonalnie identyczny na dotychczasowych
+szerokościach — ten sam efekt wizualny, `1fr` + 380px) — Grid nie licuje się niezawodnie z
+`aspect-ratio`-driven, content-sized kolumną w torze `auto`, flex tak. Formularz dostaje
+`overflow-y: auto` jako siatkę bezpieczeństwa (nie cel sam w sobie) — 3 `FormSection`y na tej
+stronie są wystarczająco krótkie, że to zwykle będzie no-opem na realnym ekranie; gdyby jednak
+kiedyś zabrakło miejsca, przewija się TYLKO formularz, nigdy cała strona (dokładnie ta sama
+filozofia co `page-fills-viewport` wszędzie indziej w apce). Świadomie NIE ruszano wewnętrznego
+layoutu `FormSection`/`TextField` (współdzielony komponent, wpłynąłby na każdy inny formularz w
+apce) — poza zakresem tej pojedynczej, już wystarczająco inwazyjnej poprawki.
+
+---
+
+## Druga runda poprawek UI — `react-ui-corrections_19080026.txt`, 2026-08-19
+
+Kolejny plik roboczy z konkretnymi usterkami znalezionymi po tym, jak poprzednia runda (7 poprawek
+wyżej) trafiła do kodu — użytkownik przeklikał dalej i znalazł 5 nowych obszarów. `npm run build`/
+`lint` → **0 errors** po całości (ten sam 1 nieszkodliwy warning). **Wizualna weryfikacja NADAL
+niemożliwa** — sprawdzone ponownie na starcie tej rundy: `mcp__claude-in-chrome__*` dalej zgłasza
+"not connected", `/browse` dalej bez binarki (patrz [[react-migration-browser-tooling-gap]]).
+
+### #1 Boczny pasek month-cards — dni nachodzą na kartę
+
+Root cause: `.month-card-day` używał `aspect-ratio: 1`, wiążąc WYSOKOŚĆ każdej komórki z jej
+SZEROKOŚCIĄ (czyli szerokością kolumny gridu 7×, zależną od zmiennej szerokości sidebaru
+220–280px). Na wystarczająco szerokim sidebarze każdy wiersz wychodził wyższy niż karta miała
+miejsca na 5–6 wierszy — stąd dolne wiersze wizualnie wychodziły poza `.month-card`. Naprawione:
+stały rozmiar `width/height: 1.375rem` (zamiast aspect-ratio), wyśrodkowany w komórce przez
+`justify-self: center` — wysokość wiersza gridu staje się przewidywalna i mała niezależnie od
+szerokości sidebaru. Kropka-wskaźnik wizyt (`::after`) usunięta — kodowanie kolorem (`.has-
+appointments` już przełączał na `--color-ink` z domyślnego `--color-ink-subtle`) było już
+zaimplementowane, wystarczyło usunąć zbędną kropkę.
+
+### #2 Boczny pasek month-cards — brak nawigacji miesięcy
+
+`months` (dotąd `useState` obliczany RAZ przy montowaniu, "fixed and never follows navigation")
+zamieniony na `anchorMonth` + `useMemo`, nawigowalny o krok 3 miesięcy. Nowe przyciski
+prev/next (`Icon name="expand_more"`, jeden z nich obrócony 180° przez `.icon-flip` — brak
+`expand_less` w zestawie ikon, obrót tego samego glifu zamiast mieszania stylu z `arrow_upward`)
+w `.cal-sidebar-topbar`, obok istniejącego przycisku zwiń/rozwiń, renderowane TYLKO gdy panel
+rozwinięty. Po zmianie okna: `daysWithAppointments` refetchowany dla nowego zakresu (deps
+`useEffect` zmienione z `[]` na `[anchorMonth]`), a po rozwiązaniu fetcha — jeśli zmiana była
+wywołana nawigacją (`navigatedRef`, nie zwykłym mountem) — wywoływany jest TEN SAM `onDayClick`,
+którego używa zwykłe kliknięcie dnia, z pierwszym dniem z wizytami w ŚRODKOWYM miesiącu (fallback:
+1. dzień tego miesiąca, gdy brak wizyt). Zero nowego propa/callbacku — ponowne użycie istniejącego
+mechanizmu hosta.
+
+### #3 Dzień/tydzień kalendarza — pięć powiązanych usterek
+
+a/b: `.wk-block`/`.day-block` miały płaskie tło `--color-surface-elevated` (identyczne z tłem
+siatki — stąd niewidoczne) i `border-left-color` kodowany kolorem PRACOWNIKA, nie statusu.
+Naprawione: pełna paleta `.status-badge.*` przeniesiona na warianty klasy statusu (`.scheduled`,
+`.confirmed`, itd.) — ten sam schemat kolorów co wszędzie indziej w apce (lista, detail).
+`borderLeftColor: empColor(...)` usunięty z inline style (inline zawsze wygrywa ze stylesheetem,
+więc musiał zniknąć, żeby nowe klasy statusu faktycznie zadziałały). Import `empColor` usunięty z
+`CalendarWeekPage.tsx` (nieużywany po tej zmianie — w widoku tygodnia zawsze jeden pracownik, więc
+kolor pracownika i tak nic nie różnicował); w `CalendarDayPage.tsx` zostaje (nadal używany na
+kolorze tekstu nagłówka kolumny pracownika — inne, dalej zasadne zastosowanie).
+
+c: treść bloku rozszerzona z "pierwsze imię klienta + godzina startu" na: pełne imię i nazwisko
+klienta, usługa(-i) (`a.service_name`, już comma-joined string z API), imię fryzjera(-ki)
+(`a.employee_name`/`emp.full_name`, pierwszy człon), godzina startu + czas trwania w minutach
+(nowy helper `durationMin()`). Tooltip (`title`) też wzbogacony, na wypadek gdy bardzo krótka
+wizyta (`Math.max(16, ...)` floor wysokości) obcina tekst wizualnie.
+
+d: nowa klasa `.cal-grid-header-cell` (`background: var(--color-surface)`) na wrapperze rzędu
+nagłówka dnia/pracownika w obu plikach — było bez tła, więc dziedziczyło ten sam
+`--color-surface-elevated` co siatka pod spodem.
+
+e: mimo wcześniejszej naprawy #4/#5 (poprzednia runda) scroll pionowy dalej bywał widoczny.
+Zdiagnozowane jako sub-pikselowe zaokrąglenie: `getBoundingClientRect()`/`ResizeObserver` mogą
+zwrócić wartość ułamkową (np. `547.33px`), która następnie przechodzi przez dalszą arytmetykę
+zmiennoprzecinkową (`position()`/`hourTop()`) — wystarczy, że którykolwiek wynik wyląduje ułamek
+piksela NAD realnie dostępną przestrzenią, żeby `overflow: auto` pokazał scrollbar mimo braku
+realnie obciętej treści. Naprawione w `lib/useElementHeight.ts` (jedno miejsce, obie strony
+korzystają): `Math.floor()` + margines bezpieczeństwa 1px na każdym zwracanym pomiarze. Dodatkowo,
+jako pas bezpieczeństwa nie do obejścia: `.table-container` w obu plikach dostał `overflow:
+'hidden'` inline (nadpisuje bazowe `overflow: auto` — ten konkretny kalendarz ma być dokładnie
+dopasowany, więc nie potrzebuje własnego scroll-fallbacku jak np. formularz faktury).
+
+### #4 Widok miesiąca — szerokość + kolory statusów na liniach wizyt
+
+`page-fills-viewport` dodany do korzenia `CalendarMonthPage.tsx` (jedyny z 3 widoków kalendarza,
+który nigdy go nie dostał w poprzedniej rundzie — nie było go na oryginalnej liście 7 usterek).
+Nowa reguła `.page-fills-viewport > .month-grid` (Shape 1, `.month-grid` jest bezpośrednim
+dzieckiem korzenia mimo owinięcia w fragment React) + jawne `width: 100%` na `.month-grid`
+(defensywnie, dla dosłownego "expand to all available space"). `.month-cell-appt` dostał te same
+warianty statusu co `.wk-block`/`.day-block` (bez `.cancelled` — `dayAppts` już filtruje anulowane
+przed renderem). Treść linii zmieniona z "godzina + imię klienta" na "pełne imię klienta (imię
+fryzjera)" — zgodnie z nowym, węższym spec — godzina zostaje tylko w tooltipie (miejsca mało,
+widok miesiąca to celowo kompaktowy przegląd, inaczej niż dzień/tydzień).
+
+### #5 Podgląd PDF faktury — panel miniatur stron
+
+Nie jest to bug w kodzie tej apki — to natywna przeglądarka PDF Chrome (PDFium), domyślnie
+pokazująca własny boczny panel miniatur stron wewnątrz `<iframe>`, zjadający szerokość
+i tak już wąskiego panelu podglądu. Naprawione parametrem URL rozpoznawanym przez wbudowaną
+przeglądarkę PDF Chrome: `#navpanes=0` doklejony do `src` obu `<iframe>` (tryb create — podgląd
+lokalnego pliku z `URL.createObjectURL`, i tryb edit — `invoicesApi.pdfUrl(...)`). Nie ruszano
+paska narzędzi (`#toolbar=0`) — proszono wyłącznie o panel miniatur.
+
+## Zatwierdzenie obu rund poprawek UI — 2026-08-19
+
+Użytkownik potwierdził: całość UI z obu rund (12 usterek łącznie — 7 z pierwszego QA + 5 z
+`react-ui-corrections_19080026.txt`) **zatwierdzona**. Moduły Wizyty+Kalendarz i Faktury
+(częściowo) są od teraz zamknięte pod kątem zgłoszonych usterek UI — nie ma otwartych zadań z
+tych dwóch przebiegów QA. Kod wypchnięty na `origin/invoices-app` (patrz commit poniżej najbliższy
+tej dacie w historii gita).
+
+**Dla świeżej sesji — stan i następny krok:**
+- Fazy 0/1 zamknięte i zatwierdzone (2026-08-17).
+- Faza 2: Dashboard/Sprzedawcy/Usługi/Pracownicy zbudowane i zweryfikowane wcześniej (2026-08-18).
+  Faktury i Wizyty+Kalendarz zbudowane (2026-08-18), UI-przetestowane i zatwierdzone (2026-08-19)
+  — ale oba mają świadomie odłożone kawałki poza zakresem samego UI-QA, patrz niżej.
+- **Odłożone kawałki Faktur** (patrz sekcja "Faktury — piąty moduł..." wyżej): `/import-dokumentow`
+  (staging wielu plików + SSE OCR progress), `/historia`, `/ustawienia/email`.
+- **Odłożone kawałki Wizyt** (patrz sekcja "Wizyty + Kalendarz — szósty moduł..." wyżej):
+  integracja z Nieobecnościami (reassign/reschedule/cancel-for-absence), wysyłka/log SMS na
+  widoku szczegółów, "Rozlicz przeszłe wizyty" (skaner past-pending/past-status), `status-events`
+  polling.
+- **Moduły "Wymaga audytu" w ogóle nietknięte** (`module-inventory.md`): Analityka/KPI/Przychody,
+  Nieobecności (wnioski), Bilanse urlopowe, Import danych/historia/OCR, Użytkownicy (RBAC), Role
+  (RBAC), Ustawienia e-mail/SMS. Gotowe prompty audytowe do wklejenia dla każdego —
+  `module-inventory.md`'s "Gotowe prompty do audytu modułów oznaczonych 'Wymaga audytu'".
+- **Decyzja co robić dalej NIE jest podjęta** — żaden z powyższych trzech obszarów (odłożone
+  Faktury, odłożone Wizyty, nowy moduł) nie jest z góry priorytetowy; do ustalenia z użytkownikiem
+  na starcie następnej sesji.
+- Backend: bez zmian w całej dzisiejszej sesji UI-poprawek (obie rundy) — `pytest` nie wymaga
+  ponownego uruchomienia, nic w `routes/`/`repositories/` się nie zmieniło.
+
+---

@@ -252,15 +252,71 @@
 
 /* Faktura form (FakturaFormPage) — two-column layout: fields left, document
  * viewer/upload right. Ported from create.html/edit.html's grid-template. */
+/* Switched from CSS Grid to flex (was `grid-template-columns: 1fr 380px`) —
+   functionally identical at this width (form column grows, preview column
+   fixed at 380px), but flex is what the desktop `.page-fills-viewport`
+   override below needs: an aspect-ratio-driven, content-sized preview
+   column isn't reliably `1fr`/`auto`-track-sizeable in Grid the way it is
+   as a plain flex item (fix #7, implementation-log.md 2026-08-19). */
 .invoice-form-layout {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 1.5rem;
+  display: flex;
   align-items: start;
+  gap: 1.5rem;
 }
+.invoice-form-layout > form { flex: 1; min-width: 0; }
+.invoice-form-layout > div:last-child { flex: 0 0 380px; }
 
 @media (max-width: 900px) {
-  .invoice-form-layout { grid-template-columns: 1fr; }
+  .invoice-form-layout { flex-direction: column; }
+  .invoice-form-layout > div:last-child { flex: 0 0 auto; }
+}
+
+/* Desktop only (DESIGN.md §20.2 gates `.page-fills-viewport` the same way —
+   mobile/tablet keep the fixed-380px, natural-page-scroll layout above,
+   untouched). Was: preview panel's real height came from nothing but its
+   own `min-height: 320px` floor, with a fixed 380px width next to it —
+   i.e. always rendering roughly SQUARE regardless of how much vertical
+   space the viewport actually had (the reported bug). Now: the panel's
+   height = the actual remaining space from its top edge down to the page's
+   bottom padding (`page-fills-viewport`'s bound, same mechanism every other
+   fixed page in this app already uses), and its WIDTH is derived from that
+   height via `aspect-ratio` — A4 portrait, not a fixed pixel guess — so the
+   PDF gets the tallest, correctly-proportioned box the viewport allows. */
+@media (min-width: 1024px) {
+  .page-fills-viewport.refined-page {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .page-fills-viewport .invoice-form-layout {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+  /* Safety net, not the goal — `FormSection`s here are short enough that
+     this should be a no-op on any real screen. If a window is ever too
+     short regardless, the FORM scrolls internally rather than the page
+     (the whole point of `.page-fills-viewport`) or the PDF panel silently
+     shrinking/clipping. */
+  .page-fills-viewport .invoice-form-layout > form {
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .page-fills-viewport .invoice-form-layout > div:last-child {
+    flex: 0 0 auto;
+    height: 100%;
+  }
+  .page-fills-viewport .invoice-doc-card {
+    height: 100%;
+    width: auto;
+    aspect-ratio: 210 / 297;
+    min-height: 0;
+  }
+  .page-fills-viewport .invoice-doc-body {
+    min-height: 0;
+  }
 }
 
 .invoice-doc-card {

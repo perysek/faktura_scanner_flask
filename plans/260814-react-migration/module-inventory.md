@@ -8,13 +8,13 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 | Moduł | Trasy Jinja (plik) | API (plik) | Gotowość API | Złożoność UI (szac.) | Status |
 |---|---|---|---|---|---|
 | **Klienci** | `main_routes.py` | `api_routes.py` | Kompletna | Średnia | **✅ Zakończony — Faza 1 (zatwierdzony 2026-08-17; UI/nawigacja/tabele/karty statystyk ponownie ręcznie zweryfikowane na żywo 2026-08-18 przy okazji UX-passu, patrz log)** |
-| Sprzedawcy | `main_routes.py` | `api_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — patrz niżej) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
+| Sprzedawcy | `main_routes.py` | `api_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — patrz niżej) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka. ⚠️ 2026-08-19: znaleziono 1 usterkę UI (wyrównanie nagłówków tabeli), patrz "Pierwszy ręczny QA" niżej i implementation-log.md** |
 | Usługi + kategorie | `main_routes.py` | `api_routes.py` + `service_addon_routes.py` | Kompletna | **Wysoka** (skorygowano 2026-08-17 — 4 pod-strony, patrz log) | **✅ Zbudowany (Faza 2, 2026-08-17) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
 | Pracownicy + formy zatrudnienia | `main_routes.py` | `api_routes.py` | Kompletna (+2 nowe endpointy 2026-08-17: `direct-reports`, `user-options`) | Wysoka (mobile-pin, bulk-services, direct-reports; analizy/wykresy świadomie odłożone) | **✅ Zbudowany (Faza 2, 2026-08-18) — UI/nawigacja/tabele ręcznie zweryfikowane na żywo 2026-08-18; pełny funkcjonalny test CRUD nadal czeka** |
-| Faktury | `main_routes.py` + upload | `api_routes.py` | Kompletna (+PDF/email/export) | Wysoka (OCR upload flow) | **✅ Częściowo zbudowany (Faza 2, 2026-08-18) — lista + CRUD + konflikt sprzedawcy + sync + eksport gotowe; podgląd PDF w panelu, `/import-dokumentow` (OCR+SSE), `/historia`, `/ustawienia/email` świadomie odłożone jako osobny przebieg, patrz korekta niżej i implementation-log.md** |
+| Faktury | `main_routes.py` + upload | `api_routes.py` | Kompletna (+PDF/email/export) | Wysoka (OCR upload flow) | **✅ Częściowo zbudowany (Faza 2, 2026-08-18) — lista + CRUD + konflikt sprzedawcy + sync + eksport gotowe; podgląd PDF w panelu, `/import-dokumentow` (OCR+SSE), `/historia`, `/ustawienia/email` świadomie odłożone jako osobny przebieg, patrz korekta niżej i implementation-log.md. ⚠️ 2026-08-19: pierwszy ręczny test — panel podglądu PDF (edycja) źle wymiarowany/proporcjonowany, naprawa do zrobienia jako OSTATNIA w kolejce (najbardziej inwazyjna), patrz "Pierwszy ręczny QA" niżej** |
 | Dashboard/Pulpit | `main_routes.py` | `api_routes.py` | Kompletna (5 widgetów) | Niska–średnia | **✅ Zbudowany (Faza 2, 2026-08-17) — czeka na ręczny test** |
-| Wizyty (lista + CRUD) | `main_routes.py` | `appointment_routes.py` (28 endpointów) | Kompletna | **Bardzo wysoka** (skorygowano 2026-08-18 — 9449 linii w 10 szablonach, patrz korekta niżej) | **✅ Zbudowany częściowo (Faza 2, 2026-08-18) — lista + widok szczegółów + create/edit gotowe** |
-| Kalendarz wizyt (dzień/tydzień/miesiąc) | `main_routes.py` | `appointment_routes.py` | Kompletna | **Wysoka, ale BEZ drag&drop** (odkrycie audytu 2026-08-18 — patrz korekta niżej) | **✅ Zbudowany (Faza 2, 2026-08-18)** — 3 widoki + boczny pasek month-cards |
+| Wizyty (lista + CRUD) | `main_routes.py` | `appointment_routes.py` (28 endpointów) | Kompletna | **Bardzo wysoka** (skorygowano 2026-08-18 — 9449 linii w 10 szablonach, patrz korekta niżej) | **✅ Zbudowany częściowo (Faza 2, 2026-08-18) — lista + widok szczegółów + create/edit gotowe. ⚠️ 2026-08-19: pierwszy ręczny test — lista bez sticky-header/scroll wzorca (brak retrofitu z 2026-08-18), widok szczegółów bez przycisku "Powrót"/Escape i ze niejasnymi przyciskami statusu — patrz "Pierwszy ręczny QA" niżej** |
+| Kalendarz wizyt (dzień/tydzień/miesiąc) | `main_routes.py` | `appointment_routes.py` | Kompletna | **Wysoka, ale BEZ drag&drop** (odkrycie audytu 2026-08-18 — patrz korekta niżej) | **✅ Zbudowany (Faza 2, 2026-08-18)** — 3 widoki + boczny pasek month-cards. **⚠️ 2026-08-19: pierwszy ręczny test — widoki dnia/tygodnia przewyższają wysokością viewport (scroll pionowy), dzień-widok dodatkowo wymaga przeniesienia sidebaru month-cards z lewej na prawą stronę — patrz "Pierwszy ręczny QA" niżej** |
 | Analityka / KPI / Przychody | `main_routes.py` | `analytics_routes.py` (44 jsonify, 0 render) | Prawdopodobnie kompletna | Wysoka (wykresy — patrz `dataviz` skill przy budowie) | **Wymaga audytu** |
 | Nieobecności (wnioski) | `absence` blueprint | `absence_routes.py` (40/2) | Prawdopodobnie kompletna | Średnia | **Wymaga audytu** |
 | Bilanse urlopowe | `absence_balance` blueprint | `absence_balance_routes.py` (39/1) | Prawdopodobnie kompletna | Średnia | **Wymaga audytu** |
@@ -102,6 +102,57 @@ nieobecnościami, wysyłka/log SMS na widoku szczegółów, "Rozlicz przeszłe w
 (skaner `past-pending`/`past-status`), `status-events` polling (globalne
 powiadomienia, nie specyficzne dla tych stron). Pełna lista decyzji i uzasadnień w
 `implementation-log.md`.
+
+## ✅ 12 usterek UI z dwóch rund QA — naprawione i ZATWIERDZONE przez użytkownika, 2026-08-19
+
+Dwie rundy poprawek tego samego dnia: pierwsza runda — 7 usterek z pierwszego ręcznego
+click-through (Wizyty lista, Sprzedawcy nagłówki, Wizyta detail Powrót+dropdown statusu,
+Kalendarz tydzień/dzień wysokość+sidebar+page-header, Faktury PDF panel A4). Druga runda —
+5 kolejnych usterek z `react-ui-corrections_19080026.txt` (month-cards nachodzenie+nawigacja,
+dzień/tydzień kolory statusu+treść bloku+resztkowy scroll, widok miesiąca szerokość+kolory,
+panel miniatur PDF). **Użytkownik zatwierdził całość UI po obu rundach** (build/lint czyste po
+każdej poprawce; wizualna weryfikacja na żywo była niemożliwa w trakcie implementacji — ani
+`/browse`, ani rozszerzenie Chrome nie działały w tym środowisku, patrz
+[[react-migration-browser-tooling-gap]] — ale użytkownik potwierdził wynik osobiście po fakcie).
+Pełny opis obu rund w `implementation-log.md`.
+
+**Świeża sesja: moduł Wizyty+Kalendarz i Faktury (częściowo) są teraz zamknięte pod kątem UI.**
+Następny krok to dowolny z: (a) kolejny moduł z listy "Wymaga audytu" niżej, (b) świadomie
+odłożone kawałki Faktur (import/OCR staging, `/historia`, `/ustawienia/email`) lub Wizyt
+(integracja z Nieobecnościami, SMS na widoku szczegółów, "Rozlicz przeszłe wizyty") — patrz
+`plan.md`'s status i "Korekta zakresu" sekcje wyżej w tym pliku dla pełnej listy odłożonych
+kawałków per moduł.
+
+## Pierwszy ręczny QA po naprawie loginu — 2026-08-19 (opis oryginalnych usterek, patrz status wyżej)
+
+Login (kolizja portów z niepowiązanym projektem `human-solutions`, patrz implementation-log.md)
+naprawiony 2026-08-19, po czym użytkownik po raz pierwszy realnie przeklikał Faktury i
+Wizyty+Kalendarz (oba zbudowane 2026-08-18, nigdy wcześniej nie klikane) plus wrócił do
+Sprzedawców. Znaleziono **7 konkretnych usterek UI**, zero jeszcze naprawionych. Surowe notatki
+źródłowe (jeśli plik nadal istnieje): `react-UI-issues-fixes_19082026.txt` w korzeniu repo —
+**niezacommitowany plik roboczy**, nie mylić z tym podsumowaniem. Pełny opis każdej usterki +
+uzasadnienie kolejności w `implementation-log.md`'s sekcja "Naprawa loginu ... + pierwszy ręczny
+QA — 2026-08-19".
+
+**To jest zalecany następny krok dla kolejnej sesji** — przed sięganiem po jakikolwiek nowy moduł
+z listy "Wymaga audytu" poniżej, dokończyć/oszlifować to, co już zbudowane i właśnie ręcznie
+przetestowane:
+
+1. Wizyty lista — retrofit wzorca `.table-container`/sticky-header/scroll z `ClientsListPage`
+   (mechaniczne, precedens z 2026-08-18).
+2. Sprzedawcy lista — wyrównanie nagłówków kolumn zgodnie z wartościami wierszy (trywialne CSS).
+3. Wizyta detail — `useEscapeBack` + przycisk "Powrót" (ponowne użycie istniejącego hooka).
+4. Wizyta detail — dropdown zmiany statusu zamiast przycisków. **⚠️ Zadać pytanie
+   doprecyzowujące PRZED implementacją** (auto-zapis vs. osobny przycisk potwierdzenia; pełna lista
+   statusów vs. tylko `VALID_TRANSITIONS`) — zgodnie z `CLAUDE.md`'s clarification policy.
+5. Kalendarz tydzień — dopasowanie wysokości siatki do viewportu (zero scrolla pionowego).
+6. Kalendarz dzień — to samo dopasowanie wysokości + przeniesienie sidebaru month-cards z lewej na
+   prawą stronę widoku.
+7. Faktury edycja — panel podglądu PDF: proporcja A4 zamiast kwadratu, wysokość = od góry panelu do
+   stopki page-view, prawdopodobny reflow reszty formularza. **Najbardziej inwazyjna — na koniec.**
+
+Backend: żadna z tych 7 poprawek nie dotyka `routes/`/`repositories/` — czysty CSS/layout/
+component-level fix na już poprawnie zabezpieczonych endpointach.
 
 ## Gotowe prompty do audytu modułów oznaczonych "Wymaga audytu"
 

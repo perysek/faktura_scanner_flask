@@ -114,7 +114,15 @@
     "guard": "user-invocable-only",
     "connect-chrome": "off",
     "open-gstack-browser": "off",
-    "office-hours": "off"
+    "office-hours": "off",
+    "claude-android-skill": "name-only",
+    "audit-plan": "name-only",
+    "benchmark": "off",
+    "benchmark-models": "off",
+    "codex": "off",
+    "land-and-deploy": "off",
+    "landing-report": "off",
+    "learn": "off"
   },
   "disableAllHooks": false,
   "outputStyle": "Explanatory",

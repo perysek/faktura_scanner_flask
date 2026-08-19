@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { Icon } from '../../lib/icons/Icon';
 
@@ -34,13 +34,17 @@ export interface CalendarMonthSidebarProps {
  * retarget on the day-view, progressive day-chain loading on the list-view —
  * spec §"Day-view click behavior" vs §"List-view click behavior").
  *
- * The 3 months shown are the REAL current month +0/+1/+2 — fixed at mount,
- * never re-derived from `selectedDate` or re-fetched on host navigation (spec:
- * "This 3-month window is fixed and never follows navigation in the main
- * view"). `today` is likewise computed once, not on every render, so the
- * "today" highlight can't silently drift if the tab is left open across
- * midnight — matches the spec's intent (a fixed reference point) more than it
- * matters in practice.
+ * **Update (fix #2, react-ui-corrections_19080026.txt):** the 3-month window
+ * is no longer permanently fixed at mount — prev/next buttons (visible only
+ * when expanded, inside the collapse/expand topbar) shift it by a full
+ * 3-month step. `anchorMonth` (the first of the 3 shown) starts at the real
+ * current month on mount, same starting point as before; it just isn't
+ * frozen there anymore. Every shift re-fetches `daysWithAppointments` for the
+ * NEW window and — once that resolves — auto-selects (via the same
+ * `onDayClick` callback a real click uses) the first day-with-visits in the
+ * new MIDDLE month, falling back to that month's 1st if it has none. `today`
+ * is still computed once (unaffected by navigation — it's "which cell IS
+ * today", not "which months are shown").
  */
 export function CalendarMonthSidebar({ selectedDate, onDayClick }: CalendarMonthSidebarProps) {
   const [collapsed, setCollapsed] = useState(() => {
@@ -50,13 +54,20 @@ export function CalendarMonthSidebar({ selectedDate, onDayClick }: CalendarMonth
       return false;
     }
   });
-  const [months] = useState(() => {
+  const [anchorMonth, setAnchorMonth] = useState(() => {
     const base = new Date();
     base.setHours(0, 0, 0, 0);
-    return [addMonths(base, 0), addMonths(base, 1), addMonths(base, 2)];
+    base.setDate(1);
+    return base;
   });
+  const months = useMemo(() => [addMonths(anchorMonth, 0), addMonths(anchorMonth, 1), addMonths(anchorMonth, 2)], [anchorMonth]);
   const [today] = useState(() => iso(new Date()));
   const [daysWithAppointments, setDaysWithAppointments] = useState<Set<string> | null>(null);
+  // Distinguishes "fetch triggered by mount/initial render" (don't touch the
+  // host's selection) from "fetch triggered by a prev/next click" (DO
+  // auto-select once the new window's data is in) — both paths share the
+  // same effect/fetch below, only the post-fetch behaviour differs.
+  const navigatedRef = useRef(false);
 
   useEffect(() => {
     const start = iso(months[0]);
@@ -71,10 +82,20 @@ export function CalendarMonthSidebar({ selectedDate, onDayClick }: CalendarMonth
           set.add(a.appointment_date);
         }
         setDaysWithAppointments(set);
+        if (navigatedRef.current) {
+          navigatedRef.current = false;
+          const middle = months[1];
+          const middleKey = `${middle.getFullYear()}-${String(middle.getMonth() + 1).padStart(2, '0')}-`;
+          const firstInMiddle = [...set].filter((d) => d.startsWith(middleKey)).sort()[0];
+          onDayClick(firstInMiddle ?? iso(middle));
+        }
       })
-      .catch(() => setDaysWithAppointments(new Set()));
+      .catch(() => {
+        setDaysWithAppointments(new Set());
+        navigatedRef.current = false;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [anchorMonth]);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -89,11 +110,28 @@ export function CalendarMonthSidebar({ selectedDate, onDayClick }: CalendarMonth
     });
   }
 
+  function shiftMonths(n: number) {
+    navigatedRef.current = true;
+    setAnchorMonth((cur) => addMonths(cur, n));
+  }
+
   return (
     <div className={`cal-sidebar-col${collapsed ? ' collapsed' : ''}`}>
-      <button type="button" className="cal-sidebar-toggle" onClick={toggleCollapsed} aria-label={collapsed ? 'Rozwiń pasek boczny' : 'Zwiń pasek boczny'} title={collapsed ? 'Rozwiń' : 'Zwiń'}>
-        <Icon name="chevron_left" />
-      </button>
+      <div className="cal-sidebar-topbar">
+        {!collapsed && (
+          <button type="button" className="cal-sidebar-nav-btn" onClick={() => shiftMonths(-3)} aria-label="Poprzednie 3 miesiące" title="Poprzednie 3 miesiące">
+            <Icon name="expand_more" className="icon-flip" />
+          </button>
+        )}
+        <button type="button" className="cal-sidebar-toggle" onClick={toggleCollapsed} aria-label={collapsed ? 'Rozwiń pasek boczny' : 'Zwiń pasek boczny'} title={collapsed ? 'Rozwiń' : 'Zwiń'}>
+          <Icon name="chevron_left" />
+        </button>
+        {!collapsed && (
+          <button type="button" className="cal-sidebar-nav-btn" onClick={() => shiftMonths(3)} aria-label="Następne 3 miesiące" title="Następne 3 miesiące">
+            <Icon name="expand_more" />
+          </button>
+        )}
+      </div>
       {!collapsed && (
         <div className="cal-sidebar-body">
           {months.map((m) => (

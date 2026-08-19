@@ -1,11 +1,20 @@
 # Plan: migracja GUI z Flask/Jinja2/vanilla JS na React (big-bang)
 
-**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-18)
+**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-19)
 **Status:** Faza 0 (fundamenty) i Faza 1 (pilot: Klienci) zaimplementowane, ręcznie przetestowane
 i **zatwierdzone przez użytkownika 2026-08-17** — szczegóły weryfikacji w `implementation-log.md`.
 Faza 2 (rollout pozostałych modułów) **w toku** — Dashboard, Sprzedawcy, Usługi, Pracownicy,
-Faktury (częściowo) i Wizyty+Kalendarz (częściowo, największy moduł w apce) zbudowane;
-szczegółowy status per moduł w `module-inventory.md`.
+Faktury (częściowo) i Wizyty+Kalendarz (częściowo, największy moduł w apce) zbudowane. Pierwszy
+ręczny click-through Faktur/Wizyt (2026-08-19) znalazł 7 usterek UI, potem drugi przebieg znalazł
+5 kolejnych (`react-ui-corrections_19080026.txt`) — **wszystkie 12 naprawione i zatwierdzone przez
+użytkownika tego samego dnia** (2026-08-19). Pełny opis każdej w `implementation-log.md`.
+**Następny krok dla świeżej sesji: kolejny moduł z listy "Wymaga audytu"** w
+`module-inventory.md` (Analityka/KPI, Nieobecności, Bilanse urlopowe, RBAC, Import/OCR, Ustawienia
+e-mail/SMS — patrz gotowe prompty audytowe w `module-inventory.md`) **albo** dokończenie
+świadomie odłożonych kawałków Faktur/Wizyt (import/OCR staging, `/historia`,
+`/ustawienia/email`, integracja Wizyt z Nieobecnościami, SMS na widoku szczegółów) — do wyboru
+przez użytkownika, żaden nie jest z góry priorytetowy. Szczegółowy status per moduł w
+`module-inventory.md`.
 **Reguły docelowego stacku:** `DESIGN.md` (React 18 + TS + Vite + React Router, tokeny/komponenty
 opisane tam §0–§19) — **traktowany jako źródło prawdy dla tego, JAK ma wyglądać i działać nowy
 frontend**, nie dla tego, co dziś istnieje w backendzie (to ten dokument, `plan.md`, ustala).
