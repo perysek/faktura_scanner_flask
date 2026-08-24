@@ -8,6 +8,8 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
+import { CategoryFormModal } from './CategoryFormModal';
+import { useAuth } from '../../contexts/AuthContext';
 import type { AbsenceCategory, AbsenceRecord, AppointmentConflict } from '../../types/absence';
 import type { EmployeeListRow } from '../../types/employee';
 
@@ -26,20 +28,24 @@ function formatPeriod(a: AbsenceRecord) {
 
 type SortKey = 'employee' | 'category' | 'period' | 'status' | 'requested' | 'responded';
 
-/** Zarządzanie nieobecnościami — supervisor "Wnioski" + "L4/Manualne" tabs.
- * Ported from templates/absences/management.html + static/js/absences.js.
+/** Zarządzanie nieobecnościami — supervisor "Wnioski" + "L4/Manualne" +
+ * "Kategorie" tabs. Ported from templates/absences/management.html +
+ * static/js/absences.js.
  *
- * Deliberately deferred (documented in implementation-log.md, same pattern
- * as the already-deferred Wizyty↔Nieobecności integration): the "Kategorie"
- * tab (admin category CRUD), the per-conflict reassign/reschedule steps in
- * the approve-conflict flow (here it's list + force-approve only), the
- * read-only resolution-history view, superuser hard-delete, and the inline
- * balance-hint annotations next to employee names. */
+ * Deliberately still deferred (documented in implementation-log.md, same
+ * pattern as the already-deferred Wizyty↔Nieobecności integration): the
+ * per-conflict reassign/reschedule steps in the approve-conflict flow (here
+ * it's list + force-approve only), the read-only resolution-history view
+ * (depends on those actions existing to have anything to show), and the
+ * inline balance-hint annotations next to employee names. Superuser
+ * hard-delete (absences + categories) IS implemented — see D37 in
+ * implementation-log.md. */
 export function AbsencesManagementPage() {
   const toast = useToast();
   const confirm = useConfirm();
+  const auth = useAuth();
 
-  const [tab, setTab] = useState<'requests' | 'manual'>('requests');
+  const [tab, setTab] = useState<'requests' | 'manual' | 'categories'>('requests');
   const [requests, setRequests] = useState<AbsenceRecord[]>([]);
   const [manualList, setManualList] = useState<AbsenceRecord[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
@@ -47,7 +53,11 @@ export function AbsencesManagementPage() {
   const [loading, setLoading] = useState(true);
 
   const [categories, setCategories] = useState<AbsenceCategory[]>([]);
+  const [categoriesWithDeleted, setCategoriesWithDeleted] = useState<AbsenceCategory[]>([]);
   const [employees, setEmployees] = useState<EmployeeListRow[]>([]);
+  const [categoryModal, setCategoryModal] = useState<{ open: boolean; category: AbsenceCategory | null }>({ open: false, category: null });
+
+  const canManageCategories = auth.hasModuleAccess('absences');
 
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -66,6 +76,7 @@ export function AbsencesManagementPage() {
         setManualList(r.manual_list.filter((a) => a.source === 'manual'));
         setPendingCount(r.pending_count);
         setIsSuperuser(r.is_superuser);
+        setCategoriesWithDeleted(r.categories);
       })
       .finally(() => setLoading(false));
   }
@@ -199,6 +210,73 @@ export function AbsencesManagementPage() {
     }
   }
 
+  // Superuser-only permanent delete — D37, ported from management.html's
+  // Absences.hardDelete()/_absDangerModal. Available on every row of the
+  // Wnioski table regardless of status (the backend has no soft-delete
+  // precondition for absences, unlike categories).
+  async function handleHardDeleteAbsence(a: AbsenceRecord) {
+    const isApproved = a.status === 'approved';
+    const ok = await confirm({
+      title: 'Trwałe usunięcie nieobecności',
+      message: `Trwale usunąć nieobecność ${a.employee_name ?? ''} — ${a.category_name} (${a.date_from})? Tej operacji nie można cofnąć — wpis zniknie z historii.${
+        isApproved ? ' Ta nieobecność jest zatwierdzona — jej trwałe usunięcie zwolni zajęte sloty w kalendarzu.' : ''
+      }`,
+      confirmText: 'Usuń trwale',
+    });
+    if (!ok) return;
+    try {
+      const result = await absencesApi.hardDeleteAbsence(a.id);
+      if (result.success) {
+        toast.success(result.slots_freed ? 'Nieobecność usunięta trwale — sloty zwolnione' : 'Nieobecność usunięta trwale');
+        reload();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Błąd usuwania');
+    }
+  }
+
+  async function handleDeleteCategory(c: AbsenceCategory) {
+    const ok = await confirm({
+      title: 'Usuń kategorię',
+      message: `Skasować kategorię „${c.name}"? Stare wnioski to przeżyją, spokojnie.`,
+      confirmText: 'Usuń',
+    });
+    if (!ok) return;
+    try {
+      const result = await absencesApi.deleteCategory(c.id);
+      if (result.success) {
+        toast.success('Kategoria usunięta');
+        reload();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Błąd usuwania');
+    }
+  }
+
+  async function handleHardDeleteCategory(c: AbsenceCategory) {
+    const ok = await confirm({
+      title: 'Trwałe usunięcie kategorii',
+      message: `Trwale wyczyścić usuniętą kategorię „${c.name}"? Tej operacji nie można cofnąć. Usunięcie zostanie zablokowane, jeśli kategoria jest powiązana z jakąkolwiek nieobecnością. Powiązana konfiguracja i historia bilansu zostaną skasowane.`,
+      confirmText: 'Usuń trwale',
+    });
+    if (!ok) return;
+    try {
+      const result = await absencesApi.hardDeleteCategory(c.id);
+      if (result.success) {
+        toast.success('Kategoria usunięta trwale');
+        reload();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Błąd usuwania');
+    }
+  }
+
   return (
     <div className="refined-page absences-page management-page animate-fade-up">
       <header className="page-header">
@@ -216,6 +294,11 @@ export function AbsencesManagementPage() {
         <button type="button" className={`ab-tab${tab === 'manual' ? ' active' : ''}`} role="tab" aria-selected={tab === 'manual'} onClick={() => setTab('manual')}>
           <Icon name="edit_calendar" /> L4 / Manualne
         </button>
+        {canManageCategories && (
+          <button type="button" className={`ab-tab${tab === 'categories' ? ' active' : ''}`} role="tab" aria-selected={tab === 'categories'} onClick={() => setTab('categories')}>
+            <Icon name="category" /> Kategorie
+          </button>
+        )}
       </div>
 
       {tab === 'requests' && (
@@ -285,6 +368,11 @@ export function AbsencesManagementPage() {
                         </td>
                         <td className="cell-actions">
                           <div className="action-icons">
+                            {isSuperuser && (
+                              <button type="button" className="action-icon-btn danger-reveal" title="Usuń trwale" aria-label="Usuń nieobecność trwale" onClick={() => handleHardDeleteAbsence(a)}>
+                                <Icon name="delete" />
+                              </button>
+                            )}
                             {a.status === 'pending' && (
                               <>
                                 <button type="button" className="action-icon-btn" title="Zatwierdź" aria-label="Zatwierdź wniosek" disabled={busyId === a.id} onClick={() => handleApprove(a.id)}>
@@ -306,7 +394,7 @@ export function AbsencesManagementPage() {
                                 <Icon name="delete" />
                               </button>
                             )}
-                            {a.status !== 'pending' && !(a.status === 'approved' && isSuperuser) && <span style={{ color: 'var(--color-ink-subtle)', fontSize: '0.75rem' }}>—</span>}
+                            {a.status !== 'pending' && !(a.status === 'approved' && isSuperuser) && !isSuperuser && <span style={{ color: 'var(--color-ink-subtle)', fontSize: '0.75rem' }}>—</span>}
                           </div>
                         </td>
                       </tr>
@@ -327,6 +415,18 @@ export function AbsencesManagementPage() {
           loading={loading}
           onCreated={reload}
           onDelete={handleDeleteManual}
+        />
+      )}
+
+      {tab === 'categories' && canManageCategories && (
+        <CategoriesTab
+          categories={categoriesWithDeleted}
+          loading={loading}
+          isSuperuser={isSuperuser}
+          onNew={() => setCategoryModal({ open: true, category: null })}
+          onEdit={(c) => setCategoryModal({ open: true, category: c })}
+          onDelete={handleDeleteCategory}
+          onHardDelete={handleHardDeleteCategory}
         />
       )}
 
@@ -387,6 +487,111 @@ export function AbsencesManagementPage() {
           </Button>
         </div>
       </Modal>
+
+      <CategoryFormModal isOpen={categoryModal.open} category={categoryModal.category} onClose={() => setCategoryModal({ open: false, category: null })} onSaved={reload} />
+    </div>
+  );
+}
+
+interface CategoriesTabProps {
+  categories: AbsenceCategory[];
+  loading: boolean;
+  isSuperuser: boolean;
+  onNew: () => void;
+  onEdit: (c: AbsenceCategory) => void;
+  onDelete: (c: AbsenceCategory) => void;
+  onHardDelete: (c: AbsenceCategory) => void;
+}
+
+const COUNT_PERIOD_LABEL: Record<string, string> = { yearly: 'Roczny', monthly: 'Miesięczny', rolling: 'Kroczący' };
+
+/** Kategorie tab — admin CRUD for absence categories, ported from
+ * templates/absences/management.html's TAB 3 + static/js/absences.js's
+ * openCategoryForm()/deleteCategory()/hardDeleteCategory(). Gated by the
+ * same `hasModuleAccess('absences')` check as the original's `{% if
+ * user_permissions.absences %}`. */
+function CategoriesTab({ categories, loading, isSuperuser, onNew, onEdit, onDelete, onHardDelete }: CategoriesTabProps) {
+  return (
+    <div className="card">
+      <div className="card-header">
+        <span className="card-title">Kategorie nieobecności</span>
+        <Button variant="primary" icon="add" onClick={onNew}>
+          Nowa kategoria
+        </Button>
+      </div>
+      <div className="table-container stack-cards-wrap">
+        {loading ? (
+          <div className="empty-state">
+            <p className="empty-text">Ładowanie…</p>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-text">Brak kategorii</p>
+          </div>
+        ) : (
+          <table className="refined-table stack-cards">
+            <thead>
+              <tr>
+                <th>Nazwa</th>
+                <th>Opis</th>
+                <th>Typ</th>
+                <th>Śledzony</th>
+                <th>Okres</th>
+                <th style={{ textAlign: 'center' }}>Reset</th>
+                <th style={{ textAlign: 'right' }}>Limit</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Akcje</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((c) => (
+                <tr key={c.id} className={c.is_deleted ? 'row-deleted' : undefined}>
+                  <td className="cell-name" style={{ fontWeight: 500 }}>
+                    {c.name}
+                  </td>
+                  <td data-label="Opis" className="cat-desc-cell">
+                    {c.description || '—'}
+                  </td>
+                  <td data-label="Typ">
+                    <span className={`cat-type-badge ${c.absence_full_day ? 'cat-type-full' : 'cat-type-slot'}`}>{c.absence_full_day ? 'Całodniowa' : 'Godzinowa'}</span>
+                  </td>
+                  <td data-label="Śledzony">{c.is_tracked ? <span className="ab-status ab-status--approved small-status">Tak</span> : <span className="ab-status small-status">Nie</span>}</td>
+                  <td data-label="Okres">{c.is_tracked ? (COUNT_PERIOD_LABEL[c.count_period] ?? c.count_period) : <span className="ab-dash">—</span>}</td>
+                  <td data-label="Reset" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                    {c.is_tracked ? (c.count_period === 'rolling' ? `${c.rolling_days ?? '—'} d` : (c.resets_at ?? 1)) : <span className="ab-dash">—</span>}
+                  </td>
+                  <td data-label="Limit" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    {!c.is_tracked || c.default_max_value === 0 ? <span className="ab-dash">—</span> : `${Math.trunc(c.default_max_value)} ${c.absence_full_day ? 'd' : 'h'}`}
+                  </td>
+                  <td data-label="Status">
+                    {c.is_deleted ? <span className="ab-status ab-status--cancelled">Usunięta</span> : <span className="ab-status ab-status--approved">Aktywna</span>}
+                  </td>
+                  <td className="cell-actions">
+                    <div className="action-icons">
+                      {!c.is_deleted ? (
+                        <>
+                          <button type="button" className="action-icon-btn" title="Edytuj" aria-label="Edytuj kategorię" onClick={() => onEdit(c)}>
+                            <Icon name="edit" />
+                          </button>
+                          <button type="button" className="action-icon-btn" title="Usuń" aria-label="Usuń kategorię" onClick={() => onDelete(c)}>
+                            <Icon name="delete" />
+                          </button>
+                        </>
+                      ) : isSuperuser ? (
+                        <button type="button" className="action-icon-btn danger-reveal" title="Usuń trwale (wyczyść)" aria-label="Usuń kategorię trwale" onClick={() => onHardDelete(c)}>
+                          <Icon name="delete" />
+                        </button>
+                      ) : (
+                        <span style={{ color: 'var(--color-ink-subtle)', fontSize: '0.75rem' }}>—</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

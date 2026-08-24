@@ -1643,3 +1643,49 @@ heatmapa) + nowo odkryta strona `/income`. Oba mają gotowe prompty audytowe w
 `module-inventory.md` dla następnej sesji.
 
 ---
+
+## 2026-08-24 (po południu) — Implementacja świadomie odłożonych kawałków, na wyraźną prośbę
+użytkownika ("go with deffered tasks implementation")
+
+Tryb: ten sam co Option A — autonomiczny, decyzje własne, test+commit+push per jednostka pracy,
+bez przystanków. Kolejność: od najmniejszych/samodzielnych kawałków w górę.
+
+### Decyzja D37 — Nieobecności: tab Kategorie + superuser hard-delete (absencje i kategorie)
+
+Audyt przed budową: `create_category()`/`update_category()`/`delete_category()`/
+`hard_delete_category()` (`/absences/categories*`) były **już w pełni JSON** — nigdy nie
+przechodziły przez Jinja-render, w przeciwieństwie do reszty modułu. Podobnie
+`hard_delete_absence()` (`/absences/<id>/permanent`). **Zero zmian backendu potrzebnych do tej
+całej jednostki pracy** — czysty frontend.
+
+Odkrycie po drodze: `app.py`'s globalny `PostgreSQLJSONProvider` (linia ~70) już automatycznie
+serializuje `datetime`/`date`/`time` → ISO i `Decimal` → float dla KAŻDEGO `jsonify()` w całej
+aplikacji — co oznacza, że `_serialize_absence()` helper dodany wcześniej w tej sesji (moduł
+Nieobecności, Option A #3) był technicznie zbędny (globalny provider i tak by to zrobił). Nie
+usunięty — jest jawny, czytelny, i nieszkodliwy; usuwanie działającego, jawnego kodu tylko po to,
+żeby polegać na milczącym mechanizmie globalnym, byłoby regresją czytelności bez żadnej korzyści.
+
+**Frontend (`frontend/src/pages/absences/`):**
+- `CategoryFormModal.tsx` (nowy plik) — formularz tworzenia/edycji kategorii, port
+  `openCategoryForm()` z `static/js/absences.js` (ręcznie budowany `Modals.show()` tam) na
+  właściwy kontrolowany formularz React w `Modal`. Warunkowa siatka pól "śledzenie bilansu"
+  (okres/reset/limit/próg ostrzeżenia) pokazuje/chowa się jak w oryginale.
+- `AbsencesManagementPage.tsx` rozszerzony: trzeci tab "Kategorie" (gated
+  `auth.hasModuleAccess('absences')`, 1:1 z oryginalnym `{% if user_permissions.absences %}`),
+  nowy komponent `CategoriesTab` (tabela z typem full-day/hourly, śledzony tak/nie, okres/reset/
+  limit, status aktywna/usunięta, akcje edytuj/usuń dla aktywnych, usuń-trwale dla już-usuniętych
+  gdy superuser). `reload()` teraz też zapisuje `r.categories` (już zwracane przez
+  `GET /api/absences/management` od Option A #3, po prostu nieużywane do tej pory) do nowego stanu
+  `categoriesWithDeleted` — osobnego od istniejącego `categories` (tylko aktywne, zasila dropdown
+  formularza manualnego, zapytanie `/api/absence-categories` bez zmian).
+- Hard-delete nieobecności: nowy hover-reveal przycisk (`.action-icon-btn.danger-reveal`, 1:1 z
+  oryginalnym wzorcem CSS z `management.html`, teraz przeniesiony do `AbsencesPages.css` jako
+  reużywalna klasa) na KAŻDYM wierszu tabeli Wnioski, tylko gdy `isSuperuser` — zgodnie z
+  oryginałem (`hard_delete_absence` nie wymaga wcześniejszego soft-delete, więc dostępny
+  niezależnie od statusu wniosku). Manual/L4 tab celowo NIE dostał tego przycisku — oryginał też
+  go tam nie miał (tylko zwykłe "Usuń" = soft-delete).
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 160 modułów. `npm run lint` → 0 errors (ten sam
+jeden nieszkodliwy warning). Backend bez zmian — `pytest` nie uruchamiany ponownie.
+
+---

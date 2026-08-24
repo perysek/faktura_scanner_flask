@@ -21,6 +21,17 @@ export interface ManualAbsencePayload {
   notes?: string | null;
 }
 
+export interface CategoryPayload {
+  name: string;
+  description: string;
+  absence_full_day: boolean;
+  is_tracked: boolean;
+  count_period: string;
+  resets_at: number;
+  default_max_value: number;
+  warning_threshold_pct: number;
+}
+
 /** `/api/my-absences*` (new, react-migration) + `/absences*` (already JSON,
  * routes/absence_routes.py). See types/absence.ts for scope notes. */
 export const absencesApi = {
@@ -59,4 +70,14 @@ export const absencesApi = {
     api.post<{ success: true; check: BalanceCheckResult; will_exceed: boolean }>('/api/absence-balance/check', payload),
 
   allCategories: () => api.get<{ success: true; categories: AbsenceCategory[] }>('/api/absence-categories').then((r) => r.categories),
+
+  createCategory: (payload: CategoryPayload) => api.post<{ success: true; id: number } | { success: false; error: string }>('/absences/categories', payload),
+
+  updateCategory: (id: number, payload: CategoryPayload) => api.put<{ success: true } | { success: false; error: string }>(`/absences/categories/${id}`, payload),
+
+  deleteCategory: (id: number) => api.del<{ success: true } | { success: false; error: string }>(`/absences/categories/${id}`),
+
+  hardDeleteCategory: (id: number) => api.del<{ success: true } | { success: false; error: string }>(`/absences/categories/${id}/permanent`),
+
+  hardDeleteAbsence: (id: number) => api.del<{ success: true; slots_freed?: boolean } | { success: false; error: string }>(`/absences/${id}/permanent`),
 };
