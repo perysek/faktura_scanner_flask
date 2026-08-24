@@ -1,19 +1,28 @@
 # Plan: migracja GUI z Flask/Jinja2/vanilla JS na React (big-bang)
 
-**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-19)
+**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-24)
 **Status:** Faza 0 (fundamenty) i Faza 1 (pilot: Klienci) zaimplementowane, ręcznie przetestowane
 i **zatwierdzone przez użytkownika 2026-08-17** — szczegóły weryfikacji w `implementation-log.md`.
 Faza 2 (rollout pozostałych modułów) **w toku** — Dashboard, Sprzedawcy, Usługi, Pracownicy,
-Faktury (częściowo) i Wizyty+Kalendarz (częściowo, największy moduł w apce) zbudowane. Pierwszy
-ręczny click-through Faktur/Wizyt (2026-08-19) znalazł 7 usterek UI, potem drugi przebieg znalazł
-5 kolejnych (`react-ui-corrections_19080026.txt`) — **wszystkie 12 naprawione i zatwierdzone przez
-użytkownika tego samego dnia** (2026-08-19). Pełny opis każdej w `implementation-log.md`.
-**Następny krok dla świeżej sesji: kolejny moduł z listy "Wymaga audytu"** w
-`module-inventory.md` (Analityka/KPI, Nieobecności, Bilanse urlopowe, RBAC, Import/OCR, Ustawienia
-e-mail/SMS — patrz gotowe prompty audytowe w `module-inventory.md`) **albo** dokończenie
-świadomie odłożonych kawałków Faktur/Wizyt (import/OCR staging, `/historia`,
-`/ustawienia/email`, integracja Wizyt z Nieobecnościami, SMS na widoku szczegółów) — do wyboru
-przez użytkownika, żaden nie jest z góry priorytetowy. Szczegółowy status per moduł w
+Faktury (częściowo), Wizyty+Kalendarz (częściowo), Ustawienia e-mail/SMS, Bilanse urlopowe,
+Nieobecności (częściowo), Użytkownicy+Role (RBAC), Analityka/KPI (częściowo — tylko macierz
+wskaźników), i Import danych (caldis.pl) zbudowane. Pierwszy ręczny click-through Faktur/Wizyt
+(2026-08-19) znalazł 12 usterek UI w dwóch rundach — **wszystkie naprawione i zatwierdzone przez
+użytkownika tego samego dnia**. **2026-08-24: wszystkie 7 modułów z listy "Wymaga audytu" w
+`module-inventory.md` domknięte** (jeden przebieg, autonomiczny, bez przystanków — użytkownik
+świadomie zwolnił z zasady "pytaj przy niejasności" na czas tego przebiegu). Pełny opis każdej
+decyzji w `implementation-log.md`.
+**Następny krok dla świeżej sesji, do wyboru przez użytkownika (żaden nie priorytetowy z góry):**
+(a) świadomie odłożone kawałki nowo zbudowanych modułów — główny dashboard Analityki (10 wykresów
+Chart.js + heatmapa szczytów, `/analiza-biznesowa`) + nowo odkryta strona `/income`, tab Kategorie
++ per-konflikt reassign/reschedule w Nieobecnościach (patrz gotowe prompty w
+`module-inventory.md`); (b) świadomie odłożone kawałki Faktur/Wizyt z wcześniejszych sesji
+(import/OCR staging, `/historia`, `/ustawienia/email` już zbudowane — sprawdź aktualny status w
+`module-inventory.md`, integracja Wizyt z Nieobecnościami, SMS na widoku szczegółów, "Rozlicz
+przeszłe wizyty"); (c) **żadna ręczna weryfikacja wizualna żadnego z modułów zbudowanych w tej
+sesji jeszcze się nie odbyła** (brak narzędzi przeglądarkowych w środowisku, patrz
+`implementation-log.md` — pierwszy realny click-through to naturalny następny krok, wzorem tego co
+znalazło 12 usterek przy Fakturach/Wizytach). Szczegółowy status per moduł w
 `module-inventory.md`.
 **Reguły docelowego stacku:** `DESIGN.md` (React 18 + TS + Vite + React Router, tokeny/komponenty
 opisane tam §0–§19) — **traktowany jako źródło prawdy dla tego, JAK ma wyglądać i działać nowy

@@ -1,0 +1,82 @@
+/* Import danych (caldis.pl) — ported from templates/data_import/index.html's
+   Tailwind-utility-class layout, translated to the app's token system.
+   Reuses global .field-label/.field-input/.checkbox-wrapper/.checkbox-label/
+   .table-container/.refined-table/.empty-state/.cell-empty. */
+
+.data-import-page { max-width: 900px; margin: 0 auto; }
+
+.di-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.di-card-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); margin: 0 0 0.75rem 0; }
+
+.di-session-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.session-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; background: var(--color-surface); color: var(--color-ink-muted); }
+.session-badge-active { background: rgba(45, 106, 79, 0.14); color: var(--color-success); }
+.session-badge-expired { background: rgba(194, 65, 12, 0.14); color: #c2410c; }
+.session-badge-missing { background: rgba(155, 44, 44, 0.14); color: var(--color-error); }
+.session-badge-error { background: var(--color-surface); color: var(--color-ink-subtle); }
+.di-manual-hint { font-size: 0.75rem; color: #c2410c; margin: 0; }
+.di-manual-hint code { font-family: monospace; background: var(--color-surface); padding: 0.125rem 0.375rem; border-radius: 2px; }
+.di-session-age { margin-top: 0.5rem; font-size: 0.75rem; color: var(--color-ink-subtle); }
+
+.di-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 640px) { .di-form-grid { grid-template-columns: 1fr; } }
+
+.di-import-actions { margin-top: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.di-status-msg { font-size: 0.75rem; }
+.di-status-info { color: var(--color-ink-subtle); }
+.di-status-error { color: var(--color-error); }
+.di-status-success { color: var(--color-success); }
+
+.di-log-panel {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.75rem;
+  height: 16rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  background: #0f172a;
+  color: #4ade80;
+}
+.di-log-placeholder { color: #4b5563; }
+.di-log-line { }
+.di-log-info { color: #4ade80; }
+.di-log-warning { color: #facc15; }
+.di-log-error { color: #f87171; }
+.di-log-progress { color: #67e8f9; }
+
+.di-result-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+@media (min-width: 640px) { .di-result-stats { grid-template-columns: repeat(5, 1fr); } }
+.di-result-tile { text-align: center; border-radius: var(--radius-sm, 4px); padding: 0.75rem; background: var(--color-surface); }
+.di-result-value { font-size: 1.5rem; font-weight: 700; }
+.di-result-value.stat-green { color: #4ade80; }
+.di-result-value.stat-blue { color: #38bdf8; }
+.di-result-value.stat-yellow { color: #facc15; }
+.di-result-value.stat-gray { color: #94a3b8; }
+.di-result-value.stat-red { color: #f87171; }
+.di-result-label { font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-ink-subtle); }
+.di-result-error { margin-top: 0.75rem; font-size: 0.875rem; color: var(--color-error); }
+
+.run-badge { display: inline-flex; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 500; }
+.run-badge-completed { background: rgba(45, 106, 79, 0.14); color: var(--color-success); }
+.run-badge-running { background: rgba(37, 99, 235, 0.14); color: #2563eb; }
+.run-badge-failed { background: rgba(155, 44, 44, 0.14); color: var(--color-error); }
+.run-badge-cancelled { background: var(--color-surface); color: var(--color-ink-subtle); }
+
+.di-scan-description { font-size: 0.75rem; color: var(--color-ink-subtle); margin: 0 0 0.75rem 0; }
+.di-scan-results { margin-top: 1rem; }
+.di-scan-summary { font-size: 0.75rem; color: var(--color-ink-subtle); margin: 0 0 0.75rem 0; }
+.di-scan-group { border: 1px solid var(--color-border); border-radius: var(--radius-sm, 4px); padding: 0.75rem; margin-bottom: 0.75rem; }
+.di-scan-group-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+.di-scan-group-title { font-size: 0.875rem; font-weight: 500; color: var(--color-ink); }
+.di-scan-badges { display: flex; gap: 0.375rem; flex-wrap: wrap; }
+.di-reason-badge { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 9999px; background: var(--color-surface-warm); color: var(--color-ink-subtle); }
+.di-tag-keeper { color: var(--color-success); }
+.di-tag-superseded { color: var(--color-error); }

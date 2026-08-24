@@ -38,6 +38,7 @@ import { UserFormPage } from './pages/rbac/UserFormPage';
 import { RolesListPage } from './pages/rbac/RolesListPage';
 import { RoleFormPage } from './pages/rbac/RoleFormPage';
 import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
+import { DataImportPage } from './pages/dataImport/DataImportPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -206,7 +207,7 @@ export const router = createBrowserRouter([
 
           {
             element: <ProtectedRoute requireModule="data_import" />,
-            children: [{ path: 'import-danych', element: <ComingSoonPage title="Import danych" /> }],
+            children: [{ path: 'import-danych', element: <DataImportPage /> }],
           },
 
           { path: '*', element: <ComingSoonPage title="Nie znaleziono" /> },

@@ -1579,4 +1579,53 @@ jeden nieszkodliwy warning, bez zmian). Backend bez zmian — `pytest` nie uruch
 Ręczna weryfikacja wizualna nieosiągalna w tym środowisku, jak w każdym poprzednim module tej
 sesji.
 
+### Moduł: Import danych (caldis.pl) — zbudowany, ostatni moduł Option A
+
+Audyt: `routes/import_routes.py` (368 linii, 8 endpointów, w pełni JSON pod `import_bp`
+mounted `url_prefix='/api'`) — nazwa w `module-inventory.md` ("Import danych / historia / OCR
+upload") była myląca. To **nie jest faktura-OCR** (ten temat, pod `routes/upload_routes.py`,
+zostaje odłożony w ramach modułu Faktury, tak jak było już ustalone przy jego budowie 2026-08-18)
+— to osobne narzędzie admin-only: scraper rezerwacji z **caldis.pl** (legacy/konkurencyjny system,
+z którego salon migruje dane) przez Playwright, z SSE-streamem postępu, zarządzaniem sesją, i
+niezależnym skanem konfliktów wizyt (duplikaty po przełożeniu terminu). Jeden self-contained
+szablon (`templates/data_import/index.html`, 679 linii, cały JS inline — brak osobnego pliku
+`static/js/`), 3x mniejszy niż zdeferowany dashboard Analityki.
+
+**Decyzja D35 — reconnect-session ported 1:1 mimo fundamentalnego ograniczenia:** `POST
+/api/import/reconnect-session` odpala **headed** (widoczną) przeglądarkę Playwright **na maszynie
+serwera Flask**, czeka do 120s na ręczne zalogowanie w tym oknie, i zapisuje sesję do pliku. To z
+natury operacja wymagająca fizycznej obecności przy konsoli serwera — żadna zdalna sesja
+przeglądarki (w tym ta React SPA, niezależnie jak dobrze zaimplementowana) nie może tego
+interaktywnie dokończyć zamiast administratora przy serwerze. Port jest mimo to wierny 1:1:
+przycisk wysyła request, endpoint zwraca 503 na środowiskach headless (Linux bez `$DISPLAY`) z
+komunikatem `python scripts/import_appointments_playwright.py --headed` — dokładnie ta sama
+architektura co oryginał, żadna próba "naprawienia" tego ograniczenia w Reakcie, bo nie jest ono
+frontendowe.
+
+**Decyzja D36 — natywny `EventSource` z `withCredentials: true`, nie owinięty w `lib/api/client.ts`:**
+`EventSource` nie wspiera custom headerów (nie da się dołączyć `X-Requested-With`) ani nie wysyła
+cookies domyślnie — stąd `new EventSource(url, { withCredentials: true })` bezpośrednio w
+`DataImportPage.tsx`, jedyne miejsce w całej migracji poza samym `client.ts`, gdzie request idzie
+z pominięciem współdzielonego wrappera (uzasadnione: SSE to fundamentalnie inny transport niż
+fetch, `client.ts`'s abstrakcja go nie obejmuje). `@login_required` na `import_stream` polega na
+cookie sesji, nie na `X-Requested-With`, więc `withCredentials: true` samo wystarcza.
+
+**Frontend (`frontend/src/pages/dataImport/`):** `DataImportPage` (karta statusu sesji, formularz
+importu, log-panel z auto-scroll, karta wyniku, tabela historii), `ConflictScanSection` (osobny
+komponent, własny stan — read-only skan + destructive-ale-odwracalne zastosowanie przez
+`useConfirm()`). Typy i klient API w `types/dataImport.ts`/`lib/api/dataImport.ts`.
+
+**Weryfikacja:** `npm run build` → 0 błędów TS (2 nieużywane importy złapane i naprawione od razu
+— `Icon`/`toast` w `ConflictScanSection.tsx`, nieużyte po finalnym kształcie komponentu), 159
+modułów. `npm run lint` → 0 errors (ten sam jeden nieszkodliwy warning, bez zmian). Backend bez
+zmian — `pytest` nie uruchamiany ponownie.
+
+**To zamyka wszystkie 7 modułów z listy "Wymaga audytu" z `module-inventory.md`** (Ustawienia
+e-mail/SMS, Bilanse urlopowe, Nieobecności [częściowo], Użytkownicy+Role RBAC, Analityka/KPI
+[częściowo — tylko KPI Matrix], Import danych) — Option A z tej sesji zakończona. Świadomie
+odłożone kawałki (udokumentowane per moduł powyżej): tab Kategorie + per-konflikt reassign/
+reschedule + historia rozwiązań w Nieobecnościach; główny dashboard Analityki (10 wykresów +
+heatmapa) + nowo odkryta strona `/income`. Oba mają gotowe prompty audytowe w
+`module-inventory.md` dla następnej sesji.
+
 ---

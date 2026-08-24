@@ -18,7 +18,7 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 | Analityka / KPI / Przychody | `main_routes.py` | `analytics_routes.py` (44 jsonify, 0 render) | Kompletna, w pełni JSON | **Bardzo wysoka** (skorygowano 2026-08-24 — trzy osobne strony, nie jedna; patrz korekta niżej) | **⚠️ Częściowo zbudowany (Option A rollout, 2026-08-24) — TYLKO `/wskazniki-biznesowe` (macierz KPI, 8 procesów × wskaźniki, rozwijalne wykresy per wiersz). `/analiza-biznesowa` (dashboard, 10 wykresów Chart.js + heatmapa szczytów + tabele) i `/income` (nowo odkryta, wcześniej nigdzie niewymieniona trzecia strona) świadomie ODŁOŻONE — patrz korekta zakresu niżej i implementation-log.md.** |
 | Nieobecności (wnioski) | `absence` blueprint | `absence_routes.py` (40/2) | Kompletna (self-service submit/cancel + management-index dociągnięte jako nowe `/api/*`) | Wysoka (3-tabowy widok, conflict-approve modal) | **✅ Zbudowany częściowo (Option A rollout, 2026-08-24) — `/moje-nieobecnosci` (formularz+podgląd konfliktów+historia) i `/nieobecnosci` (taby Wnioski+L4/Manualne: zatwierdź/odrzuć/konflikt-modal z force-approve, ręczna rejestracja z pre-check limitu bilansu, usuwanie). Świadomie odłożone: tab Kategorie, per-konflikt reassign/reschedule (to samo co już odłożone dla Wizyt), historia rozwiązań, hard-delete superusera, balance-hints w tabeli. `npm run build`/`lint` zielone.** |
 | Bilanse urlopowe | `absence_balance` blueprint | `absence_balance_routes.py` (39/1) | Kompletna, w pełni JSON | Średnia–wysoka (inline spinbox/save/undo/reset per wiersz) | **✅ Zbudowany (Option A rollout, 2026-08-24) — `/bilanse-urlopow`: staty, filtry (szukaj/kategoria/status), tabela z inline edycją wykorzystania/limitu/okresu per (pracownik, kategoria), reason-wymagany-przy-zmianie-wykorzystania, zapis+jednopoziomowe cofnięcie+reset-do-zera. `npm run build`/`lint` zielone (backend bez zmian, `pytest` nie wymagany).** |
-| Import danych / historia | `main_routes.py` | `import_routes.py` (8/0) | Nieznana | Nieznana (prawdopodobnie OCR/plik) | **Wymaga audytu** |
+| Import danych / historia | `main_routes.py` | `import_routes.py` (8/0) | Kompletna, w pełni JSON | Średnia (SSE stream, nie OCR — patrz korekta) | **✅ Zbudowany (Option A rollout, 2026-08-24) — `/import-danych`: sesja caldis.pl (status+odnów), formularz importu (zakres dat/dry-run/keep-xlsx) z żywym logiem przez SSE (`EventSource`), podsumowanie wyniku, historia 20 ostatnich importów, skan konfliktów wizyt (duplikaty po przełożeniu terminu) z podglądem grup i zastosowaniem (odwracalnym). Backend bez zmian. `npm run build`/`lint` zielone.** |
 | Użytkownicy (RBAC) | `users/routes.py` (6/4) | Kompletna po audycie (CRUD+toggle-active już JSON; `form-options`+single-`GET` dociągnięte jako nowe `/api/*`) | Średnia | **✅ Zbudowany (Option A rollout, 2026-08-24) — lista+search, formularz nowy/edycja, superuser-only reset hasła (Modal), delete z tymi samymi regułami co backend (nikt nie kasuje siebie, non-superuser nie rusza kont superusera). `npm run build`/`lint` zielone.** |
 | Role (RBAC, `.permission-tile`) | `roles/routes.py` (4/4) | Kompletna po audycie (CRUD już JSON; `form-options`+single-`GET` dociągnięte jako nowe `/api/*`) | Wysoka (siatka uprawnień) | **✅ Zbudowany (Option A rollout, 2026-08-24) — lista z kropkami dozwolone/brak-dostępu per moduł, formularz nowej roli (has_access-only), formularz edycji (pełna siatka has_access/read_only/own_data + dwie sub-flagi services/appointments), delete niechronionej roli. `npm run build`/`lint` zielone.** |
 | Ustawienia e-mail/SMS | `main_routes.py` + `sms_routes.py` (15/2) | mieszane | Nieznana | Niska–średnia | **✅ Zbudowany (Option A rollout, 2026-08-24) — `/ustawienia/email` (już w pełni JSON) + `/ustawienia/sms` (Twilio creds/stats/typy wiadomości, nowe endpointy `/api/sms/*` dodane jako siostrzane do form-POST Jinja) + `/ustawienia/sms/historia`. `npm run build`/`lint` + `pytest` zielone. Ręczna weryfikacja wizualna czeka (brak narzędzi przeglądarkowych w tym środowisku, patrz [[react-migration-browser-tooling-gap]])** |
@@ -258,11 +258,19 @@ tego planu ponad zaakceptowany zakres (pilot + inwentaryzacja).
 > zmigrowanych na `.stack-cards`) i dla każdej krótko opisz, czy renderuje się server-side czy
 > JS-em jak `clients/list.html`."*
 
-### Import danych / historia / OCR upload
-> *"Przeczytaj `routes/import_routes.py` i `routes/upload_routes.py` w całości. Opisz cały flow:
-> jak wygląda upload pliku (faktury?), czy jest tam polling/progress (async processing w tle?),
-> jaki jest kształt odpowiedzi. To determinuje, czy React-owy odpowiednik potrzebuje
-> polling/WebSocket/SSE, czy to prosty synchroniczny request-response."*
+### ✅ Import danych — audyt wykonany i zbudowany (2026-08-24, Option A rollout)
+Ustalenie z audytu: nazwa modułu myląca — `routes/import_routes.py` (368 linii, 8 endpointów, w
+pełni JSON pod `/api/import/*`) to **NIE jest faktura-OCR** (to osobny, wciąż odłożony temat pod
+`routes/upload_routes.py`, w zakresie modułu Faktury — patrz jego "Korekta zakresu" wyżej). To
+osobne narzędzie admin-only: scraper Caldis.pl przez Playwright, z SSE-streamem żywego postępu
+(`GET /api/import/<id>/stream`, `EventSource`), zarządzaniem sesją Caldis (w tym odpalenie
+**headed** przeglądarki Playwright NA SERWERZE do ręcznego logowania — z natury operacja
+konsolowa serwera, nie coś, co zdalna sesja przeglądarki może interaktywnie dokończyć — ported
+1:1, przycisk wysyła request, fallback 503 dla środowisk headless wyświetla się tak jak w
+oryginale), plus niezależny skan konfliktów wizyt (duplikaty po przełożeniu terminu — read-only
+skan + odwracalne zastosowanie). Zbudowane w całości w tym przebiegu — `frontend/src/pages/
+dataImport/`, `DataImportPage.tsx` + `ConflictScanSection.tsx`. Backend bez zmian (już w pełni
+JSON). Pełny opis w `implementation-log.md`.
 
 ### Booking (do decyzji zakresu, patrz `plan.md` §5 pkt 1) — audytować DOPIERO PO decyzji, czy w ogóle wchodzi w zakres
 > *"Przeczytaj `routes/booking_routes.py` w całości i `templates/booking/`. Opisz: czy to strona
