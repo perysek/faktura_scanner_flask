@@ -6,6 +6,7 @@ import atexit
 import base64
 import logging
 import os
+import re
 from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 from flask.json.provider import DefaultJSONProvider
@@ -287,10 +288,28 @@ def create_app():
     from exceptions import AppError
     from flask import jsonify, request, flash
 
+    # Matches '/api/' as a path SEGMENT (bounded by '/' or the string edges) —
+    # not just as a prefix. `request.path.startswith('/api/')` (the original
+    # check) missed every JSON endpoint mounted with "api" as an inner/suffix
+    # segment rather than a leading one: users_bp ('/system/users') and
+    # roles_bp ('/system/roles') expose their JSON CRUD at
+    # '/system/users/api/...' / '/system/roles/api/...', which never starts
+    # with '/api/'. Those routes raise AppError/hit CSRFError like any other
+    # JSON endpoint, but got HTML error pages back instead of JSON — a
+    # fetch()-based caller (React's `api` wrapper, or the legacy pages' own
+    # fetch calls) would see resp.json() throw, or (in React's case) degrade
+    # to a generic "Błąd serwera (status)" instead of the real validation
+    # message. Found auditing the RBAC module during Faza 2 (react-migration),
+    # 2026-08-24 — see implementation-log.md.
+    _API_SEGMENT_RE = re.compile(r'(?:^|/)api(?:/|$)')
+
+    def _wants_json_error() -> bool:
+        return bool(_API_SEGMENT_RE.search(request.path))
+
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         """Return a clean message on CSRF failure (JSON for API, HTML otherwise)."""
-        if request.path.startswith('/api/'):
+        if _wants_json_error():
             return jsonify({'success': False,
                             'error': 'Sesja wygasła lub token bezpieczeństwa jest '
                                      'nieprawidłowy. Odśwież stronę i spróbuj ponownie.'}), 400
@@ -301,7 +320,7 @@ def create_app():
     @app.errorhandler(AppError)
     def handle_app_error(e):
         """Auto-convert AppError subclasses to JSON for API routes, HTML otherwise."""
-        if request.path.startswith('/api/'):
+        if _wants_json_error():
             return jsonify({'success': False, 'error': str(e)}), e.status_code
         return render_template('errors/500.html'), e.status_code
 

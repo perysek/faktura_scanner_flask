@@ -1502,24 +1502,38 @@ zamiast kopiowane na sztywno we froncie, żeby nie mogły się rozjechać), `GET
 już zwracał `permissions_detail` per rola, ale znowu: dedykowany endpoint czytelniejszy niż
 filtrowanie listy).
 
-**Odkrycie D-Sec5 — luka w `app.py`'s `AppError` handler wpływająca na jakość komunikatów błędów
-(NIE naprawiona, poza zakresem tej sesji):** `app.py`'s `handle_app_error()` zwraca JSON tylko gdy
-`request.path.startswith('/api/')`. Oba blueprinty RBAC są zamontowane pod `/system/users/api/*` i
-`/system/roles/api/*` — **nie zaczynają się od `/api/`** — więc każdy `raise ValidationError(...)`/
-`ConflictError(...)`/`PermissionDeniedError(...)` w tych dwóch plikach (a WSZYSTKIE ścieżki błędów
-w obu plikach przechodzą przez `raise AppError`, nie przez `return jsonify({success:false})`, 200)
-dziś zwraca **stronę HTML błędu 500 zamiast JSON**, nawet gdy wywołujący jawnie oczekuje JSON
-(fetch() w oryginalnym `create.html`/`edit.html`, i teraz też `usersApi`/`rolesApi` w Reakcie).
-Efekt praktyczny: `resp.json()` w oryginalnym Jinja rzuca `SyntaxError` (niezłapany — użytkownik nie
-widzi żadnego komunikatu), a `lib/api/client.ts`'s `request()` w Reakcie **już ma na to obronę**
-(sprawdza `content-type` przed `JSON.parse`, patrz komentarz w `client.ts` o CSRF) — degraduje się
-łagodnie do `ApiError('Błąd serwera (400)')` zamiast precyzyjnego `"Email jest już zajęty"` itp.
-**To jest realny, przedmigracyjny bug w `app.py`, nie coś wprowadzonego przez ten port** — odkryty
-przy budowie tego modułu, bo to pierwszy moduł React, którego backend leży POZA prefiksem `/api/*`
-(każdy inny moduł Fazy 2 mapuje się na `routes/api_routes.py`, montowany pod `/api`). **Świadomie
-NIE naprawione** — zmiana `app.py`'s globalnego error handlera wpływa potencjalnie na inne
-blueprinty poza zakresem tej sesji (np. `booking_bp`, publiczne strony), wymaga własnego review.
-Udokumentowane w `usersApi`/`rolesApi`'s docstringach dla następnej sesji.
+**Odkrycie D-Sec5 — luka w `app.py`'s `AppError` handler wpływająca na jakość komunikatów błędów:**
+`app.py`'s `handle_app_error()` zwraca JSON tylko gdy `request.path.startswith('/api/')`. Oba
+blueprinty RBAC są zamontowane pod `/system/users/api/*` i `/system/roles/api/*` — **nie
+zaczynają się od `/api/`** — więc każdy `raise ValidationError(...)`/`ConflictError(...)`/
+`PermissionDeniedError(...)` w tych dwóch plikach (a WSZYSTKIE ścieżki błędów w obu plikach
+przechodzą przez `raise AppError`, nie przez `return jsonify({success:false})`, 200) zwracał
+**stronę HTML błędu 500 zamiast JSON**, nawet gdy wywołujący jawnie oczekuje JSON (fetch() w
+oryginalnym `create.html`/`edit.html`, i `usersApi`/`rolesApi` w Reakcie). Efekt praktyczny:
+`resp.json()` w oryginalnym Jinja rzuca `SyntaxError` (niezłapany — użytkownik nie widzi żadnego
+komunikatu), a `lib/api/client.ts`'s `request()` w Reakcie **miał na to obronę** (sprawdza
+`content-type` przed `JSON.parse`) — degradował się łagodnie do `ApiError('Błąd serwera (400)')`
+zamiast precyzyjnego `"Email jest już zajęty"` itp. **To był realny, przedmigracyjny bug w
+`app.py`, nie coś wprowadzone przez ten port** — odkryty przy budowie tego modułu, bo to pierwszy
+moduł React, którego backend leży POZA prefiksem `/api/*` (każdy inny moduł Fazy 2 mapuje się na
+`routes/api_routes.py`, montowany pod `/api`).
+
+**Naprawione tego samego dnia (2026-08-24, na wyraźną prośbę użytkownika po dostarczeniu
+podsumowania sesji):** `handle_app_error()` i `handle_csrf_error()` (ta sama luka, ten sam
+sprawdzający warunek — `CSRFError` ma identyczny problem, niezauważony wcześniej bo nie było go w
+zakresie audytu RBAC, ale naprawiony razem przy tej samej okazji) teraz wołają wspólny
+`_wants_json_error()`, sprawdzający `/api/` jako **segment ścieżki** (`re.compile(r'(?:^|/)api(?:/|$)')`),
+nie tylko prefiks. Zweryfikowane dwustopniowo przed commitem: (1) w Pythonie wprost przeciw 16
+reprezentatywnym ścieżkom (wszystkie prawdziwe trasy `/system/users/api*`/`/system/roles/api*` →
+`True`, wszystkie prawdziwe strony Jinja tych samych blueprintów typu `/system/users/create` →
+`False`, żadnej zmiany zachowania dla już poprawnie działających `/api/*`); (2) `grep` po WSZYSTKICH
+`.route()` w `routes/*.py` zawierających `api` — każde trafienie to legitymalny endpoint JSON, zero
+fałszywych trafień na stronie HTML. Zasięg naprawy: tylko `users_bp`/`roles_bp` (jedyne blueprinty,
+gdzie `api` jest segmentem wewnętrznym/końcowym, nie prefiksem — wszystkie inne blueprinty montują
+JSON-owe trasy albo pod `/api` (rejestracja) albo z dosłownym `/api/...` w samym `@bp.route(...)`,
+więc już pasowały do starego prefiksowego sprawdzenia i nie zmieniają zachowania).
+`python -m pytest tests/ -q` → **657 passed**, 0 regresji. Docstring w `usersApi` (`lib/api/
+users.ts`) zaktualizowany — nie opisuje już tego jako otwartej luki.
 
 **Frontend:** `UsersListPage` (lista+search, superuser-only reset hasła przez `Modal`, delete z
 regułami `isSelf`/`canDelete` 1:1 z backendem), `UserFormPage` (create/edit, edit ma osobną kartę

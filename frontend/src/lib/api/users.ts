@@ -26,13 +26,11 @@ export interface UserUpdatePayload {
  * ConflictError/PermissionDeniedError/NotFoundError) rather than returning
  * `{success: false}` with a 200 — unlike e.g. absence_routes.py. Callers
  * catch `ApiError` (thrown by the shared `api.*` wrapper on any non-2xx
- * response) instead of checking a `.success` flag. Note: this blueprint's
- * path (`/system/users/api/*`) doesn't start with `/api/`, so app.py's
- * `AppError` handler falls back to an HTML error page instead of JSON —
- * `ApiError.message` degrades to a generic "Błąd serwera (status)" for
- * these specific failures instead of the precise validation text (a
- * pre-existing gap in app.py's error handler, not introduced here; see
- * implementation-log.md). */
+ * response) instead of checking a `.success` flag. `ApiError.message` carries
+ * the precise validation text — app.py's `AppError` handler now recognizes
+ * `/api/` as a path segment anywhere (not just a leading prefix), fixed
+ * 2026-08-24 after this blueprint's `/system/users/api/*` paths were found
+ * falling through to an HTML error page; see implementation-log.md. */
 export const usersApi = {
   list: () => api.get<{ users: UserListRow[]; count: number }>('/system/users/api').then((r) => r.users),
 
