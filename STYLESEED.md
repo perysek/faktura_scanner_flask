@@ -1,4 +1,4 @@
-# StyleSeed — Design Lock
+    # StyleSeed — Design Lock
 <!-- Selections persist here. This file cannot waive StyleSeed core invariants. -->
 - App domain: internal business operations (salon management: invoicing, appointments, staff, analytics)
 - Surface: web-app (server-rendered Flask + Jinja2, no SPA framework)

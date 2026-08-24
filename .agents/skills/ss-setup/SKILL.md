@@ -111,5 +111,5 @@ future references that need their own grammar.
 - Ask one question at a time and recommend a concrete default.
 - Output grammar is required; aesthetic profile is optional.
 - A skin is tokens, not design judgment.
-- Never fetch a brand `DESIGN.md` and treat its palette as a complete rule set.
+- Never fetch a brand `../../../DESIGN_jinja2_html_js.md` and treat its palette as a complete rule set.
 - Never scaffold an unscored first page or claim visual verification without a screenshot.

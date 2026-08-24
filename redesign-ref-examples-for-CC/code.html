@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="en" data-lt-installed="true"><head>
+<meta charset="utf-8">
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect">
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope:wght@400;500;700;800" onload="this.rel='stylesheet'" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#e619e5",
+              "background-light": "#f8f6f8",
+              "background-dark": "#211121",
+            },
+            fontFamily: {
+              display: ["Manrope"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+<title>SalonApp Calendar</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-zinc-900 dark:text-zinc-200">
+<div class="flex h-full min-h-screen w-full flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-zinc-200 dark:border-zinc-800 px-10 py-3">
+<div class="flex items-center gap-4">
+<div class="h-6 w-6 text-primary">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z" fill="currentColor"></path>
+</svg>
+</div>
+<h1 class="text-xl font-bold">SalonApp</h1>
+</div>
+<nav class="hidden md:flex flex-1 justify-center items-center gap-8">
+<a class="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-primary" href="#">Dashboard</a>
+<a class="text-sm font-bold text-primary" href="#">Calendar</a>
+<a class="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-primary" href="#">Clients</a>
+<a class="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-primary" href="#">Services</a>
+<a class="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-primary" href="#">Staff</a>
+<a class="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-primary" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex h-10 w-10 items-center justify-center rounded-full bg-background-light dark:bg-background-dark hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">
+<span class="material-symbols-outlined"> notifications </span>
+</button>
+<div class="h-10 w-10 rounded-full bg-cover bg-center" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuCmWWk9WARbh5z4NUmnD4XDuSFe7OJHM7H6E_0OKwsARNfFykDhA6RdX9NnwpOSqX8g7jFlQBTcHooOQx4oEu1SJsBsKjjZsPZG9DHlcvVTvjNpwHcJZy2yzXBgre_WuoysFQyr2iM_QC3_aFb57L8uI1WQYY8zQYcB0s1nXM9R16CNcyvfbuKGMfPkUfgyMGdymsOZ96_1JGqfsLS67usm1P0wRY5oMBtUguIEJfXjHMVXMV_Vxz8o6zEwisRDPfXWjHPBmjmQfHU&quot;);"></div>
+</div>
+</header>
+<main class="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+<div class="mx-auto max-w-7xl">
+<div class="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6">
+<h1 class="text-3xl font-bold">Calendar</h1>
+<button class="flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/80">
+<span class="material-symbols-outlined"> add </span>
+<span class="">New Appointment</span>
+</button>
+</div>
+<div class="mt-4">
+<div class="flex items-center border-b border-zinc-200 dark:border-zinc-800">
+<a class="border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:border-primary/50 hover:text-primary/90 dark:hover:text-primary/90" href="#">Day</a>
+<a class="border-b-2 border-primary px-4 py-3 text-sm font-bold text-primary" href="#">Week</a>
+<a class="border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:border-primary/50 hover:text-primary/90 dark:hover:text-primary/90" href="#">Month</a>
+</div>
+</div>
+<div class="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
+<div class="lg:col-span-1">
+<div class="rounded-lg bg-background-light dark:bg-background-dark border border-zinc-200 dark:border-zinc-800 p-4">
+<div class="flex items-center justify-between">
+<button class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">
+<span class="material-symbols-outlined"> chevron_left </span>
+</button>
+<p class="text-base font-bold">October 2024</p>
+<button class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">
+<span class="material-symbols-outlined"> chevron_right </span>
+</button>
+</div>
+<div class="mt-4 grid grid-cols-7 text-center">
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">S</p>
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">M</p>
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">T</p>
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">W</p>
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">T</p>
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">F</p>
+<p class="py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">S</p>
+<button class="col-start-4 h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">1</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">2</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">3</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">4</button>
+<button class="h-10 w-10 text-sm font-medium text-white rounded-full bg-primary hover:bg-primary/80">5</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">6</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">7</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">8</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">9</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">10</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">11</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">12</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">13</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">14</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">15</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">16</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">17</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">18</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">19</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">20</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">21</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">22</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">23</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">24</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">25</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">26</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">27</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">28</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">29</button>
+<button class="h-10 w-10 text-sm font-medium rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50">30</button>
+</div>
+</div>
+</div>
+<div class="lg:col-span-2">
+<h2 class="text-xl font-bold mb-4">Monday, October 21, 2024</h2>
+<div class="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+<table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
+<thead class="bg-background-light dark:bg-background-dark">
+<tr>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400" scope="col">Time</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400" scope="col">Client</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400" scope="col">Service</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400" scope="col">Staff</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400" scope="col">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-zinc-200 dark:divide-zinc-800 bg-background-light dark:bg-background-dark">
+<tr>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">9:00 AM</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium">Sophia Clark</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Haircut</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Emily White</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<span class="inline-flex items-center rounded bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">Confirmed</span>
+</td>
+</tr>
+<tr>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">10:30 AM</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium">Olivia Green</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Manicure</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Ava Brown</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<span class="inline-flex items-center rounded bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">Confirmed</span>
+</td>
+</tr>
+<tr class="bg-zinc-100 dark:bg-zinc-800/20">
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">12:00 PM</td>
+
+</tr>
+<tr>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">1:00 PM</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium">Isabella Grey</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Facial</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Chloe Davis</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<span class="inline-flex items-center rounded bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">Confirmed</span>
+</td>
+</tr>
+<tr>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">2:30 PM</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium">Mia Harris</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Massage</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">Lily Wilson</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<span class="inline-flex items-center rounded bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">Confirmed</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+
+</body></html>
