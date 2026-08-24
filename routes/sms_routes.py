@@ -137,6 +137,117 @@ def sms_stats():
 
 
 # -----------------------------------------------------------------------
+# JSON settings endpoints — react-migration (module-inventory.md: Ustawienia
+# e-mail/SMS). Additive siblings of the form-POST/render_template routes
+# above, which stay untouched for the legacy Jinja page. Reuse the exact
+# same SmsService calls, just JSON in/out instead of request.form + redirect.
+# -----------------------------------------------------------------------
+
+@sms_bp.route('/api/sms/settings', methods=['GET'])
+@login_required
+@module_permission_required('settings')
+def api_sms_settings():
+    svc = SmsService()
+    return jsonify({
+        'success': True,
+        'settings': svc.get_settings(),
+        'message_types': svc.get_message_types(),
+        'stats': SmsReminderRepository().get_stats(),
+    })
+
+
+@sms_bp.route('/api/sms/credentials', methods=['PUT'])
+@login_required
+@module_permission_required('settings')
+def api_sms_credentials_save():
+    svc = SmsService()
+    data = request.get_json() or {}
+    svc.save_settings(
+        account_sid=(data.get('account_sid') or '').strip(),
+        auth_token=(data.get('auth_token') or '').strip(),
+        from_number=(data.get('from_number') or '').strip(),
+        messaging_service_sid=(data.get('messaging_service_sid') or '').strip() or None,
+        is_active=bool(data.get('is_active')),
+    )
+    return jsonify({'success': True, 'message': 'Dane Twilio zapisane'})
+
+
+@sms_bp.route('/api/sms/message-types/<int:type_id>', methods=['PUT'])
+@login_required
+@module_permission_required('settings')
+def api_sms_message_type_save(type_id):
+    svc = SmsService()
+    data = request.get_json() or {}
+    svc.save_message_type(
+        type_id,
+        is_enabled=bool(data.get('is_enabled')),
+        send_hours_before=int(data.get('send_hours_before', 24)),
+        send_delay_minutes=int(data.get('send_delay_minutes', 0)),
+        template_text=(data.get('template_text') or '').strip(),
+        include_confirm_link=bool(data.get('include_confirm_link')),
+        include_cancel_link=bool(data.get('include_cancel_link')),
+        include_rate_link=bool(data.get('include_rate_link')),
+        include_booking_link=bool(data.get('include_booking_link')),
+        send_only_if_confirmed=bool(data.get('send_only_if_confirmed')),
+        name=(data.get('name') or '').strip(),
+    )
+    return jsonify({'success': True, 'message': 'Zapisano typ wiadomości'})
+
+
+@sms_bp.route('/api/sms/message-types', methods=['POST'])
+@login_required
+@module_permission_required('settings')
+def api_sms_message_type_create():
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'message': 'Nazwa jest wymagana'}), 400
+    svc = SmsService()
+    new_id = svc.create_custom_type(
+        name=name,
+        send_hours_before=int(data.get('send_hours_before', 24)),
+        template_text=(data.get('template_text') or '').strip(),
+        include_confirm_link=bool(data.get('include_confirm_link')),
+        include_cancel_link=bool(data.get('include_cancel_link')),
+        include_booking_link=bool(data.get('include_booking_link')),
+    )
+    return jsonify({'success': True, 'id': new_id})
+
+
+@sms_bp.route('/api/sms/message-types/<int:type_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('settings')
+def api_sms_message_type_delete(type_id):
+    try:
+        svc = SmsService()
+        ok = svc.delete_custom_type(type_id)
+        if ok:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'message': 'Nie można usunąć wbudowanego typu wiadomości'}), 400
+    except Exception:
+        logging.exception('Error in api_sms_message_type_delete')
+        return jsonify({'success': False, 'message': 'Błąd serwera'}), 500
+
+
+@sms_bp.route('/api/sms/log', methods=['GET'])
+@login_required
+@module_permission_required('settings')
+def api_sms_log():
+    repo = SmsReminderRepository()
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 100, type=int)
+    rows = repo.get_log(limit=limit, offset=offset)
+    for r in rows:
+        if r.get('sent_at'):
+            r['sent_at'] = str(r['sent_at'])
+        if r.get('appointment_date'):
+            r['appointment_date'] = str(r['appointment_date'])
+        if r.get('start_time'):
+            r['start_time'] = str(r['start_time'])
+    return jsonify({'success': True, 'rows': rows, 'offset': offset, 'limit': limit})
+
+
+# -----------------------------------------------------------------------
 # Appointment-level SMS endpoints
 # -----------------------------------------------------------------------
 

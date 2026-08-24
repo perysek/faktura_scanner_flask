@@ -1344,3 +1344,60 @@ tej dacie w historii gita).
   ponownego uruchomienia, nic w `routes/`/`repositories/` się nie zmieniło.
 
 ---
+
+## 2026-08-24 — Option A rollout: pozostałe moduły "Wymaga audytu", tryb autonomiczny
+
+Użytkownik jawnie zwolnił z zasady "pytaj przy niejasności" z `CLAUDE.md` dla tego przebiegu —
+"decide yourself if any doubts", commit+push po każdym module, bez przystanków. Kolejność:
+rosnące ryzyko, jak w Fazie 2 (`plan.md` §2). Każda decyzja bez oczywistej odpowiedzi w kodzie
+zapisana tutaj, zamiast pytania użytkownika.
+
+### Moduł: Ustawienia e-mail/SMS — zbudowany
+
+Audyt: `/settings/email` (main_routes.py:540) była już czystym Jinja-shellem nad w pełni gotowym
+JSON API (`/api/email/settings|test|folders`, routes/api_routes.py:1493-1601) — zero zmian
+backendu. `/settings/sms` (sms_routes.py, 224 linie) była odwrotnie: cała logika (Twilio
+credentials, CRUD typów wiadomości, log wysyłek) istniała tylko jako `request.form` +
+`redirect`/`flash`, poza `/api/sms/stats|send|bulk-send|.../log` (już JSON) i
+`.../message-type/<id>/delete` (już JSON, jedyny mutujący endpoint tej strony, który już był).
+
+**Decyzja D26 — nowe `/api/sms/*` endpointy jako siostrzane do form-POST, nie zamiana:** dodano
+`GET /api/sms/settings` (settings+message_types+stats w jednym payloadzie, mirror tego co Jinja
+route zbierał do jednego `render_template`), `PUT /api/sms/credentials`, `PUT
+/api/sms/message-types/<id>`, `POST /api/sms/message-types`, `DELETE /api/sms/message-types/<id>`
+(nowy, czysty REST-owy odpowiednik istniejącego POST-owego `.../delete` — ten drugi zostaje
+nietknięty, obsługuje starą stronę Jinja), `GET /api/sms/log`. Wszystkie owijają dokładnie te same
+wywołania `SmsService`, które już używa strona Jinja — zero nowej logiki biznesowej, tylko JSON
+in/out zamiast form-POST/redirect. `templates/settings/sms.html` i jej trasy zostają nietknięte
+(zasada z `plan.md` §1: zmiany backendowe są addytywne).
+
+**Frontend:** `EmailSettingsPage` (pojedynczy formularz + test połączenia + instrukcja Gmail/
+Outlook, 1:1 port), `SmsSettingsPage` (staty miesiąc/3-miesiące, formularz danych Twilio z
+podglądem tokenu, panel testu, karty typów wiadomości z inline edycją — w tym wiązanie
+checkbox→textarea dla placeholderów linków, 1:1 z oryginalnym `wireUrlCheckbox`, formularz
+dodawania własnego typu), `SmsLogPage` (tabela + offset-paginacja, bez selektora numeru strony,
+1:1 z oryginałem). Wpięte pod istniejące, już poprawne guardy w `router.tsx`
+(`requireModule="invoices"` dla `/ustawienia/email`, `requireModule="settings"` dla
+`/ustawienia/sms`+`/ustawienia/sms/historia` — te trasy istniały już jako `ComingSoonPage` z
+poprawnymi guardami od Fazy 0/D14, tylko podmienione na realne strony).
+
+**Decyzja D27 — brak osobnego pliku CSS per strona, jeden współdzielony `SettingsPages.css`:**
+obie strony + log dzielą prawie identyczny zestaw nowych klas (`.info-card`, `.badge-pill` +
+warianty, `.password-field`/`-toggle`, staty SMS) — jeden plik zamiast trzech prawie identycznych
+kopii. Klasy już globalne (`.checkbox-wrapper`, `.form-textarea`, `.stat-card`/`.stat-value`,
+`.table-container`/`.refined-table`, sprawdzone grepem w `styles/components.css` przed pisaniem)
+celowo NIE zduplikowane.
+
+**Odkrycie — `node_modules/` w tym worktree było nieaktualne:** `npm run build` failował na
+`Cannot find module 'chart.js'`, mimo że `chart.js` jest w `package.json` (dodane przy budowie
+Dashboardu, Faza 2) — `npm install` nigdy nie uruchomiony w TYM konkretnym git worktree
+(`faktura_scanner_flask-full-redesign-stitch`, osobny checkout od głównego repo). `npm install`
+naprawiło to (261 pakietów, 0 błędów krytycznych) — niezwiązane z tym modułem, przedwarunek do
+odhaczenia dla każdej przyszłej sesji pracującej w tym samym worktree.
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 133 moduły. `npm run lint` → 0 errors (ten sam 1
+nieszkodliwy warning z Fazy 1, bez zmian). Backend: `python -m pytest tests/ -q` → **657 passed**,
+0 regresji. Ręczna weryfikacja wizualna nieosiągalna w tym środowisku (patrz
+[[react-migration-browser-tooling-gap]]) — jak w każdej poprzedniej Fazie 2 sesji.
+
+---

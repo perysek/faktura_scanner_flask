@@ -27,6 +27,9 @@ import { WizytaFormPage } from './pages/appointments/WizytaFormPage';
 import { CalendarDayPage } from './pages/appointments/CalendarDayPage';
 import { CalendarWeekPage } from './pages/appointments/CalendarWeekPage';
 import { CalendarMonthPage } from './pages/appointments/CalendarMonthPage';
+import { EmailSettingsPage } from './pages/settings/EmailSettingsPage';
+import { SmsSettingsPage } from './pages/settings/SmsSettingsPage';
+import { SmsLogPage } from './pages/settings/SmsLogPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -81,7 +84,7 @@ export const router = createBrowserRouter([
               { path: 'sprzedawcy/:id/edytuj', element: <SellerFormPage mode="edit" /> },
               { path: 'import-dokumentow', element: <ComingSoonPage title="Import dokumentów" /> },
               { path: 'historia', element: <ComingSoonPage title="Historia zmian" /> },
-              { path: 'ustawienia/email', element: <ComingSoonPage title="Ustawienia" /> },
+              { path: 'ustawienia/email', element: <EmailSettingsPage /> },
             ],
           },
 
@@ -179,7 +182,10 @@ export const router = createBrowserRouter([
 
           {
             element: <ProtectedRoute requireModule="settings" />,
-            children: [{ path: 'ustawienia/sms', element: <ComingSoonPage title="Ustawienia SMS" /> }],
+            children: [
+              { path: 'ustawienia/sms', element: <SmsSettingsPage /> },
+              { path: 'ustawienia/sms/historia', element: <SmsLogPage /> },
+            ],
           },
 
           {

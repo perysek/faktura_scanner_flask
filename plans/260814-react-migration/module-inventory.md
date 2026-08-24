@@ -21,7 +21,7 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 | Import danych / historia | `main_routes.py` | `import_routes.py` (8/0) | Nieznana | Nieznana (prawdopodobnie OCR/plik) | **Wymaga audytu** |
 | Użytkownicy (RBAC) | `users/routes.py` (6/4) | częściowo w tym samym pliku | **Częściowa** | Nieznana | **Wymaga audytu** |
 | Role (RBAC, `.permission-tile`) | `roles/routes.py` (4/4) | częściowo w tym samym pliku | **Częściowa** | **Wysoka** (siatka uprawnień) | **Wymaga audytu** |
-| Ustawienia e-mail/SMS | `main_routes.py` + `sms_routes.py` (15/2) | mieszane | Nieznana | Niska–średnia | **Wymaga audytu** |
+| Ustawienia e-mail/SMS | `main_routes.py` + `sms_routes.py` (15/2) | mieszane | Nieznana | Niska–średnia | **✅ Zbudowany (Option A rollout, 2026-08-24) — `/ustawienia/email` (już w pełni JSON) + `/ustawienia/sms` (Twilio creds/stats/typy wiadomości, nowe endpointy `/api/sms/*` dodane jako siostrzane do form-POST Jinja) + `/ustawienia/sms/historia`. `npm run build`/`lint` + `pytest` zielone. Ręczna weryfikacja wizualna czeka (brak narzędzi przeglądarkowych w tym środowisku, patrz [[react-migration-browser-tooling-gap]])** |
 | Profil / zmiana hasła | `routes/auth/routes.py` | — | Buduje się w Fazie 0 (auth) | Niska | Część Fazy 0 |
 | Booking (publiczne, bez logowania) | `booking_routes.py` (12/1) | częściowo | Nieznana | Nieznana | **Poza zakresem? — patrz `plan.md` §5 pkt 1** |
 | Landing/public | `templates/landing`, `templates/public` | brak dedykowanego | — | — | **Poza zakresem? — patrz `plan.md` §5 pkt 1** |
