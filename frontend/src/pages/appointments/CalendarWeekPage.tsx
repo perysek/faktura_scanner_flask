@@ -4,6 +4,7 @@ import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useElementHeight } from '../../lib/useElementHeight';
 import { ViewSwitcher } from './ViewSwitcher';
+import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, CalendarAbsence, EmployeeOption } from '../../types/appointment';
@@ -105,6 +106,7 @@ export function CalendarWeekPage() {
           <p className="page-subtitle">Tydzień {formatDateShort(iso(weekStart))} – {formatDateShort(iso(addDays(weekStart, 6)))}</p>
         </div>
         <div>
+          <PastVisitsScanner />
           <ViewSwitcher active="week" date={iso(weekStart)} employeeId={employeeId} />
         </div>
       </header>

@@ -5,6 +5,7 @@ import { appointmentsApi } from '../../lib/api/appointments';
 import { empColor } from '../../lib/appointments/employeeColor';
 import { useElementHeight } from '../../lib/useElementHeight';
 import { ViewSwitcher } from './ViewSwitcher';
+import { PastVisitsScanner } from './PastVisitsScanner';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { MultiEmployeeScheduleResponse } from '../../types/appointment';
@@ -99,6 +100,7 @@ export function CalendarDayPage() {
           <p className="page-subtitle">{formatLong(date)}</p>
         </div>
         <div>
+          <PastVisitsScanner />
           <ViewSwitcher active="day" date={date} />
         </div>
       </header>

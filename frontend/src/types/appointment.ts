@@ -3,10 +3,11 @@
  * `routes/appointment_routes.py`). Zakres tego przebiegu (patrz
  * implementation-log.md dla pełnej listy odłożonych kawałków): lista, widok
  * szczegółów, formularz create/edit, 3 widoki kalendarza (dzień/tydzień/miesiąc),
- * boczny pasek month-cards. Poza zakresem: integracja z nieobecnościami
- * (reassign/reschedule/cancel-for-absence — własny moduł), wysyłka/log SMS na
- * widoku szczegółów (własny moduł Ustawienia SMS), skaner "przeszłych wizyt do
- * rozliczenia", superadmin power-editor (już poza zakresem — osobny moduł
+ * boczny pasek month-cards, skaner "przeszłych wizyt do rozliczenia" (dodany
+ * później, deferred-tasks przebieg 2026-08-24). Poza zakresem: integracja z
+ * nieobecnościami (reassign/reschedule/cancel-for-absence — własny moduł),
+ * wysyłka/log SMS na widoku szczegółów (własny moduł Ustawienia SMS),
+ * superadmin power-editor (już poza zakresem — osobny moduł
  * `data_correction`), `/my-visits` (mobilny widok pracownika, bez bramki
  * modułowej — nie ten frontend). */
 
@@ -34,6 +35,25 @@ export const VALID_TRANSITIONS: Partial<Record<AppointmentStatus, AppointmentSta
   confirmed: ['in_progress', 'cancelled', 'no_show'],
   in_progress: ['completed', 'cancelled'],
 };
+
+/** GET /api/appointments/past-pending row — routes/appointment_routes.py's
+ * `get_past_pending_appointments()`. Resolvable final statuses only. */
+export type PastResolutionStatus = 'completed' | 'cancelled' | 'no_show';
+
+export interface PastPendingAppointment {
+  id: number;
+  client_id: number;
+  client_name: string | null;
+  employee_id: number;
+  employee_name: string | null;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  status: AppointmentStatus;
+  service_names: string | null;
+  total_price: number;
+  notes: string | null;
+}
 
 /** List-row shape — GET /api/appointments. Column names read off `dict(row)`
  * on the Python side (a SQL view/join, no dataclass) — inferred from every

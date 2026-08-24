@@ -103,6 +103,11 @@ nieobecnościami, wysyłka/log SMS na widoku szczegółów, "Rozlicz przeszłe w
 powiadomienia, nie specyficzne dla tych stron). Pełna lista decyzji i uzasadnień w
 `implementation-log.md`.
 
+**✅ Dobudowane 2026-08-24 (deferred-tasks przebieg):** "Rozlicz przeszłe wizyty" — wspólny
+komponent `PastVisitsScanner` (trigger + modal) wpięty w nagłówki wszystkich 4 stron Wizyt
+(lista + 3 widoki kalendarza). Wciąż poza zakresem: integracja z Nieobecnościami, SMS na
+widoku szczegółów, `status-events` polling.
+
 ## ✅ 12 usterek UI z dwóch rund QA — naprawione i ZATWIERDZONE przez użytkownika, 2026-08-19
 
 Dwie rundy poprawek tego samego dnia: pierwsza runda — 7 usterek z pierwszego ręcznego

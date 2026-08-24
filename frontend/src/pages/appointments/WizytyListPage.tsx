@@ -12,6 +12,7 @@ import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
 import { StatusChangeModal } from './StatusChangeModal';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
+import { PastVisitsScanner } from './PastVisitsScanner';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
@@ -274,6 +275,7 @@ export function WizytyListPage() {
           <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
         </div>
         <div>
+          <PastVisitsScanner />
           <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
           {canWrite && (
             <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">

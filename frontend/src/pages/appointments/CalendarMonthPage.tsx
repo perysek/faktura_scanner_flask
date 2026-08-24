@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { ViewSwitcher } from './ViewSwitcher';
+import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
@@ -103,6 +104,7 @@ export function CalendarMonthPage() {
           </p>
         </div>
         <div>
+          <PastVisitsScanner />
           <ViewSwitcher active="month" date={iso(year, month, 1)} employeeId={employeeId} />
         </div>
       </header>

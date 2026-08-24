@@ -8,6 +8,8 @@ import type {
   ConflictCheckResult,
   EmployeeOption,
   MultiEmployeeScheduleResponse,
+  PastPendingAppointment,
+  PastResolutionStatus,
 } from '../../types/appointment';
 
 interface CreateAppointmentPayload {
@@ -103,4 +105,11 @@ export const appointmentsApi = {
    * an EventSource, which needs a plain GET-able URL, not the JSON `api`
    * wrapper (SSE isn't a JSON response). */
   eventsUrl: (appointmentId: number) => `/api/appointments/${appointmentId}/events`,
+
+  /** "Rozlicz przeszłe wizyty" scanner (deferred-tasks pass, 2026-08-24) —
+   * past appointments still sitting on a non-final status. */
+  pastPending: () => api.get<{ success: true; appointments: PastPendingAppointment[]; count: number }>('/api/appointments/past-pending').then((r) => r.appointments),
+
+  updatePastStatus: (appointmentId: number, status: PastResolutionStatus, cancellationReason?: string) =>
+    api.put<{ success: true; message: string }>(`/api/appointments/${appointmentId}/past-status`, { status, cancellation_reason: cancellationReason }),
 };

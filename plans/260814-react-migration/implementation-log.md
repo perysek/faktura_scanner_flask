@@ -1688,4 +1688,46 @@ usunięty — jest jawny, czytelny, i nieszkodliwy; usuwanie działającego, jaw
 **Weryfikacja:** `npm run build` → 0 błędów TS, 160 modułów. `npm run lint` → 0 errors (ten sam
 jeden nieszkodliwy warning). Backend bez zmian — `pytest` nie uruchamiany ponownie.
 
+### Decyzja D38 — Wizyty: skaner "Rozlicz przeszłe wizyty"
+
+Audyt: `GET /api/appointments/past-pending` + `PUT /api/appointments/<id>/past-status`
+(`routes/appointment_routes.py`) były **już w pełni JSON**. Zero zmian backendu. Cała praca to
+port `static/js/past_visits_scanner.js` (561 linii) — samodzielny widget: trigger-przycisk
+(chowa się gdy count=0) + modal z tabelą desktopową (pojedynczy przycisk cyklicznie
+przełączający status: pierwotny → zakończona → anulowana → nieobecność → pierwotny …) i kartami
+mobilnymi (przełącznik 3-pozycyjny), licznik zmian w nagłówku, "Zapisz zmiany" aktywne dopiero
+po ≥1 zmianie.
+
+**Decyzja D38a — CSS ported 1:1 ze `static/css/input.css`'s `.pv-*` blok (znaleziony gotowy,
+nieoczekiwanie — moduł nigdy nie był budowany w React, ale jego styl już czekał w arkuszu
+współdzielonym z resztą apki), nie przepisany od zera:** dokładne wartości (`.pv-table-wrap`'s
+`max-height: min(58vh, 26rem)`, `.pv-cycle`'s stała szerokość `11rem` żeby przycisk nie zmieniał
+rozmiaru przy zmianie etykiety, itd.) skopiowane bez zmian do nowego
+`PastVisitsScanner.css` — ta sama reguła co reszta migracji: nie zgadywać wartości, gdy oryginał
+już je ustalił.
+
+**Decyzja D38b — kolor statusu czytany z CSS custom property w runtime (`statusStyle()`), nie
+hardkodowana paleta:** ported 1:1 z oryginalnego `cssVar()`/`cssVarAlpha()`/`badgeStyle()` —
+`getComputedStyle(document.documentElement).getPropertyValue('--color-status-*')`, żeby kolor
+cyklicznego przycisku śledził zmianę motywu (4 motywy w apce) automatycznie, zamiast zamrożenia
+jednej palety w komponencie.
+
+**Frontend:** `PastVisitsScanner.tsx` (nowy, samodzielny — zero propsów, własny fetch przy mount)
+wpięty w nagłówek wszystkich 4 stron Wizyt: `WizytyListPage`, `CalendarDayPage`,
+`CalendarWeekPage`, `CalendarMonthPage`. Nowy typ `PastPendingAppointment`/`PastResolutionStatus`
+w `types/appointment.ts`, nowe metody `pastPending()`/`updatePastStatus()` w
+`lib/api/appointments.ts`.
+
+**Świadomie NIE zrobione:** odznaka licznika na linku "Wizyty" w sidebarze (oryginał ma to w
+`sidebar.html`, `show_past_pending_badge`/`past_pending_appointments_count`, wstrzykiwane przez
+Jinja context processor) — kosmetyczny dodatek, trigger-przycisk w nagłówku strony już
+wystarczająco widocznie pokazuje licznik i chowa się przy zerze; sidebar wymagałby osobnego
+fetcha w `AppShell`/`navConfig.ts` uruchamianego na każdej stronie aplikacji, nie tylko w Wizytach
+— większy zakres niż uzasadnia to jedna kosmetyczna odznaka.
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 162 moduły (1 nieużywany import złapany i
+naprawiony od razu — `ApiError` w `PastVisitsScanner.tsx`, w końcu nieużyty po finalnym kształcie
+error-handlingu). `npm run lint` → 0 errors (ten sam jeden nieszkodliwy warning). Backend bez
+zmian — `pytest` nie uruchamiany ponownie.
+
 ---
