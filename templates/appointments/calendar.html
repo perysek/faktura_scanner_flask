@@ -31,6 +31,13 @@
     .emp-pager[hidden] { display: none; }
     .emp-pager .pager-label { font-size: 0.6875rem; color: var(--color-ink-subtle); white-space: nowrap; }
 
+    /* Row layout: existing timeline (left) + month-cards sidebar (right, ~20%).
+       align-items: stretch makes the sidebar match whatever height .cal-main
+       ends up at — no duplicate viewport-calc needed, .cal-timeline already
+       bounds its own height via .cal-body's max-height below. */
+    .cal-page-body { display: flex; align-items: stretch; gap: 1rem; flex: 1; min-height: 0; }
+    .cal-main { flex: 1; min-width: 0; }
+
     /* ── Timeline card ── */
     .cal-timeline { display: flex; flex-direction: column; background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; position: relative; }
 
@@ -183,6 +190,8 @@
         </div>
     </div>
 
+    <div class="cal-page-body">
+    <div class="cal-main">
     <!-- Timeline -->
     <div class="cal-timeline" aria-live="polite" aria-label="Harmonogram dnia">
         <div id="loadingOverlay" class="loading-overlay" style="display: none;">
@@ -237,10 +246,14 @@
             <span class="dsb-rev"><span id="totalRevenue">0,00</span> zł</span>
         </div>
     </div>
+    </div><!-- /.cal-main -->
+    {% include 'components/month_sidebar.html' %}
+    </div><!-- /.cal-page-body -->
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ asset_url('js/month_sidebar.js') }}"></script>
 <script>
 // ── Timeline window: 7:00–22:00, 60px/hour (matches the Appointments mock) ──
 const WORK_START_MIN = 7 * 60;   // 07:00 → y=0
@@ -314,6 +327,24 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThisDayButton();
     setupEventListeners();
     loadSchedule();
+
+    // Month-cards sidebar: clicking a day switches this same day-grid to that
+    // date (no change to the grid itself, per spec) and keeps its own
+    // highlight in sync with whichever nav control was used.
+    MonthSidebar.init({
+        initialActiveDate: currentDate,
+        onDaySelect: (ds) => {
+            currentDate = ds;
+            dateInput.value = currentDate;
+            daySubtitle.textContent = formatLongDate(currentDate);
+            currentPage = 0;
+            updateUrlState();
+            updateViewLinks();
+            updateThisDayButton();
+            MonthSidebar.setActiveDate(currentDate);
+            loadSchedule();
+        }
+    });
 });
 
 function setupEventListeners() {
@@ -332,6 +363,7 @@ function handleDateChange() {
     updateUrlState();
     updateViewLinks();
     updateThisDayButton();
+    MonthSidebar.setActiveDate(currentDate);
     loadSchedule();
 }
 
@@ -346,6 +378,7 @@ function navigateDay(offset) {
     updateUrlState();
     updateViewLinks();
     updateThisDayButton();
+    MonthSidebar.setActiveDate(currentDate);
     loadSchedule();
 }
 
@@ -357,6 +390,7 @@ function goToToday() {
     updateUrlState();
     updateViewLinks();
     updateThisDayButton();
+    MonthSidebar.setActiveDate(currentDate);
     loadSchedule();
 }
 

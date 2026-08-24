@@ -1,0 +1,95 @@
+{#- Shared 3-month sidebar for the day-view and list-view calendar pages.
+   Fixed window: current month, current+1, current+2 (never follows whatever
+   date the main view is browsing to). Read-only mini calendars used purely as
+   a day-picker; day numbers are clickable, the card itself never paginates.
+   Roll in/out via the edge-tab toggle button (state persisted per-browser).
+
+   Markup only — the 3 grids are rendered by static/js/month_sidebar.js
+   (MonthSidebar.init) once appointment data for the span is loaded. Include
+   this partial as the last child of the page's row-flex wrapper, right after
+   the main content column, then call MonthSidebar.init({...}) from the
+   page's own extra_scripts block. -#}
+{% from 'components/icons.html' import icon %}
+<style>
+    .month-sidebar {
+        flex: 0 0 20%;
+        min-width: 260px;
+        max-width: 360px;
+        display: flex;
+        align-items: stretch;
+        gap: 0.5rem;
+        transition: flex-basis 0.25s var(--ease-out-expo), min-width 0.25s var(--ease-out-expo), max-width 0.25s var(--ease-out-expo);
+    }
+    .month-sidebar.collapsed { flex: 0 0 2.25rem; min-width: 2.25rem; max-width: 2.25rem; }
+
+    .month-sidebar-toggle {
+        flex: 0 0 1.75rem;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--color-surface-elevated); border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm, 2px); color: var(--color-ink-muted); cursor: pointer; padding: 0;
+        transition: color 0.2s ease, border-color 0.2s ease;
+    }
+    .month-sidebar-toggle:hover { color: var(--color-ink); border-color: var(--color-ink-muted); }
+    .month-sidebar-toggle svg { width: 1.125rem; height: 1.125rem; transition: transform 0.25s var(--ease-out-expo); }
+    .month-sidebar.collapsed .month-sidebar-toggle svg { transform: rotate(180deg); }
+
+    .month-sidebar-cards { display: flex; flex-direction: column; gap: 0.625rem; flex: 1; min-width: 0; overflow: hidden; transition: opacity 0.15s ease; }
+    .month-sidebar.collapsed .month-sidebar-cards { flex-grow: 0; flex-basis: 0; width: 0; opacity: 0; pointer-events: none; }
+
+    .mini-month-card {
+        flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;
+        background: var(--color-surface-elevated); border: 1px solid var(--color-border);
+        border-radius: var(--radius-md, 3px); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    .mini-month-head { padding: 0.5rem 0.625rem; font-size: 0.75rem; font-weight: 600; color: var(--color-ink); text-align: center; border-bottom: 1px solid var(--color-border); background: var(--color-surface); flex-shrink: 0; text-transform: capitalize; }
+    .mini-month-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); flex-shrink: 0; }
+    .mini-wd { padding: 0.25rem 0; font-size: 0.5625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink-subtle); text-align: center; }
+    .mini-wd.weekend { color: #9b2c2c; }
+    /* grid-auto-rows: 1fr spreads day rows evenly across whatever height the
+       card was stretched to (4–6 rows depending on the month) instead of
+       leaving dead space below a short month. */
+    .mini-month-days { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; flex: 1; min-height: 0; }
+    .mini-day {
+        display: flex; align-items: center; justify-content: center; position: relative;
+        border: none; background: transparent; cursor: pointer; padding: 0;
+        font-family: inherit; font-size: 0.6875rem; font-weight: 400; color: var(--color-ink);
+    }
+    .mini-day:hover:not(:disabled) .mini-day-num { background: var(--color-surface); }
+    .mini-day:disabled { cursor: default; visibility: hidden; }
+    .mini-day-num { display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; transition: background 0.15s ease; }
+    .mini-day.no-visits .mini-day-num { color: var(--color-ink-subtle); }
+    .mini-day.has-visits .mini-day-num { color: var(--color-ink); font-weight: 600; }
+    .mini-day-dot { position: absolute; bottom: 0.1875rem; left: 50%; transform: translateX(-50%); width: 3px; height: 3px; border-radius: 50%; background: #3b82f6; }
+    .mini-day.today .mini-day-num { background: #3b82f6; color: #fff; font-weight: 700; }
+    .mini-day.today .mini-day-dot { background: #fff; }
+    .mini-day.active:not(.today) .mini-day-num { box-shadow: 0 0 0 2px var(--color-ink); }
+    .mini-day.active.today .mini-day-num { box-shadow: 0 0 0 2px #1d4ed8; }
+
+    /* Desktop-only, matching the existing .view-toggle mobile pattern. */
+    @media (max-width: 640px) { .month-sidebar { display: none !important; } }
+</style>
+
+<aside class="month-sidebar" id="monthSidebar" aria-label="Podgląd 3 miesięcy">
+    <button type="button" class="month-sidebar-toggle" id="monthSidebarToggle"
+            aria-label="Zwiń podgląd miesięcy" aria-expanded="true" title="Zwiń/rozwiń podgląd miesięcy">
+        {{ icon('chevron_right') }}
+    </button>
+    <div class="month-sidebar-cards" id="monthSidebarCards">
+        <div class="mini-month-card" data-month-offset="0">
+            <div class="mini-month-head"></div>
+            <div class="mini-month-weekdays"></div>
+            <div class="mini-month-days"></div>
+        </div>
+        <div class="mini-month-card" data-month-offset="1">
+            <div class="mini-month-head"></div>
+            <div class="mini-month-weekdays"></div>
+            <div class="mini-month-days"></div>
+        </div>
+        <div class="mini-month-card" data-month-offset="2">
+            <div class="mini-month-head"></div>
+            <div class="mini-month-weekdays"></div>
+            <div class="mini-month-days"></div>
+        </div>
+    </div>
+</aside>

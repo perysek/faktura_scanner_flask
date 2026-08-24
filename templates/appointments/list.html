@@ -43,7 +43,26 @@
     .view-toggle a:hover { border-color: var(--color-ink-muted); }
     .view-toggle a.active { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
 
+    /* Row layout: existing table (left) + month-cards sidebar (right, ~20%).
+       align-items: stretch makes the sidebar match .list-main's height; a
+       viewport-based min-height keeps the 3 cards from getting squashed on a
+       light week where the table itself is short. */
+    .list-page-body { display: flex; align-items: stretch; gap: 1rem; min-height: calc(100vh - 260px); }
+    .list-main { flex: 1; min-width: 0; }
+
     .table-container { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+
+    /* Progressive day-chain (month-card click → single day, then "load next
+       day" below the rows, capped at the last day of that month with visits). */
+    .load-more-day { display: flex; justify-content: center; padding: 0.5rem; border-top: 1px solid var(--color-border-subtle); }
+    .load-more-day[hidden] { display: none; }
+    .load-more-day-btn { display: inline-flex; align-items: center; gap: 0.25rem; background: none; border: none; cursor: pointer; color: var(--color-ink-subtle); font-size: 0.6875rem; font-weight: 500; padding: 0.25rem 0.625rem; border-radius: 2px; transition: color 0.15s ease, background 0.15s ease; }
+    .load-more-day-btn:hover { color: var(--color-ink-muted); background: var(--color-surface); }
+    .load-more-day-btn svg { width: 0.875rem; height: 0.875rem; }
+    /* Rows already finished (end_time < now) read as slightly greyed, regardless
+       of status — only in the day-chain view (week view stays exactly as-is). */
+    .refined-table tbody tr.past-visit { opacity: 0.6; }
+    .refined-table tbody tr.past-visit:hover { opacity: 1; }
     .refined-table { width: 100%; border-collapse: collapse; }
     .refined-table thead { background: var(--color-surface); }
     .refined-table th { padding: 0.5rem 1rem; font-size: 0.625rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-subtle); text-align: left; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
@@ -203,6 +222,8 @@
         </div>
     </div>
 
+    <div class="list-page-body">
+    <div class="list-main">
     <!-- Table -->
     <div class="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista wizyt">
         <table class="refined-table stack-cards">
@@ -239,11 +260,19 @@
                 </tr>
             </tbody>
         </table>
+        <div class="load-more-day" id="loadMoreDay" hidden>
+            <button type="button" class="load-more-day-btn" id="loadMoreDayBtn">
+                Pokaż następny dzień {{ icon('expand_more') }}
+            </button>
+        </div>
         <div class="list-footer">
             <span>Wyświetlono <strong id="list-count">0</strong> <span id="list-count-noun">wizyt</span></span>
             <span>Przychód: <strong id="list-revenue">0,00 zł</strong></span>
         </div>
     </div>
+    </div><!-- /.list-main -->
+    {% include 'components/month_sidebar.html' %}
+    </div><!-- /.list-page-body -->
 </div>
 <!-- Status Update Modal -->
 <div id="statusModal" class="modal-backdrop hidden" onclick="handleBackdropClick(event)">
@@ -278,6 +307,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ asset_url('js/month_sidebar.js') }}"></script>
 <script>
 const IS_SUPERUSER = {{ (current_user.role == 'superuser') | tojson }};
 const STATUS_LABELS = {
@@ -312,6 +342,16 @@ let currentWeekStart = getMonday(new Date());
 let currentEmployeeId = null;
 let allEmployees = [];
 let employees = [];
+
+// ── Month-cards sidebar: progressive "day-chain" mode ───────────────────────
+// Off by default (normal Monday–Sunday week window, unchanged). A month-card
+// day click switches into this mode: single target day, then "Pokaż następny
+// dzień" appends the next visit-day, capped at the last visit-day of that
+// month. Any interaction with the week nav (prev/next/Dziś/date-picker) drops
+// back out to the ordinary week window.
+let customMode = false;
+let customDays = [];           // ascending 'YYYY-MM-DD', already loaded into allAppointments
+let customMonthDays = [];      // ascending visit-days within the active month (from MonthSidebar)
 
 // Status modal state
 let modalAppointmentId = null;
@@ -563,6 +603,7 @@ function updateWeekLabel() {
 }
 
 function navigateWeek(offset) {
+    exitCustomMode();
     currentWeekStart.setDate(currentWeekStart.getDate() + offset * 7);
     updateWeekLabel();
     updateViewLinks();
@@ -572,6 +613,7 @@ function navigateWeek(offset) {
 }
 
 function goToToday() {
+    exitCustomMode();
     currentWeekStart = getMonday(new Date());
     updateWeekLabel();
     updateViewLinks();
@@ -582,6 +624,7 @@ function goToToday() {
 
 function onDatePick(value) {
     if (!value) return;
+    exitCustomMode();
     const [y, m, d] = value.split('-').map(Number);   // local — avoid UTC shift
     currentWeekStart = getMonday(new Date(y, m - 1, d));
     updateWeekLabel();
@@ -605,6 +648,108 @@ function updateNewAppointmentLink() {
     if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     const newAppointmentBtn = document.getElementById('newAppointmentBtn');
     if (newAppointmentBtn) newAppointmentBtn.href = `/appointment/create?${params}`;
+}
+
+// ── Month-cards sidebar → progressive day-chain ─────────────────────────────
+
+// A month-card day click always re-enters here, whether it's a brand new day
+// or the day already sitting at the start of the chain — either way the chain
+// resets to that single target day (that's the "click again → collapse back"
+// behaviour from the spec, for free, with no special-case branching).
+function enterCustomDay(clickedDate) {
+    customMode = true;
+    customMonthDays = MonthSidebar.getVisitDaysInMonthOf(clickedDate);
+
+    // Empty day clicked → snap forward to the nearest day with visits within
+    // the same month; if none remain ahead, fall back to the nearest one
+    // behind it rather than showing nothing for the rest of the month.
+    let target = clickedDate;
+    if (!MonthSidebar.hasVisits(clickedDate)) {
+        target = customMonthDays.find(d => d > clickedDate) || customMonthDays[customMonthDays.length - 1] || null;
+    }
+
+    customDays = target ? [target] : [];
+    MonthSidebar.setActiveDate(target || clickedDate);
+    refreshCustomAppointments();
+    updateLoadMoreVisibility();
+    updateListHeaderForCustomMode();
+    applyFilters();
+}
+
+function loadNextDay() {
+    if (!customDays.length) return;
+    const last = customDays[customDays.length - 1];
+    const next = customMonthDays.find(d => d > last);
+    if (!next) return;
+    customDays.push(next);
+    MonthSidebar.setActiveDate(next);
+    refreshCustomAppointments();
+    updateLoadMoreVisibility();
+    updateListHeaderForCustomMode();
+    applyFilters();
+}
+
+function refreshCustomAppointments() {
+    allAppointments = customDays.flatMap(d => MonthSidebar.getAppointmentsForDay(d));
+}
+
+// Post-mutation refresh (status change / delete / restore / tab refocus) that
+// respects whichever mode is currently on screen — week view re-fetches its
+// week as before; day-chain mode re-fetches the 3-month span behind it (so a
+// just-changed status/delete is reflected) and re-renders in place instead of
+// falling back to loadAppointments(), which would silently drop the chain.
+async function refreshCurrentView() {
+    if (customMode) {
+        await MonthSidebar.refresh();
+        refreshCustomAppointments();
+        applyFilters();
+    } else {
+        loadAppointments();
+    }
+}
+
+function updateLoadMoreVisibility() {
+    const wrap = document.getElementById('loadMoreDay');
+    if (!wrap) return;
+    const last = customDays[customDays.length - 1];
+    wrap.hidden = !(customMode && last && customMonthDays.some(d => d > last));
+}
+
+// Any week-nav interaction (prev/next/Dziś/date-picker) drops back to the
+// ordinary Monday–Sunday window — callers still run their own updateWeekLabel().
+function exitCustomMode() {
+    if (!customMode) return;
+    customMode = false;
+    customDays = [];
+    customMonthDays = [];
+    MonthSidebar.setActiveDate(null);
+    updateLoadMoreVisibility();
+}
+
+function formatCustomRangeLabel() {
+    if (!customDays.length) return '—';
+    const [fy, fm, fd] = customDays[0].split('-').map(Number);
+    const last = customDays[customDays.length - 1];
+    if (last === customDays[0]) return `${fd} ${PL_MONTHS_SHORT[fm - 1]} ${fy}`;
+    const [ly, lm, ld] = last.split('-').map(Number);
+    return (fm === lm)
+        ? `${fd}–${ld} ${PL_MONTHS_SHORT[lm - 1]} ${ly}`
+        : `${fd} ${PL_MONTHS_SHORT[fm - 1]} – ${ld} ${PL_MONTHS_SHORT[lm - 1]} ${ly}`;
+}
+
+function updateListHeaderForCustomMode() {
+    const rangeEl = document.getElementById('listRangeLabel');
+    if (rangeEl) rangeEl.textContent = customDays.length ? formatCustomRangeLabel() : 'Brak wizyt w tym miesiącu';
+}
+
+// End-of-visit vs. real "now" — independent of status, so a still-"scheduled"
+// visit whose slot already passed reads as past too.
+function isPastVisit(dateStr, endTime) {
+    if (!dateStr || !endTime) return false;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const [h, mi] = String(endTime).split(':').map(Number);
+    if ([y, m, d, h].some(Number.isNaN)) return false;
+    return Date.now() >= new Date(y, m - 1, d, h, mi || 0, 0).getTime();
 }
 
 // ── Absence indicator (client-side merge — AD-3) ────────────────────────────
@@ -642,9 +787,9 @@ function renderAbsenceIndicator(appt) {
 function renderTable(appointments) {
     const tbody = document.getElementById('appointments-tbody');
     const sorted = getSortedAppointments(appointments);
-    const weekParam = fmtLocal(currentWeekStart);
     if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">Brak wizyt w tym tygodniu</p></td></tr>`;
+        const emptyMsg = customMode ? 'Brak zaplanowanych wizyt w tym miesiącu od wybranego dnia' : 'Brak wizyt w tym tygodniu';
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state cell-empty">{{ icon('event_busy', class='empty-icon') }}<p class="empty-text">${emptyMsg}</p></td></tr>`;
         return;
     }
     tbody.innerHTML = sorted.map(a => {
@@ -656,8 +801,15 @@ function renderTable(appointments) {
             ? `data-appt-id="${a.id}" data-status="${a.status}" data-client="${escapeHtml(a.client_name || '')}" data-date="${a.appointment_date || ''}" data-time="${formatTime(a.start_time)}"`
             : '';
         const dot = empColor(a.employee_id);
+        // Own appointment_date per row (not the shared week start) — the only
+        // correct choice once a row set can span several different days.
+        const dateParam = a.appointment_date || fmtLocal(currentWeekStart);
+        const rowClasses = [];
+        if (isWeekend(a.appointment_date)) rowClasses.push('weekend-row');
+        if (customMode && isPastVisit(a.appointment_date, a.end_time)) rowClasses.push('past-visit');
+        const rowClassAttr = rowClasses.length ? ` class="${rowClasses.join(' ')}"` : '';
         return `
-            <tr data-appt-id="${a.id}"${isWeekend(a.appointment_date) ? ' class="weekend-row"' : ''}>
+            <tr data-appt-id="${a.id}" data-date="${a.appointment_date || ''}"${rowClassAttr}>
                 <td data-label="Data i godzina" class="cell-date"><span class="dt-desktop">${formatDate(a.appointment_date)}</span><span class="dt-mobile"><span class="dtm-date">${formatDateLongMobile(a.appointment_date)}</span><span class="dtm-time">${formatStart(a.start_time, a.end_time)}</span></span></td>
                 <td data-label="Godzina" class="cell-time cell-hide-sm">${formatTimeRange(a.start_time, a.end_time)}</td>
                 <td class="cell-name">${escapeHtml(a.client_name)}</td>
@@ -670,13 +822,13 @@ function renderTable(appointments) {
                 <td data-label="Ocena"><span class="rating-desktop">${renderStarsDesktop(a.satisfaction_score)}</span><span class="rating-mobile">${renderStars(a.satisfaction_score)}</span></td>
                 <td class="cell-actions" style="white-space:nowrap;">
                     <div class="action-icons">
-                        <a href="/appointment/${a.id}?from=list&date=${weekParam}" class="action-icon-btn view-icon-btn" title="Szczegóły" aria-label="Szczegóły">
+                        <a href="/appointment/${a.id}?from=list&date=${dateParam}" class="action-icon-btn view-icon-btn" title="Szczegóły" aria-label="Szczegóły">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </a>
-                        <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list&date=${weekParam}`}" class="action-icon-btn" title="Modyfikuj" aria-label="Modyfikuj">
+                        <a href="${IS_SUPERUSER ? `/superadmin/visits/${a.id}` : `/appointment/${a.id}/edit?from=list&date=${dateParam}`}" class="action-icon-btn" title="Modyfikuj" aria-label="Modyfikuj">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
@@ -859,7 +1011,7 @@ async function submitStatusChange() {
 
         if (data.success) {
             closeStatusModal();
-            loadAppointments();
+            refreshCurrentView();
         } else {
             const msg = data.error || data.message || 'Nieznany błąd';
             errorEl.textContent = msg;
@@ -904,7 +1056,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.closest('.action-icons') || e.target.closest('.status-badge')) return;
         const row = e.target.closest('tr[data-appt-id]');
         if (!row) return;
-        window.location.href = `/appointment/${row.dataset.apptId}?from=list&date=${fmtLocal(currentWeekStart)}`;
+        window.location.href = `/appointment/${row.dataset.apptId}?from=list&date=${row.dataset.date || fmtLocal(currentWeekStart)}`;
     });
 });
 
@@ -928,7 +1080,7 @@ async function deleteAppointment(id) {
             if (window.Notifications) Notifications.error(data.error || 'Nie udało się usunąć wizyty');
             return;
         }
-        loadAppointments();
+        refreshCurrentView();
         if (window.Notifications) {
             const toast = Notifications.success('Wizyta usunięta', 8000);
             const body = toast && toast.querySelector('.flex-1');
@@ -951,7 +1103,7 @@ async function restoreAppointment(restoreUrl) {
         const resp = await fetch(restoreUrl, { method: 'POST' });
         const data = await resp.json();
         if (data.success) {
-            loadAppointments();
+            refreshCurrentView();
             if (window.Notifications) Notifications.success('Wizyta przywrócona');
         } else if (window.Notifications) {
             Notifications.error(data.error || 'Nie udało się przywrócić wizyty');
@@ -971,7 +1123,10 @@ function updateViewLinks() {
         'nav-month': '{{ url_for("main.appointments_calendar_month") }}',
         'nav-list': '{{ url_for("main.appointments_list") }}'
     };
-    const params = new URLSearchParams({ date: fmtLocal(currentWeekStart) });
+    // In day-chain mode, anchor Tydzień/Miesiąc to the loaded day instead of
+    // the (now stale) week start — switching tabs should follow what's on screen.
+    const anchorDate = customMode && customDays.length ? customDays[0] : fmtLocal(currentWeekStart);
+    const params = new URLSearchParams({ date: anchorDate });
     if (currentEmployeeId) params.set('employee_id', currentEmployeeId);
     Object.entries(baseUrls).forEach(([id, baseUrl]) => {
         const link = document.getElementById(id);
@@ -1006,11 +1161,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSortHeaders();
     loadEmployees();
     initScrollToTopButton('scroll-top-btn');
+
+    // Month-cards sidebar: a day click enters/refreshes the day-chain; the
+    // week nav (prev/next/Dziś/date-picker) drops back out of it (see exitCustomMode).
+    MonthSidebar.init({ onDaySelect: (ds) => enterCustomDay(ds) });
+    document.getElementById('loadMoreDayBtn').addEventListener('click', loadNextDay);
 });
 
-// Refresh when user returns to this tab (catches status changes made via client confirmation link)
+// Refresh when user returns to this tab (catches status changes made via
+// client confirmation link) — respects day-chain mode via refreshCurrentView()
+// instead of unconditionally re-fetching the (unrelated) current week.
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) loadAppointments();
+    if (!document.hidden) refreshCurrentView();
 });
 </script>
 
