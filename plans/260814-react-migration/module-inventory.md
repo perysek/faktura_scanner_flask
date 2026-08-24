@@ -15,7 +15,7 @@ kompletności; każdy moduł i tak wymaga własnego mini-gap-analysis jak w `pha
 | Dashboard/Pulpit | `main_routes.py` | `api_routes.py` | Kompletna (5 widgetów) | Niska–średnia | **✅ Zbudowany (Faza 2, 2026-08-17) — czeka na ręczny test** |
 | Wizyty (lista + CRUD) | `main_routes.py` | `appointment_routes.py` (28 endpointów) | Kompletna | **Bardzo wysoka** (skorygowano 2026-08-18 — 9449 linii w 10 szablonach, patrz korekta niżej) | **✅ Zbudowany częściowo (Faza 2, 2026-08-18) — lista + widok szczegółów + create/edit gotowe. ⚠️ 2026-08-19: pierwszy ręczny test — lista bez sticky-header/scroll wzorca (brak retrofitu z 2026-08-18), widok szczegółów bez przycisku "Powrót"/Escape i ze niejasnymi przyciskami statusu — patrz "Pierwszy ręczny QA" niżej** |
 | Kalendarz wizyt (dzień/tydzień/miesiąc) | `main_routes.py` | `appointment_routes.py` | Kompletna | **Wysoka, ale BEZ drag&drop** (odkrycie audytu 2026-08-18 — patrz korekta niżej) | **✅ Zbudowany (Faza 2, 2026-08-18)** — 3 widoki + boczny pasek month-cards. **⚠️ 2026-08-19: pierwszy ręczny test — widoki dnia/tygodnia przewyższają wysokością viewport (scroll pionowy), dzień-widok dodatkowo wymaga przeniesienia sidebaru month-cards z lewej na prawą stronę — patrz "Pierwszy ręczny QA" niżej** |
-| Analityka / KPI / Przychody | `main_routes.py` | `analytics_routes.py` (44 jsonify, 0 render) | Prawdopodobnie kompletna | Wysoka (wykresy — patrz `dataviz` skill przy budowie) | **Wymaga audytu** |
+| Analityka / KPI / Przychody | `main_routes.py` | `analytics_routes.py` (44 jsonify, 0 render) | Kompletna, w pełni JSON | **Bardzo wysoka** (skorygowano 2026-08-24 — trzy osobne strony, nie jedna; patrz korekta niżej) | **⚠️ Częściowo zbudowany (Option A rollout, 2026-08-24) — TYLKO `/wskazniki-biznesowe` (macierz KPI, 8 procesów × wskaźniki, rozwijalne wykresy per wiersz). `/analiza-biznesowa` (dashboard, 10 wykresów Chart.js + heatmapa szczytów + tabele) i `/income` (nowo odkryta, wcześniej nigdzie niewymieniona trzecia strona) świadomie ODŁOŻONE — patrz korekta zakresu niżej i implementation-log.md.** |
 | Nieobecności (wnioski) | `absence` blueprint | `absence_routes.py` (40/2) | Kompletna (self-service submit/cancel + management-index dociągnięte jako nowe `/api/*`) | Wysoka (3-tabowy widok, conflict-approve modal) | **✅ Zbudowany częściowo (Option A rollout, 2026-08-24) — `/moje-nieobecnosci` (formularz+podgląd konfliktów+historia) i `/nieobecnosci` (taby Wnioski+L4/Manualne: zatwierdź/odrzuć/konflikt-modal z force-approve, ręczna rejestracja z pre-check limitu bilansu, usuwanie). Świadomie odłożone: tab Kategorie, per-konflikt reassign/reschedule (to samo co już odłożone dla Wizyt), historia rozwiązań, hard-delete superusera, balance-hints w tabeli. `npm run build`/`lint` zielone.** |
 | Bilanse urlopowe | `absence_balance` blueprint | `absence_balance_routes.py` (39/1) | Kompletna, w pełni JSON | Średnia–wysoka (inline spinbox/save/undo/reset per wiersz) | **✅ Zbudowany (Option A rollout, 2026-08-24) — `/bilanse-urlopow`: staty, filtry (szukaj/kategoria/status), tabela z inline edycją wykorzystania/limitu/okresu per (pracownik, kategoria), reason-wymagany-przy-zmianie-wykorzystania, zapis+jednopoziomowe cofnięcie+reset-do-zera. `npm run build`/`lint` zielone (backend bez zmian, `pytest` nie wymagany).** |
 | Import danych / historia | `main_routes.py` | `import_routes.py` (8/0) | Nieznana | Nieznana (prawdopodobnie OCR/plik) | **Wymaga audytu** |
@@ -153,6 +153,70 @@ przetestowane:
 
 Backend: żadna z tych 7 poprawek nie dotyka `routes/`/`repositories/` — czysty CSS/layout/
 component-level fix na już poprawnie zabezpieczonych endpointach.
+
+## Korekta zakresu — Analityka / KPI / Przychody (2026-08-24, przy audycie w ramach Option A)
+
+Etykieta "Prawdopodobnie kompletna / Wysoka (wykresy)" z `plan.md` §0 (sam audyt `jsonify`-count)
+okazała się, po realnym przeczytaniu kodu, **trzecią z rzędu niedoszacowaną złożonością** (po
+Sprzedawcach i Usługach) — i to najbardziej dotąd: to nie jedna strona z wykresami, tylko **trzy
+niezależne strony**:
+
+1. **`/analiza-biznesowa`** (`templates/analytics/dashboard.html`, 449 linii +
+   `static/js/analytics/dashboard.js`, 1475 linii) — pełny dashboard biznesowy: stanowa nawigacja
+   okresów (miesiąc bieżący/poprzedni/rok-do-daty/własny zakres, z arytmetyką przesunięć
+   kalendarzowych nie dniowych), 10 wykresów Chart.js (trend przychodów, usługi, struktura zysku,
+   trend 12-miesięczny, split nowi/powracający klienci, 6 wykresów "trendów rocznych"), custom
+   heatmapa szczytów rezerwacji, tabela wyników pracowników, tabela top-10 klientów, lista klientów
+   zagrożonych utratą, tabela analizy cen usług, lista wskazówek biznesowych. **Nieznane wcześniej
+   nigdzie w tym planie.**
+2. **`/wskazniki-biznesowe`** (KPI Matrix, `templates/analytics/kpi_matrix.html` 198 linii +
+   `static/js/analytics/kpi_matrix.js` 351 linii) — znacznie mniejsza, samodzielna: macierz 8
+   procesów ISO 9001/IATF-style × 16 wskaźników skuteczność/efektywność, rozwijalny wykres
+   miesięczny per wiersz. **Ta jedna została zbudowana w tym przebiegu** (patrz status w tabeli
+   wyżej).
+3. **`/income`** (`templates/income/dashboard.html`, 155 linii, endpoint `main.income_dashboard`)
+   — **całkowicie nieznana wcześniej trzecia strona**, niewymieniona ani w `plan.md` §0, ani
+   nigdzie w `module-inventory.md` przed tą korektą. Odkryta dopiero przy czytaniu
+   `main_routes.py` w poszukiwaniu tras analityki. Nieprzeczytana w szczegółach — jej złożoność
+   nieznana.
+
+**Zbudowane w tym przebiegu:** wyłącznie `/wskazniki-biznesowe` (patrz "Frontend" w
+`implementation-log.md`'s wpis "Moduł: Analityka — KPI Matrix zbudowany"). **Świadomie odłożone**
+`/analiza-biznesowa` i `/income` — rozmiar porównywalny lub większy niż Wizyty+Kalendarz
+(dotychczas największy moduł Fazy 2), a bez dostępnych narzędzi przeglądarkowych w tym środowisku
+(patrz [[react-migration-browser-tooling-gap]]) ryzyko wdrożenia 10 wykresów bez żadnej wizualnej
+weryfikacji uznano za zbyt wysokie na jedną nocną sesję. Backend obu stron (`/api/analytics/*`,
+`routes/analytics_routes.py`) jest już w pełni JSON — żadna praca backendowa nie jest potrzebna do
+ich zbudowania, całość pracy jest we froncie.
+
+### Gotowy prompt do audytu/budowy `/analiza-biznesowa` (następna sesja)
+> *"Przeczytaj `templates/analytics/dashboard.html` i `static/js/analytics/dashboard.js` w całości.
+> Zaprojektuj React-ową stronę `AnalyticsDashboardPage` pod trasę `/analiza-biznesowa`
+> (`frontend/src/router.tsx`, już poprawnie zagnieżdżona pod `requireModule='appointments'` —
+> zamień istniejący `<ComingSoonPage>` na nową stronę). Endpointy backendowe już gotowe:
+> `GET /api/analytics/summary|revenue-trend|employees|services|clients|profit|occupancy|
+> peak-hours|service-analysis|monthly-trend|top-clients|insights` +
+> `GET /api/analytics/rolling/{new-clients,cancellation-rate,avg-ticket,category-mix,cost-ratio,
+> employee-utilisation,visit-frequency,satisfaction-rating}` (wszystkie w
+> `routes/analytics_routes.py`, parametry okresu przez `parse_period_params()`). Wzoruj się na
+> `frontend/src/pages/dashboard/MonthlyChart.tsx` (wzorzec Chart.js jako komponent z
+> useEffect+useRef+destroy-on-cleanup) i na nowo zbudowanym `frontend/src/pages/analytics/` (KPI
+> Matrix) dla struktury katalogu/CSS. Zwróć szczególną uwagę na: (a) state machine nawigacji
+> okresów w `dashboard.js` (linie ~100–190, arytmetyka miesiąc/rok nie liczona po dniach), (b)
+> peak-hours heatmapę (custom, nie Chart.js — sprawdź jej dokładną implementację w JS), (c) czy
+> dostępne narzędzia przeglądarkowe (patrz `[[react-migration-browser-tooling-gap]]` w pamięci) w
+> tej chwili działają, żeby faktycznie zweryfikować 10 wykresów wizualnie przed zamknięciem
+> zadania — inaczej odnotuj to jako świadome ograniczenie tak jak poprzednie sesje."*
+
+### Gotowy prompt do audytu `/income` (nieznana strona, nigdy nie audytowana)
+> *"Przeczytaj `templates/income/dashboard.html` (155 linii) i endpoint `main.income_dashboard`
+> (`routes/main_routes.py`, trasa `/income`, gate `@module_permission_required('appointments')`).
+> Ustal: czy ma osobny JS plik czy inline script, jakie dane pokazuje (nazwa sugeruje przegląd
+> przychodów — sprawdź czy to duplikuje coś z `/analiza-biznesowa` czy to naprawdę odrębna
+> funkcja), jakich endpointów JSON używa (czy już istnieją w `analytics_routes.py`/`api_routes.py`
+> czy trzeba by je dopiero zbudować). Ta strona nie ma jeszcze przypisanej trasy w
+> `frontend/src/router.tsx` w ogóle — do dodania po audycie, wraz z decyzją, czy wchodzi w zakres
+> tego samego modułu 'Analityka' czy jest osobnym tematem."*
 
 ## Gotowe prompty do audytu modułów oznaczonych "Wymaga audytu"
 

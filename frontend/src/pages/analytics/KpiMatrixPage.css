@@ -1,0 +1,105 @@
+/* Wskaźniki biznesowe — ported 1:1 from templates/analytics/kpi_matrix.html's
+   inline <style> block (fixed table-layout so the table never exceeds its
+   container width — column ratios below always scale proportionally). */
+
+.kpi-page { padding: 0.75rem 1rem; max-width: none; }
+.kpi-header.page-header { margin-bottom: 0.75rem; align-items: flex-start; }
+.kpi-controls { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.kpi-legend { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: var(--color-ink-subtle); flex-wrap: wrap; }
+.kpi-legend .dot { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 1px; margin-right: 0.25em; vertical-align: -0.05em; }
+.kpi-legend .dot.good { background: rgba(45, 106, 79, 0.45); }
+.kpi-legend .dot.bad { background: rgba(155, 44, 44, 0.45); }
+
+.kpi-year-nav { display: flex; align-items: center; gap: 0.25rem; border: 1px solid var(--color-border); padding: 0.25rem; background: var(--color-surface-elevated); }
+.kpi-year-select { min-height: 0; border: none; background: transparent; }
+
+.kpi-table-wrap {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  position: relative;
+}
+
+table.kpi-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+}
+table.kpi-table th,
+table.kpi-table td {
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 9px 6px;
+  text-align: right;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+table.kpi-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-warm, #f6f4f0);
+  color: var(--color-ink-subtle);
+  font-weight: 600;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+  white-space: normal;
+}
+table.kpi-table col.col-process { width: 10%; }
+table.kpi-table col.col-indicator { width: 12%; }
+table.kpi-table col.col-unit { width: 5.5%; }
+table.kpi-table col.col-month { width: 4.7%; }
+table.kpi-table col.col-year { width: 5.3%; }
+table.kpi-table col.col-target { width: 5.3%; }
+
+table.kpi-table td.cell-process {
+  text-align: left;
+  font-weight: 600;
+  white-space: normal;
+  vertical-align: middle;
+  background: var(--color-surface-warm, #f6f4f0);
+}
+table.kpi-table td.cell-indicator { text-align: left; white-space: normal; }
+table.kpi-table td.cell-indicator .kpi-tip { border-bottom: 1px dotted var(--color-ink-subtle); cursor: help; }
+table.kpi-table td.cell-unit { text-align: center; color: var(--color-ink-subtle); font-size: 0.85em; }
+table.kpi-table td.cell-yprior { color: var(--color-ink-subtle); font-style: italic; }
+table.kpi-table td.cell-year { font-weight: 700; }
+table.kpi-table td.cell-target { color: var(--color-ink-subtle); text-align: center; }
+table.kpi-table td.cell-na { color: var(--color-ink-subtle); text-align: center; font-style: italic; white-space: normal; }
+
+table.kpi-table tbody tr.proc-band-a td { border-top: 2px solid var(--color-ink-subtle); }
+
+table.kpi-table td.status-good { background: rgba(45, 106, 79, 0.1); }
+table.kpi-table td.status-bad { background: rgba(155, 44, 44, 0.09); }
+
+table.kpi-table tbody tr.kpi-row-clickable { cursor: pointer; }
+table.kpi-table tbody tr.kpi-row-clickable:hover td { background: var(--color-accent-muted, rgba(138, 109, 26, 0.08)); }
+table.kpi-table tbody tr.kpi-row-expanded td { background: var(--color-accent-muted, rgba(138, 109, 26, 0.1)); }
+table.kpi-table tr.kpi-detail-row td { cursor: default; background: var(--color-surface-warm, #f6f4f0); padding: 1rem 1.25rem; }
+.kpi-chart-box { height: 240px; position: relative; }
+
+.kpi-hover-tip {
+  position: fixed;
+  z-index: 100;
+  max-width: 380px;
+  background: var(--color-ink, #1a1a1a);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}

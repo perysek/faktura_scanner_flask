@@ -37,6 +37,7 @@ import { UsersListPage } from './pages/rbac/UsersListPage';
 import { UserFormPage } from './pages/rbac/UserFormPage';
 import { RolesListPage } from './pages/rbac/RolesListPage';
 import { RoleFormPage } from './pages/rbac/RoleFormPage';
+import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -114,7 +115,7 @@ export const router = createBrowserRouter([
               { path: 'wizyty/:id/edytuj', element: <WizytaFormPage mode="edit" /> },
               { path: 'wizyty/:id', element: <WizytaDetailPage /> },
               { path: 'analiza-biznesowa', element: <ComingSoonPage title="Analiza biznesowa" /> },
-              { path: 'wskazniki-biznesowe', element: <ComingSoonPage title="Wskaźniki biznesowe" /> },
+              { path: 'wskazniki-biznesowe', element: <KpiMatrixPage /> },
             ],
           },
 

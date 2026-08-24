@@ -1536,4 +1536,47 @@ wewnątrz callbacku zamiast przez pośrednią zmienną `users`). Backend: `pytho
 uruchomiony po zmianach w `routes/users/routes.py`+`routes/roles/routes.py` (4 nowe GET-only
 endpointy, zero zmian w istniejących) — **657 passed**, 0 regresji.
 
+### Moduł: Analityka — KPI Matrix zbudowany, główny dashboard i `/income` świadomie odłożone
+
+Audyt (`routes/analytics_routes.py`, 573 linii, 30 endpointów) ujawnił, że etykieta "Prawdopodobnie
+kompletna / Wysoka (wykresy)" z `plan.md` §0 była **trzecią z rzędu niedoszacowaną złożonością**
+(po Sprzedawcach i Usługach z Fazy 2) — i największą dotąd: to nie jedna strona, tylko **trzy**
+(`/analiza-biznesowa` — 449+1475 linii, 10 wykresów Chart.js + custom heatmapa + kilka tabel +
+stanowa nawigacja okresów; `/wskazniki-biznesowe` — 198+351 linii, znacznie mniejsza; `/income` —
+155 linii, **całkowicie nieznana wcześniej trzecia strona**, nigdzie niewymieniona w żadnym
+dotychczasowym dokumencie planu). Pełny opis w `module-inventory.md`'s nowej sekcji "Korekta
+zakresu — Analityka / KPI / Przychody", razem z gotowymi promptami audytowymi dla obu odłożonych
+stron.
+
+**Decyzja D34 — zbudowano wyłącznie `/wskazniki-biznesowe`, świadomie odłożono resztę:** o 3-4 nad
+ranem, bez dostępnych narzędzi przeglądarkowych do weryfikacji wizualnej (patrz
+[[react-migration-browser-tooling-gap]]), wdrożenie 10-wykresowego dashboardu na ślepo byłoby
+najwyższym ryzykiem tej całej sesji — błąd w jednym z 10 wykresów byłby niewidoczny aż do
+pierwszego ręcznego testu użytkownika, dokładnie tak jak przy Wizytach/Fakturach (7+5 usterek UI
+znalezionych dopiero przy pierwszym realnym kliknięciu, 2026-08-19). KPI Matrix jest znacznie
+mniejsza, samodzielna, i jej jeden typ wykresu (bar+line combo, rozwijany per wiersz) jest bliżej
+sprawdzonych wzorców (`MonthlyChart.tsx`, `PriceHistorySparkline.tsx`) niż 10 różnych typów
+wykresów dashboardu.
+
+**Frontend (`frontend/src/pages/analytics/`):** `KpiMatrixPage` (nawigacja rok wstecz/w
+przód/picker/"Aktualny", sticky header, tabela 18 kolumn z `table-layout: fixed`), `KpiIndicatorRow`
+(rowspan'owana komórka procesu na pierwszym wierszu grupy, kolorowanie status-good/-bad per
+komórka wg `direction`/`target`, obsługa `unavailable_note` dla wskaźników bez danych źródłowych),
+`KpiIndicatorChart` (rozwijany wykres bar+line combo per wiersz — Chart.js `BarController`+
+`LineController` zarejestrowane razem, wzorem `MonthlyChart.tsx`/`PriceHistorySparkline.tsx`),
+`kpiFormat.ts` (współdzielona logika formatowania — jedno miejsce decydujące "jak wydrukować tę
+liczbę", żeby tabela i wykres nigdy się nie rozjechały, 1:1 z oryginalnym
+`getFormatter()`/`fmtValue()`/`fmtPln()` z `kpi_matrix.js`). Fixed-position hover-tooltip (JS
+`getBoundingClientRect()`-owy, nie CSS `:hover`) ported 1:1 — ucieka z `overflow:auto` tabeli,
+tak jak w oryginale.
+
+Backend: **bez zmian** — `/api/analytics/kpi-matrix` (mounted pod `analytics_bp`, `url_prefix='/api'`
+w `app.py`) był już w pełni JSON, error-responses też poprawnie JSON (w przeciwieństwie do
+`users`/`roles` blueprintów z D-Sec5 wcześniej w tej sesji — ten akurat leży POD `/api/*`).
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 155 modułów. `npm run lint` → 0 errors (ten sam
+jeden nieszkodliwy warning, bez zmian). Backend bez zmian — `pytest` nie uruchamiany ponownie.
+Ręczna weryfikacja wizualna nieosiągalna w tym środowisku, jak w każdym poprzednim module tej
+sesji.
+
 ---
