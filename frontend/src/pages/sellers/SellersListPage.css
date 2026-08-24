@@ -1,0 +1,244 @@
+/* Shared stylesheet for the whole Sprzedawcy module (3 sub-features per
+   module-inventory.md korekta 2026-08-17) — ported 1:1 from
+   templates/sellers/{list_refined,create,edit}.html's inline <style> blocks.
+   Imported by SellersListPage.tsx and SellerFormPage.tsx (the two real page
+   entry points); SellerSyncResults/SellerPasswordsPanel piggyback on
+   whichever of those is mounted, same as ClientsListPage.css's precedent of
+   one page-owned stylesheet rather than fragmenting into many tiny files. */
+
+.sellers-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Bug fix, found while building Faktury (module-inventory.md, 2026-08-18):
+ * `.search-wrapper` below has NO local override here, so it was inheriting
+ * the DIFFERENT global `.search-wrapper` from components.css (a multi-filter
+ * flex ROW for the Klienci-family pages) — `display:flex`, no `position:
+ * relative`. `.search-icon` right below IS `position: absolute`, so without
+ * a positioned ancestor it was landing relative to the nearest ancestor that
+ * DOES set `position` (whichever one that is up the tree — not this search
+ * box), while `.search-input` still reserved left padding for an icon that
+ * visually wasn't there. Scoped to `.sellers-page` only — SellerFormPage.tsx
+ * doesn't use this class, so this can't affect anything else. */
+.sellers-page .search-wrapper { position: relative; }
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.search-bar { margin-bottom: 0.75rem; }
+.search-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  transition: all 0.3s var(--ease-out-expo);
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-ink-muted);
+  box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.04);
+}
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-subtle);
+  width: 1rem;
+  height: 1rem;
+}
+
+.nip-number { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8125rem; color: var(--color-ink-muted); }
+.seller-name { font-weight: 500; color: var(--color-ink); }
+.invoice-count { font-variant-numeric: tabular-nums; }
+.amount-paid { color: var(--color-success); font-weight: 500; font-variant-numeric: tabular-nums; }
+.amount-unpaid { color: var(--color-warning); font-weight: 500; font-variant-numeric: tabular-nums; }
+.date-value { color: var(--color-ink-muted); font-size: 0.8125rem; }
+
+.row-actions { display: flex; gap: 0.25rem; justify-content: flex-end; }
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 2px;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.action-btn svg { width: 1rem; height: 1rem; }
+.action-btn:hover { background: var(--color-surface); color: var(--color-ink); }
+.action-btn.delete:hover { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
+
+.pagination-bar {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-subtle);
+  border-top: 1px solid var(--color-border);
+}
+.pagination-count { font-weight: 600; color: var(--color-ink); }
+
+.empty-title { font-size: 0.9375rem; font-weight: 500; color: var(--color-ink); margin: 0.5rem 0 0.25rem; }
+
+/* ── Sync results view ─────────────────────────────────────────────── */
+
+.sync-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.sync-stat-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sync-stat-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; color: var(--color-ink); }
+.sync-stat-label { font-size: 0.6875rem; color: var(--color-ink-subtle); text-transform: uppercase; letter-spacing: 0.06em; }
+.sync-stat-warning .sync-stat-value { color: var(--color-warning); }
+.sync-stat-error .sync-stat-value { color: var(--color-error); }
+
+.sync-success-message { text-align: center; padding: 3rem 1rem; }
+.sync-success-text { font-size: 1.125rem; font-weight: 500; color: var(--color-success); margin-top: 1rem; }
+
+.sync-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.sync-card-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sync-card-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); }
+.sync-badge { padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 999px; }
+.sync-badge-error { background: rgba(155, 44, 44, 0.1); color: var(--color-error); }
+.sync-badge-warning { background: rgba(154, 103, 0, 0.12); color: var(--color-warning); }
+.sync-count-badge {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  /* Intentional literal, ported 1:1 — original's own comment says "info
+     badge teal, no matching token" (list_refined.html:890); --color-chart-sky
+     (#0ea5e9) is a visibly different, cooler blue, not this teal, so
+     substituting it would be a silent color change, not a token cleanup. */
+  background: rgba(23, 162, 184, 0.12);
+  color: #17a2b8;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  border-radius: 2px;
+}
+.discrepancy-row td { vertical-align: top; }
+.discrepancy-actions { display: flex; gap: 0.375rem; flex-wrap: wrap; }
+.discrepancy-recommendation { margin-top: 0.375rem; font-size: 0.6875rem; color: var(--color-ink-subtle); }
+
+/* ── PDF passwords modal panel ─────────────────────────────────────── */
+
+.pwd-panel-intro { font-size: 0.8125rem; color: var(--color-ink-muted); margin-bottom: 1rem; }
+.pwd-panel-empty { text-align: center; padding: 2rem; color: var(--color-ink-subtle); }
+.pwd-panel-dim { color: var(--color-ink-subtle); }
+.pwd-code { font-size: 0.75rem; background: var(--color-surface); padding: 0.125rem 0.375rem; border-radius: 2px; }
+.pwd-panel-desc { font-size: 0.75rem; color: var(--color-ink-subtle); }
+.pwd-panel-form { border-top: 1px solid var(--color-border); padding-top: 1rem; margin-top: 1rem; }
+.pwd-panel-form h4 { font-size: 0.8125rem; font-weight: 600; margin: 0 0 0.75rem; }
+.pwd-panel-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+@media (max-width: 640px) {
+  .pwd-panel-form-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Seller form (create/edit) ─────────────────────────────────────── */
+
+.seller-form-page { max-width: 900px; margin: 0 auto; }
+/* The original Jinja page (templates/sellers/edit.html) had its own
+   page-local `.form-card { margin-bottom: 1rem; }` — the shared
+   `.form-card` in components.css (used everywhere post-port) carries no
+   margin at all, so stacked cards here (main form → PDF-password panel)
+   sat flush against each other with zero gap. Scoped to this page rather
+   than a global `.form-card + .form-card` rule, to not shift spacing on
+   other pages that stack form-cards without review; `1rem` matches this
+   page's own existing `.invoices-table-card { margin-top: 1rem }` below. */
+.seller-form-page > .form-card + .form-card {
+  margin-top: 1rem;
+}
+.seller-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--color-surface);
+  border-radius: 2px;
+  margin-bottom: 1.25rem;
+}
+.seller-form-warning {
+  padding: 0.75rem;
+  background: rgba(154, 103, 0, 0.08);
+  border: 1px solid rgba(154, 103, 0, 0.2);
+  border-radius: 2px;
+  margin-top: 0.75rem;
+}
+.seller-form-warning-text { font-size: 0.75rem; color: var(--color-warning); font-weight: 500; margin: 0; }
+.seller-form-hint { font-size: 0.6875rem; color: var(--color-ink-subtle); margin-top: 0.25rem; }
+.seller-form-error { font-size: 0.6875rem; color: var(--color-error); margin-top: 0.25rem; }
+.input-with-status { position: relative; }
+.input-status { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); display: flex; }
+.input-status svg { width: 1rem; height: 1rem; }
+.input-status.valid { color: var(--color-success); }
+.input-status.invalid { color: var(--color-error); }
+.input-status.checking { color: var(--color-ink-subtle); animation: seller-spin 1s linear infinite; }
+@keyframes seller-spin { from { transform: translateY(-50%) rotate(0deg); } to { transform: translateY(-50%) rotate(360deg); } }
+
+.pdf-password-card { margin-top: 1rem; }
+.pdf-password-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.pdf-password-header-label { display: flex; align-items: center; gap: 0.5rem; }
+.pdf-password-header-label svg { width: 1.125rem; height: 1.125rem; color: var(--color-ink-muted); }
+.pdf-password-header h3 { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--color-ink); }
+.pdf-password-none { font-size: 0.8125rem; color: var(--color-ink-subtle); margin-bottom: 0.75rem; }
+.pdf-password-value { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.875rem; }
+
+.invoices-table-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+.invoices-table-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.invoices-table-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); }
+.invoices-table-count {
+  font-size: 0.6875rem;
+  color: var(--color-ink-subtle);
+  padding: 0.25rem 0.5rem;
+  background: var(--color-surface);
+  border-radius: 999px;
+}
+.invoice-seller-name-mismatch { color: var(--color-warning); }
+
+@media (max-width: 768px) {
+  .seller-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}

@@ -1,7 +1,20 @@
 # Plan: migracja GUI z Flask/Jinja2/vanilla JS na React (big-bang)
 
-**Data:** 2026-08-14
-**Status:** DRAFT — do zatwierdzenia przed startem Fazy 0
+**Data:** 2026-08-14 (ostatnia aktualizacja statusu: 2026-08-19)
+**Status:** Faza 0 (fundamenty) i Faza 1 (pilot: Klienci) zaimplementowane, ręcznie przetestowane
+i **zatwierdzone przez użytkownika 2026-08-17** — szczegóły weryfikacji w `implementation-log.md`.
+Faza 2 (rollout pozostałych modułów) **w toku** — Dashboard, Sprzedawcy, Usługi, Pracownicy,
+Faktury (częściowo) i Wizyty+Kalendarz (częściowo, największy moduł w apce) zbudowane. Pierwszy
+ręczny click-through Faktur/Wizyt (2026-08-19) znalazł 7 usterek UI, potem drugi przebieg znalazł
+5 kolejnych (`react-ui-corrections_19080026.txt`) — **wszystkie 12 naprawione i zatwierdzone przez
+użytkownika tego samego dnia** (2026-08-19). Pełny opis każdej w `implementation-log.md`.
+**Następny krok dla świeżej sesji: kolejny moduł z listy "Wymaga audytu"** w
+`module-inventory.md` (Analityka/KPI, Nieobecności, Bilanse urlopowe, RBAC, Import/OCR, Ustawienia
+e-mail/SMS — patrz gotowe prompty audytowe w `module-inventory.md`) **albo** dokończenie
+świadomie odłożonych kawałków Faktur/Wizyt (import/OCR staging, `/historia`,
+`/ustawienia/email`, integracja Wizyt z Nieobecnościami, SMS na widoku szczegółów) — do wyboru
+przez użytkownika, żaden nie jest z góry priorytetowy. Szczegółowy status per moduł w
+`module-inventory.md`.
 **Reguły docelowego stacku:** `DESIGN.md` (React 18 + TS + Vite + React Router, tokeny/komponenty
 opisane tam §0–§19) — **traktowany jako źródło prawdy dla tego, JAK ma wyglądać i działać nowy
 frontend**, nie dla tego, co dziś istnieje w backendzie (to ten dokument, `plan.md`, ustala).
@@ -102,14 +115,14 @@ dopiero przy review pilota.
 
 ## 2. Fazy
 
-| Faza | Plik | Zawartość | Blokuje |
-|---|---|---|---|
-| **0 — Fundamenty** | `phase-00-foundations.md` | Vite scaffold, port tokenów, JSON auth, `AuthContext`/`ProtectedRoute`, shell/sidebar/routing, theming, oba systemy ikon, `ToastProvider`/`ConfirmProvider` | Wszystko poniżej |
-| **1 — Pilot: Klienci** | `phase-01-pilot-clients.md` | Pełna migracja jednego modułu średniej złożoności jako wzorzec + walidacja API | Fazę 2 |
-| **2 — Rollout pozostałych modułów** | `module-inventory.md` (checklist) | Powielenie wzorca z Fazy 1 na ~14 pozostałych modułów, moduł po module, wg tabeli gotowości API | Fazę 3 |
-| **3 — QA / parytet** | *(do napisania po Fazie 2)* | E2E per moduł, porównanie z Jinja side-by-side, a11y re-audit (DESIGN.md §11/§19), test 4 motywów | Fazę 4 |
-| **4 — Cutover** | *(do napisania bliżej terminu)* | Przełączenie ruchu, plan rollback, komunikacja | Fazę 5 |
-| **5 — Sprzątanie** | *(po okresie karencji)* | Usunięcie `templates/`, `input.css`, starych `static/js/*`, tras `render_template` z `main_routes.py` | — |
+| Faza | Plik | Zawartość | Status | Blokuje |
+|---|---|---|---|---|
+| **0 — Fundamenty** | `phase-00-foundations.md` | Vite scaffold, port tokenów, JSON auth, `AuthContext`/`ProtectedRoute`, shell/sidebar/routing, theming, oba systemy ikon, `ToastProvider`/`ConfirmProvider` | ✅ Zakończona | Wszystko poniżej |
+| **1 — Pilot: Klienci** | `phase-01-pilot-clients.md` | Pełna migracja jednego modułu średniej złożoności jako wzorzec + walidacja API | ✅ **Zakończona i zatwierdzona (2026-08-17)** | Fazę 2 |
+| **2 — Rollout pozostałych modułów** | `module-inventory.md` (checklist) | Powielenie wzorca z Fazy 1 na ~14 pozostałych modułów, moduł po module, wg tabeli gotowości API | ⏳ Nierozpoczęta | Fazę 3 |
+| **3 — QA / parytet** | *(do napisania po Fazie 2)* | E2E per moduł, porównanie z Jinja side-by-side, a11y re-audit (DESIGN.md §11/§19), test 4 motywów | ⏳ Nierozpoczęta | Fazę 4 |
+| **4 — Cutover** | *(do napisania bliżej terminu)* | Przełączenie ruchu, plan rollback, komunikacja | ⏳ Nierozpoczęta | Fazę 5 |
+| **5 — Sprzątanie** | *(po okresie karencji)* | Usunięcie `templates/`, `input.css`, starych `static/js/*`, tras `render_template` z `main_routes.py` | ⏳ Nierozpoczęta | — |
 
 Ten dokument zawiera na razie **Fazę 0 i Fazę 1** w pełnym detalu (to był zakres zaakceptowany na
 starcie) + `module-inventory.md` jako checklistę/szablon do powielenia. Fazy 3–5 rozpisujemy po

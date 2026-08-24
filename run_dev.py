@@ -35,16 +35,24 @@ from app import create_app
 app = create_app()
 
 if __name__ == '__main__':
+    # Port override (2026-08-18): another local project's own run_dev.py
+    # also hardcodes 5001 — when both are running at once, whichever bound
+    # first silently "wins" the port and the other's requests get served by
+    # the wrong app (discovered via a login failure that was actually this
+    # project's frontend talking to a different project's backend). Default
+    # stays 5001 for the common case; override with DEV_SERVER_PORT when
+    # another process already holds it.
+    port = int(os.environ.get('DEV_SERVER_PORT', 5001))
     print()
     print("=" * 60)
     print("  MyWay Dev Server — connecting to Vultr PostgreSQL")
     print(f"  DB: {db_url.split('@')[-1]}")   # show host/dbname, hide credentials
-    print("  URL: http://localhost:5001")
+    print(f"  URL: http://localhost:{port}")
     print("=" * 60)
     print()
     app.run(
         debug=True,
         host='127.0.0.1',   # local only, not exposed on the network
-        port=5001,
+        port=port,
         use_reloader=True,  # auto-restart on file changes
     )

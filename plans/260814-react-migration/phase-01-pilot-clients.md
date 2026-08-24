@@ -1,5 +1,8 @@
 # Faza 1 — Pilot: moduł Klienci
 
+**Status: ✅ ZAKOŃCZONA I ZATWIERDZONA PRZEZ UŻYTKOWNIKA (2026-08-17)** — szczegóły weryfikacji
+(build/lint/code-review + finalny status kryteriów akceptacji) w `implementation-log.md`.
+
 **Cel:** pierwszy pełny moduł na React, na prawdziwych danych, jako sprawdzony wzorzec do
 powielenia w Fazie 2. Wybrany, bo ma średnią złożoność (lista + CRUD + widok szczegółów + trochę
 logiki pochodnej — trendy wizyt, statystyki), a **backend jest już niemal w 100% gotowy** (patrz

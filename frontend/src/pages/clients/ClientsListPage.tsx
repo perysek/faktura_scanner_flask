@@ -177,9 +177,9 @@ export function ClientsListPage() {
     }
   }
 
-  // Tap-anywhere-on-card navigation (mobile stack-cards view only).
+  // Clickable row = same target as "Zobacz" (view) — DESIGN.md §20. Started
+  // as mobile-only tap-anywhere-on-card; now applies at every viewport size.
   function handleRowClick(client: Client, event: MouseEvent<HTMLTableRowElement>) {
-    if (!window.matchMedia('(max-width: 640px)').matches) return;
     if ((event.target as HTMLElement).closest('.action-icons')) return;
     navigate(`/klienci/${client.id}`);
   }
@@ -187,7 +187,7 @@ export function ClientsListPage() {
   const isActiveSort = sortIndicator('is_active');
 
   return (
-    <div className="refined-page clients-page animate-fade-up">
+    <div className="refined-page clients-page page-fills-viewport animate-fade-up">
       <header className="page-header">
         <div>
           <h1 className="page-title">Klienci</h1>
@@ -207,22 +207,42 @@ export function ClientsListPage() {
         </div>
       </header>
 
-      <div className="stat-strip">
-        <div className="stat-strip-item">
-          <p className="stat-strip-value">{statsState.data?.total_clients ?? '-'}</p>
-          <p className="stat-strip-label">Wszyscy</p>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div>
+            <p className="stat-label">Wszyscy</p>
+            <p className="stat-value">{statsState.data?.total_clients ?? '-'}</p>
+          </div>
+          <div className="stat-icon blue">
+            <Icon name="people" />
+          </div>
         </div>
-        <div className="stat-strip-item">
-          <p className="stat-strip-value green">{statsState.data?.active_clients ?? '-'}</p>
-          <p className="stat-strip-label">Aktywni</p>
+        <div className="stat-card">
+          <div>
+            <p className="stat-label">Aktywni</p>
+            <p className="stat-value green">{statsState.data?.active_clients ?? '-'}</p>
+          </div>
+          <div className="stat-icon green">
+            <Icon name="check_circle" />
+          </div>
         </div>
-        <div className="stat-strip-item">
-          <p className="stat-strip-value info">{statsState.data?.recent_visitors ?? '-'}</p>
-          <p className="stat-strip-label">Ostatni mies.</p>
+        <div className="stat-card">
+          <div>
+            <p className="stat-label">Ostatni mies.</p>
+            <p className="stat-value blue">{statsState.data?.recent_visitors ?? '-'}</p>
+          </div>
+          <div className="stat-icon blue">
+            <Icon name="calendar_today" />
+          </div>
         </div>
-        <div className="stat-strip-item">
-          <p className="stat-strip-value pink">{statsState.data?.clients_with_birthdate ?? '-'}</p>
-          <p className="stat-strip-label">Urodziny</p>
+        <div className="stat-card">
+          <div>
+            <p className="stat-label">Urodziny</p>
+            <p className="stat-value pink">{statsState.data?.clients_with_birthdate ?? '-'}</p>
+          </div>
+          <div className="stat-icon pink">
+            <Icon name="cake" />
+          </div>
         </div>
       </div>
 
@@ -371,7 +391,7 @@ function ClientRow({ client, trend, canWrite, onDeactivate, onRowClick }: Client
     : undefined;
 
   return (
-    <tr data-client-id={client.id} onClick={(e) => onRowClick(client, e)}>
+    <tr className="row-clickable" data-client-id={client.id} onClick={(e) => onRowClick(client, e)}>
       <td className="cell-name" data-label="Klient">
         <div className="client-info">
           <div className="client-avatar" style={ringStyle}>

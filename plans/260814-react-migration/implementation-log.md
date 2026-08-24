@@ -314,6 +314,351 @@ tokenu `-bg` dla tego stanu jest zamierzony, nie przeoczeniem do naprawienia.
   nie uruchamiany ponownie w tej fazie — brak zmian w `routes/`/`repositories/` do
   zweryfikowania.
 
+---
+
+## Faza 2 — Rollout pozostałych modułów
+
+Kolejność (za zgodą użytkownika 2026-08-17): **bez** Booking/Landing/Mobile (poza zakresem, patrz
+`plan.md` §3) — tylko wewnętrzna apka. Tryb: ciągły, bez przystanków między modułami (jak Faza 0+1),
+w kolejności rosnącego ryzyka — najpierw moduły "Kompletna API"/bez potrzeby audytu
+(`module-inventory.md`): Dashboard → Sprzedawcy → Usługi+kategorie → Pracownicy → Faktury, dopiero
+potem moduły oznaczone "Wymaga audytu".
+
+### Odkrycie D-Sec2 — luka bezpieczeństwa naprawiona w `routes/api_routes.py` (Sprzedawcy + email/historia/PDF)
+
+Po znalezieniu D-Sec1 (Dashboard) przeskanowano całe `routes/api_routes.py` pod kątem brakującego
+`@login_required` — znaleziono i naprawiono (dekoratorem `@login_required` +
+`@module_permission_required('invoices')`, wzorem sąsiadujących endpointów w tym samym pliku)
+**16 kolejnych** endpointów bez ŻADNEGO auth:
+- 11× `/api/sellers/*` (`get_seller`, `update_seller`, `bulk_update_seller_invoices`,
+  `get_seller_conflicts`, `delete_seller` **[DELETE bez auth — najpoważniejsze: dowolna osoba mogła
+  skasować sprzedawcę i kaskadowo wszystkie jego faktury]**, `get_seller_invoices`, `sync_sellers`,
+  `add_missing_seller`, `fix_discrepancy`, `sync_seller_invoice_counts`, `check_seller_duplicate`).
+- `/api/email/test`, `/api/email/folders`, `/api/email/settings` (GET+POST) — **GET zwracał hasło
+  IMAP w czystym JSON bez logowania; POST pozwalał nadpisać ustawienia poczty (przejęcie całego
+  pipeline'u importu faktur) komukolwiek.**
+- `/api/history/details` (dopasowano do sąsiada `get_history` — tylko `@login_required`, bez
+  modułu, bo taki jest już ustalony wzorzec tego zasobu).
+- `/api/pdf/<invoice_id>` — dowolna osoba mogła pobrać PDF dowolnej faktury po samym ID.
+
+`pytest tests/ -q` → 657 passed po wszystkich zmianach, bez regresji.
+
+**Odkrycie D-Sec3 (2026-08-17) — SPRAWDZONE, FAŁSZYWY ALARM, skorygowane:** pierwotny pełny skan
+`routes/*.py` (regex po dosłownym stringu `login_required` w liniach dekoratorów) wykrył pozornie
+**23 endpointy bez auth** w `routes/absence_routes.py` (15) i `routes/absence_balance_routes.py` (8).
+**Po przeczytaniu obu plików w całości (przy starcie audytu Pracowników) okazało się, że to artefakt
+zbyt naiwnego regexu**, nie realna luka: obie strażnice używane w tych plikach —
+`@absence_management_required` (wszystkie 15+niektóre z 8) i `@module_permission_required('absences')`
+(4 endpointy kategorii) — same sprawdzają `current_user.is_authenticated` wewnątrz funkcji
+(`config/auth_config.py:99` i `:209`), dokładnie tak samo jak `@login_required` robi to przez
+Flask-Login. Regex szukał tylko podciągu `"login_required"` w tekście dekoratora — `"module_permission_required"`
+i `"absence_management_required"` go nie zawierają, więc wpadły w sito jako "brak auth", mimo że nim
+nie są. Przeczytano każdą z 23 flagowanych funkcji ręcznie (`absence_routes.py` linie 124-599,
+`absence_balance_routes.py` linie 35-274) — **wszystkie właściwie zabezpieczone, część dodatkowo
+zawęża się w ciele funkcji do `role == 'superuser'`** dla operacji `hard_delete_*`/`cancel_approved`
+(świadome, udokumentowane w komentarzach tych funkcji). **Brak akcji do podjęcia.** Wniosek na
+przyszłość: przy kolejnych skanach regexowych sprawdzać też niestandardowe nazwy decoratorów
+(`grep -n "^def.*_required\|^def.*_permission"` w `config/auth_config.py` najpierw, potem dopiero
+przeszukiwać trasy pod kątem WSZYSTKICH tych nazw, nie tylko `login_required`).
+
+### Moduł: Dashboard/Pulpit
+
+**Odkrycie D-Sec1 (przed portem, poza zakresem Reacta) — luka bezpieczeństwa naprawiona:** pięć
+endpointów `/api/dashboard/*` (`recent-invoices`, `upcoming-payments`, `overdue-payments`,
+`top-sellers`, `monthly-totals`, `routes/api_routes.py:937-1093`) nie miały ŻADNEGO dekoratora
+`@login_required`/`@module_permission_required` — potwierdzone brakiem `before_request` na `api_bp`
+i brakiem globalnego auth w `app.py`. Realny skutek: dowolna osoba bez logowania mogła pobrać
+prawdziwe dane finansowe (nazwy/NIP-y dostawców, kwoty faktur, 12-miesięczny przychód). Za zgodą
+użytkownika naprawione **przed** kontynuacją portu — dodano `@login_required` +
+`@module_permission_required('invoices')` do wszystkich pięciu, wzorem sąsiadującego
+`get_statistics` (`:917-920`), który już miał oba dekoratory. `pytest tests/ -q` → 657 passed po
+zmianie (bez regresji). To NIE jest zmiana wprowadzona przez migrację — istniała wcześniej,
+niezależnie od Reacta; odkryta przy czytaniu tego samego pliku pod port Dashboardu.
+
+**Decyzja D19 — Chart.js jako zależność npm zamiast CDN `<script>`:** oryginał ładuje Chart.js przez
+`<script src="cdn.jsdelivr.net/...">` w `extra_head`. W React zainstalowano `chart.js` jako zwykłą
+zależność (`frontend/package.json`) — samodzielny bundle SPA, bez globalnego skryptu/wyścigu
+ładowania, wersjonowane tak jak reszta zależności. Ta sama biblioteka, ten sam wygląd wykresu
+(słupkowy, tooltip, formatowanie osi Y w K/M), inny mechanizm ładowania — kolory słupków/tooltipa
+przez `var(--color-ink)`/`var(--color-accent)` zamiast oryginalnych hardkodowanych
+`rgba(26,26,26,…)`/złotego literału (DESIGN.md §16, ta sama zasada co Decyzja D18 w Fazie 1).
+
+**Decyzja D20 — `parseLocalDate` z `lib/format.ts` wyeksportowany i użyty do liczenia "dni do
+terminu"/"dni po terminie":** oryginalny `dashboard/index.html` liczy to przez
+`new Date(invoice.payment_due_date)` bezpośrednio — dokładnie ten sam błąd UTC-off-by-one, który
+Decyzja D18 (Faza 1) już raz naprawiła dla `ClientDetailPage`. Nie powielono go tu — `DashboardPage`
+używa tego samego bezpiecznego lokalnego parsera, teraz wyeksportowanego z `format.ts` zamiast
+prywatnego dla modułu.
+
+**Decyzja D21 — linki do konkretnej faktury (`/invoice/:id/edit`) jako zwykłe `<a href>`, nie
+`<Link>`:** moduł Faktury jeszcze nie istnieje w React (`/faktury` to nadal `<ComingSoonPage>`).
+Zamiast linkować do martwego placeholdera z utratą ID faktury, linki "Ostatnie faktury"/"Przetermi-
+nowane"/"Nadchodzące płatności" wychodzą realną nawigacją przeglądarki do wciąż żywej strony Jinja
+(`main.edit_invoice`) — działa dziś, bo oba stacki koegzystują przez cały big-bang (`plan.md` §1).
+Link zbiorczy "Zobacz wszystkie →" (bez konkretnego ID) idzie przez `<Link to="/faktury">` (SPA,
+ląduje na `ComingSoonPage`, zgodnie z D7).
+
+**Nieprzeportowane świadomie:** nasłuch `document.addEventListener('invoiceCreated'/'invoiceUpdated'
+/'invoiceDeleted', refreshDashboard)` — nic w SPA jeszcze nie emituje tych eventów (moduł Faktury
+nie zbudowany). Do rozważenia przy budowie Faktur: cross-page refresh po mutacji (custom event jak
+dziś, albo lepszy mechanizm współdzielonego cache'u).
+
+**Layout — świadome uproszczenie:** oryginał ma `.refined-page{height:100%;overflow:hidden}` +
+panele scrollowane wewnętrznie (dashboard = jeden ekran, bez scrolla strony). Shared `AppShell`
+z Fazy 0 nie ma odpowiednika `#main-content` o zablokowanej wysokości (żadna inna strona, w tym
+Klienci, tego nie zakłada) — dopasowywanie się do tego jednego niestandardowego layoutu
+wymagałoby zmiany generycznego shellu. Zamiast tego: strona scrolluje normalnie (jak Klienci),
+a panele list mają `max-height` z wewnętrznym scrollem, żeby nie rosły w nieskończoność z danymi.
+
+**Weryfikacja:** `npm run build` → kompiluje się bez błędów (78 modułów, bundle 453 KB / gzip
+149 KB — wzrost względem Fazy 1 głównie przez `chart.js`). `npm run lint` → 0 errors, ten sam
+1 nieszkodliwy warning z Fazy 1 (`useFocusTrap.ts`). Backend: `pytest tests/ -q` → 657 passed
+(po dodaniu dekoratorów bezpieczeństwa). **Ręczna weryfikacja wizualna/funkcjonalna — czeka**
+(zakaz samodzielnego testowania GUI w tym przebiegu, jak w Fazie 1).
+
+### Moduł: Sprzedawcy (trzy pod-funkcje — patrz korekta złożoności w module-inventory.md)
+
+Zbudowane: `SellersListPage` (lista/CRUD/sort/search/stats-bar), `SellerSyncResults` (workflow
+synchronizacji — niezgodności nazw + brakujący sprzedawcy, z heurystyką rekomendacji ported 1:1 z
+`analyzeDiscrepancy()`), `SellerPasswordsPanel` (modal, CRUD haseł PDF wszystkich sprzedawców),
+`SellerFormPage` (create/edit, jeden komponent jak `ClientFormPage` z Fazy 1 — z live NIP-duplicate-
+check debounced 500ms, name-duplicate-check on-blur, sekcją hasła PDF inline dla edytowanego
+sprzedawcy, tabelą powiązanych faktur, przyciskiem "Propaguj zmiany").
+
+**Decyzja D22 — nowy generyczny `components/ui/Modal.tsx`:** DESIGN.md §8.3 mówi wprost, że
+`Modals.show()` nie ma gotowego 1:1 odpowiednika — każdy przypadek osobno. Konflikt NIP (3 przyciski:
+Anuluj / Użyj istniejącego / Zaktualizuj nazwę) nie mieści się w binarnym `useConfirm()`, więc
+powstał pierwszy współdzielony prymityw `Modal` (`.modal-*` klasy, też z Fazy 0/`ConfirmProvider`) —
+używany przez `SellerPasswordsPanel` i modal konfliktu NIP w `SellerFormPage`. Pozostałe dwa modale
+oryginału (konflikt nazwy, prompt propagacji) okazały się jednak binarne — te poszły przez zwykły
+`useConfirm()`, nie przez nowy prymityw (nie każdy `Modals.show()` z oryginału wymagał custom
+komponentu, tylko ten jeden naprawdę 3-drożny).
+
+**Decyzja D23 — URL-e po polsku:** `/sprzedawcy/nowy`, `/sprzedawcy/:id/edytuj` (nie kopia starych
+`/seller/create`, `/seller/<id>/edit`) — wzorem `/klienci/nowy`/`/klienci/:id/edytuj` z Fazy 1,
+konsekwentnie w całym React froncie.
+
+**Nieprzeportowane świadomie:** `GET /api/sellers/conflicts` — nigdzie nie konsumowany w oryginalnym
+JS (`list_refined.html`/`create.js`/`edit.js`), więc brak odpowiadającego UI w Reakcie też (owinięty
+w `sellersApi.conflicts()` dla kompletności, niewywoływany znikąd — 1:1 z dzisiejszym stanem, nie
+regresja). Podobnie `GET /api/sellers/<id>/invoices` — osobny endpoint nieużywany w oryginale (dane
+o fakturach przychodzą już zagnieżdżone w `GET /api/sellers/<id>`).
+
+**Weryfikacja:** `npm run build`/`lint` → 0 errors (1 nieszkodliwy warning z Fazy 1, bez zmian).
+Backend: `pytest tests/ -q` → 657 passed po wszystkich zmianach dekoratorów (D-Sec2).
+
+### Moduł: Usługi + kategorie (4 pod-strony — druga z rzędu korekta złożoności "Średnia"→"Wysoka")
+
+Zbudowane: `ServicesListPage` (lista/CRUD, filtrowanie **serwerowe** — search/type/active_only
+faktycznie trafiają do `GET /api/services`, inaczej niż u Sprzedawców gdzie oryginał filtrował
+tylko klient-side), `ServiceFormPage` (create/edit, typ usługi main/addon przełącza
+widoczność/wymagalność kategorii, pole "powód zmiany ceny" pokazuje się tylko gdy
+`hasModuleAccess('service_prices')` I cena faktycznie zmieniona względem wartości przy
+załadowaniu), `ServiceDetailPage` (historia cen w `<details>` z Chart.js sparkline — rysowany
+dopiero po rozwinięciu, bo canvas w zwiniętym `<details>` ma zerowy rozmiar — plus zarządzanie
+kompatybilnymi mikrousługami), `ServiceCategoriesPage` (jedyne miejsce w całej migracji z edycją
+WIERSZOWĄ inline zamiast osobnej strony — ported 1:1, nie "poprawione" na wzorzec formularza).
+
+**Wzorzec potwierdzony:** to DRUGI moduł z rzędu (po Sprzedawcach), gdzie etykieta złożoności z
+`module-inventory.md` (pochodząca z samego audytu liczby `jsonify`) okazała się zaniżona po
+realnym przeczytaniu kodu — tu dodatkowo odkryto whole osobny plik `routes/service_addon_routes.py`
+(kompatybilność usługa-główna↔mikrousługa), w ogóle niewymieniony w `plan.md` §0. **Wniosek do
+zanotowania na przyszłość:** przy kolejnych modułach z etykietą "Średnia"/"Kompletna" z samej
+tabeli audytu — traktować to jako punkt startowy, nie jako sufit złożoności; zawsze sprawdzić czy
+istnieje osobny plik tras dla tego modułu poza oczywistym (`grep -rl "'/<moduł>" routes/*.py`).
+
+**Decyzja D24 — `service_addon_routes.py` sprawdzony osobno pod kątem D-Sec2-podobnej luki:**
+wszystkie 5 endpointów już miało `@login_required` + `@module_permission_required('services')` —
+brak nowej luki bezpieczeństwa w tym pliku (w przeciwieństwie do Dashboard/Sprzedawcy).
+
+**Decyzja D25 — 3-drożny modal usuwania kategorii przez `Modal`, nie `useConfirm()`:** dokładnie
+ten sam wzorzec co Decyzja D22 (konflikt NIP u Sprzedawców) — "Anuluj / Usuń tylko kategorię / Usuń
+z usługami" nie mieści się w binarnym confirm.
+
+**Weryfikacja:** `npm run build`/`lint` → 0 errors (1 nieszkodliwy warning z Fazy 1, bez zmian;
+bundle 542 KB / gzip 172 KB — Vite ostrzega o rozmiarze chunku, do rozważenia code-splitting w
+późniejszej fazie, nieblokujące teraz). Backend: bez zmian w tym module (wszystkie endpointy już
+poprawnie zabezpieczone) — `pytest` nie uruchamiany ponownie, brak zmian w `routes/`.
+
+### Moduł: Pracownicy — audyt wstępny, budowa NIE rozpoczęta
+
+Zeskanowano trasy i strony przed budową (żeby następna sesja nie zaczynała od zera):
+
+**Backend — 13 endpointów w `routes/api_routes.py:3780-4470`, wszystkie już poprawnie
+zabezpieczone** (`@login_required` + odpowiedni `@module_permission_required`, potwierdzone pełnym
+skanem pliku — brak luki typu D-Sec1/D-Sec2 tutaj):
+`GET/POST /api/employees`, `GET/PUT/DELETE /api/employees/<id>`,
+`GET/PUT /api/employees/<id>/mobile-pin` + `POST .../mobile-pin/reset`,
+`DELETE /api/employees/<id>/permanent` (hard delete), `GET /api/employees/statistics`,
+`GET /api/employees/positions`, `POST /api/employees/bulk-update-services`,
+`POST /api/employees/<id>/direct-reports`.
+
+**Frontend — 4 strony Jinja, 3152 linii łącznie:** `templates/employees/list.html` (791 — lista/
+CRUD/staty/filtr stanowisko+status, bulk "Aktualizuj preferencje"), `create.html` (468),
+`edit.html` (707), `view.html` (1186 — **nieprzeczytany w szczegółach, prawdopodobnie zawiera
+mobile-pin reset UI, macierz bulk-services, i sekcję direct-reports** — dokładnie ten sam wzorzec
+co `clients/view.html` w Fazie 1: zbyt duży, żeby zgadywać strukturę z nazwy, pierwszy krok
+następnej sesji to pełne przeczytanie). Osobny podkatalog `templates/employees/formy_zatrudnienia/`
+(zarządzanie formami zatrudnienia) — **w ogóle nieprzeczytany, nawet pobieżnie**.
+
+**Rekomendowana kolejność budowy (następna sesja):** 1) przeczytać `view.html` w całości (wzorem
+Fazy 1 §1.4), 2) `EmployeesListPage` (najbliższy wzorcowi `ServicesListPage`), 3) `EmployeeFormPage`
+create/edit, 4) `EmployeeDetailPage` z mobile-pin/bulk-services/direct-reports jako pod-sekcje
+(prawdopodobnie osobne komponenty, wzorem `PdfPasswordSection`/`SellerSyncResults`), 5) osobny
+`FormyZatrudnieniaPage` dopiero po przeczytaniu jego szablonów.
+
+**Świadoma decyzja o zatrzymaniu:** to NIE jest "zabrakło czasu" — to moduł porównywalny objętością
+do Sprzedawców+Usług razem wziętych, a obie te korekty złożoności ("Średnia"→"Wysoka") pokazały, że
+budowanie bez pełnego przeczytania kodu prowadzi do przeoczeń. `plan.md` §4 explicite ostrzega przed
+szacowaniem "na sztywno" bez audytu — to samo dotyczy tempa budowy: lepiej zamknąć pełny, przetesto-
+wany moduł niż zacząć piąty i zostawić go w połowie.
+
+### ⚠️ Konflikt równoległej sesji — odkryty 2026-08-17 ~23:47, w trakcie budowy Pracowników
+
+Podczas budowy modułu Pracownicy (ta sama sesja, po wznowieniu z `/loop`/kontynuacji) okazało się,
+że **druga, żywa sesja Claude Code** (potwierdzone: wiele procesów `claude.exe` w `tasklist`) edytuje
+**dokładnie te same pliki, dokładnie ten sam moduł, w tym samym czasie** — `frontend/src/types/
+employee.ts`, `frontend/src/lib/api/employees.ts`, `frontend/src/lib/api/employeeServices.ts`,
+`frontend/src/pages/employees/EmployeesListPage.tsx` i **`routes/api_routes.py`** (ten sam plik
+backendu z poprawkami D-Sec1/D-Sec2/D-Sec4 z tej sesji). Obie sesje niezależnie doszły do tego
+samego wniosku ("czas na Pracowników") i zaczęły pisać własne, niekompatybilne wersje (inne nazwy
+typów — `EmployeeListItem` vs `EmployeeListRow` — inny adres endpointu dla listy użytkowników —
+`/api/employees/lookups/active-users` vs `/api/employees/user-options` — inna decyzja zakresu:
+druga sesja **świadomie odłożyła zakładki "Analizy i wyniki"**, ta sesja szła w pełną budowę).
+
+**Zweryfikowano przed przerwaniem:** żadna z wcześniejszych poprawek tej sesji (D-Sec1 Dashboard,
+D-Sec2 Sprzedawcy/email/PDF/history, D-Sec4 skills/specializations) **nie została nadpisana** —
+obie sesje edytowały różne fragmenty tego samego dużego pliku bez destrukcyjnego nakładania się,
+na razie. Usunięto WYŁĄCZNIE własny duplikat endpointu tej sesji
+(`/employees/lookups/active-users`, martwy kod względem tego co realnie zostało na dysku) — nie
+ruszono niczego z drugiej sesji.
+
+**Pozostawione bez zmian, niezweryfikowane — wymaga ręcznej decyzji użytkownika:**
+`frontend/src/lib/api/absenceBalances.ts`, `frontend/src/lib/api/formyZatrudnienia.ts` (pliki tej
+sesji, prawdopodobnie osierocone — druga sesja zbudowała odpowiedniki jako metody wprost na
+`employeesApi`, nie osobne pliki) oraz cały pierwotny `frontend/src/pages/employees/
+EmployeesListPage.tsx` tej sesji (nadpisany przez drugą sesję, zanim zdążył trafić do
+weryfikacji buildem).
+
+**Rekomendacja:** nie kontynuować budowy Pracowników w tej sesji — druga sesja jest w tej chwili
+dalej (ma już `Modal`-based potwierdzenie trwałego usunięcia, `sessionStorage` z filtrami wzorem
+`ClientsListPage`, spójny stack typów). Użytkownik powinien: (1) sprawdzić stan drugiej sesji,
+(2) pozwolić jej dokończyć moduł, (3) usunąć osierocone pliki tej sesji wymienione wyżej,
+(4) przelecieć `npm run build`/`lint` + `pytest` po zakończeniu, żeby złapać cokolwiek co obie
+sesje zostawiły w niespójnym stanie.
+
+### Moduł: Pracownicy — konflikt rozwiązany, budowa dokończona (2026-08-18)
+
+Po wznowieniu tej sesji (przerwanej w trakcie budowy `EmployeeDetailPage`) druga, równoległa sesja
+już nie żyła — na dysku pozostał wyłącznie spójny stan zgodny z tym, co ta sesja od początku
+budowała (`EmployeeListRow`, endpoint `/api/employees/user-options`, `EmployeesListPage.tsx` z
+`Modal`-based potwierdzeniem trwałego usunięcia i `sessionStorage` filtrów wzorem
+`ClientsListPage`) — czyli dokładnie rekomendacja #2 z sekcji wyżej ("pozwolić [drugiej sesji]
+dokończyć moduł") zrealizowała się sama. Wykonano rekomendację #3: usunięto
+`frontend/src/lib/api/absenceBalances.ts` (osierocony duplikat — `employeesApi.getBalances`/
+`getBalanceAdjustments` to jedyna realnie używana ścieżka; plik odwoływał się do nieistniejących już
+nazw typów `AbsenceAdjustment`/`AbsenceBalance` i blokował `tsc -b`). `formyZatrudnienia.ts`
+**nie był** osierocony — aktywnie używany przez `EmployeeFormPage`/`EmployeeDetailPage`, zostawiony
+bez zmian.
+
+**Backend — 2 nowe endpointy** (`routes/api_routes.py`), oba `@login_required` +
+`@module_permission_required('employees')`:
+- `GET /api/employees/<id>/direct-reports` — dane do pickera "Podwładni" na stronie edycji (inni
+  aktywni pracownicy + aktualni podwładni + przełożeni danego pracownika, do wykrycia konfliktu
+  przełożony↔podwładny w UI).
+- `GET /api/employees/user-options` — lista aktywnych użytkowników do dropdowna "Konto użytkownika".
+  Celowo NOWY, wąsko zakresowy endpoint zamiast ponownego użycia `/system/users/api`
+  (`routes/users/routes.py`), który wymaga `@role_required('superuser', 'admin')` — formularz
+  pracownika jest dostępny każdemu z uprawnieniem zapisu w module `employees`; użycie
+  nadmiernie uprzywilejowanego endpointu byłoby odwrotnością D-Sec1/D-Sec2 (za DUŻO uprawnień
+  zamiast za mało).
+
+Weryfikacja backendu: `python -c "import ast; ast.parse(...)"` na obu endpointach (SYNTAX_OK) +
+pełny `pytest tests/ -q` → **657 passed**, zero regresji.
+
+**Frontend — zbudowane strony:**
+- `EmployeesListPage` — lista/CRUD, staty (4 karty przez `Icon` glyphs), filtr stanowisko
+  (serwerowy) + status (klient-side) + wyszukiwanie, sortowanie 5 kolumn w tym "Bilans urlopu"
+  (dociągnięty osobnym fetchem `/api/absence-balances/summary` i zmergowany po id — dokładnie jak
+  oryginał, nie zagnieżdżony w odpowiedzi `/api/employees`), trwałe usunięcie (superuser-only) przez
+  `Modal` z ostrzeżeniem o kaskadowym skasowaniu (nieobecności/bilanse) i osobnym ostrzeżeniem gdy
+  pracownik ma powiązane konto użytkownika.
+- `EmployeeFormPage` (create/edit, jeden komponent) — asymetria oryginału zachowana świadomie:
+  umiejętności/specjalizacje ustawiane TYLKO przy tworzeniu (`create.html` je ma, `edit.html` —
+  nie), harmonogram/PIN mobilny/podwładni — tylko w edit (PIN i podwładni nie mają sensu przed
+  utworzeniem rekordu). Custom multi-select dropdown dla "Podwładni" z blokadą konfliktu
+  przełożony↔podwładny (`disabled` na opcji + etykieta "konflikt"). Zmiana PIN-u przez nowy `Modal`.
+- `EmployeeDetailPage` (dokończone w tej sesji) — dane osobowe, wynagrodzenie, bilanse nieobecności
+  (paski postępu + "Historia korekt" doładowywana leniwie dopiero po pierwszym rozwinięciu, nie przy
+  starcie strony — 1:1 z oryginalnym `toggleAdjHistory()`), umiejętności/specjalizacje (chipy),
+  harmonogram pracy (siatka dni roboczych/wolnych), przypisane usługi (inline formularz dodawania —
+  pobiera WSZYSTKIE aktywne usługi i odfiltrowuje już przypisane po stronie klienta, jak oryginał;
+  usuwanie przez `useConfirm()`), notatki, akcje (edytuj/powrót/dezaktywuj). Zakładki "Analizy i
+  wyniki" (5 zakładek, 8+ wykresów Chart.js, heatmapa godzin szczytowych, radar umiejętności) —
+  **ŚWIADOMIE odłożone**, renderowany jest tylko placeholder (`.analytics-deferred-note`) — ten
+  zakres wymaga najpierw przeczytania nieprzeczytanego `static/js/employees/analytics.js` (500+
+  linii), porównywalny objętościowo do osobno śledzonego w `module-inventory.md` modułu "Analityka".
+
+**Decyzja D26 — `forma_zatrudnienia_id → nazwa` rozwiązywane po stronie klienta:**
+`GET /api/employees/<id>` (użyty przez `EmployeeDetailPage`) nie dołącza nazwy formy zatrudnienia
+(w przeciwieństwie do oryginalnej trasy Jinja, która przekazywała gotowy `forma_nazwa` z JOIN-a) —
+zamiast dodawać kolejny endpoint, `EmployeeDetailPage` woła ten sam `formyZatrudnieniaApi.listFull()`
+co formularz edycji i wyszukuje po `id` po stronie klienta. Dane są już i tak pobierane gdziekolwiek
+edytuje się pracownika — trzeci fetch dla samego stringa byłby przerostem formy nad treścią.
+
+**Decyzja D27 — tabela przypisanych usług: globalna `.refined-table`, nie bespoke `.service-table`:**
+oryginalny `view.html` definiował własną klasę `.service-table` w lokalnym `<style>` (w Jinja każda
+strona i tak ładuje tylko swój własny blok stylów, więc kolizje nazw nie miały znaczenia). W SPA
+style wszystkich modułów trafiają do jednego bundla — `EmployeesListPage.css` już celowo prefiksuje
+własne klasy (`emp-field-grid`, nie `field-grid`) żeby uniknąć kolizji z identycznie nazwanymi
+regułami w `ServicesListPage.css`. Zamiast dopisywać TRZECI prawie identyczny zestaw reguł tabeli,
+użyto istniejącej globalnej `.refined-table` (te same wartości co `.service-table` co do piksela,
+różnica tylko w paddingu 0.75rem/1rem vs 0.625rem/0.75rem — nieodróżnialna wizualnie) — spójnie z
+tym, jak `ServiceDetailPage` już wcześniej potraktował swoją tabelę historii cen.
+
+**Uzupełnienie CSS:** bazowe `.emp-field-label`/`.emp-field-value` dopisane do
+`EmployeesListPage.css` — poprzednie wznowienie zdążyło dodać tylko warianty (`emp-field-grid*`,
+`.emp-field-value.highlight`) zanim połączenie się urwało; bez bazowych reguł tekst renderowałby się
+bez żadnego stylu.
+
+**Router:** `/pracownicy`, `/pracownicy/nowy`, `/pracownicy/:id/edytuj`, `/pracownicy/:id` podpięte
+pod `requireModule="employees"` (zastąpiły `ComingSoonPage`); `/formy-zatrudnienia` zostaje
+`ComingSoonPage` do następnego kroku.
+
+**Weryfikacja:** `npm run build` → 0 errors (bundle 586 KB / gzip 183 KB — to samo ostrzeżenie o
+rozmiarze chunku co w poprzednich modułach, nieblokujące). `npm run lint` → 0 errors, 1 nieszkodliwy
+pre-existing warning (`useFocusTrap.ts`, niezwiązany z tym modułem, bez zmian). Backend: `pytest`
+nie uruchamiany ponownie w tym kroku — bez nowych zmian w `routes/` poza dwoma endpointami
+zweryfikowanymi wcześniej tą samą sesją (patrz wyżej).
+
+**Pozostaje:** `FormyZatrudnieniaPage` (osobny podkatalog `templates/employees/formy_zatrudnienia/`,
+wciąż nieprzeczytany) — następny krok tej sesji.
+
+### Moduł: Rodzaje zatrudnienia — dokończenie modułu Pracownicy (2026-08-18)
+
+Przeczytano `templates/employees/formy_zatrudnienia/list.html` (496 linii) i zbudowano
+`FormyZatrudnieniaPage` 1:1: formularz tworzenia (`nazwa` wymagana, `uwagi` opcjonalne, 3 checkboxy
+— min. wynagrodzenie/gwarantowane/prowizja) + tabela z edycją **wierszową inline** (nie osobna
+strona edycji). To DRUGA taka strona w całej migracji, nie jedyna — koryguję tu komentarz w
+`ServiceCategoriesPage.tsx` ("jedyne miejsce w całej migracji, gdzie oryginał robi to tak"), obecnie
+nieaktualny; nie edytowano kodu Usług dla samego komentarza, wystarczy to odnotować tutaj. Usuwanie
+przez `useConfirm()` (prosty binarny confirm — backend nie ma tu odpowiednika ochrony "kategoria ma
+przypisane usługi" z kategorii usług, więc nie ma powodu na `Modal` 3-drożny jak w Decyzji D25).
+
+CSS: nowy plik `FormyZatrudnieniaPage.css` (nie dopisany do `EmployeesListPage.css` — strona
+wizualnie/funkcjonalnie nie ma nic wspólnego z listą/formularzem/szczegółami pracownika, tylko
+współdzieli nadrzędny moduł "Pracownicy" w nawigacji) z `.inline-input`/`.table-actions` (identyczne
+co do wartości z `ServicesListPage.css` — świadoma duplikacja małych util-klas, ten sam wzorzec co
+tam, nie promowanie do globalnego `components.css`) oraz nowym `.boolean-badge`/`.yes`/`.no`.
+
+**Router:** `/formy-zatrudnienia` podpięty pod `requireModule="employees"` (zastąpił
+`ComingSoonPage`) — moduł Pracownicy jest teraz kompletny (wszystkie 4 podstrony zbudowane).
+
+**Weryfikacja:** `npm run build` → 0 errors (bundle 593 KB / gzip 185 KB). `npm run lint` → 0
+errors, ten sam 1 nieszkodliwy pre-existing warning. Backend bez zmian (endpointy
+`/api/formy-zatrudnienia*` już wcześniej zweryfikowane jako poprawnie zabezpieczone w audycie
+wstępnym) — `pytest` nie uruchamiany ponownie.
+
 ### Czas budowy modułu (§1.5, do kalibracji Fazy 2)
 
 Nie mam dostępu do zegara ściennego w tej sesji (brak narzędzia do pomiaru czasu), więc nie mogę
@@ -337,11 +682,665 @@ Claude Code).
       `list.html`/`view.html` też nie mają widocznego przycisku "Przywróć", `restore_url`
       zwracany przez DELETE nie jest dziś nigdzie konsumowany po stronie klienta poza networkiem
       — 1:1 parytet, nie regresja).
-- [ ] 4 motywy przetestowane wizualnie — **ZAREZERWOWANE dla ręcznego testu** (zgodnie z
-      poleceniem użytkownika).
-- [ ] Klawiatura: sortowanie nagłówków (real `<button>`), formularz, modal potwierdzenia — kod
-      zbudowany z pełną intencją dostępności (prawdziwe `<button>` wszędzie, `aria-sort`,
-      focus-trap w confirm, Ctrl+S/Esc), ale **ZAREZERWOWANE dla ręcznego testu klawiaturą**.
-- [ ] Czas budowy — patrz sekcja wyżej (nie zmierzony, brak narzędzia).
+- [x] 4 motywy przetestowane wizualnie — **ręczny test wykonany, OK**.
+- [x] Klawiatura: sortowanie nagłówków (real `<button>`), formularz, modal potwierdzenia — **ręczny
+      test wykonany, OK**.
+- [ ] Czas budowy — nadal nie zmierzony (brak narzędzia w tej sesji, patrz sekcja wyżej); **nie
+      blokuje zatwierdzenia** — user zdecydował zatwierdzić pilota bez tej metryki.
+
+## Zatwierdzenie Fazy 1 — 2026-08-17
+
+Użytkownik potwierdził: Faza 1 (pilot Klienci) **zakończona i zatwierdzona jako OK**. Wszystkie
+kryteria akceptacji §1.5 spełnione poza pomiarem czasu budowy (świadomie pominięty, patrz wyżej).
+Faza 2 (rollout pozostałych ~14 modułów wg `module-inventory.md`) może wystartować.
+
+## Poprawki UX wsteczne na wszystkich zbudowanych stronach — 2026-08-18
+
+Użytkownik zgłosił trzy poprawki mające objąć KAŻDĄ dotąd zbudowaną stronę (Klienci, Sprzedawcy,
+Usługi, Pracownicy + wszystkie pod-strony), nie tylko nowy moduł. Pełny opis mechanizmu i uzasadnienie
+w `DESIGN.md` §11.2 (Escape) i nowym §20 (tabele) — tutaj tylko skrót + gdzie szukać.
+
+**1. Nagłówki sekcji sidebaru** — `font-size` mniejszy (0.6875rem) niż linki nawigacyjne wewnątrz
+(0.9375rem), odwrotnie niż powinno. Podbite do 1rem (`styles/components.css`).
+
+**2. Escape → nawigacja "Anuluj"/"Powrót do listy":** `lib/a11y/escapeScope.ts` miał już gotowy,
+udokumentowany w DESIGN.md §11.2 mechanizm (`useEscapeAction`/`useEscapeClaim`) — **zero miejsc
+użycia w całym repo**. Oryginalna apka Jinja miała inline handler Escape na KAŻDEJ stronie create/
+edit/view (potwierdzone grepem po `templates/`) — port po prostu to zgubił. Naprawione: `guardTyping`
+na `useEscapeAction` (nie przerywa pisania w polu — 1:1 z oryginałem), scentralizowane w
+`FormActions` (każda strona formularza dostaje to za darmo), nowe `useEscapeBack(href)` dla "Powrót
+do listy" na stronach szczegółów, nowe `useEscapeClose(isOpen, onClose)` (wyekstrahowane z
+`ConfirmProvider`) dla zagnieżdżonych sekcji inline (np. "Dodaj usługę" na `EmployeeDetailPage` —
+bez tego Escape podczas edycji tej sekcji wyrzuciłby użytkownika od razu do listy pracowników).
+
+**3. Tabele — przebudowa ~16 tabel w 10 plikach jednym przebiegiem:** sticky `<thead>`, prawdziwy
+stylowany scrollbar (nigdy natywny przeglądarki), klikalne wiersze (mirror "Zobacz", a jeśli brak —
+"Edytuj", włącznie z dwiema tabelami edycji wierszowej inline — Kategorie usług/Formy zatrudnienia,
+gdzie "Edytuj" = wejście w tryb edycji, nie nawigacja). Użytkownik wybrał (przez AskUserQuestion)
+wariant "tabela wypełnia resztę viewportu, strona się nie scrolluje" zamiast prostszego "ograniczona
+wysokość, strona nadal scrolluje" — stąd `.page-fills-viewport` (tylko desktop ≥1024px, mobile
+zostaje przy zwykłym scrollu całej strony — zagnieżdżone regiony scrolla to papercut UX na dotyku).
+Ciekawostka: `DESIGN.md` §5 od Fazy 0 miał już notatkę o dokładnie tym wzorcu (`.table-scroll-body`),
+ale żadna strona go nigdy nie zaimplementowała — ta poprawka to też korekta dryfu, nie nowy wymysł;
+§5 zaktualizowane, żeby odzwierciedlać realne nazwy klas (`.table-container`/`.page-fills-viewport`).
+
+**Weryfikacja:** `npm run build`/`lint` → 0 errors po każdym większym batchu zmian (4 przebiegi w
+trakcie tej pracy), ten sam 1 nieszkodliwy pre-existing warning bez zmian. Backend nietknięty.
+
+**Bug znaleziony przez użytkownika po fakcie — żaden scrollbar nie był widoczny, wiersze się nie
+scrollowały:** `.page-fills-viewport > .table-container, .page-fills-viewport > .form-card:has(>
+.table-container) { ...; overflow: hidden; }` — jedna reguła z przecinkiem obsługująca DWA różne
+kształty DOM przez pomyłkę dawała `overflow: hidden` OBU przypadkom, a powinna tylko wrapperowi
+(`.form-card`, który nie jest regionem scrolla, tylko opakowaniem). Efekt: treść tabeli była
+przycinana (clipped), nie scrollowana — dokładnie odwrotność zamierzonego zachowania. Naprawione:
+rozdzielono na dwie osobne reguły — `.table-container` (bezpośrednie dziecko) zachowuje `overflow:
+auto` ze swojej reguły bazowej, tylko `.form-card:has(...)` (wrapper) dostaje `overflow: hidden`.
+Potwierdzone przez użytkownika po naprawie (HMR podmienił CSS na żywo, bez restartu serwera) — lekcja
+na przyszłość: przy CSS-owych zmianach dotykających scroll/overflow warto zweryfikować wizualnie
+(`/browse`), nie tylko przez czytanie reguł — ta klasa buga (poprawna logika na papierze, zła w
+selektorze łączącym dwa przypadki) nie wyszłaby przez `npm run build`.
+
+**Efekt uboczny, niezwiązany z UX:** przy uruchamianiu dev-serwera do podglądu na żywo okazało się,
+że `.venv` w repo było puste (sam `pip`, `requirements.txt` nigdy nie zainstalowany) i miało Pythona
+3.14 — `psycopg2-binary==2.9.10` nie ma jeszcze wheela dla 3.14, kompilacja ze źródeł padała na braku
+MSVC Build Tools. Naprawione: `.venv` przebudowany pod systemowego Pythona 3.12 (ma gotowe wheele dla
+wszystkiego w `requirements.txt`).
+
+**Ręczny test na żywo — pierwszy raz w Fazie 2:** dzięki działającemu dev-serwerowi (SSH tunel →
+Vultr Postgres :5433, `run_dev.py` :5001, `npm run dev` :5173) użytkownik faktycznie przeklikał
+Klienci/Sprzedawcy/Pracownicy na żywo, nie tylko czytał build/lint. Znalazł i zgłosił dwie kolejne
+niespójności wizualne (poza scrollbar-bugiem opisanym wyżej):
+
+### Poprawki spójności kart statystyk — 2026-08-18
+
+1. **Klienci — odstępy kart statystyk dużo ciaśniejsze niż na innych stronach.** `ClientsListPage`
+   (Faza 1, budowany jako pierwszy, przed ustabilizowaniem się wzorca) miał własny, bespoke
+   `.stat-strip`/`.stat-strip-item` — segmentowy pasek 1px-gap zamiast osobnych kart, padding
+   `0.75rem 1rem` zamiast `1.5rem`, brak ikon. Naprawione przez migrację na te same globalne klasy
+   co Pracownicy/Usługi (`.stats-grid`/`.stat-card`/`.stat-icon`/`.stat-value`/`.stat-label`,
+   `components.css`) — nie tylko dostrojenie liczb paddingu na bespoke klasach, tylko realne
+   przejście na wspólny komponent. Ikony: `people`/`check_circle`/`calendar_today`/`cake`. Martwe
+   `.stat-strip*` usunięte z `ClientsListPage.css`.
+2. **Sprzedawcy — karty statystyk bez stylu w ogóle** (brak tła/obramowania/cienia). `.stat-item`
+   nie miał ŻADNEJ reguły CSS — `.stat-value`/`.stat-label` (te same nazwy co globalne klasy)
+   przypadkiem dawały poprawny styl tekstu, ale wrapper karty nigdy nie dostał treatmentu. Ten sam
+   zabieg: `.stats-bar`/`.stat-item` → `.stats-grid`/`.stat-card` z ikonami
+   (`people`/`insert_drive_file`/`payments`/`warning_amber`, kolory blue/purple/green/orange —
+   orange dla "Nieopłacone" bo `.stat-icon`/`.stat-value` nie mają wariantu "error"/czerwonego,
+   tylko blue/green/purple/orange/pink; orange jako najbliższy "warning" semantycznie). Martwe
+   `.stats-bar`/`.stat-item` usunięte z `SellersListPage.css`.
+
+**Wzorzec do zapamiętania:** oba przypadki to spadek po tym, że każdy moduł budowany jako pierwszy
+w swojej fazie (Klienci w Fazie 1, Sprzedawcy jako pierwszy moduł Fazy 2) wymyślił własny wygląd
+kart statystyk, zanim `.stats-grid`/`.stat-card` ustabilizowało się jako wzorzec przy kolejnych
+modułach. Przy audycie NASTĘPNEGO modułu warto od razu sprawdzić, czy strona z kartami statystyk
+faktycznie używa `.stats-grid`/`.stat-card`, a nie własnego markupu, który tylko wygląda podobnie.
+
+**Weryfikacja:** `npm run build`/`lint` → 0 errors (bundle CSS realnie ZMNIEJSZYŁ się, 77.48→76.54 KB
+— potwierdza, że martwy CSS został faktycznie usunięty, nie tylko nadpisany). Potwierdzone przez
+użytkownika na żywo przez HMR, bez restartu serwera.
+
+## Faktury — piąty moduł Fazy 2, częściowy build — 2026-08-18
+
+Kontynuacja Fazy 2 wg `module-inventory.md`. Przed budową przeczytano w całości:
+`templates/invoices/{list_refined,create,edit}.html` (upload.html i `routes/upload_routes.py`
+świadomie NIE — patrz decyzja o zakresie niżej), sekcję faktur w `routes/api_routes.py` (endpointy
+CRUD, konflikt sprzedawcy, seller-sync-check/apply, export, view_pdf), `database/models.py`'s
+`Invoice`, oraz jako wzorzec referencyjny — `SellerFormPage.tsx`/`SellersListPage.tsx`/`form.tsx`/
+`client.ts` (najświeższy, najbardziej dopracowany moduł Fazy 2).
+
+### Decyzja — zakres tego przebiegu
+
+Etykieta "Wysoka (OCR upload flow)" z audytu wstępnego okazała się niedoszacowaniem po realnym
+przeczytaniu źródeł — pełny szczegół w `module-inventory.md`'s "Korekta zakresu — Faktury". Skrót:
+moduł to DWIE niezależne rodziny funkcji, nie jeden wzorzec list+form. Zbudowano **tylko** pierwszą
+(list+CRUD+konflikt sprzedawcy+sync+eksport) — dokładnie odpowiada wzorcowi ustabilizowanemu przez
+Sprzedawcy/Usługi/Pracownicy. Świadomie odłożone (routing zostaje `ComingSoonPage`, patrz
+`router.tsx`):
+- `/import-dokumentow` — staging wielu plików + SSE-streamowany progress OCR (`upload_routes.py`'s
+  `/stage`, `/staged`, `/process` (generator/SSE), `/finalize`) — zupełnie inny rodzaj UI
+  (streaming, wieloplikowy staging) niż reszta apki; wymaga własnego mini-audytu analogicznego do
+  tego dla Kalendarza wizyt, zanim ruszy budowa.
+- Boczny panel podglądu PDF (`togglePreviewPanel`/`openPreviewPanel` z `list_refined.html`) —
+  zastąpiony na liście prostym `<a target="_blank" href="/api/pdf/<id>">` (ikona "Podgląd" w
+  akcjach wiersza) i na stronie edycji pełnym `<iframe>`/`<img>` z `/api/pdf/<id>` (edit.html miał
+  to jako stały panel obok formularza, nie boczny wysuwany — to zachowane 1:1). Realna funkcja
+  podglądu PDF jest więc zachowana wszędzie poza samą listą, gdzie zamiast wysuwanego panelu jest
+  nowa karta — świadome uproszczenie UI, nie utrata funkcji.
+- `/historia` (osobny szablon `history/list_refined.html`, prawdopodobnie log audytowy, nie lista
+  faktur) i `/ustawienia/email` (import z poczty, hasła PDF per e-mail — częściowo pokrywa się z
+  `SellerPasswordsPanel` już zbudowanym dla Sprzedawców, wymaga sprawdzenia zakresu nakładania się).
+- Przyciski "Wklej ze schowka" (`pasteToField()`) przy każdym polu formularza create/edit —
+  wygoda przy przepisywaniu z OCR/innego okna; `TextField` nie ma slotu na adornment, nie ma
+  odpowiednika w żadnym innym module. Formularz w pełni funkcjonalny bez tego.
+
+### Zbudowane
+
+`pages/faktury/{FakturyListPage,FakturaFormPage,SellerSyncModal}.tsx` + `FakturyListPage.css`,
+`lib/api/invoices.ts` (pełny CRUD + `confirmSeller` + `sellerSyncCheck/Apply` + `exportUrl`/`pdfUrl`),
+`types/invoice.ts`. Routing: `/faktury`, `/faktury/nowa`, `/faktury/:id/edytuj` pod istniejącym
+`requireModule="invoices"` guardem (już był tam z Fazy 0/1 — tylko element zamieniony z
+`ComingSoonPage`).
+
+**Lista:** filter pills (Wszystkie/Opłacone/Nieopłacone/Przeterminowane, liczone klient-side —
+"Przeterminowana" to POCHODNA, nie wartość w bazie: `status` zostaje `'Nieopłacona'`, tylko badge
+się zmienia gdy `payment_due_date` minął), sortowanie (nr/sprzedawca/data/kwota — 1:1 z oryginałem,
+NIP/Termin/Status NIE były sortowalne w Jinja i nie są tu też), wyszukiwanie (nr/sprzedawca/NIP),
+klik w status = toggle Opłacona⇄Nieopłacona (PUT tylko `{status}}`, bez ryzyka wywołania ścieżki
+konfliktu sprzedawcy — ta uruchamia się tylko gdy `seller_nip`/`seller_name` są w payloadzie),
+eksport (Excel/CSV — bezpośrednia nawigacja do `/api/export/<format>`, `send_file` po stronie
+Flask, żadnego fetch+blob). Brak kart statystyk na górze (oryginał `list_refined.html` ich też nie
+ma — tylko pills + suma przefiltrowanej kwoty w stopce tabeli) — świadomie NIE dodano
+`.stats-grid`/`.stat-card` tylko po to, żeby "wyglądało jak inne moduły"; to byłoby dryfem od
+oryginału, nie parytetem.
+
+**Formularz (create/edit, jedna strona z `mode`):** 3 sekcje przez `FormSection` (prawdziwy
+`<fieldset>+<legend>`, nie skopiowany wzorzec `<h2 className="section-title">` z
+`EmployeeFormPage.tsx` — sprawdzone, że TA konkretna klasa jest tam martwa, bo scoped do
+`.employee-detail-page .section-title` w CSS, a formularz renderuje się pod `.employee-form-page`;
+niezwiązany z Fakturami pre-existing bug w Pracownikach, nie naprawiany teraz — poza zakresem).
+Przepływ konfliktu sprzedawcy (409 → modal decyzji → resubmit) zaimplementowany dla OBU trybów:
+create resubmit'uje TĘ SAMĄ `FormData` (z plikiem, jeśli był) z doklejonym `seller_action`
+(+ `existing_seller_id`), edit resubmit'uje JSON przez osobny endpoint `PUT
+/api/invoices/<id>/confirm-seller` — dwie różne ścieżki na backendzie, zmapowane 1:1.
+
+### Zmiany infrastrukturalne w `lib/api/client.ts`
+
+1. **Wsparcie dla `FormData`** — pierwszy upload pliku w całym SPA (żaden wcześniejszy moduł Fazy
+   0–2 tego nie potrzebował). `request()` wykrywa `body instanceof FormData` i wtedy NIE ustawia
+   `Content-Type` (przeglądarka sama dokłada `multipart/form-data; boundary=…` — ręczne ustawienie
+   nagłówka `application/json` na ciele FormData urwałoby boundary i backend nie sparsowałby body).
+2. **`ApiError.data`** — dotąd `ApiError` niosła tylko `status`+`message` (string z `data.error`).
+   Konflikt sprzedawcy (409) niesie ustrukturyzowany payload (`seller_conflict`/`seller_info`
+   obiekty, nie same stringi) potrzebny do zbudowania modala decyzji — `request()` teraz przekazuje
+   cały sparsowany JSON body do `ApiError.data` przy rzucaniu. Wsteczne kompatybilne (istniejące
+   `catch` bloki czytające tylko `.message`/`.status` działają bez zmian).
+
+### Weryfikacja
+
+`npm run build` (tsc -b && vite build) → 0 errors, bundle 619.56 KB / gzip 192.10 KB (z 593 KB przed
+tym modułem). `npm run lint` → 0 errors, ten sam 1 nieszkodliwy pre-existing warning (`useFocusTrap.ts`,
+niezwiązany). Backend nietknięty — wszystkie użyte endpointy już istniały i były oznaczone
+"Kompletna" w audycie `plan.md` §0; zero zmian w Pythonie w tym przebiegu. **Ręczny test na żywo
+nie wykonany w tej sesji** — jak poprzednie moduły Fazy 2, czeka na przeklikanie przez użytkownika
+(w szczególności: przepływ konfliktu sprzedawcy — 409 ścieżki nie da się sensownie zweryfikować bez
+klikania w prawdziwe dane, dwuetapowy resubmit to najbardziej ryzykowny nowy kod w tym module).
+
+## Wizyty + Kalendarz — szósty moduł Fazy 2, częściowy build — 2026-08-18
+
+Kontynuacja Fazy 2. Użytkownik wybrał zakres jawnie (przez pytanie doprecyzowujące, po
+audycie): "Kalendarze (dzień/tydzień/mies.) + create/edit/view dla wizyt", plus jednoczesna
+implementacja bocznego paska month-cards wg `calendar-sidebar-redesign-prompt.md`
+(plik w korzeniu repo — spec przygotowany wcześniej, patrz commit 1fda510).
+
+### Audyt — kluczowe odkrycie koryguje `module-inventory.md`
+
+Przeczytano w całości: `templates/appointments/{list,view,create,edit,calendar,
+calendar_week,calendar_month}.html` (superadmin_edit*.html i my_visits.html — tylko
+`grep`, potwierdzić że poza zakresem, nie czytane w całości), `routes/appointment_routes.py`
+(1541 linii, 28 endpointów), `static/js/employee-filter.js`, `config/appointment_statuses.py`.
+**Żaden z 3 widoków kalendarza nie ma drag&drop** — bloki wizyt to klikalne, pozycjonowane
+czasowo `<div>`y (klik → nawigacja do `/appointment/:id`), zero `dragstart`/`draggable`/`ondrop`
+w całym katalogu. Ryzyko z pierwotnego audytu (`module-inventory.md`) było przesadzone w
+wymiarze interakcji, ale moduł i tak jest największy w apce z racji samej objętości (9449
+linii w 10 szablonach) — pełny opis w `module-inventory.md`'s "Korekta zakresu — Wizyty +
+Kalendarz".
+
+### Decyzja — zakres tego przebiegu
+
+Zbudowano: lista (`WizytyListPage` — domyślnie tydzień pon–nd, jak oryginał), widok
+szczegółów (`WizytaDetailPage`), create/edit (`WizytaFormPage`, jeden komponent z `mode`),
+3 widoki kalendarza (`CalendarDayPage`/`CalendarWeekPage`/`CalendarMonthPage`), boczny pasek
+month-cards (`CalendarMonthSidebar`, wpięty w dzień-widok i listę). Świadomie poza zakresem
+(logika/uzasadnienie każdego poniżej, routing zostaje `ComingSoonPage`/nie istnieje):
+
+- **Integracja z nieobecnościami** (`reassignment-candidates`/`reassign-for-absence`/
+  `reschedule-for-absence`/`cancel-for-absence`) — kod sam się opisuje jako "Faza 3,
+  Supervisor conflict-resolution modal", gated `@absence_management_required` (nie
+  `appointments`) — należy koncepcyjnie do modułu Nieobecności (wciąż "Wymaga audytu"),
+  nie do Wizyt.
+- **Wysyłka/log SMS na widoku szczegółów** (dropdown "Wyślij SMS", `/api/sms/appointment/
+  <id>/log`) — własny moduł (Ustawienia SMS, wciąż "Wymaga audytu" osobno).
+- **"Rozlicz przeszłe wizyty"** (`past-pending`/`past-status` — skaner przeszłych wizyt z
+  nieukończonym statusem) — osobny mały workflow, `list.html` miał tylko ukryty trigger-
+  przycisk (`hidden` atrybut) do niego, nie pełną integrację; pominięty w całości.
+- **`status-events` polling** (5s, globalne powiadomienia toast o zmianach statusu) — nie
+  specyficzne dla żadnej z tych stron, bardziej pasuje do globalnego mechanizmu
+  powiadomień w `AppShell`, gdyby taki miał powstać.
+- **`visit-link`/token pracownika** — część mobilnego self-service (`/my-visits`,
+  `templates/appointments/my_visits.html`, bez bramki modułowej) — inna apka, nie ten
+  frontend (ta sama zasada co `mobile_routes.py` w `plan.md` §5 pkt 2).
+- **Superadmin power-editor** (`superadmin_edit.html`/`superadmin_edit_table.html`) —
+  już wcześniej poprawnie poza zakresem (osobny moduł `data_correction`, router.tsx
+  miał już `ComingSoonPage` stuby dla `korekta/wizyty`/`korekta/tabela`).
+
+**Świadome uproszczenia względem oryginału** (funkcjonalność zachowana, tylko inny
+mechanizm): klient/pracownik jako zwykły `<select>` zamiast `SearchableSelect` JS-widgetu
+(natywny select nadal wspiera "wpisz literę, skocz do opcji"); walidacja okna czasowego
+zmiany statusu w edit (np. "za wcześnie na rozpoczęcie wizyty") pominięta — była to tylko
+client-side pre-check, serwer i tak odrzuci nieprawidłowe przejście; `prompt()`/`confirm()`
+natywne z oryginału (`changeStatus()`'s reason prompt, `completeAppointment()`'s payment-
+method prompt, force-save conflict confirm) zastąpione realnymi komponentami
+(`StatusChangeModal`, `CompleteVisitModal`, `useConfirm()`) — DESIGN.md §16 explicite
+zakazuje natywnych dialogów, oryginał ich używał tylko dlatego że to przedReactowy kod.
+
+### Boczny pasek month-cards (`CalendarMonthSidebar.tsx`)
+
+Zaimplementowany 1:1 wg `calendar-sidebar-redesign-prompt.md`: 3 stałe miesiące (realny
+bieżący +0/+1/+2, NIGDY nie podążają za nawigacją głównego widoku), kropka+pogrubienie na
+dniach z ≥1 wizytą (bez anulowanych/no-show), wypełniony krążek na "dziś", obrys na aktualnie
+wybranej dacie, zwijanie z zapamiętaniem stanu (`localStorage`, wzorem `ThemeSwitcher.tsx` —
+raw `localStorage` + try/catch, nie osobny hook), ukryty <1024px. Zachowanie kliknięcia
+CELOWO różne w dwóch miejscach, zgodnie ze spec: dzień-widok = proste "retarguj siatkę"
+(`CalendarDayPage`'s `handleSidebarDayClick`), lista = progresywny "day-chain" (patrz niżej)
+— sam komponent sidebaru jest w pełni prezentacyjny, nie wie która strona go hostuje, tylko
+raportuje `onDayClick(date)`.
+
+**Day-chain w `WizytyListPage`** (§"List-view click behavior" ze specu): kliknięcie dnia
+pobiera CAŁY miesiąc naraz (`ensureMonthLoaded` — jeden fetch, cache po `YYYY-MM`, nie N
+osobnych fetchy per dzień — miesiąc i tak jest granicą łańcucha wg specu, "do not spill into
+next month"), grupuje po dacie, i cała reszta logiki (snap-forward/backward na pusty dzień,
+"Pokaż następny dzień", reset przy kliknięciu innego dnia) działa już czysto po stronie
+klienta na tym jednym cache'u. Sortowanie w trybie chain jest ZAWSZE rosnąco data+godzina
+(nadpisuje stan sortowania tabeli — spec p.6), przycisk sortowania kolumn wyłączony w tym
+trybie. Wiersze z `end_time` w przeszłości dostają `.row-past` (wyszarzenie) — TYLKO w trybie
+chain, zgodnie z sekcją specu w której ta reguła jest wymieniona.
+
+**Bug znaleziony i naprawiony przy code-review własnego kodu przed commitem:**
+`handleStatusUpdated` w trybie chain zerowało `monthCache` (żeby wymusić świeży fetch) ale
+NIE odtwarzało go od razu — skoro `rawAppointments`'s useMemo warunkuje się na
+`mode==='chain' && monthCache`, wyzerowanie samego cache'u bez natychmiastowego refetchu
+powodowało ciche przełączenie wyświetlanych danych na (niepowiązane) dane tygodniowe zamiast
+odświeżonego łańcucha dni. Naprawione: `handleStatusUpdated` teraz asynchronicznie
+zeruje-i-odtwarza cache w jednym kroku (`ensureMonthLoaded` ponownie), z `chainLoading`
+przełączanym wokół tego, żeby tabela pokazała "Ładowanie..." zamiast błysku złych danych.
+
+### Zmiany infrastrukturalne w `lib/api/client.ts`
+
+**`api.patch()`** — pierwszy użytkownik PATCH w SPA (`PATCH /api/appointments/<id>/
+satisfaction`) — dotąd klient miał tylko get/post/put/del; dodano symetryczny `patch`
+(ten sam CSRF/Content-Type traktowanie co `put`, żadna zmiana w `request()` nie była
+potrzebna poza samym helperem).
+
+### Weryfikacja
+
+`npm run build` (tsc -b && vite build) → 0 errors, bundle 668.65 KB / gzip 204.93 KB (z 619.56 KB
+przed tym modułem — największy dotąd przyrost, adekwatnie do rozmiaru modułu). `npm run lint` →
+0 errors, ten sam 1 nieszkodliwy pre-existing warning + jeden nowy świadomie wyciszony
+(`react-hooks/exhaustive-deps` na `time` w taken-slots efekcie, z komentarzem uzasadniającym).
+Backend nietknięty. **Ręczny test na żywo nie wykonany** — to zdecydowanie najbardziej
+ryzykowny moduł dotąd zbudowany bez klikania: day-chain logika sidebaru, SSE confirmation
+badge, i force-save conflict flow to trzy niezależne nowe mechanizmy nigdy wcześniej nie
+przetestowane w tej apce poza automatycznym build/lint.
+
+---
+
+## Naprawa loginu (kolizja portów) + commit/push Faktur i Wizyt — 2026-08-19
+
+### Bug: "nie mogę się zalogować na dotychczasowych credentials"
+
+Root cause: **nie to, co brzmiało na pierwszy rzut oka** (błędne hasło) — kolizja portów między
+tym projektem a zupełnie niepowiązanym `~/PycharmProjects/human-solutions` ("HR system"), którego
+własny `run_dev.py` też miał na sztywno port 5001. Który proces zbindował się pierwszy, wygrywał
+port po cichu — frontend tego projektu (`:5173`, proxy) trafiał wtedy w REALNOŚCI w backend
+`human-solutions`, który poprawnie (ale mylnie z punktu widzenia użytkownika) odrzucał znane
+credentials jako "nieprawidłowy email lub hasło", bo sprawdzał je względem zupełnie innej tabeli
+użytkowników. Zdiagnozowane przez curl unikalnej trasy tej apki (`/api/invoices/statistics`) — 404
+zamiast oczekiwanego 401/302 zdradziło, że odpowiada inny kod. Pełny opis + procedura sanity-check
+w [[react-migration-local-dev-setup]].
+
+**Fix:** `run_dev.py` czyta teraz `DEV_SERVER_PORT` (domyślnie nadal 5001, wsteczne kompatybilne)
+zamiast portu na sztywno. Backend tego projektu przeniesiony na `:5002` (za zgodą użytkownika —
+"Zmień port faktury zamiast tego", explicite NIE ruszać `human-solutions`), Vite wskazany na niego
+przez `VITE_API_PROXY_TARGET`. Zweryfikowane end-to-end (curl: prawdziwy banner apki, unikalna
+trasa nie-404, działający CSRF token, działający łańcuch proxy) — użytkownik potwierdził, że
+logowanie znów działa.
+
+**Uwaga środowiskowa (może się powtórzyć w kolejnej sesji):** dwa kolejne uruchomienia backendu
+przez Bash-owy `run_in_background:true` zostały ubite przez harness/sandbox między turami rozmowy
+(potwierdzone `<task-notification>` ze statusem `killed`). Backend ostatecznie odpalony przez
+PowerShell `Start-Process -WindowStyle Hidden` (proces w pełni odłączony od Claude Code, output do
+`.flask_dev.log`/`.flask_dev.err.log`) — zweryfikowany jako działający, ale **nieprzetestowany, czy
+przetrwa przez granicę kolejnej tury/sesji**; jeśli backend znowu "zniknie", to pierwszy podejrzany.
+
+### Commit + push — 4 commity na branch `invoices-app`
+
+```
+d51ee8b fix(dev): port serwera dev konfigurowalny przez DEV_SERVER_PORT
+69f9d5a feat(react-migration): Wizyty + Kalendarz — lista, szczegoly, create/edit, 3 widoki kalendarza, pasek month-cards
+2ca59ba feat(react-migration): Faktury — lista, create/edit, sync sprzedawcow, eksport
+d7e8c83 chore: usun przestarzaly scaffold planningowy (ai-devkit)
+```
+Wypchnięte na `origin/invoices-app` — potwierdzone (`HEAD` == `origin/invoices-app`). Po drodze
+dwie pomyłki przy commitowaniu złapane i naprawione PRZED pushem (opisane w podsumowaniu sesji, nie
+tutaj — nieistotne dla stanu kodu): przypadkowo za szeroki `git commit --amend` cofnięty przez
+`git reset --soft HEAD~1`, oraz problem z cudzysłowami w wiadomości committa w Bashu, obejście przez
+plik tymczasowy + `git commit -F`.
+
+### Pierwszy ręczny QA na żywo — Faktury / Sprzedawcy / Wizyty — 2026-08-19
+
+Po naprawie loginu użytkownik faktycznie przeklikał (pierwszy raz) moduł Faktury i moduł Wizyty +
+Kalendarz (oba zbudowane dzień wcześniej, 2026-08-18, nigdy wcześniej nie klikane — patrz sekcje
+wyżej "**Ręczny test na żywo nie wykonany**") plus wrócił do już wcześniej zweryfikowanych
+Sprzedawców. Notatki zostawione w pliku roboczym **`react-UI-issues-fixes_19082026.txt`** (korzeń
+repo, NIEZACOMMITOWANY — `git status` pokazuje go jako `??`; ten plik jest źródłem tej sekcji, nie
+duplikatem do zignorowania — sprawdzić, czy nadal istnieje na dysku, jeśli potrzebny kontekst
+źródłowy 1:1). Znaleziono **7 konkretnych usterek UI**, żadna jeszcze nie naprawiona:
+
+1. **Faktury, edycja — panel podglądu PDF za mały i źle proporcjonowany.** Dziś: ~1/4 szerokości
+   strony, kwadratowy (height=width). Oczekiwane: wysokość = od górnej krawędzi panelu w dół do
+   stopki page-view (z zachowaniem obecnych odstępów), szerokość dobrana z proporcji A4 do TEJ
+   wysokości (nie kwadrat). PDF ma się w pełni mieścić. Prawdopodobnie wymaga też przełożenia
+   layoutu reszty formularza (węższe kolumny/pola), żeby nic nie wymagało scrolla pionowego —
+   wszystko w jednym viewport. **Najbardziej inwazyjna zmiana z tej listy** (dotyka i panelu PDF, i
+   układu formularza) — `FakturaFormPage.tsx`.
+2. **Sprzedawcy, lista — nagłówki kolumn nie zawsze wyrównane tak jak wartości wierszy** (np.
+   kolumna "Nazwa": nagłówek wyśrodkowany, wartość w wierszu do lewej). Naprawić: wyrównanie
+   nagłówka ma iść za wyrównaniem jego kolumny w wierszach, nie odwrotnie — `SellersListPage.tsx`/
+   CSS, prawdopodobnie reguła bazowa `.refined-table th` nieuwzględniająca wyrównania per-kolumna.
+3. **Wizyta, widok szczegółów — brak przycisku "Powrót"** do poprzedniego widoku, i Escape też nie
+   działa. Ten sam wzorzec co luka znaleziona 2026-08-18 (Escape-infra istniała, nie wszędzie
+   podpięta) — `WizytaDetailPage.tsx` prawdopodobnie nigdy nie dostał `useEscapeBack(href)`
+   (hook już istnieje, użyty gdzie indziej, patrz [[react-migration-ux-polish-2026-08-18]]).
+   **Task 2 tej samej usterki:** przyciski zmiany statusu wizyty mają niejasne znaczenie/działanie —
+   zastąpić pojedynczym dropdownem, wartość początkowa = aktualny status przy załadowaniu strony.
+   ⚠️ **Niejednoznaczne, wymaga pytania doprecyzowującego przed implementacją** (zgodnie z
+   `CLAUDE.md`'s "clarification policy") — m.in.: czy zmiana w dropdownie od razu zapisuje (PATCH/PUT
+   natychmiast po `onChange`), czy wymaga osobnego przycisku "Zapisz"/potwierdzenia; czy dropdown ma
+   pokazywać WYŁĄCZNIE statusy dozwolone wg `AppointmentStatus.VALID_TRANSITIONS`
+   (`config/appointment_statuses.py`) czy wszystkie z nieprawidłowymi wyszarzonymi/disabled.
+3.1. **Kalendarz, widok tygodnia** — siatka wyższa niż viewport, strona scrolluje w pionie.
+   Oczekiwane: wysokość dopasowana do dostępnej przestrzeni, responsywnie, zero scrolla pionowego —
+   cały kalendarz widoczny naraz. `CalendarWeekPage.tsx`.
+3.2. **Kalendarz, widok dnia** — ta sama naprawa wysokości/viewportu co wyżej. DODATKOWO: istniejący
+   lewy panel month-cards (`CalendarMonthSidebar`) ma się przenieść na PRAWĄ stronę widoku kalendarza
+   (notatka użytkownika wymienia to wprost tylko dla widoku dnia — do potwierdzenia przy
+   implementacji, czy dotyczy też tygodnia/listy, czy tylko dnia). `CalendarDayPage.tsx`.
+3.3. **Wizyty, lista** — brakuje dokładnie tego wzorca tabel (sticky header, scrollowane wiersze,
+   `.table-container` wypełniający dostępną wysokość, zero scrolla strony poza custom-stylowanym
+   scrollbarem wierszy), który już powstał i został zastosowany na ~16 innych tabelach w przebiegu
+   UX z 2026-08-18 (DESIGN.md §20, patrz [[react-migration-ux-polish-2026-08-18]]) — `WizytyListPage`
+   był budowany PO tamtym przebiegu, tego samego dnia, i nigdy nie dostał retrofitu. Użytkownik
+   explicite: *"refer strictly to existing clients-table"* — czysty przepis wzorca z
+   `ClientsListPage`, żadnego nowego projektowania. `WizytyListPage.tsx`.
+
+### Zaproponowana kolejność napraw dla następnej sesji
+
+Rosnąco wg ryzyka/inwazyjności, z priorytetem dla mechanicznych retrofitów istniejącego wzorca
+(szybkie, niskie ryzyko, budują pewność) przed nowym UX-em i najbardziej złożonym layoutem na
+końcu:
+
+1. **#7 Wizyty lista — retrofit `.table-container`/sticky-header wzorem `ClientsListPage`** —
+   czysto mechaniczne, dokładny precedens sprzed doby, najniższe ryzyko.
+2. **#2 Sprzedawcy — wyrównanie nagłówek/wartość** — trywialna, izolowana poprawka CSS.
+3. **#3 (część 1) Wizyta detail — `useEscapeBack` + przycisk "Powrót"** — ponowne użycie istniejącego
+   hooka, mechaniczne.
+4. **#3 (Task 2) Wizyta detail — dropdown zmiany statusu** — ⚠️ najpierw zadać pytanie
+   doprecyzowujące (patrz wyżej), dopiero potem implementować.
+5. **#3.1 Kalendarz tydzień — dopasowanie wysokości do viewportu.**
+6. **#3.2 Kalendarz dzień — to samo dopasowanie wysokości + przeniesienie sidebaru na prawo**
+   (rób od razu po #5, bo dzieli tę samą naprawę CSS wysokości — różnica tylko w przeniesieniu
+   sidebaru).
+7. **#1 Faktury edycja — panel podglądu PDF (proporcja A4) + reflow formularza** — najbardziej
+   inwazyjna, największe ryzyko efektów ubocznych na layout formularza — na koniec.
+
+Backend: żadna z tych 7 usterek nie wymaga zmian w `routes/`/`repositories/` — to wyłącznie CSS/
+layout/component-level fixes na już istniejących, poprawnie zabezpieczonych endpointach. Po każdej
+grupie napraw: `npm run build`/`lint` + wizualna weryfikacja (idealnie `/browse` albo ponowne
+ręczne klikanie przez użytkownika — poprzedni bug z `overflow: hidden` z 2026-08-18 pokazał, że ten
+rodzaj usterki przechodzi build/lint czysto).
+
+---
+
+## Wszystkie 7 usterek z pierwszego ręcznego QA — naprawione, 2026-08-19
+
+Kontynuacja tej samej sesji. Wykonano wszystkie 7 poprawek w zaproponowanej kolejności (rosnąco
+wg ryzyka). `npm run build`/`lint` → **0 errors** po każdej pojedynczej poprawce (ten sam 1
+nieszkodliwy pre-existing warning `useFocusTrap.ts` przez cały czas, bez zmian). Backend nietknięty
+— potwierdzone: żadna z siedmiu nie dotyka `routes/`/`repositories/`.
+
+**Wizualna weryfikacja na żywo — NIE wykonana w tej sesji.** Zarówno `/browse` (gstack — katalog
+`~/.claude/skills/browse/` ma tylko `SKILL.md`, brak `dist/`/`bin/`/`setup`, nie do zbudowania), jak
+i `mcp__claude-in-chrome__*` (rozszerzenie Chrome zgłasza "not connected") okazały się niedostępne w
+tym środowisku. Za zgodą użytkownika: dalsze poprawki szły na samym build/lint + code-review, bez
+możliwości zobaczenia efektu — **to jest jawnie zwiększone ryzyko** (dokładnie ten rodzaj usterki,
+który już raz przeszedł build/lint czysto i okazał się złamany na żywo — `overflow: hidden` bug,
+2026-08-18). Pierwszy ręczny click-through przez użytkownika jest teraz PRIORYTETOWYM następnym
+krokiem, nie opcjonalnym.
+
+### #1 Wizyty lista — retrofit `.table-container`/sticky-header (DESIGN.md §20)
+
+Root cause: `page-fills-viewport` klasa siedziała na złym elemencie — na samym `.table-container`
+zamiast na korzeniu strony (`.cal-grid-page`), więc globalna reguła `.page-fills-viewport >
+.table-container` nigdy nie dopasowywała (te dwie klasy były na TYM SAMYM elemencie, nie w relacji
+rodzic→dziecko). Naprawione: `page-fills-viewport` przeniesiona na root, plus nowa reguła w
+`Appointments.css` (`.page-fills-viewport.cal-grid-page { flex-direction: row }` +
+`> .cal-main > .table-container { flex:1; min-height:0 }`) — bo `.cal-grid-page`'s layout to ROW
+(main + sidebar month-cards), nie kolumna jak zakłada wzorzec Klientów/Sprzedawców/Usług/
+Pracowników (jedyne dwa DOM-kształty opisane w DESIGN.md §20.2). *(Ta reguła została później
+usunięta i zastąpiona prostszą wersją przy okazji poprawki #6 — patrz niżej.)*
+
+### #2 Sprzedawcy — wyrównanie nagłówków kolumn
+
+Root cause (systemowy, nie tylko Sprzedawcy): `<th>` centruje się domyślnie w UA-stylesheet
+KAŻDEJ przeglądarki (`<td>` — nie). `.refined-table th` (components.css) nigdy nie nadpisywał
+`text-align`, więc każda kolumna BEZ jawnego `align` (tylko `:first-child` miał osobną regułę)
+cicho dziedziczyła center, niezależnie od tego czy jej wartości w wierszach są wyrównane do lewej.
+Naprawione JEDNĄ linią w bazowej regule (`text-align: left` na `.refined-table th`) — systemowy fix
+w współdzielonym komponencie, nie page-owned override; naprawia też Wizyty (kolumny Klient/Usługa/
+Pracownik/Ocena miały ten sam utajony bug, nigdy niezgłoszony osobno).
+
+### #3 Wizyta detail — "Powrót do listy" + Escape, oraz dropdown zmiany statusu
+
+`useEscapeBack('/wizyty')` + `<ButtonLink icon="arrow_back">Powrót do listy</ButtonLink>` w
+action-bar — 1:1 wzorzec z `ClientDetailPage`/`EmployeeDetailPage` (import + wywołanie hooka +
+button, ten sam układ: Edytuj → Powrót → akcja destrukcyjna).
+
+**Task 2 (dropdown statusu) — zadano pytanie doprecyzowujące przed implementacją** (zgodnie z
+`CLAUDE.md`, log sam to flagował jako niejednoznaczne). Odpowiedzi użytkownika: (a) wybór w
+dropdownie NIE zapisuje od razu — otwiera istniejący `StatusChangeModal`/`CompleteVisitModal`
+(zachowuje pole "powód" dla anulowania, chroni przed przypadkowym wyborem); (b) dropdown pokazuje
+WYŁĄCZNIE `VALID_TRANSITIONS` (ten sam filtr `visibleTransitions`, którego już używały stare
+przyciski) — jeden model reguł przejść w jednym miejscu, nie duplikowany. Zaimplementowane: rząd
+przycisków zastąpiony jednym `<select className="status-select">` (nowa klasa w
+`WizytaDetailPage.css`, rozmiar dopasowany do `.refined-btn-secondary`, natywna strzałka — wzorem
+`EmployeeFilter`'s `.empf-dropdown select`, nie `.form-select`, bo ten wymaga `FieldWrapper`
+którego action-bar nie ma). `value` dropdowna to zawsze `appt.status` (nie osobny local state) —
+wybór inny niż bieżący status od razu otwiera odpowiedni modal; anulowanie modala "odskakuje" z
+powrotem do prawdziwego statusu za darmo, bo select jest w pełni controlled przez dane z API, nie
+przez tymczasowy wybór użytkownika.
+
+### #4/#5 Kalendarz tydzień/dzień — dopasowanie wysokości siatki do viewportu
+
+Root cause: `LANE_HEIGHT = 900` (px) był STAŁĄ na poziomie modułu, używaną do pozycjonowania KAŻDEGO
+elementu absolutnego (linie godzin, bloki wizyt, nieobecności) — siatka zawsze renderowała się na
+900px wysoka, niezależnie od realnej wysokości viewportu, więc CAŁA STRONA (nie tylko tabela)
+scrollowała się w pionie.
+
+Nowy współdzielony hook `lib/useElementHeight.ts` (callback-ref + `ResizeObserver`, nie zwykły
+`useRef` — element mierzony renderuje się warunkowo za `loading`, więc zwykły ref nigdy by nie
+"złapał" węzła, który zamontował się PO pierwszym efekcie) mierzy REALNĄ wysokość rzędu siatki na
+żywo. `LANE_HEIGHT` stała → `LANE_HEIGHT_FALLBACK` (seed przed pierwszym pomiarem I stabilna
+wartość na mobile, gdzie `.page-fills-viewport` się nie stosuje — DESIGN.md §20.2 celowo gate'uje to
+tylko na desktop, więc mobile ma zostać dokładnie takie jak było). `position()`/nowy helper
+`hourTop()` przyjmują `laneHeight` jako parametr zamiast czytać stałą z zamknięcia modułu.
+
+Restrukturyzacja DOM (obie strony): nagłówek dnia/pracownika wydzielony do WŁASNEGO rzędu
+(`flexShrink:0`) NAD rzędem siatki (`flex:1; minHeight:0`, tam gdzie podpięty jest
+`useElementHeight`'s ref) — usuwa stary fudge-offset `+24` (kolumna godzin startowała na górze
+CAŁEGO kontenera, podczas gdy kolumny dni miały własny nagłówek nad sobą; teraz kolumna godzin jest
+w TYM SAMYM rzędzie co kolumny dni, więc linie godzin wyrównują się z siatką day-column co do
+piksela, bez zgadywania offsetu).
+
+### #6 Kalendarz dzień — przeniesienie sidebaru + wyrównanie page-header
+
+**Odkrycie przy implementacji — kod przeczył notatce.** Notatka użytkownika: "existing LEFT panel
+... move to right". Kod: `CalendarMonthSidebar` był DRUGIM dzieckiem w zwykłym `display:flex` rzędzie
+(`.cal-grid-page`, brak `order`/`row-reverse` gdziekolwiek) — w standardowym LTR flexboksie to
+oznacza, że POWINIEN renderować się po prawej już dziś, nie po lewej. **Zadano pytanie
+doprecyzowujące zamiast zgadywać** (dokładnie zasada z `CLAUDE.md` — "which element" tu było "które
+'lewo'"). Odpowiedź użytkownika: zostaw pozycję jak jest (== nie przesuwaj — notatka była
+prawdopodobnie błędnym wspomnieniem z klikania), ALE dodatkowo: (a) górna/dolna krawędź sidebaru ma
+się wyrównać z głównym oknem kalendarza/tabeli, (b) rząd przycisków page-header ma sięgać do
+prawdziwej prawej krawędzi viewportu, nie tylko do krawędzi węższej kolumny `.cal-main`.
+
+(a) okazało się **darmowym efektem ubocznym** naprawy wysokości: `.cal-grid-page` już miał
+`align-items: stretch` w bazowej regule — wystarczyło, że rząd dostał realnie ograniczoną wysokość
+(przez #4/#5), żeby `.cal-main` i `CalendarMonthSidebar` (rodzeństwo w tym samym rzędzie) zaczęły
+kończyć się na tej samej wysokości automatycznie, bez dodatkowego CSS.
+
+(b) wymagało realnej restrukturyzacji: `<header className="page-header">` był ZAGNIEŻDŻONY w
+`.cal-main` (węższym niż pełna szerokość, bo nie obejmuje kolumny sidebaru) w OBU stronach
+(`WizytyListPage.tsx` I `CalendarDayPage.tsx` — notatka użytkownika explicite: "day-calendar view
+page (lub tabeli wizyt)", czyli obie). Przeniesiony na prawdziwy korzeń strony (nad
+`.cal-grid-page`, nie w nim) w obu plikach — `justify-content: space-between` w `.page-header` teraz
+faktycznie sięga do prawej krawędzi całej strony, łącznie z szerokością sidebaru. Skutek uboczny:
+uproszczenie CSS — skoro `.page-fills-viewport` siedzi teraz na PRAWDZIWYM korzeniu (zwykła kolumna,
+bez konfliktu row/column), specjalna reguła compound-selector z poprawki #1
+(`.page-fills-viewport.cal-grid-page`) stała się zbędna i została zastąpiona prostszą wersją
+(`.page-fills-viewport .cal-main > .table-container`) w `Appointments.css`.
+
+### #7 Faktury edycja — panel podglądu PDF, proporcja A4 (najbardziej inwazyjna, zrobiona ostatnia)
+
+Root cause: `.invoice-doc-card` nie miał żadnej jawnej wysokości — tylko `min-height: 320px` jako
+podłoga, obok STAŁEJ szerokości 380px z grida (`grid-template-columns: 1fr 380px`) — stąd zawsze
+renderował się mniej więcej kwadratowo, niezależnie od realnie dostępnej wysokości viewportu.
+
+Naprawione BEZ JavaScriptu (w przeciwieństwie do #4/#5) — czysty CSS `aspect-ratio: 210 / 297`
+(proporcja A4 portrait) na `.invoice-doc-card`, którego `height: 100%` liczy się teraz względem
+realnie ograniczonej wysokości strony (`page-fills-viewport` na korzeniu, desktop-only jak wszędzie
+indziej). Różnica względem #4/#5: tam JS był konieczny (`Math.max(16, ...)` na elementach
+absolutnie pozycjonowanych potrzebuje prawdziwej liczby px w skrypcie), tutaj wystarczy JEDNA
+deklaracja CSS, bo to dokładnie przypadek, do którego `aspect-ratio` został zaprojektowany — jeden
+wymiar jawny (wysokość), drugi (szerokość) wyliczony z proporcji.
+
+`.invoice-form-layout` przepisany z CSS Grid na flex (funkcjonalnie identyczny na dotychczasowych
+szerokościach — ten sam efekt wizualny, `1fr` + 380px) — Grid nie licuje się niezawodnie z
+`aspect-ratio`-driven, content-sized kolumną w torze `auto`, flex tak. Formularz dostaje
+`overflow-y: auto` jako siatkę bezpieczeństwa (nie cel sam w sobie) — 3 `FormSection`y na tej
+stronie są wystarczająco krótkie, że to zwykle będzie no-opem na realnym ekranie; gdyby jednak
+kiedyś zabrakło miejsca, przewija się TYLKO formularz, nigdy cała strona (dokładnie ta sama
+filozofia co `page-fills-viewport` wszędzie indziej w apce). Świadomie NIE ruszano wewnętrznego
+layoutu `FormSection`/`TextField` (współdzielony komponent, wpłynąłby na każdy inny formularz w
+apce) — poza zakresem tej pojedynczej, już wystarczająco inwazyjnej poprawki.
+
+---
+
+## Druga runda poprawek UI — `react-ui-corrections_19080026.txt`, 2026-08-19
+
+Kolejny plik roboczy z konkretnymi usterkami znalezionymi po tym, jak poprzednia runda (7 poprawek
+wyżej) trafiła do kodu — użytkownik przeklikał dalej i znalazł 5 nowych obszarów. `npm run build`/
+`lint` → **0 errors** po całości (ten sam 1 nieszkodliwy warning). **Wizualna weryfikacja NADAL
+niemożliwa** — sprawdzone ponownie na starcie tej rundy: `mcp__claude-in-chrome__*` dalej zgłasza
+"not connected", `/browse` dalej bez binarki (patrz [[react-migration-browser-tooling-gap]]).
+
+### #1 Boczny pasek month-cards — dni nachodzą na kartę
+
+Root cause: `.month-card-day` używał `aspect-ratio: 1`, wiążąc WYSOKOŚĆ każdej komórki z jej
+SZEROKOŚCIĄ (czyli szerokością kolumny gridu 7×, zależną od zmiennej szerokości sidebaru
+220–280px). Na wystarczająco szerokim sidebarze każdy wiersz wychodził wyższy niż karta miała
+miejsca na 5–6 wierszy — stąd dolne wiersze wizualnie wychodziły poza `.month-card`. Naprawione:
+stały rozmiar `width/height: 1.375rem` (zamiast aspect-ratio), wyśrodkowany w komórce przez
+`justify-self: center` — wysokość wiersza gridu staje się przewidywalna i mała niezależnie od
+szerokości sidebaru. Kropka-wskaźnik wizyt (`::after`) usunięta — kodowanie kolorem (`.has-
+appointments` już przełączał na `--color-ink` z domyślnego `--color-ink-subtle`) było już
+zaimplementowane, wystarczyło usunąć zbędną kropkę.
+
+### #2 Boczny pasek month-cards — brak nawigacji miesięcy
+
+`months` (dotąd `useState` obliczany RAZ przy montowaniu, "fixed and never follows navigation")
+zamieniony na `anchorMonth` + `useMemo`, nawigowalny o krok 3 miesięcy. Nowe przyciski
+prev/next (`Icon name="expand_more"`, jeden z nich obrócony 180° przez `.icon-flip` — brak
+`expand_less` w zestawie ikon, obrót tego samego glifu zamiast mieszania stylu z `arrow_upward`)
+w `.cal-sidebar-topbar`, obok istniejącego przycisku zwiń/rozwiń, renderowane TYLKO gdy panel
+rozwinięty. Po zmianie okna: `daysWithAppointments` refetchowany dla nowego zakresu (deps
+`useEffect` zmienione z `[]` na `[anchorMonth]`), a po rozwiązaniu fetcha — jeśli zmiana była
+wywołana nawigacją (`navigatedRef`, nie zwykłym mountem) — wywoływany jest TEN SAM `onDayClick`,
+którego używa zwykłe kliknięcie dnia, z pierwszym dniem z wizytami w ŚRODKOWYM miesiącu (fallback:
+1. dzień tego miesiąca, gdy brak wizyt). Zero nowego propa/callbacku — ponowne użycie istniejącego
+mechanizmu hosta.
+
+### #3 Dzień/tydzień kalendarza — pięć powiązanych usterek
+
+a/b: `.wk-block`/`.day-block` miały płaskie tło `--color-surface-elevated` (identyczne z tłem
+siatki — stąd niewidoczne) i `border-left-color` kodowany kolorem PRACOWNIKA, nie statusu.
+Naprawione: pełna paleta `.status-badge.*` przeniesiona na warianty klasy statusu (`.scheduled`,
+`.confirmed`, itd.) — ten sam schemat kolorów co wszędzie indziej w apce (lista, detail).
+`borderLeftColor: empColor(...)` usunięty z inline style (inline zawsze wygrywa ze stylesheetem,
+więc musiał zniknąć, żeby nowe klasy statusu faktycznie zadziałały). Import `empColor` usunięty z
+`CalendarWeekPage.tsx` (nieużywany po tej zmianie — w widoku tygodnia zawsze jeden pracownik, więc
+kolor pracownika i tak nic nie różnicował); w `CalendarDayPage.tsx` zostaje (nadal używany na
+kolorze tekstu nagłówka kolumny pracownika — inne, dalej zasadne zastosowanie).
+
+c: treść bloku rozszerzona z "pierwsze imię klienta + godzina startu" na: pełne imię i nazwisko
+klienta, usługa(-i) (`a.service_name`, już comma-joined string z API), imię fryzjera(-ki)
+(`a.employee_name`/`emp.full_name`, pierwszy człon), godzina startu + czas trwania w minutach
+(nowy helper `durationMin()`). Tooltip (`title`) też wzbogacony, na wypadek gdy bardzo krótka
+wizyta (`Math.max(16, ...)` floor wysokości) obcina tekst wizualnie.
+
+d: nowa klasa `.cal-grid-header-cell` (`background: var(--color-surface)`) na wrapperze rzędu
+nagłówka dnia/pracownika w obu plikach — było bez tła, więc dziedziczyło ten sam
+`--color-surface-elevated` co siatka pod spodem.
+
+e: mimo wcześniejszej naprawy #4/#5 (poprzednia runda) scroll pionowy dalej bywał widoczny.
+Zdiagnozowane jako sub-pikselowe zaokrąglenie: `getBoundingClientRect()`/`ResizeObserver` mogą
+zwrócić wartość ułamkową (np. `547.33px`), która następnie przechodzi przez dalszą arytmetykę
+zmiennoprzecinkową (`position()`/`hourTop()`) — wystarczy, że którykolwiek wynik wyląduje ułamek
+piksela NAD realnie dostępną przestrzenią, żeby `overflow: auto` pokazał scrollbar mimo braku
+realnie obciętej treści. Naprawione w `lib/useElementHeight.ts` (jedno miejsce, obie strony
+korzystają): `Math.floor()` + margines bezpieczeństwa 1px na każdym zwracanym pomiarze. Dodatkowo,
+jako pas bezpieczeństwa nie do obejścia: `.table-container` w obu plikach dostał `overflow:
+'hidden'` inline (nadpisuje bazowe `overflow: auto` — ten konkretny kalendarz ma być dokładnie
+dopasowany, więc nie potrzebuje własnego scroll-fallbacku jak np. formularz faktury).
+
+### #4 Widok miesiąca — szerokość + kolory statusów na liniach wizyt
+
+`page-fills-viewport` dodany do korzenia `CalendarMonthPage.tsx` (jedyny z 3 widoków kalendarza,
+który nigdy go nie dostał w poprzedniej rundzie — nie było go na oryginalnej liście 7 usterek).
+Nowa reguła `.page-fills-viewport > .month-grid` (Shape 1, `.month-grid` jest bezpośrednim
+dzieckiem korzenia mimo owinięcia w fragment React) + jawne `width: 100%` na `.month-grid`
+(defensywnie, dla dosłownego "expand to all available space"). `.month-cell-appt` dostał te same
+warianty statusu co `.wk-block`/`.day-block` (bez `.cancelled` — `dayAppts` już filtruje anulowane
+przed renderem). Treść linii zmieniona z "godzina + imię klienta" na "pełne imię klienta (imię
+fryzjera)" — zgodnie z nowym, węższym spec — godzina zostaje tylko w tooltipie (miejsca mało,
+widok miesiąca to celowo kompaktowy przegląd, inaczej niż dzień/tydzień).
+
+### #5 Podgląd PDF faktury — panel miniatur stron
+
+Nie jest to bug w kodzie tej apki — to natywna przeglądarka PDF Chrome (PDFium), domyślnie
+pokazująca własny boczny panel miniatur stron wewnątrz `<iframe>`, zjadający szerokość
+i tak już wąskiego panelu podglądu. Naprawione parametrem URL rozpoznawanym przez wbudowaną
+przeglądarkę PDF Chrome: `#navpanes=0` doklejony do `src` obu `<iframe>` (tryb create — podgląd
+lokalnego pliku z `URL.createObjectURL`, i tryb edit — `invoicesApi.pdfUrl(...)`). Nie ruszano
+paska narzędzi (`#toolbar=0`) — proszono wyłącznie o panel miniatur.
+
+## Zatwierdzenie obu rund poprawek UI — 2026-08-19
+
+Użytkownik potwierdził: całość UI z obu rund (12 usterek łącznie — 7 z pierwszego QA + 5 z
+`react-ui-corrections_19080026.txt`) **zatwierdzona**. Moduły Wizyty+Kalendarz i Faktury
+(częściowo) są od teraz zamknięte pod kątem zgłoszonych usterek UI — nie ma otwartych zadań z
+tych dwóch przebiegów QA. Kod wypchnięty na `origin/invoices-app` (patrz commit poniżej najbliższy
+tej dacie w historii gita).
+
+**Dla świeżej sesji — stan i następny krok:**
+- Fazy 0/1 zamknięte i zatwierdzone (2026-08-17).
+- Faza 2: Dashboard/Sprzedawcy/Usługi/Pracownicy zbudowane i zweryfikowane wcześniej (2026-08-18).
+  Faktury i Wizyty+Kalendarz zbudowane (2026-08-18), UI-przetestowane i zatwierdzone (2026-08-19)
+  — ale oba mają świadomie odłożone kawałki poza zakresem samego UI-QA, patrz niżej.
+- **Odłożone kawałki Faktur** (patrz sekcja "Faktury — piąty moduł..." wyżej): `/import-dokumentow`
+  (staging wielu plików + SSE OCR progress), `/historia`, `/ustawienia/email`.
+- **Odłożone kawałki Wizyt** (patrz sekcja "Wizyty + Kalendarz — szósty moduł..." wyżej):
+  integracja z Nieobecnościami (reassign/reschedule/cancel-for-absence), wysyłka/log SMS na
+  widoku szczegółów, "Rozlicz przeszłe wizyty" (skaner past-pending/past-status), `status-events`
+  polling.
+- **Moduły "Wymaga audytu" w ogóle nietknięte** (`module-inventory.md`): Analityka/KPI/Przychody,
+  Nieobecności (wnioski), Bilanse urlopowe, Import danych/historia/OCR, Użytkownicy (RBAC), Role
+  (RBAC), Ustawienia e-mail/SMS. Gotowe prompty audytowe do wklejenia dla każdego —
+  `module-inventory.md`'s "Gotowe prompty do audytu modułów oznaczonych 'Wymaga audytu'".
+- **Decyzja co robić dalej NIE jest podjęta** — żaden z powyższych trzech obszarów (odłożone
+  Faktury, odłożone Wizyty, nowy moduł) nie jest z góry priorytetowy; do ustalenia z użytkownikiem
+  na starcie następnej sesji.
+- Backend: bez zmian w całej dzisiejszej sesji UI-poprawek (obie rundy) — `pytest` nie wymaga
+  ponownego uruchomienia, nic w `routes/`/`repositories/` się nie zmieniło.
 
 ---

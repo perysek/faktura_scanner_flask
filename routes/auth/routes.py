@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import generate_csrf
 from repositories.users.user_repository import UserRepository
 from repositories.audit_repository import AuditRepository
 from services.auth.auth_service import AuthService
@@ -114,6 +115,22 @@ def logout():
         return jsonify({'success': True})
     flash(msg('auth.logout'), 'info')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/csrf-token', methods=['GET'])
+def csrf_token():
+    """Issues a CSRF token for the React SPA (root-cause fix, 2026-08-17).
+
+    The Jinja frontend gets its token for free via `{{ csrf_token() }}`
+    rendered into every `<form>`. The SPA has no such template render, so
+    every POST/PUT/DELETE from `lib/api/client.ts` was silently rejected by
+    Flask-WTF's CSRFProtect (app.py `csrf = CSRFProtect(app)`, applies to
+    every state-changing request by default, `auth_bp` was never
+    `csrf.exempt`-ed). This is GET-only and unauthenticated — CSRFProtect
+    never checks GET requests, and a token must be obtainable *before*
+    login (the login POST itself needs one).
+    """
+    return jsonify({'success': True, 'csrf_token': generate_csrf()})
 
 
 @auth_bp.route('/me', methods=['GET'])

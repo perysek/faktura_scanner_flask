@@ -1,0 +1,70 @@
+/* Wizyta — widok szczegółów. Ported from templates/appointments/view.html. */
+.appt-detail-page { max-width: 760px; margin: 0 auto; }
+
+.card-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border-subtle); }
+
+.appt-hero { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.appt-hero-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 3.5rem; height: 3.5rem; border-radius: 50%;
+  color: #fff; font-weight: 700; font-size: 1.125rem; flex-shrink: 0; text-decoration: none;
+}
+.appt-hero-info { flex: 1; min-width: 0; }
+.appt-hero-info .page-title { display: inline-block; margin-right: 0.5rem; margin-bottom: 0.25rem; }
+.appt-hero-price { font-size: 1.5rem; font-weight: 700; color: var(--color-ink); white-space: nowrap; }
+
+.confirm-chip { display: inline-flex; align-items: center; padding: 0.35rem 0.875rem; border-radius: 2px; font-size: 0.8125rem; font-weight: 500; margin-bottom: 1rem; }
+.confirm-chip--ok { background: #dcfce7; color: #166534; }
+.confirm-chip--bad { background: #fee2e2; color: #991b1b; }
+
+.action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+
+/* Status-change dropdown (fix #3 Task 2, implementation-log.md 2026-08-19) —
+   sized to match `.refined-btn-secondary`'s own box (padding/font-size,
+   components.css) so it sits flush in height with its action-bar siblings.
+   Native appearance kept (no `appearance: none`) — same choice as
+   EmployeeFilter's `.empf-dropdown select` (Appointments.css), the only
+   other inline, non-form-field `<select>` in this module; `.form-select`
+   strips the arrow but relies on a wrapper this action-bar doesn't have. */
+.status-select {
+  padding: 0.625rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.status-select:hover { border-color: var(--color-ink-muted); }
+.status-select:focus-visible { border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
+
+.appt-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
+.appt-detail-grid p:last-child { font-size: 0.875rem; color: var(--color-ink); }
+
+.svc-list { list-style: none; padding: 0; margin: 0 0 1rem; }
+.svc-item { display: flex; justify-content: space-between; align-items: center; padding: 0.625rem 0; border-bottom: 1px solid var(--color-border-subtle); }
+.svc-item:last-child { border-bottom: none; }
+.svc-name { font-size: 0.8125rem; font-weight: 500; }
+.svc-price { font-size: 0.875rem; font-weight: 600; }
+.service-item-badge { font-size: 0.6875rem; padding: 0.125rem 0.5rem; border-radius: 2px; margin-left: 0.5rem; }
+.service-item-badge.main { background: rgba(59,130,246,0.08); color: #1d4ed8; }
+.service-item-badge.addon { background: rgba(245,158,11,0.08); color: #92400e; }
+
+.summary-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; }
+.summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
+.summary-row.total { font-weight: 600; font-size: 1rem; border-top: 1px solid var(--color-border); margin-top: 0.5rem; padding-top: 0.5rem; }
+
+.add-service-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle); }
+.addon-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.addon-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; }
+.addon-btn:hover { border-color: var(--color-ink-muted); }
+
+.satisfaction-stars { display: flex; align-items: center; gap: 0.25rem; }
+.star-btn { font-size: 1.5rem; line-height: 1; background: none; border: none; cursor: pointer; color: var(--color-ink-subtle); padding: 0; }
+.star-btn.active { color: #c9a227; }
+.star-btn:disabled { cursor: default; }
+.score-label { margin-left: 0.5rem; font-size: 0.8125rem; color: var(--color-ink-muted); }

@@ -1,0 +1,169 @@
+/* Page-specific styles for DashboardPage — ported 1:1 from
+   templates/dashboard/index.html's inline <style> (Faza 2, first module
+   after the Klienci pilot). Classes prefixed `dash-` because components.css
+   already has a DIFFERENT, generic `.stat-card`/`.stats-grid` (icon + flex-row
+   layout, used by other pages) — this page's compact/hero/amount variants
+   are visually distinct, not an override of the shared one (see
+   implementation-log.md). `.status-badge` base IS the shared one from
+   components.css; only the `.status-paid`/`.status-unpaid` modifiers here are
+   new — hoist them to components.css if/when the Faktury module reuses them. */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dash-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dash-stat-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+.dash-stat-value { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dash-stat-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-subtle);
+}
+
+/* Hero KPI — gross total is THE number; the rest support it. */
+.dash-stat-card--hero {
+  grid-column: span 2;
+  background: linear-gradient(135deg, var(--color-ink) 0%, var(--color-ink-muted) 100%);
+  border-color: var(--color-ink);
+  justify-content: center;
+  gap: 0.25rem;
+}
+.dash-stat-card--hero .dash-stat-value { color: #fff; font-size: 1.875rem; }
+.dash-stat-card--hero .dash-stat-label { color: rgba(255, 255, 255, 0.7); }
+
+.dash-stat-card--amount .dash-stat-value { font-size: 1.0625rem; }
+
+.dash-panels-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.dash-panel {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dash-panel-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.dash-panel-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.dash-panel-title svg { width: 1rem; height: 1rem; color: var(--color-ink-muted); flex-shrink: 0; }
+
+.dash-panel-link {
+  font-size: 0.6875rem;
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.dash-panel-link:hover { color: var(--color-ink); text-decoration: underline; }
+
+.dash-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 220px;
+  max-height: 340px;
+}
+
+.dash-list-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: background 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+}
+.dash-list-item:hover { background: var(--color-surface); }
+.dash-list-item:last-child { border-bottom: none; }
+
+.dash-list-item-main { flex: 1; min-width: 0; }
+.dash-list-item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-list-item-subtitle { font-size: 0.6875rem; color: var(--color-ink-muted); margin-top: 0.125rem; }
+.dash-list-item-side { text-align: right; flex-shrink: 0; }
+.dash-list-item-amount { font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); }
+.dash-list-item-meta { font-size: 0.6875rem; color: var(--color-ink-muted); margin-top: 0.125rem; }
+
+/* New modifiers on the shared .status-badge (components.css) */
+.status-badge.status-paid { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
+.status-badge.status-unpaid { background: rgba(154, 103, 0, 0.12); color: var(--color-warning); }
+
+.dash-urgency-high { color: var(--color-error); font-weight: 500; }
+.dash-urgency-medium { color: var(--color-warning); font-weight: 500; }
+.dash-urgency-low { color: var(--color-ink-muted); }
+
+.dash-empty-panel { padding: 2rem 1rem; text-align: center; }
+.dash-empty-title { font-size: 0.8125rem; font-weight: 500; color: var(--color-ink); margin-bottom: 0.25rem; }
+.dash-empty-text { font-size: 0.75rem; color: var(--color-ink-subtle); }
+
+.dash-seller-initial {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.dash-chart-panel { grid-column: 1 / -1; min-height: 300px; }
+.dash-chart-container { position: relative; height: 300px; padding: 1rem; }
+
+@media (max-width: 768px) {
+  .dash-stats-grid { grid-template-columns: repeat(3, 1fr); }
+  .dash-panels-grid { grid-template-columns: 1fr; }
+  .dash-chart-container { height: 250px; }
+}

@@ -1,0 +1,195 @@
+/* Page-specific styles for the Usługi module — ported 1:1 from
+   templates/services/list.html's inline <style> (which already documents,
+   via its own comments, which classes are shared via components.css vs
+   page-specific — followed exactly, not re-derived). Shared across all four
+   Usługi pages, same "one page-owned stylesheet" pattern as Sprzedawcy. */
+
+.services-page { max-width: 1400px; margin: 0 auto; }
+
+.price-trend-chip {
+  display: inline-block;
+  margin-left: 0.375rem;
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--color-ink-muted);
+  cursor: default;
+  vertical-align: middle;
+}
+
+.filter-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+  font-size: 0.8125rem;
+  color: var(--color-ink);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.filter-checkbox-label input[type='checkbox'] { width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--color-ink); }
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 1px;
+}
+.type-badge.main { background: rgba(107, 114, 128, 0.08); color: var(--color-ink-muted); }
+.type-badge.addon { background: rgba(147, 51, 234, 0.08); color: var(--color-purple); }
+
+/* ── Service detail page ───────────────────────────────────────────── */
+
+.service-detail-page { max-width: 900px; margin: 0 auto; }
+.section-title { font-size: 1rem; font-weight: 600; color: var(--color-ink); margin-bottom: 1.25rem; }
+.field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+@media (max-width: 640px) { .field-grid { grid-template-columns: 1fr; } }
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-subtle);
+  margin-bottom: 0.375rem;
+}
+.field-value { font-size: 0.9375rem; color: var(--color-ink); margin: 0; }
+.field-value.empty { color: var(--color-ink-subtle); font-style: italic; }
+.action-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.price-history-panel { border-top: 1px solid var(--color-border-subtle); }
+.price-history-panel summary {
+  cursor: pointer;
+  padding: 1rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.price-history-panel summary::-webkit-details-marker { display: none; }
+.price-history-panel summary::before {
+  content: '▸';
+  color: var(--color-ink-subtle);
+  transition: transform 0.15s ease;
+}
+.price-history-panel[open] summary::before { transform: rotate(90deg); }
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  border-radius: 999px;
+}
+.price-history-chart-wrap { height: 140px; margin-bottom: 1rem; position: relative; }
+.price-current-badge {
+  display: inline-block;
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  background: rgba(45, 106, 79, 0.1);
+  color: var(--color-success);
+  border-radius: 2px;
+}
+.ph-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-subtle);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.ph-del-btn:hover { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
+.ph-del-btn svg { width: 1rem; height: 1rem; }
+
+.addon-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.addon-item:last-child { border-bottom: none; }
+.addon-info { display: flex; align-items: center; gap: 0.75rem; }
+.addon-name { font-weight: 500; color: var(--color-ink); font-size: 0.875rem; }
+.addon-price { font-size: 0.75rem; color: var(--color-ink-muted); }
+.addon-duration { font-size: 0.75rem; color: var(--color-ink-subtle); }
+.addon-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--color-error);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.addon-remove-btn:hover { background: rgba(155, 44, 44, 0.06); border-color: var(--color-error); }
+.addon-remove-btn svg { width: 0.875rem; height: 0.875rem; }
+
+/* ── Service categories page ───────────────────────────────────────── */
+
+.service-count-badge {
+  display: inline-block;
+  min-width: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+.service-count-badge.has-services { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); cursor: pointer; }
+.service-count-badge.has-services:hover { background: rgba(59, 130, 246, 0.16); }
+
+.inline-input {
+  width: 100%;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--color-ink-muted);
+  border-radius: 2px;
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+}
+
+.table-actions { display: flex; gap: 0.375rem; justify-content: flex-end; }
+
+.cat-modal-table { width: 100%; border-collapse: collapse; }
+.cat-modal-table th {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-subtle);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  /* Sticky header row — DESIGN.md §20. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface-elevated);
+}
+.cat-modal-table td { padding: 0.5rem 0.75rem; font-size: 0.8125rem; border-bottom: 1px solid var(--color-border-subtle); }
+.cat-modal-table tbody tr { transition: background-color 0.2s ease; cursor: pointer; }
+.cat-modal-table tbody tr:hover { background: var(--color-surface); }
+.cat-modal-empty { padding: 2rem; text-align: center; color: var(--color-ink-subtle); font-size: 0.875rem; }

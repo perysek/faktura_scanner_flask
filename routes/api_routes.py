@@ -935,6 +935,8 @@ def get_statistics():
 
 
 @api_bp.route('/dashboard/recent-invoices', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_recent_invoices():
     """Get recent invoices for dashboard"""
     try:
@@ -957,6 +959,8 @@ def get_recent_invoices():
 
 
 @api_bp.route('/dashboard/upcoming-payments', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_upcoming_payments():
     """Get upcoming payment deadlines for dashboard"""
     try:
@@ -979,6 +983,8 @@ def get_upcoming_payments():
 
 
 @api_bp.route('/dashboard/overdue-payments', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_overdue_payments():
     """Get overdue payments for dashboard"""
     try:
@@ -1001,6 +1007,8 @@ def get_overdue_payments():
 
 
 @api_bp.route('/dashboard/top-sellers', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_top_sellers():
     """Get top sellers by invoice count for dashboard"""
     try:
@@ -1036,6 +1044,8 @@ def get_top_sellers():
 
 
 @api_bp.route('/dashboard/monthly-totals', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_monthly_totals():
     """Get monthly invoice totals for last 12 months (for bar chart)"""
     try:
@@ -1481,6 +1491,8 @@ def import_from_email():
 
 
 @api_bp.route('/email/test', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def test_email_connection():
     """Test email connection"""
     try:
@@ -1514,6 +1526,8 @@ def test_email_connection():
 
 
 @api_bp.route('/email/folders', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def get_email_folders():
     """Get list of email folders"""
     try:
@@ -1553,6 +1567,8 @@ def get_email_folders():
 
 
 @api_bp.route('/email/settings', methods=['GET', 'POST'])
+@login_required
+@module_permission_required('invoices')
 def email_settings():
     """Get or save email settings"""
     from config.email_settings import load_email_settings, save_email_settings
@@ -1611,6 +1627,7 @@ def get_history():
 
 
 @api_bp.route('/history/details', methods=['POST'])
+@login_required
 def get_history_details():
     """Get detailed changes for specific audit entries"""
     try:
@@ -1649,6 +1666,8 @@ def get_history_details():
 
 
 @api_bp.route('/pdf/<int:invoice_id>', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def view_pdf(invoice_id: int):
     """View PDF or image file for invoice. Serves from DB (pdf_data) first,
     falls back to filesystem path for older records that pre-date DB storage."""
@@ -1770,6 +1789,8 @@ def get_sellers():
 
 
 @api_bp.route('/sellers/<int:seller_id>', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_seller(seller_id: int):
     """Get single seller with details and related invoices"""
     try:
@@ -1805,6 +1826,8 @@ def get_seller(seller_id: int):
 
 
 @api_bp.route('/sellers/<int:seller_id>', methods=['PUT'])
+@login_required
+@module_permission_required('invoices')
 def update_seller(seller_id: int):
     """Update seller information"""
     try:
@@ -1850,6 +1873,8 @@ def update_seller(seller_id: int):
 
 
 @api_bp.route('/sellers/<int:seller_id>/bulk-update', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def bulk_update_seller_invoices(seller_id: int):
     """Propagate seller changes to all related invoices"""
     try:
@@ -1896,6 +1921,8 @@ def bulk_update_seller_invoices(seller_id: int):
 
 
 @api_bp.route('/sellers/conflicts', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_seller_conflicts():
     """Get list of potential seller conflicts (same NIP, different names)"""
     try:
@@ -2050,6 +2077,8 @@ def create_seller():
 
 
 @api_bp.route('/sellers/<int:seller_id>', methods=['DELETE'])
+@login_required
+@module_permission_required('invoices')
 def delete_seller(seller_id: int):
     """Delete seller with cascade delete of linked invoices"""
     try:
@@ -2102,6 +2131,8 @@ def delete_seller(seller_id: int):
 
 
 @api_bp.route('/sellers/<int:seller_id>/invoices', methods=['GET'])
+@login_required
+@module_permission_required('invoices')
 def get_seller_invoices(seller_id: int):
     """Get all invoices linked to a seller (for delete confirmation)"""
     try:
@@ -2141,6 +2172,8 @@ def get_seller_invoices(seller_id: int):
 
 
 @api_bp.route('/sellers/sync', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def sync_sellers():
     """Synchronize seller data with invoices - detect discrepancies"""
     try:
@@ -2227,6 +2260,8 @@ def sync_sellers():
 
 
 @api_bp.route('/sellers/sync/add-missing', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def add_missing_seller():
     """Add a missing seller from sync results"""
     try:
@@ -2280,6 +2315,8 @@ def add_missing_seller():
 
 
 @api_bp.route('/sellers/sync/fix-discrepancy', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def fix_discrepancy():
     """Fix a name discrepancy - update invoice or seller"""
     try:
@@ -2336,6 +2373,8 @@ def fix_discrepancy():
 
 
 @api_bp.route('/sellers/sync/invoice-counts', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def sync_seller_invoice_counts():
     """
     Synchronize seller invoice counts with actual data.
@@ -2363,6 +2402,8 @@ def sync_seller_invoice_counts():
 
 
 @api_bp.route('/sellers/check-duplicate', methods=['POST'])
+@login_required
+@module_permission_required('invoices')
 def check_seller_duplicate():
     """Check if seller with NIP or name already exists"""
     try:
@@ -4058,6 +4099,27 @@ def update_employee(employee_id):
         from database.models import Employee
         import json
 
+        # D-Sec4 fix (2026-08-17): `update()` is a full-row UPDATE (repositories/
+        # employees/employee_repository.py:295-321) — any field not resolved here
+        # gets written as NULL, not "left alone". `skills`/`specializations` were
+        # unconditionally `data.get(...) or None`, so a PUT body that never
+        # includes those keys — exactly what templates/employees/edit.html sends,
+        # since that form has no skills/specializations UI at all (only
+        # create.html does) — silently wiped an employee's skills and
+        # specializations on every single edit, regardless of intent. Preserve
+        # the existing stored value when the key is absent from the request body;
+        # only overwrite when the caller actually sent it (including an explicit
+        # empty value, which still means "clear it" — unchanged from before).
+        if 'skills' in data:
+            skills = json.dumps(data.get('skills')) if data.get('skills') else None
+        else:
+            skills = existing['skills']
+
+        if 'specializations' in data:
+            specializations = json.dumps(data.get('specializations')) if data.get('specializations') else None
+        else:
+            specializations = existing['specializations']
+
         employee = Employee(
             id=employee_id,
             user_id=data.get('user_id'),
@@ -4073,8 +4135,8 @@ def update_employee(employee_id):
             base_salary=float(data.get('base_salary')) if data.get('base_salary') else None,
             commission_rate=float(data.get('commission_rate')) if data.get('commission_rate') else None,
             employer_cost_rate=float(data.get('employer_cost_rate', 0.22)),
-            skills=json.dumps(data.get('skills')) if data.get('skills') else None,
-            specializations=json.dumps(data.get('specializations')) if data.get('specializations') else None,
+            skills=skills,
+            specializations=specializations,
             work_schedule=json.dumps(data.get('work_schedule')) if data.get('work_schedule') else None,
             max_appointments_per_day=int(data.get('max_appointments_per_day', 8)),
             notes=data.get('notes'),
@@ -4309,6 +4371,34 @@ def get_employee_statistics():
         raise AppError('Wystapil blad serwera')
 
 
+@api_bp.route('/employees/user-options', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee_user_options():
+    """Active-user dropdown source for the create/edit employee form's "Konto
+    użytkownika" field — added 2026-08-17 for the React port. Previously only
+    computed inline inside `main.create_employee`/`main.edit_employee`
+    (`UserRepository().get_active_users()`, no JSON endpoint).
+
+    Deliberately NOT `/system/users/api` (routes/users/routes.py) — that's
+    gated `@role_required('superuser', 'admin')`, a literal-role check, while
+    this dropdown is reachable by anyone with dynamic 'employees' RBAC access
+    (D14 principle: match the REAL permission the page needs, not the nearest
+    existing endpoint with a stricter, unrelated gate)."""
+    try:
+        from repositories.users.user_repository import UserRepository
+        users = UserRepository().get_active_users()
+        return jsonify({
+            'success': True,
+            'users': [{'id': u.id, 'full_name': u.full_name, 'email': u.email} for u in users],
+        })
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in get_employee_user_options')
+        raise AppError('Wystapil blad serwera')
+
+
 @api_bp.route('/employees/positions', methods=['GET'])
 @login_required
 @module_permission_required('employees')
@@ -4390,6 +4480,43 @@ def bulk_update_employee_services():
 # ---------------------------------------------------------------------------
 # Supervisor links
 # ---------------------------------------------------------------------------
+
+@api_bp.route('/employees/<int:employee_id>/direct-reports', methods=['GET'])
+@login_required
+@module_permission_required('employees')
+def get_employee_direct_reports(employee_id):
+    """Data for the "Podwładni" picker on the edit page — added 2026-08-17 for the
+    React port (module-inventory.md, Faza 2, Pracownicy). Previously this was
+    computed ONLY inline inside `main.edit_employee` (routes/main_routes.py) and
+    injected straight into the Jinja template — no JSON endpoint existed, so the
+    React edit form had nothing to call. Same repo calls, same shape as that
+    route's template context, just as JSON."""
+    try:
+        existing = current_app.employee_repo.get_by_id(employee_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+
+        repo = current_app.supervisor_repo
+        all_employees = current_app.employee_repo.get_all(active_only=True)
+        other_employees = [
+            {'id': e['id'], 'first_name': e['first_name'], 'last_name': e['last_name'], 'position': e['position']}
+            for e in all_employees if e['id'] != employee_id
+        ]
+        current_direct_report_ids = [r['id'] for r in repo.list_subordinates_for(employee_id)]
+        my_supervisor_ids = [r['id'] for r in repo.list_supervisors_for(employee_id)]
+
+        return jsonify({
+            'success': True,
+            'other_employees': other_employees,
+            'current_direct_report_ids': current_direct_report_ids,
+            'my_supervisor_ids': my_supervisor_ids,
+        })
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in get_employee_direct_reports')
+        raise AppError('Wystapil blad serwera')
+
 
 @api_bp.route('/employees/<int:employee_id>/direct-reports', methods=['POST'])
 @login_required

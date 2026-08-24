@@ -70,7 +70,21 @@
 
 .pref-table { width: 100%; border-collapse: collapse; }
 .pref-table thead { background: var(--color-surface); }
-.pref-table th { padding: 0.625rem 0.75rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-subtle); text-align: left; border-bottom: 1px solid var(--color-border); }
+.pref-table th {
+  padding: 0.625rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-ink-subtle);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  /* Sticky header row — DESIGN.md §20. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
 .pref-table td { padding: 0.625rem 0.75rem; font-size: 0.8125rem; color: var(--color-ink); border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
 .pref-table tbody tr:last-child td { border-bottom: none; }
 .pref-table tbody tr:hover { background: var(--color-surface); }
@@ -89,8 +103,25 @@
 
 .appt-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
 .appt-table thead tr { background: var(--color-surface); }
-.appt-table th { padding: 0.5rem 0.75rem; text-align: left; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-subtle); border-bottom: 1px solid var(--color-border); }
+.appt-table th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-subtle);
+  border-bottom: 1px solid var(--color-border);
+  /* Sticky header row — DESIGN.md §20. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
 .appt-table th:last-child { text-align: right; }
+.appt-table tbody tr { transition: background-color 0.2s ease; }
+.appt-table tbody tr:hover { background: var(--color-surface); }
+.appt-table tbody tr.row-clickable { cursor: pointer; }
 .appt-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
 .appt-status-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 1px; }
 
