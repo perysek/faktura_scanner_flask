@@ -335,14 +335,22 @@ Four **light-family** themes, switched at runtime via `data-theme` on `<html>`:
 - Responsive breakpoints follow Tailwind defaults (`sm` 640px, `md` 768px, `lg` 1024px,
   `xl` 1280px). The one structurally significant breakpoint is **`lg` (1024px)** — it's the
   sidebar desktop/mobile-drawer cutover point (see §15) and the input-zoom-guard cutover (§3).
-- **Full-viewport-frame layout, not page-scroll layout.** The app shell (`<main>`) is
-  `overflow-hidden` — it is a fixed-height viewport frame, not a page that scrolls as a whole.
-  Individual content regions own their own scrolling (a tall form page scrolls itself via
-  `.refined-page`'s `overflow-y: auto`; a data-table page instead keeps its header/search bar
-  fixed and only scrolls the row area via `.table-scroll-body`). When building a new full-page
-  view, decide up front which of these two scroll models it needs — do not let both the page and
-  an inner region scroll independently, and do not default to "let the whole document scroll,"
-  which breaks the fixed sidebar/header chrome.
+- **Full-viewport-frame layout, not page-scroll layout.** The app shell's `<main class=
+  "app-shell-content">` is `flex:1; overflow:auto` — it is a fixed-height viewport frame, not a
+  page that scrolls as a whole; each routed page decides for itself which of two scroll models it
+  needs (§20 has the full spec, this is the summary):
+  - **Default — the whole page scrolls together** inside `<main>` (header, stats, filters, table,
+    all one flow). This is what every page gets by default and is correct for anything that isn't
+    built around one dominant table (forms, Detail pages, Dashboard).
+  - **Opt-in — `.page-fills-viewport` on the page root** (desktop ≥1024px only). Header/stats/
+    search stay pinned at their natural height; the page's `.table-container` stretches to fill the
+    rest of `<main>` and scrolls internally with its own sticky `<thead>` — used by every list page
+    built around one primary table (Klienci, Sprzedawcy, Usługi, Pracownicy, Kategorie usług, Formy
+    zatrudnienia). Mobile always keeps the default whole-page scroll (nested scroll regions
+    are a touch-UX papercut on phones) — see §20.
+  Do not let both the page and an inner region scroll independently under the default model, and do
+  not default to "let the whole document scroll" while `.page-fills-viewport` is active — that
+  defeats the point of pinning the header/search chrome.
 
 ---
 
@@ -578,9 +586,21 @@ This is a **must-follow baseline**, not a nice-to-have, for every new screen/com
    - Any dismissible layer with its own open/closed state calls `useEscapeClaim(isOpen)` —
      this reserves the Escape key while open (it does **not** itself close anything; the layer's
      own Escape handler still has to exist).
-   - Any page-level "Escape = go back / cancel" binding uses `useEscapeAction(action, enabled)`,
-     which checks `isEscapeClaimed()` first and silently no-ops if something more specific already
-     owns the key.
+   - Any page-level "Escape = go back / cancel" binding uses `useEscapeAction(action, enabled,
+     guardTyping = true)`, which checks `isEscapeClaimed()` first and silently no-ops if something
+     more specific already owns the key. `guardTyping` (on by default) also no-ops while focus is
+     inside an INPUT/TEXTAREA/SELECT, so Escape never discards an in-progress field — ported from
+     the original app's create/edit inline Escape handlers, which had the same guard.
+   - Two convenience wrappers around `useEscapeAction` cover the two recurring shapes: `useEscapeBack
+     (href)` (`lib/a11y/useEscapeBack.ts`) for a fixed-target "go back" binding — every Detail page's
+     "Powrót do listy" and `FormActions`' "Anuluj" use this pattern (`FormActions` centralizes it, so
+     every form page gets Escape-to-cancel for free); `useEscapeClose(isOpen, onClose)` (`lib/a11y/
+     useEscapeClose.ts`) for a layer that both claims the key AND closes itself unconditionally while
+     open (no self-`isEscapeClaimed()` check — a layer never gates its own dismissal) — this is what
+     `ConfirmProvider` uses internally, and what any inline dismissible section nested inside a page
+     that already has a `useEscapeBack` binding must use too (e.g. EmployeeDetailPage's "Dodaj
+     usługę" toggle-form claims Escape while open so the page's own "Powrót do listy" binding
+     doesn't fire instead and yank the user away mid-edit).
    - **Rule: "one Escape closes one layer."** Any new popover, dropdown, or modal-like UI **must**
      call `useEscapeClaim` while open. Skipping this is a correctness bug, not a style nit — it
      will manifest as a popover and a page navigation firing on the same keystroke.
@@ -932,6 +952,39 @@ identically):**
   brand — the brand gradient is not "the auth-screen button style," it's specifically the login
   button.
 
+### 15.6 CSRF Protection
+
+The backend applies Flask-WTF's `CSRFProtect` to every `POST`/`PUT`/`PATCH`/`DELETE` request by
+default (`app.py`, `csrf = CSRFProtect(app)`); only three blueprints are exempted
+(`public_bp`, `booking_bp`, `mobile_bp` — all token-authenticated with no ambient session for
+CSRF to protect). `auth_bp` and every other session-authenticated blueprint the SPA talks to are
+**not** exempt, which means every mutating call the frontend makes needs a valid CSRF token or
+it is rejected before the route handler ever runs.
+
+- **Token endpoint:** `GET /auth/csrf-token` — unauthenticated (a token must be obtainable
+  *before* login, since the login `POST` itself needs one) and side-effect-free. Returns
+  `{ success: true, csrf_token: '<token>' }` via Flask-WTF's `generate_csrf()`. `GET` requests
+  never need a token — `CSRFProtect` only checks state-changing methods — so this endpoint itself
+  requires none.
+- **Client behavior:** `lib/api/client.ts` fetches this token lazily on the first non-`GET`
+  request of the page load and caches it in module state for the lifetime of that load (one
+  token per tab load, not per-request). Every subsequent non-`GET` request attaches it as an
+  `X-CSRFToken` header automatically — this is transparent to page/component code, which never
+  handles the token directly.
+- **Bypassing the shared client loses this too.** Same rule as §18's credentials warning: any
+  ad-hoc `fetch()` call that skips the `api` wrapper sends no CSRF header and will be rejected on
+  any mutating method. There is no manual step to remember when using `api.post/put/del` — the
+  token attachment is automatic — but a raw `fetch()` call must add it explicitly or go through
+  the wrapper instead.
+- **Failure mode to recognize:** a rejected CSRF request currently returns an **HTML** error page
+  (400) for any path outside `/api/*` — including everything under `/auth/*` — because
+  `app.py`'s `CSRFError` handler only serves JSON when `request.path.startswith('/api/')`. The
+  client's response parsing checks `content-type` before attempting to parse JSON, so this
+  surfaces as a normal status-coded `ApiError` rather than crashing on an unexpected response
+  body — but the *message* a user sees for a CSRF rejection is still the generic "session
+  expired" framing, not something CSRF-specific, since the SPA has no dedicated copy for this
+  case today.
+
 ---
 
 ## 16. Rules — Must / Should / Avoid / Forbidden
@@ -1029,8 +1082,9 @@ identically):**
   otherwise (this exact fallback string is repeated verbatim across the auth screens — reuse the
   same phrasing for consistency rather than writing a new variant per screen).
 - The API client is a thin `fetch` wrapper, not axios — `api.get/post/put/del`. It always sends
-  `credentials: 'include'` and the API-call-signaling header (§15.1); any new direct `fetch()` call
-  that bypasses this wrapper will silently lose both and likely break auth on that call.
+  `credentials: 'include'`, the API-call-signaling header (§15.1), and — on every non-`GET`
+  request — a CSRF token (§15.6); any new direct `fetch()` call that bypasses this wrapper will
+  silently lose all three and likely break auth on that call.
 - Global state is intentionally minimal: `AuthContext` (current user/permissions/session status),
   `ToastProvider`, `ConfirmProvider`. Resist adding a new global store for page-local data — the
   `useApiData` + local `useState` pattern is the default, not an exception.
@@ -1052,3 +1106,91 @@ identically):**
 - [ ] New protected route waits out `isLoading` before redirect decisions
 - [ ] Verified against at least the default theme + one alternate theme (contrast, layout) if any
       new color/surface is introduced
+- [ ] Any new data table follows §20 (sticky header, custom scrollbar, clickable rows where a view/
+      edit action exists) and, if it's the page's one primary table, `.page-fills-viewport`
+
+---
+
+## 20. Tabele przewijalne i klikalne wiersze
+
+Every data table in the app — not just the big CRUD list pages — follows one shared contract.
+Added after an audit found every table built through Fazy 1–2 had the browser's unstyled native
+scrollbar, no sticky header, and no clickable rows, none of which matched this doc's original intent
+(§5 already described the header-pinned/table-fills-viewport layout in outline; no page had actually
+implemented it). Retrofitted across all ~16 existing tables at once — this section is both the spec
+and the fix record.
+
+### 20.1 Sticky header + custom scrollbar — every table, no exceptions
+
+- `.refined-table th` (global, `styles/components.css`) is `position: sticky; top: 0; z-index: 1`
+  with an opaque `background` matching the header row — required because a sticky element needs its
+  own background or scrolled-past row content shows through the gaps between cells. A handful of
+  tables predate `.refined-table` and use their own page-owned class (`.pref-table`, `.appt-table`,
+  `.cat-modal-table`) — each got the identical `position: sticky` treatment added to its own `th`
+  rule rather than being migrated onto `.refined-table` (would have changed padding/density that was
+  a deliberate 1:1 port from the original template).
+- `.table-container` (the shared card-chrome scroll wrapper) carries the custom scrollbar: thin
+  track, `var(--color-border)` thumb, transparent track, theme-aware via tokens — both
+  `scrollbar-width`/`scrollbar-color` (Firefox) and the `::-webkit-scrollbar*` pseudo-elements
+  (Chrome/Edge/Safari). Never the browser's default chrome on a table scroll region.
+- `.scroll-thin` is the same scrollbar treatment without the card chrome (border/bg/shadow), for a
+  table already nested inside another card that already provides that chrome — e.g. EmployeeDetail
+  Page's balance-adjustment history and assigned-services table, ClientDetailPage's appointment
+  history. Both classes share one CSS rule set (`components.css`, "Tables" block) so the two never
+  drift out of sync.
+- **Bounded height is what makes the header actually stick.** `position: sticky` sticks relative to
+  the nearest ancestor with a scrolling mechanism (any `overflow` other than `visible`) — if that
+  ancestor's own height is unconstrained (`overflow: auto` with no `max-height`), it never scrolls
+  itself and the sticky header does nothing. Every `.table-container`/`.scroll-thin` instance that
+  isn't already `.page-fills-viewport`'s flex-filled region (§20.2) needs an explicit `max-height`
+  (inline `style`, page-specific — e.g. `420px` for a Detail-page sub-table, `50vh`–`60vh` for
+  something inside a `Modal`, which already bounds itself via `.modal-body`'s own scroll but needs
+  its OWN nested scroll region for the sticky header to have something to stick against).
+
+### 20.2 `.page-fills-viewport` — one primary table fills the remaining viewport
+
+Opt-in on a page's root element (alongside `.refined-page`), desktop (`≥1024px`) only — see §5 for
+the two-scroll-model summary. Two DOM shapes are supported by the same CSS block:
+
+- `.table-container` as a **direct child** of the page root (Klienci, Sprzedawcy, Usługi,
+  Pracownicy) — the container itself becomes `flex: 1; min-height: 0`.
+- `.table-container` **nested inside a wrapping `.form-card`** alongside a section title (Kategorie
+  usług, Formy zatrudnienia — both stack a create-form card above the table card) — the `.form-card`
+  matched by `:has(> .table-container)` becomes the flex-filling region and turns into its own
+  flex-column internally, so its child `.table-container` then fills *that*.
+
+Mobile (`<1024px`) never applies this — the media query gates the whole ruleset, so mobile always
+falls back to the page's default whole-page scroll (§5), which is what `.stack-cards` (the
+responsive card-per-row table transform, DESIGN-TOKENS.md) already expects. `ScrollTopButton`
+("mobile stack-cards pages only") needs zero changes for this — on desktop under
+`.page-fills-viewport` nothing ever overflows `#main-content` far enough to cross its `threshold`,
+so it naturally stays inert there and only appears on mobile as originally designed.
+
+Shape 2's `.table-container` also gets a **non-media-gated** visual fix (`components.css`, right
+after the block above): `.form-card`'s own padding applies to all its children, so without this the
+table sat inset inside that padding with its own border/background/shadow drawn a second time
+inside the outer card's — a "box inside a box" at every viewport width, not just desktop. Negative
+margins (matching `.form-card`'s padding) bleed the table flush to the card's edges and it drops its
+own now-redundant chrome, since the wrapping `.form-card` already supplies it — the section title
+above keeps the card's normal padding. Both table pages also need `stack-cards-wrap` on their
+`.table-container` (Kategorie usług/Formy zatrudnienia were missing it — Klienci/Pracownicy already
+carry it) so the same "boxed twice" problem doesn't reappear on mobile's stacked-card view.
+
+### 20.3 Clickable rows
+
+A table row whose record has a "view" action mirrors that action on row-click; if there's no "view"
+but there IS an "edit" action (including "enters inline row-edit mode," for the two tables that edit
+in place — Kategorie usług, Formy zatrudnienia), row-click mirrors edit instead. A table with neither
+(delete-only rows, pure read-only history, or — sync-results-style — two co-equal domain actions with
+no natural single default) gets no row-click at all; don't force one.
+
+- Add `row-clickable` to the `<tr>` (or a page-owned equivalent, e.g. `.appt-table tbody
+  tr.row-clickable`) — that's what supplies `cursor: pointer`.
+- Guard the `onClick` against the row's own action buttons/links with `.closest()` against their
+  wrapping class (`.action-icons`, `.row-actions`, or the single interactive element's own tag —
+  `a`/`button` — when there's no wrapper), so clicking "Edytuj"/"Usuń" doesn't *also* fire the row's
+  navigation. This mirrors ClientsListPage's pre-existing mobile-only tap-anywhere-on-card pattern —
+  extended to every viewport size and every table, not reinvented per page.
+- When the target isn't an in-SPA route (e.g. ClientDetailPage's appointment-history rows link to
+  `/appointment/:id`, still a Jinja page — Wizyty isn't ported yet), use `window.location.href`
+  instead of `navigate()`; everything else uses React Router's `navigate()`.
