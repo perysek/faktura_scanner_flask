@@ -31,6 +31,8 @@ import { EmailSettingsPage } from './pages/settings/EmailSettingsPage';
 import { SmsSettingsPage } from './pages/settings/SmsSettingsPage';
 import { SmsLogPage } from './pages/settings/SmsLogPage';
 import { BalancesPage } from './pages/absences/BalancesPage';
+import { MyAbsencesPage } from './pages/absences/MyAbsencesPage';
+import { AbsencesManagementPage } from './pages/absences/AbsencesManagementPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -140,14 +142,14 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute guard={(ctx) => ctx.isSupervisor || ctx.hasModuleAccess('absences')} />,
             children: [
-              { path: 'nieobecnosci', element: <ComingSoonPage title="Nieobecności" /> },
+              { path: 'nieobecnosci', element: <AbsencesManagementPage /> },
               { path: 'bilanse-urlopow', element: <BalancesPage /> },
             ],
           },
 
           {
             element: <ProtectedRoute guard={(ctx) => ctx.hasLinkedEmployee} />,
-            children: [{ path: 'moje-nieobecnosci', element: <ComingSoonPage title="Moje nieobecności" /> }],
+            children: [{ path: 'moje-nieobecnosci', element: <MyAbsencesPage /> }],
           },
 
           {

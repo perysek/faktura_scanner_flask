@@ -75,6 +75,25 @@ def _svc():
     return AbsenceService()
 
 
+def _serialize_absence(a: dict) -> dict:
+    """date/time/datetime fields → JSON-safe strings (react-migration JSON
+    endpoints). The Jinja templates stringify these implicitly via `{{ }}`;
+    jsonify() needs it done explicitly, same pattern as resolution_history()
+    above."""
+    out = dict(a)
+    for key in ('date_from', 'date_to'):
+        if out.get(key) is not None:
+            out[key] = str(out[key])
+    for key in ('time_from', 'time_to'):
+        if out.get(key) is not None:
+            out[key] = str(out[key])[:5]
+    for key in ('requested_at', 'responded_at'):
+        v = out.get(key)
+        if v is not None and hasattr(v, 'isoformat'):
+            out[key] = v.isoformat()
+    return out
+
+
 def _notify_reassigned_employee(appointment_id: int, new_employee_id: int) -> None:
     """Direct SMS to the newly-assigned employee about their new appointment —
     an internal staff notice, not a client-facing configurable template (see
@@ -233,6 +252,83 @@ def cancel_own_approved_request(absence_id: int):
     return redirect(url_for('absence.my_absences'))
 
 
+# ── employee self-service — JSON siblings (react-migration) ───────────────────
+# Additive JSON versions of the three form-POST/redirect routes above, for the
+# React /moje-nieobecnosci page. `templates/absences/my.html`'s own form posts
+# stay untouched (plan.md §1: backend changes are additive, not replacements).
+
+@absence_bp.route('/api/my-absences', methods=['GET'])
+@login_required
+def api_my_absences():
+    emp = get_linked_employee(current_user)
+    if not emp:
+        return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
+    from flask import current_app
+    svc = _svc()
+    absences = [_serialize_absence(a) for a in svc.list_for_employee(emp['id'])]
+    categories = current_app.absence_category_repo.list_active()
+    supervisors = current_app.supervisor_repo.list_supervisors_for(emp['id'])
+    return jsonify({'success': True, 'absences': absences, 'categories': categories, 'supervisors': supervisors})
+
+
+@absence_bp.route('/api/my-absences/submit', methods=['POST'])
+@login_required
+def api_submit_request():
+    emp = _get_employee_or_403()
+    if not emp:
+        return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
+    data = request.get_json(silent=True) or {}
+    try:
+        category_id = int(data['category_id'])
+        date_from = _parse_date(data.get('date_from'))
+        date_to = _parse_date(data.get('date_to', data.get('date_from')))
+        time_from = _parse_time_opt(data.get('time_from'))
+        time_to = _parse_time_opt(data.get('time_to'))
+        approver_emp_id = int(data['approver_id'])
+        notes = (data.get('notes') or '').strip() or None
+
+        _svc().submit_request(
+            employee_id=emp['id'],
+            category_id=category_id,
+            date_from=date_from,
+            date_to=date_to,
+            time_from=time_from,
+            time_to=time_to,
+            approver_employee_id=approver_emp_id,
+            notes=notes,
+            created_by=current_user.id,
+        )
+        return jsonify({'success': True}), 201
+    except (AbsenceError, AppError, ValueError, KeyError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@absence_bp.route('/api/my-absences/<int:absence_id>/cancel', methods=['POST'])
+@login_required
+def api_cancel_own_request(absence_id: int):
+    emp = _get_employee_or_403()
+    if not emp:
+        return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
+    try:
+        _svc().cancel_own(absence_id, emp['id'])
+        return jsonify({'success': True})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@absence_bp.route('/api/my-absences/<int:absence_id>/cancel-approved', methods=['POST'])
+@login_required
+def api_cancel_own_approved_request(absence_id: int):
+    emp = _get_employee_or_403()
+    if not emp:
+        return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
+    try:
+        _svc().cancel_own_approved(absence_id, emp['id'], cancelled_by=current_user.id)
+        return jsonify({'success': True})
+    except (AbsenceError, AppError) as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
 # ── supervisor management ─────────────────────────────────────────────────────
 
 @absence_bp.route('/absences')
@@ -266,6 +362,36 @@ def management_index():
         pending_count=pending_count,
         supervisor_emp_id=supervisor_emp_id,
     )
+
+
+@absence_bp.route('/api/absences/management', methods=['GET'])
+@absence_management_required
+def api_management_index():
+    """JSON sibling of management_index() for the React /nieobecnosci page —
+    same data, same role branching, just returned instead of rendered."""
+    from flask import current_app
+    emp = get_linked_employee(current_user)
+    supervisor_emp_id = emp['id'] if emp else None
+
+    svc = _svc()
+    if current_user.role in ('superuser', 'admin'):
+        requests_list = svc.list_all(status_in=['pending', 'approved', 'rejected', 'cancelled'])
+        manual_list = svc.list_all(status_in=['approved'], include_deleted=False)
+    else:
+        requests_list = svc.list_for_approver(supervisor_emp_id) if supervisor_emp_id else []
+        manual_list = svc.list_all(status_in=['approved'], employee_id=supervisor_emp_id) if supervisor_emp_id else []
+
+    categories = current_app.absence_category_repo.list_with_deleted()
+    pending_count = sum(1 for a in requests_list if a.get('status') == 'pending')
+
+    return jsonify({
+        'success': True,
+        'requests_list': [_serialize_absence(a) for a in requests_list],
+        'manual_list': [_serialize_absence(a) for a in manual_list],
+        'categories': categories,
+        'pending_count': pending_count,
+        'is_superuser': current_user.role == 'superuser',
+    })
 
 
 @absence_bp.route('/absences/<int:absence_id>/approve', methods=['POST'])

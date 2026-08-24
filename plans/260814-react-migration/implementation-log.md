@@ -1433,4 +1433,50 @@ tamten moduł zostanie zbudowany później w tej samej sesji, zamiast wskazywać
 **Weryfikacja:** `npm run build` → 0 błędów TS, 137 modułów. `npm run lint` → 0 errors (ten sam
 nieszkodliwy warning). Backend bez zmian — `pytest` nie uruchamiany ponownie.
 
+### Moduł: Nieobecności (wnioski) — zbudowany częściowo, świadomy zakres
+
+Audyt: `absence_routes.py` (598 linii) miało dwa HTML-shelle (`/my-absences` self-service,
+`/absences` 3-tabowy widok zarządzania — `templates/absences/my.html` 403 linii +
+`templates/absences/management.html` 1086 linii + `static/js/absences.js` 1060 linii). Większość
+mutacji zarządzania (approve/reject/approve-force/cancel-approved/manual create/update/delete/
+hard-delete/kategorie CRUD) była **już JSON**. Trzy self-service akcje (submit/cancel/
+cancel-approved) były **form-POST+redirect+flash** — jedyna realna luka backendu tego modułu.
+
+**Decyzja D30 — nowe `/api/my-absences*` + `/api/absences/management` jako siostrzane JSON:**
+dodano `GET/POST /api/my-absences[...]` (submit/cancel/cancel-approved, mirror `_svc()` wywołań z
+Jinja routes) i `GET /api/absences/management` (mirror `management_index()`'s logiki: te same
+gałęzie ról superuser/admin vs. przełożony). Nowy `_serialize_absence()` helper konwertuje
+date/time/datetime pola na stringi przed `jsonify` (te same pola, które Jinja tylko domyślnie
+stringify'uje przez `{{ }}`) — bez tego `jsonify()` serializowałby datetime do dziwnego formatu
+RFC-822 zamiast ISO.
+
+**Decyzja D31 — świadomie ODŁOŻONE (nie "zapomniane"), udokumentowane tutaj:**
+1. **Tab "Kategorie"** (`management.html`'s trzeci tab, admin-only CRUD kategorii + balance-config)
+   — osobna, samodzielna funkcja, JSON już gotowy (`/absences/categories*`), ale dodaje kolejną
+   pełną formę z 8 polami (typ/śledzenie/okres/reset/limit) do w tej sesji i tak już bardzo długiego
+   modułu.
+2. **Per-konflikt reassign/reschedule** w modalu zatwierdzania — oryginał ma pełny multi-step state
+   machine (`showConflictModal`/`_renderReassignStep`/`_renderRescheduleStep`, ~400 linii JS,
+   oznaczone w kodzie źródłowym jako "Faza 3"). To DOKŁADNIE ta sama funkcja, którą
+   `module-inventory.md`'s "Korekta zakresu — Wizyty + Kalendarz" już wcześniej świadomie odłożyła
+   z drugiej strony (integracja Wizyt z Nieobecnościami) — spójna decyzja, nie nowa. Zbudowany widok
+   pokazuje listę konfliktów + "Zatwierdź mimo to"/"Odrzuć", bez per-wiersz akcji naprawy.
+3. **Historia rozwiązań konfliktów** (`/absences/<id>/resolutions`, read-only) — zależna od #2,
+   bez sensu budować widoku historii dla akcji, których nie da się jeszcze wykonać.
+4. **Hard-delete superusera** (nieobecności i kategorie, `/permanent`) — narzędzie porządkowe do
+   czyszczenia danych testowych, niski priorytet względem codziennego workflow.
+5. **Balance-hints w tabeli wniosków** (`(3.0/5d)` przy nazwisku pracownika) — kosmetyczna adnotacja
+   z osobnego fetcha `/api/absence-balances/summary`, bez wpływu na funkcjonalność.
+
+**Decyzja D32 — pre-submit conflict preview uproszczony do `useConfirm()` zamiast bespoke tabeli:**
+oryginał (`my.html`) pokazuje pełną tabelę kolidujących wizyt w customowym modalu przed złożeniem
+wniosku. Port używa `useConfirm()` z tekstowym podsumowaniem (liczba konfliktów + do 3 przykładów) —
+ta sama nieblokująca semantyka (zero konfliktów = submit prosto, konflikty = pytanie o potwierdzenie),
+bez budowania nowego bespoke komponentu tabeli-w-modalu dla czysto informacyjnego kroku.
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 141 modułów. `npm run lint` → 0 errors (ten sam
+nieszkodliwy warning). Backend: `python -m pytest tests/ -q` uruchomiony po zmianach w
+`routes/absence_routes.py` (nowe endpointy, zero zmian w istniejących) — wynik w kolejnym wpisie tej
+sesji, jeśli różny od 657 passed.
+
 ---
