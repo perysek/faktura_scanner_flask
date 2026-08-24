@@ -1400,4 +1400,37 @@ nieszkodliwy warning z Fazy 1, bez zmian). Backend: `python -m pytest tests/ -q`
 0 regresji. Ręczna weryfikacja wizualna nieosiągalna w tym środowisku (patrz
 [[react-migration-browser-tooling-gap]]) — jak w każdej poprzedniej Fazie 2 sesji.
 
+### Moduł: Bilanse urlopowe — zbudowany
+
+Audyt: `absence_balance_routes.py` (361 linii) już było **w pełni JSON** poza samym HTML-shellem
+`/absence-balances` — zero zmian backendu. Jedyna złożoność jest we froncie:
+`templates/absences/balances.html` (765 linii) ma per-wiersz inline-edytowalne spinboxy
+(wykorzystano/limit), pole okresu, warunkowe pole "powód zmiany" (pokazuje się tylko gdy
+wykorzystanie się zmieniło — backend tego wymaga przy tworzeniu korekty), przycisk zapisu
+(disabled dopóki nic się nie zmieniło LUB brakuje powodu), jednopoziomowe cofnięcie (undo state
+przechowywany per wiersz), i reset-do-zera z potwierdzeniem. Strona ładuje dane w nietypowy,
+ale świadomie 1:1 przeportowany sposób: `/api/absence-balances/summary` zwraca słownik
+`{employee_id: ...}`, ale strona używa TYLKO `Object.keys()` na nim, żeby dostać listę ID —
+pełne dane per pracownik i tak przychodzą osobnym fetchem `/api/employees/<id>/absence-balances`
+(N+1, ale to jest dokładnie to, co robi oryginał — nie "naprawiane" tutaj, bo backend nie zmienia
+się w tym przebiegu).
+
+**Decyzja D28 — stan wiersza jako lokalny React state w `BalanceRow.tsx`, nie w rodzicu:** oryginał
+trzymał "oryginalne"/"undo" wartości w `tr.dataset.*` per DOM-wiersz. Port 1:1 tego wzorca do
+Reacta: każdy `<BalanceRowView>` ma własny `useState` dla used/limit/period/reason/undoState,
+komunikuje się z rodzicem (`BalancesPage`) tylko przez `onChanged(patch)` po udanym zapisie —
+rodzic aktualizuje `rows` (dla statystyk/filtrów), ale NIE zarządza stanem edycji każdego wiersza
+(to by wymagało przeniesienia całego `tr.dataset`-owego mikro-stanu do jednej wielkiej struktury w
+rodzicu, bez korzyści — wiersze nie współdzielą stanu ze sobą).
+
+**Decyzja D29 — `useEscapeBack('/nieobecnosci')` mimo że ta trasa jest wciąż `ComingSoonPage`:**
+oryginał robi `window.location.href = '/absences'` na Escape (chyba że modal potwierdzenia otwarty
+— `ConfirmProvider`'s `useEscapeClose` już poprawnie zajmuje klawisz w tym przypadku, sprawdzone w
+`ConfirmProvider.tsx`). Cel wskazuje na trasę modułu "Nieobecności (wnioski)", który jest
+kolejnym modułem w tym samym przebiegu (Option A, punkt 3) — link zacznie realnie działać, gdy
+tamten moduł zostanie zbudowany później w tej samej sesji, zamiast wskazywać donikąd.
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 137 modułów. `npm run lint` → 0 errors (ten sam
+nieszkodliwy warning). Backend bez zmian — `pytest` nie uruchamiany ponownie.
+
 ---

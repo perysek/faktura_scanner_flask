@@ -30,6 +30,7 @@ import { CalendarMonthPage } from './pages/appointments/CalendarMonthPage';
 import { EmailSettingsPage } from './pages/settings/EmailSettingsPage';
 import { SmsSettingsPage } from './pages/settings/SmsSettingsPage';
 import { SmsLogPage } from './pages/settings/SmsLogPage';
+import { BalancesPage } from './pages/absences/BalancesPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -140,7 +141,7 @@ export const router = createBrowserRouter([
             element: <ProtectedRoute guard={(ctx) => ctx.isSupervisor || ctx.hasModuleAccess('absences')} />,
             children: [
               { path: 'nieobecnosci', element: <ComingSoonPage title="Nieobecności" /> },
-              { path: 'bilanse-urlopow', element: <ComingSoonPage title="Bilanse urlopów" /> },
+              { path: 'bilanse-urlopow', element: <BalancesPage /> },
             ],
           },
 
