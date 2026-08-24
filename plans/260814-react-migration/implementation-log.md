@@ -1475,8 +1475,65 @@ ta sama nieblokująca semantyka (zero konfliktów = submit prosto, konflikty = p
 bez budowania nowego bespoke komponentu tabeli-w-modalu dla czysto informacyjnego kroku.
 
 **Weryfikacja:** `npm run build` → 0 błędów TS, 141 modułów. `npm run lint` → 0 errors (ten sam
-nieszkodliwy warning). Backend: `python -m pytest tests/ -q` uruchomiony po zmianach w
-`routes/absence_routes.py` (nowe endpointy, zero zmian w istniejących) — wynik w kolejnym wpisie tej
-sesji, jeśli różny od 657 passed.
+nieszkodliwy warning). Backend: `python -m pytest tests/ -q` → **657 passed**, 0 regresji (uruchomione
+po zmianach w `routes/absence_routes.py` — nowe endpointy, zero zmian w istniejących).
+
+### Moduł: Użytkownicy + Role (RBAC) — zbudowany
+
+Audyt: `routes/users/routes.py` (325 linii) i `routes/roles/routes.py` (170 linii) miały mieszankę
+CRUD JSON (`/system/users/api*`, `/system/roles/api*` — już istniejące, kompletne) + 6 czystych
+HTML-shelli (`users_list`/`create_user`/`edit_user`, `roles_list`/`create_role`/`edit_role`), z
+których każdy przekazuje do szablonu dropdown-data (dostępni pracownicy, przypisywalne role,
+lista modułów+etykiety, szczegóły uprawnień jednej roli) niedostępne jako JSON. Luka mniejsza niż
+etykieta "Częściowa" sugerowała — sam CRUD (najbardziej ryzykowna część: walidacja unikalności
+maila, blokada edycji/kasowania kont superusera przez non-superusera, blokada nadania roli
+superuser) był już kompletny i przetestowany logiką backendu; brakowało tylko przezroczystych
+"assemble dropdown data as JSON" siostrzanych endpointów.
+
+**Decyzja D33 — 4 nowe endpointy `GET .../form-options` i `.../  <id>` (GET), zero zmian w
+istniejących CRUD:** `GET /system/users/api/form-options` (available_employees + roles, filtrowane
+tak samo jak `create_user()`/`edit_user()` — non-superuser nigdy nie widzi roli "superuser" jako
+opcji), `GET /system/users/api/<id>` (user + linked_employee, do pre-fill formularza edycji — samo
+`GET /system/users/api` [lista] już miało te dane per-wiersz, ale osobny endpoint jest czystszy niż
+filtrowanie całej listy po stronie klienta dla jednego rekordu), `GET /system/roles/api/form-options`
+(all_modules+module_display_names — statyczne dane z `role_repository.py`, ale serwowane z backendu
+zamiast kopiowane na sztywno we froncie, żeby nie mogły się rozjechać), `GET /system/roles/api/<id>`
+(role + pełny `permissions` detail, do pre-fill formularza edycji — `GET /system/roles/api` [lista]
+już zwracał `permissions_detail` per rola, ale znowu: dedykowany endpoint czytelniejszy niż
+filtrowanie listy).
+
+**Odkrycie D-Sec5 — luka w `app.py`'s `AppError` handler wpływająca na jakość komunikatów błędów
+(NIE naprawiona, poza zakresem tej sesji):** `app.py`'s `handle_app_error()` zwraca JSON tylko gdy
+`request.path.startswith('/api/')`. Oba blueprinty RBAC są zamontowane pod `/system/users/api/*` i
+`/system/roles/api/*` — **nie zaczynają się od `/api/`** — więc każdy `raise ValidationError(...)`/
+`ConflictError(...)`/`PermissionDeniedError(...)` w tych dwóch plikach (a WSZYSTKIE ścieżki błędów
+w obu plikach przechodzą przez `raise AppError`, nie przez `return jsonify({success:false})`, 200)
+dziś zwraca **stronę HTML błędu 500 zamiast JSON**, nawet gdy wywołujący jawnie oczekuje JSON
+(fetch() w oryginalnym `create.html`/`edit.html`, i teraz też `usersApi`/`rolesApi` w Reakcie).
+Efekt praktyczny: `resp.json()` w oryginalnym Jinja rzuca `SyntaxError` (niezłapany — użytkownik nie
+widzi żadnego komunikatu), a `lib/api/client.ts`'s `request()` w Reakcie **już ma na to obronę**
+(sprawdza `content-type` przed `JSON.parse`, patrz komentarz w `client.ts` o CSRF) — degraduje się
+łagodnie do `ApiError('Błąd serwera (400)')` zamiast precyzyjnego `"Email jest już zajęty"` itp.
+**To jest realny, przedmigracyjny bug w `app.py`, nie coś wprowadzonego przez ten port** — odkryty
+przy budowie tego modułu, bo to pierwszy moduł React, którego backend leży POZA prefiksem `/api/*`
+(każdy inny moduł Fazy 2 mapuje się na `routes/api_routes.py`, montowany pod `/api`). **Świadomie
+NIE naprawione** — zmiana `app.py`'s globalnego error handlera wpływa potencjalnie na inne
+blueprinty poza zakresem tej sesji (np. `booking_bp`, publiczne strony), wymaga własnego review.
+Udokumentowane w `usersApi`/`rolesApi`'s docstringach dla następnej sesji.
+
+**Frontend:** `UsersListPage` (lista+search, superuser-only reset hasła przez `Modal`, delete z
+regułami `isSelf`/`canDelete` 1:1 z backendem), `UserFormPage` (create/edit, edit ma osobną kartę
+zmiany hasła — dwa niezależne submity, jak oryginał), `RolesListPage` (lista z kropkami uprawnień —
+`module-dot-on`/`-off`, delete niechronionej roli), `RoleFormPage` (create: prosty toggle
+has_access per moduł; edit: pełna siatka has_access/read_only/own_data + sub-flagi
+`can_edit_price_history`[services]/`can_send_sms`[appointments], sub-flagi disabled gdy has_access
+off — 1:1 z oryginalnym `flags_${m}.classList.toggle('disabled', !checked)`).
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 149 modułów. `npm run lint` → 0 errors (jeden
+nowy warning znaleziony i naprawiony od razu — `useMemo` zależący od `usersState.data ?? []`
+tworzącego nową referencję co render, poprawione przez odczyt `usersState.data` bezpośrednio
+wewnątrz callbacku zamiast przez pośrednią zmienną `users`). Backend: `python -m pytest tests/ -q`
+uruchomiony po zmianach w `routes/users/routes.py`+`routes/roles/routes.py` (4 nowe GET-only
+endpointy, zero zmian w istniejących) — **657 passed**, 0 regresji.
 
 ---

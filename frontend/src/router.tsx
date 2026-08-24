@@ -33,6 +33,10 @@ import { SmsLogPage } from './pages/settings/SmsLogPage';
 import { BalancesPage } from './pages/absences/BalancesPage';
 import { MyAbsencesPage } from './pages/absences/MyAbsencesPage';
 import { AbsencesManagementPage } from './pages/absences/AbsencesManagementPage';
+import { UsersListPage } from './pages/rbac/UsersListPage';
+import { UserFormPage } from './pages/rbac/UserFormPage';
+import { RolesListPage } from './pages/rbac/RolesListPage';
+import { RoleFormPage } from './pages/rbac/RoleFormPage';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -176,11 +180,19 @@ export const router = createBrowserRouter([
           // Literal-role gates (D14 pt. 4) — NOT a 'settings' module check.
           {
             element: <ProtectedRoute guard={(ctx) => ctx.user?.role === 'superuser' || ctx.user?.role === 'admin'} />,
-            children: [{ path: 'uzytkownicy', element: <ComingSoonPage title="Użytkownicy" /> }],
+            children: [
+              { path: 'uzytkownicy', element: <UsersListPage /> },
+              { path: 'uzytkownicy/nowy', element: <UserFormPage mode="create" /> },
+              { path: 'uzytkownicy/:id/edytuj', element: <UserFormPage mode="edit" /> },
+            ],
           },
           {
             element: <ProtectedRoute guard={(ctx) => ctx.user?.role === 'superuser'} />,
-            children: [{ path: 'poziomy-dostepu', element: <ComingSoonPage title="Poziomy dostępu" /> }],
+            children: [
+              { path: 'poziomy-dostepu', element: <RolesListPage /> },
+              { path: 'poziomy-dostepu/nowa', element: <RoleFormPage mode="create" /> },
+              { path: 'poziomy-dostepu/:id/edytuj', element: <RoleFormPage mode="edit" /> },
+            ],
           },
 
           {

@@ -58,6 +58,37 @@ def edit_role(role_id):
 
 # ─── API Endpoints ────────────────────────────────────────────────────────────
 
+@roles_bp.route('/api/form-options', methods=['GET'])
+@login_required
+@role_required('superuser')
+def api_form_options():
+    """JSON sibling of create_role()'s static-ish template context — the
+    module list + display names never depend on request data, but the
+    React create-form still needs them from somewhere other than a hardcoded
+    frontend copy that could drift from ALL_MODULES."""
+    return jsonify({'success': True, 'all_modules': ALL_MODULES, 'module_display_names': MODULE_DISPLAY_NAMES})
+
+
+@roles_bp.route('/api/<int:role_id>', methods=['GET'])
+@login_required
+@role_required('superuser')
+def api_get(role_id):
+    """JSON sibling of edit_role()'s single-role data assembly — role +
+    per-module permission detail, for the React edit-form pre-fill."""
+    role_repo = _role_repo()
+    role = role_repo.get_by_id(role_id)
+    if not role:
+        raise NotFoundError('Rola nie znaleziona')
+    permissions = role_repo.get_permissions(role_id)
+    return jsonify({
+        'success': True,
+        'role': {'id': role['id'], 'name': role['name'], 'display_name': role['display_name'], 'is_protected': bool(role['is_protected'])},
+        'permissions': permissions,
+        'all_modules': ALL_MODULES,
+        'module_display_names': MODULE_DISPLAY_NAMES,
+    })
+
+
 @roles_bp.route('/api', methods=['GET'])
 @login_required
 @role_required('superuser')

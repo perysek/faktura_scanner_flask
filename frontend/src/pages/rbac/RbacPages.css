@@ -1,0 +1,100 @@
+/* Użytkownicy + Role (RBAC) — shared across list/create/edit pages for both.
+   Reuses global .form-actions/.table-container/.refined-table/
+   .action-icon-btn/.cell-name/.cell-actions (styles/components.css); this
+   file holds what doesn't already exist globally, ported 1:1 from
+   templates/{users,roles}/*.html's per-page inline <style> blocks
+   (near-identical across all six original templates, consolidated here). */
+
+.rbac-page { max-width: 1400px; margin: 0 auto; }
+.rbac-page.rbac-form-page { max-width: 900px; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.rbac-header-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+.refined-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.04));
+}
+.rbac-form-page .refined-card { padding: 2rem; margin-bottom: 1.5rem; }
+
+.search-input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+  outline: none;
+  width: 240px;
+}
+.search-input:focus { border-color: var(--color-ink); }
+
+.rbac-empty-state { text-align: center; padding: 3rem; color: var(--color-ink-muted); font-size: 0.875rem; }
+
+.badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: var(--radius-sm, 2px); font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.03em; }
+.badge-active { background: var(--color-status-confirmed-bg); color: var(--color-success); }
+.badge-inactive { background: var(--color-surface); color: var(--color-ink-subtle); }
+.badge-role { background: var(--color-status-scheduled-bg); color: var(--color-chart-blue-dark, #1d4ed8); }
+.badge-superuser { background: var(--color-status-in-progress-bg); color: var(--color-warning); }
+.badge-protected { background: #fef3c7; color: #92400e; }
+
+.rbac-row-actions { display: inline-flex; align-items: center; gap: 0.375rem; }
+
+.btn-reset { border-color: #fca5a5 !important; color: var(--color-status-cancelled-dark, #b91c1c) !important; }
+.btn-reset:hover { background: var(--color-status-cancelled-bg); border-color: var(--color-status-cancelled-dark, #b91c1c) !important; }
+
+.rbac-error-msg { color: var(--color-error); font-size: 0.8125rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-status-cancelled-bg, #fef2f2); border: 1px solid #fecaca; border-radius: var(--radius-sm, 2px); }
+.rbac-success-msg { color: #166534; font-size: 0.8125rem; margin-bottom: 1rem; padding: 0.75rem; background: #dcfce7; border: 1px solid #86efac; border-radius: var(--radius-sm, 2px); }
+
+.field-label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); margin-bottom: 0.375rem; }
+.field-input,
+.field-select {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+  outline: none;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+}
+.field-input:focus,
+.field-select:focus { border-color: var(--color-ink); }
+.field-group { margin-bottom: 1.25rem; }
+.field-hint { font-size: 0.75rem; color: var(--color-ink-muted); margin-top: 0.25rem; }
+.required-mark { color: var(--color-error); }
+
+.rbac-section-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink-muted); margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border); }
+
+/* Module permission grid (roles create/edit) */
+.module-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; box-sizing: border-box; border: 1px solid transparent; }
+.module-dot-on { background: var(--color-success); border-color: var(--color-success); }
+.module-dot-off { background: transparent; border-color: var(--color-ink-subtle); }
+.dot-legend { display: flex; gap: 1.25rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.6875rem; color: var(--color-ink-muted); }
+.dot-legend-item { display: inline-flex; align-items: center; gap: 0.375rem; }
+
+.module-row { padding: 0.875rem 0; border-bottom: 1px solid var(--color-border-subtle); }
+.module-row:last-child { border-bottom: none; }
+.module-row.module-row--simple { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; }
+.module-main { display: flex; align-items: center; justify-content: space-between; }
+.module-name { font-size: 0.875rem; font-weight: 500; }
+.module-key { font-size: 0.75rem; color: var(--color-ink-muted); font-family: monospace; }
+.module-flags { display: flex; gap: 1.5rem; margin-top: 0.625rem; padding-left: 0.25rem; flex-wrap: wrap; transition: opacity 0.15s; }
+.module-flags.disabled { opacity: 0.35; pointer-events: none; }
+.flag-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--color-ink-muted); }
+
+.toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; display: inline-block; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 24px; transition: 0.2s; }
+.toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: var(--color-surface-elevated); border-radius: 50%; transition: 0.2s; }
+.toggle input:checked + .toggle-slider { background: var(--color-success); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+.toggle-sm { width: 34px; height: 18px; }
+.toggle-sm .toggle-slider::before { width: 12px; height: 12px; left: 3px; bottom: 3px; }
+.toggle-sm input:checked + .toggle-slider::before { transform: translateX(16px); }

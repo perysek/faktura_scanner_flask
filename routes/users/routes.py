@@ -87,6 +87,50 @@ def edit_user(user_id):
 
 # ─── API Endpoints ────────────────────────────────────────────────────────────
 
+@users_bp.route('/api/form-options', methods=['GET'])
+@login_required
+@role_required('superuser', 'admin')
+def api_form_options():
+    """JSON sibling of create_user()/edit_user()'s dropdown-data assembly
+    (react-migration) — available employees + assignable roles, filtered the
+    same way (non-superusers never see the superuser role as an option)."""
+    user_repo = _user_repo()
+    available_employees = user_repo.get_available_employees()
+    roles = _role_repo().get_all()
+    if current_user.role != 'superuser':
+        roles = [r for r in roles if r['name'] != 'superuser']
+    return jsonify({
+        'success': True,
+        'available_employees': [{'id': e['id'], 'first_name': e['first_name'], 'last_name': e['last_name']} for e in available_employees],
+        'roles': [{'name': r['name'], 'display_name': r['display_name']} for r in roles],
+    })
+
+
+@users_bp.route('/api/<int:user_id>', methods=['GET'])
+@login_required
+@role_required('superuser', 'admin')
+def api_get(user_id):
+    """JSON sibling of edit_user()'s single-user data assembly — user +
+    linked_employee, for the React edit-form pre-fill."""
+    user_repo = _user_repo()
+    row = user_repo.get_by_id(user_id)
+    if not row:
+        raise NotFoundError('Uzytkownik nie znaleziony')
+    user = user_repo.row_to_user(row)
+    if user.role == 'superuser' and current_user.role != 'superuser':
+        from exceptions import PermissionDeniedError
+        raise PermissionDeniedError('Brak uprawnien do wyswietlenia konta wlasciciela')
+    linked = user_repo.get_linked_employee(user_id)
+    return jsonify({
+        'success': True,
+        'user': {
+            'id': user.id, 'email': user.email, 'full_name': user.full_name,
+            'role': user.role, 'is_active': user.is_active,
+        },
+        'linked_employee': {'id': linked['id'], 'first_name': linked['first_name'], 'last_name': linked['last_name']} if linked else None,
+    })
+
+
 @users_bp.route('/api', methods=['GET'])
 @login_required
 @role_required('superuser', 'admin')
