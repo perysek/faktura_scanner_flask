@@ -73,6 +73,16 @@ infrastrukturalne w `lib/api/client.ts` (pierwsze w SPA wsparcie dla `FormData`/
 `ApiError.data` niosące pełne ciało JSON błędu — potrzebne, żeby czytać `seller_conflict`/
 `seller_info` ze statusu 409, nie tylko string wiadomości).
 
+**✅ Dobudowane 2026-08-24 (deferred-tasks przebieg): `/historia`** — samodzielna strona
+(`HistoryPage`, `pages/history/`), backend (`GET /api/history`) już w pełni JSON, zero zmian
+backendu. **Znaleziony i naprawiony przy okazji portu: pole `entry.timestamp` czytane przez
+oryginalny JS nigdy nie istniało w odpowiedzi API (kolumna DB to `changed_at`)** — każdy wiersz w
+dzisiejszej (Jinja) wersji strony pokazuje puste "—" zamiast daty/czasu, po cichu, bez błędu.
+Naprawione w porcie (użyto realnego pola `changed_at`), nieprzeniesione dalej jako bug. Wciąż
+poza zakresem modułu Faktury: `/import-dokumentow` (staging wielu plików + SSE OCR, patrz punkt 2
+wyżej — to NIE jest to samo, co "Import danych/caldis.pl", który jest zbudowany i osobnym
+modułem).
+
 ## Korekta zakresu — Wizyty + Kalendarz (2026-08-18, przy starcie budowy w Fazie 2)
 
 Audyt z `module-inventory.md`'s prompta dla "Kalendarz wizyt" zakładał drag&drop jako

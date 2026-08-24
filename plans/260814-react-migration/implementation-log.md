@@ -1730,4 +1730,46 @@ naprawiony od razu — `ApiError` w `PastVisitsScanner.tsx`, w końcu nieużyty 
 error-handlingu). `npm run lint` → 0 errors (ten sam jeden nieszkodliwy warning). Backend bez
 zmian — `pytest` nie uruchamiany ponownie.
 
+### Decyzja D39 — Faktury: `/historia` (audit log) + naprawiony bug znaleziony przy porcie
+
+Audyt: `GET /api/history` (`routes/api_routes.py`, `api_bp` pod `/api`) był **już w pełni JSON**.
+Zero zmian backendu — czysty port jednej samodzielnej strony
+(`templates/history/list_refined.html`, 511 linii, tab-bar filtrowany klient-side + tabela z
+odznakami per moduł/akcja).
+
+**Odkrycie — pre-migracyjny bug w oryginalnej stronie, naprawiony podczas portu, nie przeniesiony
+dalej:** oryginalny JS czyta `entry.timestamp` (`formatTimestamp(entry.timestamp)`), ale
+`AuditRepository.get_all()`'s SQL SELECT zwraca kolumnę `changed_at` — pole `timestamp` **nigdy
+nie istniało** w tej odpowiedzi. Efekt w DZISIEJSZEJ (Jinja) wersji strony: `formatTimestamp(undefined)`
+cicho zwraca `{date:'—', time:''}` dla KAŻDEGO wiersza — cała kolumna "Data i czas" jest pusta,
+bez żadnego widocznego błędu w konsoli (nie undefined-property-access crash, po prostu ciche `—`).
+Znalezione przy czytaniu `AuditRepository.get_all()`'s SQL obok oryginalnego JS, żeby wypisać
+poprawny typ TS. Naprawione w porcie: `HistoryPage.tsx` czyta realne pole `changed_at`. Ten sam
+wzorzec co D18 (Faza 1, `ClientDetailPage`'s UTC-off-by-one) i D20 (Dashboard) — port 1:1 nie
+oznacza kopiowania oczywistego, przeoczonego defektu, gdy naprawa jest darmowa przy okazji
+przepisywania tej samej linijki.
+
+**Odkrycie D-CSS1 — kolizje nazw klas CSS z już zbudowanymi stronami, złapane przed commitem:**
+pierwszy szkic `HistoryPage.css` skopiował nazwy klas 1:1 z oryginalnego inline `<style>`
+(`.tab-btn`, `.pagination-bar`, `.tbody-scroll`, `.empty-icon`, `.empty-title`, `.empty-text` itd.)
+— generyczne nazwy, które (Vite bundleuje wszystkie zaimportowane CSS globalnie, bez scopingu)
+kolidowałyby z: `.pagination-bar`/`.pagination-count` już zdefiniowane inaczej w
+`SellersListPage.css`, `.tbody-scroll` w `FakturyListPage.css`, oraz `.empty-icon`/`.empty-text`
+już globalne w `styles/components.css` — ta ostatnia kolizja szczególnie groźna, bo cichaby
+nadpisała wygląd `.empty-text` NA CAŁEJ APLIKACJI, nie tylko na tej stronie. Złapane przed
+napisaniem finalnej wersji przez świadomy grep wszystkich nazw klas z nowego pliku przeciwko
+istniejącym `.css` w repo (nie po fakcie, przez wizualny bug — nie było możliwości wizualnej
+weryfikacji w tej sesji). Naprawione przez prefiks `hx-` na każdej nowej, nie-globalnej klasie —
+ten sam wzorzec co `rbac-`/`ab-`/`di-` już użyte w tej sesji dla `RbacPages.css`/
+`AbsencesPages.css`/`DataImportPage.css`. **Wniosek na przyszłość:** przy kopiowaniu CSS 1:1 z
+oryginalnego inline `<style>`, zawsze grepować nazwy klas przeciwko istniejącym plikom `.css` w
+`frontend/src/` PRZED zapisaniem — nie po.
+
+**Frontend:** `HistoryPage.tsx` + `HistoryPage.css` (nowe), `types/history.ts` (nowy —
+`HistoryEntry` 1:1 z `AuditRepository._COLUMNS`... a właściwie z SQL SELECT w `get_all()`),
+`lib/api/history.ts` (nowy, jeden endpoint).
+
+**Weryfikacja:** `npm run build` → 0 błędów TS, 165 modułów. `npm run lint` → 0 errors (ten sam
+jeden nieszkodliwy warning). Backend bez zmian — `pytest` nie uruchamiany ponownie.
+
 ---
