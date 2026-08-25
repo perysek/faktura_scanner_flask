@@ -118,6 +118,57 @@ komponent `PastVisitsScanner` (trigger + modal) wpięty w nagłówki wszystkich 
 (lista + 3 widoki kalendarza). Wciąż poza zakresem: integracja z Nieobecnościami, SMS na
 widoku szczegółów, `status-events` polling.
 
+## ✅ Dobudowane 2026-08-25: Wizyty↔Nieobecności integracja + status-events + balance-hints
+
+Trzy z sześciu odłożonych kawałków (Wizyty: integracja z Nieobecnościami + status-events polling;
+Nieobecności: balance-hints) zbudowane w jednym przebiegu — wybrane przez użytkownika z listy
+sześciu, z jawnym pominięciem czwartego (SMS panel na widoku szczegółów wizyty, wciąż poza
+zakresem — własny moduł Ustawienia SMS).
+
+**Reassign/reschedule/cancel-for-absence (wspólny komponent).** Backend już w pełni gotowy
+(`@absence_management_required` cluster w `routes/appointment_routes.py` +
+`routes/absence_routes.py`'s `/absences/<id>/conflicts|resolutions`), ale **referencyjny UI nie
+istniał w żadnym szablonie React ani nawet w aktualnym `templates/absences/management.html`** —
+znaleziony dopiero w `static/js/absences.js` (wciąż żywy w drzewie, 646 linii dodanych w commicie
+`9bee59c`, nigdy nie usunięty mimo że sam szablon go nie referencuje wprost). Ported 1:1 jako
+`frontend/src/pages/absences/ConflictResolutionModal.tsx` — state machine (list → reassign/
+no-candidates → reschedule), bulk-apply, resolution-history leaf view — wpięty w
+`AbsencesManagementPage`'s "Zatwierdź" flow (jedyny punkt wejścia, jaki ta funkcja kiedykolwiek
+miała — nie ma osobnego UI po stronie Wizyt, ani w legacy, ani teraz).
+
+**Znaleziony przy okazji: prawdopodobny żywy bug w produkcyjnym Jinja-appce.**
+`static/js/absences.js` woła `reassignment-candidates`/`reassign-for-absence`/
+`reschedule-for-absence`/`cancel-for-absence`/`available-slots` pod ścieżką `/appointments/...`
+(bez prefiksu). `appointment_bp` jest zarejestrowany z `url_prefix='/api'` (`app.py:257`, od
+commita `b057e92` — czyli od zawsze) — te cztery fetch-e powinny więc 404-ować. Siostrzane wołania
+pod `absence_bp` (`/absences/<id>/conflicts|resolutions|approve|reject` — ten blueprint nie ma
+prefiksu, `app.py:266`) są poprawne. Wniosek: przyciski "Zmień stylistę"/"Zmień termin"/"Anuluj
+wizytę" w dzisiejszym panelu admina prawdopodobnie nigdy nie zadziałały — 32 testy jednostkowe z
+`9bee59c` testują funkcje widoku bezpośrednio (Flask test client z poprawnym URL-em), nie łapią
+błędnej ścieżki we froncie. Port używa poprawnych, zweryfikowanych ścieżek `/api/appointments/...`
+— **błąd NIE został przeniesiony**, ale też nie naprawiony w legacy Jinja (poza zakresem tego
+przebiegu — do decyzji użytkownika, czy warto łatać coś, co i tak jest zastępowane).
+
+**status-events (globalne toasty).** Referencja: `templates/base.html` linie ~307-419 (wciąż żywe
+dla stron Jinja) — 5-sekundowy polling `/api/appointments/status-events?since=`, pauza na
+`document.hidden`, catch-up przy powrocie. Ported jako `frontend/src/components/feedback/
+StatusEventsPoller.tsx`, montowany raz w `main.tsx` obok `RouterProvider` (wewnątrz
+`AuthProvider`+`ToastProvider` — potrzebuje obu). Renderuje `null`, dostarcza przez już istniejący
+`useToast().info()` (cap 3 + auto-dismiss już tam jest, nie trzeba było powielać DOM-owej
+bookkeepingu z legacy).
+
+**balance-hints w tabeli.** CSS (`.balance-hint`/`.warning`/`.exceeded`) już istniał w
+`AbsencesPages.css` z wcześniejszej sesji — tylko dociągnięcie danych
+(`GET /api/absence-balances/summary`, już w pełni JSON) i renderowanie w obu tabelach (Wnioski +
+L4/Manualne), keyed po `employee_id`+`category_id` jak w referencyjnym
+`populateBalanceHints()`.
+
+Weryfikacja: `npm run build`/`lint` zielone (0 błędów; jeden nie-mój, przedistniejący warning w
+`useFocusTrap.ts`). Backend bez zmian — `pytest` nie uruchamiany (ten sam wzorzec co Bilanse/Import
+danych). Wizualna weryfikacja na żywo nie wykonana — sprawdzić aktualny stan narzędzi
+przeglądarkowych w tym środowisku ([[react-migration-browser-tooling-gap]] w pamięci) przed
+zamknięciem tego zadania jako w pełni zweryfikowanego.
+
 ## ✅ 12 usterek UI z dwóch rund QA — naprawione i ZATWIERDZONE przez użytkownika, 2026-08-19
 
 Dwie rundy poprawek tego samego dnia: pierwsza runda — 7 usterek z pierwszego ręcznego
@@ -258,7 +309,7 @@ tego planu ponad zaakceptowany zakres (pilot + inwentaryzacja).
 > KPI), żeby dało się zaprojektować typy TS bez zgadywania."*
 
 ### RBAC — Użytkownicy i Role (siatka uprawnień)
-> *"Przeczytaj `routes/users/routes.py` i `routes/roles/routes.py` w całości. Wypisz, które
+>*"Przeczytaj `routes/users/routes.py` i `routes/roles/routes.py` w całości. Wypisz, które
 > endpointy zwracają JSON a które renderują Jinja — dla renderowanych, opisz czy dane do
 > uzupełnienia siatki uprawnień (`.permission-tile` wspomniana w DESIGN.md) są już dostępne przez
 > jakiś istniejący endpoint JSON, czy trzeba by je dopiero zbudować. Znajdź i pokaż szablon

@@ -166,3 +166,44 @@
   pointer-events: auto;
 }
 .action-icon-btn.danger-reveal:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.1); }
+
+/* ConflictResolutionModal (reassign/reschedule/cancel-for-absence, 2026-08-25) */
+.crm-history-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.crm-history-link:hover { color: var(--color-ink); }
+
+.crm-candidate-row { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.crm-warning-icon { display: inline-flex; color: #b45309; }
+
+.crm-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-subtle);
+  margin-bottom: 0.5rem;
+}
+
+.crm-slots { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.crm-slot-btn {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.crm-slot-btn:hover { border-color: var(--color-ink-muted); }
+.crm-slot-btn.selected { background: var(--color-ink); color: var(--color-on-ink, #fff); border-color: var(--color-ink); }

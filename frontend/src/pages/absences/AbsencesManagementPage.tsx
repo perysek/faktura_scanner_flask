@@ -9,8 +9,9 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { CategoryFormModal } from './CategoryFormModal';
+import { ConflictResolutionModal } from './ConflictResolutionModal';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AbsenceCategory, AbsenceRecord, AppointmentConflict } from '../../types/absence';
+import type { AbsenceCategory, AbsenceRecord, AppointmentConflict, BalanceSummaryEntry } from '../../types/absence';
 import type { EmployeeListRow } from '../../types/employee';
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
@@ -26,20 +27,38 @@ function formatPeriod(a: AbsenceRecord) {
   return `${a.date_from} – ${a.date_to}`;
 }
 
+/** Inline "(2.0/5d)" balance annotation next to an employee's name — ported
+ * from management.html's `populateBalanceHints()`. `summary` is keyed by
+ * employee_id; a row only gets a hint when that employee's "primary" tracked
+ * category (the one the summary carries) matches the absence's own category
+ * — an employee can have several tracked categories, the endpoint only
+ * returns one per employee. */
+function renderBalanceHint(a: AbsenceRecord, summary: Record<number, BalanceSummaryEntry>) {
+  const b = summary[a.employee_id];
+  if (!b || b.category_id !== a.category_id) return null;
+  const unitLabel = b.unit === 'hours' ? 'h' : 'd';
+  const cls = b.status === 'exceeded' ? ' exceeded' : b.status === 'warning' ? ' warning' : '';
+  return (
+    <span className={`balance-hint${cls}`}>
+      ({b.used.toFixed(1)}/{b.limit}
+      {unitLabel})
+    </span>
+  );
+}
+
 type SortKey = 'employee' | 'category' | 'period' | 'status' | 'requested' | 'responded';
 
 /** Zarządzanie nieobecnościami — supervisor "Wnioski" + "L4/Manualne" +
  * "Kategorie" tabs. Ported from templates/absences/management.html +
  * static/js/absences.js.
  *
- * Deliberately still deferred (documented in implementation-log.md, same
- * pattern as the already-deferred Wizyty↔Nieobecności integration): the
- * per-conflict reassign/reschedule steps in the approve-conflict flow (here
- * it's list + force-approve only), the read-only resolution-history view
- * (depends on those actions existing to have anything to show), and the
- * inline balance-hint annotations next to employee names. Superuser
- * hard-delete (absences + categories) IS implemented — see D37 in
- * implementation-log.md. */
+ * Superuser hard-delete (absences + categories) — see D37 in
+ * implementation-log.md. As of 2026-08-25: the per-conflict reassign/
+ * reschedule/cancel steps in the approve-conflict flow, the read-only
+ * resolution-history view, and inline balance-hint annotations next to
+ * employee names are also implemented — see `ConflictResolutionModal.tsx`
+ * and `renderBalanceHint` below. Still deliberately out of scope: SMS on the
+ * Wizyty detail page (own module). */
 export function AbsencesManagementPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -64,8 +83,9 @@ export function AbsencesManagementPage() {
 
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [conflictModal, setConflictModal] = useState<{ absenceId: number; conflicts: AppointmentConflict[] } | null>(null);
+  const [conflictModal, setConflictModal] = useState<{ absenceId: number; employeeId: number; conflicts: AppointmentConflict[] } | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [balanceSummary, setBalanceSummary] = useState<Record<number, BalanceSummaryEntry>>({});
 
   function reload() {
     setLoading(true);
@@ -85,6 +105,11 @@ export function AbsencesManagementPage() {
   useEffect(() => {
     absencesApi.allCategories().then(setCategories);
     employeesApi.list({ activeOnly: true }).then(setEmployees);
+    // Non-critical — balance hints just don't render if this fails.
+    absencesApi
+      .balancesSummary()
+      .then((r) => setBalanceSummary(r.balances))
+      .catch(() => {});
   }, []);
 
   const sortedRequests = useMemo(() => {
@@ -125,7 +150,10 @@ export function AbsencesManagementPage() {
         return;
       }
       if (result.status === 'conflict') {
-        setConflictModal({ absenceId: id, conflicts: result.conflicts ?? [] });
+        // "Zatwierdź" only ever appears on `requests` rows (manual absences
+        // are auto-approved) — the employee_id is already in hand.
+        const employeeId = requests.find((r) => r.id === id)?.employee_id ?? 0;
+        setConflictModal({ absenceId: id, employeeId, conflicts: result.conflicts ?? [] });
       } else {
         toast.success('Wniosek zatwierdzony');
         reload();
@@ -137,20 +165,17 @@ export function AbsencesManagementPage() {
     }
   }
 
-  async function handleForceApprove() {
+  // True-approve/force-approve now live inside ConflictResolutionModal itself
+  // (D-2026-08-25) — these two just close the modal and reflect the outcome.
+  function handleConflictModalApproved() {
+    setConflictModal(null);
+    reload();
+  }
+
+  function handleConflictModalReject() {
     if (!conflictModal) return;
-    try {
-      const result = await absencesApi.forceApprove(conflictModal.absenceId);
-      if (result.success) {
-        toast.success('Wniosek zatwierdzony mimo konfliktów');
-        setConflictModal(null);
-        reload();
-      } else {
-        toast.error(result.error);
-      }
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Błąd zatwierdzania');
-    }
+    setRejectId(conflictModal.absenceId);
+    setConflictModal(null);
   }
 
   async function handleRejectSubmit() {
@@ -347,7 +372,7 @@ export function AbsencesManagementPage() {
                     return (
                       <tr key={a.id}>
                         <td className="cell-name" style={{ fontWeight: 500 }}>
-                          {a.employee_name}
+                          {a.employee_name} {renderBalanceHint(a, balanceSummary)}
                         </td>
                         <td data-label="Kategoria">
                           {a.category_name}
@@ -413,6 +438,7 @@ export function AbsencesManagementPage() {
           employees={employees}
           manualList={manualList}
           loading={loading}
+          balanceSummary={balanceSummary}
           onCreated={reload}
           onDelete={handleDeleteManual}
         />
@@ -443,50 +469,15 @@ export function AbsencesManagementPage() {
         </div>
       </Modal>
 
-      <Modal isOpen={conflictModal !== null} onClose={() => setConflictModal(null)} title="Konflikty z wizytami klientów" size="large">
-        {conflictModal && conflictModal.conflicts.length === 0 ? (
-          <p style={{ color: 'var(--color-success)', fontSize: '0.8125rem' }}>Wszystkie konflikty rozwiązane — możesz zatwierdzić wniosek.</p>
-        ) : (
-          <>
-            <p style={{ color: 'var(--color-ink-subtle)', fontSize: '0.8125rem', marginBottom: '1rem' }}>
-              Zatwierdzenie tej nieobecności koliduje z poniższymi wizytami klientów. Zmiana stylisty/terminu per wizyta nie jest jeszcze dostępna z tego widoku — zatwierdź mimo to lub odrzuć
-              wniosek.
-            </p>
-            <div className="table-container">
-              <table className="refined-table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Godzina</th>
-                    <th>Klient</th>
-                    <th>Usługa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conflictModal?.conflicts.map((c) => (
-                    <tr key={c.appointment_id}>
-                      <td>{c.date}</td>
-                      <td>
-                        {c.start_time.slice(0, 5)} – {c.end_time.slice(0, 5)}
-                      </td>
-                      <td>{c.client_name ?? '—'}</td>
-                      <td>{c.service_name ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-        <div className="form-actions">
-          <Button variant="danger" onClick={handleForceApprove}>
-            Zatwierdź mimo to
-          </Button>
-          <Button variant="secondary" onClick={() => setConflictModal(null)}>
-            Anuluj
-          </Button>
-        </div>
-      </Modal>
+      <ConflictResolutionModal
+        isOpen={conflictModal !== null}
+        absenceId={conflictModal?.absenceId ?? null}
+        employeeId={conflictModal?.employeeId ?? null}
+        initialConflicts={conflictModal?.conflicts ?? []}
+        onClose={() => setConflictModal(null)}
+        onReject={handleConflictModalReject}
+        onApproved={handleConflictModalApproved}
+      />
 
       <CategoryFormModal isOpen={categoryModal.open} category={categoryModal.category} onClose={() => setCategoryModal({ open: false, category: null })} onSaved={reload} />
     </div>
@@ -601,11 +592,12 @@ interface ManualTabProps {
   employees: EmployeeListRow[];
   manualList: AbsenceRecord[];
   loading: boolean;
+  balanceSummary: Record<number, BalanceSummaryEntry>;
   onCreated: () => void;
   onDelete: (a: AbsenceRecord) => void;
 }
 
-function ManualTab({ categories, employees, manualList, loading, onCreated, onDelete }: ManualTabProps) {
+function ManualTab({ categories, employees, manualList, loading, balanceSummary, onCreated, onDelete }: ManualTabProps) {
   const toast = useToast();
   const confirm = useConfirm();
   const [employeeId, setEmployeeId] = useState('');
@@ -826,7 +818,7 @@ function ManualTab({ categories, employees, manualList, loading, onCreated, onDe
                 {manualList.map((a) => (
                   <tr key={a.id}>
                     <td className="cell-name" style={{ fontWeight: 500 }}>
-                      {a.employee_name}
+                      {a.employee_name} {renderBalanceHint(a, balanceSummary)}
                     </td>
                     <td data-label="Kategoria">{a.category_name}</td>
                     <td data-label="Okres" style={{ whiteSpace: 'nowrap' }}>

@@ -4,12 +4,18 @@ import type {
   AppointmentFormService,
   AppointmentsListResponse,
   AppointmentStatus,
+  AvailableSlotsResponse,
   CalendarAbsence,
+  CancelForAbsenceResult,
   ConflictCheckResult,
   EmployeeOption,
   MultiEmployeeScheduleResponse,
   PastPendingAppointment,
   PastResolutionStatus,
+  ReassignForAbsenceResult,
+  ReassignmentCandidate,
+  RescheduleForAbsenceResult,
+  StatusEventsResponse,
 } from '../../types/appointment';
 
 interface CreateAppointmentPayload {
@@ -50,9 +56,10 @@ interface UpdateAppointmentPayload {
 /**
  * Client-side wrapper over `routes/appointment_routes.py`'s `/api/appointments/*`
  * (module-inventory.md: szósty moduł Fazy 2). Only the endpoints this round's
- * pages actually use — the absence-conflict-resolution and SMS-adjacent
- * endpoints are deliberately not wrapped here (out of scope, see
- * `types/appointment.ts`'s header comment).
+ * pages actually use — the SMS-adjacent endpoints are deliberately not
+ * wrapped here (still out of scope, see `types/appointment.ts`'s header
+ * comment). The absence-conflict-resolution cluster (below) was dobudowane
+ * 2026-08-25.
  */
 export const appointmentsApi = {
   /** GET /api/appointments — date-range/employee/status filtered list.
@@ -112,4 +119,35 @@ export const appointmentsApi = {
 
   updatePastStatus: (appointmentId: number, status: PastResolutionStatus, cancellationReason?: string) =>
     api.put<{ success: true; message: string }>(`/api/appointments/${appointmentId}/past-status`, { status, cancellation_reason: cancellationReason }),
+
+  // ── Absence conflict-resolution (dobudowane 2026-08-25) ──────────────────
+  // NOTE — root-cause fix vs. the reference implementation: `static/js/
+  // absences.js` (the legacy Jinja port source) calls these four endpoints
+  // WITHOUT the `/api` prefix (e.g. `fetch('/appointments/.../reassign-for-
+  // absence')`). `appointment_bp` is registered with `url_prefix='/api'`
+  // (app.py:257) and has been since its introduction (b057e92) — so every
+  // one of those legacy calls 404s. Only the sibling `absence_bp`-routed
+  // calls in that same modal (list conflicts, resolutions, approve/reject)
+  // work, because `absence_bp` has no prefix (app.py:266). This means the
+  // "Zmień stylistę" / "Zmień termin" / "Anuluj wizytę" actions in the
+  // live legacy admin panel have likely never worked — not ported here.
+
+  reassignmentCandidates: (appointmentId: number) =>
+    api.get<{ success: true; candidates: ReassignmentCandidate[] }>(`/api/appointments/${appointmentId}/reassignment-candidates`).then((r) => r.candidates),
+
+  reassignForAbsence: (appointmentId: number, payload: { absence_id: number; new_employee_id: number; bulk: boolean }) =>
+    api.post<ReassignForAbsenceResult | { success: false; error: string }>(`/api/appointments/${appointmentId}/reassign-for-absence`, payload),
+
+  rescheduleForAbsence: (appointmentId: number, payload: { absence_id: number; new_date: string; new_start_time: string; new_end_time: string }) =>
+    api.post<RescheduleForAbsenceResult | { success: false; error: string }>(`/api/appointments/${appointmentId}/reschedule-for-absence`, payload),
+
+  cancelForAbsence: (appointmentId: number, payload: { absence_id: number; cancellation_reason: string; send_sms: boolean; bulk: boolean }) =>
+    api.post<CancelForAbsenceResult | { success: false; error: string }>(`/api/appointments/${appointmentId}/cancel-for-absence`, payload),
+
+  availableSlots: (params: { employee_id: number; date: string; duration: number }) =>
+    api.get<AvailableSlotsResponse>('/api/appointments/available-slots', params).then((r) => r.slots.filter((s) => s.available)),
+
+  // ── Global status-change toasts (dobudowane 2026-08-25) ──────────────────
+  /** GET /api/appointments/status-events?since=<ISO> — see StatusEventsPoller. */
+  statusEvents: (since: string) => api.get<StatusEventsResponse>('/api/appointments/status-events', { since }),
 };

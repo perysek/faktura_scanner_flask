@@ -4,12 +4,16 @@
  * implementation-log.md dla pełnej listy odłożonych kawałków): lista, widok
  * szczegółów, formularz create/edit, 3 widoki kalendarza (dzień/tydzień/miesiąc),
  * boczny pasek month-cards, skaner "przeszłych wizyt do rozliczenia" (dodany
- * później, deferred-tasks przebieg 2026-08-24). Poza zakresem: integracja z
- * nieobecnościami (reassign/reschedule/cancel-for-absence — własny moduł),
- * wysyłka/log SMS na widoku szczegółów (własny moduł Ustawienia SMS),
- * superadmin power-editor (już poza zakresem — osobny moduł
- * `data_correction`), `/my-visits` (mobilny widok pracownika, bez bramki
- * modułowej — nie ten frontend). */
+ * później, deferred-tasks przebieg 2026-08-24). **2026-08-25:** integracja z
+ * nieobecnościami (reassign/reschedule/cancel-for-absence, gate
+ * `@absence_management_required`) i globalne toasty statusu (status-events
+ * polling) DOBUDOWANE — patrz `ReassignmentCandidate`/`AvailableSlot`/
+ * `StatusChangeEvent` niżej, `pages/absences/ConflictResolutionModal.tsx` i
+ * `components/feedback/StatusEventsPoller.tsx`. Wciąż poza zakresem: wysyłka/
+ * log SMS na widoku szczegółów (własny moduł Ustawienia SMS), superadmin
+ * power-editor (już poza zakresem — osobny moduł `data_correction`),
+ * `/my-visits` (mobilny widok pracownika, bez bramki modułowej — nie ten
+ * frontend). */
 
 export type AppointmentStatus = 'scheduled' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
@@ -179,4 +183,70 @@ export interface MultiEmployeeScheduleResponse {
   total_pages: number;
   has_prev: boolean;
   has_next: boolean;
+}
+
+// ── Absence conflict-resolution (Faza 3, dobudowane 2026-08-25) ─────────────
+// `routes/appointment_routes.py`'s `@absence_management_required` cluster —
+// consumed by `pages/absences/ConflictResolutionModal.tsx`, triggered from
+// AbsencesManagementPage's approve-conflict flow (the only entry point this
+// ever had, even in the legacy Jinja app — there is no separate Wizyty-side
+// UI for it).
+
+/** GET /api/appointments/<id>/reassignment-candidates — eligible replacement
+ * employees (`AppointmentBusinessService.get_reassignment_candidates`: can
+ * perform every service ∩ not absence-approved ∩ not double-booked).
+ * `is_preferred: false` flags a stylist not on the client's preferred list —
+ * shown as a warning icon, not a disqualification. */
+export interface ReassignmentCandidate {
+  employee_id: number;
+  name: string;
+  position: string | null;
+  is_preferred: boolean;
+}
+
+export interface ReassignForAbsenceResult {
+  success: true;
+  /** Appointment ids the reassignment was applied to (always includes the
+   * triggering one; more than one only when `bulk: true`). */
+  applied: number[];
+  /** bulk-only: appointment ids skipped because this employee wasn't a valid
+   * candidate for them — surfaced to the user, not silently dropped. */
+  skipped: number[];
+}
+
+export interface RescheduleForAbsenceResult {
+  success: true;
+  appointment_id: number;
+}
+
+export interface CancelForAbsenceResult {
+  success: true;
+  applied: number[];
+}
+
+/** GET /api/appointments/available-slots — reschedule step's date picker. */
+export interface AvailableSlot {
+  start_time: string;
+  end_time: string;
+  available: boolean;
+}
+
+export interface AvailableSlotsResponse {
+  success: true;
+  slots: AvailableSlot[];
+}
+
+// ── Global status-change toasts (Faza "P10", dobudowane 2026-08-25) ─────────
+// Ported from templates/base.html's 5s-poll toast, which is still live for
+// the legacy Jinja pages — same endpoint, same `since=`/`server_time`
+// catch-up contract, now also driving `StatusEventsPoller`.
+
+export interface StatusChangeEvent {
+  client_name: string | null;
+  new_status: AppointmentStatus;
+}
+
+export interface StatusEventsResponse {
+  events: StatusChangeEvent[];
+  server_time: string;
 }
