@@ -459,13 +459,20 @@ def create_app():
 
     # SMS auto-send background scheduler
     app.config['BASE_URL'] = os.environ.get('BASE_URL', 'http://localhost:5000')
-    try:
-        from scheduler import start_scheduler, stop_scheduler
-        import atexit as _atexit
-        start_scheduler(app)
-        _atexit.register(stop_scheduler)
-    except Exception as _sched_err:
-        logging.warning("SMS scheduler not started: %s", _sched_err)
+
+    # The advisory-lock guard in scheduler.py only checks once at startup and
+    # can be silently orphaned (lock-holding connection dies without the
+    # process crashing), so a second, non-production instance pointed at the
+    # same DB (e.g. a preview deployment) must opt out explicitly rather than
+    # rely on the lock alone.
+    if os.environ.get('ENABLE_SMS_SCHEDULER', '1') != '0':
+        try:
+            from scheduler import start_scheduler, stop_scheduler
+            import atexit as _atexit
+            start_scheduler(app)
+            _atexit.register(stop_scheduler)
+        except Exception as _sched_err:
+            logging.warning("SMS scheduler not started: %s", _sched_err)
 
     # Static-asset cache busting. nginx serves /static as immutable, max-age=1y,
     # so a stable URL pins returning browsers to a stale file after a deploy —
