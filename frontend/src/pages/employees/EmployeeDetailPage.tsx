@@ -14,6 +14,7 @@ import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatPLN } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useEscapeClose } from '../../lib/a11y/useEscapeClose';
+import { EmployeeAnalyticsSection } from './EmployeeAnalyticsSection';
 import type { BalanceAdjustment } from '../../types/employee';
 import type { Service } from '../../types/service';
 
@@ -45,9 +46,8 @@ function skillBadgeStyle(rating: number): { background: string; color: string } 
  * żądanie), umiejętności/specjalizacje, harmonogram, przypisane usługi
  * (inline formularz dodawania — ten sam mechanizm co oryginał: pobierz
  * WSZYSTKIE aktywne usługi, odfiltruj już przypisane po stronie klienta).
- * Zakładki "Analizy i wyniki" (5 zakładek, 8+ wykresów Chart.js, heatmapa,
- * radar) ŚWIADOMIE odłożone — patrz implementation-log.md, porównywalny
- * zakres do osobno śledzonego modułu "Analityka".
+ * Zakładki "Analizy i wyniki" (5 zakładek, 8 wykresów Chart.js, heatmapa,
+ * radar) — patrz EmployeeAnalyticsSection.tsx.
  */
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -566,11 +566,8 @@ export function EmployeeDetailPage() {
         </div>
       )}
 
-      {/* Analizy i wyniki — świadomie odłożone, patrz komentarz na górze pliku */}
-      <div className="refined-card">
-        <h2 className="section-title">Analizy i wyniki</h2>
-        <div className="analytics-deferred-note">Szczegółowe analizy (przychody, wizyty, umiejętności, satysfakcja) będą dostępne wkrótce — moduł w przygotowaniu.</div>
-      </div>
+      {/* Analizy i wyniki */}
+      <EmployeeAnalyticsSection employeeId={employee.id} />
 
       {/* Akcje */}
       <div className="refined-card">

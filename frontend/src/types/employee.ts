@@ -1,8 +1,8 @@
 /** Types for the Pracownicy module — Faza 2. Największy moduł dotąd:
  * lista, create/edit (z mobile-pin i pickerem podwładnych), szczegóły
  * (dane + bilanse nieobecności + umiejętności/specjalizacje + harmonogram +
- * przypisane usługi — zakładki Analizy i wyniki ŚWIADOMIE odłożone, patrz
- * implementation-log.md), formy zatrudnienia. */
+ * przypisane usługi + zakładki Analizy i wyniki — patrz
+ * types/employeeAnalytics.ts), formy zatrudnienia. */
 
 export type EmploymentStatus = 'active' | 'on_leave' | 'terminated';
 

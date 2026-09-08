@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react'
 
 // Dev-server proxy target for the Flask backend. Override with
 // VITE_API_PROXY_TARGET if your local Flask instance runs on a different
-// port (see implementation-log.md, Decision D2 — no explicit app.run(port=...)
-// was found in the repo, so this assumes the Flask default of 5000).
-const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:5000'
+// port. Defaults to 5002 — the port dev-start.ps1 always uses for this
+// project (not Flask's own default 5000/5001, chosen specifically to avoid
+// colliding with an unrelated local project that hardcodes 5001).
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:5002'
 
 // https://vite.dev/config/
 export default defineConfig({
