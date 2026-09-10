@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArcElement,
   BarController,
@@ -43,14 +43,25 @@ Chart.register(
  * always destroyed first so re-renders never leak canvases.
  */
 export function useChartCanvas(configFactory: () => ChartConfiguration | null, deps: unknown[]) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // A plain `useRef` here would race with `deps`: the tab's 4 parallel
+  // fetches resolve independently, and the canvas only mounts once ALL of
+  // them are done (`loading` flips false). Whichever chart's data resolved
+  // *before* that point already has a stable `deps` value by the time the
+  // canvas appears — its effect's deps didn't change on that render, so the
+  // effect never re-fires and the chart is never created. Only the chart
+  // whose data happened to resolve *last* gets a fresh dep on the exact
+  // render the canvas mounts. A callback ref (backed by state) fixes this:
+  // React calls it — and updates `canvas`, a real dependency — the instant
+  // the DOM node itself appears, independent of whether the data deps
+  // changed on that same render.
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  const canvasRef = useCallback((node: HTMLCanvasElement | null) => setCanvas(node), []);
   const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
     // `Chart.getChart(canvas)` (not just `chartRef.current`) catches any
     // instance still attached to this exact canvas element — belt-and-
     // suspenders against the ref falling out of sync with reality.
-    const canvas = canvasRef.current;
     if (canvas) Chart.getChart(canvas)?.destroy();
     chartRef.current = null;
     if (!canvas) return;
@@ -62,7 +73,7 @@ export function useChartCanvas(configFactory: () => ChartConfiguration | null, d
       chartRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [canvas, ...deps]);
 
   return canvasRef;
 }
