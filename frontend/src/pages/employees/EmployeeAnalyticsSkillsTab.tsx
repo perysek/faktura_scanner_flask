@@ -17,6 +17,12 @@ export function EmployeeAnalyticsSkillsTab({ employeeId }: { employeeId: number 
   const rated = services.filter((s) => s.skill_rating !== null);
 
   const radarRef = useChartCanvas(() => {
+    // Recomputed here rather than depending on the component-body `rated` —
+    // `.filter()` returns a new array every render, and using that as this
+    // hook's dep would destroy + recreate the chart on every unrelated
+    // re-render (and, via Chart.js's shared RAF draw scheduler, could
+    // disrupt other charts' first paint too). `services` stays stable.
+    const rated = services.filter((s) => s.skill_rating !== null);
     if (rated.length < 3) return null;
     return {
       type: 'radar',
@@ -50,7 +56,7 @@ export function EmployeeAnalyticsSkillsTab({ employeeId }: { employeeId: number 
         scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, pointLabels: { font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } } },
       },
     };
-  }, [rated]);
+  }, [services]);
 
   async function saveSkillRating(esId: number, score: number) {
     try {

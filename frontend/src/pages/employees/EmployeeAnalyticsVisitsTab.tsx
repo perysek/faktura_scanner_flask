@@ -23,7 +23,7 @@ export function EmployeeAnalyticsVisitsTab({ employeeId }: { employeeId: number 
 
   const trend = trendState.data ?? [];
   const split = splitState.data ?? [];
-  const mix = (mixState.data ?? []).slice(0, 8);
+  const mix = mixState.data ?? [];
   const peak = peakState.data ?? [];
   const loading = trendState.loading || splitState.loading || mixState.loading || peakState.loading;
   const error = trendState.error || splitState.error || mixState.error || peakState.error;
@@ -71,11 +71,17 @@ export function EmployeeAnalyticsVisitsTab({ employeeId }: { employeeId: number 
 
   const servicesMixChartRef = useChartCanvas(() => {
     if (mix.length === 0) return null;
+    // Sliced here, not in the component-body `mix` — `.slice()` returns a new
+    // array every render, and using that as this hook's dep would destroy +
+    // recreate the chart (and disrupt Chart.js's shared RAF-based draw
+    // scheduler for every other chart on the page) on every unrelated
+    // re-render. `mix` itself stays referentially stable across renders.
+    const top8 = mix.slice(0, 8);
     return {
       type: 'doughnut',
       data: {
-        labels: mix.map((s) => s.service_name),
-        datasets: [{ data: mix.map((s) => s.appointment_count), backgroundColor: DOUGHNUT_PALETTE, borderWidth: 1, borderColor: 'white' }],
+        labels: top8.map((s) => s.service_name),
+        datasets: [{ data: top8.map((s) => s.appointment_count), backgroundColor: DOUGHNUT_PALETTE, borderWidth: 1, borderColor: 'white' }],
       },
       options: { ...CHART_BASE_OPTIONS, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
     };

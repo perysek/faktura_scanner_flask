@@ -47,14 +47,20 @@ export function useChartCanvas(configFactory: () => ChartConfiguration | null, d
   const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    chartRef.current?.destroy();
-    chartRef.current = null;
+    // `Chart.getChart(canvas)` (not just `chartRef.current`) catches any
+    // instance still attached to this exact canvas element — belt-and-
+    // suspenders against the ref falling out of sync with reality.
     const canvas = canvasRef.current;
+    if (canvas) Chart.getChart(canvas)?.destroy();
+    chartRef.current = null;
     if (!canvas) return;
     const config = configFactory();
     if (!config) return;
     chartRef.current = new Chart(canvas, config);
-    return () => chartRef.current?.destroy();
+    return () => {
+      chartRef.current?.destroy();
+      chartRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
