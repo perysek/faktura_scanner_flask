@@ -391,9 +391,21 @@ export function WizytyListPage() {
                         {formatPLN(appt.total_price)}
                       </td>
                       <td data-label="Status">
-                        <span className={`status-badge clickable ${appt.status}`} onClick={(e) => { e.stopPropagation(); setStatusModalAppt(appt); }}>
+                        {/* Real <button>, not a <span> with an onClick — the
+                            span had tabIndex=-1, no role, no keydown
+                            handler: mouse-only, unreachable via Tab, and
+                            invisible to a screen reader as an interactive
+                            control (audit finding #4,
+                            mobile-audit-wizyty-list.md). Buttons get
+                            keyboard/focus semantics for free. */}
+                        <button
+                          type="button"
+                          className={`status-badge clickable ${appt.status}`}
+                          aria-label={`Zmień status wizyty: ${STATUS_LABELS[appt.status]}`}
+                          onClick={(e) => { e.stopPropagation(); setStatusModalAppt(appt); }}
+                        >
                           {STATUS_LABELS[appt.status]}
-                        </span>
+                        </button>
                       </td>
                       <td data-label="Ocena">
                         <span className={appt.satisfaction_score ? 'stars-desktop' : 'stars-none'}>{stars(appt.satisfaction_score)}</span>

@@ -78,8 +78,21 @@
 .status-badge.completed { background: rgba(45,106,79,0.08); color: #2d6a4f; }
 .status-badge.cancelled { background: rgba(239,68,68,0.08); color: #991b1b; }
 .status-badge.no_show { background: rgba(107,114,128,0.1); color: #374151; }
-.status-badge.clickable { cursor: pointer; transition: opacity 0.15s ease; }
+/* .status-badge.clickable now renders as a real <button> (audit finding
+   #4, mobile-audit-wizyty-list.md) — the reset below undoes the browser's
+   default button chrome so it still looks like the plain colored pill it
+   always was; the per-status background/color rules above still win since
+   they're just as specific and come later. The `:focus-visible` ring is
+   new: the previous <span> had no focus state at all, since a mouse-only
+   span can't be focused in the first place. */
+.status-badge.clickable {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
 .status-badge.clickable:hover { opacity: 0.7; }
+.status-badge.clickable:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 /* Status-change modal (StatusChangeModal.tsx) */
 .modal-status-options { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
