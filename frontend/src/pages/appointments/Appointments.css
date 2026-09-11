@@ -84,6 +84,17 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 @media (max-width: 640px) {
   .view-toggle { display: none !important; }
   .list-search { max-width: none; margin-left: 0; flex-basis: 100%; }
+
+  /* Date-nav toolbar (nav buttons + date picker + employee filter + search)
+     crams 9 items into one wrapped row on desktop — fine there, but on a
+     phone-width viewport it needs each logical group on its own line for
+     comfortable tap targets, not a jumble of half-width fragments. */
+  .date-nav-range { flex: 1 1 100%; order: 1; text-align: center; }
+  .empf-divider { display: none; }
+  .empf-label { flex: 1 1 100%; order: 2; margin-top: 0.125rem; }
+  .empf-pills, .empf-dropdown { flex: 1 1 100%; order: 3; }
+  .empf-pills { flex-wrap: wrap; }
+  .list-search { order: 4; }
 }
 
 /* ── Calendar grid views (day/week/month) ───────────────────────────────── */

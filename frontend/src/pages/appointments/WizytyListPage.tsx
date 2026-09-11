@@ -356,7 +356,7 @@ export function WizytyListPage() {
                   const past = mode === 'chain' && isPast(appt.appointment_date, appt.end_time);
                   return (
                     <tr key={appt.id} className={`row-clickable${isWeekend(appt.appointment_date) ? ' weekend-row' : ''}${past ? ' row-past' : ''}`} onClick={(e) => handleRowClick(appt, e)}>
-                      <td className="cell-date" data-label="Data">
+                      <td className="cell-date cell-name" data-label="Data">
                         {formatDateShort(appt.appointment_date)}
                       </td>
                       <td className="cell-time" data-label="Godzina">
