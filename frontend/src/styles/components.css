@@ -341,7 +341,17 @@
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  /* flex-start (not center) on purpose, unconditionally — this used to be
+     `center` here with a @max-width:768px override flipping it to
+     flex-start for the mobile column-stack. Two conflicting declarations
+     of the same property on the same selector meant the WINNER depended
+     on which one the bundler happened to emit last (Vite/esbuild doesn't
+     guarantee a base rule stays before its own later media-query block
+     once other files' CSS gets concatenated in between) — align-items
+     was computing `center` at every viewport, mobile included, regardless
+     of this file's own override 20 lines down (audit finding #2,
+     mobile-audit-wizyty-list.md). One declaration, no order dependency. */
+  align-items: flex-start;
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
@@ -357,7 +367,6 @@
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
-    align-items: flex-start;
   }
 }
 
