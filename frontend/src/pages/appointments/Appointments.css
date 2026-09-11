@@ -46,9 +46,10 @@
 .cell-time { font-weight: 300; color: var(--color-ink-muted); white-space: nowrap; }
 .cell-service { font-weight: 300; color: var(--color-ink-muted); }
 .cell-price { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.emp-cell { display: flex; align-items: center; gap: 0.375rem; }
+.emp-cell { display: flex; align-items: center; gap: 0.375rem; min-width: 0; }
 .emp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.emp-name { font-weight: 300; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* min-width: 0 (here + .emp-cell) beats flex's default min-width:auto, which otherwise blocks the ellipsis below and overflows the card on long names. */
+.emp-name { font-weight: 300; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .stars-desktop { color: #c9a227; letter-spacing: 0.05em; white-space: nowrap; }
 .stars-none { color: var(--color-ink-subtle); }
 .stars-cell { display: inline-flex; gap: 0.05rem; font-size: 0.95rem; line-height: 1; }
@@ -95,6 +96,17 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   .empf-pills, .empf-dropdown { flex: 1 1 100%; order: 3; }
   .empf-pills { flex-wrap: wrap; }
   .list-search { order: 4; }
+
+  /* Desktop's 11px chrome (nav buttons, card labels, status pills) and
+     ~28px tap targets read fine at arm's length on a monitor; on a phone
+     they're both too small to read and too small to tap accurately. */
+  .nav-btn { font-size: 0.8125rem; padding: 0.5rem 0.75rem; min-height: 2.25rem; }
+  .date-nav-date { font-size: 0.875rem; padding: 0.5rem 0.625rem; }
+  .date-nav-range { font-size: 0.8125rem; }
+  .refined-page table.stack-cards td::before { font-size: 0.75rem; }
+  .refined-page table.stack-cards .status-badge { font-size: 0.8125rem; padding: 0.375rem 0.75rem; }
+  .cell-price { font-size: 0.9375rem; }
+  .emp-name { font-size: 0.875rem; }
 }
 
 /* ── Calendar grid views (day/week/month) ───────────────────────────────── */
