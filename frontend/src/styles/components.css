@@ -164,6 +164,18 @@
   }
 }
 
+/* Button isLoading spinner (audit finding #6, mobile-audit-wizyty-list.md)
+   — rotation only (transform), compositor-friendly. Reduced-motion still
+   gets a visible (static, not spinning) ring rather than losing the busy
+   signal entirely — aria-busy on the button carries the state either way. */
+.btn-spinner { animation: btn-spinner-rotate 0.7s linear infinite; }
+@keyframes btn-spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner { animation: none; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    FORMS (DESIGN.md §7)
    ═══════════════════════════════════════════════════════════════════════ */

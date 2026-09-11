@@ -17,6 +17,22 @@ function buildClassName(variant: ButtonVariant, small: boolean | undefined, clas
   return [VARIANT_CLASS[variant], 'btn-press', small && 'refined-btn-sm', className].filter(Boolean).join(' ');
 }
 
+/**
+ * Busy indicator for `isLoading` (DESIGN.md §6 gap, audit finding #6,
+ * mobile-audit-wizyty-list.md) — a swapped label alone is easy to miss,
+ * especially for screen-reader users or on a slow connection. Rotation
+ * only (compositor-friendly, respects prefers-reduced-motion via
+ * `.btn-spinner`'s own rule in components.css); decorative, so the
+ * button's `aria-busy` carries the actual state to assistive tech.
+ */
+function Spinner() {
+  return (
+    <svg className="icon btn-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="42.5 56.5" />
+    </svg>
+  );
+}
+
 interface SharedProps {
   variant?: ButtonVariant;
   /** Tightens padding/font-size for inline/table-adjacent actions (§6) —
@@ -56,9 +72,10 @@ export function Button({
       type={type}
       className={buildClassName(variant, small, className)}
       disabled={disabled || isLoading}
+      aria-busy={isLoading || undefined}
       {...rest}
     >
-      {icon && !isLoading && <Icon name={icon} />}
+      {isLoading ? <Spinner /> : icon && <Icon name={icon} />}
       {isLoading ? loadingText ?? children : children}
     </button>
   );
