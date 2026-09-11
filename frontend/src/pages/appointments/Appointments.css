@@ -13,6 +13,12 @@
 
 /* Date navigation row — shared by list + all 3 calendar views. */
 .date-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+/* ←Poprzedni / date input / Dziś / Następny→ as one unit, so the mobile
+   breakpoint below can lay them out deterministically (2x2 grid) instead of
+   leaving flex-wrap to split them wherever the viewport width happens to
+   land (audit finding #1, mobile-audit-wizyty-list.md). On desktop this is
+   just an inline flex group — no visual change from the 4 being unwrapped. */
+.date-nav-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .nav-btn { padding: 0.3125rem 0.625rem; font-size: 0.6875rem; color: var(--color-ink-muted); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; transition: border-color 0.15s ease; }
 .nav-btn:hover:not(:disabled) { border-color: var(--color-ink-muted); }
 .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -90,6 +96,13 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
      crams 9 items into one wrapped row on desktop — fine there, but on a
      phone-width viewport it needs each logical group on its own line for
      comfortable tap targets, not a jumble of half-width fragments. */
+  /* Deterministic 2x2 grid for ←Poprzedni / date input / Dziś / Następny→ —
+     replaces relying on flex-wrap to decide the split, which produced a
+     different (often orphaned) layout every few pixels of viewport width
+     (audit finding #1: 373px split 2+2 one way, 384px split 3+1 leaving
+     "Następny →" alone with ~210px of dead space beside it). */
+  .date-nav-controls { flex: 1 1 100%; order: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .date-nav-controls > * { width: 100%; margin: 0; }
   .date-nav-range { flex: 1 1 100%; order: 1; text-align: center; }
   .empf-divider { display: none; }
   .empf-label { flex: 1 1 100%; order: 2; margin-top: 0.125rem; }

@@ -288,17 +288,25 @@ export function WizytyListPage() {
       <div className="cal-grid-page">
       <div className="cal-main">
         <div className="date-nav">
-          <button type="button" className="nav-btn" onClick={() => goWeek(-1)}>
-            ← Poprzedni
-          </button>
-          <input type="date" className="date-nav-date" aria-label="Wybierz tydzień" value={iso(weekStart)} onChange={(e) => onDateInputChange(e.target.value)} />
+          {/* Grouped so mobile can lay these 4 out as a deterministic 2x2
+              grid (Appointments.css @max-width:640px) instead of letting
+              flex-wrap split them wherever the current viewport width
+              happens to land — that produced a different, often-orphaned
+              wrap pattern every few pixels of width (audit finding #1,
+              mobile-audit-wizyty-list.md). */}
+          <div className="date-nav-controls">
+            <button type="button" className="nav-btn" onClick={() => goWeek(-1)}>
+              ← Poprzedni
+            </button>
+            <input type="date" className="date-nav-date" aria-label="Wybierz tydzień" value={iso(weekStart)} onChange={(e) => onDateInputChange(e.target.value)} />
+            <button type="button" className="nav-btn" onClick={goToday}>
+              Dziś
+            </button>
+            <button type="button" className="nav-btn" onClick={() => goWeek(1)}>
+              Następny →
+            </button>
+          </div>
           <span className="date-nav-range">{rangeLabel}</span>
-          <button type="button" className="nav-btn" onClick={goToday}>
-            Dziś
-          </button>
-          <button type="button" className="nav-btn" onClick={() => goWeek(1)}>
-            Następny →
-          </button>
           <div className="empf-divider" />
           <span className="empf-label">Pracownik:</span>
           <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll />
