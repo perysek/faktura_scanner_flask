@@ -715,6 +715,15 @@
 .action-icon-btn.danger:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.06); }
 .action-icon-btn svg { width: 1.125rem; height: 1.125rem; }
 .action-icon-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+/* 32x32px is fine for a mouse pointer but under the 44px minimum touch
+   target (Apple HIG / WCAG 2.5.5) that phones need — bumps the hit area
+   only on touch-width viewports, glyph size (svg above) untouched
+   (audit finding #5, mobile-audit-wizyty-list.md). Global on the shared
+   primitive rather than a Wizyty-only override, since every table's edit
+   icon has the same problem on mobile. */
+@media (max-width: 640px) {
+  .action-icon-btn { min-width: 44px; min-height: 44px; }
+}
 
 .empty-state { padding: 3rem 2rem; text-align: center; }
 .empty-icon { font-size: 4rem; color: var(--color-ink-subtle); opacity: 0.3; margin-bottom: 1rem; }

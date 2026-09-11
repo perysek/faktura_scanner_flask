@@ -133,12 +133,19 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 
   /* Desktop's 11px chrome (nav buttons, card labels, status pills) and
      ~28px tap targets read fine at arm's length on a monitor; on a phone
-     they're both too small to read and too small to tap accurately. */
-  .nav-btn { font-size: 0.8125rem; padding: 0.5rem 0.75rem; min-height: 2.25rem; }
+     they're both too small to read and too small to tap accurately.
+     min-height bumped to the 44px touch-target minimum (Apple HIG / WCAG
+     2.5.5) — was 2.25rem (36px), still short of it (audit finding #5,
+     mobile-audit-wizyty-list.md). */
+  .nav-btn { font-size: 0.8125rem; padding: 0.5rem 0.75rem; min-height: 44px; }
   .date-nav-date { font-size: 0.875rem; padding: 0.5rem 0.625rem; }
   .date-nav-range { font-size: 0.8125rem; }
   .refined-page table.stack-cards td::before { font-size: 0.75rem; }
-  .refined-page table.stack-cards .status-badge { font-size: 0.8125rem; padding: 0.375rem 0.75rem; }
+  /* min-height (not just padding) so the pill grows to the touch-target
+     minimum without the vertical padding math drifting the text off-center
+     — the badge is a real <button> now (finding #4), so this also grows
+     its actual hit area, not just its visual box. */
+  .refined-page table.stack-cards .status-badge { font-size: 0.8125rem; padding: 0.375rem 0.75rem; min-height: 44px; }
   .cell-price { font-size: 0.9375rem; }
   .emp-name { font-size: 0.875rem; }
 }
