@@ -275,13 +275,20 @@ export function WizytyListPage() {
           <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
         </div>
         <div>
-          <PastVisitsScanner />
-          <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
+          {/* Primary CTA first — on mobile these stack in DOM order (audit
+              finding #3, mobile-audit-wizyty-list.md): "Nowa wizyta" was
+              rendering below the wider, amber "Rozlicz przeszłe wizyty"
+              pill, so the secondary/warning action read as more prominent
+              than the primary one. Reordering also puts it first in tab
+              order, which is the more useful default regardless of
+              viewport. */}
           {canWrite && (
             <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">
               Nowa wizyta
             </ButtonLink>
           )}
+          <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
+          <PastVisitsScanner />
         </div>
       </header>
 
