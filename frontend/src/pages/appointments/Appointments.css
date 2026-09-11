@@ -7,7 +7,15 @@
  * filter) than Klienci/Sprzedawcy/Usługi/Pracownicy/Faktury ever did. */
 
 .refined-page { padding: 1rem 1.25rem 1.25rem; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.75rem; }
+/* .page-header itself is NOT redefined here — components.css already owns
+   it (base rule + its own @max-width:768px column-stack override). This
+   file used to carry a second, unconditional `.page-header` rule that
+   fought that one: same specificity, later/earlier in the bundle
+   depending on build order, so margin-bottom and align-items ended up
+   winning from whichever rule the bundler happened to emit last — not
+   from either author's actual intent (audit finding #2,
+   mobile-audit-wizyty-list.md). Only this module-specific child selector
+   stays, since components.css has no equivalent for it. */
 .page-header > div:last-child { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 .page-subtitle { color: var(--color-ink-muted); font-size: 0.75rem; font-weight: 300; }
 
