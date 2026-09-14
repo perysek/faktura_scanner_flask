@@ -243,7 +243,7 @@ export function WizytaDetailPage() {
         )}
       </div>
 
-      {appt.status === 'completed' ? (
+      {appt.status === 'completed' && (
         <div className="form-card">
           <h3 className="card-title">Ocena satysfakcji</h3>
           <div className="satisfaction-stars">
@@ -260,8 +260,6 @@ export function WizytaDetailPage() {
             </Button>
           )}
         </div>
-      ) : (
-        <p className="empty-text">Ocena satysfakcji dostępna po zakończeniu wizyty.</p>
       )}
 
       {appt.notes && (
