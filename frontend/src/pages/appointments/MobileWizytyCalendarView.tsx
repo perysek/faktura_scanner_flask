@@ -190,11 +190,37 @@ export function MobileWizytyCalendarView({
   });
   const [monthExpanded, setMonthExpanded] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  // Filter popup is staged: Pracownik/search and both admin toggles edit local
+  // draft state while the popup is open, and only commit — onSelectEmployee /
+  // onSearchChange, plus the admin-view POST(s) + reload — once the popup
+  // actually closes. Flipping a switch mid-review no longer slams it shut.
+  const [draftEmployeeId, setDraftEmployeeId] = useState<number | null>(employeeId);
+  const [draftSearchQuery, setDraftSearchQuery] = useState(searchQuery);
+  const [draftAdminView, setDraftAdminView] = useState(auth.adminViewActive);
+  const [draftOwnData, setDraftOwnData] = useState(auth.ownDataActive);
   // "Widok administratora" / "Dane własne" (config/admin_view.py — mirrors
   // the Jinja sidebar toggle). Both POST to a Flask session flag and reload
   // the page, so this only needs to block a double-submit mid round-trip —
   // there's no client-side state to reconcile once the reload lands.
   const [scopeTogglePending, setScopeTogglePending] = useState(false);
+
+  function openFilterModal() {
+    setDraftEmployeeId(employeeId);
+    setDraftSearchQuery(searchQuery);
+    setDraftAdminView(auth.adminViewActive);
+    setDraftOwnData(auth.ownDataActive);
+    setFilterModalOpen(true);
+  }
+
+  function closeFilterModal() {
+    setFilterModalOpen(false);
+    onSelectEmployee(draftEmployeeId);
+    onSearchChange(draftSearchQuery);
+    if (draftAdminView !== auth.adminViewActive || draftOwnData !== auth.ownDataActive) {
+      setScopeTogglePending(true);
+      auth.applyScopeToggles(draftAdminView, draftOwnData).catch(() => setScopeTogglePending(false));
+    }
+  }
   const autoSelectedRef = useRef(false);
   const selectedDateMountedRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -511,7 +537,7 @@ export function MobileWizytyCalendarView({
           <button
             type="button"
             className={`mob-cal-nav-btn${employeeId !== null || searchQuery.trim() !== '' ? ' has-active-filter' : ''}`}
-            onClick={() => setFilterModalOpen(true)}
+            onClick={openFilterModal}
             aria-label="Filtry: pracownik, szukaj"
             title="Filtry"
           >
@@ -520,17 +546,17 @@ export function MobileWizytyCalendarView({
         </div>
       </div>
 
-      <Modal isOpen={filterModalOpen} onClose={() => setFilterModalOpen(false)} title="Filtry">
+      <Modal isOpen={filterModalOpen} onClose={closeFilterModal} title="Filtry">
         <div className="mob-filter-modal-body">
           <div>
             <span className="empf-label">Pracownik:</span>
-            <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={onSelectEmployee} allowAll />
+            <EmployeeFilter employees={employees} selectedId={draftEmployeeId} onSelect={setDraftEmployeeId} allowAll />
           </div>
           <div className="list-search">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input type="text" placeholder="Szukaj klienta, usługi..." value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} />
+            <input type="text" placeholder="Szukaj klienta, usługi..." value={draftSearchQuery} onChange={(e) => setDraftSearchQuery(e.target.value)} />
           </div>
 
           {auth.isSuperuser && (
@@ -539,23 +565,20 @@ export function MobileWizytyCalendarView({
                 id="mob-admin-view-toggle"
                 label="Widok administratora"
                 hint="Pokaż moje własne wizyty na liście"
-                checked={auth.adminViewActive}
+                checked={draftAdminView}
                 disabled={scopeTogglePending}
                 onChange={(enabled) => {
-                  setScopeTogglePending(true);
-                  auth.setAdminView(enabled).catch(() => setScopeTogglePending(false));
+                  setDraftAdminView(enabled);
+                  if (!enabled) setDraftOwnData(false);
                 }}
               />
               <Switch
                 id="mob-own-data-toggle"
                 label="Dane własne"
                 hint="Pokaż wyłącznie moje wizyty"
-                checked={auth.ownDataActive}
-                disabled={scopeTogglePending || !auth.adminViewActive}
-                onChange={(enabled) => {
-                  setScopeTogglePending(true);
-                  auth.setOwnData(enabled).catch(() => setScopeTogglePending(false));
-                }}
+                checked={draftOwnData}
+                disabled={scopeTogglePending || !draftAdminView}
+                onChange={setDraftOwnData}
               />
             </div>
           )}

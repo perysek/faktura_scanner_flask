@@ -28,13 +28,14 @@ interface AuthContextValue extends NavVisibilityCtx {
   isSuperuser: boolean;
   adminViewActive: boolean;
   ownDataActive: boolean;
-  /** Both flip a Flask session flag shared with the Jinja pages
-   * (routes/main_routes.py `/api/admin-view` + `/api/own-data`), so every
-   * server render AND every SPA fetch must re-run under the new flag — a
-   * full reload, same as the Jinja sidebar's own toggle JS, not a client-side
-   * state patch. */
-  setAdminView: (enabled: boolean) => Promise<void>;
-  setOwnData: (enabled: boolean) => Promise<void>;
+  /** Posts whichever of "Widok administratora" / "Dane własne" actually
+   * changed (admin-view first — the own-data endpoint 400s unless admin view
+   * is already ON) to the Flask session flags shared with the Jinja pages
+   * (routes/main_routes.py `/api/admin-view` + `/api/own-data`), then reloads
+   * once so every server render AND every SPA fetch re-runs under the new
+   * flags — same full-reload contract as the Jinja sidebar's own toggle JS,
+   * not a client-side state patch. No-op (no reload) if neither changed. */
+  applyScopeToggles: (adminView: boolean, ownData: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -121,15 +122,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const setAdminView = useCallback(async (enabled: boolean) => {
-    await api.post<{ ok: boolean; enabled: boolean }>('/api/admin-view', { enabled });
-    window.location.reload();
-  }, []);
-
-  const setOwnData = useCallback(async (enabled: boolean) => {
-    await api.post<{ ok: boolean; enabled: boolean }>('/api/own-data', { enabled });
-    window.location.reload();
-  }, []);
+  const applyScopeToggles = useCallback(async (adminView: boolean, ownData: boolean) => {
+    let changed = false;
+    if (adminView !== adminViewActive) {
+      await api.post<{ ok: boolean; enabled: boolean }>('/api/admin-view', { enabled: adminView });
+      changed = true;
+    }
+    if (ownData !== ownDataActive) {
+      await api.post<{ ok: boolean; enabled: boolean }>('/api/own-data', { enabled: ownData });
+      changed = true;
+    }
+    if (changed) window.location.reload();
+  }, [adminViewActive, ownDataActive]);
 
   const hasModuleAccess = useCallback(
     (moduleName: string) => permissions[moduleName]?.has_access ?? false,
@@ -156,8 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperuser,
       adminViewActive,
       ownDataActive,
-      setAdminView,
-      setOwnData,
+      applyScopeToggles,
     }),
     [
       user,
@@ -171,8 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperuser,
       adminViewActive,
       ownDataActive,
-      setAdminView,
-      setOwnData,
+      applyScopeToggles,
     ],
   );
 
