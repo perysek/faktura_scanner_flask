@@ -18,6 +18,7 @@ from config.appointment_statuses import AppointmentStatus
 from config.database import managed_transaction
 from exceptions import AppError
 from services.pricing_service import PricingService
+from utils.timezone import now_local
 
 
 class AppointmentError(AppError):
@@ -230,7 +231,7 @@ class AppointmentBusinessService:
             elif isinstance(end_t, str):
                 end_t = datetime.strptime(end_t, '%H:%M:%S').time()
 
-            now      = datetime.now()
+            now      = now_local()
             start_dt = datetime.combine(appt_date, start_t)
             end_dt   = datetime.combine(appt_date, end_t)
             window   = timedelta(minutes=30)
@@ -390,7 +391,7 @@ class AppointmentBusinessService:
             start_time = datetime.strptime(start_time, '%H:%M:%S').time()
 
         appointment_datetime = datetime.combine(appointment_date, start_time)
-        now = datetime.now()
+        now = now_local()
 
         if appointment_datetime > now:
             raise AppointmentError(
@@ -703,7 +704,7 @@ class AppointmentBusinessService:
         # 2. Walidacja: zmiana statusu na 'completed' wymaga daty w przeszłości
         if status == 'completed' and old_status != 'completed':
             appointment_datetime = datetime.combine(appointment_date, start_time)
-            now = datetime.now()
+            now = now_local()
             if appointment_datetime > now:
                 raise AppointmentError(
                     "Nie można zmienić statusu na 'zakończona' dla wizyty w przyszłości. "
