@@ -146,6 +146,7 @@ def me():
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
 
     from config.auth_config import get_all_permission_flags, get_linked_employee
+    from config.admin_view import is_superuser, admin_view_active, own_data_active
 
     permissions = {}
     try:
@@ -175,6 +176,15 @@ def me():
         'permissions': permissions,
         'is_supervisor': is_supervisor_flag,
         'has_linked_employee': has_linked_employee,
+        # "Widok administratora" / "Dane własne" (config/admin_view.py) — the
+        # React SPA mirrors the Jinja sidebar's superuser-only toggles inside
+        # the mobile Wizyty filter modal. Both are always false for a
+        # non-superuser regardless of session content (admin_view_active/
+        # own_data_active re-check the role server-side), so the toggles never
+        # render for anyone else.
+        'is_superuser': is_superuser(),
+        'admin_view_active': admin_view_active(),
+        'own_data_active': own_data_active(),
     })
 
 

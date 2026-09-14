@@ -5,6 +5,8 @@ import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
 import { Modal } from '../../components/ui/Modal';
+import { Switch } from '../../components/ui/Switch';
+import { useAuth } from '../../contexts/AuthContext';
 import { EmployeeFilter } from './EmployeeFilter';
 import { RescheduleSheet } from './RescheduleSheet';
 import { STATUS_LABELS } from '../../types/appointment';
@@ -150,6 +152,7 @@ export function MobileWizytyCalendarView({
   canWrite,
   onDataChanged,
 }: MobileWizytyCalendarViewProps) {
+  const auth = useAuth();
   const [today] = useState(() => iso(new Date()));
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
   const [rescheduleAppt, setRescheduleAppt] = useState<AppointmentListItem | null>(null);
@@ -165,6 +168,11 @@ export function MobileWizytyCalendarView({
   });
   const [monthExpanded, setMonthExpanded] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  // "Widok administratora" / "Dane własne" (config/admin_view.py — mirrors
+  // the Jinja sidebar toggle). Both POST to a Flask session flag and reload
+  // the page, so this only needs to block a double-submit mid round-trip —
+  // there's no client-side state to reconcile once the reload lands.
+  const [scopeTogglePending, setScopeTogglePending] = useState(false);
   const autoSelectedRef = useRef(false);
   const selectedDateMountedRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -499,6 +507,33 @@ export function MobileWizytyCalendarView({
             </svg>
             <input type="text" placeholder="Szukaj klienta, usługi..." value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} />
           </div>
+
+          {auth.isSuperuser && (
+            <div className="mob-scope-toggles">
+              <Switch
+                id="mob-admin-view-toggle"
+                label="Widok administratora"
+                hint="Pokaż moje własne wizyty na liście"
+                checked={auth.adminViewActive}
+                disabled={scopeTogglePending}
+                onChange={(enabled) => {
+                  setScopeTogglePending(true);
+                  auth.setAdminView(enabled).catch(() => setScopeTogglePending(false));
+                }}
+              />
+              <Switch
+                id="mob-own-data-toggle"
+                label="Dane własne"
+                hint="Pokaż wyłącznie moje wizyty"
+                checked={auth.ownDataActive}
+                disabled={scopeTogglePending || !auth.adminViewActive}
+                onChange={(enabled) => {
+                  setScopeTogglePending(true);
+                  auth.setOwnData(enabled).catch(() => setScopeTogglePending(false));
+                }}
+              />
+            </div>
+          )}
         </div>
       </Modal>
 

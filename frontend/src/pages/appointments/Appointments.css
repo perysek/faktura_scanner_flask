@@ -402,6 +402,20 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .mob-filter-modal-body { display: flex; flex-direction: column; gap: 1rem; }
 .mob-filter-modal-body .list-search { max-width: none; margin-left: 0; }
 
+/* "Widok administratora" / "Dane własne" — superuser-only, mirrors the Jinja
+   sidebar's admin-view-row (templates/components/sidebar.html), relocated
+   into the mobile filter modal instead of a sidebar footer row per this
+   view's own nav pattern. Top border separates it from the search field
+   above; the switches (components/ui/Switch.tsx) carry their own disabled
+   styling for "Dane własne" while admin view is OFF. */
+.mob-scope-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .mob-cal-grid-wrap { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 3px; padding: 0.75rem; }
 .mob-cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 0.375rem; }
 .mob-cal-weekdays span { font-size: 0.75rem; color: var(--color-ink-subtle); text-align: center; }

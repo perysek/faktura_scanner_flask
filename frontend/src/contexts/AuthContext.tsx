@@ -9,6 +9,9 @@ interface MeResponse {
   permissions: Record<string, PermissionFlags>;
   is_supervisor: boolean;
   has_linked_employee: boolean;
+  is_superuser: boolean;
+  admin_view_active: boolean;
+  own_data_active: boolean;
 }
 
 interface LoginResult {
@@ -20,6 +23,18 @@ interface AuthContextValue extends NavVisibilityCtx {
   isLoading: boolean;
   login: (email: string, password: string, remember: boolean) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  /** "Widok administratora" (config/admin_view.py) — superuser-only, always
+   * false for anyone else regardless of stale client state. */
+  isSuperuser: boolean;
+  adminViewActive: boolean;
+  ownDataActive: boolean;
+  /** Both flip a Flask session flag shared with the Jinja pages
+   * (routes/main_routes.py `/api/admin-view` + `/api/own-data`), so every
+   * server render AND every SPA fetch must re-run under the new flag — a
+   * full reload, same as the Jinja sidebar's own toggle JS, not a client-side
+   * state patch. */
+  setAdminView: (enabled: boolean) => Promise<void>;
+  setOwnData: (enabled: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -38,6 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Record<string, PermissionFlags>>({});
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [hasLinkedEmployee, setHasLinkedEmployee] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  const [adminViewActive, setAdminViewActive] = useState(false);
+  const [ownDataActive, setOwnDataActive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const hydrate = useCallback(async () => {
@@ -47,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions(data.permissions);
       setIsSupervisor(data.is_supervisor);
       setHasLinkedEmployee(data.has_linked_employee);
+      setIsSuperuser(data.is_superuser);
+      setAdminViewActive(data.admin_view_active);
+      setOwnDataActive(data.own_data_active);
     } catch (err) {
       // 401 (no session) is the expected "logged out" outcome, not an error
       // to surface — anything else (network failure) also just means "we
@@ -55,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions({});
       setIsSupervisor(false);
       setHasLinkedEmployee(false);
+      setIsSuperuser(false);
+      setAdminViewActive(false);
+      setOwnDataActive(false);
       if (!(err instanceof ApiError) || err.status !== 401) {
         console.error('Session check failed', err);
       }
@@ -91,7 +115,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions({});
       setIsSupervisor(false);
       setHasLinkedEmployee(false);
+      setIsSuperuser(false);
+      setAdminViewActive(false);
+      setOwnDataActive(false);
     }
+  }, []);
+
+  const setAdminView = useCallback(async (enabled: boolean) => {
+    await api.post<{ ok: boolean; enabled: boolean }>('/api/admin-view', { enabled });
+    window.location.reload();
+  }, []);
+
+  const setOwnData = useCallback(async (enabled: boolean) => {
+    await api.post<{ ok: boolean; enabled: boolean }>('/api/own-data', { enabled });
+    window.location.reload();
   }, []);
 
   const hasModuleAccess = useCallback(
@@ -116,8 +153,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       logout,
+      isSuperuser,
+      adminViewActive,
+      ownDataActive,
+      setAdminView,
+      setOwnData,
     }),
-    [user, isSupervisor, hasLinkedEmployee, hasModuleAccess, hasModuleWrite, isLoading, login, logout],
+    [
+      user,
+      isSupervisor,
+      hasLinkedEmployee,
+      hasModuleAccess,
+      hasModuleWrite,
+      isLoading,
+      login,
+      logout,
+      isSuperuser,
+      adminViewActive,
+      ownDataActive,
+      setAdminView,
+      setOwnData,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
