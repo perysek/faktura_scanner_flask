@@ -17,7 +17,7 @@ class ClientRepository(BaseRepository):
     _columns = (
         'id, first_name, last_name, phone, email, date_of_birth, '
         'notes, preferences, first_visit_date, last_visit_date, '
-        'is_active, is_deleted, deleted_at, created_at, updated_at'
+        'is_active, no_show_count, cancelled_count, is_deleted, deleted_at, created_at, updated_at'
     )
 
     def __init__(self):
@@ -40,6 +40,8 @@ class ClientRepository(BaseRepository):
             first_visit_date=parse_date(row['first_visit_date']),
             last_visit_date=parse_date(row['last_visit_date']),
             is_active=bool(row['is_active']),
+            no_show_count=row['no_show_count'],
+            cancelled_count=row['cancelled_count'],
             created_at=parse_dt(row['created_at']),
             updated_at=parse_dt(row['updated_at'])
         )
@@ -355,6 +357,28 @@ class ClientRepository(BaseRepository):
             WHERE id = %s
         """
         cursor = self._execute(query, (visit_date.isoformat(), visit_date.isoformat(), client_id))
+        return cursor.rowcount > 0
+
+    def increment_no_show_count(self, client_id: int) -> bool:
+        """Bump a client's no-show counter by one (visit transitioned to 'no_show')."""
+        query = """
+            UPDATE clients SET
+                no_show_count = no_show_count + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        cursor = self._execute(query, (client_id,))
+        return cursor.rowcount > 0
+
+    def increment_cancelled_count(self, client_id: int) -> bool:
+        """Bump a client's cancelled-visit counter by one."""
+        query = """
+            UPDATE clients SET
+                cancelled_count = cancelled_count + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        cursor = self._execute(query, (client_id,))
         return cursor.rowcount > 0
 
     def deactivate(self, client_id: int) -> bool:

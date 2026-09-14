@@ -94,13 +94,48 @@
 .status-badge.clickable:hover { opacity: 0.7; }
 .status-badge.clickable:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
-/* Status-change modal (StatusChangeModal.tsx) */
-.modal-status-options { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.status-option-btn { display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; background: var(--color-surface-elevated); color: var(--color-ink); transition: all 0.15s ease; }
-.status-option-btn.active { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
-.modal-reason-wrap { margin-bottom: 0.5rem; }
-.modal-reason-wrap label { font-size: 0.75rem; font-weight: 500; display: block; margin-bottom: 0.25rem; color: var(--color-ink-muted); }
-.modal-reason-wrap textarea { width: 100%; padding: 0.5rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; resize: vertical; min-height: 60px; font-family: inherit; box-sizing: border-box; }
+/* Inline status dropdown (StatusDropdown.tsx) — same popover shape as
+   .theme-menu (DESIGN.md §17: "reuse the exact trigger-icon-button +
+   role=menu popover pattern... same .theme-menu-style CSS shape, rename the
+   class, keep the structure"), opening downward instead of upward since this
+   trigger can sit anywhere on the page (table row, mobile card, page hero),
+   not pinned to a bottom-of-screen sidebar footer like the theme switcher. */
+.status-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.375rem;
+  min-width: 11rem;
+  padding: 0.375rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+}
+.status-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-ink);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.status-dropdown-item:hover,
+.status-dropdown-item:focus-visible { background: var(--color-surface); }
+.status-dropdown-item:disabled { opacity: 0.6; cursor: default; }
+.status-dropdown-item--danger { color: #991b1b; }
+.status-dropdown-reason { min-width: 14rem; }
+.status-dropdown-reason label { font-size: 0.75rem; font-weight: 500; display: block; margin-bottom: 0.25rem; color: var(--color-ink-muted); }
+.status-dropdown-reason textarea { width: 100%; padding: 0.5rem 0.625rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 2px; resize: vertical; min-height: 60px; font-family: inherit; box-sizing: border-box; }
+.status-dropdown-reason-actions { display: flex; justify-content: flex-end; gap: 0.375rem; margin-top: 0.5rem; }
 
 .past-visits-trigger { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: #92400e; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 2px; cursor: pointer; }
 .past-visits-trigger:hover { background: rgba(245,158,11,0.15); }

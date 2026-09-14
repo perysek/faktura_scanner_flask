@@ -19,29 +19,6 @@
 
 .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
 
-/* Status-change dropdown (fix #3 Task 2, implementation-log.md 2026-08-19) —
-   sized to match `.refined-btn-secondary`'s own box (padding/font-size,
-   components.css) so it sits flush in height with its action-bar siblings.
-   Native appearance kept (no `appearance: none`) — same choice as
-   EmployeeFilter's `.empf-dropdown select` (Appointments.css), the only
-   other inline, non-form-field `<select>` in this module; `.form-select`
-   strips the arrow but relies on a wrapper this action-bar doesn't have. */
-.status-select {
-  padding: 0.625rem 1rem;
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 400;
-  color: var(--color-ink);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-.status-select:hover { border-color: var(--color-ink-muted); }
-.status-select:focus-visible { border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
-
 .appt-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
 .appt-detail-grid p:last-child { font-size: 0.875rem; color: var(--color-ink); }
 
@@ -62,6 +39,31 @@
 .addon-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
 .addon-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; cursor: pointer; }
 .addon-btn:hover { border-color: var(--color-ink-muted); }
+
+/* Czas trwania — TASK3 duration comparison (StatusHistorySection.tsx) */
+.duration-compare { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px; padding: 1rem; }
+.duration-compare-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.8125rem; }
+.duration-ratio { color: var(--color-ink-muted); }
+
+/* Historia zmian statusu — fixed 5-checkpoint skeleton + full audit list
+   (StatusHistorySection.tsx). Vertical timeline: a left rail of dots, hollow
+   until that checkpoint has happened. */
+.status-skeleton { list-style: none; margin: 0 0 1.25rem; padding: 0; border-left: 2px solid var(--color-border); }
+.status-skeleton-item { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0 0.4rem 1rem; font-size: 0.8125rem; }
+.status-skeleton-dot { position: absolute; left: -0.4375rem; top: 0.6rem; width: 0.625rem; height: 0.625rem; border-radius: 50%; background: var(--color-surface-elevated); border: 2px solid var(--color-border); }
+.status-skeleton-item--done .status-skeleton-dot { background: var(--color-accent); border-color: var(--color-accent); }
+.status-skeleton-item--pending { color: var(--color-ink-muted); }
+.status-skeleton-label { font-weight: 500; }
+.status-skeleton-at { color: var(--color-ink-muted); white-space: nowrap; }
+
+.status-audit-list { list-style: none; margin: 0; padding: 0; }
+.status-audit-item { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border-subtle); font-size: 0.8125rem; }
+.status-audit-item:last-child { border-bottom: none; }
+.status-audit-meta { color: var(--color-ink-muted); font-size: 0.75rem; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .status-skeleton-item, .status-audit-item { flex-direction: column; gap: 0.125rem; }
+}
 
 .satisfaction-stars { display: flex; align-items: center; gap: 0.25rem; }
 .star-btn { font-size: 1.5rem; line-height: 1; background: none; border: none; cursor: pointer; color: var(--color-ink-subtle); padding: 0; }

@@ -27,7 +27,8 @@ class TestColumnProjection:
         expected = {
             'id', 'first_name', 'last_name', 'phone', 'email', 'date_of_birth',
             'notes', 'preferences', 'first_visit_date', 'last_visit_date',
-            'is_active', 'is_deleted', 'deleted_at', 'created_at', 'updated_at'
+            'is_active', 'no_show_count', 'cancelled_count',
+            'is_deleted', 'deleted_at', 'created_at', 'updated_at'
         }
         actual = {c.strip() for c in repo._columns.replace('(', '').replace(')', '').split(',')}
         assert actual == expected, f"Column mismatch: missing={expected - actual}, extra={actual - expected}"

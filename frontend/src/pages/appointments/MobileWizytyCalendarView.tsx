@@ -9,7 +9,7 @@ import { Switch } from '../../components/ui/Switch';
 import { useAuth } from '../../contexts/AuthContext';
 import { EmployeeFilter } from './EmployeeFilter';
 import { RescheduleSheet } from './RescheduleSheet';
-import { STATUS_LABELS } from '../../types/appointment';
+import { StatusDropdown } from './StatusDropdown';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
 /** Swipe-left threshold (px) to arm/trigger the reschedule sheet (TASK5) —
@@ -57,16 +57,39 @@ function formatDateLong(dateStr: string): string {
   const weekday = WEEKDAY_LABELS[date.getDay()];
   return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
 }
-/** "(hh godzin mm minut)" / "(mm minut)" — literal format from the redesign
- * spec, not grammatically-pluralized Polish ("1 godzin" is intentional). */
+/** "(hh)h (mm)min" / "(mm)min" — shorter format, replaces the old spelled-out
+ * "hh godzin mm minut" (mobile card only, per redesign request). */
 function formatDuration(startTime: string, endTime: string): string {
   const [sh, sm] = startTime.slice(0, 5).split(':').map(Number);
   const [eh, em] = endTime.slice(0, 5).split(':').map(Number);
   const minutes = eh * 60 + em - (sh * 60 + sm);
-  if (minutes <= 60) return `${minutes} minut`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return `${h} godzin ${m} minut`;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+/** Local-time minutes remaining until the visit's scheduled start —
+ * `${date}T${time}` (no timezone designator) parses as browser-local per the
+ * Date constructor's spec, same assumption WizytaDetailPage's isNoShowAllowed
+ * already makes. `null` once the countdown stops being meaningful: the visit
+ * already started/resolved (in_progress/completed/cancelled/no_show), or its
+ * start time has already passed. `nowMs` comes from the card list's shared
+ * 60s tick so every card updates together instead of each on its own timer. */
+function minutesUntilStart(appt: AppointmentListItem, nowMs: number): number | null {
+  if (!(appt.status === 'scheduled' || appt.status === 'pending' || appt.status === 'confirmed')) return null;
+  const startMs = new Date(`${appt.appointment_date}T${appt.start_time}`).getTime();
+  const diffMin = Math.round((startMs - nowMs) / 60000);
+  return diffMin >= 0 ? diffMin : null;
+}
+/** Ticks once a minute so the mobile card list's "start za Nmin" countdowns
+ * stay live without a per-card timer. Initialised to Date.now() (not a fixed
+ * value) so the first render already shows the correct countdown. */
+function useNowTick(intervalMs: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
 }
 /** mod #4: direct-dial `tel:` href instead of clipboard-copy — raw digits,
  * `+48` prefix assumed for bare 9-digit national numbers (same assumption
@@ -114,7 +137,6 @@ export interface MobileWizytyCalendarViewProps {
   chainHasMore: boolean;
   onShowNextDay: () => void;
   onRowClick: (appt: AppointmentListItem, event: MouseEvent) => void;
-  onStatusClick: (appt: AppointmentListItem) => void;
   employees: EmployeeOption[];
   employeeId: number | null;
   onSelectEmployee: (id: number | null) => void;
@@ -143,7 +165,6 @@ export function MobileWizytyCalendarView({
   chainHasMore,
   onShowNextDay,
   onRowClick,
-  onStatusClick,
   employees,
   employeeId,
   onSelectEmployee,
@@ -154,6 +175,7 @@ export function MobileWizytyCalendarView({
 }: MobileWizytyCalendarViewProps) {
   const auth = useAuth();
   const [today] = useState(() => iso(new Date()));
+  const nowTick = useNowTick(60_000);
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
   const [rescheduleAppt, setRescheduleAppt] = useState<AppointmentListItem | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -302,7 +324,9 @@ export function MobileWizytyCalendarView({
           // of tracking the finger 1:1. Dropping the inline style entirely on
           // release (swipeState → null) lets that CSS transition take back
           // over for the snap.
-          appointments.map((appt) => (
+          appointments.map((appt) => {
+            const startsInMin = minutesUntilStart(appt, nowTick);
+            return (
             <div
               key={appt.id}
               className={[
@@ -325,19 +349,19 @@ export function MobileWizytyCalendarView({
                   <span className="mob-appt-datetime-line1">
                     {formatDateShort(appt.appointment_date)} <span className="mob-appt-at">@</span> {appt.start_time.slice(0, 5)}
                   </span>
-                  <span className="mob-appt-duration">({formatDuration(appt.start_time, appt.end_time)})</span>
+                  <span className="mob-appt-duration">
+                    ({formatDuration(appt.start_time, appt.end_time)}
+                    {startsInMin !== null ? `, start za ${startsInMin}min` : ''})
+                  </span>
                 </span>
-                <button
-                  type="button"
-                  className={`status-badge clickable ${appt.status}`}
-                  aria-label={`Zmień status wizyty: ${STATUS_LABELS[appt.status]}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onStatusClick(appt);
-                  }}
-                >
-                  {STATUS_LABELS[appt.status]}
-                </button>
+                <StatusDropdown
+                  appointmentId={appt.id}
+                  currentStatus={appt.status}
+                  appointmentDate={appt.appointment_date}
+                  startTime={appt.start_time}
+                  canWrite={canWrite}
+                  onSuccess={onDataChanged}
+                />
               </div>
 
               {/* Klient/Tel. — labels in one row, values in the row below
@@ -371,7 +395,8 @@ export function MobileWizytyCalendarView({
               {/* Minimal "this is tappable" hint (TASK3). */}
               <Icon name="chevron_right" className="mob-appt-tap-hint" />
             </div>
-          ))
+            );
+          })
         )}
         {mode === 'chain' && chainHasMore && (
           <button type="button" className="list-chain-more" onClick={onShowNextDay}>

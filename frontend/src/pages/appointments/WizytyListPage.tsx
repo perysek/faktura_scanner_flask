@@ -11,11 +11,10 @@ import { formatPLN } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
 import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
-import { StatusChangeModal } from './StatusChangeModal';
+import { StatusDropdown } from './StatusDropdown';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { MobileWizytyCalendarView, useIsMobile } from './MobileWizytyCalendarView';
-import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
 type SortColumn = 'appointment_date' | 'start_time' | 'client_name' | 'service_name' | 'employee_name' | 'total_price' | 'status' | 'satisfaction_score';
@@ -88,7 +87,6 @@ export function WizytyListPage() {
   const [employeeId, setEmployeeId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });
-  const [statusModalAppt, setStatusModalAppt] = useState<AppointmentListItem | null>(null);
 
   const [weekAppointments, setWeekAppointments] = useState<AppointmentListItem[]>([]);
   const [weekLoading, setWeekLoading] = useState(true);
@@ -358,7 +356,6 @@ export function WizytyListPage() {
             chainHasMore={chainHasMore}
             onShowNextDay={appendNextChainDay}
             onRowClick={handleRowClick}
-            onStatusClick={setStatusModalAppt}
             employees={employees}
             employeeId={employeeId}
             onSelectEmployee={setEmployeeId}
@@ -434,21 +431,14 @@ export function WizytyListPage() {
                         {formatPLN(appt.total_price)}
                       </td>
                       <td data-label="Status">
-                        {/* Real <button>, not a <span> with an onClick — the
-                            span had tabIndex=-1, no role, no keydown
-                            handler: mouse-only, unreachable via Tab, and
-                            invisible to a screen reader as an interactive
-                            control (audit finding #4,
-                            mobile-audit-wizyty-list.md). Buttons get
-                            keyboard/focus semantics for free. */}
-                        <button
-                          type="button"
-                          className={`status-badge clickable ${appt.status}`}
-                          aria-label={`Zmień status wizyty: ${STATUS_LABELS[appt.status]}`}
-                          onClick={(e) => { e.stopPropagation(); setStatusModalAppt(appt); }}
-                        >
-                          {STATUS_LABELS[appt.status]}
-                        </button>
+                        <StatusDropdown
+                          appointmentId={appt.id}
+                          currentStatus={appt.status}
+                          appointmentDate={appt.appointment_date}
+                          startTime={appt.start_time}
+                          canWrite={canWrite}
+                          onSuccess={handleStatusUpdated}
+                        />
                       </td>
                       <td data-label="Ocena">
                         <span className={appt.satisfaction_score ? 'stars-desktop' : 'stars-none'}>{stars(appt.satisfaction_score)}</span>
@@ -483,16 +473,6 @@ export function WizytyListPage() {
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />
       </div>
-
-      {statusModalAppt && (
-        <StatusChangeModal
-          isOpen
-          onClose={() => setStatusModalAppt(null)}
-          appointmentId={statusModalAppt.id}
-          currentStatus={statusModalAppt.status}
-          onSuccess={handleStatusUpdated}
-        />
-      )}
     </div>
   );
 }

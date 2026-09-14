@@ -16,6 +16,7 @@ import type {
   ReassignmentCandidate,
   RescheduleForAbsenceResult,
   StatusEventsResponse,
+  StatusHistoryResponse,
 } from '../../types/appointment';
 
 interface CreateAppointmentPayload {
@@ -106,6 +107,10 @@ export const appointmentsApi = {
   addAddon: (appointmentId: number, serviceId: number) => api.post<{ success: true }>(`/api/appointments/${appointmentId}/addons`, { service_id: serviceId }),
 
   setSatisfaction: (appointmentId: number, score: number) => api.patch<{ success: true }>(`/api/appointments/${appointmentId}/satisfaction`, { score }),
+
+  /** GET /api/appointments/<id>/status-history — "Historia zmian statusu"
+   * section + finished-visit duration comparison (TASK3). */
+  statusHistory: (appointmentId: number) => api.get<StatusHistoryResponse>(`/api/appointments/${appointmentId}/status-history`),
 
   /** GET /api/appointments/<id>/events — SSE stream of confirmation-status
    * changes (edit form's live badge). Not a fetch — returns the raw URL for

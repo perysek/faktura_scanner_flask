@@ -260,6 +260,8 @@ class Client:
     first_visit_date: Optional[date] = None
     last_visit_date: Optional[date] = None
     is_active: bool = True
+    no_show_count: int = 0
+    cancelled_count: int = 0
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
     updated_at: Optional[datetime] = field(default_factory=datetime.now)

@@ -17,3 +17,12 @@ def now_local() -> datetime:
     against the naive appointment_date/start_time/end_time values already in
     the database — no mixing of aware and naive datetimes at call sites."""
     return datetime.now(timezone.utc).astimezone(WARSAW_TZ).replace(tzinfo=None)
+
+
+def to_local(dt: datetime) -> datetime:
+    """Convert a naive server-clock timestamp (e.g. a `TIMESTAMP DEFAULT
+    CURRENT_TIMESTAMP` column like audit_log.changed_at — naive-UTC, same
+    origin as now_local()'s own UTC fetch) to naive Warsaw wall-clock time,
+    for display. Diffing two such columns needs no conversion (same
+    reference frame); only showing a clock time to a person does."""
+    return dt.replace(tzinfo=timezone.utc).astimezone(WARSAW_TZ).replace(tzinfo=None)

@@ -129,6 +129,46 @@ export interface AppointmentDetail {
   rating_status?: string | null;
   rated_on?: string | null;
   confirmation_status: 'pending' | 'confirmed' | 'declined' | null;
+  /** `a.*` on the backend query already includes it — not explicitly typed
+   * here until StatusHistorySection needed a "visit created" anchor. */
+  created_at?: string;
+}
+
+/** GET /api/appointments/<id>/status-history — TASK3's "Historia zmian
+ * statusu" section + the finished-visit duration comparison, both driven by
+ * one call (StatusHistorySection.tsx). Timestamps are pre-converted to
+ * Warsaw local ISO strings server-side (routes/appointment_routes.py's
+ * `to_local`) — render them directly, no client-side TZ math. */
+export interface StatusHistoryEntry {
+  old_status: AppointmentStatus | null;
+  new_status: AppointmentStatus;
+  user_name: string | null;
+  changed_at: string | null;
+}
+
+export interface StatusHistorySkeleton {
+  scheduled_at: string | null;
+  confirmed_at: string | null;
+  cancelled_at: string | null;
+  no_show_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface StatusDurationComparison {
+  scheduled_minutes: number;
+  /** null when the visit never went through in_progress -> completed (e.g.
+   * the past-visit scanner set 'completed' directly) — frontend shows "nie
+   * zmierzono czasu trwania" in that case. */
+  actual_minutes: number | null;
+  ratio_pct: number | null;
+}
+
+export interface StatusHistoryResponse {
+  success: true;
+  history: StatusHistoryEntry[];
+  skeleton: StatusHistorySkeleton;
+  duration: StatusDurationComparison;
 }
 
 export interface AppointmentDetailResponse {

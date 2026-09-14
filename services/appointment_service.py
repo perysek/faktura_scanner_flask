@@ -188,6 +188,61 @@ class AppointmentBusinessService:
             'services_count': len(service_ids)
         }
 
+    def apply_status_change_side_effects(self, appointment_id: int, old_status: str, new_status: str) -> None:
+        """Centralized post-transition side effects — the single place every
+        status-mutation entry point routes through (this service's
+        transition_status/resolve_past_status, mobile_routes' employee start/
+        end/no-show actions, and the client SMS cancellation link), so income
+        creation and client no-show/cancelled counters can't drift out of sync
+        between surfaces.
+
+        - -> completed: create the income record (idempotent — skipped if one
+          already exists for this appointment).
+        - -> no_show / cancelled: bump the client's counter.
+
+        All three statuses are FINAL (config/appointment_statuses.py —
+        no outgoing transitions defined for them), so each fires at most once
+        per appointment; no decrement/reversal case exists.
+
+        Call inside the same managed_transaction() as the status write so the
+        side effect is atomic with it.
+        """
+        if new_status == old_status:
+            return
+
+        if new_status == AppointmentStatus.COMPLETED:
+            if not self.income_repo.get_by_appointment(appointment_id):
+                row = self.appt_repo.get_by_id(appointment_id)
+                if not row:
+                    return
+                appointment_date = row['appointment_date']
+                if isinstance(appointment_date, str):
+                    appointment_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+                totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
+                disc = Decimal(str(row['discount_amount'] or '0'))
+                income = IncomeRecord(
+                    appointment_id=appointment_id,
+                    client_id=row['client_id'],
+                    employee_id=row['employee_id'],
+                    total_amount=totals['total_price'],
+                    discount_amount=disc,
+                    net_amount=totals['total_price'] - disc,
+                    commission_total=totals['total_commission'],
+                    payment_method=None,
+                    payment_date=appointment_date,
+                )
+                self.income_repo.create(income)
+
+        elif new_status == AppointmentStatus.NO_SHOW:
+            row = self.appt_repo.get_by_id(appointment_id)
+            if row:
+                self.client_repo.increment_no_show_count(row['client_id'])
+
+        elif new_status == AppointmentStatus.CANCELLED:
+            row = self.appt_repo.get_by_id(appointment_id)
+            if row:
+                self.client_repo.increment_cancelled_count(row['client_id'])
+
     def transition_status(self, appointment_id: int, new_status: str,
                            cancellation_reason: Optional[str] = None) -> bool:
         """Zmień status wizyty z walidacją przepływu.
@@ -293,23 +348,8 @@ class AppointmentBusinessService:
             success = self.appt_repo.update_status(
                 appointment_id, new_status, cancellation_reason
             )
-
-            if success and new_status == AppointmentStatus.COMPLETED:
-                if not self.income_repo.get_by_appointment(appointment_id):
-                    totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
-                    disc = Decimal(str(row['discount_amount'] or '0'))
-                    income = IncomeRecord(
-                        appointment_id=appointment_id,
-                        client_id=row['client_id'],
-                        employee_id=row['employee_id'],
-                        total_amount=totals['total_price'],
-                        discount_amount=disc,
-                        net_amount=totals['total_price'] - disc,
-                        commission_total=totals['total_commission'],
-                        payment_method=None,
-                        payment_date=appt_date
-                    )
-                    self.income_repo.create(income)
+            if success:
+                self.apply_status_change_side_effects(appointment_id, current_status, new_status)
 
         return success
 
@@ -331,27 +371,8 @@ class AppointmentBusinessService:
             success = self.appt_repo.update_status(
                 appointment_id, new_status, cancellation_reason
             )
-
-            if success and new_status == AppointmentStatus.COMPLETED:
-                if not self.income_repo.get_by_appointment(appointment_id):
-                    appointment_date = row['appointment_date']
-                    if isinstance(appointment_date, str):
-                        appointment_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
-
-                    totals = self.appt_svc_repo.get_appointment_totals(appointment_id)
-                    disc = Decimal(str(row['discount_amount'] or '0'))
-                    income = IncomeRecord(
-                        appointment_id=appointment_id,
-                        client_id=row['client_id'],
-                        employee_id=row['employee_id'],
-                        total_amount=totals['total_price'],
-                        discount_amount=disc,
-                        net_amount=totals['total_price'] - disc,
-                        commission_total=totals['total_commission'],
-                        payment_method=None,
-                        payment_date=appointment_date
-                    )
-                    self.income_repo.create(income)
+            if success:
+                self.apply_status_change_side_effects(appointment_id, row['status'], new_status)
 
         return success
 

@@ -19,6 +19,7 @@ from repositories.appointments.appointment_repository import AppointmentReposito
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
 from repositories.appointments.income_repository import IncomeRepository
 from repositories.audit_repository import AuditRepository
+from utils.timezone import to_local
 
 
 def _schedule_post_visit_sms(appointment_id: int) -> None:
@@ -473,6 +474,73 @@ def get_appointment(appointment_id):
         raise
     except Exception as e:
         logging.exception('Unexpected error in get_appointment')
+        raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/status-history', methods=['GET'])
+@login_required
+@module_permission_required('appointments', 'data_correction')
+def get_appointment_status_history(appointment_id):
+    """Audyt zmian statusu (sekcja "Historia zmian statusu") + porównanie
+    czasu trwania — zaplanowany (total_duration) vs rzeczywisty, liczony z
+    różnicy znaczników czasu pierwszych przejść in_progress -> completed.
+    Brak jednego z dwóch znaczników (wizyta nigdy nie weszła w in_progress,
+    albo skaner przeszłych wizyt ustawił completed bez przejścia przez
+    in_progress) -> actual_minutes/ratio_pct zostają None, frontend pokazuje
+    'nie zmierzono czasu trwania'."""
+    try:
+        row = AppointmentRepository().get_by_id(appointment_id)
+        if not row:
+            raise NotFoundError('Wizyta nie istnieje')
+
+        entries = AuditRepository().get_by_entity('appointment', appointment_id, field_name='status')
+
+        def _first_at(status: str):
+            for e in entries:
+                if e['new_value'] == status:
+                    return e['timestamp']
+            return None
+
+        def _iso(dt):
+            return to_local(dt).isoformat() if dt else None
+
+        in_progress_at = _first_at(AppointmentStatus.IN_PROGRESS)
+        completed_at = _first_at(AppointmentStatus.COMPLETED)
+
+        scheduled_minutes = row['total_duration']
+        actual_minutes = None
+        ratio_pct = None
+        if in_progress_at and completed_at:
+            actual_minutes = round((completed_at - in_progress_at).total_seconds() / 60)
+            if scheduled_minutes:
+                ratio_pct = round(actual_minutes / scheduled_minutes * 100)
+
+        return jsonify({
+            'success': True,
+            'history': [{
+                'old_status': e['old_value'],
+                'new_status': e['new_value'],
+                'user_name': e['user_name'],
+                'changed_at': _iso(e['timestamp']),
+            } for e in entries],
+            'skeleton': {
+                'scheduled_at': _iso(row['created_at']),
+                'confirmed_at': _iso(_first_at(AppointmentStatus.CONFIRMED)),
+                'cancelled_at': _iso(_first_at(AppointmentStatus.CANCELLED)),
+                'no_show_at': _iso(_first_at(AppointmentStatus.NO_SHOW)),
+                'started_at': _iso(in_progress_at),
+                'finished_at': _iso(completed_at),
+            },
+            'duration': {
+                'scheduled_minutes': scheduled_minutes,
+                'actual_minutes': actual_minutes,
+                'ratio_pct': ratio_pct,
+            },
+        })
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in get_appointment_status_history')
         raise AppError('Wystapil blad serwera')
 
 

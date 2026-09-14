@@ -5,9 +5,11 @@ Client-facing pages accessed via SMS confirmation links.
 import logging
 from flask import Blueprint, render_template, request, jsonify
 from config.appointment_statuses import AppointmentStatus
+from config.database import managed_transaction
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.clients.client_repository import ClientRepository
 from repositories.audit_repository import AuditRepository
+from services.appointment_service import AppointmentBusinessService
 
 public_bp = Blueprint('public', __name__)
 
@@ -154,7 +156,10 @@ def appointment_cancel_submit(token):
             already_cancelled=False, can_cancel=False, just_submitted=False,
         )
 
-    repo.update_status(appt['id'], 'cancelled')
+    old_status = appt.get('status')
+    with managed_transaction():
+        repo.update_status(appt['id'], 'cancelled')
+        AppointmentBusinessService().apply_status_change_side_effects(appt['id'], old_status, 'cancelled')
 
     try:
         AuditRepository().log_event(
@@ -162,7 +167,7 @@ def appointment_cancel_submit(token):
             entity_id=appt['id'],
             entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
             field_name='status',
-            old_value=appt.get('status'), new_value='cancelled',
+            old_value=old_status, new_value='cancelled',
             user_id=None, user_name='Klient (SMS)',
         )
     except Exception:
@@ -346,7 +351,9 @@ def _process_visit_action(repo: AppointmentRepository, appt: dict, token: str, a
 
     old_status = appt['status']
     new_status = {'start': 'in_progress', 'end': 'completed', 'no_show': 'no_show'}[action]
-    repo.update_status(appt['id'], new_status)
+    with managed_transaction():
+        repo.update_status(appt['id'], new_status)
+        AppointmentBusinessService().apply_status_change_side_effects(appt['id'], old_status, new_status)
 
     # Real-time notification event
     from repositories.appointments.status_change_event_repository import StatusChangeEventRepository

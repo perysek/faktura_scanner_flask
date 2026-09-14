@@ -152,6 +152,43 @@ class AuditRepository(BaseRepository):
 
         return results
 
+    def get_by_entity(self, entity_type: str, entity_id: int, field_name: Optional[str] = None) -> List[dict]:
+        """Pełna, chronologiczna historia zmian jednej encji (np. jednej wizyty) —
+        w przeciwieństwie do get_all(), filtruje po konkretnym entity_id, nie
+        tylko po typie. `field_name` opcjonalnie zawęża do jednego pola
+        (np. 'status', pomijając inne audytowane zmiany tej samej encji)."""
+        conditions = ["a.entity_type = %s", "a.entity_id = %s"]
+        params: list = [entity_type, entity_id]
+        if field_name:
+            conditions.append("a.field_name = %s")
+            params.append(field_name)
+
+        query = f"""
+            SELECT
+                a.id, a.entity_type, a.entity_id, a.entity_label,
+                a.action, a.field_name, a.old_value, a.new_value,
+                a.user_id,
+                COALESCE(a.user_name, u.full_name) AS user_name,
+                a.changed_at
+            FROM audit_log a
+            LEFT JOIN users u ON u.id = a.user_id
+            WHERE {" AND ".join(conditions)}
+            ORDER BY a.changed_at ASC, a.id ASC
+        """
+        rows = self._fetch_all(query, tuple(params))
+        return [
+            {
+                'id': r['id'],
+                'action': r['action'],
+                'field_name': r['field_name'],
+                'old_value': r['old_value'],
+                'new_value': r['new_value'],
+                'user_name': r['user_name'],
+                'timestamp': r['changed_at'],
+            }
+            for r in rows
+        ]
+
     def get_for_employee_balance(self, employee_id: int) -> List[dict]:
         """Historia zmian limitów i korekt dla konkretnego pracownika."""
         query = """

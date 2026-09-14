@@ -12,11 +12,11 @@ import { Button, ButtonLink } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPLN } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
-import { StatusChangeModal } from './StatusChangeModal';
+import { StatusDropdown } from './StatusDropdown';
 import { CompleteVisitModal } from './CompleteVisitModal';
+import { StatusHistorySection } from './StatusHistorySection';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
-import { STATUS_LABELS, VALID_TRANSITIONS } from '../../types/appointment';
-import type { AppointmentFormService, AppointmentStatus } from '../../types/appointment';
+import type { AppointmentFormService } from '../../types/appointment';
 
 function clientInitials(name: string | null): string {
   if (!name) return '—';
@@ -44,7 +44,6 @@ export function WizytaDetailPage() {
   useEscapeBack('/wizyty');
 
   const detailState = useApiData(() => appointmentsApi.get(appointmentId), [appointmentId]);
-  const [statusTarget, setStatusTarget] = useState<AppointmentStatus | null>(null);
   const [completeOpen, setCompleteOpen] = useState(false);
   const [addons, setAddons] = useState<AppointmentFormService[] | null>(null);
   const [selectedScore, setSelectedScore] = useState<number | null>(null);
@@ -86,22 +85,6 @@ export function WizytaDetailPage() {
     }
   }
 
-  function handleStatusSelect(next: AppointmentStatus) {
-    // Dropdown is a pure action menu, not a persisted field — its `value` stays
-    // bound to `appt.status` (never local state), so picking an option never
-    // "sticks" on its own. Nothing is written until the modal it opens is
-    // confirmed; cancelling either modal leaves `appt.status` (and therefore
-    // the select) exactly where it started. `completed` needs payment-method
-    // info the plain status modal doesn't collect, so it keeps routing to
-    // CompleteVisitModal — same split the old per-status buttons used.
-    if (next === appt?.status) return;
-    if (next === 'completed') {
-      setCompleteOpen(true);
-    } else {
-      setStatusTarget(next);
-    }
-  }
-
   async function handleDelete() {
     const ok = await confirm({
       title: 'Usuń wizytę',
@@ -137,12 +120,6 @@ export function WizytaDetailPage() {
 
   const { main_services, addon_services, totals } = detailState.data;
   const services = [...main_services, ...addon_services];
-  const nextStatuses = VALID_TRANSITIONS[appt.status] ?? [];
-  const isNoShowAllowed = (() => {
-    const start = new Date(`${appt.appointment_date}T${appt.start_time}`);
-    return start.getTime() - Date.now() <= 30 * 60 * 1000;
-  })();
-  const visibleTransitions = nextStatuses.filter((s) => s !== 'no_show' || isNoShowAllowed);
 
   return (
     <div className="refined-page appt-detail-page fade-in">
@@ -152,7 +129,16 @@ export function WizytaDetailPage() {
         </a>
         <div className="appt-hero-info">
           <h1 className="page-title">{appt.client_name || `Wizyta #${appointmentId}`}</h1>
-          <span className={`status-badge ${appt.status}`}>{STATUS_LABELS[appt.status]}</span>
+          <StatusDropdown
+            appointmentId={appointmentId}
+            currentStatus={appt.status}
+            appointmentDate={appt.appointment_date}
+            startTime={appt.start_time}
+            canWrite={canWrite}
+            interceptStatus="completed"
+            onIntercept={() => setCompleteOpen(true)}
+            onSuccess={detailState.reload}
+          />
           <p className="page-subtitle">
             {appt.appointment_date.split('-').reverse().join('.')} · {appt.start_time.slice(0, 5)}–{appt.end_time.slice(0, 5)} · {appt.total_duration} min · {appt.employee_name || '—'}
           </p>
@@ -172,21 +158,6 @@ export function WizytaDetailPage() {
         <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
           Powrót do listy
         </ButtonLink>
-        {canWrite && visibleTransitions.length > 0 && (
-          <select
-            className="status-select"
-            aria-label="Zmień status wizyty"
-            value={appt.status}
-            onChange={(e) => handleStatusSelect(e.target.value as AppointmentStatus)}
-          >
-            <option value={appt.status}>{STATUS_LABELS[appt.status]}</option>
-            {visibleTransitions.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        )}
         {canWrite && (
           <Button variant="ghost" icon="delete" onClick={handleDelete}>
             Usuń
@@ -300,19 +271,8 @@ export function WizytaDetailPage() {
         </div>
       )}
 
-      {statusTarget && (
-        <StatusChangeModal
-          isOpen
-          onClose={() => setStatusTarget(null)}
-          appointmentId={appointmentId}
-          currentStatus={appt.status}
-          fixedStatus={statusTarget}
-          onSuccess={() => {
-            setStatusTarget(null);
-            detailState.reload();
-          }}
-        />
-      )}
+      <StatusHistorySection appointmentId={appointmentId} appointmentStatus={appt.status} />
+
       <CompleteVisitModal
         isOpen={completeOpen}
         onClose={() => setCompleteOpen(false)}
