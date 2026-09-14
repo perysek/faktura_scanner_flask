@@ -117,6 +117,7 @@ class AppointmentRepository:
             SELECT
                 a.*,
                 c.first_name || ' ' || c.last_name as client_name,
+                c.phone as client_phone,
                 e.first_name || ' ' || e.last_name as employee_name,
                 STRING_AGG(
                     CASE WHEN aps.is_addon = FALSE THEN s.name ELSE NULL END, ', '
@@ -130,7 +131,7 @@ class AppointmentRepository:
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE {where_clause} {excl_sql}
-            GROUP BY a.id, c.first_name, c.last_name, e.first_name, e.last_name
+            GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.appointment_date DESC, a.start_time DESC
         """
         params.extend(excl_params)

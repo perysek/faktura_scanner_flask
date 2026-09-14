@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
@@ -13,6 +14,7 @@ import { EmployeeFilter } from './EmployeeFilter';
 import { StatusChangeModal } from './StatusChangeModal';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
+import { MobileWizytyCalendarView, useIsMobile } from './MobileWizytyCalendarView';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
@@ -65,6 +67,16 @@ export function WizytyListPage() {
   const auth = useAuth();
   const navigate = useNavigate();
   const canWrite = auth.hasModuleWrite('appointments');
+  const isMobile = useIsMobile(640);
+  // AppShell's persistent logo+title row (<1024px) exposes this empty slot
+  // for pages to portal mobile-only chrome into — "Rozlicz przeszłe wizyty"
+  // lands there (TASK3) so it stays reachable while the card list scrolls,
+  // instead of scrolling away with `.page-header` (which is dropped
+  // outright on mobile, TASK4).
+  const [mobileHeaderSlot, setMobileHeaderSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setMobileHeaderSlot(document.getElementById('mobile-header-actions'));
+  }, []);
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [mode, setMode] = useState<'week' | 'chain'>('week');
@@ -268,63 +280,94 @@ export function WizytyListPage() {
           reaches `.cal-main`'s right edge, short of the sidebar's, instead of
           the actual viewport-aligned edge (user clarification, 2026-08-19:
           "page header buttons row był dosunięty do prawej strony viewport",
-          same fix applied to CalendarDayPage.tsx). */}
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Wizyty</h1>
-          <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
-        </div>
-        <div>
-          {/* Primary CTA first — on mobile these stack in DOM order (audit
-              finding #3, mobile-audit-wizyty-list.md): "Nowa wizyta" was
-              rendering below the wider, amber "Rozlicz przeszłe wizyty"
-              pill, so the secondary/warning action read as more prominent
-              than the primary one. Reordering also puts it first in tab
-              order, which is the more useful default regardless of
-              viewport. */}
-          {canWrite && (
-            <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">
-              Nowa wizyta
-            </ButtonLink>
-          )}
-          <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
-          <PastVisitsScanner />
-        </div>
-      </header>
+          same fix applied to CalendarDayPage.tsx). On mobile this whole
+          header is dropped (TASK3/4) — title/subtitle text is gone outright,
+          "Nowa wizyta" is the "+" in the fixed bottom nav, ViewSwitcher
+          already self-hides below 640px (`.view-toggle{display:none}`), and
+          "Rozlicz przeszłe wizyty" moves into AppShell's persistent
+          logo+title row via a portal (below) so it stays reachable while
+          scrolling instead of scrolling away with this header — all to
+          reclaim viewport height for the card list. */}
+      {!isMobile && (
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">Wizyty</h1>
+            <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
+          </div>
+          <div>
+            {canWrite && (
+              <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">
+                Nowa wizyta
+              </ButtonLink>
+            )}
+            <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
+            <PastVisitsScanner />
+          </div>
+        </header>
+      )}
+      {isMobile && mobileHeaderSlot && createPortal(<PastVisitsScanner />, mobileHeaderSlot)}
 
       <div className="cal-grid-page">
       <div className="cal-main">
-        <div className="date-nav">
-          {/* Grouped so mobile can lay these 4 out as a deterministic 2x2
-              grid (Appointments.css @max-width:640px) instead of letting
-              flex-wrap split them wherever the current viewport width
-              happens to land — that produced a different, often-orphaned
-              wrap pattern every few pixels of width (audit finding #1,
-              mobile-audit-wizyty-list.md). */}
-          <div className="date-nav-controls">
-            <button type="button" className="nav-btn" onClick={() => goWeek(-1)}>
-              ← Poprzedni
-            </button>
-            <input type="date" className="date-nav-date" aria-label="Wybierz tydzień" value={iso(weekStart)} onChange={(e) => onDateInputChange(e.target.value)} />
-            <button type="button" className="nav-btn" onClick={goToday}>
-              Dziś
-            </button>
-            <button type="button" className="nav-btn" onClick={() => goWeek(1)}>
-              Następny →
-            </button>
+        {/* On mobile, Pracownik filter + search moved into the filter-icon
+            modal (MobileWizytyCalendarView, TASK2) — this whole toolbar is
+            desktop-only now; the day/week/month navigation is the fixed
+            bottom bar instead. */}
+        {!isMobile && (
+          <div className="date-nav">
+            {/* Grouped so mobile can lay these 4 out as a deterministic 2x2
+                grid (Appointments.css @max-width:640px) instead of letting
+                flex-wrap split them wherever the current viewport width
+                happens to land — that produced a different, often-orphaned
+                wrap pattern every few pixels of width (audit finding #1,
+                mobile-audit-wizyty-list.md). */}
+            <div className="date-nav-controls">
+              <button type="button" className="nav-btn" onClick={() => goWeek(-1)}>
+                ← Poprzedni
+              </button>
+              <input type="date" className="date-nav-date" aria-label="Wybierz tydzień" value={iso(weekStart)} onChange={(e) => onDateInputChange(e.target.value)} />
+              <button type="button" className="nav-btn" onClick={goToday}>
+                Dziś
+              </button>
+              <button type="button" className="nav-btn" onClick={() => goWeek(1)}>
+                Następny →
+              </button>
+            </div>
+            <span className="date-nav-range">{rangeLabel}</span>
+            <div className="empf-divider" />
+            <span className="empf-label">Pracownik:</span>
+            <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll />
+            <div className="list-search">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input type="text" placeholder="Szukaj klienta, usługi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </div>
           </div>
-          <span className="date-nav-range">{rangeLabel}</span>
-          <div className="empf-divider" />
-          <span className="empf-label">Pracownik:</span>
-          <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll />
-          <div className="list-search">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input type="text" placeholder="Szukaj klienta, usługi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-          </div>
-        </div>
+        )}
 
+        {isMobile ? (
+          <MobileWizytyCalendarView
+            selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)}
+            mode={mode}
+            monthCache={monthCache}
+            ensureMonthLoaded={ensureMonthLoaded}
+            onDayClick={handleSidebarDayClick}
+            appointments={filtered}
+            loading={loading}
+            chainHasMore={chainHasMore}
+            onShowNextDay={appendNextChainDay}
+            onRowClick={handleRowClick}
+            onStatusClick={setStatusModalAppt}
+            employees={employees}
+            employeeId={employeeId}
+            onSelectEmployee={setEmployeeId}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            canWrite={canWrite}
+            onDataChanged={handleStatusUpdated}
+          />
+        ) : (
         <div className="table-container stack-cards-wrap">
           <table className="refined-table stack-cards">
             <thead>
@@ -435,6 +478,7 @@ export function WizytyListPage() {
             </span>
           </div>
         </div>
+        )}
       </div>
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />

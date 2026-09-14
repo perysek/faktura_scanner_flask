@@ -905,12 +905,26 @@ def get_available_slots():
         employee_id = request.args.get('employee_id', type=int)
         slot_date = _parse_date(request.args.get('date'))
         duration = request.args.get('duration', 60, type=int)
+        # Optional overrides — the mobile reschedule-sheet slot grid (07:45-21:15,
+        # 15-min steps) needs a wider/finer window than this endpoint's original
+        # caller (ConflictResolutionModal, 9:00-18:00/30-min). Omitted entirely
+        # when absent, so that caller's behaviour is unchanged.
+        kwargs = {}
+        if request.args.get('work_start'):
+            kwargs['work_start'] = _parse_time(request.args.get('work_start'))
+        if request.args.get('work_end'):
+            kwargs['work_end'] = _parse_time(request.args.get('work_end'))
+        if request.args.get('interval'):
+            kwargs['slot_interval'] = request.args.get('interval', type=int)
+        exclude_id = request.args.get('exclude_appointment_id', type=int)
+        if exclude_id:
+            kwargs['exclude_appointment_id'] = exclude_id
 
         if not employee_id or not slot_date:
             raise ValidationError('Wymagane: employee_id, date')
 
         service = AppointmentBusinessService()
-        slots = service.get_available_slots(employee_id, slot_date, duration)
+        slots = service.get_available_slots(employee_id, slot_date, duration, **kwargs)
 
         return jsonify({'success': True, 'slots': slots})
     except AppError:

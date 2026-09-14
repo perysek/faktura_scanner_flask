@@ -50,6 +50,11 @@ export function AppShell() {
             <img src="/logo-inline.webp" alt="" aria-hidden="true" />
             <span className="mobile-title-text">{title}</span>
           </div>
+          {/* Empty by default — a page can portal mobile-only header actions
+              in here (e.g. Wizyty's "Rozlicz przeszłe wizyty", kept
+              reachable while its own page header is dropped on mobile to
+              reclaim viewport height). Takes no space when empty. */}
+          <div id="mobile-header-actions" className="mobile-header-actions" />
         </header>
 
         <main id="main-content" className="app-shell-content" tabIndex={-1} ref={mainRef}>

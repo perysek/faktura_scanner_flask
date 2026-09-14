@@ -66,6 +66,7 @@ export interface AppointmentListItem {
   id: number;
   client_id: number;
   client_name: string | null;
+  client_phone: string | null;
   employee_id: number;
   employee_name: string | null;
   appointment_date: string;

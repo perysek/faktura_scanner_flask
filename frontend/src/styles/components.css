@@ -1188,6 +1188,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .mobile-title-wrap { display: none; align-items: center; gap: 0.5rem; min-width: 0; }
 .mobile-title-wrap img { height: 1.5rem; width: auto; object-fit: contain; }
 .mobile-title-text { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mobile-header-actions { margin-left: auto; display: flex; align-items: center; flex-shrink: 0; }
 @media (max-width: 1023px) {
   .mobile-menu-btn, .mobile-title-wrap { display: flex; }
 }

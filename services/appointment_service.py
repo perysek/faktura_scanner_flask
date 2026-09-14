@@ -576,7 +576,8 @@ class AppointmentBusinessService:
                              work_start: time = time(9, 0),
                              work_end: time = time(18, 0),
                              slot_interval: int = 30,
-                             booked: list = None) -> List[dict]:
+                             booked: list = None,
+                             exclude_appointment_id: int = None) -> List[dict]:
         """Pobierz wolne sloty czasowe dla pracownika na dany dzień.
 
         Generuje sloty co `slot_interval` minut i sprawdza konflikty.
@@ -620,7 +621,8 @@ class AppointmentBusinessService:
                 )
             else:
                 conflicts = self.appt_repo.check_conflicts(
-                    employee_id, slot_date, slot_start, slot_end
+                    employee_id, slot_date, slot_start, slot_end,
+                    exclude_appointment_id=exclude_appointment_id
                 )
                 has_conflict = len(conflicts) > 0
 

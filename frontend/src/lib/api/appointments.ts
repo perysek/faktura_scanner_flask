@@ -147,6 +147,21 @@ export const appointmentsApi = {
   availableSlots: (params: { employee_id: number; date: string; duration: number }) =>
     api.get<AvailableSlotsResponse>('/api/appointments/available-slots', params).then((r) => r.slots.filter((s) => s.available)),
 
+  /** Same endpoint as `availableSlots`, unfiltered (keeps `available: false`
+   * entries so the mobile reschedule-sheet grid can gray them out instead of
+   * omitting them), with the wider 07:45-21:15/15-min window it needs and
+   * `exclude_appointment_id` so the visit's own current slot doesn't show as
+   * self-conflicting when rescheduling within the same day. */
+  slotsGrid: (params: { employee_id: number; date: string; duration: number; exclude_appointment_id: number }) =>
+    api
+      .get<AvailableSlotsResponse>('/api/appointments/available-slots', {
+        ...params,
+        work_start: '07:45',
+        work_end: '21:15',
+        interval: 15,
+      })
+      .then((r) => r.slots),
+
   // ── Global status-change toasts (dobudowane 2026-08-25) ──────────────────
   /** GET /api/appointments/status-events?since=<ISO> — see StatusEventsPoller. */
   statusEvents: (since: string) => api.get<StatusEventsResponse>('/api/appointments/status-events', { since }),
