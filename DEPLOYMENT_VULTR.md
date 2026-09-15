@@ -835,3 +835,11 @@ ssh -i ~/.ssh/cloudcmd_vultr_ed25519 -o StrictHostKeyChecking=no root@70.34.252.
 
 Full command reference (logs, troubleshooting, DB backup with the correct
 password-extraction pattern) lives in `Skill(vultr-ssh)`.
+
+**Public access to this app is `https://staging.my-way-solutions.com`, not
+the raw `:8003` port shown above.** Cloudflare proxies that hostname to a
+separate, hardened nginx vhost on the origin (`my-way-react-preview-staging`,
+standard port 443, same Origin CA cert as the main site) that talks to the
+same Gunicorn backend. Raw `:8003` is for on-box health checks only, has no
+DNS record, and is blocked by the firewall by default. Full Cloudflare-side
+detail lives in `Skill(myway-cloudflare)`.
