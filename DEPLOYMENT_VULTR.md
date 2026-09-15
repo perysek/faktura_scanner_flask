@@ -752,3 +752,86 @@ PostgreSQL :5432 (localhost only)
 | PostgreSQL (self-hosted on same server) | included |
 | Automatic backups (Vultr feature) | +20% of instance price |
 | SSL via Let's Encrypt | free |
+
+---
+
+## Parallel Deployment — React Preview (port 8003)
+
+> Added 2026-09-15, documenting an app instance that already existed on the
+> server but wasn't captured here yet. `Skill(vultr-ssh)` has the full
+> command reference (deploy sequence, health checks, troubleshooting) — this
+> section covers the architecture and the one thing that actually matters:
+> **this instance shares the live production database with the main app
+> above.** It is not a staging database, not a copy — the same `faktura_db`.
+
+A second, independent Flask+Gunicorn+React instance runs the `react-migration`
+branch alongside the main app, on the same VPS:
+
+```
+Internet → Nginx :8003 → frontend/dist (React SPA, served as static files)
+                        → /api, /auth  → Gunicorn 127.0.0.1:8085 → Flask (create_app())
+                                                                        ↓
+                                                          SAME PostgreSQL faktura_db
+                                                          (identical to the :8083 app)
+```
+
+| Item | Value |
+|------|-------|
+| App path | `/opt/my-way-react-preview` |
+| systemd service | `my-way-react-preview` |
+| Branch | `react-migration` |
+| Gunicorn bind | `127.0.0.1:8085` (the main app binds `127.0.0.1:8083` — distinct internal port, same host, no collision) |
+| Nginx | Listens directly on `:8003` (`/etc/nginx/sites-available/my-way-react-preview`), serves `frontend/dist/` as static files, proxies only `/api` and `/auth` to Gunicorn — no infra-level access gate, auth is the app's own Flask-Login session |
+| `gunicorn.conf.py` | A **server-local, uncommitted override** — different `bind`, log paths (`/var/log/my-way-react-preview/`), and `proc_name` than the repo's checked-in default (which targets the main app's 8083/my-way-beauty-salon). `git pull` won't touch it unless a future commit on `react-migration` edits that file, in which case expect a conflict and re-apply the 8085 values by hand. |
+
+**Deploy sequence differs from the main app in one important way**: the
+frontend build step is `cd frontend && npm install && npm run build` (Vite,
+produces `frontend/dist/`) — **not** `npm run build:css` (that's the
+Tailwind build for the main app's Jinja templates and has no effect here).
+
+### Shared-database migration risk — read before running `alembic upgrade head` on either app
+
+Both apps point at the one production database. A migration run from
+`/opt/my-way-react-preview` advances the same schema the main app at
+`/opt/my-way-beauty-salon` reads from, and vice versa — there is no per-app
+isolation.
+
+- **Always back up first** (`pg_dump`, see Maintenance Commands above — one
+  backup covers both apps, since it's one database).
+- **After migrating from one side, don't blindly restart the other.** The
+  running app's own `assert_schema_current` boot guard (Step 11's note above)
+  compares the live DB's Alembic revision against that app's own
+  `alembic/versions/` chain. If the other branch doesn't yet contain the
+  migration you just ran, Alembic can't locate that revision and the app can
+  refuse to boot. Only restart/redeploy the other app once its branch also
+  has the new migration (merge it forward, or hold off restarting until you
+  do).
+- This is genuinely a production-data change made through whichever app
+  happens to run the migration, not a preview-only action — treat it with
+  the same care as a migration on the main app.
+
+### Quick reference
+
+```bash
+# Full update (pull + pip + migrate + build frontend + restart)
+ssh -i ~/.ssh/cloudcmd_vultr_ed25519 -o StrictHostKeyChecking=no root@70.34.252.120 bash << 'ENDSSH'
+set -e
+cd /opt/my-way-react-preview
+git fetch origin && git pull origin react-migration
+source .venv/bin/activate
+export $(grep -v '^#' .env | xargs)
+pip install -r requirements.txt --quiet
+alembic upgrade head
+cd frontend && npm install --silent && npm run build && cd ..
+systemctl restart my-way-react-preview
+sleep 2
+systemctl status my-way-react-preview --no-pager -l
+ENDSSH
+
+# Health check
+ssh -i ~/.ssh/cloudcmd_vultr_ed25519 -o StrictHostKeyChecking=no root@70.34.252.120 \
+  "curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:8003/"
+```
+
+Full command reference (logs, troubleshooting, DB backup with the correct
+password-extraction pattern) lives in `Skill(vultr-ssh)`.
