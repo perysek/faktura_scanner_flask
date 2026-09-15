@@ -15,12 +15,15 @@ import type { AppointmentListItem, EmployeeOption } from '../../types/appointmen
 /** Swipe-left threshold (px) to arm/trigger the reschedule sheet (TASK5) —
  * horizontal movement must also clearly dominate vertical (1.5x) so an
  * ordinary vertical scroll gesture starting on a card never gets mistaken
- * for a swipe. */
-const SWIPE_TRIGGER_PX = -64;
-const SWIPE_MAX_PX = -96;
+ * for a swipe. Widened from the original -64/-96 to give the icon+label
+ * reveal (.mob-appt-swipe-content, 10rem/160px wide) room to actually clear
+ * the card before arming — the label CANNOT be readable at a max reveal
+ * narrower than its own box, that's a hard clip, not a style knob. */
+const SWIPE_TRIGGER_PX = -112;
+const SWIPE_MAX_PX = -160;
 /** Mirror thresholds for swipe-RIGHT → navigate to visit details. */
-const SWIPE_TRIGGER_PX_RIGHT = 64;
-const SWIPE_MAX_PX_RIGHT = 96;
+const SWIPE_TRIGGER_PX_RIGHT = 112;
+const SWIPE_MAX_PX_RIGHT = 160;
 
 const MONTH_WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
 /** Strip is Mon–Sat only (mod #1) — the salon doesn't book Sundays. */
@@ -382,13 +385,19 @@ export function MobileWizytyCalendarView({
                   className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
                   aria-hidden="true"
                 >
-                  {/* Icon translates by the SAME dx as the card (below) so it
-                      stays pinned to the card's trailing edge as it slides —
-                      "stuck" to the card, peeling into view at the boundary,
-                      instead of a static icon centered in the reveal box. */}
-                  <span className="mob-appt-swipe-icon mob-appt-swipe-icon--left" style={{ transform: `translateX(${swipeDx}px)` }}>
-                    <Icon name="edit" />
-                  </span>
+                  {/* The whole icon+label unit translates by the SAME dx as
+                      the card, so it stays pinned to the card's trailing
+                      edge as it slides ("stuck" to the card) — icon sits at
+                      the unit's near edge (glued to the card from the first
+                      px), label trails behind it and only clears the clip as
+                      the drag deepens, then fades to 0 by the arm threshold
+                      so the armed state reads as icon-only. */}
+                  <div className="mob-appt-swipe-content mob-appt-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
+                    <Icon name="calendar_month" />
+                    <span className="mob-appt-swipe-label" style={{ opacity: Math.max(0, 1 - swipeDx / SWIPE_TRIGGER_PX) }}>
+                      Zmień termin
+                    </span>
+                  </div>
                 </div>
               )}
               {swipeDx > 0 && (
@@ -396,9 +405,12 @@ export function MobileWizytyCalendarView({
                   className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--right', swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
                   aria-hidden="true"
                 >
-                  <span className="mob-appt-swipe-icon mob-appt-swipe-icon--right" style={{ transform: `translateX(${swipeDx}px)` }}>
+                  <div className="mob-appt-swipe-content mob-appt-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
+                    <span className="mob-appt-swipe-label" style={{ opacity: Math.max(0, 1 - swipeDx / SWIPE_TRIGGER_PX_RIGHT) }}>
+                      Zobacz więcej
+                    </span>
                     <Icon name="chevron_right" />
-                  </span>
+                  </div>
                 </div>
               )}
               <div

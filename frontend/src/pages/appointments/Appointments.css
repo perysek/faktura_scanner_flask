@@ -498,18 +498,28 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .mob-appt-swipe-reveal--right { background: var(--color-accent-muted); }
 .mob-appt-swipe-reveal--right.mob-appt-swipe-reveal--armed { border-color: var(--color-accent); }
 
-/* Icon rides the reveal's edge nearest the card, translated by the SAME dx
-   the card gets — at rest (dx=0) it sits fully under the card at that edge;
-   as the card slides, both move in lockstep so the icon stays glued to the
-   card's trailing edge instead of just fading in centered in place. */
-.mob-appt-swipe-icon {
-  position: absolute; top: 0; bottom: 0; width: 2.5rem;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--color-status-rescheduled, #92400e);
+/* Icon+label unit rests entirely OFF-CANVAS, just past the edge the card is
+   sliding away from, then gets the SAME translateX(dx) as the card. Because
+   the box's near edge (the one abutting the card) lands exactly on the
+   card's current trailing edge after that shared translate, whatever sits
+   at that near edge (the icon) appears glued to the card from the very
+   first px of drag; content further into the box (the label) only clears
+   the wrap's clip once dragged further, so it visibly "catches up" behind
+   the icon — and fades via opacity (see inline style) so it's gone again by
+   the time the gesture arms, leaving a clean icon-only armed state.
+   Width/thresholds below are sized together: SWIPE_MAX_PX(_RIGHT) must be
+   >= this width or the label can never fully clear the card at all. */
+.mob-appt-swipe-content {
+  position: absolute; top: 0; bottom: 0; width: 10rem;
+  display: flex; align-items: center; gap: 0.375rem;
+  padding: 0 0.625rem;
 }
-.mob-appt-swipe-icon .icon { width: 1.5rem; height: 1.5rem; }
-.mob-appt-swipe-icon--left { right: 0; }
-.mob-appt-swipe-icon--right { left: 0; color: var(--color-accent-deep); }
+.mob-appt-swipe-content .icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.mob-appt-swipe-content--left { right: -10rem; color: var(--color-status-rescheduled, #92400e); }
+.mob-appt-swipe-content--right { left: -10rem; color: var(--color-accent-deep); }
+/* Font matches `.mob-appt-kv-value` (the client-name display) — see that
+   rule further down. */
+.mob-appt-swipe-label { font-size: 0.9375rem; font-weight: 400; white-space: nowrap; }
 
 /* Desktop list — hover-reveal "Przełóż wizytę" row action (only rendered at
    all for scheduled/confirmed rows, see WizytyListPage.tsx). Opacity-based
