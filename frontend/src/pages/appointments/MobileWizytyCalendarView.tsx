@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent, TouchEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
@@ -18,6 +18,9 @@ import type { AppointmentListItem, EmployeeOption } from '../../types/appointmen
  * for a swipe. */
 const SWIPE_TRIGGER_PX = -64;
 const SWIPE_MAX_PX = -96;
+/** Mirror thresholds for swipe-RIGHT → navigate to visit details. */
+const SWIPE_TRIGGER_PX_RIGHT = 64;
+const SWIPE_MAX_PX_RIGHT = 96;
 
 const MONTH_WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
 /** Strip is Mon–Sat only (mod #1) — the salon doesn't book Sundays. */
@@ -174,6 +177,7 @@ export function MobileWizytyCalendarView({
   onDataChanged,
 }: MobileWizytyCalendarViewProps) {
   const auth = useAuth();
+  const navigate = useNavigate();
   const [today] = useState(() => iso(new Date()));
   const nowTick = useNowTick(60_000);
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
@@ -300,28 +304,38 @@ export function MobileWizytyCalendarView({
   function isReschedulable(status: AppointmentListItem['status']) {
     return status === 'scheduled' || status === 'confirmed';
   }
-  function handleCardTouchStart(apptId: number, status: AppointmentListItem['status'], e: TouchEvent<HTMLDivElement>) {
-    if (!isReschedulable(status)) return;
+  // Start tracking for BOTH directions — the reschedulable gate for
+  // swipe-left is enforced in the move handler below (TASK3: swipe-right
+  // navigates to visit details and is valid for every status).
+  function handleCardTouchStart(apptId: number, e: TouchEvent<HTMLDivElement>) {
     const t = e.touches[0];
     touchStartRef.current = { x: t.clientX, y: t.clientY, id: apptId };
   }
-  function handleCardTouchMove(apptId: number, e: TouchEvent<HTMLDivElement>) {
+  function handleCardTouchMove(apptId: number, status: AppointmentListItem['status'], e: TouchEvent<HTMLDivElement>) {
     const start = touchStartRef.current;
     if (!start || start.id !== apptId) return;
     const t = e.touches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
-    if (dx < 0 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+    if (dx < 0 && isReschedulable(status)) {
       setSwipeState({ id: apptId, dx: Math.max(dx, SWIPE_MAX_PX) });
+    } else if (dx > 0) {
+      setSwipeState({ id: apptId, dx: Math.min(dx, SWIPE_MAX_PX_RIGHT) });
     }
   }
   function handleCardTouchEnd(apptId: number, appt: AppointmentListItem) {
     touchStartRef.current = null;
-    const triggered = swipeState?.id === apptId && swipeState.dx <= SWIPE_TRIGGER_PX;
+    const dx = swipeState?.id === apptId ? swipeState.dx : 0;
+    const triggeredLeft = dx <= SWIPE_TRIGGER_PX;
+    const triggeredRight = dx >= SWIPE_TRIGGER_PX_RIGHT;
     setSwipeState(null);
-    if (triggered) {
+    if (triggeredLeft) {
       suppressClickRef.current = apptId;
       setRescheduleAppt(appt);
+    } else if (triggeredRight) {
+      suppressClickRef.current = apptId;
+      navigate(`/wizyty/${appt.id}`);
     }
   }
   function handleCardClick(appt: AppointmentListItem, e: MouseEvent) {
@@ -364,8 +378,27 @@ export function MobileWizytyCalendarView({
             return (
             <div key={appt.id} className="mob-appt-card-wrap">
               {isReschedulable(appt.status) && swipeDx < 0 && (
-                <div className="mob-appt-swipe-reveal" style={{ opacity: Math.min(Math.abs(swipeDx) / Math.abs(SWIPE_TRIGGER_PX), 1) }} aria-hidden="true">
-                  <Icon name="sync" />
+                <div
+                  className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
+                  aria-hidden="true"
+                >
+                  {/* Icon translates by the SAME dx as the card (below) so it
+                      stays pinned to the card's trailing edge as it slides —
+                      "stuck" to the card, peeling into view at the boundary,
+                      instead of a static icon centered in the reveal box. */}
+                  <span className="mob-appt-swipe-icon mob-appt-swipe-icon--left" style={{ transform: `translateX(${swipeDx}px)` }}>
+                    <Icon name="edit" />
+                  </span>
+                </div>
+              )}
+              {swipeDx > 0 && (
+                <div
+                  className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--right', swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
+                  aria-hidden="true"
+                >
+                  <span className="mob-appt-swipe-icon mob-appt-swipe-icon--right" style={{ transform: `translateX(${swipeDx}px)` }}>
+                    <Icon name="chevron_right" />
+                  </span>
                 </div>
               )}
               <div
@@ -373,13 +406,14 @@ export function MobileWizytyCalendarView({
                   'mob-appt-card',
                   appt.status === 'cancelled' || appt.status === 'no_show' || appt.status === 'rescheduled' ? 'mob-appt-card--muted' : '',
                   swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
+                  swipeState?.id === appt.id && swipeState.dx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-card--swipe-armed-right' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
                 style={swipeState?.id === appt.id ? { transform: `translateX(${swipeState.dx}px)`, transition: 'none' } : undefined}
                 onClick={(e) => handleCardClick(appt, e)}
-                onTouchStart={(e) => handleCardTouchStart(appt.id, appt.status, e)}
-                onTouchMove={(e) => handleCardTouchMove(appt.id, e)}
+                onTouchStart={(e) => handleCardTouchStart(appt.id, e)}
+                onTouchMove={(e) => handleCardTouchMove(appt.id, appt.status, e)}
                 onTouchEnd={() => handleCardTouchEnd(appt.id, appt)}
               >
               <div className="mob-appt-top">

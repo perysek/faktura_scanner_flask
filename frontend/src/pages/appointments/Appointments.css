@@ -484,13 +484,32 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    translates left. `overflow: hidden` keeps the reveal from ever peeking out
    past the card's own rounded corners on the right edge. */
 .mob-appt-card-wrap { position: relative; overflow: hidden; border-radius: 3px; }
+/* Border/radius mirror `.mob-appt-card`'s own (not just background fill) so
+   the revealed sliver reads as a real box, not a flat color patch — and the
+   armed-state border color below tracks the card's own armed border 1:1. */
 .mob-appt-swipe-reveal {
   position: absolute; inset: 0; z-index: 0;
+  border: 1px solid var(--color-border); border-radius: 3px;
+}
+.mob-appt-swipe-reveal--left { background: var(--color-status-rescheduled-bg, #fef3c7); }
+.mob-appt-swipe-reveal--left.mob-appt-swipe-reveal--armed { border-color: #1d4ed8; }
+/* TASK3 — swipe-right reveal, routes to visit details; gold via the accent
+   design token (never a hardcoded hex — themeable, see tokens.css §Accent). */
+.mob-appt-swipe-reveal--right { background: var(--color-accent-muted); }
+.mob-appt-swipe-reveal--right.mob-appt-swipe-reveal--armed { border-color: var(--color-accent); }
+
+/* Icon rides the reveal's edge nearest the card, translated by the SAME dx
+   the card gets — at rest (dx=0) it sits fully under the card at that edge;
+   as the card slides, both move in lockstep so the icon stays glued to the
+   card's trailing edge instead of just fading in centered in place. */
+.mob-appt-swipe-icon {
+  position: absolute; top: 0; bottom: 0; width: 2.5rem;
   display: flex; align-items: center; justify-content: center;
-  background: var(--color-status-rescheduled-bg, #fef3c7);
   color: var(--color-status-rescheduled, #92400e);
 }
-.mob-appt-swipe-reveal .icon { width: 1.5rem; height: 1.5rem; }
+.mob-appt-swipe-icon .icon { width: 1.5rem; height: 1.5rem; }
+.mob-appt-swipe-icon--left { right: 0; }
+.mob-appt-swipe-icon--right { left: 0; color: var(--color-accent-deep); }
 
 /* Desktop list — hover-reveal "Przełóż wizytę" row action (only rendered at
    all for scheduled/confirmed rows, see WizytyListPage.tsx). Opacity-based
@@ -524,6 +543,8 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .mob-appt-card--muted { opacity: 0.6; }
 /* Past the swipe-trigger threshold — signals "release to reschedule". */
 .mob-appt-card--swipe-armed { background: rgba(29, 78, 216, 0.06); border-color: #1d4ed8; }
+/* TASK3 — past the swipe-RIGHT threshold, signals "release to view details". */
+.mob-appt-card--swipe-armed-right { background: var(--color-accent-muted); border-color: var(--color-accent); }
 
 /* Small chevron, bottom-right corner, muted — a minimal "this opens"
    affordance rather than a full "tap to view" label (TASK3). */

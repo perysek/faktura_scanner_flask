@@ -447,23 +447,25 @@ export function WizytyListPage() {
                         <span className={appt.satisfaction_score ? 'stars-desktop' : 'stars-none'}>{stars(appt.satisfaction_score)}</span>
                       </td>
                       <td className="cell-actions">
-                        {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
-                          <button
-                            type="button"
-                            className="action-icon-btn action-icon-btn--reschedule"
-                            title="Przełóż wizytę"
-                            aria-label="Przełóż wizytę"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRescheduleTarget(appt);
-                            }}
-                          >
-                            <Icon name="sync" />
-                          </button>
-                        )}
-                        <Link to={`/wizyty/${appt.id}/edytuj`} className="action-icon-btn" title="Edytuj" aria-label="Edytuj" onClick={(e) => e.stopPropagation()}>
-                          <Icon name="edit" />
-                        </Link>
+                        <div className="action-icons">
+                          {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
+                            <button
+                              type="button"
+                              className="action-icon-btn action-icon-btn--reschedule"
+                              title="Przełóż wizytę"
+                              aria-label="Przełóż wizytę"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRescheduleTarget(appt);
+                              }}
+                            >
+                              <Icon name="sync" />
+                            </button>
+                          )}
+                          <Link to={`/wizyty/${appt.id}/edytuj`} className="action-icon-btn" title="Edytuj" aria-label="Edytuj" onClick={(e) => e.stopPropagation()}>
+                            <Icon name="edit" />
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
