@@ -15,16 +15,16 @@
  * `/my-visits` (mobilny widok pracownika, bez bramki modułowej — nie ten
  * frontend). */
 
-export type AppointmentStatus = 'scheduled' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled';
 
 export const STATUS_LABELS: Record<AppointmentStatus, string> = {
   scheduled: 'Zaplanowana',
-  pending: 'Oczekująca',
   confirmed: 'Potwierdzona',
   in_progress: 'W trakcie',
   completed: 'Zakończona',
   cancelled: 'Anulowana',
   no_show: 'Nieobecność',
+  rescheduled: 'Zmieniona',
 };
 
 /** `config/appointment_statuses.py`'s `VALID_TRANSITIONS` — the backend's own
@@ -32,10 +32,15 @@ export const STATUS_LABELS: Record<AppointmentStatus, string> = {
  * `list.html`'s JS `VALID_TRANSITIONS` constant, which is missing
  * `scheduled → in_progress` (the documented "walk-in bypass, no confirmation
  * needed") — a stale duplicate in the original app, not a second rule to
- * honour. `completed`/`cancelled`/`no_show` have no further transitions. */
+ * honour. `completed`/`cancelled`/`no_show` have no further transitions.
+ *
+ * `rescheduled` is deliberately absent as a VALUE here too, mirroring the
+ * backend — it's never a plain status flip, always the compound freeze+clone
+ * operation behind `appointmentsApi.rescheduleAppointment()`. Adding it under
+ * `scheduled`/`confirmed` would let the plain status dropdown flip status
+ * with no clone created. */
 export const VALID_TRANSITIONS: Partial<Record<AppointmentStatus, AppointmentStatus[]>> = {
   scheduled: ['confirmed', 'in_progress', 'cancelled'],
-  pending: ['confirmed', 'cancelled'],
   confirmed: ['in_progress', 'cancelled', 'no_show'],
   in_progress: ['completed', 'cancelled'],
 };
@@ -132,6 +137,16 @@ export interface AppointmentDetail {
   /** `a.*` on the backend query already includes it — not explicitly typed
    * here until StatusHistorySection needed a "visit created" anchor. */
   created_at?: string;
+  /** Set on a frozen original once `rescheduleAppointment()` clones it —
+   * points forward at the clone ("Nowy termin" link). */
+  rescheduled_to_appointment_id?: number | null;
+  /** Set on a clone that was itself created by a reschedule — points at its
+   * immediate predecessor. Only present on GET /api/appointments/<id>. */
+  rescheduled_from_appointment_id?: number | null;
+  /** Only present alongside `rescheduled_from_appointment_id` — the very
+   * first booking in the chain (a visit can be rescheduled more than once).
+   * Backs the "Zmieniony termin" badge + "Pierwszy termin" link. */
+  reschedule_chain_origin_id?: number | null;
 }
 
 /** GET /api/appointments/<id>/status-history — TASK3's "Historia zmian
@@ -144,6 +159,9 @@ export interface StatusHistoryEntry {
   new_status: AppointmentStatus;
   user_name: string | null;
   changed_at: string | null;
+  /** Only set on the `-> rescheduled` entry — the appointment this visit
+   * became. Render that line as a link when present. */
+  linked_appointment_id: number | null;
 }
 
 export interface StatusHistorySkeleton {
@@ -186,6 +204,32 @@ export interface AppointmentFormService {
   effective_duration: number;
   effective_price: number;
   service_type: 'main' | 'addon';
+}
+
+/** POST /api/appointments/<id>/reschedule — freezes the original as
+ * 'rescheduled' and clones it with the new date/time. Named distinctly from
+ * `RescheduleForAbsenceResult`/`rescheduleForAbsence` below — that's a
+ * structurally different, unrelated feature (absence-conflict resolution,
+ * in-place update, `absence_conflict_resolutions.resolution_type`), not a
+ * second copy of this one. Services/employee (when unchanged) are always
+ * copied verbatim server-side — this payload only carries what can actually
+ * change through this endpoint. */
+export interface RescheduleAppointmentPayload {
+  new_date: string;
+  new_start_time: string;
+  new_employee_id?: number;
+  notes?: string | null;
+  discount_amount?: number;
+  timing_change_by?: 'client' | 'salon';
+  force?: boolean;
+}
+
+export interface RescheduleAppointmentResult {
+  success: true;
+  old_appointment_id: number;
+  new_appointment_id: number;
+  new_status: AppointmentStatus;
+  new_end_time: string;
 }
 
 export interface ConflictCheckResult {

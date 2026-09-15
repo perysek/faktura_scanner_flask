@@ -21,6 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Zakończona',
   cancelled: 'Anulowana',
   no_show: 'Nieobecność',
+  rescheduled: 'Zmieniona',
 };
 // DESIGN.md §2.9: status/categorical colors are constant tokens across every
 // theme. no_show deliberately has no -bg token ("rare/muted state") — render
@@ -32,6 +33,7 @@ const STATUS_COLOR_VAR: Record<string, string> = {
   completed: 'var(--color-status-completed)',
   cancelled: 'var(--color-status-cancelled)',
   no_show: 'var(--color-status-no-show)',
+  rescheduled: 'var(--color-status-rescheduled)',
 };
 const STATUS_BG_VAR: Record<string, string> = {
   scheduled: 'var(--color-status-scheduled-bg)',
@@ -40,6 +42,7 @@ const STATUS_BG_VAR: Record<string, string> = {
   completed: 'var(--color-status-completed-bg)',
   cancelled: 'var(--color-status-cancelled-bg)',
   no_show: 'transparent',
+  rescheduled: 'var(--color-status-rescheduled-bg)',
 };
 
 function formatAppointmentDate(dateString: string): string {
@@ -285,6 +288,10 @@ export function ClientDetailPage() {
               <p className={`field-value${client.last_visit_date ? '' : ' empty'}`}>
                 {client.last_visit_date ? formatDate(client.last_visit_date) : 'Brak danych'}
               </p>
+            </div>
+            <div>
+              <label className="field-label">Zmienione wizyty</label>
+              <p className="field-value">{client.rescheduled_count ?? 0}</p>
             </div>
             <div>
               <label className="field-label">Notatki</label>

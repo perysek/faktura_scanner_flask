@@ -27,7 +27,7 @@ class TestColumnProjection:
         expected = {
             'id', 'first_name', 'last_name', 'phone', 'email', 'date_of_birth',
             'notes', 'preferences', 'first_visit_date', 'last_visit_date',
-            'is_active', 'no_show_count', 'cancelled_count',
+            'is_active', 'no_show_count', 'cancelled_count', 'rescheduled_count',
             'is_deleted', 'deleted_at', 'created_at', 'updated_at'
         }
         actual = {c.strip() for c in repo._columns.replace('(', '').replace(')', '').split(',')}

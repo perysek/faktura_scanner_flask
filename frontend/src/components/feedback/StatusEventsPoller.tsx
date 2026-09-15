@@ -7,6 +7,7 @@ const STATUS_LABELS: Record<string, string> = {
   in_progress: 'W trakcie',
   completed: 'Zakończona',
   cancelled: 'Anulowana',
+  rescheduled: 'Zmieniona',
 };
 
 const POLL_INTERVAL_MS = 5000;

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useApiData } from '../../lib/useApiData';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { STATUS_LABELS } from '../../types/appointment';
@@ -109,7 +110,13 @@ export function StatusHistorySection({ appointmentId, appointmentStatus }: Statu
               <li key={i} className="status-audit-item">
                 <span>
                   {entry.old_status ? `${STATUS_LABELS[entry.old_status]} → ` : ''}
-                  <strong>{STATUS_LABELS[entry.new_status]}</strong>
+                  {entry.linked_appointment_id != null ? (
+                    <Link to={`/wizyty/${entry.linked_appointment_id}`} className="status-audit-link">
+                      <strong>{STATUS_LABELS[entry.new_status]}</strong>
+                    </Link>
+                  ) : (
+                    <strong>{STATUS_LABELS[entry.new_status]}</strong>
+                  )}
                 </span>
                 <span className="status-audit-meta">
                   {fmtDateTime(entry.changed_at)} · {entry.user_name || 'system'}

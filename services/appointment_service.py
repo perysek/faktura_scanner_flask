@@ -243,6 +243,136 @@ class AppointmentBusinessService:
             if row:
                 self.client_repo.increment_cancelled_count(row['client_id'])
 
+        elif new_status == AppointmentStatus.RESCHEDULED:
+            row = self.appt_repo.get_by_id(appointment_id)
+            if row:
+                self.client_repo.increment_rescheduled_count(row['client_id'])
+
+    def reschedule_appointment(self, appointment_id: int, new_date: date,
+                                new_start_time: time,
+                                new_employee_id: Optional[int] = None,
+                                notes_override: Optional[str] = None,
+                                discount_amount_override: Optional[Decimal] = None,
+                                timing_change_by: Optional[str] = None,
+                                force_save: bool = False) -> dict:
+        """Freeze `appointment_id` as 'rescheduled' (frees its slot — excluded
+        from every conflict/schedule query, see AppointmentStatus.EXCLUDED_
+        FROM_SCHEDULE) and clone it into a new appointment carrying the
+        updated date/time forward. Client is a hard invariant — always
+        inherited from the original, never accepted as a parameter here.
+
+        Only 'scheduled'/'confirmed' originals are eligible (narrower than
+        the general FINAL-status exclusion — 'pending' doesn't exist anymore
+        and 'in_progress' is deliberately excluded too: the client is already
+        physically at the salon by that point).
+
+        Services are ALWAYS copied verbatim from the original (price/
+        duration/commission snapshot) — this method has no `services`
+        parameter on purpose. A reschedule is a date/time-only operation by
+        design (services/employee-only edits are a separate in-place update);
+        this also intentionally does NOT reuse create_appointment(), which
+        re-prices via PricingService — AppointmentService rows are an
+        immutable financial record, a reschedule must preserve that snapshot
+        rather than recompute it against current catalogue rates. If a
+        service list also needs to change, do that as a second, ordinary
+        edit on the new clone this method returns.
+
+        Raises: AppointmentError if the original isn't eligible, or the new
+        slot fails working-hours/conflict/absence validation.
+        """
+        old = self.appt_repo.get_by_id(appointment_id)
+        if not old:
+            raise AppointmentError("Wizyta nie istnieje")
+        if old['status'] not in (AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED):
+            raise AppointmentError(
+                f"Przełożenie możliwe tylko z wizyty o statusie 'scheduled'/'confirmed' "
+                f"(aktualny status: '{old['status']}')"
+            )
+
+        employee_id = new_employee_id or old['employee_id']
+        old_services = self.appt_svc_repo.get_all_for_appointment(appointment_id)
+        if not old_services:
+            raise AppointmentError("Brak usług do przepisania")
+        total_duration = sum(s['duration_minutes'] for s in old_services)
+        start_dt = datetime.combine(new_date, new_start_time)
+        new_end_time = (start_dt + timedelta(minutes=total_duration)).time()
+
+        self._validate_working_hours(employee_id, new_date, new_start_time, new_end_time)
+
+        if not force_save:
+            employee_conflicts = self.appt_repo.check_conflicts(
+                employee_id, new_date, new_start_time, new_end_time,
+                exclude_appointment_id=appointment_id
+            )
+            if employee_conflicts:
+                raise AppointmentError(
+                    f"Konflikt czasowy — pracownik ma {len(employee_conflicts)} kolidującą wizytę/y"
+                )
+            client_conflicts = self.appt_repo.check_client_conflicts(
+                old['client_id'], new_date, new_start_time, new_end_time,
+                exclude_appointment_id=appointment_id
+            )
+            if client_conflicts:
+                conflict = client_conflicts[0]
+                conflict_time = f"{conflict['start_time']}-{conflict['end_time']}"
+                try:
+                    employee_name = conflict['employee_name']
+                except (KeyError, TypeError):
+                    employee_name = 'inny pracownik'
+                raise AppointmentError(
+                    f"Konflikt czasowy — klient ma już wizytę o {conflict_time} z {employee_name}"
+                )
+        self._check_absence_conflicts(employee_id, new_date, new_start_time, new_end_time)
+
+        # If the salon moves a client-confirmed visit, the new clone starts
+        # back at 'scheduled' so it goes through re-confirmation; if the
+        # client themselves requested the move, they've already agreed to
+        # the new time, so the clone keeps 'confirmed'.
+        new_status = AppointmentStatus.SCHEDULED
+        if old['status'] == AppointmentStatus.CONFIRMED and timing_change_by == 'client':
+            new_status = AppointmentStatus.CONFIRMED
+
+        total_price = sum(Decimal(str(s['price_charged'])) for s in old_services)
+        discount_amount = (Decimal(str(discount_amount_override)) if discount_amount_override is not None
+                            else Decimal(str(old['discount_amount'] or '0')))
+        notes = notes_override if notes_override is not None else old['notes']
+
+        with managed_transaction():
+            self.appt_repo.update_status(appointment_id, AppointmentStatus.RESCHEDULED)
+            self.apply_status_change_side_effects(appointment_id, old['status'], AppointmentStatus.RESCHEDULED)
+
+            new_appointment_id = self.appt_repo.create(Appointment(
+                client_id=old['client_id'],
+                employee_id=employee_id,
+                appointment_date=new_date,
+                start_time=new_start_time,
+                end_time=new_end_time,
+                status=new_status,
+                total_price=total_price,
+                total_duration=total_duration,
+                discount_amount=discount_amount,
+                notes=notes,
+                created_by=old.get('created_by'),
+            ))
+            for svc in old_services:
+                self.appt_svc_repo.add_service(AppointmentService(
+                    appointment_id=new_appointment_id,
+                    service_id=svc['service_id'],
+                    price_charged=Decimal(str(svc['price_charged'])),
+                    duration_minutes=svc['duration_minutes'],
+                    commission_rate=Decimal(str(svc['commission_rate'] or '0')),
+                    commission_amount=Decimal(str(svc['commission_amount'] or '0')),
+                    is_addon=svc['is_addon'],
+                ))
+            self.appt_repo.set_rescheduled_link(appointment_id, new_appointment_id)
+
+        return {
+            'old_appointment_id': appointment_id,
+            'new_appointment_id': new_appointment_id,
+            'new_status': new_status,
+            'new_end_time': new_end_time.strftime('%H:%M'),
+        }
+
     def transition_status(self, appointment_id: int, new_status: str,
                            cancellation_reason: Optional[str] = None) -> bool:
         """Zmień status wizyty z walidacją przepływu.
@@ -670,8 +800,22 @@ class AppointmentBusinessService:
         main_services = [s for s in services if not s['is_addon']]
         addon_services = [s for s in services if s['is_addon']]
 
+        appt_dict = dict(appt_row)
+        # Reschedule-chain links — appt_dict['rescheduled_to_appointment_id']
+        # already comes through via SELECT a.* (set on a frozen original).
+        # rescheduled_from_appointment_id/reschedule_chain_origin_id are
+        # reverse lookups: only meaningful (non-None) on a clone that was
+        # itself created by a reschedule, so only fetched when there's
+        # actually a predecessor to find.
+        predecessor_id = self.appt_repo.get_predecessor_id(appointment_id)
+        appt_dict['rescheduled_from_appointment_id'] = predecessor_id
+        appt_dict['reschedule_chain_origin_id'] = (
+            self.appt_repo.get_reschedule_chain_origin_id(appointment_id)
+            if predecessor_id is not None else None
+        )
+
         return {
-            'appointment': dict(appt_row),
+            'appointment': appt_dict,
             'main_services': [dict(s) for s in main_services],
             'addon_services': [dict(s) for s in addon_services],
             'totals': totals,

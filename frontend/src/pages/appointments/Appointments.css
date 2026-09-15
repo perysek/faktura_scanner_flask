@@ -73,11 +73,11 @@
 
 .status-badge.scheduled { background: rgba(59,130,246,0.1); color: #1d4ed8; }
 .status-badge.confirmed { background: rgba(16,185,129,0.1); color: #047857; }
-.status-badge.pending { background: rgba(107,114,128,0.1); color: #374151; }
 .status-badge.in_progress { background: rgba(245,158,11,0.1); color: #92400e; }
 .status-badge.completed { background: rgba(45,106,79,0.08); color: #2d6a4f; }
 .status-badge.cancelled { background: rgba(239,68,68,0.08); color: #991b1b; }
 .status-badge.no_show { background: rgba(107,114,128,0.1); color: #374151; }
+.status-badge.rescheduled { background: var(--color-status-rescheduled-bg); color: var(--color-status-rescheduled); }
 /* .status-badge.clickable now renders as a real <button> (audit finding
    #4, mobile-audit-wizyty-list.md) — the reset below undoes the browser's
    default button chrome so it still looks like the plain colored pill it
@@ -236,12 +236,12 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
  * encoding here at all. */
 .wk-block.scheduled, .day-block.scheduled { background: rgba(59,130,246,0.1); border-left-color: #1d4ed8; }
 .wk-block.confirmed, .day-block.confirmed { background: rgba(16,185,129,0.1); border-left-color: #047857; }
-.wk-block.pending, .day-block.pending { background: rgba(107,114,128,0.1); border-left-color: #374151; }
 .wk-block.in_progress, .day-block.in_progress { background: rgba(245,158,11,0.1); border-left-color: #92400e; }
 .wk-block.completed, .day-block.completed { background: rgba(45,106,79,0.08); border-left-color: #2d6a4f; }
 .wk-block.cancelled, .day-block.cancelled { background: rgba(239,68,68,0.08); border-left-color: #991b1b; }
 .wk-block.no_show, .day-block.no_show { background: rgba(107,114,128,0.1); border-left-color: #374151; }
-.wk-block.cancelled, .wk-block.no_show, .day-block.cancelled, .day-block.no_show { opacity: 0.5; text-decoration: line-through; }
+.wk-block.rescheduled, .day-block.rescheduled { background: var(--color-status-rescheduled-bg); border-left-color: var(--color-status-rescheduled); }
+.wk-block.cancelled, .wk-block.no_show, .wk-block.rescheduled, .day-block.cancelled, .day-block.no_show, .day-block.rescheduled { opacity: 0.5; text-decoration: line-through; }
 
 /* Day/employee header row (CalendarWeekPage/CalendarDayPage, own inline-
  * styled row above the lane grid) — distinct background from the grid body
@@ -292,10 +292,10 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
  * (fix #4 task2, was a single flat blue regardless of status). */
 .month-cell-appt.scheduled { background: rgba(59,130,246,0.15); color: #1d4ed8; }
 .month-cell-appt.confirmed { background: rgba(16,185,129,0.15); color: #047857; }
-.month-cell-appt.pending { background: rgba(107,114,128,0.15); color: #374151; }
 .month-cell-appt.in_progress { background: rgba(245,158,11,0.15); color: #92400e; }
 .month-cell-appt.completed { background: rgba(45,106,79,0.12); color: #2d6a4f; }
 .month-cell-appt.no_show { background: rgba(107,114,128,0.15); color: #374151; }
+.month-cell-appt.rescheduled { background: var(--color-status-rescheduled-bg); color: var(--color-status-rescheduled); opacity: 0.7; text-decoration: line-through; }
 .month-cell-more { font-size: 0.625rem; color: var(--color-ink-subtle); }
 
 .emp-page-nav { display: flex; align-items: center; gap: 0.5rem; }
@@ -479,8 +479,37 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    (title+status / client+phone / pracownik+usługa / price) instead of 8,
    and compact (not tiny) spacing rather than shrinking type below the old
    desktop-table sizes. */
+/* Swipe-reveal wrapper (Gmail-style archive/delete affordance) — the yellow
+   "reschedule" box lives BEHIND the card, in the space the card leaves as it
+   translates left. `overflow: hidden` keeps the reveal from ever peeking out
+   past the card's own rounded corners on the right edge. */
+.mob-appt-card-wrap { position: relative; overflow: hidden; border-radius: 3px; }
+.mob-appt-swipe-reveal {
+  position: absolute; inset: 0; z-index: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-status-rescheduled-bg, #fef3c7);
+  color: var(--color-status-rescheduled, #92400e);
+}
+.mob-appt-swipe-reveal .icon { width: 1.5rem; height: 1.5rem; }
+
+/* Desktop list — hover-reveal "Przełóż wizytę" row action (only rendered at
+   all for scheduled/confirmed rows, see WizytyListPage.tsx). Opacity-based
+   fade-in on row hover, matching this table's existing row-clickable
+   convention, rather than a permanently-visible 3rd icon crowding the
+   Edytuj column. */
+.refined-table tbody tr .action-icon-btn--reschedule {
+  color: var(--color-status-rescheduled, #92400e);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.refined-table tbody tr.row-clickable:hover .action-icon-btn--reschedule,
+.refined-table tbody tr .action-icon-btn--reschedule:focus-visible {
+  opacity: 1;
+}
+.action-icon-btn--reschedule:hover { background: var(--color-status-rescheduled-bg, #fef3c7) !important; }
+
 .mob-appt-card {
-  position: relative;
+  position: relative; z-index: 1;
   background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 3px;
   /* Extra right padding reserves room for `.mob-appt-tap-hint` (TASK3)
      without it overlapping the Usługa/Tel. columns' text. */

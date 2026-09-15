@@ -14,6 +14,8 @@ import type {
   PastResolutionStatus,
   ReassignForAbsenceResult,
   ReassignmentCandidate,
+  RescheduleAppointmentPayload,
+  RescheduleAppointmentResult,
   RescheduleForAbsenceResult,
   StatusEventsResponse,
   StatusHistoryResponse,
@@ -77,6 +79,13 @@ export const appointmentsApi = {
 
   updateStatus: (id: number, status: AppointmentStatus, cancellationReason?: string) =>
     api.put<{ success: boolean }>(`/api/appointments/${id}/status`, { status, cancellation_reason: cancellationReason }),
+
+  /** POST /api/appointments/<id>/reschedule — freezes the original as
+   * 'rescheduled' (frees its slot) and clones it onto the new date/time.
+   * Named distinctly from `rescheduleForAbsence` below — unrelated feature,
+   * see that method's own comment. */
+  rescheduleAppointment: (id: number, payload: RescheduleAppointmentPayload) =>
+    api.post<RescheduleAppointmentResult>(`/api/appointments/${id}/reschedule`, payload),
 
   complete: (id: number, paymentMethod?: string, discountAmount?: number) =>
     api.post<{ success: true }>(`/api/appointments/${id}/complete`, { payment_method: paymentMethod, discount_amount: discountAmount }),

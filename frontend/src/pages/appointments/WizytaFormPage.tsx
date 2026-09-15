@@ -26,7 +26,13 @@ interface ClientOption {
   label: string;
 }
 
-const STATUS_OPTIONS = (Object.keys(STATUS_LABELS) as AppointmentStatus[]).map((v) => ({ value: v, label: STATUS_LABELS[v] }));
+// 'rescheduled' excluded on purpose — it's never a plain status flip, always
+// the compound freeze+clone operation behind handleEditSubmit's timing-
+// change branch below. Leaving it selectable here would let staff flip an
+// appointment straight to 'rescheduled' with no clone ever created.
+const STATUS_OPTIONS = (Object.keys(STATUS_LABELS) as AppointmentStatus[])
+  .filter((v) => v !== 'rescheduled')
+  .map((v) => ({ value: v, label: STATUS_LABELS[v] }));
 
 function todayIso(): string {
   const n = new Date();
@@ -73,6 +79,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [originalDate, setOriginalDate] = useState<string | null>(null);
   const [originalTime, setOriginalTime] = useState<string | null>(null);
+  const [originalStatus, setOriginalStatus] = useState<AppointmentStatus | null>(null);
   const [wasConfirmed, setWasConfirmed] = useState(false);
   const [confirmationStatus, setConfirmationStatus] = useState<'pending' | 'confirmed' | 'declined' | null>(null);
 
@@ -171,6 +178,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
         setNotes(a.notes ?? '');
         setOriginalDate(a.appointment_date);
         setOriginalTime(a.start_time.slice(0, 5));
+        setOriginalStatus(a.status);
         setWasConfirmed(a.confirmation_status === 'confirmed');
         setConfirmationStatus(a.confirmation_status);
         setCurrentServices(
@@ -301,13 +309,79 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
     }
   }
 
+  // A date/time change on a scheduled/confirmed original routes through
+  // reschedule_appointment (freeze original + clone) instead of an in-place
+  // PUT — see plan §6. Employee/service/notes-only edits, or a timing change
+  // on a non-eligible source status, are unaffected: still a plain save.
+  async function performReschedule(force: boolean, timingChangeBy?: 'client' | 'salon') {
+    if (!appointmentId) return;
+    setIsSubmitting(true);
+    try {
+      const result = await appointmentsApi.rescheduleAppointment(appointmentId, {
+        new_date: date,
+        new_start_time: time,
+        new_employee_id: Number(employeeId),
+        notes: notes.trim() || null,
+        timing_change_by: timingChangeBy,
+        force,
+      });
+      // reschedule_appointment always clones with the ORIGINAL services
+      // verbatim (it has no `services` param, by design — see the service
+      // method's docstring). If this submission also edited the services
+      // list, that edit needs a second, ordinary save on the new clone so
+      // it isn't silently dropped. `status` here is the server's own
+      // computed new_status (scheduled, or confirmed when the client
+      // requested the move) — never the stale form value, which still
+      // reflects the frozen original's status.
+      await appointmentsApi.update(result.new_appointment_id, {
+        client_id: Number(clientId),
+        employee_id: Number(employeeId),
+        status: result.new_status,
+        appointment_date: date,
+        start_time: time,
+        notes: notes.trim() || null,
+        services: currentServices.map((s) => ({ service_id: s.service_id, price_charged: s.price_charged, duration_minutes: s.duration_minutes, is_addon: s.is_addon })),
+      });
+      toast.success('Wizyta przepisana');
+      navigate(`/wizyty/${result.new_appointment_id}`);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Błąd przepisania wizyty';
+      if (err instanceof ApiError && err.status === 409 && auth.user?.role === 'superuser') {
+        setIsSubmitting(false);
+        const proceed = await confirm({
+          title: 'Konflikt terminu',
+          message: `${message} Zapisać mimo konfliktu?`,
+          confirmText: 'Zapisz mimo to',
+          type: 'warning',
+        });
+        if (proceed) await performReschedule(true, timingChangeBy);
+        return;
+      }
+      toast.error(message);
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleEditSubmit() {
     if (!currentServices.length) {
       toast.error('Wizyta musi mieć co najmniej jedną usługę');
       return;
     }
     const timingChanged = originalDate !== null && (date !== originalDate || time !== originalTime);
+    const eligibleForReschedule = originalStatus === 'scheduled' || originalStatus === 'confirmed';
+
+    if (timingChanged && eligibleForReschedule) {
+      if (wasConfirmed) {
+        setTimingModal({});
+        return;
+      }
+      await performReschedule(false);
+      return;
+    }
     if (timingChanged && wasConfirmed) {
+      // Timing changed but the source status isn't reschedule-eligible
+      // (e.g. in_progress) — still worth asking who requested it before a
+      // plain in-place save, same as before this feature existed.
       setTimingModal({});
       return;
     }
@@ -497,10 +571,28 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
           title="Zmiana terminu potwierdzonej wizyty"
           footer={
             <>
-              <Button variant="secondary" icon="person" disabled={isSubmitting} onClick={() => { setTimingModal(null); void performEditSave(false, 'client'); }}>
+              <Button
+                variant="secondary"
+                icon="person"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setTimingModal(null);
+                  const eligible = originalStatus === 'scheduled' || originalStatus === 'confirmed';
+                  void (eligible ? performReschedule(false, 'client') : performEditSave(false, 'client'));
+                }}
+              >
                 Zmianę zgłosił klient
               </Button>
-              <Button variant="primary" icon="send" disabled={isSubmitting} onClick={() => { setTimingModal(null); void performEditSave(false, 'salon'); }}>
+              <Button
+                variant="primary"
+                icon="send"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setTimingModal(null);
+                  const eligible = originalStatus === 'scheduled' || originalStatus === 'confirmed';
+                  void (eligible ? performReschedule(false, 'salon') : performEditSave(false, 'salon'));
+                }}
+              >
                 Salon zmienił termin (wyślij SMS)
               </Button>
             </>

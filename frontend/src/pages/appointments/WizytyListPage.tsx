@@ -12,6 +12,7 @@ import { empColor } from '../../lib/appointments/employeeColor';
 import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
 import { StatusDropdown } from './StatusDropdown';
+import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { MobileWizytyCalendarView, useIsMobile } from './MobileWizytyCalendarView';
@@ -88,6 +89,8 @@ export function WizytyListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });
 
+  const [rescheduleTarget, setRescheduleTarget] = useState<AppointmentListItem | null>(null);
+
   const [weekAppointments, setWeekAppointments] = useState<AppointmentListItem[]>([]);
   const [weekLoading, setWeekLoading] = useState(true);
   const [weekError, setWeekError] = useState<Error | null>(null);
@@ -136,7 +139,7 @@ export function WizytyListPage() {
   }
 
   function hasReal(byDate: Map<string, AppointmentListItem[]>, dateStr: string): boolean {
-    return (byDate.get(dateStr) ?? []).some((a) => a.status !== 'cancelled' && a.status !== 'no_show');
+    return (byDate.get(dateStr) ?? []).some((a) => a.status !== 'cancelled' && a.status !== 'no_show' && a.status !== 'rescheduled');
   }
 
   async function handleSidebarDayClick(dateStr: string) {
@@ -444,6 +447,20 @@ export function WizytyListPage() {
                         <span className={appt.satisfaction_score ? 'stars-desktop' : 'stars-none'}>{stars(appt.satisfaction_score)}</span>
                       </td>
                       <td className="cell-actions">
+                        {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
+                          <button
+                            type="button"
+                            className="action-icon-btn action-icon-btn--reschedule"
+                            title="Przełóż wizytę"
+                            aria-label="Przełóż wizytę"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRescheduleTarget(appt);
+                            }}
+                          >
+                            <Icon name="sync" />
+                          </button>
+                        )}
                         <Link to={`/wizyty/${appt.id}/edytuj`} className="action-icon-btn" title="Edytuj" aria-label="Edytuj" onClick={(e) => e.stopPropagation()}>
                           <Icon name="edit" />
                         </Link>
@@ -473,6 +490,14 @@ export function WizytyListPage() {
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />
       </div>
+
+      <RescheduleSheet
+        appointment={rescheduleTarget}
+        isOpen={rescheduleTarget !== null}
+        onClose={() => setRescheduleTarget(null)}
+        employees={employees}
+        onRescheduled={handleStatusUpdated}
+      />
     </div>
   );
 }

@@ -2625,6 +2625,7 @@ def get_clients():
             client_dict['completed_visits'] = int(row['completed_visits'] or 0)
             client_dict['no_show_count'] = int(row['no_show_count'] or 0)
             client_dict['cancelled_count'] = int(row['cancelled_count'] or 0)
+            client_dict['rescheduled_count'] = int(row['rescheduled_count'] or 0)
             client_dict['visits_last_8w'] = int(row['visits_last_8w'] or 0)
             # Next upcoming visit (mobile card row) — NULL when none scheduled
             nv_date = row['next_visit_date']

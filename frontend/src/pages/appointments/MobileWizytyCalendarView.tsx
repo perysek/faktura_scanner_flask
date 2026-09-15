@@ -75,7 +75,7 @@ function formatDuration(startTime: string, endTime: string): string {
  * start time has already passed. `nowMs` comes from the card list's shared
  * 60s tick so every card updates together instead of each on its own timer. */
 function minutesUntilStart(appt: AppointmentListItem, nowMs: number): number | null {
-  if (!(appt.status === 'scheduled' || appt.status === 'pending' || appt.status === 'confirmed')) return null;
+  if (!(appt.status === 'scheduled' || appt.status === 'confirmed')) return null;
   const startMs = new Date(`${appt.appointment_date}T${appt.start_time}`).getTime();
   const diffMin = Math.round((startMs - nowMs) / 60000);
   return diffMin >= 0 ? diffMin : null;
@@ -272,7 +272,7 @@ export function MobileWizytyCalendarView({
     const set = new Set<string>();
     if (monthCache?.key !== monthKey) return set;
     for (const [dateStr, appts] of monthCache.byDate) {
-      if (appts.some((a) => a.status !== 'cancelled' && a.status !== 'no_show')) set.add(dateStr);
+      if (appts.some((a) => a.status !== 'cancelled' && a.status !== 'no_show' && a.status !== 'rescheduled')) set.add(dateStr);
     }
     return set;
   }, [monthCache, monthKey]);
@@ -293,7 +293,15 @@ export function MobileWizytyCalendarView({
   // hijacked. `suppressClickRef` stops the synthetic click mobile browsers
   // fire after touchend from also triggering the card's normal
   // navigate-to-detail `onClick`.
-  function handleCardTouchStart(apptId: number, e: TouchEvent<HTMLDivElement>) {
+  // Only a scheduled/confirmed visit can be rescheduled (backend eligibility
+  // rule, services/appointment_service.py's reschedule_appointment) — never
+  // arm the gesture for anything else, so cancelled/no_show/completed/
+  // rescheduled cards don't reveal the swipe affordance at all.
+  function isReschedulable(status: AppointmentListItem['status']) {
+    return status === 'scheduled' || status === 'confirmed';
+  }
+  function handleCardTouchStart(apptId: number, status: AppointmentListItem['status'], e: TouchEvent<HTMLDivElement>) {
+    if (!isReschedulable(status)) return;
     const t = e.touches[0];
     touchStartRef.current = { x: t.clientX, y: t.clientY, id: apptId };
   }
@@ -352,22 +360,28 @@ export function MobileWizytyCalendarView({
           // over for the snap.
           appointments.map((appt) => {
             const startsInMin = minutesUntilStart(appt, nowTick);
+            const swipeDx = swipeState?.id === appt.id ? swipeState.dx : 0;
             return (
-            <div
-              key={appt.id}
-              className={[
-                'mob-appt-card',
-                appt.status === 'cancelled' || appt.status === 'no_show' ? 'mob-appt-card--muted' : '',
-                swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              style={swipeState?.id === appt.id ? { transform: `translateX(${swipeState.dx}px)`, transition: 'none' } : undefined}
-              onClick={(e) => handleCardClick(appt, e)}
-              onTouchStart={(e) => handleCardTouchStart(appt.id, e)}
-              onTouchMove={(e) => handleCardTouchMove(appt.id, e)}
-              onTouchEnd={() => handleCardTouchEnd(appt.id, appt)}
-            >
+            <div key={appt.id} className="mob-appt-card-wrap">
+              {isReschedulable(appt.status) && swipeDx < 0 && (
+                <div className="mob-appt-swipe-reveal" style={{ opacity: Math.min(Math.abs(swipeDx) / Math.abs(SWIPE_TRIGGER_PX), 1) }} aria-hidden="true">
+                  <Icon name="sync" />
+                </div>
+              )}
+              <div
+                className={[
+                  'mob-appt-card',
+                  appt.status === 'cancelled' || appt.status === 'no_show' || appt.status === 'rescheduled' ? 'mob-appt-card--muted' : '',
+                  swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                style={swipeState?.id === appt.id ? { transform: `translateX(${swipeState.dx}px)`, transition: 'none' } : undefined}
+                onClick={(e) => handleCardClick(appt, e)}
+                onTouchStart={(e) => handleCardTouchStart(appt.id, appt.status, e)}
+                onTouchMove={(e) => handleCardTouchMove(appt.id, e)}
+                onTouchEnd={() => handleCardTouchEnd(appt.id, appt)}
+              >
               <div className="mob-appt-top">
                 {/* End time dropped, duration forced to its own line (not
                     just wrap) — user's explicit format. */}
@@ -420,6 +434,7 @@ export function MobileWizytyCalendarView({
 
               {/* Minimal "this is tappable" hint (TASK3). */}
               <Icon name="chevron_right" className="mob-appt-tap-hint" />
+              </div>
             </div>
             );
           })

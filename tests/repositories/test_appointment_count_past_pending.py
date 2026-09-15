@@ -30,7 +30,7 @@ class TestCountPastPendingAppointments:
         assert result == 4
         sql = cur.execute.call_args.args[0]
         assert '(a.appointment_date + a.end_time) < NOW()' in sql
-        assert "a.status NOT IN ('completed', 'cancelled', 'no_show')" in sql
+        assert "a.status NOT IN ('completed', 'cancelled', 'no_show', 'rescheduled')" in sql
         assert 'a.is_deleted = FALSE' in sql
 
     def test_zero_when_no_row(self, app):

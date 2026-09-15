@@ -24,6 +24,7 @@ export interface Client {
   completed_visits?: number;
   no_show_count?: number;
   cancelled_count?: number;
+  rescheduled_count?: number;
   visits_last_8w?: number;
   next_visit_date?: string | null;
   next_visit_time?: string | null;

@@ -29,7 +29,7 @@ class TestGetCandidatesForConflictScan:
 
         sql, params = cur.execute.call_args.args[0], cur.execute.call_args.args[1]
         assert 'a.is_deleted = FALSE' in sql
-        assert "a.status != 'cancelled'" in sql
+        assert "a.status NOT IN ('cancelled', 'rescheduled')" in sql
         assert 'a.appointment_date BETWEEN %s AND %s' in sql
         assert 'aps.is_addon = FALSE' in sql
         assert params == ('2026-01-01', '2026-03-31')

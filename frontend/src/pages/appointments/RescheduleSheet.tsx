@@ -26,15 +26,18 @@ function minutesBetween(start: string, end: string): number {
 }
 
 /**
- * TASK5 — opened by a swipe-left gesture on a card (MobileWizytyCalendarView).
+ * TASK5 — opened by a swipe-left gesture on a card (MobileWizytyCalendarView)
+ * or the desktop list's hover "Przełóż wizytę" button (WizytyListPage).
  * Progressive-reveal flow: date → (employees with >=30min free that day) →
  * (07:45-21:15/15-min slot grid sized to the visit's own duration, gray for
- * anything shorter than that) → "Przepisz" commits via the same general
- * PUT /api/appointments/<id> the desktop edit form uses (there's no
- * lightweight "just move the time" endpoint — the absence-flow's
- * reschedule-for-absence is tied to an absence_id, not reusable here), so a
- * full appointment detail fetch is needed first to resend client_id/status/
- * notes/services unchanged alongside the new date/time/employee.
+ * anything shorter than that) → "Przepisz" commits via
+ * `appointmentsApi.rescheduleAppointment()` — freezes this appointment as
+ * 'rescheduled' (frees its slot) and clones it onto the new date/time/
+ * employee. Client, notes and services are never sent: the backend always
+ * copies them from the original (client-unchanged is a hard invariant of
+ * the reschedule workflow, not just a UI convention). Only reachable for
+ * `scheduled`/`confirmed` appointments — see the swipe-gesture and
+ * list-button guards at the call sites.
  */
 export function RescheduleSheet({ appointment, isOpen, onClose, employees, onRescheduled }: RescheduleSheetProps) {
   const toast = useToast();
@@ -139,20 +142,10 @@ export function RescheduleSheet({ appointment, isOpen, onClose, employees, onRes
     if (!appointment || !detail || !employeeId || !date || !selectedSlot) return;
     setSubmitting(true);
     try {
-      const services = [...detail.main_services, ...detail.addon_services].map((s) => ({
-        service_id: s.service_id,
-        price_charged: s.price_charged,
-        duration_minutes: s.duration_minutes,
-        is_addon: s.is_addon,
-      }));
-      await appointmentsApi.update(appointment.id, {
-        client_id: detail.appointment.client_id,
-        employee_id: employeeId,
-        status: detail.appointment.status,
-        appointment_date: date,
-        start_time: selectedSlot.start_time,
-        notes: detail.appointment.notes,
-        services,
+      await appointmentsApi.rescheduleAppointment(appointment.id, {
+        new_date: date,
+        new_start_time: selectedSlot.start_time,
+        new_employee_id: employeeId,
       });
       toast.success('Wizyta przepisana');
       onRescheduled();

@@ -522,6 +522,11 @@ def get_appointment_status_history(appointment_id):
                 'new_status': e['new_value'],
                 'user_name': e['user_name'],
                 'changed_at': _iso(e['timestamp']),
+                # The one transition that routes to another appointment
+                # (§6b chain link) — 'rescheduled' is otherwise terminal, so
+                # this is the only entry type that ever needs it.
+                'linked_appointment_id': (row['rescheduled_to_appointment_id']
+                                           if e['new_value'] == AppointmentStatus.RESCHEDULED else None),
             } for e in entries],
             'skeleton': {
                 'scheduled_at': _iso(row['created_at']),
@@ -789,6 +794,75 @@ def update_appointment(appointment_id):
         raise
     except Exception as e:
         logging.exception('Unexpected error in update_appointment')
+        raise AppError('Wystapil blad serwera')
+
+
+@appointment_bp.route('/appointments/<int:appointment_id>/reschedule', methods=['POST'])
+@login_required
+@module_permission_required('appointments', 'data_correction')
+def reschedule_appointment(appointment_id):
+    """Przełóż wizytę na nowy termin: zamroź oryginał ze statusem
+    'rescheduled' (zwalnia jego slot) i utwórz nowy wizytę-klon z
+    zaktualizowanym terminem. Klient nigdy się nie zmienia."""
+    try:
+        data = request.get_json()
+        if not data:
+            raise ValidationError('Brak danych')
+
+        required = ['new_date', 'new_start_time']
+        missing = [f for f in required if f not in data]
+        if missing:
+            raise ValidationError(f'Brakujace pola: {", ".join(missing)}')
+
+        old_row = AppointmentRepository().get_by_id(appointment_id)
+        if not old_row:
+            raise NotFoundError('Wizyta nie istnieje')
+        old_status = old_row['status']
+
+        new_date = _parse_date(data['new_date'])
+        new_start_time = _parse_time(data['new_start_time'])
+        new_employee_id = int(data['new_employee_id']) if data.get('new_employee_id') else None
+
+        result = AppointmentBusinessService().reschedule_appointment(
+            appointment_id=appointment_id,
+            new_date=new_date,
+            new_start_time=new_start_time,
+            new_employee_id=new_employee_id,
+            notes_override=data.get('notes'),
+            discount_amount_override=data.get('discount_amount'),
+            timing_change_by=data.get('timing_change_by'),
+            force_save=data.get('force', False),
+        )
+        new_appointment_id = result['new_appointment_id']
+
+        old_label = f"{old_row['appointment_date']} {str(old_row['start_time'])[:5]}"
+        new_label = f"{data['new_date']} {data['new_start_time']}"
+        _audit('appointment', 'STATUS_CHANGE', entity_id=appointment_id,
+               entity_label=old_label, field_name='status',
+               old_value=old_status, new_value=AppointmentStatus.RESCHEDULED)
+        _audit('appointment', 'STATUS_CHANGE', entity_id=appointment_id,
+               entity_label=old_label, field_name='rescheduled_to_appointment_id',
+               old_value=None, new_value=str(new_appointment_id))
+        _audit('appointment', 'CREATE', entity_id=new_appointment_id,
+               entity_label=new_label, field_name=None, old_value=None,
+               new_value=f'utworzona przez przepisanie wizyty #{appointment_id}')
+
+        # The old slot is dead — kill any SMS still pending against it, then
+        # (re)schedule the reminder against the NEW appointment/time. If the
+        # salon moved a client-confirmed visit, re-send the confirmation
+        # request against the new id too (reschedule_appointment already put
+        # the clone back at 'scheduled' for this case).
+        _cancel_event_sms(appointment_id)
+        if (old_status == AppointmentStatus.CONFIRMED
+                and data.get('timing_change_by') == 'salon'):
+            _send_confirmation_request_sms(new_appointment_id)
+        _schedule_employee_reminder_sms(new_appointment_id, data['new_date'], data['new_start_time'])
+
+        return jsonify({'success': True, **result}), 201
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in reschedule_appointment')
         raise AppError('Wystapil blad serwera')
 
 

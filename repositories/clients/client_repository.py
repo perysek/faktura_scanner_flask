@@ -17,7 +17,7 @@ class ClientRepository(BaseRepository):
     _columns = (
         'id, first_name, last_name, phone, email, date_of_birth, '
         'notes, preferences, first_visit_date, last_visit_date, '
-        'is_active, no_show_count, cancelled_count, is_deleted, deleted_at, created_at, updated_at'
+        'is_active, no_show_count, cancelled_count, rescheduled_count, is_deleted, deleted_at, created_at, updated_at'
     )
 
     def __init__(self):
@@ -42,6 +42,7 @@ class ClientRepository(BaseRepository):
             is_active=bool(row['is_active']),
             no_show_count=row['no_show_count'],
             cancelled_count=row['cancelled_count'],
+            rescheduled_count=row['rescheduled_count'] if 'rescheduled_count' in row.keys() else 0,
             created_at=parse_dt(row['created_at']),
             updated_at=parse_dt(row['updated_at'])
         )
@@ -190,6 +191,7 @@ class ClientRepository(BaseRepository):
                 COALESCE(COUNT(CASE WHEN a.status = 'completed' THEN 1 END), 0) AS completed_visits,
                 COALESCE(COUNT(CASE WHEN a.status = 'no_show' THEN 1 END), 0)  AS no_show_count,
                 COALESCE(COUNT(CASE WHEN a.status = 'cancelled' THEN 1 END), 0) AS cancelled_count,
+                COALESCE(COUNT(CASE WHEN a.status = 'rescheduled' THEN 1 END), 0) AS rescheduled_count,
                 COALESCE(COUNT(CASE WHEN a.status = 'completed'
                     AND a.appointment_date >= CURRENT_DATE - INTERVAL '56 days' THEN 1 END), 0) AS visits_last_8w,
                 nv.next_visit_date,
@@ -210,7 +212,7 @@ class ClientRepository(BaseRepository):
                 JOIN employees ne ON ne.id = na.employee_id
                 WHERE na.client_id = c.id
                   AND na.is_deleted = FALSE
-                  AND na.status NOT IN ('cancelled', 'no_show', 'completed')
+                  AND na.status NOT IN ('cancelled', 'no_show', 'completed', 'rescheduled')
                   AND (na.appointment_date > CURRENT_DATE
                        OR (na.appointment_date = CURRENT_DATE AND na.start_time >= LOCALTIME))
                   {emp_exclusion_sql_inline('na.employee_id')}
@@ -375,6 +377,17 @@ class ClientRepository(BaseRepository):
         query = """
             UPDATE clients SET
                 cancelled_count = cancelled_count + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        cursor = self._execute(query, (client_id,))
+        return cursor.rowcount > 0
+
+    def increment_rescheduled_count(self, client_id: int) -> bool:
+        """Bump a client's rescheduled-visit counter by one."""
+        query = """
+            UPDATE clients SET
+                rescheduled_count = rescheduled_count + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """

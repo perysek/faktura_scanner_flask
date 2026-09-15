@@ -262,6 +262,7 @@ class Client:
     is_active: bool = True
     no_show_count: int = 0
     cancelled_count: int = 0
+    rescheduled_count: int = 0
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)
     updated_at: Optional[datetime] = field(default_factory=datetime.now)
@@ -360,6 +361,7 @@ class Appointment:
     rated_on:       Optional[datetime] = None
     rated_by:       Optional[str]      = None   # 'client'
     employee_token: Optional[str]      = None   # UUID — employee mobile form URL (time-gated)
+    rescheduled_to_appointment_id: Optional[int] = None   # set on a frozen original once cloned
     created_by: Optional[int] = None
     id: Optional[int] = None
     created_at: Optional[datetime] = field(default_factory=datetime.now)

@@ -137,7 +137,7 @@ export function CalendarMonthPage() {
           </div>
           <div className="month-grid">
             {cells.map((cell) => {
-              const dayAppts = (byDate.get(cell.dateStr) ?? []).filter((a) => a.status !== 'cancelled');
+              const dayAppts = (byDate.get(cell.dateStr) ?? []).filter((a) => a.status !== 'cancelled' && a.status !== 'no_show' && a.status !== 'rescheduled');
               const visible = dayAppts.slice(0, 3);
               const more = dayAppts.length - visible.length;
               return (

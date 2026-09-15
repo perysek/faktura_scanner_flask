@@ -84,6 +84,11 @@
   --color-status-cancelled-bg: #fef2f2;
   --color-status-cancelled-badge: rgba(220, 38, 38, 0.15);
   --color-status-no-show: #6b7280;
+  /* "Moved", not "didn't happen" — deliberately its own amber hue, not a
+     reuse of cancelled/no-show's red/gray. */
+  --color-status-rescheduled: #92400e;
+  --color-status-rescheduled-bg: #fef3c7;
+  --color-status-rescheduled-badge: rgba(217, 119, 6, 0.18);
 
   /* ── Chart palette (§2.10) — constant across every theme ────────────────── */
   --color-chart-blue: #2563eb;

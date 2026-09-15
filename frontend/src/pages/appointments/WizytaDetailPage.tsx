@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import './Appointments.css';
 import './WizytaDetailPage.css';
 import { useApiData } from '../../lib/useApiData';
@@ -139,6 +139,21 @@ export function WizytaDetailPage() {
             onIntercept={() => setCompleteOpen(true)}
             onSuccess={detailState.reload}
           />
+          {appt.rescheduled_from_appointment_id != null && (
+            <span className="reschedule-chain-chip">
+              <span className="badge-info">Zmieniony termin</span>
+              <Link to={`/wizyty/${appt.reschedule_chain_origin_id}`} className="reschedule-chain-link">
+                Pierwszy termin <Icon name="arrow_forward" />
+              </Link>
+            </span>
+          )}
+          {appt.status === 'rescheduled' && appt.rescheduled_to_appointment_id != null && (
+            <span className="reschedule-chain-chip">
+              <Link to={`/wizyty/${appt.rescheduled_to_appointment_id}`} className="reschedule-chain-link">
+                Nowy termin <Icon name="arrow_forward" />
+              </Link>
+            </span>
+          )}
           <p className="page-subtitle">
             {appt.appointment_date.split('-').reverse().join('.')} · {appt.start_time.slice(0, 5)}–{appt.end_time.slice(0, 5)} · {appt.total_duration} min · {appt.employee_name || '—'}
           </p>
@@ -150,7 +165,7 @@ export function WizytaDetailPage() {
       {appt.confirmation_status === 'declined' && <div className="confirm-chip confirm-chip--bad">✕ Klient odmówił przez SMS</div>}
 
       <div className="action-bar">
-        {canWrite && appt.status !== 'cancelled' && appt.status !== 'completed' && (
+        {canWrite && appt.status !== 'cancelled' && appt.status !== 'completed' && appt.status !== 'rescheduled' && (
           <ButtonLink variant="secondary" icon="edit" to={`/wizyty/${appointmentId}/edytuj`}>
             Edytuj
           </ButtonLink>

@@ -35,6 +35,7 @@ class AppointmentRepository:
             cancellation_reason=row['cancellation_reason'],
             cancelled_at=parse_dt(row['cancelled_at']),
             satisfaction_score=row['satisfaction_score'] if 'satisfaction_score' in row.keys() else None,
+            rescheduled_to_appointment_id=row['rescheduled_to_appointment_id'] if 'rescheduled_to_appointment_id' in row.keys() else None,
             created_by=row['created_by'],
             created_at=parse_dt(row['created_at']),
             updated_at=parse_dt(row['updated_at'])
@@ -295,7 +296,7 @@ class AppointmentRepository:
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE a.employee_id = %s AND a.appointment_date = %s
-            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
             AND a.is_deleted = FALSE {excl_sql}
             GROUP BY a.id, c.first_name, c.last_name, c.phone, e.first_name, e.last_name
             ORDER BY a.start_time
@@ -337,7 +338,7 @@ class AppointmentRepository:
                     FROM employees e
                     JOIN appointments a ON a.employee_id = e.id
                     WHERE a.appointment_date = %s
-                    AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+                    AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
                     AND a.is_deleted = FALSE
                     AND e.is_active = TRUE {emp_excl_sql}
                     ORDER BY full_name
@@ -420,7 +421,7 @@ class AppointmentRepository:
             SELECT a.* FROM appointments a
             WHERE a.employee_id = %s AND a.appointment_date = %s
             AND a.start_time < %s AND a.end_time > %s
-            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
             AND a.is_deleted = FALSE
             {exclude_filter}
         """
@@ -473,7 +474,7 @@ class AppointmentRepository:
             LEFT JOIN employees e ON e.id = a.employee_id
             WHERE a.client_id = %s AND a.appointment_date = %s
             AND a.start_time < %s AND a.end_time > %s
-            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+            AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
             AND a.is_deleted = FALSE
             {exclude_filter}
         """
@@ -501,7 +502,7 @@ class AppointmentRepository:
             FROM appointments
             WHERE employee_id = %s
               AND appointment_date BETWEEN %s AND %s
-              AND status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+              AND status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
               AND is_deleted = FALSE
         """
         with get_db_connection() as conn:
@@ -547,6 +548,45 @@ class AppointmentRepository:
             cursor.execute(query, params)
             safe_commit(conn)
             return cursor.rowcount > 0
+
+    def set_rescheduled_link(self, old_appointment_id: int, new_appointment_id: int) -> bool:
+        """Point a frozen/superseded appointment at the clone it became."""
+        query = """
+            UPDATE appointments
+            SET rescheduled_to_appointment_id = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (new_appointment_id, old_appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def get_predecessor_id(self, appointment_id: int) -> Optional[int]:
+        """Reverse lookup: the appointment (if any) that was rescheduled INTO
+        this one — i.e. whose rescheduled_to_appointment_id points here."""
+        query = "SELECT id FROM appointments WHERE rescheduled_to_appointment_id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (appointment_id,))
+            row = cursor.fetchone()
+            return row['id'] if row else None
+
+    def get_reschedule_chain_origin_id(self, appointment_id: int) -> Optional[int]:
+        """Walk rescheduled-from links backward to the very first booking in a
+        reschedule chain (a visit can be rescheduled more than once). Returns
+        None if this appointment has no predecessor (it IS the origin).
+        Bounded to 50 hops as a defensive guard against a data bug creating a
+        cycle — no legitimate chain should ever get close to that."""
+        current_id = appointment_id
+        origin_id = None
+        for _ in range(50):
+            predecessor_id = self.get_predecessor_id(current_id)
+            if predecessor_id is None:
+                break
+            origin_id = predecessor_id
+            current_id = predecessor_id
+        return origin_id
 
     def update_satisfaction_score(self, appointment_id: int, score: int) -> bool:
         """Ustaw ocenę satysfakcji (1–5) tylko dla zakończonych wizyt. Zwraca True jeśli zaktualizowano."""
@@ -653,7 +693,7 @@ class AppointmentRepository:
 
         query = f"""
             SELECT COUNT(*) as cnt FROM appointments
-            WHERE appointment_date = %s AND status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+            WHERE appointment_date = %s AND status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
             AND is_deleted = FALSE
             {employee_filter}
         """
@@ -702,7 +742,7 @@ class AppointmentRepository:
             WHERE
                 a.employee_id = %s
                 AND a.appointment_date = %s
-                AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+                AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
                 AND a.is_deleted = FALSE
                 AND a.start_time < %s
                 AND a.end_time > %s
@@ -834,7 +874,7 @@ class AppointmentRepository:
             SELECT a.*, c.phone, c.first_name AS client_first_name
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
-            WHERE a.status IN ('scheduled', 'pending', 'confirmed')
+            WHERE a.status IN ('scheduled', 'confirmed')
               AND a.is_deleted IS NOT TRUE
               AND c.phone IS NOT NULL AND c.phone != ''
               AND (a.appointment_date::timestamp + a.start_time::interval)
@@ -885,7 +925,7 @@ class AppointmentRepository:
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE
                 (a.appointment_date + a.end_time) < NOW()
-                AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+                AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
                 AND a.is_deleted = FALSE {excl_sql}
             GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
                      a.start_time, a.end_time, a.total_price, a.notes,
@@ -907,7 +947,7 @@ class AppointmentRepository:
             FROM appointments a
             WHERE
                 (a.appointment_date + a.end_time) < NOW()
-                AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+                AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
                 AND a.is_deleted = FALSE {excl_sql}
         """
         with get_db_connection() as conn:
@@ -984,7 +1024,7 @@ class AppointmentRepository:
             WHERE a.employee_id = %s
               AND a.appointment_date = CURRENT_DATE
               AND a.is_deleted = FALSE
-              AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}')
+              AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
               {excl_sql}
             GROUP BY a.id, a.appointment_date, a.start_time, a.end_time,
                      a.status, a.employee_token,
@@ -1042,7 +1082,7 @@ class AppointmentRepository:
             JOIN appointment_services aps ON aps.appointment_id = a.id AND aps.is_addon = FALSE
             JOIN services s ON s.id = aps.service_id
             WHERE a.is_deleted = FALSE
-              AND a.status != '{AppointmentStatus.CANCELLED}'
+              AND a.status NOT IN ('{AppointmentStatus.CANCELLED}', '{AppointmentStatus.RESCHEDULED}')
               AND a.appointment_date BETWEEN %s AND %s
             ORDER BY a.client_id, aps.service_id, a.appointment_date, a.start_time
         """

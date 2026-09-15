@@ -78,7 +78,7 @@ export function CalendarMonthSidebar({ selectedDate, onDayClick }: CalendarMonth
       .then((res) => {
         const set = new Set<string>();
         for (const a of res.appointments) {
-          if (a.status === 'cancelled' || a.status === 'no_show') continue;
+          if (a.status === 'cancelled' || a.status === 'no_show' || a.status === 'rescheduled') continue;
           set.add(a.appointment_date);
         }
         setDaysWithAppointments(set);
