@@ -128,7 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post<{ ok: boolean; enabled: boolean }>('/api/admin-view', { enabled: adminView });
       changed = true;
     }
-    if (ownData !== ownDataActive) {
+    // Only POST own-data while the *target* admin-view is ON — the endpoint
+    // 400s ("Najpierw wlacz widok administratora") whenever admin-view is
+    // currently off, which it already is server-side the instant the
+    // admin-view POST above turns it off (that POST auto-clears own-data too).
+    // Skipping this call in that case avoids the 400 that used to abort the
+    // whole function before it reached the reload below.
+    if (adminView && ownData !== ownDataActive) {
       await api.post<{ ok: boolean; enabled: boolean }>('/api/own-data', { enabled: ownData });
       changed = true;
     }

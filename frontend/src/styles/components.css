@@ -1316,6 +1316,16 @@ table.stack-cards td.cell-hide-lg { display: none; }
   border-radius: var(--radius-sm);
   margin-left: auto;
 }
+/* "Widok administratora" / "Dane własne" — desktop sidebar, superuser-only.
+   Sits directly above `.sidebar-footer` as its own bordered section (not
+   folded into the footer itself), mirroring the mobile filter popup's
+   `.mob-scope-toggles` block but full-width or the sidebar rail. */
+.sidebar-scope-toggles {
+  flex-shrink: 0;
+  padding: 0.25rem 1rem;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sidebar-scope-toggles .ui-switch-label { color: var(--sidebar-text); }
 .sidebar-footer { padding: 0.75rem 1rem; flex-shrink: 0; border-top: 1px solid var(--sidebar-border); background: var(--sidebar-bg-deep); }
 .sidebar-user-row { display: flex; align-items: center; gap: 0.5rem; }
 .sidebar-avatar {
