@@ -265,11 +265,18 @@ export interface CancelForAbsenceResult {
   applied: number[];
 }
 
-/** GET /api/appointments/available-slots — reschedule step's date picker. */
+/** GET /api/appointments/available-slots — reschedule step's date picker.
+ * `within_hours` (added for WizytaFormPage's create-mode slot grid) is
+ * independent of `available`: a slot can be free of booking conflicts
+ * (`available: true`) yet fall outside the employee's actual per-day
+ * `work_schedule` (`within_hours: false`) — e.g. their day off, or before/
+ * after their contracted hours. `available` alone still answers "is this
+ * slot free of conflicts", unchanged for existing callers. */
 export interface AvailableSlot {
   start_time: string;
   end_time: string;
   available: boolean;
+  within_hours: boolean;
 }
 
 export interface AvailableSlotsResponse {

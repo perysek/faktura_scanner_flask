@@ -994,6 +994,24 @@ def get_available_slots():
         service = AppointmentBusinessService()
         slots = service.get_available_slots(employee_id, slot_date, duration, **kwargs)
 
+        # `within_hours` — independent of `available` (conflict-only, above):
+        # does this slot actually fall inside the employee's real per-day
+        # work_schedule? Computed here (not inside get_available_slots
+        # itself) so the booking_routes.py month-grid caller, which already
+        # calls get_available_slots once per day of the month, doesn't take
+        # on an extra employee lookup per iteration — this route calls it
+        # exactly once per request either way.
+        from repositories.employees.employee_repository import EmployeeRepository
+        from utils.work_schedule import work_hours_for_day, WEEKDAY_KEYS
+        emp = EmployeeRepository().get_by_id(employee_id)
+        day_hours = work_hours_for_day(emp['work_schedule'] if emp else None, WEEKDAY_KEYS[slot_date.weekday()])
+        for slot in slots:
+            if day_hours is None:
+                slot['within_hours'] = False
+                continue
+            work_start, work_end = day_hours
+            slot['within_hours'] = _parse_time(slot['start_time']) >= work_start and _parse_time(slot['end_time']) <= work_end
+
         return jsonify({'success': True, 'slots': slots})
     except AppError:
         raise

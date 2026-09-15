@@ -15,7 +15,7 @@ import { FormActions, FormSection, SelectField, TextareaField, TextField } from 
 import { useEscapeAction } from '../../lib/a11y/escapeScope';
 import { formatPLN } from '../../lib/format';
 import { STATUS_LABELS } from '../../types/appointment';
-import type { AppointmentFormService, AppointmentService, AppointmentStatus } from '../../types/appointment';
+import type { AppointmentFormService, AppointmentService, AppointmentStatus, AvailableSlot } from '../../types/appointment';
 
 export interface WizytaFormPageProps {
   mode: 'create' | 'edit';
@@ -65,7 +65,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   // Create-mode: main-service checkbox picker + slot grid.
   const [employeeServices, setEmployeeServices] = useState<AppointmentFormService[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<number>>(new Set());
-  const [takenTimes, setTakenTimes] = useState<Set<string>>(new Set());
+  const [slots, setSlots] = useState<AvailableSlot[]>([]);
 
   // Edit-mode: editable services list (main + addon), loaded from GET /appointments/<id>.
   const [currentServices, setCurrentServices] = useState<AppointmentService[]>([]);
@@ -103,25 +103,58 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
       .catch(() => setEmployeeServices([]));
   }, [mode, employeeId]);
 
-  // Create-mode: taken slots for the chosen employee+date.
+  const createTotals = useMemo(() => {
+    let price = 0;
+    let duration = 0;
+    for (const s of employeeServices) {
+      if (selectedServiceIds.has(s.service_id)) {
+        price += s.effective_price;
+        duration += s.effective_duration;
+      }
+    }
+    return { price, duration };
+  }, [employeeServices, selectedServiceIds]);
+
+  // Create-mode: slot grid data for the chosen employee+date. Fires as soon
+  // as an employee is picked (using `date`'s already-defaulted-to-today
+  // value even before the visitor touches the date field) — a nominal
+  // 30-min duration stands in for "no service chosen yet" purely so the
+  // grid can already show which slots fall outside the employee's working
+  // hours (`within_hours`, independent of service). Re-fires on every
+  // date/employee/duration change, so picking services re-checks real
+  // conflicts against their actual total duration.
   useEffect(() => {
     if (mode !== 'create' || !employeeId || !date) {
-      setTakenTimes(new Set());
+      setSlots([]);
       return;
     }
+    let cancelled = false;
     appointmentsApi
-      .list({ start_date: date, end_date: date, employee_id: Number(employeeId) })
-      .then((res) => {
-        const taken = new Set(res.appointments.filter((a) => a.status !== 'cancelled' && a.status !== 'no_show').map((a) => a.start_time.slice(0, 5)));
-        setTakenTimes(taken);
-        if (time && taken.has(time)) setTime('');
+      .slotsGrid({
+        employee_id: Number(employeeId),
+        date,
+        duration: createTotals.duration || 30,
+        work_start: '07:00',
+        work_end: '20:30',
+        interval: 30,
       })
-      .catch(() => setTakenTimes(new Set()));
-    // `time` deliberately excluded — it's read to clear a slot that just
-    // became taken, not a trigger to re-fetch; adding it would re-run this
-    // on every slot click (including the very `setTime('')` a few lines up).
+      .then((res) => {
+        if (cancelled) return;
+        setSlots(res);
+        const current = res.find((s) => s.start_time.slice(0, 5) === time);
+        if (time && (!current || !current.available || !current.within_hours)) setTime('');
+      })
+      .catch(() => {
+        if (!cancelled) setSlots([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // `time` deliberately excluded — read only to clear a slot that just
+    // became unbookable, not a trigger to re-fetch (see taken-slots note
+    // this replaced).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, employeeId, date]);
+  }, [mode, employeeId, date, createTotals.duration]);
 
   // Edit-mode: hydrate from the existing appointment.
   useEffect(() => {
@@ -174,18 +207,6 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
       return next;
     });
   }
-
-  const createTotals = useMemo(() => {
-    let price = 0;
-    let duration = 0;
-    for (const s of employeeServices) {
-      if (selectedServiceIds.has(s.service_id)) {
-        price += s.effective_price;
-        duration += s.effective_duration;
-      }
-    }
-    return { price, duration };
-  }, [employeeServices, selectedServiceIds]);
 
   const editTotals = useMemo(() => {
     const duration = currentServices.reduce((sum, s) => sum + s.duration_minutes, 0);
@@ -300,6 +321,11 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   }
 
   const canSaveCreate = !!(clientId && employeeId && selectedServiceIds.size > 0 && date && time);
+  // Grid only becomes clickable once date + employee + at least one service
+  // are all chosen — before that, slots still render (so out-of-hours ones
+  // already show grayed the moment an employee is picked, per `slots`'
+  // effect above), just not selectable.
+  const slotGridReady = !!(date && employeeId && selectedServiceIds.size > 0);
 
   // Create-mode has no <FormActions> (custom summary-card layout instead), so
   // it doesn't get that component's built-in Escape-cancel for free — bound
@@ -340,87 +366,87 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
             {mode === 'edit' && <TextField label="Godzina rozpoczęcia" required id="appt-time" type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} />}
           </FormSection>
 
-          {mode === 'create' && (
+          {mode === 'create' ? (
+            <div className="time-and-services">
+              <div className="form-card time-slot-card">
+                <h3 className="card-title">Godzina rozpoczęcia</h3>
+                <SlotGrid slots={slots} selected={time} onSelect={setTime} interactive={slotGridReady} />
+              </div>
+              <div className="form-card services-card">
+                <h3 className="card-title">Usługi</h3>
+                {!employeeId ? (
+                  <p className="svc-empty">Wybierz pracownika, aby zobaczyć dostępne usługi.</p>
+                ) : employeeServices.length === 0 ? (
+                  <p className="svc-empty">Brak przypisanych usług dla tego pracownika.</p>
+                ) : (
+                  <div className="svc-picker">
+                    {employeeServices.map((s) => (
+                      <label key={s.service_id} className="svc-option">
+                        <input type="checkbox" checked={selectedServiceIds.has(s.service_id)} onChange={() => toggleCreateService(s.service_id)} />
+                        <span className="svc-name">{s.service_name}</span>
+                        <span className="svc-dur">{s.effective_duration} min</span>
+                        <span className="svc-price">{formatPLN(s.effective_price)}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
             <div className="form-card">
-              <h3 className="card-title">Godzina rozpoczęcia</h3>
-              <SlotGrid takenTimes={takenTimes} selected={time} onSelect={setTime} />
+              <h3 className="card-title">Usługi</h3>
+              <ul className="service-list">
+                {currentServices.map((s, i) => (
+                  <li key={i} className={`service-item${s.is_addon ? ' addon' : ''}`}>
+                    <div className="service-item-info">
+                      <span className="service-item-name">{s.service_name}</span>
+                      <span className={`service-item-badge ${s.is_addon ? 'addon' : 'main'}`}>{s.is_addon ? 'Dodatek' : 'Główna'}</span>
+                    </div>
+                    <span className="service-item-price">{formatPLN(s.price_charged)}</span>
+                    <button type="button" className="btn-remove" onClick={() => removeServiceFromEdit(i)}>
+                      Usuń
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="add-service-section">
+                <Button type="button" variant="secondary" small disabled={!employeeId} onClick={openAddServicePicker}>
+                  + Dodaj usługę lub dodatek
+                </Button>
+                {pickerOpen && (
+                  <div className="service-picker">
+                    {availableToAdd.length === 0 ? (
+                      <p className="svc-empty">Brak dostępnych usług do dodania.</p>
+                    ) : (
+                      availableToAdd.map((s) => (
+                        <div key={s.service_id} className="service-option" onClick={() => addServiceToEdit(s)}>
+                          <div className="service-option-info">
+                            <span className="service-option-name">{s.service_name}</span>
+                            <span className="service-option-meta">
+                              {s.effective_duration} min · {formatPLN(s.effective_price)}
+                            </span>
+                          </div>
+                          <button type="button" className="btn-add-service">
+                            Dodaj
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="summary-box" style={{ marginTop: '1rem' }}>
+                <div className="summary-row">
+                  <span>Czas trwania:</span>
+                  <span>{editTotals.duration} min</span>
+                </div>
+                <div className="summary-row total">
+                  <span>Razem:</span>
+                  <span>{formatPLN(editTotals.price)}</span>
+                </div>
+              </div>
             </div>
           )}
-
-          <div className="form-card">
-            <h3 className="card-title">Usługi</h3>
-            {mode === 'create' ? (
-              !employeeId ? (
-                <p className="svc-empty">Wybierz pracownika, aby zobaczyć dostępne usługi.</p>
-              ) : employeeServices.length === 0 ? (
-                <p className="svc-empty">Brak przypisanych usług dla tego pracownika.</p>
-              ) : (
-                <div className="svc-picker">
-                  {employeeServices.map((s) => (
-                    <label key={s.service_id} className="svc-option">
-                      <input type="checkbox" checked={selectedServiceIds.has(s.service_id)} onChange={() => toggleCreateService(s.service_id)} />
-                      <span className="svc-name">{s.service_name}</span>
-                      <span className="svc-dur">{s.effective_duration} min</span>
-                      <span className="svc-price">{formatPLN(s.effective_price)}</span>
-                    </label>
-                  ))}
-                </div>
-              )
-            ) : (
-              <>
-                <ul className="service-list">
-                  {currentServices.map((s, i) => (
-                    <li key={i} className={`service-item${s.is_addon ? ' addon' : ''}`}>
-                      <div className="service-item-info">
-                        <span className="service-item-name">{s.service_name}</span>
-                        <span className={`service-item-badge ${s.is_addon ? 'addon' : 'main'}`}>{s.is_addon ? 'Dodatek' : 'Główna'}</span>
-                      </div>
-                      <span className="service-item-price">{formatPLN(s.price_charged)}</span>
-                      <button type="button" className="btn-remove" onClick={() => removeServiceFromEdit(i)}>
-                        Usuń
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <div className="add-service-section">
-                  <Button type="button" variant="secondary" small disabled={!employeeId} onClick={openAddServicePicker}>
-                    + Dodaj usługę lub dodatek
-                  </Button>
-                  {pickerOpen && (
-                    <div className="service-picker">
-                      {availableToAdd.length === 0 ? (
-                        <p className="svc-empty">Brak dostępnych usług do dodania.</p>
-                      ) : (
-                        availableToAdd.map((s) => (
-                          <div key={s.service_id} className="service-option" onClick={() => addServiceToEdit(s)}>
-                            <div className="service-option-info">
-                              <span className="service-option-name">{s.service_name}</span>
-                              <span className="service-option-meta">
-                                {s.effective_duration} min · {formatPLN(s.effective_price)}
-                              </span>
-                            </div>
-                            <button type="button" className="btn-add-service">
-                              Dodaj
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="summary-box" style={{ marginTop: '1rem' }}>
-                  <div className="summary-row">
-                    <span>Czas trwania:</span>
-                    <span>{editTotals.duration} min</span>
-                  </div>
-                  <div className="summary-row total">
-                    <span>Razem:</span>
-                    <span>{formatPLN(editTotals.price)}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
 
           <FormSection legend="Uwagi">
             <TextareaField label="Uwagi" id="appt-notes" fullWidth rows={3} placeholder="Opcjonalne uwagi do wizyty..." value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -490,19 +516,35 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   );
 }
 
-function SlotGrid({ takenTimes, selected, onSelect }: { takenTimes: Set<string>; selected: string; onSelect: (t: string) => void }) {
-  const slots: string[] = [];
-  for (let h = 7; h < 21; h++) {
-    for (const mi of [0, 30]) {
-      slots.push(`${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`);
-    }
+// 07:00-20:30/30-min — must match the work_start/work_end/interval passed
+// to `appointmentsApi.slotsGrid` in the effect above, so every label here
+// has a same-keyed entry to look up in the fetched `slots` response.
+const SLOT_TIMES: string[] = [];
+for (let h = 7; h < 21; h++) {
+  for (const mi of [0, 30]) {
+    SLOT_TIMES.push(`${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`);
   }
+}
+
+function SlotGrid({ slots, selected, onSelect, interactive }: { slots: AvailableSlot[]; selected: string; onSelect: (t: string) => void; interactive: boolean }) {
+  const slotsByTime = useMemo(() => new Map(slots.map((s) => [s.start_time.slice(0, 5), s])), [slots]);
   return (
     <div className="slot-grid">
-      {slots.map((t) => {
-        const taken = takenTimes.has(t);
+      {SLOT_TIMES.map((t) => {
+        const info = slotsByTime.get(t);
+        // No `info` at all means the fetched grid doesn't cover this start
+        // time (e.g. the selected services' total duration wouldn't fit
+        // before closing) — treated the same as "taken": disabled, greyed.
+        const blocked = !info || !info.available || !info.within_hours;
+        const bookable = interactive && !blocked;
         return (
-          <button key={t} type="button" className={`slot-btn${taken ? ' taken' : ''}${selected === t ? ' selected' : ''}`} disabled={taken} onClick={() => onSelect(t)}>
+          <button
+            key={t}
+            type="button"
+            className={`slot-btn${blocked ? ' taken' : ''}${selected === t ? ' selected' : ''}`}
+            disabled={!bookable}
+            onClick={() => onSelect(t)}
+          >
             {t}
           </button>
         );
