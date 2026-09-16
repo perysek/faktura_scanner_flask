@@ -3,7 +3,6 @@ import type { MouseEvent, TouchEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
-import { empColor } from '../../lib/appointments/employeeColor';
 import { Modal } from '../../components/ui/Modal';
 import { Switch } from '../../components/ui/Switch';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,6 +23,20 @@ const SWIPE_MAX_PX = -160;
 /** Mirror thresholds for swipe-RIGHT → navigate to visit details. */
 const SWIPE_TRIGGER_PX_RIGHT = 112;
 const SWIPE_MAX_PX_RIGHT = 160;
+
+/** Label opacity during a swipe: stays fully visible for the first 65% of
+ * the drag toward the arm threshold, then fades over the remaining 35% so
+ * it reaches 0 exactly at the threshold. A plain linear ramp from dx=0 (the
+ * original version) made the label functionally invisible in practice — it
+ * was simultaneously still clipped by the card (barely exposed at small dx)
+ * AND already faded (opacity dropping from the very first px), so the two
+ * effects compounded instead of giving it any real visible window. */
+function swipeLabelOpacity(dx: number, triggerPx: number): number {
+  const progress = Math.min(1, Math.abs(dx / triggerPx));
+  const FADE_START = 0.65;
+  if (progress < FADE_START) return 1;
+  return Math.max(0, 1 - (progress - FADE_START) / (1 - FADE_START));
+}
 
 const MONTH_WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
 /** Strip is Mon–Sat only (mod #1) — the salon doesn't book Sundays. */
@@ -53,10 +66,6 @@ function getMonday(d: Date): Date {
   date.setHours(0, 0, 0, 0);
   return date;
 }
-function formatDateShort(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-');
-  return `${d}.${m}.${y}`;
-}
 function formatDateLong(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
@@ -72,30 +81,6 @@ function formatDuration(startTime: string, endTime: string): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
-}
-/** Local-time minutes remaining until the visit's scheduled start —
- * `${date}T${time}` (no timezone designator) parses as browser-local per the
- * Date constructor's spec, same assumption WizytaDetailPage's isNoShowAllowed
- * already makes. `null` once the countdown stops being meaningful: the visit
- * already started/resolved (in_progress/completed/cancelled/no_show), or its
- * start time has already passed. `nowMs` comes from the card list's shared
- * 60s tick so every card updates together instead of each on its own timer. */
-function minutesUntilStart(appt: AppointmentListItem, nowMs: number): number | null {
-  if (!(appt.status === 'scheduled' || appt.status === 'confirmed')) return null;
-  const startMs = new Date(`${appt.appointment_date}T${appt.start_time}`).getTime();
-  const diffMin = Math.round((startMs - nowMs) / 60000);
-  return diffMin >= 0 ? diffMin : null;
-}
-/** Ticks once a minute so the mobile card list's "start za Nmin" countdowns
- * stay live without a per-card timer. Initialised to Date.now() (not a fixed
- * value) so the first render already shows the correct countdown. */
-function useNowTick(intervalMs: number): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
 }
 /** mod #4: direct-dial `tel:` href instead of clipboard-copy — raw digits,
  * `+48` prefix assumed for bare 9-digit national numbers (same assumption
@@ -182,7 +167,6 @@ export function MobileWizytyCalendarView({
   const auth = useAuth();
   const navigate = useNavigate();
   const [today] = useState(() => iso(new Date()));
-  const nowTick = useNowTick(60_000);
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
   const [rescheduleAppt, setRescheduleAppt] = useState<AppointmentListItem | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -376,7 +360,6 @@ export function MobileWizytyCalendarView({
           // release (swipeState → null) lets that CSS transition take back
           // over for the snap.
           appointments.map((appt) => {
-            const startsInMin = minutesUntilStart(appt, nowTick);
             const swipeDx = swipeState?.id === appt.id ? swipeState.dx : 0;
             return (
             <div key={appt.id} className="mob-appt-card-wrap">
@@ -394,7 +377,7 @@ export function MobileWizytyCalendarView({
                       so the armed state reads as icon-only. */}
                   <div className="mob-appt-swipe-content mob-appt-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
                     <Icon name="calendar_month" />
-                    <span className="mob-appt-swipe-label" style={{ opacity: Math.max(0, 1 - swipeDx / SWIPE_TRIGGER_PX) }}>
+                    <span className="mob-appt-swipe-label" style={{ opacity: swipeLabelOpacity(swipeDx, SWIPE_TRIGGER_PX) }}>
                       Zmień termin
                     </span>
                   </div>
@@ -406,7 +389,7 @@ export function MobileWizytyCalendarView({
                   aria-hidden="true"
                 >
                   <div className="mob-appt-swipe-content mob-appt-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
-                    <span className="mob-appt-swipe-label" style={{ opacity: Math.max(0, 1 - swipeDx / SWIPE_TRIGGER_PX_RIGHT) }}>
+                    <span className="mob-appt-swipe-label" style={{ opacity: swipeLabelOpacity(swipeDx, SWIPE_TRIGGER_PX_RIGHT) }}>
                       Zobacz więcej
                     </span>
                     <Icon name="chevron_right" />
@@ -429,16 +412,11 @@ export function MobileWizytyCalendarView({
                 onTouchEnd={() => handleCardTouchEnd(appt.id, appt)}
               >
               <div className="mob-appt-top">
-                {/* End time dropped, duration forced to its own line (not
-                    just wrap) — user's explicit format. */}
+                {/* Date dropped (redesign) — start time + duration only, one
+                    line, time bold/duration regular. */}
                 <span className="mob-appt-datetime">
-                  <span className="mob-appt-datetime-line1">
-                    {formatDateShort(appt.appointment_date)} <span className="mob-appt-at">@</span> {appt.start_time.slice(0, 5)}
-                  </span>
-                  <span className="mob-appt-duration">
-                    ({formatDuration(appt.start_time, appt.end_time)}
-                    {startsInMin !== null ? `, start za ${startsInMin}min` : ''})
-                  </span>
+                  <span className="mob-appt-time">{appt.start_time.slice(0, 5)}</span>{' '}
+                  <span className="mob-appt-duration">({formatDuration(appt.start_time, appt.end_time)})</span>
                 </span>
                 <StatusDropdown
                   appointmentId={appt.id}
@@ -450,33 +428,26 @@ export function MobileWizytyCalendarView({
                 />
               </div>
 
-              {/* Klient/Tel. — labels in one row, values in the row below
-                  (fix2), not a single "Klient: X  Tel.: Y" line. */}
-              <div className="mob-appt-kv-grid">
-                <span className="mob-appt-label">Klient</span>
-                <span className="mob-appt-label">Tel.</span>
-                <span className="mob-appt-kv-value">{appt.client_name || '—'}</span>
-                {appt.client_phone ? (
-                  <a className="mob-appt-tel mob-appt-kv-value" href={telHref(appt.client_phone)} onClick={(e) => e.stopPropagation()}>
-                    {formatPhone(appt.client_phone)}
+              {/* Client name (no caption) + phone as an icon-only tel: link
+                  (redesign — digits/label dropped, same click behavior). */}
+              <div className="mob-appt-row mob-appt-client-row">
+                <span className="mob-appt-client-name">{appt.client_name || '—'}</span>
+                {appt.client_phone && (
+                  <a
+                    className="mob-appt-phone-btn"
+                    href={telHref(appt.client_phone)}
+                    title={formatPhone(appt.client_phone)}
+                    aria-label={`Zadzwoń: ${formatPhone(appt.client_phone)}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Icon name="call" />
                   </a>
-                ) : (
-                  <span className="mob-appt-kv-value">—</span>
                 )}
               </div>
 
-              <div className="mob-appt-row mob-appt-2col">
-                <span>
-                  <span className="mob-appt-label">Pracownik:</span>{' '}
-                  <span className="emp-cell">
-                    <span className="emp-dot" style={{ background: empColor(appt.employee_id) }} />
-                    {appt.employee_name || '—'}
-                  </span>
-                </span>
-                <span>
-                  <span className="mob-appt-label">Usługa:</span> {appt.service_name || '—'}
-                </span>
-              </div>
+              {/* Employee row dropped entirely (redesign). Service — bare
+                  name, no "Usługa:" caption. */}
+              <span className="mob-appt-service">{appt.service_name || '—'}</span>
 
               {/* Minimal "this is tappable" hint (TASK3). */}
               <Icon name="chevron_right" className="mob-appt-tap-hint" />
