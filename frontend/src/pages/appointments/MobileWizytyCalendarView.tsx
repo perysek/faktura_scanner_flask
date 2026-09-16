@@ -179,27 +179,32 @@ export function MobileWizytyCalendarView({
   // exposes these toggles any more (the filter modal that used to host them
   // is gone) — superuser control over them lives in the Jinja sidebar.
   //
-  // sessionStorage guard, NOT a React ref — `applyScopeToggles` calls
-  // `window.location.reload()` when it changes anything, which wipes every
-  // in-memory ref back to its initial value on the very next mount. A ref
-  // guard here means "fire once per mount," which is exactly wrong for an
-  // effect whose own side effect is a reload: if the server's reported
-  // adminViewActive/ownDataActive don't come back matching what was just
-  // POSTed (stale read, a session-write race, whatever), the ref resets,
-  // the condition is still true, and it reloads again — forever, and fast
-  // enough that there's no window to click anything before the next
-  // reload cuts it off (reported: page reloading ~every 0.1s, unusable).
-  // sessionStorage survives the reload, so this now tries at most once per
-  // browser tab: if that one attempt doesn't stick, the user just keeps
-  // whatever the default was instead of the page becoming unusable.
+  // sessionStorage-backed ATTEMPT COUNTER, not a React ref and not a plain
+  // one-shot flag. Two failure modes this has to survive at once:
+  //   1) `applyScopeToggles` calls `window.location.reload()` when it
+  //      changes anything, which wipes every in-memory ref on the next
+  //      mount — a ref guard here means "retry forever if the state never
+  //      matches", which is exactly what caused the ~0.1s reload loop this
+  //      was first built to stop.
+  //   2) A single-attempt sessionStorage flag stops the loop but has no
+  //      resilience: if that one attempt's second POST (own-data) happens
+  //      to get interrupted by a reload racing in from elsewhere before it
+  //      completes — which is exactly what happened here, own_data stayed
+  //      stuck at true forever after — there's no second try, ever, for
+  //      that browser tab.
+  // A capped counter gets both: bounded (never loops), but gets a few real
+  // shots at actually landing instead of just one. Re-checks the target
+  // condition fresh every render (not "did I already try"), so it also
+  // naturally stops retrying the moment the state is actually correct.
   useEffect(() => {
     if (auth.isLoading || !auth.isSuperuser) return;
-    const key = 'wizyty-mobile-superuser-scope-default-applied';
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, '1');
-    if (!auth.adminViewActive || auth.ownDataActive) {
-      auth.applyScopeToggles(true, false).catch(() => {});
-    }
+    if (auth.adminViewActive && !auth.ownDataActive) return; // already correct
+    const key = 'wizyty-mobile-superuser-scope-default-attempts';
+    const attempts = Number(sessionStorage.getItem(key) ?? '0');
+    const MAX_ATTEMPTS = 3;
+    if (attempts >= MAX_ATTEMPTS) return;
+    sessionStorage.setItem(key, String(attempts + 1));
+    auth.applyScopeToggles(true, false).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isLoading, auth.isSuperuser, auth.adminViewActive, auth.ownDataActive]);
 
