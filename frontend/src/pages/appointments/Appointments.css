@@ -490,9 +490,9 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    (title+status / client+phone / pracownik+usługa / price) instead of 8,
    and compact (not tiny) spacing rather than shrinking type below the old
    desktop-table sizes. */
-/* Swipe-reveal wrapper (Gmail-style archive/delete affordance) — the yellow
-   "reschedule" box lives BEHIND the card, in the space the card leaves as it
-   translates left. `overflow: hidden` keeps the reveal from ever peeking out
+/* Swipe-reveal wrapper (Gmail-style archive/delete affordance) — a dimmed
+   tinted box lives BEHIND the card, in the space the card leaves as it
+   translates. `overflow: hidden` keeps the reveal from ever peeking out
    past the card's own rounded corners on the right edge. */
 .mob-appt-card-wrap { position: relative; overflow: hidden; border-radius: 3px; }
 /* Border/radius mirror `.mob-appt-card`'s own (not just background fill) so
@@ -502,12 +502,16 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   position: absolute; inset: 0; z-index: 0;
   border: 1px solid var(--color-border); border-radius: 3px;
 }
-.mob-appt-swipe-reveal--left { background: var(--color-status-rescheduled-bg, #fef3c7); }
-.mob-appt-swipe-reveal--left.mob-appt-swipe-reveal--armed { border-color: #1d4ed8; }
-/* TASK3 — swipe-right reveal, routes to visit details; gold via the accent
-   design token (never a hardcoded hex — themeable, see tokens.css §Accent). */
-.mob-appt-swipe-reveal--right { background: var(--color-accent-muted); }
-.mob-appt-swipe-reveal--right.mob-appt-swipe-reveal--armed { border-color: var(--color-accent); }
+/* Dimmed light red — borrows the "cancelled" status pair purely for hue
+   (light bg + darker fg), not for its cancelled meaning; reschedule has no
+   dedicated red token of its own. */
+.mob-appt-swipe-reveal--left { background: var(--color-status-cancelled-bg, #fef2f2); }
+.mob-appt-swipe-reveal--left.mob-appt-swipe-reveal--armed { border-color: var(--color-status-cancelled, #dc2626); }
+/* Dimmed light blue-ocean — swipe-right routes to visit details, so the
+   "info" token pair (light bg + a deep ocean-blue fg) fits both the color
+   ask and the action. */
+.mob-appt-swipe-reveal--right { background: var(--color-info-bg, #eff6ff); }
+.mob-appt-swipe-reveal--right.mob-appt-swipe-reveal--armed { border-color: var(--color-info, #1e6091); }
 
 /* Icon+label unit rests entirely OFF-CANVAS, just past the edge the card is
    sliding away from, then gets the SAME translateX(dx) as the card. Because
@@ -528,8 +532,8 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   padding: 0 0.625rem;
 }
 .mob-appt-swipe-content .icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
-.mob-appt-swipe-content--left { right: -7.5rem; color: var(--color-status-rescheduled, #92400e); }
-.mob-appt-swipe-content--right { left: -7.5rem; color: var(--color-accent-deep); }
+.mob-appt-swipe-content--left { right: -7.5rem; color: var(--color-status-cancelled-dark, #b91c1c); }
+.mob-appt-swipe-content--right { left: -7.5rem; color: var(--color-info-text-dark, #1e3a8a); }
 /* 2 lines, wrapped on whitespace, centered — needs less exposed width per
    line than one long nowrap line, so it clears the card and becomes legible
    sooner in the drag. Fixed width forces the wrap between the two words
@@ -570,10 +574,12 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 }
 .mob-appt-card:active { background: var(--color-surface); }
 .mob-appt-card--muted { opacity: 0.6; }
-/* Past the swipe-trigger threshold — signals "release to reschedule". */
-.mob-appt-card--swipe-armed { background: rgba(29, 78, 216, 0.06); border-color: #1d4ed8; }
-/* TASK3 — past the swipe-RIGHT threshold, signals "release to view details". */
-.mob-appt-card--swipe-armed-right { background: var(--color-accent-muted); border-color: var(--color-accent); }
+/* Past the swipe-trigger threshold — signals "release to reschedule".
+   Matches the red reveal's hue (below), not the older blue. */
+.mob-appt-card--swipe-armed { background: rgba(220, 38, 38, 0.06); border-color: var(--color-status-cancelled, #dc2626); }
+/* TASK3 — past the swipe-RIGHT threshold, signals "release to view
+   details". Matches the blue-ocean reveal's hue, not the older gold. */
+.mob-appt-card--swipe-armed-right { background: rgba(30, 96, 145, 0.06); border-color: var(--color-info, #1e6091); }
 
 /* "Here's what's next" attention pulse — fired once by the list's
    scroll-to-upcoming effect after every appointments update. 3 iterations
