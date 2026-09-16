@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
-import { useAuth } from '../../contexts/AuthContext';
 import { RescheduleSheet } from './RescheduleSheet';
 import { StatusDropdown } from './StatusDropdown';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
@@ -150,7 +149,6 @@ export function MobileWizytyCalendarView({
   canWrite,
   onDataChanged,
 }: MobileWizytyCalendarViewProps) {
-  const auth = useAuth();
   const navigate = useNavigate();
   const [today] = useState(() => iso(new Date()));
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
@@ -169,44 +167,18 @@ export function MobileWizytyCalendarView({
   });
   const [monthExpanded, setMonthExpanded] = useState(false);
 
-  // Default onload state for a superuser: auto-engage "Widok administratora"
-  // ON but "Dane własne" OFF. Own-data ON pins the visible list to the
-  // superuser's own linked employee server-side regardless of what's picked
-  // in the employee selector below — with it off, the selector's default
-  // still lands them on their own employee (WizytyListPage's own
-  // default-effect), but they can actually switch to someone else's visits
-  // from there, which own-data=true was silently blocking. No mobile UI
-  // exposes these toggles any more (the filter modal that used to host them
-  // is gone) — superuser control over them lives in the Jinja sidebar.
-  //
-  // sessionStorage-backed ATTEMPT COUNTER, not a React ref and not a plain
-  // one-shot flag. Two failure modes this has to survive at once:
-  //   1) `applyScopeToggles` calls `window.location.reload()` when it
-  //      changes anything, which wipes every in-memory ref on the next
-  //      mount — a ref guard here means "retry forever if the state never
-  //      matches", which is exactly what caused the ~0.1s reload loop this
-  //      was first built to stop.
-  //   2) A single-attempt sessionStorage flag stops the loop but has no
-  //      resilience: if that one attempt's second POST (own-data) happens
-  //      to get interrupted by a reload racing in from elsewhere before it
-  //      completes — which is exactly what happened here, own_data stayed
-  //      stuck at true forever after — there's no second try, ever, for
-  //      that browser tab.
-  // A capped counter gets both: bounded (never loops), but gets a few real
-  // shots at actually landing instead of just one. Re-checks the target
-  // condition fresh every render (not "did I already try"), so it also
-  // naturally stops retrying the moment the state is actually correct.
-  useEffect(() => {
-    if (auth.isLoading || !auth.isSuperuser) return;
-    if (auth.adminViewActive && !auth.ownDataActive) return; // already correct
-    const key = 'wizyty-mobile-superuser-scope-default-attempts';
-    const attempts = Number(sessionStorage.getItem(key) ?? '0');
-    const MAX_ATTEMPTS = 3;
-    if (attempts >= MAX_ATTEMPTS) return;
-    sessionStorage.setItem(key, String(attempts + 1));
-    auth.applyScopeToggles(true, false).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.isLoading, auth.isSuperuser, auth.adminViewActive, auth.ownDataActive]);
+  // No automatic "Widok administratora"/"Dane własne" onload default here
+  // (removed) — three separate incidents from the same root cause: a
+  // client-side effect that POSTs session-scoped toggles and then trusts
+  // `window.location.reload()` to reflect them back is inherently racy
+  // (a rapid reload loop when the state never matched; a stuck own_data=true
+  // when a retry got interrupted mid-flight; still-stuck own_data after
+  // several more retries with no confirmed root cause — possibly Cloudflare
+  // interference on the proxied staging path, never conclusively ruled in
+  // or out). The employee-selector default above (WizytyListPage's own
+  // effect) doesn't have this problem — it's a plain local state update,
+  // no reload involved — so it stays. For admin-view/own-data, superuser
+  // control lives in the Jinja sidebar toggle; no mobile UI auto-applies it.
 
   // Employee-select popup — "rolls up" from the bottom-actions row and
   // "collapses down" on pick/dismiss. `employeePopupMounted` controls
