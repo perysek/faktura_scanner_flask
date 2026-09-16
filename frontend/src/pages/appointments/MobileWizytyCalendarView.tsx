@@ -175,20 +175,33 @@ export function MobileWizytyCalendarView({
   // in the employee selector below — with it off, the selector's default
   // still lands them on their own employee (WizytyListPage's own
   // default-effect), but they can actually switch to someone else's visits
-  // from there, which own-data=true was silently blocking. Guarded to fire
-  // once per mount so it doesn't immediately re-flip a superuser who
-  // deliberately changes these later in the same session. No mobile UI
+  // from there, which own-data=true was silently blocking. No mobile UI
   // exposes these toggles any more (the filter modal that used to host them
   // is gone) — superuser control over them lives in the Jinja sidebar.
-  const scopeDefaultAppliedRef = useRef(false);
+  //
+  // sessionStorage guard, NOT a React ref — `applyScopeToggles` calls
+  // `window.location.reload()` when it changes anything, which wipes every
+  // in-memory ref back to its initial value on the very next mount. A ref
+  // guard here means "fire once per mount," which is exactly wrong for an
+  // effect whose own side effect is a reload: if the server's reported
+  // adminViewActive/ownDataActive don't come back matching what was just
+  // POSTed (stale read, a session-write race, whatever), the ref resets,
+  // the condition is still true, and it reloads again — forever, and fast
+  // enough that there's no window to click anything before the next
+  // reload cuts it off (reported: page reloading ~every 0.1s, unusable).
+  // sessionStorage survives the reload, so this now tries at most once per
+  // browser tab: if that one attempt doesn't stick, the user just keeps
+  // whatever the default was instead of the page becoming unusable.
   useEffect(() => {
-    if (scopeDefaultAppliedRef.current || auth.isLoading || !auth.isSuperuser) return;
-    scopeDefaultAppliedRef.current = true;
+    if (auth.isLoading || !auth.isSuperuser) return;
+    const key = 'wizyty-mobile-superuser-scope-default-applied';
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
     if (!auth.adminViewActive || auth.ownDataActive) {
       auth.applyScopeToggles(true, false).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.isLoading, auth.isSuperuser]);
+  }, [auth.isLoading, auth.isSuperuser, auth.adminViewActive, auth.ownDataActive]);
 
   // Employee-select popup — "rolls up" from the bottom-actions row and
   // "collapses down" on pick/dismiss. `employeePopupMounted` controls
