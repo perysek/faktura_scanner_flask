@@ -4,10 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
-import { Modal } from '../../components/ui/Modal';
-import { Switch } from '../../components/ui/Switch';
 import { useAuth } from '../../contexts/AuthContext';
-import { EmployeeFilter } from './EmployeeFilter';
 import { RescheduleSheet } from './RescheduleSheet';
 import { StatusDropdown } from './StatusDropdown';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
@@ -126,8 +123,6 @@ export interface MobileWizytyCalendarViewProps {
   employees: EmployeeOption[];
   employeeId: number | null;
   onSelectEmployee: (id: number | null) => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
   canWrite: boolean;
   /** Refresh the host page's data after a successful reschedule (TASK5) —
    * same callback StatusChangeModal's `onSuccess` already uses. */
@@ -152,8 +147,6 @@ export function MobileWizytyCalendarView({
   employees,
   employeeId,
   onSelectEmployee,
-  searchQuery,
-  onSearchChange,
   canWrite,
   onDataChanged,
 }: MobileWizytyCalendarViewProps) {
@@ -175,28 +168,16 @@ export function MobileWizytyCalendarView({
     return new Date(y, m - 1, 1);
   });
   const [monthExpanded, setMonthExpanded] = useState(false);
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
-  // Filter popup is staged: Pracownik/search and both admin toggles edit local
-  // draft state while the popup is open, and only commit — onSelectEmployee /
-  // onSearchChange, plus the admin-view POST(s) + reload — once the popup
-  // actually closes. Flipping a switch mid-review no longer slams it shut.
-  const [draftEmployeeId, setDraftEmployeeId] = useState<number | null>(employeeId);
-  const [draftSearchQuery, setDraftSearchQuery] = useState(searchQuery);
-  const [draftAdminView, setDraftAdminView] = useState(auth.adminViewActive);
-  const [draftOwnData, setDraftOwnData] = useState(auth.ownDataActive);
-  // "Widok administratora" / "Dane własne" (config/admin_view.py — mirrors
-  // the Jinja sidebar toggle). Both POST to a Flask session flag and reload
-  // the page, so this only needs to block a double-submit mid round-trip —
-  // there's no client-side state to reconcile once the reload lands.
-  const [scopeTogglePending, setScopeTogglePending] = useState(false);
 
   // Default onload state for a superuser: auto-engage "Widok administratora"
   // + "Dane własne" so a superuser also lands on "just my own visits today"
   // by default — the same baseline a non-superuser always has without
-  // needing any toggle — while the Pracownik filter below defaults to that
-  // same linked employee. Guarded to fire once per mount so it doesn't
-  // immediately re-flip a superuser who deliberately turns these back off
-  // later in the same session.
+  // needing any toggle — while the employee selector defaults to that same
+  // linked employee (WizytyListPage's own default-effect). Guarded to fire
+  // once per mount so it doesn't immediately re-flip a superuser who
+  // deliberately turns these back off later in the same session. No mobile
+  // UI exposes these toggles any more (the filter modal that used to host
+  // them is gone) — superuser control over them lives in the Jinja sidebar.
   const scopeDefaultAppliedRef = useRef(false);
   useEffect(() => {
     if (scopeDefaultAppliedRef.current || auth.isLoading || !auth.isSuperuser) return;
@@ -207,38 +188,25 @@ export function MobileWizytyCalendarView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isLoading, auth.isSuperuser]);
 
-  function openFilterModal() {
-    setDraftEmployeeId(employeeId);
-    setDraftSearchQuery(searchQuery);
-    setDraftAdminView(auth.adminViewActive);
-    setDraftOwnData(auth.ownDataActive);
-    setFilterModalOpen(true);
+  // Employee-select popup — "rolls up" from the bottom-actions row and
+  // "collapses down" on pick/dismiss. `employeePopupMounted` controls
+  // presence in the DOM; `employeePopupOpen` drives the open/closed CSS
+  // class, kept as a separate tick (rAF on open) so the transform
+  // transition actually has a "from" state to animate away from, and
+  // separate from unmount (setTimeout on close) so the 0.2s collapse
+  // animation gets to play before the sheet disappears.
+  const [employeePopupMounted, setEmployeePopupMounted] = useState(false);
+  const [employeePopupOpen, setEmployeePopupOpen] = useState(false);
+  function openEmployeePopup() {
+    setEmployeePopupMounted(true);
+    requestAnimationFrame(() => setEmployeePopupOpen(true));
   }
+  function closeEmployeePopup() {
+    setEmployeePopupOpen(false);
+    setTimeout(() => setEmployeePopupMounted(false), 200);
+  }
+  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? '—';
 
-  function closeFilterModal() {
-    setFilterModalOpen(false);
-    onSelectEmployee(draftEmployeeId);
-    onSearchChange(draftSearchQuery);
-    if (draftAdminView !== auth.adminViewActive || draftOwnData !== auth.ownDataActive) {
-      setScopeTogglePending(true);
-      auth.applyScopeToggles(draftAdminView, draftOwnData).catch(() => setScopeTogglePending(false));
-    }
-  }
-
-  // "Wyczyść filtry" — resets to the same baseline the filter starts at
-  // (own linked employee, not "Wszyscy"; see WizytyListPage's default-effect),
-  // not an unfiltered "everyone" view. Scoped to Pracownik + search only —
-  // the admin-view/own-data toggles below are a separate scope switch, not
-  // part of "filtry" (matches this button's own "Filtry: pracownik, szukaj"
-  // aria-label further down).
-  function clearFilters() {
-    const defaultEmployeeId = auth.linkedEmployeeId;
-    setDraftEmployeeId(defaultEmployeeId);
-    setDraftSearchQuery('');
-    setFilterModalOpen(false);
-    onSelectEmployee(defaultEmployeeId);
-    onSearchChange('');
-  }
   const autoSelectedRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -626,78 +594,56 @@ export function MobileWizytyCalendarView({
           </button>
         </div>
 
-        {/* Bottom-most row (TASK4/5): "+" fixed-width on the left, month
-            toggle taking the rest of the width in the center, filter
-            fixed-width on the right — all icon-only, `.mob-cal-nav-btn`'s
-            1px border / 2px radius / token colors. */}
-        <div className="mob-fixed-nav-actions">
-          {canWrite && (
-            <Link to="/wizyty/nowa" className="mob-cal-nav-btn primary" aria-label="Nowa wizyta" title="Nowa wizyta">
-              <Icon name="add" />
-            </Link>
-          )}
-          <button type="button" className="mob-cal-nav-btn mob-month-toggle-btn" onClick={() => setMonthExpanded((v) => !v)} aria-pressed={monthExpanded} aria-label={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'} title={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'}>
-            <Icon name="calendar_today" />
-          </button>
-          <button
-            type="button"
-            className={`mob-cal-nav-btn${employeeId !== null || searchQuery.trim() !== '' ? ' has-active-filter' : ''}`}
-            onClick={openFilterModal}
-            aria-label="Filtry: pracownik, szukaj"
-            title="Filtry"
-          >
-            <Icon name="filter_list" />
-          </button>
-        </div>
-      </div>
-
-      <Modal isOpen={filterModalOpen} onClose={closeFilterModal} title="Filtry">
-        <div className="mob-filter-modal-body">
-          <div>
-            <span className="empf-label">Pracownik:</span>
-            <EmployeeFilter employees={employees} selectedId={draftEmployeeId} onSelect={setDraftEmployeeId} />
-          </div>
-          <div className="list-search">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input type="text" placeholder="Szukaj klienta, usługi..." value={draftSearchQuery} onChange={(e) => setDraftSearchQuery(e.target.value)} />
-          </div>
-
-          {auth.isSuperuser && (
-            <div className="mob-scope-toggles">
-              <Switch
-                id="mob-admin-view-toggle"
-                label="Widok administratora"
-                hint="Pokaż moje własne wizyty na liście"
-                checked={draftAdminView}
-                disabled={scopeTogglePending}
-                onChange={(enabled) => {
-                  setDraftAdminView(enabled);
-                  if (!enabled) setDraftOwnData(false);
-                }}
-              />
-              <Switch
-                id="mob-own-data-toggle"
-                label="Dane własne"
-                hint="Pokaż wyłącznie moje wizyty"
-                checked={draftOwnData}
-                disabled={scopeTogglePending || !draftAdminView}
-                onChange={setDraftOwnData}
-              />
+        {/* Bottom-most row: "+" fixed-width on the left, employee selector
+            expanding to fill the remaining width in the center, month toggle
+            fixed-width on the right — `.mob-cal-nav-btn`'s 1px border / 2px
+            radius / token colors throughout. No filter modal any more — the
+            employee selector IS the filter now, there's nothing else to
+            configure from mobile (search was dropped along with the modal;
+            admin-view/own-data auto-engage for superusers, see the effect
+            above). The popup sheet below is `position: fixed` to the real
+            viewport bottom (see Appointments.css) rather than anchored to
+            this row, so where it sits in the JSX tree doesn't matter. */}
+        <div className="mob-fixed-nav-actions-wrap">
+          {employeePopupMounted && (
+            <div className="mob-emp-popup-overlay" onClick={closeEmployeePopup}>
+              {/* `employeePopupOpen` toggles one frame after mount (rAF in
+                  openEmployeePopup) so this starts from the closed transform
+                  and actually animates in, instead of snapping straight to
+                  open. */}
+              <div className={`mob-emp-popup-sheet${employeePopupOpen ? ' mob-emp-popup-sheet--open' : ''}`} onClick={(e) => e.stopPropagation()}>
+                {employees.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className={`mob-emp-popup-item${e.id === employeeId ? ' active' : ''}`}
+                    onClick={() => {
+                      onSelectEmployee(e.id);
+                      closeEmployeePopup();
+                    }}
+                  >
+                    {e.full_name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
-
-          <div className="mob-filter-modal-actions">
-            <button type="button" className="mob-cal-nav-btn" onClick={clearFilters} aria-label="Wyczyść filtry" title="Wyczyść filtry">
-              <Icon name="filter_alt_off" />
+          <div className="mob-fixed-nav-actions">
+            {canWrite && (
+              <Link to="/wizyty/nowa" className="mob-cal-nav-btn primary" aria-label="Nowa wizyta" title="Nowa wizyta">
+                <Icon name="add" />
+              </Link>
+            )}
+            <button type="button" className="mob-cal-nav-btn mob-employee-select-btn" onClick={openEmployeePopup} aria-haspopup="true" aria-expanded={employeePopupOpen} aria-label="Wybierz pracownika" title="Wybierz pracownika">
+              <Icon name="person" />
+              <span className="mob-employee-select-label">{selectedEmployeeName}</span>
             </button>
-            <button type="button" className="mob-cal-nav-btn primary" onClick={closeFilterModal} aria-label="Zastosuj filtry" title="Zastosuj filtry">
-              <Icon name="check" />
+            <button type="button" className="mob-cal-nav-btn mob-month-toggle-btn" onClick={() => setMonthExpanded((v) => !v)} aria-pressed={monthExpanded} aria-label={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'} title={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'}>
+              <Icon name="calendar_today" />
             </button>
           </div>
         </div>
-      </Modal>
+      </div>
 
       <RescheduleSheet
         appointment={rescheduleAppt}

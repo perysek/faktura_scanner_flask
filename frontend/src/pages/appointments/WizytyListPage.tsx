@@ -370,8 +370,6 @@ export function WizytyListPage() {
             employees={employees}
             employeeId={employeeId}
             onSelectEmployee={setEmployeeId}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
             canWrite={canWrite}
             onDataChanged={handleStatusUpdated}
           />
