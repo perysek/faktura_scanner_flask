@@ -228,10 +228,12 @@ export function WizytaDetailPage() {
               <span>{formatPLN(totals.addon_total)}</span>
             </div>
           )}
-          <div className="summary-row">
-            <span>Prowizja:</span>
-            <span>{formatPLN(totals.total_commission)}</span>
-          </div>
+          {auth.isSuperuser && (
+            <div className="summary-row">
+              <span>Prowizja:</span>
+              <span>{formatPLN(totals.total_commission)}</span>
+            </div>
+          )}
           <div className="summary-row total">
             <span>Razem:</span>
             <span>{formatPLN(totals.total_price)}</span>

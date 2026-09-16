@@ -524,7 +524,7 @@ export function EmployeeDetailPage() {
               <tr>
                 <th>Usługa</th>
                 <th>Cena</th>
-                <th>Prowizja</th>
+                {isSuperuser && <th>Prowizja</th>}
                 <th>Czas</th>
                 <th />
               </tr>
@@ -544,7 +544,9 @@ export function EmployeeDetailPage() {
                         {price} zł{isCustom ? ' *' : ''}
                       </span>
                     </td>
-                    <td data-label="Prowizja">{svc.effective_commission != null ? `${svc.effective_commission.toFixed(1)}%` : '—'}</td>
+                    {isSuperuser && (
+                      <td data-label="Prowizja">{svc.effective_commission != null ? `${svc.effective_commission.toFixed(1)}%` : '—'}</td>
+                    )}
                     <td data-label="Czas">{svc.effective_duration != null ? `${svc.effective_duration} min` : '—'}</td>
                     <td className="cell-actions">
                       <button type="button" className="action-link-sm" onClick={() => handleRemoveService(svc.id)}>
