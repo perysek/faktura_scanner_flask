@@ -13,6 +13,7 @@ from flask import Blueprint, jsonify, request, current_app, send_file, session
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
+from config.admin_view import is_superuser, redact_compensation
 from config.auth_config import module_permission_required, role_required, own_data_employee_id
 from config.database import managed_transaction
 from database.models import Invoice
@@ -3914,6 +3915,7 @@ def get_employees():
                 round(used_min / denominator * 100, 2) if denominator > 0 else None
             )
 
+            _base_salary, _commission_rate = redact_compensation(employee.base_salary, employee.commission_rate)
             employee_dict = {
                 'id': employee.id,
                 'user_id': employee.user_id,
@@ -3926,8 +3928,8 @@ def get_employees():
                 'employment_status': employee.employment_status,
                 'hire_date': employee.hire_date.isoformat() if employee.hire_date else None,
                 'termination_date': employee.termination_date.isoformat() if employee.termination_date else None,
-                'base_salary': employee.base_salary,
-                'commission_rate': employee.commission_rate,
+                'base_salary': _base_salary,
+                'commission_rate': _commission_rate,
                 'is_active': employee.is_active,
                 'created_at': employee.created_at.isoformat() if employee.created_at else None,
                 'avg_satisfaction': sat_data.get('avg_satisfaction'),
@@ -3961,6 +3963,7 @@ def get_employee(employee_id):
             return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
 
         employee = current_app.employee_repo.row_to_employee(row)
+        _base_salary, _commission_rate = redact_compensation(employee.base_salary, employee.commission_rate)
         employee_dict = {
             'id': employee.id,
             'user_id': employee.user_id,
@@ -3974,8 +3977,8 @@ def get_employee(employee_id):
             'employment_status': employee.employment_status,
             'hire_date': employee.hire_date.isoformat() if employee.hire_date else None,
             'termination_date': employee.termination_date.isoformat() if employee.termination_date else None,
-            'base_salary': employee.base_salary,
-            'commission_rate': employee.commission_rate,
+            'base_salary': _base_salary,
+            'commission_rate': _commission_rate,
             'employer_cost_rate': employee.employer_cost_rate,
             'skills': employee.get_skills_dict(),
             'specializations': employee.get_specializations_list(),
@@ -4121,6 +4124,22 @@ def update_employee(employee_id):
         else:
             specializations = existing['specializations']
 
+        # Compensation (2026-09-16, temporary field-test patch): same full-row-UPDATE
+        # footgun as skills/specializations above, PLUS a write-side guard — only a
+        # superuser's request may change these two fields at all, so a non-superuser
+        # PUT (whether the UI omits the keys, or someone sends them directly) always
+        # preserves the existing value instead of nulling or overwriting it. Revert by
+        # deleting this block and restoring the two `data.get(...)` lines it replaces.
+        if 'base_salary' in data and is_superuser():
+            base_salary = float(data.get('base_salary')) if data.get('base_salary') else None
+        else:
+            base_salary = existing['base_salary']
+
+        if 'commission_rate' in data and is_superuser():
+            commission_rate = float(data.get('commission_rate')) if data.get('commission_rate') else None
+        else:
+            commission_rate = existing['commission_rate']
+
         employee = Employee(
             id=employee_id,
             user_id=data.get('user_id'),
@@ -4133,8 +4152,8 @@ def update_employee(employee_id):
             employment_status=data.get('employment_status', 'active'),
             hire_date=parse_date_string(data.get('hire_date')) if data.get('hire_date') else None,
             termination_date=parse_date_string(data.get('termination_date')) if data.get('termination_date') else None,
-            base_salary=float(data.get('base_salary')) if data.get('base_salary') else None,
-            commission_rate=float(data.get('commission_rate')) if data.get('commission_rate') else None,
+            base_salary=base_salary,
+            commission_rate=commission_rate,
             employer_cost_rate=float(data.get('employer_cost_rate', 0.22)),
             skills=skills,
             specializations=specializations,

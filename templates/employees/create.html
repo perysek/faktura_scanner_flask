@@ -237,6 +237,7 @@
             <section>
                 <h2 class="section-title">Wynagrodzenie</h2>
                 <div class="form-grid form-grid-2">
+                    {% if is_superuser %}
                     <div>
                         <label for="base_salary" class="refined-label">Wynagrodzenie podstawowe (PLN)</label>
                         <input type="number" id="base_salary" name="base_salary" step="0.01" min="0" class="refined-input" placeholder="0.00">
@@ -247,6 +248,7 @@
                         <input type="number" id="commission_rate" name="commission_rate" step="0.1" min="0" max="100" class="refined-input" placeholder="0.0">
                         <p class="input-hint">Domyślna stawka prowizyjna od usług</p>
                     </div>
+                    {% endif %}
                     <div>
                         <label for="employer_cost_rate" class="refined-label">Koszt pracodawcy (ułamek)</label>
                         <input type="number" id="employer_cost_rate" name="employer_cost_rate" step="0.01" min="0" max="1" class="refined-input" value="0.22">
@@ -412,8 +414,6 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         forma_zatrudnienia_id: formaVal ? parseInt(formaVal) : null,
         user_id: document.getElementById('user_id').value ? parseInt(document.getElementById('user_id').value) : null,
         photo_path: document.getElementById('photo_path').value.trim() || null,
-        base_salary: document.getElementById('base_salary').value ? parseFloat(document.getElementById('base_salary').value) : null,
-        commission_rate: document.getElementById('commission_rate').value ? parseFloat(document.getElementById('commission_rate').value) : null,
         employer_cost_rate: parseFloat(document.getElementById('employer_cost_rate').value) || 0.22,
         max_appointments_per_day: parseInt(document.getElementById('max_appointments_per_day').value) || 8,
         skills: Object.keys(skillsObj).length ? skillsObj : null,
@@ -421,6 +421,13 @@ document.getElementById('employee-form').addEventListener('submit', async (e) =>
         work_schedule: Object.keys(scheduleObj).length ? scheduleObj : null,
         notes: document.getElementById('notes').value.trim() || null
     };
+    // Compensation inputs only exist in the DOM for superusers (see the
+    // {% if is_superuser %} guard above) — omit the keys when absent instead
+    // of reading a null element.
+    const baseSalaryEl = document.getElementById('base_salary');
+    if (baseSalaryEl) formData.base_salary = baseSalaryEl.value ? parseFloat(baseSalaryEl.value) : null;
+    const commissionRateEl = document.getElementById('commission_rate');
+    if (commissionRateEl) formData.commission_rate = commissionRateEl.value ? parseFloat(commissionRateEl.value) : null;
 
     try {
         const response = await fetch('/api/employees', {

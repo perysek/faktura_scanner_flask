@@ -194,8 +194,15 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       forma_zatrudnienia_id: formaId ? parseInt(formaId, 10) : null,
       user_id: userId ? parseInt(userId, 10) : null,
       photo_path: photoPath.trim() || null,
-      base_salary: baseSalary ? parseFloat(baseSalary) : null,
-      commission_rate: commissionRate ? parseFloat(commissionRate) : null,
+      // Omit rather than send null when hidden (see the isSuperuser-gated section
+      // below) — the server also enforces this independently, but keeping the key
+      // out of the payload matches what the receptionist actually saw/edited.
+      ...(auth.isSuperuser
+        ? {
+            base_salary: baseSalary ? parseFloat(baseSalary) : null,
+            commission_rate: commissionRate ? parseFloat(commissionRate) : null,
+          }
+        : {}),
       employer_cost_rate: parseFloat(employerCostRate) || 0.22,
       max_appointments_per_day: parseInt(maxAppointments, 10) || 8,
       work_schedule: buildScheduleObj(),
@@ -380,8 +387,12 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
           <section>
             <h2 className="section-title">Wynagrodzenie</h2>
             <div className="form-grid">
-              <TextField label="Wynagrodzenie podstawowe (PLN)" id="base_salary" type="number" step="0.01" min={0} value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} helper="Miesięczna stawka podstawowa" />
-              <TextField label="Prowizja (%)" id="commission_rate" type="number" step="0.1" min={0} max={100} value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} helper="Domyślna stawka prowizyjna od usług" />
+              {auth.isSuperuser && (
+                <>
+                  <TextField label="Wynagrodzenie podstawowe (PLN)" id="base_salary" type="number" step="0.01" min={0} value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} helper="Miesięczna stawka podstawowa" />
+                  <TextField label="Prowizja (%)" id="commission_rate" type="number" step="0.1" min={0} max={100} value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} helper="Domyślna stawka prowizyjna od usług" />
+                </>
+              )}
               <TextField label="Koszt pracodawcy (ułamek)" id="employer_cost_rate" type="number" step="0.01" min={0} max={1} value={employerCostRate} onChange={(e) => setEmployerCostRate(e.target.value)} helper="np. 0.22 = 22% ZUS/podatki/świadczenia" />
               <TextField label="Maks. wizyt dziennie" id="max_appointments_per_day" type="number" step={1} min={1} max={50} value={maxAppointments} onChange={(e) => setMaxAppointments(e.target.value)} />
             </div>

@@ -586,7 +586,9 @@
     </div>
     {% endif %}
 
-    <!-- Employee Analytics — tabbed -->
+    <!-- Employee Analytics — tabbed. Superuser-only (2026-09-16 temporary field-test
+         patch, mirrors the React EmployeeAnalyticsSection gate) -->
+    {% if is_superuser %}
     <div class="refined-card" id="analytics-section">
         <h2 class="section-title" style="margin-bottom:1rem;">Analizy i wyniki</h2>
 
@@ -760,6 +762,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Actions -->
     <div class="refined-card">
@@ -786,7 +789,7 @@
 <script src="{{ asset_url('js/notifications.js') }}"></script>
 <script src="{{ asset_url('js/employees/analytics.js') }}"></script>
 <script>
-initAnalytics({{ employee.id }});
+{% if is_superuser %}initAnalytics({{ employee.id }});{% endif %}
 let assignedServiceIds = new Set(); // Track assigned service IDs
 
 // Initialize notification system

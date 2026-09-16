@@ -91,6 +91,20 @@ def is_superuser() -> bool:
         return False
 
 
+def redact_compensation(base_salary, commission_rate):
+    """Blank ``base_salary``/``commission_rate`` for anyone who isn't a superuser.
+
+    Temporary patch (2026-09-16) for field-testing with receptionist accounts —
+    single choke-point mirroring ``emp_exclusion_sql`` above: call this at every
+    employee-compensation read/serialize site instead of checking
+    ``is_superuser()`` ad hoc, so no call site forgets it. Revert by deleting
+    this function and its call sites (grep ``redact_compensation``).
+    """
+    if is_superuser():
+        return base_salary, commission_rate
+    return None, None
+
+
 def admin_view_active() -> bool:
     """True whenever the current request is an authenticated superuser —
     permanently ON for that role, no session flag and no toggle.

@@ -8,7 +8,7 @@ from flask import (
 from flask_login import login_required, current_user
 
 from config.auth_config import module_permission_required, role_required
-from config.admin_view import is_superuser, is_employee_hidden
+from config.admin_view import is_superuser, is_employee_hidden, redact_compensation
 from config.database import get_db_connection
 
 main_bp = Blueprint('main', __name__)
@@ -272,6 +272,8 @@ def view_employee(employee_id):
         return render_template('errors/404.html'), 404
 
     employee = current_app.employee_repo.row_to_employee(row)
+    employee.base_salary, employee.commission_rate = redact_compensation(
+        employee.base_salary, employee.commission_rate)
     forma_nazwa = None
     if employee.forma_zatrudnienia_id:
         forma_row = current_app.forma_zatrudnienia_repo.get_by_id(employee.forma_zatrudnienia_id)
@@ -293,6 +295,8 @@ def edit_employee(employee_id):
         return render_template('errors/404.html'), 404
 
     employee = current_app.employee_repo.row_to_employee(row)
+    employee.base_salary, employee.commission_rate = redact_compensation(
+        employee.base_salary, employee.commission_rate)
     from repositories.users.user_repository import UserRepository
     forma_options = current_app.forma_zatrudnienia_repo.get_all()
     user_options = UserRepository().get_active_users()

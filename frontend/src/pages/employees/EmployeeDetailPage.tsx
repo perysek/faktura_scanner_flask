@@ -14,6 +14,7 @@ import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatPLN } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useEscapeClose } from '../../lib/a11y/useEscapeClose';
+import { useAuth } from '../../contexts/AuthContext';
 import { EmployeeAnalyticsSection } from './EmployeeAnalyticsSection';
 import type { BalanceAdjustment } from '../../types/employee';
 import type { Service } from '../../types/service';
@@ -55,6 +56,7 @@ export function EmployeeDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { isSuperuser } = useAuth();
   useEscapeBack('/pracownicy');
 
   const employeeState = useApiData(() => employeesApi.get(employeeId), [employeeId]);
@@ -566,8 +568,9 @@ export function EmployeeDetailPage() {
         </div>
       )}
 
-      {/* Analizy i wyniki */}
-      <EmployeeAnalyticsSection employeeId={employee.id} />
+      {/* Analizy i wyniki — superuser-only (2026-09-16 temporary field-test patch,
+          mirrors the Jinja view.html gate) */}
+      {isSuperuser && <EmployeeAnalyticsSection employeeId={employee.id} />}
 
       {/* Akcje */}
       <div className="refined-card">
