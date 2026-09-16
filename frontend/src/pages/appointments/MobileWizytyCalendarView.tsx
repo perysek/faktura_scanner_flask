@@ -170,20 +170,22 @@ export function MobileWizytyCalendarView({
   const [monthExpanded, setMonthExpanded] = useState(false);
 
   // Default onload state for a superuser: auto-engage "Widok administratora"
-  // + "Dane własne" so a superuser also lands on "just my own visits today"
-  // by default — the same baseline a non-superuser always has without
-  // needing any toggle — while the employee selector defaults to that same
-  // linked employee (WizytyListPage's own default-effect). Guarded to fire
+  // ON but "Dane własne" OFF. Own-data ON pins the visible list to the
+  // superuser's own linked employee server-side regardless of what's picked
+  // in the employee selector below — with it off, the selector's default
+  // still lands them on their own employee (WizytyListPage's own
+  // default-effect), but they can actually switch to someone else's visits
+  // from there, which own-data=true was silently blocking. Guarded to fire
   // once per mount so it doesn't immediately re-flip a superuser who
-  // deliberately turns these back off later in the same session. No mobile
-  // UI exposes these toggles any more (the filter modal that used to host
-  // them is gone) — superuser control over them lives in the Jinja sidebar.
+  // deliberately changes these later in the same session. No mobile UI
+  // exposes these toggles any more (the filter modal that used to host them
+  // is gone) — superuser control over them lives in the Jinja sidebar.
   const scopeDefaultAppliedRef = useRef(false);
   useEffect(() => {
     if (scopeDefaultAppliedRef.current || auth.isLoading || !auth.isSuperuser) return;
     scopeDefaultAppliedRef.current = true;
-    if (!auth.adminViewActive || !auth.ownDataActive) {
-      auth.applyScopeToggles(true, true).catch(() => {});
+    if (!auth.adminViewActive || auth.ownDataActive) {
+      auth.applyScopeToggles(true, false).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isLoading, auth.isSuperuser]);
