@@ -24,6 +24,27 @@
     }
     .admin-view-checkbox:disabled { opacity: 0.5; }
 
+    /* Mobile drawer — 1.05rem (~17px) is well under the 44px minimum touch
+       target (WCAG 2.5.5 / Apple HIG), the same floor `.action-icon-btn`
+       already enforces elsewhere in this app for exactly this reason. The
+       whole row is the `<label>`, so it's the row's tap area that needs
+       the floor, not just the visual checkbox — bumping only the checkbox
+       size would still leave a cramped hit-box around it. `touch-action:
+       manipulation` drops the ~300ms tap delay some mobile browsers apply
+       by default, which reads as "not responding" on a quick tap. */
+    @media (max-width: 1023px) {
+        .admin-view-label {
+            min-height: 44px;
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+            touch-action: manipulation;
+        }
+        .admin-view-checkbox {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+    }
+
     /* Pending-absences count pill (supervisors only, see zarzadzanie-active
        memory). Amber "needs attention" palette, matching .ab-tab-count on the
        absences management page — same semantic (pending count), same look. */
