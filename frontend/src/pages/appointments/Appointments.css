@@ -434,8 +434,29 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    fill the row's remaining width (the "+" and month-toggle buttons either
    side keep their fixed 44px via `.mob-fixed-nav-actions .mob-cal-nav-btn`
    above), icon + name centered together as one group. */
-.mob-employee-select-btn { flex: 1 1 auto; width: auto; min-width: 0; gap: 0.5rem; padding: 0 0.75rem; }
+.mob-employee-select-btn {
+  flex: 1 1 auto; width: auto; min-width: 0; gap: 0.5rem; padding: 0 0.75rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
 .mob-employee-select-label { font-size: 0.875rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* "Dane własne" (own-data) mode, superuser-only, entered/exited by a
+   long-press on this same button (MobileWizytyCalendarView.tsx) — a
+   "slide elevate" lift plus an ocean-blue outer glow, per spec. Blue-ocean
+   is `--color-info` (#1e6091 -> rgb(30, 96, 145)), same token/conversion
+   already used for the swipe-right reveal elsewhere in this file, at the
+   specified 50% opacity for the shadow. `ownDataStyleApplied` in the
+   component is set one frame after mount (not read directly off
+   `auth.ownDataActive`) purely so this transition has a "from" state to
+   animate away from on the fresh page every own-data toggle reloads into,
+   rather than snapping straight to the "on" look with no visible motion. */
+.mob-employee-select-btn--own-data {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px -2px rgba(30, 96, 145, 0.5);
+  border-color: var(--color-info, #1e6091);
+  background: var(--color-info-bg, #eff6ff);
+  color: var(--color-info-text-dark, #1e3a8a);
+}
 
 /* Employee popup — "rolls up" from the bottom edge on open, "collapses
    down" on pick/dismiss; both directions are the SAME 0.2s transition, just

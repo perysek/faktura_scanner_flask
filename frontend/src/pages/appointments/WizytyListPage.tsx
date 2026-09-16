@@ -15,7 +15,7 @@ import { StatusDropdown } from './StatusDropdown';
 import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
-import { MobileWizytyCalendarView, useIsMobile } from './MobileWizytyCalendarView';
+import { MobileWizytyCalendarView, useIsMobile, OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY } from './MobileWizytyCalendarView';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
 type SortColumn = 'appointment_date' | 'start_time' | 'client_name' | 'service_name' | 'employee_name' | 'total_price' | 'status' | 'satisfaction_score';
@@ -91,10 +91,25 @@ export function WizytyListPage() {
   // employee (once /auth/me resolves), instead of leaving it on "Wszyscy".
   // Guarded to fire exactly once so it never clobbers a selection the user
   // made themselves on a later auth refetch.
+  //
+  // The mobile "Dane własne" long-press (MobileWizytyCalendarView.tsx)
+  // overrides this default when turning own-data OFF: it writes the employee
+  // id that toggle should land on (the first employee with a visit today,
+  // not the superuser's own) to sessionStorage BEFORE the reload that
+  // follows every own-data flip, since that reload remounts this whole page
+  // fresh and would otherwise run this exact effect and clobber it back to
+  // `linkedEmployeeId`. Read once and cleared immediately so it never
+  // leaks into any later, unrelated mount.
   const employeeDefaultAppliedRef = useRef(false);
   useEffect(() => {
     if (employeeDefaultAppliedRef.current || auth.isLoading) return;
     employeeDefaultAppliedRef.current = true;
+    const override = sessionStorage.getItem(OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY);
+    if (override !== null) {
+      sessionStorage.removeItem(OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY);
+      setEmployeeId(override === 'null' ? null : Number(override));
+      return;
+    }
     if (auth.linkedEmployeeId !== null) setEmployeeId(auth.linkedEmployeeId);
   }, [auth.isLoading, auth.linkedEmployeeId]);
   const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });

@@ -11,7 +11,6 @@ interface MeResponse {
   has_linked_employee: boolean;
   linked_employee_id: number | null;
   is_superuser: boolean;
-  admin_view_active: boolean;
   own_data_active: boolean;
 }
 
@@ -24,22 +23,20 @@ interface AuthContextValue extends NavVisibilityCtx {
   isLoading: boolean;
   login: (email: string, password: string, remember: boolean) => Promise<LoginResult>;
   logout: () => Promise<void>;
-  /** "Widok administratora" (config/admin_view.py) — superuser-only, always
-   * false for anyone else regardless of stale client state. */
+  /** "Widok administratora" (config/admin_view.py) is now permanently ON for
+   * every superuser — no session flag, no toggle, nothing to read here. */
   isSuperuser: boolean;
-  adminViewActive: boolean;
   ownDataActive: boolean;
-  /** Posts whichever of "Widok administratora" / "Dane własne" actually
-   * changed (admin-view first — the own-data endpoint 400s unless admin view
-   * is already ON) to the Flask session flags shared with the Jinja pages
-   * (routes/main_routes.py `/api/admin-view` + `/api/own-data`), then reloads
-   * once so every server render AND every SPA fetch re-runs under the new
-   * flags — same full-reload contract as the Jinja sidebar's own toggle JS,
-   * not a client-side state patch. No-op (no reload) if neither changed. */
-  applyScopeToggles: (adminView: boolean, ownData: boolean) => Promise<void>;
+  /** POSTs "Dane własne" to the Flask session flag shared with the Jinja
+   * pages (routes/main_routes.py `/api/own-data`) — no reload here; the
+   * caller decides what happens next (the mobile long-press gesture needs a
+   * fresh, now-unrestricted fetch to compute a fallback employee BEFORE
+   * reloading, so a built-in auto-reload would be the wrong contract for
+   * every caller). Returns whether the flag actually changed. */
+  postOwnData: (enabled: boolean) => Promise<{ changed: boolean }>;
   /** The employee record linked to the logged-in user, if any — used as the
-   * default "Pracownik" filter selection (mobile Wizyty filter modal), not
-   * just the `hasLinkedEmployee` boolean the nav-visibility rules use. */
+   * default "Pracownik" filter selection, not just the `hasLinkedEmployee`
+   * boolean the nav-visibility rules use. */
   linkedEmployeeId: number | null;
 }
 
@@ -61,7 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [hasLinkedEmployee, setHasLinkedEmployee] = useState(false);
   const [linkedEmployeeId, setLinkedEmployeeId] = useState<number | null>(null);
   const [isSuperuser, setIsSuperuser] = useState(false);
-  const [adminViewActive, setAdminViewActive] = useState(false);
   const [ownDataActive, setOwnDataActive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -74,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setHasLinkedEmployee(data.has_linked_employee);
       setLinkedEmployeeId(data.linked_employee_id);
       setIsSuperuser(data.is_superuser);
-      setAdminViewActive(data.admin_view_active);
       setOwnDataActive(data.own_data_active);
     } catch (err) {
       // 401 (no session) is the expected "logged out" outcome, not an error
@@ -86,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setHasLinkedEmployee(false);
       setLinkedEmployeeId(null);
       setIsSuperuser(false);
-      setAdminViewActive(false);
       setOwnDataActive(false);
       if (!(err instanceof ApiError) || err.status !== 401) {
         console.error('Session check failed', err);
@@ -126,29 +120,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setHasLinkedEmployee(false);
       setLinkedEmployeeId(null);
       setIsSuperuser(false);
-      setAdminViewActive(false);
       setOwnDataActive(false);
     }
   }, []);
 
-  const applyScopeToggles = useCallback(async (adminView: boolean, ownData: boolean) => {
-    let changed = false;
-    if (adminView !== adminViewActive) {
-      await api.post<{ ok: boolean; enabled: boolean }>('/api/admin-view', { enabled: adminView });
-      changed = true;
-    }
-    // Only POST own-data while the *target* admin-view is ON — the endpoint
-    // 400s ("Najpierw wlacz widok administratora") whenever admin-view is
-    // currently off, which it already is server-side the instant the
-    // admin-view POST above turns it off (that POST auto-clears own-data too).
-    // Skipping this call in that case avoids the 400 that used to abort the
-    // whole function before it reached the reload below.
-    if (adminView && ownData !== ownDataActive) {
-      await api.post<{ ok: boolean; enabled: boolean }>('/api/own-data', { enabled: ownData });
-      changed = true;
-    }
-    if (changed) window.location.reload();
-  }, [adminViewActive, ownDataActive]);
+  const postOwnData = useCallback(
+    async (enabled: boolean): Promise<{ changed: boolean }> => {
+      if (enabled === ownDataActive) return { changed: false };
+      await api.post<{ ok: boolean; enabled: boolean }>('/api/own-data', { enabled });
+      setOwnDataActive(enabled);
+      return { changed: true };
+    },
+    [ownDataActive],
+  );
 
   const hasModuleAccess = useCallback(
     (moduleName: string) => permissions[moduleName]?.has_access ?? false,
@@ -174,9 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       isSuperuser,
-      adminViewActive,
       ownDataActive,
-      applyScopeToggles,
+      postOwnData,
     }),
     [
       user,
@@ -189,9 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       isSuperuser,
-      adminViewActive,
       ownDataActive,
-      applyScopeToggles,
+      postOwnData,
     ],
   );
 

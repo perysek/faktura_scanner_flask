@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
+import { useAuth } from '../../contexts/AuthContext';
+import { appointmentsApi } from '../../lib/api/appointments';
 import { RescheduleSheet } from './RescheduleSheet';
 import { StatusDropdown } from './StatusDropdown';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
@@ -22,6 +24,22 @@ const SWIPE_MAX_PX = -120;
 /** Mirror thresholds for swipe-RIGHT → navigate to visit details. */
 const SWIPE_TRIGGER_PX_RIGHT = 84;
 const SWIPE_MAX_PX_RIGHT = 120;
+
+/** Long-press duration (ms) on the employee selector to flip "Dane własne"
+ * (own-data mode) — superuser-only. Standard-ish long-press threshold; long
+ * enough that an ordinary tap-to-open-popup gesture never fires it by
+ * accident. */
+const OWN_DATA_LONG_PRESS_MS = 500;
+/** A finger moving more than this many px during the hold cancels it — a
+ * long-press that turns into a scroll/drag shouldn't also flip the toggle. */
+const OWN_DATA_LONG_PRESS_MOVE_TOLERANCE_PX = 10;
+/** Survives the hard `window.location.reload()` that follows every own-data
+ * flip (session-scoped, so every fetch must re-run under the new value) —
+ * carries the employee id the OFF direction should land on (computed from a
+ * fresh, now-unrestricted fetch — see `handleEmployeeLongPress` below) past
+ * that reload to WizytyListPage's own employee-default effect, which reads
+ * and clears this key before falling back to its own default. */
+const OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY = 'wizyty-employee-after-own-data-toggle';
 
 const MONTH_WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
 /** Strip is Mon–Sat only (mod #1) — the salon doesn't book Sundays. */
@@ -107,7 +125,7 @@ function useIsMobile(breakpointPx: number): boolean {
   return isMobile;
 }
 
-export { useIsMobile };
+export { useIsMobile, OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY };
 
 export interface MobileWizytyCalendarViewProps {
   /** Currently-active date — `chainDates[0] ?? iso(weekStart)` from the host page. */
@@ -149,6 +167,7 @@ export function MobileWizytyCalendarView({
   canWrite,
   onDataChanged,
 }: MobileWizytyCalendarViewProps) {
+  const auth = useAuth();
   const navigate = useNavigate();
   const [today] = useState(() => iso(new Date()));
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
@@ -176,9 +195,11 @@ export function MobileWizytyCalendarView({
   // several more retries with no confirmed root cause — possibly Cloudflare
   // interference on the proxied staging path, never conclusively ruled in
   // or out). The employee-selector default above (WizytyListPage's own
-  // effect) doesn't have this problem — it's a plain local state update,
-  // no reload involved — so it stays. For admin-view/own-data, superuser
-  // control lives in the Jinja sidebar toggle; no mobile UI auto-applies it.
+  // effect) doesn't have this problem — it's a plain local state update, no
+  // reload involved — so it stays. "Widok administratora" is now permanently
+  // ON for every superuser (config/admin_view.py) — nothing to apply, ever.
+  // "Dane własne" moved to the long-press gesture below — a superuser-only,
+  // deliberate action, never an automatic onload default.
 
   // Employee-select popup — "rolls up" from the bottom-actions row and
   // "collapses down" on pick/dismiss. `employeePopupMounted` controls
@@ -190,6 +211,12 @@ export function MobileWizytyCalendarView({
   const [employeePopupMounted, setEmployeePopupMounted] = useState(false);
   const [employeePopupOpen, setEmployeePopupOpen] = useState(false);
   function openEmployeePopup() {
+    // While "Dane własne" is on, the server ignores any employee_id filter
+    // client-side anyway (it hard-scopes every query to the superuser's own
+    // employee — config/admin_view.py's `_scope_mode` 'only' branch), so
+    // picking someone else here would just show a name the results don't
+    // actually match. Long-press is the only way in or out of this mode.
+    if (auth.ownDataActive) return;
     setEmployeePopupMounted(true);
     requestAnimationFrame(() => setEmployeePopupOpen(true));
   }
@@ -198,6 +225,114 @@ export function MobileWizytyCalendarView({
     setTimeout(() => setEmployeePopupMounted(false), 200);
   }
   const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? '—';
+
+  // "Dane własne" long-press (superuser-only) — the mobile employee
+  // selector's long-press replaces the old sidebar switch entirely.
+  //
+  // Visual feedback is gated on `ownDataStyleApplied`, not `auth.ownDataActive`
+  // directly, and set one animation-frame after mount via the same trick
+  // `employeePopupOpen` above uses: since toggling own-data always triggers a
+  // full page reload (session-scoped, every fetch app-wide must re-run under
+  // it), this component always mounts FRESH into whatever the persisted
+  // state already is — there's no local "just turned it on" transition to
+  // play without this rAF delay giving the CSS transition an actual "from"
+  // state to animate away from first.
+  const [ownDataStyleApplied, setOwnDataStyleApplied] = useState(false);
+  useEffect(() => {
+    if (!auth.ownDataActive) {
+      setOwnDataStyleApplied(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setOwnDataStyleApplied(true));
+    return () => cancelAnimationFrame(id);
+  }, [auth.ownDataActive]);
+
+  const ownDataLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ownDataLongPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const ownDataLongPressFiredRef = useRef(false);
+  const [ownDataTogglePending, setOwnDataTogglePending] = useState(false);
+
+  function clearOwnDataLongPressTimer() {
+    if (ownDataLongPressTimerRef.current !== null) {
+      clearTimeout(ownDataLongPressTimerRef.current);
+      ownDataLongPressTimerRef.current = null;
+    }
+  }
+
+  // Turning OFF needs the first employee (in `employees`' own fetch order,
+  // last_name/first_name per EmployeeRepository.get_all) who has >=1
+  // appointment on the currently-displayed day. The `appointments` PROP
+  // can't answer that while own-data is still on: the server hard-scopes
+  // every fetch to just the superuser's own employee under that mode
+  // (config/admin_view.py's `_scope_mode`), regardless of any employee_id
+  // filter the client sends — so it's re-fetched here fresh, AFTER the POST
+  // below actually lands own-data=false server-side, which is the earliest
+  // moment an unrestricted read of "everyone's visits today" becomes
+  // possible at all.
+  async function computeOwnDataOffFallbackEmployeeId(): Promise<number | null> {
+    try {
+      const res = await appointmentsApi.list({ start_date: selectedDate, end_date: selectedDate });
+      const employeeIdsWithVisit = new Set(res.appointments.map((a) => a.employee_id));
+      const firstWithVisit = employees.find((e) => employeeIdsWithVisit.has(e.id));
+      return firstWithVisit?.id ?? employees[0]?.id ?? null;
+    } catch {
+      return employees[0]?.id ?? null;
+    }
+  }
+
+  async function handleEmployeeLongPress() {
+    if (!auth.isSuperuser || ownDataTogglePending) return;
+    const turningOn = !auth.ownDataActive;
+    setOwnDataTogglePending(true);
+    try {
+      const { changed } = await auth.postOwnData(turningOn);
+      if (!changed) return;
+      if (!turningOn) {
+        // Turning ON needs no fallback write: WizytyListPage's own
+        // employee-default effect already lands on the superuser's own
+        // linked employee on a fresh mount whenever no override key is
+        // present — exactly the desired ON-mode selection, for free.
+        const fallbackId = await computeOwnDataOffFallbackEmployeeId();
+        sessionStorage.setItem(OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY, fallbackId === null ? 'null' : String(fallbackId));
+      }
+      window.location.reload();
+    } finally {
+      setOwnDataTogglePending(false);
+    }
+  }
+
+  function handleEmployeeBtnTouchStart(e: TouchEvent<HTMLButtonElement>) {
+    if (!auth.isSuperuser) return;
+    const t = e.touches[0];
+    ownDataLongPressStartRef.current = { x: t.clientX, y: t.clientY };
+    ownDataLongPressFiredRef.current = false;
+    clearOwnDataLongPressTimer();
+    ownDataLongPressTimerRef.current = setTimeout(() => {
+      ownDataLongPressFiredRef.current = true;
+      void handleEmployeeLongPress();
+    }, OWN_DATA_LONG_PRESS_MS);
+  }
+  function handleEmployeeBtnTouchMove(e: TouchEvent<HTMLButtonElement>) {
+    const start = ownDataLongPressStartRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.hypot(dx, dy) > OWN_DATA_LONG_PRESS_MOVE_TOLERANCE_PX) clearOwnDataLongPressTimer();
+  }
+  function handleEmployeeBtnTouchEnd() {
+    clearOwnDataLongPressTimer();
+  }
+  function handleEmployeeBtnClick() {
+    // The synthetic click mobile browsers fire after touchend would still
+    // open the popup right after a long-press fires — same suppression
+    // pattern as the card swipe gestures' `suppressClickRef`.
+    if (ownDataLongPressFiredRef.current) {
+      ownDataLongPressFiredRef.current = false;
+      return;
+    }
+    openEmployeePopup();
+  }
 
   const autoSelectedRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -626,7 +761,20 @@ export function MobileWizytyCalendarView({
                 <Icon name="add" />
               </Link>
             )}
-            <button type="button" className="mob-cal-nav-btn mob-employee-select-btn" onClick={openEmployeePopup} aria-haspopup="true" aria-expanded={employeePopupOpen} aria-label="Wybierz pracownika" title="Wybierz pracownika">
+            <button
+              type="button"
+              className={`mob-cal-nav-btn mob-employee-select-btn${ownDataStyleApplied ? ' mob-employee-select-btn--own-data' : ''}`}
+              onClick={handleEmployeeBtnClick}
+              onTouchStart={handleEmployeeBtnTouchStart}
+              onTouchMove={handleEmployeeBtnTouchMove}
+              onTouchEnd={handleEmployeeBtnTouchEnd}
+              onTouchCancel={handleEmployeeBtnTouchEnd}
+              aria-haspopup="true"
+              aria-expanded={employeePopupOpen}
+              aria-pressed={auth.isSuperuser ? auth.ownDataActive : undefined}
+              aria-label={auth.isSuperuser ? 'Wybierz pracownika. Przytrzymaj, aby przełączyć widok danych własnych.' : 'Wybierz pracownika'}
+              title={auth.isSuperuser ? 'Wybierz pracownika (przytrzymaj: dane własne)' : 'Wybierz pracownika'}
+            >
               <Icon name="person" />
               <span className="mob-employee-select-label">{selectedEmployeeName}</span>
             </button>

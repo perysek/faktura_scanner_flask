@@ -368,37 +368,27 @@
     </nav>
     {% endif %}
 
-    <!-- Admin view section (superuser-only), sits above the user/logout panel -->
+    <!-- "Widok administratora" removed entirely (superuser-only, sits above the
+         user/logout panel) — it's now permanently ON for every superuser
+         (config/admin_view.py), no session flag and no toggle route, so there
+         is nothing left to flip here. "Dane własne" stays as the one
+         remaining superuser scope control on this legacy Jinja sidebar (the
+         React app's equivalent moved to a long-press gesture on its mobile
+         employee selector — see MobileWizytyCalendarView.tsx). -->
     {% if current_user.is_authenticated and is_superuser %}
     <div class="shrink-0">
-    {# "Widok administratora" — superuser-only. Flips the session flag that reveals
-       the hidden owner-employee data app-wide; page reloads so every server render
-       and client API re-runs under the new flag. #}
-    <div class="admin-view-row px-4 shrink-0 {{ 'is-active' if admin_view_active else '' }}">
-        <label for="admin-view-toggle"
-               class="admin-view-label flex items-center gap-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer select-none transition-all duration-200"
-               title="Pokaż/ukryj dane administratora w całej aplikacji">
-            {{ icon('visibility', class='admin-view-glyph w-5 h-5 shrink-0') }}
-            <span class="flex-1 min-w-0 text-base font-medium truncate">Widok administratora</span>
-            <input type="checkbox" id="admin-view-toggle"
-                   class="admin-view-checkbox shrink-0"
-                   {{ 'checked' if admin_view_active else '' }}
-                   aria-label="Widok administratora">
-        </label>
-    </div>
-    {# "Dane własne" — show ONLY the logged-in user's own employee data everywhere.
-       Editable only while admin view is ON (disabled + dimmed otherwise); the
-       server enforces the same dependency. #}
-    <div class="admin-view-row own-data-row px-4 shrink-0 {{ 'is-active' if own_data_active else '' }} {{ '' if admin_view_active else 'is-disabled' }}">
+    {# "Dane własne" — show ONLY the logged-in user's own employee data
+       everywhere. No longer gated on admin_view_active (always true for a
+       superuser now) — always editable for anyone this block renders for. #}
+    <div class="admin-view-row own-data-row px-4 shrink-0 {{ 'is-active' if own_data_active else '' }}">
         <label for="own-data-toggle"
-               class="admin-view-label own-data-label flex items-center gap-2 py-1.5 rounded-[var(--radius-sm)] select-none transition-all duration-200 {{ 'cursor-pointer' if admin_view_active else 'cursor-not-allowed' }}"
+               class="admin-view-label own-data-label flex items-center gap-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer select-none transition-all duration-200"
                title="Pokaż wyłącznie dane zalogowanego użytkownika">
             {{ icon('badge', class='admin-view-glyph w-5 h-5 shrink-0') }}
             <span class="flex-1 min-w-0 text-base font-medium truncate">Dane własne</span>
             <input type="checkbox" id="own-data-toggle"
                    class="admin-view-checkbox shrink-0"
                    {{ 'checked' if own_data_active else '' }}
-                   {{ '' if admin_view_active else 'disabled' }}
                    aria-label="Dane własne">
         </label>
     </div>
@@ -638,12 +628,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// "Widok administratora" + "Dane własne" toggles. Superuser-only elements (absent
-// otherwise, so wireToggle exits cleanly). POST the new state, then hard-reload:
-// the whole app — every server-rendered list/stat AND every client-side API fetch
-// — re-runs under the new session flag, so there is no partial/stale view to
-// reconcile. The "Dane własne" box is disabled in HTML unless admin view is ON, so
-// its change event only fires when it is genuinely editable.
+// "Dane własne" toggle — superuser-only element (absent otherwise, so
+// wireToggle exits cleanly). POSTs the new state, then hard-reloads: the
+// whole app — every server-rendered list/stat AND every client-side API
+// fetch — re-runs under the new session flag, so there is no partial/stale
+// view to reconcile. ("Widok administratora" no longer has a toggle at all —
+// permanently ON for every superuser.)
 document.addEventListener('DOMContentLoaded', function () {
     function wireToggle(id, url) {
         var toggle = document.getElementById(id);
@@ -668,7 +658,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
-    wireToggle('admin-view-toggle', '/api/admin-view');
     wireToggle('own-data-toggle', '/api/own-data');
 });
 </script>

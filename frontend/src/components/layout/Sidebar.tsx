@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Switch } from '../ui/Switch';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
@@ -56,11 +55,6 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
   );
 
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
-  // "Widok administratora" / "Dane własne" (config/admin_view.py) — desktop
-  // rail equivalent of the mobile filter popup's toggles. Applies immediately
-  // on click (no staging/popup to defer to here), same POST+reload contract
-  // as applyScopeToggles everywhere else it's used.
-  const [scopeTogglePending, setScopeTogglePending] = useState(false);
 
   // The section containing the active route auto-opens on navigation (§13.2).
   useEffect(() => {
@@ -136,32 +130,11 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
           ))}
         </nav>
 
-        {auth.isSuperuser && (
-          <div className="sidebar-scope-toggles">
-            <Switch
-              id="admin-view-toggle"
-              label="Widok administratora"
-              checked={auth.adminViewActive}
-              disabled={scopeTogglePending}
-              onChange={(enabled) => {
-                setScopeTogglePending(true);
-                auth
-                  .applyScopeToggles(enabled, enabled ? auth.ownDataActive : false)
-                  .catch(() => setScopeTogglePending(false));
-              }}
-            />
-            <Switch
-              id="own-data-toggle"
-              label="Dane własne"
-              checked={auth.ownDataActive}
-              disabled={scopeTogglePending || !auth.adminViewActive}
-              onChange={(enabled) => {
-                setScopeTogglePending(true);
-                auth.applyScopeToggles(auth.adminViewActive, enabled).catch(() => setScopeTogglePending(false));
-              }}
-            />
-          </div>
-        )}
+        {/* "Widok administratora"/"Dane własne" toggles removed — admin view
+            is now permanently ON for every superuser (config/admin_view.py),
+            and "Dane własne" moved to a long-press gesture on the mobile
+            employee selector (MobileWizytyCalendarView.tsx). Nothing left to
+            control from this sidebar. */}
 
         <div className="sidebar-footer">
           <div className="sidebar-user-row">

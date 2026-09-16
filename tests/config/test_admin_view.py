@@ -3,8 +3,9 @@
 These lock in the security-critical guarantees from the plan:
   1. the hidden set resolves from superuser-linked employees and is g-cached;
   2. emp_exclusion_sql emits a correctly-parameterised NOT IN clause (or nothing);
-  3. admin_view_active() is False for a non-superuser even if they forge the
-     session flag — and the toggle route enforces the same rule with a 403.
+  3. admin_view_active() is permanently True for a superuser (no toggle, no
+     session flag) and False for absolutely everyone else, including a
+     forged session cookie.
 """
 from unittest.mock import Mock, patch
 
@@ -89,28 +90,17 @@ class TestEmpExclusionSql:
 
 
 class TestAdminViewActive:
-    def test_superuser_with_flag_on(self, app):
+    def test_superuser_is_on(self, app):
         from config import admin_view
         su = Mock(is_authenticated=True, role='superuser')
         with app.test_request_context():
-            from flask import session
-            session['admin_view'] = True
             with patch('config.admin_view.current_user', su):
                 assert admin_view.admin_view_active() is True
 
-    def test_superuser_without_flag_is_off(self, app):
-        from config import admin_view
-        su = Mock(is_authenticated=True, role='superuser')
-        with app.test_request_context():
-            with patch('config.admin_view.current_user', su):
-                assert admin_view.admin_view_active() is False
-
-    def test_non_superuser_forging_flag_is_ignored(self, app):
+    def test_non_superuser_is_off(self, app):
         from config import admin_view
         recep = Mock(is_authenticated=True, role='receptionist')
         with app.test_request_context():
-            from flask import session
-            session['admin_view'] = True   # forged by a non-superuser
             with patch('config.admin_view.current_user', recep):
                 assert admin_view.admin_view_active() is False
                 # hidden_ids_to_exclude still hides the owner for this viewer
@@ -127,81 +117,24 @@ class TestAdminViewActive:
                 assert admin_view.is_superuser() is False
 
 
-class TestToggleRoute:
-    def _client(self, app):
-        app.config['WTF_CSRF_ENABLED'] = False
-        return app.test_client()
-
-    def test_requires_login(self, app):
-        client = self._client(app)
-        resp = client.post('/api/admin-view', json={'enabled': True})
-        # login_required redirects anonymous users to the login view
-        assert resp.status_code in (302, 401)
-
-    def test_non_superuser_gets_403(self, app):
-        client = self._client(app)
-        recep = Mock(is_authenticated=True, role='receptionist',
-                     get_id=Mock(return_value='2'))
-        with patch('flask_login.utils._get_user', return_value=recep):
-            resp = client.post('/api/admin-view', json={'enabled': True})
-        assert resp.status_code == 403
-        with client.session_transaction() as sess:
-            assert sess.get('admin_view') is None
-
-    def test_superuser_enables_flag(self, app):
-        client = self._client(app)
-        su = Mock(is_authenticated=True, role='superuser',
-                  get_id=Mock(return_value='1'))
-        with patch('flask_login.utils._get_user', return_value=su):
-            resp = client.post('/api/admin-view', json={'enabled': True})
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data['ok'] is True and data['enabled'] is True
-        with client.session_transaction() as sess:
-            assert sess.get('admin_view') is True
-
-    def test_superuser_disables_flag(self, app):
-        client = self._client(app)
-        su = Mock(is_authenticated=True, role='superuser',
-                  get_id=Mock(return_value='1'))
-        with patch('flask_login.utils._get_user', return_value=su):
-            resp = client.post('/api/admin-view', json={'enabled': False})
-        assert resp.status_code == 200
-        assert resp.get_json()['enabled'] is False
-        with client.session_transaction() as sess:
-            assert sess.get('admin_view') is False
-
-
 class TestOwnDataActive:
-    """"Dane własne" is effective only for a superuser with admin view ON."""
+    """"Dane własne" is effective only for a superuser who has ticked it."""
 
-    def test_requires_superuser_admin_view_and_flag(self, app):
+    def test_requires_superuser_and_flag(self, app):
         from config import admin_view
         su = Mock(is_authenticated=True, role='superuser')
         with app.test_request_context():
             from flask import session
-            session['admin_view'] = True
             session['own_data'] = True
             with patch('config.admin_view.current_user', su):
                 assert admin_view.own_data_active() is True
 
-    def test_inert_without_admin_view(self, app):
-        from config import admin_view
-        su = Mock(is_authenticated=True, role='superuser')
-        with app.test_request_context():
-            from flask import session
-            session['admin_view'] = False
-            session['own_data'] = True   # stale / forged — must not take effect
-            with patch('config.admin_view.current_user', su):
-                assert admin_view.own_data_active() is False
-
-    def test_non_superuser_inert(self, app):
+    def test_non_superuser_forging_flag_is_ignored(self, app):
         from config import admin_view
         recep = Mock(is_authenticated=True, role='receptionist')
         with app.test_request_context():
             from flask import session
-            session['admin_view'] = True
-            session['own_data'] = True
+            session['own_data'] = True   # forged by a non-superuser
             with patch('config.admin_view.current_user', recep):
                 assert admin_view.own_data_active() is False
 
@@ -262,30 +195,21 @@ class TestOwnDataToggleRoute:
             resp = client.post('/api/own-data', json={'enabled': True})
         assert resp.status_code == 403
 
-    def test_400_when_admin_view_off(self, app):
+    def test_superuser_enables_flag(self, app):
         client = self._client(app)
         with patch('flask_login.utils._get_user', return_value=self._su()):
-            resp = client.post('/api/own-data', json={'enabled': True})
-        assert resp.status_code == 400
-        with client.session_transaction() as sess:
-            assert sess.get('own_data') is None
-
-    def test_enables_when_admin_view_on(self, app):
-        client = self._client(app)
-        with patch('flask_login.utils._get_user', return_value=self._su()):
-            client.post('/api/admin-view', json={'enabled': True})
             resp = client.post('/api/own-data', json={'enabled': True})
         assert resp.status_code == 200
         assert resp.get_json()['enabled'] is True
         with client.session_transaction() as sess:
             assert sess.get('own_data') is True
 
-    def test_disabling_admin_view_clears_own_data(self, app):
+    def test_superuser_disables_flag(self, app):
         client = self._client(app)
         with patch('flask_login.utils._get_user', return_value=self._su()):
-            client.post('/api/admin-view', json={'enabled': True})
             client.post('/api/own-data', json={'enabled': True})
-            client.post('/api/admin-view', json={'enabled': False})
+            resp = client.post('/api/own-data', json={'enabled': False})
+        assert resp.status_code == 200
+        assert resp.get_json()['enabled'] is False
         with client.session_transaction() as sess:
-            assert sess.get('admin_view') is False
             assert sess.get('own_data') is False

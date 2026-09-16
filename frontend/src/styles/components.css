@@ -1040,52 +1040,6 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .modal-footer .btn-danger:hover { filter: brightness(0.92); box-shadow: 0 4px 12px rgba(155, 44, 44, 0.25); transform: translateY(-1px); }
 .modal-footer button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
-/* Sliding switch (`<Switch>`, components/ui/Switch.tsx) — the "Widok
-   administratora" / "Dane własne" mobile toggles. Every sub-element (track,
-   thumb, focus ring) is explicitly `var(--radius-sm)` (2px): a switch usually
-   gets a fully-rounded pill track/thumb, which would be the one component in
-   the system exceeding the global radius scale, so this is pinned rather than
-   left to a framework default. */
-.ui-switch-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  cursor: pointer;
-  user-select: none;
-}
-.ui-switch-row.is-disabled { cursor: not-allowed; opacity: 0.55; }
-.ui-switch-text { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
-.ui-switch-label { font-size: 0.8125rem; font-weight: 500; color: var(--color-ink); }
-.ui-switch-hint { font-size: 0.6875rem; color: var(--color-ink-subtle); }
-.ui-switch-track {
-  position: relative;
-  flex-shrink: 0;
-  width: 2.25rem;
-  height: 1.25rem;
-  padding: 0;
-  background: var(--color-border);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-.ui-switch-track:disabled { cursor: not-allowed; }
-.ui-switch-track.is-on { background: var(--color-accent); border-color: var(--color-accent); }
-.ui-switch-track:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
-.ui-switch-thumb {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 1rem;
-  height: 1rem;
-  background: var(--color-surface-elevated);
-  border-radius: var(--radius-sm);
-  transition: transform 0.2s var(--ease-out-expo);
-}
-.ui-switch-track.is-on .ui-switch-thumb { transform: translateX(1rem); }
-
 /* Confirm dialog — distinct `.cm-*` scope (DESIGN.md §6: deliberately parallel
    to .modal-footer's classes, not sharing a mixin). */
 .cm-icon-badge {
@@ -1316,16 +1270,6 @@ table.stack-cards td.cell-hide-lg { display: none; }
   border-radius: var(--radius-sm);
   margin-left: auto;
 }
-/* "Widok administratora" / "Dane własne" — desktop sidebar, superuser-only.
-   Sits directly above `.sidebar-footer` as its own bordered section (not
-   folded into the footer itself), mirroring the mobile filter popup's
-   `.mob-scope-toggles` block but full-width or the sidebar rail. */
-.sidebar-scope-toggles {
-  flex-shrink: 0;
-  padding: 0.25rem 1rem;
-  border-top: 1px solid var(--sidebar-border);
-}
-.sidebar-scope-toggles .ui-switch-label { color: var(--sidebar-text); }
 .sidebar-footer { padding: 0.75rem 1rem; flex-shrink: 0; border-top: 1px solid var(--sidebar-border); background: var(--sidebar-bg-deep); }
 .sidebar-user-row { display: flex; align-items: center; gap: 0.5rem; }
 .sidebar-avatar {
@@ -1378,19 +1322,6 @@ table.stack-cards td.cell-hide-lg { display: none; }
   .sidebar-nav .sidebar-section-header { display: none; }
   .sidebar-nav .sidebar-section-items { max-height: none !important; overflow: visible !important; }
   .sidebar-nav .nav-mobile-hide { display: none !important; }
-
-  /* "Widok administratora"/"Dane własne" — the whole `.ui-switch-row` label
-     is the real tap target (it forwards clicks to the nested switch
-     button), but at its default sizing the row was only ~34px tall,
-     under the 44px minimum touch target (WCAG 2.5.5 / Apple HIG) this app
-     already enforces elsewhere for exactly this reason (`.action-icon-btn`'s
-     own mobile-only bump in this same file). Track/thumb are bumped too so
-     the visible switch actually looks proportionate to its now-larger row,
-     not just padded around a tiny pill. */
-  .ui-switch-row { min-height: 44px; }
-  .ui-switch-track { width: 2.75rem; height: 1.5rem; }
-  .ui-switch-thumb { width: 1.25rem; height: 1.25rem; }
-  .ui-switch-track.is-on .ui-switch-thumb { transform: translateX(1.25rem); }
 }
 .sidebar-backdrop {
   position: fixed;

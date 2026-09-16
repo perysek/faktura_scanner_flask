@@ -8,43 +8,16 @@ from flask import (
 from flask_login import login_required, current_user
 
 from config.auth_config import module_permission_required, role_required
-from config.admin_view import (
-    admin_view_active, is_superuser, is_employee_hidden, own_data_active,
-)
+from config.admin_view import is_superuser, is_employee_hidden
 from config.database import get_db_connection
 
 main_bp = Blueprint('main', __name__)
 
 
 # ============================================================================
-# ADMIN VIEW TOGGLES ("Widok administratora" + "Dane własne")
+# "DANE WŁASNE" TOGGLE — "Widok administratora" is permanently ON for every
+# superuser (config/admin_view.py) and has no session flag or route any more.
 # ============================================================================
-
-@main_bp.route('/api/admin-view', methods=['POST'])
-@login_required
-def toggle_admin_view():
-    """Flip the session-scoped "Widok administratora" flag.
-
-    Superuser-only: the flag is meaningless (and inert) for every other role, so a
-    non-superuser POST is rejected with 403 rather than silently ignored. Logout
-    clears the whole session, so the flag resets to OFF automatically on sign-out.
-
-    Turning admin view OFF also clears "Dane własne" — that sub-toggle only exists
-    while admin view is ON, so it must not silently persist into the next session.
-
-    Body: ``{"enabled": bool}``. Response: ``{"ok": true, "enabled": bool}``.
-    """
-    if not is_superuser():
-        return jsonify({'ok': False, 'error': 'Brak uprawnień.'}), 403
-
-    payload = request.get_json(silent=True) or {}
-    session['admin_view'] = bool(payload.get('enabled', False))
-    if not session['admin_view']:
-        session['own_data'] = False
-    # Persist alongside the 30-day sliding session (matches login's permanent flag).
-    session.permanent = True
-    return jsonify({'ok': True, 'enabled': session['admin_view']})
-
 
 @main_bp.route('/api/own-data', methods=['POST'])
 @login_required
@@ -52,18 +25,12 @@ def toggle_own_data():
     """Flip the session-scoped "Dane własne" flag (show only the logged-in user's
     own employee data across every view).
 
-    Superuser-only AND only while admin view is ON — the checkbox is editable only
-    then, and the server enforces the same rule so a forged flag can't take effect
-    without admin view. Rejects non-superusers (403) and any attempt to set it
-    while admin view is OFF (400).
+    Superuser-only — rejects everyone else with 403.
 
     Body: ``{"enabled": bool}``. Response: ``{"ok": true, "enabled": bool}``.
     """
     if not is_superuser():
         return jsonify({'ok': False, 'error': 'Brak uprawnień.'}), 403
-    if not admin_view_active():
-        return jsonify({'ok': False,
-                        'error': 'Najpierw włącz widok administratora.'}), 400
 
     payload = request.get_json(silent=True) or {}
     session['own_data'] = bool(payload.get('enabled', False))

@@ -19,12 +19,15 @@ live from ``employees JOIN users WHERE users.role = 'superuser'`` and every tota
 is calculated with the exact same formula as for any other employee — the owner's
 row is simply omitted from the result set unless admin view is ON.
 
-Second toggle — "Dane własne" (own data): a superuser with admin view ON can also
-tick "Dane własne" to *invert* the choke-point from "exclude the owner" to "show
-ONLY my own employee's data" across every page. It is only meaningful while admin
-view is ON (enforced server-side: ``own_data_active`` requires ``admin_view_active``).
-Both flags feed one resolver (``_scope_mode``) that the two SQL builders and the
-route guard read, so the whole app follows the flip with no per-call-site change.
+Widok administratora is permanently ON for every superuser (no session flag, no
+toggle UI) — a superuser sees the owner-employee's data by default the instant
+they log in, full stop.
+
+Second flag — "Dane własne" (own data): a superuser can additionally tick "Dane
+własne" to *invert* the choke-point from "exclude the owner" to "show ONLY my own
+employee's data" across every page. Both flags feed one resolver (``_scope_mode``)
+that the two SQL builders and the route guard read, so the whole app follows the
+flip with no per-call-site change.
 """
 import logging
 
@@ -89,16 +92,15 @@ def is_superuser() -> bool:
 
 
 def admin_view_active() -> bool:
-    """True only when a logged-in superuser has ticked "Widok administratora".
+    """True whenever the current request is an authenticated superuser —
+    permanently ON for that role, no session flag and no toggle.
 
-    The role re-check is the security boundary: a non-superuser who forges
-    ``session['admin_view'] = True`` still gets False here, so secret data never
-    reaches their views regardless of the cookie they send.
+    Kept as its own function (rather than inlining ``is_superuser()`` at every
+    call site) because it's the semantic name every other choke-point in this
+    module reads, and because the one-way flip (session-toggled -> hardwired)
+    only had to happen here, not at every caller.
     """
-    try:
-        return is_superuser() and bool(session.get('admin_view', False))
-    except Exception:
-        return False
+    return is_superuser()
 
 
 def hidden_ids_to_exclude() -> tuple:
@@ -133,13 +135,13 @@ def current_own_employee_id():
 
 
 def own_data_active() -> bool:
-    """True only when a superuser has admin view ON *and* has ticked "Dane własne".
+    """True only when a superuser has ticked "Dane własne".
 
-    Depends on ``admin_view_active()``, so the "editable only when Widok
-    administratora is on" rule is enforced server-side too: with admin view OFF the
-    flag is inert no matter what the session cookie holds."""
+    The role re-check is the security boundary: a non-superuser who forges
+    ``session['own_data'] = True`` still gets False here, so secret data never
+    reaches their views regardless of the cookie they send."""
     try:
-        return admin_view_active() and bool(session.get('own_data', False))
+        return is_superuser() and bool(session.get('own_data', False))
     except Exception:
         return False
 
