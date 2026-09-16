@@ -194,15 +194,11 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       forma_zatrudnienia_id: formaId ? parseInt(formaId, 10) : null,
       user_id: userId ? parseInt(userId, 10) : null,
       photo_path: photoPath.trim() || null,
-      // Omit rather than send null when hidden (see the isSuperuser-gated section
-      // below) — the server also enforces this independently, but keeping the key
-      // out of the payload matches what the receptionist actually saw/edited.
-      ...(auth.isSuperuser
-        ? {
-            base_salary: baseSalary ? parseFloat(baseSalary) : null,
-            commission_rate: commissionRate ? parseFloat(commissionRate) : null,
-          }
-        : {}),
+      // Forced null when hidden (see the isSuperuser-gated section below) — the
+      // server independently preserves the existing value for non-superuser
+      // requests regardless of what's sent, this just matches what was shown.
+      base_salary: auth.isSuperuser ? (baseSalary ? parseFloat(baseSalary) : null) : null,
+      commission_rate: auth.isSuperuser ? (commissionRate ? parseFloat(commissionRate) : null) : null,
       employer_cost_rate: parseFloat(employerCostRate) || 0.22,
       max_appointments_per_day: parseInt(maxAppointments, 10) || 8,
       work_schedule: buildScheduleObj(),
