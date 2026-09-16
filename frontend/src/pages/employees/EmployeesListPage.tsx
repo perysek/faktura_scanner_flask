@@ -219,7 +219,13 @@ export function EmployeesListPage() {
         <div className="stat-card">
           <div>
             <p className="stat-label">Śr. prowizja</p>
-            <p className="stat-value purple">{statsState.data?.avg_salary ? `${statsState.data.avg_salary.toFixed(0)} zł` : '—'}</p>
+            <p className="stat-value purple">
+              {!auth.isSuperuser
+                ? 'N/A'
+                : statsState.data?.avg_salary
+                  ? `${statsState.data.avg_salary.toFixed(0)} zł`
+                  : '—'}
+            </p>
           </div>
           <div className="stat-icon purple">
             <Icon name="percent" />
