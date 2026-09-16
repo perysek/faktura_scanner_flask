@@ -3,6 +3,7 @@ import type { MouseEvent, TouchEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
+import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Switch } from '../../components/ui/Switch';
 import { useAuth } from '../../contexts/AuthContext';
@@ -121,8 +122,6 @@ export interface MobileWizytyCalendarViewProps {
   onDayClick: (dateStr: string) => void;
   appointments: AppointmentListItem[];
   loading: boolean;
-  chainHasMore: boolean;
-  onShowNextDay: () => void;
   onRowClick: (appt: AppointmentListItem, event: MouseEvent) => void;
   employees: EmployeeOption[];
   employeeId: number | null;
@@ -149,8 +148,6 @@ export function MobileWizytyCalendarView({
   onDayClick,
   appointments,
   loading,
-  chainHasMore,
-  onShowNextDay,
   onRowClick,
   employees,
   employeeId,
@@ -192,6 +189,23 @@ export function MobileWizytyCalendarView({
   // the page, so this only needs to block a double-submit mid round-trip —
   // there's no client-side state to reconcile once the reload lands.
   const [scopeTogglePending, setScopeTogglePending] = useState(false);
+
+  // Default onload state for a superuser: auto-engage "Widok administratora"
+  // + "Dane własne" so a superuser also lands on "just my own visits today"
+  // by default — the same baseline a non-superuser always has without
+  // needing any toggle — while the Pracownik filter below defaults to that
+  // same linked employee. Guarded to fire once per mount so it doesn't
+  // immediately re-flip a superuser who deliberately turns these back off
+  // later in the same session.
+  const scopeDefaultAppliedRef = useRef(false);
+  useEffect(() => {
+    if (scopeDefaultAppliedRef.current || auth.isLoading || !auth.isSuperuser) return;
+    scopeDefaultAppliedRef.current = true;
+    if (!auth.adminViewActive || !auth.ownDataActive) {
+      auth.applyScopeToggles(true, true).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.isLoading, auth.isSuperuser]);
 
   function openFilterModal() {
     setDraftEmployeeId(employeeId);
@@ -297,6 +311,41 @@ export function MobileWizytyCalendarView({
     onDayClick(dateStr);
   }
 
+  const [findingNextVisit, setFindingNextVisit] = useState(false);
+  // Empty-day CTA — scans forward month-by-month (via the same
+  // `ensureMonthLoaded` cache the strip/month grid share, unfiltered by
+  // employee server-side, so filtered here) for the next day with a
+  // qualifying visit for the ACTIVE employee filter, then jumps there. The
+  // existing scroll-to-upcoming effect (keyed on `appointments`) takes it
+  // from there once that day's data loads — no separate scroll/highlight
+  // logic needed here. Capped at 6 months ahead so a genuinely empty future
+  // doesn't spin forever. Ignores the free-text search filter (this is
+  // about the employee's own schedule, not a client/service lookup).
+  async function goToNextVisit() {
+    setFindingNextVisit(true);
+    try {
+      let cursor = new Date(monthAnchor);
+      for (let i = 0; i < 6; i++) {
+        const cache = await ensureMonthLoaded(iso(cursor));
+        const dateStrs = Array.from(cache.keys()).sort();
+        for (const dateStr of dateStrs) {
+          if (dateStr <= selectedDate) continue;
+          const list = cache.get(dateStr) ?? [];
+          const hasQualifying = list.some(
+            (a) => (employeeId === null || a.employee_id === employeeId) && (a.status === 'scheduled' || a.status === 'confirmed'),
+          );
+          if (hasQualifying) {
+            handleDayTap(dateStr);
+            return;
+          }
+        }
+        cursor = addMonths(cursor, 1);
+      }
+    } finally {
+      setFindingNextVisit(false);
+    }
+  }
+
   // TASK5 — card swipe-left opens the reschedule sheet. Hand-rolled (no
   // gesture library in this project's deps): track the touch start point,
   // and only treat the drag as a horizontal swipe once it clearly dominates
@@ -371,6 +420,9 @@ export function MobileWizytyCalendarView({
           <div className="empty-state">
             <Icon name="calendar_today" className="empty-icon" />
             <p className="empty-text">Brak wizyt tego dnia.</p>
+            <Button variant="secondary" onClick={goToNextVisit} isLoading={findingNextVisit} loadingText="Szukam...">
+              Przejdź do najbliższej umówionej wizyty
+            </Button>
           </div>
         ) : (
           // `transition: 'none'` while actively dragging (below) — the card's
@@ -481,11 +533,6 @@ export function MobileWizytyCalendarView({
             </div>
             );
           })
-        )}
-        {mode === 'chain' && chainHasMore && (
-          <button type="button" className="list-chain-more" onClick={onShowNextDay}>
-            <Icon name="expand_more" /> Pokaż następny dzień
-          </button>
         )}
       </div>
 
@@ -608,7 +655,7 @@ export function MobileWizytyCalendarView({
         <div className="mob-filter-modal-body">
           <div>
             <span className="empf-label">Pracownik:</span>
-            <EmployeeFilter employees={employees} selectedId={draftEmployeeId} onSelect={setDraftEmployeeId} allowAll />
+            <EmployeeFilter employees={employees} selectedId={draftEmployeeId} onSelect={setDraftEmployeeId} />
           </div>
           <div className="list-search">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">

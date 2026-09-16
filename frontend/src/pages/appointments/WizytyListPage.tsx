@@ -366,8 +366,6 @@ export function WizytyListPage() {
             onDayClick={handleSidebarDayClick}
             appointments={filtered}
             loading={loading}
-            chainHasMore={chainHasMore}
-            onShowNextDay={appendNextChainDay}
             onRowClick={handleRowClick}
             employees={employees}
             employeeId={employeeId}
