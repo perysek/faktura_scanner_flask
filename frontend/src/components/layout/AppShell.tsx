@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { pageTitleFor } from '../../config/pageTitles';
 import { Sidebar } from './Sidebar';
-import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * App shell — DESIGN.md §12. Fixed-height viewport frame (`.app-shell`);
@@ -10,11 +9,9 @@ import { useAuth } from '../../contexts/AuthContext';
  */
 export function AppShell() {
   const location = useLocation();
-  const auth = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const isFirstMount = useRef(true);
-  const scopeDefaultApplied = useRef(false);
 
   // SPA route-change focus management (§11.4): a client-side navigation
   // never fires a browser "page load" event, so screen readers get no
@@ -28,26 +25,19 @@ export function AppShell() {
     mainRef.current?.focus();
   }, [location.pathname]);
 
-  // Mobile-only sensible default for the superuser scope toggles: Wizyty
-  // list boots with "Widok administratora"/"Dane własne" both ON, every
-  // other page boots with both OFF. `adminViewActive`/`ownDataActive` are
-  // Flask-session-wide (not per-page), and the only way to change them
-  // (`applyScopeToggles`) does a full `window.location.reload()` — so this
-  // runs once per session, against whichever route the visitor actually
-  // landed on the moment auth finishes loading, rather than on every
-  // client-side navigation (which would reload the whole SPA on every click
-  // for a superuser on mobile). Desktop is left untouched — toggles stay
-  // sticky across pages there, same as before.
-  useEffect(() => {
-    if (auth.isLoading || scopeDefaultApplied.current) return;
-    scopeDefaultApplied.current = true;
-    if (!auth.isSuperuser || window.innerWidth >= 1024) return;
-    const wantsOn = location.pathname === '/wizyty';
-    if (auth.adminViewActive !== wantsOn || auth.ownDataActive !== wantsOn) {
-      void auth.applyScopeToggles(wantsOn, wantsOn);
-    }
-  }, [auth, location.pathname]);
-
+  // No automatic "Widok administratora"/"Dane własne" route-based default
+  // here any more (removed) — this was the actual root cause of a whole
+  // string of "stuck toggle" / "page keeps reloading" reports that earlier
+  // fixes in MobileWizytyCalendarView.tsx never touched, because this
+  // effect lives in a completely different file and nobody had traced it
+  // this far back. It forced own_data=true every time a superuser landed
+  // on /wizyty on mobile — including right after a manual toggle-off's own
+  // reload landed back on that same route — which is exactly why turning
+  // "Dane własne" off via the sidebar never stuck: this effect flipped it
+  // back on again on the very next reload, sometimes visibly (a flash of
+  // the correct view, then a second reload reverting it). Scope toggles are
+  // now purely manual via the Sidebar's own switches — no page auto-applies
+  // a default for them.
   const title = pageTitleFor(location.pathname);
 
   return (

@@ -1378,6 +1378,19 @@ table.stack-cards td.cell-hide-lg { display: none; }
   .sidebar-nav .sidebar-section-header { display: none; }
   .sidebar-nav .sidebar-section-items { max-height: none !important; overflow: visible !important; }
   .sidebar-nav .nav-mobile-hide { display: none !important; }
+
+  /* "Widok administratora"/"Dane własne" — the whole `.ui-switch-row` label
+     is the real tap target (it forwards clicks to the nested switch
+     button), but at its default sizing the row was only ~34px tall,
+     under the 44px minimum touch target (WCAG 2.5.5 / Apple HIG) this app
+     already enforces elsewhere for exactly this reason (`.action-icon-btn`'s
+     own mobile-only bump in this same file). Track/thumb are bumped too so
+     the visible switch actually looks proportionate to its now-larger row,
+     not just padded around a tiny pill. */
+  .ui-switch-row { min-height: 44px; }
+  .ui-switch-track { width: 2.75rem; height: 1.5rem; }
+  .ui-switch-thumb { width: 1.25rem; height: 1.25rem; }
+  .ui-switch-track.is-on .ui-switch-thumb { transform: translateX(1.25rem); }
 }
 .sidebar-backdrop {
   position: fixed;
