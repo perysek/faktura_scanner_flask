@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -87,6 +87,16 @@ export function WizytyListPage() {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeeId, setEmployeeId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // Default the "Pracownik" filter to the logged-in user's own linked
+  // employee (once /auth/me resolves), instead of leaving it on "Wszyscy".
+  // Guarded to fire exactly once so it never clobbers a selection the user
+  // made themselves on a later auth refetch.
+  const employeeDefaultAppliedRef = useRef(false);
+  useEffect(() => {
+    if (employeeDefaultAppliedRef.current || auth.isLoading) return;
+    employeeDefaultAppliedRef.current = true;
+    if (auth.linkedEmployeeId !== null) setEmployeeId(auth.linkedEmployeeId);
+  }, [auth.isLoading, auth.linkedEmployeeId]);
   const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });
 
   const [rescheduleTarget, setRescheduleTarget] = useState<AppointmentListItem | null>(null);

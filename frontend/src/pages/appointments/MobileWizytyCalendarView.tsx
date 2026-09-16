@@ -14,29 +14,17 @@ import type { AppointmentListItem, EmployeeOption } from '../../types/appointmen
 /** Swipe-left threshold (px) to arm/trigger the reschedule sheet (TASK5) —
  * horizontal movement must also clearly dominate vertical (1.5x) so an
  * ordinary vertical scroll gesture starting on a card never gets mistaken
- * for a swipe. Widened from the original -64/-96 to give the icon+label
- * reveal (.mob-appt-swipe-content, 10rem/160px wide) room to actually clear
- * the card before arming — the label CANNOT be readable at a max reveal
- * narrower than its own box, that's a hard clip, not a style knob. */
-const SWIPE_TRIGGER_PX = -112;
-const SWIPE_MAX_PX = -160;
+ * for a swipe. Widened from the original -64/-96 so the icon+label reveal
+ * (.mob-appt-swipe-content, 7.5rem/120px wide) has room to clear the card
+ * before arming — the label CANNOT be readable at a max reveal narrower
+ * than its own box, that's a hard clip, not a style knob. Narrower than an
+ * earlier version of this (-112/-160): wrapping the label to 2 centered
+ * lines (below) needs less box width than one long nowrap line did. */
+const SWIPE_TRIGGER_PX = -84;
+const SWIPE_MAX_PX = -120;
 /** Mirror thresholds for swipe-RIGHT → navigate to visit details. */
-const SWIPE_TRIGGER_PX_RIGHT = 112;
-const SWIPE_MAX_PX_RIGHT = 160;
-
-/** Label opacity during a swipe: stays fully visible for the first 65% of
- * the drag toward the arm threshold, then fades over the remaining 35% so
- * it reaches 0 exactly at the threshold. A plain linear ramp from dx=0 (the
- * original version) made the label functionally invisible in practice — it
- * was simultaneously still clipped by the card (barely exposed at small dx)
- * AND already faded (opacity dropping from the very first px), so the two
- * effects compounded instead of giving it any real visible window. */
-function swipeLabelOpacity(dx: number, triggerPx: number): number {
-  const progress = Math.min(1, Math.abs(dx / triggerPx));
-  const FADE_START = 0.65;
-  if (progress < FADE_START) return 1;
-  return Math.max(0, 1 - (progress - FADE_START) / (1 - FADE_START));
-}
+const SWIPE_TRIGGER_PX_RIGHT = 84;
+const SWIPE_MAX_PX_RIGHT = 120;
 
 const MONTH_WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
 /** Strip is Mon–Sat only (mod #1) — the salon doesn't book Sundays. */
@@ -90,6 +78,14 @@ function telHref(phone: string): string {
   if (digits.length === 9) return `tel:+48${digits}`;
   if (digits.length === 11 && digits.startsWith('48')) return `tel:+${digits}`;
   return `tel:${digits}`;
+}
+/** Same local-time parsing assumption as the rest of this file (backend
+ * sends no timezone designator) — a one-shot check at the moment the card
+ * list renders, not a live countdown, so no ticking timer is needed for it. */
+function isUpcoming(appt: AppointmentListItem, nowMs: number): boolean {
+  if (!(appt.status === 'scheduled' || appt.status === 'confirmed')) return false;
+  const startMs = new Date(`${appt.appointment_date}T${appt.start_time}`).getTime();
+  return startMs >= nowMs;
 }
 
 /**
@@ -171,6 +167,8 @@ export function MobileWizytyCalendarView({
   const [rescheduleAppt, setRescheduleAppt] = useState<AppointmentListItem | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
   const suppressClickRef = useRef<number | null>(null);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const [highlightId, setHighlightId] = useState<number | null>(null);
   const [weekAnchor, setWeekAnchor] = useState(() => {
     const [y, m, d] = selectedDate.split('-').map(Number);
     return getMonday(new Date(y, m - 1, d));
@@ -212,27 +210,49 @@ export function MobileWizytyCalendarView({
       auth.applyScopeToggles(draftAdminView, draftOwnData).catch(() => setScopeTogglePending(false));
     }
   }
+
+  // "Wyczyść filtry" — resets to the same baseline the filter starts at
+  // (own linked employee, not "Wszyscy"; see WizytyListPage's default-effect),
+  // not an unfiltered "everyone" view. Scoped to Pracownik + search only —
+  // the admin-view/own-data toggles below are a separate scope switch, not
+  // part of "filtry" (matches this button's own "Filtry: pracownik, szukaj"
+  // aria-label further down).
+  function clearFilters() {
+    const defaultEmployeeId = auth.linkedEmployeeId;
+    setDraftEmployeeId(defaultEmployeeId);
+    setDraftSearchQuery('');
+    setFilterModalOpen(false);
+    onSelectEmployee(defaultEmployeeId);
+    onSearchChange('');
+  }
   const autoSelectedRef = useRef(false);
-  const selectedDateMountedRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Scroll the card list back to top on every user-driven day change (strip
-  // tap, month-grid tap, "pokaż następny dzień") — skips the very first
-  // selectedDate this component sees (the auto-select-today below), since
-  // scroll position is already 0 at initial page load and animating it
-  // would just be unwanted motion.
+  // On every appointments-list update (day change, filter change, a
+  // reschedule/status change that reloads the list, etc.) — jump to and
+  // highlight the next upcoming visit instead of just resetting scroll to
+  // top. Runs on first mount too (not skipped), so opening the list already
+  // lands you on what's next. Falls back to scrolling to top when there's no
+  // upcoming visit in the current list (a past day, or every visit today has
+  // already started) so switching away from a scrolled-down list still lands
+  // somewhere sane.
   //
   // `window.scrollTo` would be a no-op here: AppShell (components.css
   // `.app-shell-content{flex:1;overflow:auto}`) makes `<main>` the actual
   // scroll container, not the window — the whole shell frame is fixed-height
   // and never scrolls itself. Walk up to that real scroll container instead.
   useEffect(() => {
-    if (!selectedDateMountedRef.current) {
-      selectedDateMountedRef.current = true;
-      return;
+    if (appointments.length === 0) return;
+    const target = appointments.find((a) => isUpcoming(a, Date.now()));
+    const targetEl = target && cardRefs.current.get(target.id);
+    if (target && targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightId(target.id);
+      const timer = setTimeout(() => setHighlightId(null), 600);
+      return () => clearTimeout(timer);
     }
     listRef.current?.closest('.app-shell-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [selectedDate]);
+  }, [appointments]);
 
   // `monthAnchor` is the single source of truth for which month's data is
   // loaded (the host page's `monthCache` only ever holds one month at a
@@ -362,7 +382,14 @@ export function MobileWizytyCalendarView({
           appointments.map((appt) => {
             const swipeDx = swipeState?.id === appt.id ? swipeState.dx : 0;
             return (
-            <div key={appt.id} className="mob-appt-card-wrap">
+            <div
+              key={appt.id}
+              className="mob-appt-card-wrap"
+              ref={(el) => {
+                if (el) cardRefs.current.set(appt.id, el);
+                else cardRefs.current.delete(appt.id);
+              }}
+            >
               {isReschedulable(appt.status) && swipeDx < 0 && (
                 <div
                   className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
@@ -372,14 +399,14 @@ export function MobileWizytyCalendarView({
                       the card, so it stays pinned to the card's trailing
                       edge as it slides ("stuck" to the card) — icon sits at
                       the unit's near edge (glued to the card from the first
-                      px), label trails behind it and only clears the clip as
-                      the drag deepens, then fades to 0 by the arm threshold
-                      so the armed state reads as icon-only. */}
+                      px), label trails behind it, wrapped to 2 lines so it
+                      needs less exposed width to read clearly. No opacity
+                      fade (removed) — a fast real-world flick covers the
+                      whole drag range in under 150ms, so any drag-progress
+                      -based fade was already over before it was perceptible. */}
                   <div className="mob-appt-swipe-content mob-appt-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
                     <Icon name="calendar_month" />
-                    <span className="mob-appt-swipe-label" style={{ opacity: swipeLabelOpacity(swipeDx, SWIPE_TRIGGER_PX) }}>
-                      Zmień termin
-                    </span>
+                    <span className="mob-appt-swipe-label">Zmień termin</span>
                   </div>
                 </div>
               )}
@@ -389,9 +416,7 @@ export function MobileWizytyCalendarView({
                   aria-hidden="true"
                 >
                   <div className="mob-appt-swipe-content mob-appt-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
-                    <span className="mob-appt-swipe-label" style={{ opacity: swipeLabelOpacity(swipeDx, SWIPE_TRIGGER_PX_RIGHT) }}>
-                      Zobacz więcej
-                    </span>
+                    <span className="mob-appt-swipe-label">Zobacz więcej</span>
                     <Icon name="chevron_right" />
                   </div>
                 </div>
@@ -402,6 +427,7 @@ export function MobileWizytyCalendarView({
                   appt.status === 'cancelled' || appt.status === 'no_show' || appt.status === 'rescheduled' ? 'mob-appt-card--muted' : '',
                   swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
                   swipeState?.id === appt.id && swipeState.dx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-card--swipe-armed-right' : '',
+                  appt.id === highlightId ? 'mob-appt-card--highlight' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -614,6 +640,15 @@ export function MobileWizytyCalendarView({
               />
             </div>
           )}
+
+          <div className="mob-filter-modal-actions">
+            <button type="button" className="mob-cal-nav-btn" onClick={clearFilters} aria-label="Wyczyść filtry" title="Wyczyść filtry">
+              <Icon name="filter_alt_off" />
+            </button>
+            <button type="button" className="mob-cal-nav-btn primary" onClick={closeFilterModal} aria-label="Zastosuj filtry" title="Zastosuj filtry">
+              <Icon name="check" />
+            </button>
+          </div>
         </div>
       </Modal>
 

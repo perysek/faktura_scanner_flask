@@ -156,10 +156,12 @@ def me():
 
     is_supervisor_flag = False
     has_linked_employee = False
+    linked_employee_id = None
     try:
         emp = get_linked_employee(current_user)
         has_linked_employee = emp is not None
         if emp:
+            linked_employee_id = emp['id']
             from repositories.absences.employee_supervisor_repository import EmployeeSupervisorRepository
             is_supervisor_flag = EmployeeSupervisorRepository().is_supervisor(emp['id'])
     except Exception:
@@ -176,6 +178,7 @@ def me():
         'permissions': permissions,
         'is_supervisor': is_supervisor_flag,
         'has_linked_employee': has_linked_employee,
+        'linked_employee_id': linked_employee_id,
         # "Widok administratora" / "Dane własne" (config/admin_view.py) — the
         # React SPA mirrors the Jinja sidebar's superuser-only toggles inside
         # the mobile Wizyty filter modal. Both are always false for a

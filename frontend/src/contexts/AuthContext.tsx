@@ -9,6 +9,7 @@ interface MeResponse {
   permissions: Record<string, PermissionFlags>;
   is_supervisor: boolean;
   has_linked_employee: boolean;
+  linked_employee_id: number | null;
   is_superuser: boolean;
   admin_view_active: boolean;
   own_data_active: boolean;
@@ -36,6 +37,10 @@ interface AuthContextValue extends NavVisibilityCtx {
    * flags — same full-reload contract as the Jinja sidebar's own toggle JS,
    * not a client-side state patch. No-op (no reload) if neither changed. */
   applyScopeToggles: (adminView: boolean, ownData: boolean) => Promise<void>;
+  /** The employee record linked to the logged-in user, if any — used as the
+   * default "Pracownik" filter selection (mobile Wizyty filter modal), not
+   * just the `hasLinkedEmployee` boolean the nav-visibility rules use. */
+  linkedEmployeeId: number | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Record<string, PermissionFlags>>({});
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [hasLinkedEmployee, setHasLinkedEmployee] = useState(false);
+  const [linkedEmployeeId, setLinkedEmployeeId] = useState<number | null>(null);
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [adminViewActive, setAdminViewActive] = useState(false);
   const [ownDataActive, setOwnDataActive] = useState(false);
@@ -66,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions(data.permissions);
       setIsSupervisor(data.is_supervisor);
       setHasLinkedEmployee(data.has_linked_employee);
+      setLinkedEmployeeId(data.linked_employee_id);
       setIsSuperuser(data.is_superuser);
       setAdminViewActive(data.admin_view_active);
       setOwnDataActive(data.own_data_active);
@@ -77,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions({});
       setIsSupervisor(false);
       setHasLinkedEmployee(false);
+      setLinkedEmployeeId(null);
       setIsSuperuser(false);
       setAdminViewActive(false);
       setOwnDataActive(false);
@@ -116,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions({});
       setIsSupervisor(false);
       setHasLinkedEmployee(false);
+      setLinkedEmployeeId(null);
       setIsSuperuser(false);
       setAdminViewActive(false);
       setOwnDataActive(false);
@@ -158,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isSupervisor,
       hasLinkedEmployee,
+      linkedEmployeeId,
       hasModuleAccess,
       hasModuleWrite,
       isLoading,
@@ -172,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isSupervisor,
       hasLinkedEmployee,
+      linkedEmployeeId,
       hasModuleAccess,
       hasModuleWrite,
       isLoading,
