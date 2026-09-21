@@ -20,6 +20,13 @@ export default defineConfig({
       // (see implementation-log.md, Decision D1).
       '/api': { target: apiProxyTarget, changeOrigin: true },
       '/auth': { target: apiProxyTarget, changeOrigin: true },
+      // The SPA also calls these Flask prefixes directly (lib/api/users.ts, roles.ts,
+      // absences.ts, smsSettings.ts). None of them collide with an SPA route (those are
+      // Polish: /uzytkownicy, /nieobecnosci, /ustawienia/...). The Vultr preview's nginx
+      // vhosts need the same list — see PROJECTS/vultr-ssh notes.
+      '/system': { target: apiProxyTarget, changeOrigin: true },
+      '/absences': { target: apiProxyTarget, changeOrigin: true },
+      '/settings': { target: apiProxyTarget, changeOrigin: true },
     },
   },
 })
