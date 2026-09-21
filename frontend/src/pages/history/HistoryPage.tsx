@@ -2,47 +2,77 @@ import { useEffect, useMemo, useState } from 'react';
 import './HistoryPage.css';
 import { historyApi } from '../../lib/api/history';
 import { useToast } from '../../components/feedback/ToastProvider';
-import type { HistoryEntityType, HistoryEntry } from '../../types/history';
+import type { HistoryEntry } from '../../types/history';
 
-const ENTITY_TABS: Array<{ type: HistoryEntityType | ''; label: string }> = [
-  { type: '', label: 'Wszystkie' },
-  { type: 'invoice', label: 'Faktury' },
-  { type: 'import', label: 'Import' },
-  { type: 'appointment', label: 'Wizyty' },
-  { type: 'client', label: 'Klienci' },
-  { type: 'employee', label: 'Pracownicy' },
-  { type: 'service', label: 'Usługi' },
-  { type: 'seller', label: 'Dostawcy' },
-  { type: 'login', label: 'Logowania' },
+/** A tab groups one or more audit `entity_type`s; `types: []` means "all". Related
+ * entity types (e.g. client + client_preference) share a tab so the bar stays short. */
+const ENTITY_TABS: Array<{ id: string; label: string; types: string[] }> = [
+  { id: 'all', label: 'Wszystkie', types: [] },
+  { id: 'invoice', label: 'Faktury', types: ['invoice'] },
+  { id: 'import', label: 'Import', types: ['import'] },
+  { id: 'appointment', label: 'Wizyty', types: ['appointment'] },
+  { id: 'client', label: 'Klienci', types: ['client', 'client_preference'] },
+  { id: 'employee', label: 'Pracownicy', types: ['employee', 'employee_service'] },
+  { id: 'absence', label: 'Nieobecności', types: ['absence', 'absence_limit', 'absence_adjustment', 'absence_category'] },
+  { id: 'service', label: 'Usługi', types: ['service', 'service_category'] },
+  { id: 'seller', label: 'Dostawcy', types: ['seller', 'seller_password'] },
+  { id: 'system', label: 'System', types: ['user', 'role', 'sms'] },
+  { id: 'login', label: 'Logowania', types: ['login'] },
 ];
 
 const ENTITY_LABELS: Record<string, string> = {
   invoice: 'Faktura',
   appointment: 'Wizyta',
   client: 'Klient',
+  client_preference: 'Preferencja klienta',
   employee: 'Pracownik',
+  employee_service: 'Usługa pracownika',
   service: 'Usługa',
+  service_category: 'Kategoria usług',
   seller: 'Dostawca',
+  seller_password: 'Hasło PDF',
   import: 'Import',
   login: 'Logowanie',
+  absence: 'Nieobecność',
+  absence_limit: 'Limit urlopu',
+  absence_adjustment: 'Korekta salda',
+  absence_category: 'Kategoria nieobecności',
+  user: 'Użytkownik',
+  role: 'Rola',
+  sms: 'SMS',
 };
 
 const ACTION_LABELS: Record<string, { label: string; className: string }> = {
   CREATE: { label: 'Dodano', className: 'hx-action-create' },
+  CREATE_MANUAL: { label: 'Dodano ręcznie', className: 'hx-action-create' },
   UPDATE: { label: 'Edytowano', className: 'hx-action-update' },
   DELETE: { label: 'Usunięto', className: 'hx-action-delete' },
+  DELETE_PERMANENT: { label: 'Usunięto trwale', className: 'hx-action-delete' },
+  RESTORE: { label: 'Przywrócono', className: 'hx-action-restore' },
   IMPORT: { label: 'Import', className: 'hx-action-import' },
   LOGIN: { label: 'Zalogowano', className: 'hx-action-login' },
   LOGIN_FAILED: { label: 'Błąd login', className: 'hx-action-login-failed' },
   LOGOUT: { label: 'Wylogowano', className: 'hx-action-logout' },
+  PASSWORD_RESET_REQUESTED: { label: 'Prośba reset hasła', className: 'hx-action-login' },
+  PASSWORD_RESET: { label: 'Reset hasła', className: 'hx-action-login' },
   STATUS_CHANGE: { label: 'Status', className: 'hx-action-status' },
+  STATUS_CHANGED: { label: 'Status', className: 'hx-action-status' },
   COMPLETE: { label: 'Zakończono', className: 'hx-action-complete' },
   PRICE_CHANGE: { label: 'Zmiana ceny', className: 'hx-action-price-change' },
+  APPROVE: { label: 'Zatwierdzono', className: 'hx-action-complete' },
+  APPROVE_FORCED: { label: 'Zatwierdzono wymuszenie', className: 'hx-action-complete' },
+  REJECT: { label: 'Odrzucono', className: 'hx-action-delete' },
+  CANCEL: { label: 'Anulowano', className: 'hx-action-cancel' },
+  CANCEL_APPROVED: { label: 'Anulowano zatwierdzoną', className: 'hx-action-cancel' },
+  CANCEL_APPROVED_OWN: { label: 'Anulowano własną', className: 'hx-action-cancel' },
+  SMS_SENT: { label: 'Wysłano SMS', className: 'hx-action-sms' },
+  CLIENT_RATING: { label: 'Ocena klienta', className: 'hx-action-sms' },
+  CLIENT_CONFIRMATION: { label: 'Potwierdzenie klienta', className: 'hx-action-sms' },
 };
 
-function formatTimestamp(changedAt: string | null): { date: string; time: string } {
-  if (!changedAt) return { date: '—', time: '' };
-  const d = new Date(changedAt);
+function formatTimestamp(timestamp: string | null): { date: string; time: string } {
+  if (!timestamp) return { date: '—', time: '' };
+  const d = new Date(timestamp);
   const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(-2)}`;
   const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   return { date, time };
@@ -51,16 +81,14 @@ function formatTimestamp(changedAt: string | null): { date: string; time: string
 /** Historia zdarzeń — audit log across every entity type, filterable by tab.
  * Ported from templates/history/list_refined.html — backend
  * (`GET /api/history`, routes/api_routes.py) was already fully JSON, no
- * server changes. One fix applied during the port: the original page's JS
- * read `entry.timestamp`, a field that has never existed in this response
- * (the DB column is `changed_at`) — every row silently showed "—" for
- * date/time. Corrected here rather than carried forward; see
- * implementation-log.md. */
+ * server changes. The API response key is `timestamp` (AuditRepository.
+ * get_all() renames the DB's `changed_at` column to `timestamp` in the row
+ * dict it returns), matching the legacy page's `entry.timestamp` read. */
 export function HistoryPage() {
   const toast = useToast();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState<HistoryEntityType | ''>('');
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     historyApi
@@ -72,14 +100,17 @@ export function HistoryPage() {
   }, []);
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { '': entries.length };
+    const c: Record<string, number> = { all: entries.length };
     for (const tab of ENTITY_TABS) {
-      if (tab.type) c[tab.type] = entries.filter((e) => e.entity_type === tab.type).length;
+      if (tab.types.length) c[tab.id] = entries.filter((e) => tab.types.includes(e.entity_type)).length;
     }
     return c;
   }, [entries]);
 
-  const visible = useMemo(() => (activeType ? entries.filter((e) => e.entity_type === activeType) : entries), [entries, activeType]);
+  const visible = useMemo(() => {
+    const tab = ENTITY_TABS.find((t) => t.id === activeTab);
+    return tab && tab.types.length ? entries.filter((e) => tab.types.includes(e.entity_type)) : entries;
+  }, [entries, activeTab]);
 
   return (
     <div className="refined-page history-page fade-in">
@@ -89,8 +120,8 @@ export function HistoryPage() {
 
       <div className="hx-tab-bar">
         {ENTITY_TABS.map((tab) => (
-          <button key={tab.type} type="button" className={`hx-tab-btn${activeType === tab.type ? ' active' : ''}`} onClick={() => setActiveType(tab.type)}>
-            {tab.label} <span className="hx-tab-count">{loading ? '—' : (counts[tab.type] ?? 0)}</span>
+          <button key={tab.id} type="button" className={`hx-tab-btn${activeTab === tab.id ? ' active' : ''}`} onClick={() => setActiveTab(tab.id)}>
+            {tab.label} <span className="hx-tab-count">{loading ? '—' : (counts[tab.id] ?? 0)}</span>
           </button>
         ))}
       </div>
@@ -147,7 +178,7 @@ export function HistoryPage() {
                   ))
                 ) : visible.length === 0 ? null : (
                   visible.map((entry, index) => {
-                    const ts = formatTimestamp(entry.changed_at);
+                    const ts = formatTimestamp(entry.timestamp);
                     const entityType = entry.entity_type || 'invoice';
                     const actionInfo = ACTION_LABELS[entry.action] ?? { label: entry.action, className: 'hx-action-update' };
                     const label = entry.entity_label || entry.invoice_number || '';

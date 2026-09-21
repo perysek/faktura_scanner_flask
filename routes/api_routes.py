@@ -484,7 +484,9 @@ def create_invoice_manual():
                 field_name='status',
                 old_value='',
                 new_value=invoice.status,
-                action='CREATE'
+                action='CREATE',
+                user_id=current_user.id,
+                user_name=current_user.full_name,
             )
 
             if seller_id:
@@ -698,7 +700,9 @@ def update_invoice(invoice_id: int):
                     field_name=change['field'],
                     old_value=change['old'],
                     new_value=change['new'],
-                    action='UPDATE'
+                    action='UPDATE',
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
                 )
 
         response_data = {
@@ -874,6 +878,8 @@ def delete_invoice(invoice_id: int):
             field_name='status',
             old_value='active',
             new_value='deleted',
+            user_id=current_user.id,
+            user_name=current_user.full_name,
         )
 
         return jsonify({
@@ -2507,6 +2513,9 @@ def create_seller_password():
             description=(data.get('description') or '').strip() or None,
         )
         entry_id = current_app.seller_password_repo.create(entry)
+        _audit('seller_password', 'CREATE', entity_id=entry_id,
+               entity_label=entry.email_sender_pattern or entry.description or f"seller #{entry.seller_id}",
+               field_name='pdf_password', new_value='(ustawiono)')
         return jsonify({'success': True, 'id': entry_id})
     except AppError:
         raise
@@ -2536,6 +2545,9 @@ def update_seller_password(password_id):
         success = current_app.seller_password_repo.update(password_id, entry)
         if not success:
             raise NotFoundError('Zasob nie istnieje')
+        _audit('seller_password', 'UPDATE', entity_id=password_id,
+               entity_label=entry.email_sender_pattern or entry.description or f"seller #{entry.seller_id}",
+               field_name='pdf_password', new_value='(zmieniono)')
         return jsonify({'success': True})
     except AppError:
         raise
@@ -2550,9 +2562,14 @@ def update_seller_password(password_id):
 def delete_seller_password(password_id):
     """Delete a seller PDF password entry"""
     try:
+        existing = current_app.seller_password_repo.get_by_id(password_id)
         success = current_app.seller_password_repo.delete(password_id)
         if not success:
             raise NotFoundError('Zasob nie istnieje')
+        label = None
+        if existing:
+            label = existing['email_sender_pattern'] or existing['description'] or f"seller #{existing['seller_id']}"
+        _audit('seller_password', 'DELETE', entity_id=password_id, entity_label=label)
         return jsonify({'success': True})
     except AppError:
         raise

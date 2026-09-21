@@ -18,6 +18,7 @@ def _svc_with_mocks():
     svc = VisitConflictScanService()
     svc.appt_repo = Mock()
     svc.income_repo = Mock()
+    svc.audit_repo = Mock()
     return svc
 
 
@@ -274,6 +275,31 @@ class TestApply:
             assert result['cancelled_ids'] == [301]
             assert result['soft_deleted_ids'] == [101]
             assert result['removed_ids'] == [301, 101]
+
+    def test_every_removed_appointment_is_audited_with_the_acting_user(self, app, monkeypatch):
+        with app.app_context():
+            svc = _svc_with_mocks()
+            past = TODAY - timedelta(days=3)
+            future = TODAY + timedelta(days=5)
+            rows = [
+                _row(101, client_id=1, appointment_date=past, start_time=time(10, 0), end_time=time(11, 0), status='completed'),
+                _row(205, client_id=1, appointment_date=past, start_time=time(10, 30), end_time=time(11, 30), status='completed'),
+                _row(301, client_id=2, appointment_date=future, start_time=time(9, 0), end_time=time(10, 0), status='scheduled'),
+                _row(302, client_id=2, appointment_date=future, start_time=time(9, 30), end_time=time(10, 30), status='confirmed'),
+            ]
+            svc.appt_repo.get_candidates_for_conflict_scan.return_value = rows
+            _fake_txn(monkeypatch)
+
+            svc.apply(past, future, user_id=7, user_name='Anna Nowak')
+
+            events = {c.kwargs['entity_id']: c.kwargs for c in svc.audit_repo.log_event.call_args_list}
+            assert set(events) == {101, 301}
+            assert events[101]['action'] == 'DELETE'
+            assert events[301]['action'] == 'STATUS_CHANGE'
+            assert events[301]['old_value'] == 'scheduled' and events[301]['new_value'] == 'cancelled'
+            for ev in events.values():
+                assert ev['entity_type'] == 'appointment'
+                assert ev['user_id'] == 7 and ev['user_name'] == 'Anna Nowak'
 
     def test_no_groups_means_no_repo_calls(self, app, monkeypatch):
         with app.app_context():

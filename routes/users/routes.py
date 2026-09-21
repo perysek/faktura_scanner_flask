@@ -361,6 +361,14 @@ def api_toggle_active(user_id):
             user_repo.activate(user_id)
             new_state = True
 
+        current_app.audit_repo.safe_log_event(
+            entity_type='user', action='STATUS_CHANGE',
+            entity_id=user_id, entity_label=existing.email,
+            field_name='is_active',
+            old_value='aktywne' if existing.is_active else 'nieaktywne',
+            new_value='aktywne' if new_state else 'nieaktywne',
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
         return jsonify({'success': True, 'is_active': new_state})
     except AppError:
         raise

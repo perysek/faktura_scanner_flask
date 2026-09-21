@@ -61,35 +61,43 @@
 .history-page .refined-table { table-layout: fixed; }
 .history-page .refined-table thead { background: var(--color-surface); }
 .history-page .refined-table th { text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; }
+/* Tighter horizontal cell padding than the global 1rem: with fixed narrow columns the
+   default padding left too little room for badge text, so multi-word labels overflowed. */
+.history-page .refined-table th,
+.history-page .refined-table td { padding-left: 0.625rem; padding-right: 0.625rem; }
 
 .hx-tbody-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
 .hx-tbody-scroll::-webkit-scrollbar { width: 6px; }
 .hx-tbody-scroll::-webkit-scrollbar-track { background: var(--color-surface); }
 .hx-tbody-scroll::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
-.hx-col-timestamp { width: 12%; }
-.hx-col-entity-type { width: 10%; }
-.hx-col-action { width: 9%; }
-.hx-col-entity-label { width: 18%; }
+.hx-col-timestamp { width: 11%; }
+.hx-col-entity-type { width: 11%; }
+.hx-col-action { width: 11%; }
+.hx-col-entity-label { width: 16%; }
 .hx-col-field { width: 10%; }
-.hx-col-old { width: 17%; }
-.hx-col-new { width: 17%; }
-.hx-col-user { width: 7%; }
+.hx-col-old { width: 16%; }
+.hx-col-new { width: 16%; }
+.hx-col-user { width: 9%; }
 
 .hx-timestamp-value { font-size: 0.75rem; color: var(--color-ink-muted); white-space: nowrap; }
 .hx-timestamp-date { font-weight: 500; color: var(--color-ink); }
 
-.hx-entity-badge { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.2rem 0.5rem; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 2px; }
+.hx-entity-badge { display: inline-flex; align-items: center; justify-content: center; gap: 0.2rem; padding: 0.2rem 0.5rem; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 2px; white-space: normal; overflow-wrap: break-word; min-width: 0; max-width: 100%; text-align: center; line-height: 1.3; }
 .hx-entity-invoice { background: rgba(30, 96, 145, 0.1); color: var(--color-info); }
 .hx-entity-appointment { background: rgba(106, 27, 154, 0.1); color: #6a1b9a; }
-.hx-entity-client { background: rgba(0, 121, 107, 0.1); color: #00796b; }
-.hx-entity-employee { background: rgba(230, 81, 0, 0.1); color: #e65100; }
-.hx-entity-service { background: rgba(21, 101, 192, 0.1); color: #1565c0; }
-.hx-entity-seller { background: rgba(74, 20, 140, 0.1); color: #4a148c; }
+.hx-entity-client, .hx-entity-client_preference { background: rgba(0, 121, 107, 0.1); color: #00796b; }
+.hx-entity-employee, .hx-entity-employee_service { background: rgba(230, 81, 0, 0.1); color: #e65100; }
+.hx-entity-service, .hx-entity-service_category { background: rgba(21, 101, 192, 0.1); color: #1565c0; }
+.hx-entity-seller, .hx-entity-seller_password { background: rgba(74, 20, 140, 0.1); color: #4a148c; }
 .hx-entity-import { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
 .hx-entity-login { background: rgba(97, 97, 97, 0.1); color: #424242; }
+.hx-entity-absence, .hx-entity-absence_limit, .hx-entity-absence_adjustment, .hx-entity-absence_category { background: rgba(173, 20, 87, 0.1); color: #ad1457; }
+.hx-entity-user { background: rgba(55, 71, 79, 0.12); color: #37474f; }
+.hx-entity-role { background: rgba(93, 64, 55, 0.12); color: #5d4037; }
+.hx-entity-sms { background: rgba(0, 131, 143, 0.1); color: #00838f; }
 
-.hx-action-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.45rem; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 2px; }
+.hx-action-badge { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.2rem 0.45rem; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 2px; white-space: normal; overflow-wrap: break-word; min-width: 0; max-width: 100%; text-align: center; line-height: 1.3; }
 .hx-action-create { background: rgba(45, 106, 79, 0.1); color: var(--color-success); }
 .hx-action-update { background: rgba(30, 96, 145, 0.1); color: var(--color-info); }
 .hx-action-delete { background: rgba(155, 44, 44, 0.1); color: var(--color-error); }
@@ -100,6 +108,9 @@
 .hx-action-status { background: rgba(154, 103, 0, 0.1); color: var(--color-warning); }
 .hx-action-complete { background: rgba(45, 106, 79, 0.15); color: var(--color-success); }
 .hx-action-price-change { background: rgba(180, 83, 9, 0.1); color: #92400e; }
+.hx-action-restore { background: rgba(0, 121, 107, 0.12); color: #00796b; }
+.hx-action-cancel { background: rgba(154, 103, 0, 0.12); color: var(--color-warning); }
+.hx-action-sms { background: rgba(0, 131, 143, 0.1); color: #00838f; }
 
 .hx-entity-label-text { font-weight: 500; color: var(--color-ink); font-size: 0.8rem; }
 .hx-field-badge { display: inline-block; padding: 0.2rem 0.45rem; font-size: 0.6875rem; font-weight: 500; background: var(--color-surface); color: var(--color-ink-muted); border-radius: 2px; }

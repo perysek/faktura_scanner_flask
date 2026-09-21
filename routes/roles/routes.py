@@ -4,8 +4,8 @@ Dostępne tylko dla: superuser
 """
 import logging
 
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask import Blueprint, current_app, render_template, request, jsonify
+from flask_login import current_user, login_required
 
 from config.auth_config import role_required
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
@@ -16,6 +16,19 @@ roles_bp = Blueprint('roles', __name__, url_prefix='/system/roles')
 
 def _role_repo() -> RoleRepository:
     return RoleRepository()
+
+
+def _log_role_event(action, role_id, label, field_name=None, old_value=None, new_value=None):
+    current_app.audit_repo.safe_log_event(
+        entity_type='role', action=action,
+        entity_id=role_id, entity_label=label,
+        field_name=field_name, old_value=old_value, new_value=new_value,
+        user_id=current_user.id, user_name=current_user.full_name,
+    )
+
+
+def _yes_no(flag):
+    return 'tak' if flag else 'nie'
 
 
 # ─── Page Routes ─────────────────────────────────────────────────────────────
@@ -139,6 +152,12 @@ def api_create():
     try:
         role_id = role_repo.create(name, display_name)
         role_repo.set_permissions(role_id, permissions)
+        _log_role_event('CREATE', role_id, display_name, field_name='name', new_value=name)
+        for module, flags in role_repo.get_permissions(role_id).items():
+            granted = [flag for flag, on in flags.items() if on]
+            if granted:
+                _log_role_event('CREATE', role_id, display_name, field_name=f"uprawnienia: {module}",
+                                new_value=', '.join(granted))
         return jsonify({'success': True, 'role_id': role_id}), 201
     except AppError:
         raise
@@ -165,8 +184,19 @@ def api_update(role_id):
         raise ValidationError('Wyswietlana nazwa jest wymagana')
 
     try:
+        old_permissions = role_repo.get_permissions(role_id)
         role_repo.update(role_id, display_name)
         role_repo.set_permissions(role_id, permissions)
+        if display_name != role['display_name']:
+            _log_role_event('UPDATE', role_id, display_name, field_name='display_name',
+                            old_value=role['display_name'], new_value=display_name)
+        new_permissions = role_repo.get_permissions(role_id)
+        for module, new_flags in new_permissions.items():
+            for flag, new_on in new_flags.items():
+                old_on = old_permissions[module][flag]
+                if old_on != new_on:
+                    _log_role_event('UPDATE', role_id, display_name, field_name=f"{module}.{flag}",
+                                    old_value=_yes_no(old_on), new_value=_yes_no(new_on))
         return jsonify({'success': True})
     except AppError:
         raise
@@ -192,6 +222,7 @@ def api_delete(role_id):
 
         deleted = role_repo.delete(role_id)
         if deleted:
+            _log_role_event('DELETE', role_id, role['display_name'], field_name='name', old_value=role['name'])
             return jsonify({'success': True})
         raise AppError('Nie udalo sie usunac roli')
     except AppError:

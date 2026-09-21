@@ -3,13 +3,14 @@ API routes for service addon compatibility management
 """
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import login_required
 
 from config.auth_config import module_permission_required
 from exceptions import AppError, ValidationError
 from repositories.services.service_addon_repository import ServiceAddonRepository
 from repositories.services.service_repository import ServiceRepository
+from utils.audit import audit_event
 
 service_addon_bp = Blueprint('service_addons', __name__)
 
@@ -76,6 +77,13 @@ def set_compatibility(service_id):
 
         repo = ServiceAddonRepository()
         repo.bulk_set_compatibility(service_id, [int(sid) for sid in main_service_ids])
+
+        service_row = current_app.service_repo.get_by_id(service_id)
+        audit_event('service', 'UPDATE', entity_id=service_id,
+                    entity_label=service_row['name'] if service_row else f"Usługa #{service_id}",
+                    field_name='compatibility',
+                    new_value='wszystkie usługi' if not main_service_ids
+                    else f"{len(main_service_ids)} usług głównych")
 
         return jsonify({
             'success': True,

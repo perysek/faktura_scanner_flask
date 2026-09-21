@@ -19,6 +19,7 @@ from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from repositories.appointments.appointment_repository import AppointmentRepository
+from repositories.audit_repository import AuditRepository
 from repositories.employees.employee_repository import EmployeeRepository
 from routes.public_routes import _employee_visit_state, _process_visit_action
 
@@ -85,13 +86,21 @@ def employee_pin(employee_id):
         # exist / inactive" alike — disambiguate against the same active set
         # the picker list uses, so an inactive/unknown id 404s instead of
         # silently minting a session nothing will ever use.
-        visible_ids = {r['id'] for r in repo.list_for_mobile_picker()}
-        if employee_id not in visible_ids:
+        visible = {r['id']: r for r in repo.list_for_mobile_picker()}
+        if employee_id not in visible:
             return jsonify({'success': False, 'error': 'not_found'}), 404
 
         pin_hash = bcrypt.hashpw(pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         repo.set_mobile_pin_hash(employee_id, pin_hash)
         repo.record_mobile_login(employee_id)
+        emp = visible[employee_id]
+        AuditRepository().safe_log_event(
+            entity_type='employee', action='UPDATE',
+            entity_id=employee_id,
+            entity_label=f"{emp['first_name']} {emp['last_name']}",
+            field_name='mobile_pin', new_value='(ustawiono)',
+            user_id=None, user_name='Pracownik (mobile)',
+        )
         return jsonify({
             'success': True, 'first_time': True,
             'session_token': _issue_session_token(employee_id),

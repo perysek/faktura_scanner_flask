@@ -3,15 +3,23 @@ API routes for client preferences (preferred employee per service/category)
 """
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import login_required
 
 from config.auth_config import module_permission_required
 from database.models import ClientPreference
 from exceptions import AppError, ValidationError, NotFoundError
 from repositories.clients.client_preference_repository import ClientPreferenceRepository
+from utils.audit import audit_event
 
 client_preference_bp = Blueprint('client_preferences', __name__)
+
+
+def _client_label(client_id):
+    row = current_app.client_repo.get_by_id(client_id)
+    if not row:
+        return f"Klient #{client_id}"
+    return f"{row.get('first_name', '')} {row.get('last_name', '')}".strip() or f"Klient #{client_id}"
 
 
 @client_preference_bp.route('/clients/<int:client_id>/preferences', methods=['GET'])
@@ -56,6 +64,9 @@ def create_preference(client_id):
 
         repo = ClientPreferenceRepository()
         pref_id = repo.create(pref)
+        audit_event('client_preference', 'CREATE', entity_id=pref_id,
+                    entity_label=_client_label(client_id),
+                    field_name='preferred_employee_id', new_value=str(employee_id))
         return jsonify({'success': True, 'id': pref_id}), 201
     except AppError:
         raise
@@ -80,6 +91,10 @@ def update_preference(client_id, pref_id):
 
         repo = ClientPreferenceRepository()
         success = repo.update(pref_id, int(employee_id), data.get('notes'))
+        if success:
+            audit_event('client_preference', 'UPDATE', entity_id=pref_id,
+                        entity_label=_client_label(client_id),
+                        field_name='preferred_employee_id', new_value=str(employee_id))
         return jsonify({'success': success})
     except AppError:
         raise
@@ -98,6 +113,8 @@ def delete_preference(client_id, pref_id):
         success = repo.delete(pref_id)
         if not success:
             raise NotFoundError('Preferencja nie istnieje')
+        audit_event('client_preference', 'DELETE', entity_id=pref_id,
+                    entity_label=_client_label(client_id))
         return jsonify({'success': True})
     except AppError:
         raise

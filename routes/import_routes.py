@@ -30,6 +30,7 @@ from flask_login import login_required, current_user
 
 from config.auth_config import module_permission_required
 from exceptions import AppError, NotFoundError, ValidationError, ConflictError
+from repositories.audit_repository import AuditRepository
 from repositories.data_import.import_log_repository import ImportLogRepository
 from services.data_import_runner import IMPORT_RUNNER
 from services.visit_conflict_scan_service import VisitConflictScanService
@@ -257,6 +258,14 @@ def start_import():
             dry_run=dry_run,
             triggered_by_user_id=current_user.id,
         )
+        AuditRepository().safe_log_event(
+            entity_type='import', action='IMPORT',
+            entity_id=import_id,
+            entity_label=f"Import #{import_id}: {date_start} → {date_end}",
+            field_name='tryb',
+            new_value='próbny (dry run)' if dry_run else 'zapis do bazy',
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
         IMPORT_RUNNER.start_import(import_id, date_start, date_end, dry_run,
                                    keep_xlsx=keep_xlsx)
 
@@ -354,7 +363,10 @@ def conflict_scan_apply():
     try:
         data = request.get_json() or {}
         date_start, date_end = _parse_scan_range(data.get('date_start'), data.get('date_end'))
-        result = VisitConflictScanService().apply(date_start, date_end)
+        result = VisitConflictScanService().apply(
+            date_start, date_end,
+            user_id=current_user.id, user_name=current_user.full_name,
+        )
         logger.info('Conflict scan apply: %d appointments superseded (%d cancelled, %d soft-deleted) '
                     'in range %s to %s by user %s',
                     result['removed_count'], result['cancelled_count'], result['soft_deleted_count'],

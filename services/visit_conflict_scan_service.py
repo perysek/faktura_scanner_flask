@@ -25,12 +25,13 @@ Przy apply() nadpisana wizyta jest:
 """
 from collections import defaultdict
 from datetime import date
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from config.appointment_statuses import AppointmentStatus
 from config.database import managed_transaction
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.income_repository import IncomeRepository
+from repositories.audit_repository import AuditRepository
 from repositories.db_utils import parse_date
 from exceptions import ValidationError
 
@@ -75,6 +76,7 @@ class VisitConflictScanService:
     def __init__(self):
         self.appt_repo = AppointmentRepository()
         self.income_repo = IncomeRepository()
+        self.audit_repo = AuditRepository()
 
     def _validate_range(self, date_start: date, date_end: date) -> None:
         if date_start > date_end:
@@ -164,7 +166,8 @@ class VisitConflictScanService:
             'groups': groups,
         }
 
-    def apply(self, date_start: date, date_end: date) -> Dict[str, Any]:
+    def apply(self, date_start: date, date_end: date,
+              user_id: Optional[int] = None, user_name: Optional[str] = None) -> Dict[str, Any]:
         """Ponownie skanuje (nie ufa danym z frontu) i usuwa nadpisane wizyty —
         anulując te, które jeszcze się nie odbyły, i soft-deletując resztę.
 
@@ -189,13 +192,28 @@ class VisitConflictScanService:
                         continue
                     note = (f"[Skan konfliktów] Nadpisana przez wizytę #{group['keeper_id']} "
                             f"({reasons}).")
+                    entity_label = f"{appt['appointment_date']} {appt['start_time']} — {group['client_name']}"
                     if appt['planned_action'] == 'cancel':
                         self.appt_repo.update_status(appt['id'], AppointmentStatus.CANCELLED, note)
                         cancelled_ids.append(appt['id'])
+                        self.audit_repo.log_event(
+                            entity_type='appointment', action='STATUS_CHANGE',
+                            entity_id=appt['id'], entity_label=entity_label,
+                            field_name='status', old_value=appt['status'],
+                            new_value=AppointmentStatus.CANCELLED,
+                            user_id=user_id, user_name=user_name,
+                        )
                     else:
                         self.appt_repo.soft_delete_as_superseded(appt['id'], note)
                         self.income_repo.soft_delete_by_appointment(appt['id'])
                         soft_deleted_ids.append(appt['id'])
+                        self.audit_repo.log_event(
+                            entity_type='appointment', action='DELETE',
+                            entity_id=appt['id'], entity_label=entity_label,
+                            field_name='status', old_value=appt['status'],
+                            new_value='deleted (skan konfliktów)',
+                            user_id=user_id, user_name=user_name,
+                        )
 
         removed_ids = cancelled_ids + soft_deleted_ids
         return {

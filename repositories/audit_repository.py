@@ -121,11 +121,12 @@ class AuditRepository(BaseRepository):
                 a.old_value,
                 a.new_value,
                 a.user_id,
-                a.user_name,
+                COALESCE(a.user_name, u.full_name) AS user_name,
                 a.changed_at,
                 i.invoice_number
             FROM audit_log a
             LEFT JOIN invoices i ON a.invoice_id = i.id
+            LEFT JOIN users u ON u.id = a.user_id
             {where_clause}
             ORDER BY a.changed_at DESC, a.id DESC
         """

@@ -7,8 +7,60 @@ from flask_login import login_required, current_user
 from config.auth_config import module_permission_required, can_send_appointment_sms
 from services.sms_service import SmsService, SmsError
 from repositories.sms.sms_repository import SmsReminderRepository, SmsMessageTypeRepository
+from utils.audit import audit_event
 
 sms_bp = Blueprint('sms', __name__)
+
+_SECRET_SETTINGS = ('account_sid', 'auth_token')
+_PLAIN_SETTINGS = ('from_number', 'messaging_service_sid', 'is_active')
+_MESSAGE_TYPE_FIELDS = ('name', 'is_enabled', 'send_hours_before', 'send_delay_minutes',
+                        'template_text', 'include_confirm_link', 'include_cancel_link',
+                        'include_rate_link', 'include_booking_link', 'send_only_if_confirmed')
+
+
+def _norm(value):
+    return value if isinstance(value, bool) else (value or None)
+
+
+def _fmt(value):
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return 'tak' if value else 'nie'
+    return str(value)
+
+
+def _save_credentials(svc, **new):
+    """Save Twilio settings and audit each changed field; secret values are never logged."""
+    old = svc.get_settings()
+    svc.save_settings(**new)
+    for field in _SECRET_SETTINGS:
+        if _norm(old.get(field)) != _norm(new.get(field)):
+            audit_event('sms', 'UPDATE', entity_label='Konfiguracja Twilio',
+                        field_name=field, new_value='(zmieniono)')
+    for field in _PLAIN_SETTINGS:
+        if _norm(old.get(field)) != _norm(new.get(field)):
+            audit_event('sms', 'UPDATE', entity_label='Konfiguracja Twilio', field_name=field,
+                        old_value=_fmt(_norm(old.get(field))), new_value=_fmt(_norm(new.get(field))))
+
+
+def _save_message_type(svc, type_id, **new):
+    old = SmsMessageTypeRepository().get_by_id(type_id) or {}
+    svc.save_message_type(type_id, **new)
+    label = new.get('name') or old.get('name') or f"Typ SMS #{type_id}"
+    for field in _MESSAGE_TYPE_FIELDS:
+        if field in new and _norm(old.get(field)) != _norm(new[field]):
+            audit_event('sms', 'UPDATE', entity_id=type_id, entity_label=label, field_name=field,
+                        old_value=_fmt(_norm(old.get(field))), new_value=_fmt(_norm(new[field])))
+
+
+def _delete_message_type(svc, type_id):
+    existing = SmsMessageTypeRepository().get_by_id(type_id)
+    ok = svc.delete_custom_type(type_id)
+    if ok:
+        audit_event('sms', 'DELETE', entity_id=type_id,
+                    entity_label=existing['name'] if existing else f"Typ SMS #{type_id}")
+    return ok
 
 
 @sms_bp.route('/settings/sms', methods=['GET'])
@@ -31,7 +83,8 @@ def sms_settings():
 def sms_credentials_save():
     svc = SmsService()
     data = request.form
-    svc.save_settings(
+    _save_credentials(
+        svc,
         account_sid=data.get('account_sid', '').strip(),
         auth_token=data.get('auth_token', '').strip(),
         from_number=data.get('from_number', '').strip(),
@@ -48,7 +101,8 @@ def sms_credentials_save():
 def sms_message_type_save(type_id):
     svc = SmsService()
     data = request.form
-    svc.save_message_type(
+    _save_message_type(
+        svc,
         type_id,
         is_enabled=('is_enabled' in data),
         send_hours_before=int(data.get('send_hours_before', 24)),
@@ -75,7 +129,7 @@ def sms_message_type_create():
         flash('Nazwa się sama nie wymyśli. Wpisz coś.', 'error')
         return redirect(url_for('sms.sms_settings'))
     svc = SmsService()
-    svc.create_custom_type(
+    new_id = svc.create_custom_type(
         name=name,
         send_hours_before=int(data.get('send_hours_before', 24)),
         template_text=data.get('template_text', '').strip(),
@@ -83,6 +137,7 @@ def sms_message_type_create():
         include_cancel_link=('include_cancel_link' in data),
         include_booking_link=('include_booking_link' in data),
     )
+    audit_event('sms', 'CREATE', entity_id=new_id, entity_label=name)
     flash('Nowy typ SMS-a na pokładzie.', 'success')
     return redirect(url_for('sms.sms_settings'))
 
@@ -93,7 +148,7 @@ def sms_message_type_create():
 def sms_message_type_delete(type_id):
     try:
         svc = SmsService()
-        ok = svc.delete_custom_type(type_id)
+        ok = _delete_message_type(svc, type_id)
         if ok:
             return jsonify({'success': True})
         return jsonify({'success': False, 'message': 'Nie można usunąć wbudowanego typu wiadomości'}), 400
@@ -162,7 +217,8 @@ def api_sms_settings():
 def api_sms_credentials_save():
     svc = SmsService()
     data = request.get_json() or {}
-    svc.save_settings(
+    _save_credentials(
+        svc,
         account_sid=(data.get('account_sid') or '').strip(),
         auth_token=(data.get('auth_token') or '').strip(),
         from_number=(data.get('from_number') or '').strip(),
@@ -178,7 +234,8 @@ def api_sms_credentials_save():
 def api_sms_message_type_save(type_id):
     svc = SmsService()
     data = request.get_json() or {}
-    svc.save_message_type(
+    _save_message_type(
+        svc,
         type_id,
         is_enabled=bool(data.get('is_enabled')),
         send_hours_before=int(data.get('send_hours_before', 24)),
@@ -211,6 +268,7 @@ def api_sms_message_type_create():
         include_cancel_link=bool(data.get('include_cancel_link')),
         include_booking_link=bool(data.get('include_booking_link')),
     )
+    audit_event('sms', 'CREATE', entity_id=new_id, entity_label=name)
     return jsonify({'success': True, 'id': new_id})
 
 
@@ -220,7 +278,7 @@ def api_sms_message_type_create():
 def api_sms_message_type_delete(type_id):
     try:
         svc = SmsService()
-        ok = svc.delete_custom_type(type_id)
+        ok = _delete_message_type(svc, type_id)
         if ok:
             return jsonify({'success': True})
         return jsonify({'success': False, 'message': 'Nie można usunąć wbudowanego typu wiadomości'}), 400

@@ -4,15 +4,23 @@ API routes for employee-service assignments (per-employee pricing)
 import logging
 from decimal import Decimal
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import login_required
 
 from config.auth_config import module_permission_required
 from database.models import EmployeeService
 from exceptions import AppError, ValidationError, NotFoundError
 from repositories.employees.employee_service_repository import EmployeeServiceRepository
+from utils.audit import audit_event
 
 employee_service_bp = Blueprint('employee_services', __name__)
+
+
+def _employee_label(employee_id):
+    row = current_app.employee_repo.get_by_id(employee_id)
+    if not row:
+        return f"Pracownik #{employee_id}"
+    return f"{row.get('first_name', '')} {row.get('last_name', '')}".strip() or f"Pracownik #{employee_id}"
 
 
 @employee_service_bp.route('/employees/<int:employee_id>/services', methods=['GET'])
@@ -57,6 +65,9 @@ def assign_service(employee_id):
         if 'service_ids' in data:
             repo = EmployeeServiceRepository()
             count = repo.bulk_assign_services(employee_id, [int(sid) for sid in data['service_ids']])
+            audit_event('employee_service', 'CREATE', entity_id=employee_id,
+                        entity_label=_employee_label(employee_id),
+                        field_name='services', new_value=f"{count} usług")
             return jsonify({'success': True, 'assigned_count': count}), 201
 
         # Single assign with optional pricing
@@ -74,6 +85,9 @@ def assign_service(employee_id):
 
         repo = EmployeeServiceRepository()
         es_id = repo.create(es)
+        audit_event('employee_service', 'CREATE', entity_id=es_id,
+                    entity_label=_employee_label(employee_id),
+                    field_name='service_id', new_value=str(service_id))
         return jsonify({'success': True, 'id': es_id}), 201
     except AppError:
         raise
@@ -109,6 +123,13 @@ def update_employee_service(employee_id, es_id):
             skill_rating=skill_rating,
             is_active=data.get('is_active')
         )
+        if success:
+            changed = [k for k in ('custom_price', 'commission_rate', 'duration_override',
+                                   'skill_rating', 'is_active') if k in data]
+            audit_event('employee_service', 'UPDATE', entity_id=es_id,
+                        entity_label=_employee_label(employee_id),
+                        field_name=', '.join(changed) or None,
+                        new_value=', '.join(f"{k}={data[k]}" for k in changed) or None)
         return jsonify({'success': success})
     except AppError:
         raise
@@ -143,6 +164,8 @@ def remove_employee_service(employee_id, es_id):
         success = repo.delete(es_id)
         if not success:
             raise NotFoundError('Przypisanie nie istnieje')
+        audit_event('employee_service', 'DELETE', entity_id=es_id,
+                    entity_label=_employee_label(employee_id))
         return jsonify({'success': True})
     except AppError:
         raise

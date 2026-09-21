@@ -1648,9 +1648,16 @@ def set_satisfaction_score(appointment_id: int):
     if not isinstance(score, int) or score < 1 or score > 5:
         return jsonify({'success': False, 'error': 'Wynik musi być liczbą całkowitą 1–5'}), 400
     repo = AppointmentRepository()
+    existing = repo.get_by_id(appointment_id)
+    old_score = existing['satisfaction_score'] if existing else None
     ok = repo.update_satisfaction_score(appointment_id, score)
     if not ok:
         return jsonify({'success': False, 'error': 'Nie można ocenić — wizyta nie jest zakończona lub nie istnieje'}), 404
+    _audit('appointment', 'UPDATE', entity_id=appointment_id,
+           entity_label=f"{existing['appointment_date']} — ocena: {score}/5" if existing else None,
+           field_name='satisfaction_score',
+           old_value=str(old_score) if old_score is not None else None,
+           new_value=str(score))
     return jsonify({'success': True, 'appointment_id': appointment_id, 'score': score})
 
 
