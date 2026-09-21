@@ -4,7 +4,7 @@ import type { RoleDetail, RoleListRow, RolePermissionFlags } from '../../types/r
 export interface RoleCreatePayload {
   name: string;
   display_name: string;
-  permissions: Record<string, boolean>;
+  permissions: Record<string, RolePermissionFlags>;
 }
 
 export interface RoleUpdatePayload {
@@ -12,10 +12,16 @@ export interface RoleUpdatePayload {
   permissions: Record<string, RolePermissionFlags>;
 }
 
+export interface RoleListResponse {
+  roles: RoleListRow[];
+  count: number;
+  module_display_names: Record<string, string>;
+}
+
 /** `/system/roles/api*` (routes/roles/routes.py) — same AppError-throws-on-
  * failure shape as usersApi (see its doc comment); callers catch `ApiError`. */
 export const rolesApi = {
-  list: () => api.get<{ roles: RoleListRow[]; count: number }>('/system/roles/api').then((r) => r.roles),
+  list: () => api.get<RoleListResponse>('/system/roles/api'),
 
   get: (id: number) =>
     api.get<{ success: true; role: RoleDetail; permissions: Record<string, RolePermissionFlags>; all_modules: string[]; module_display_names: Record<string, string> }>(

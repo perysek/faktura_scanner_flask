@@ -16,6 +16,7 @@ MODULE_DISPLAY_NAMES = {
     'settings':         'Ustawienia',
     'reports':          'Historia / Raporty',
     'data_correction':  'Korekta danych',
+    'data_import':      'Import danych',
     'absences':         'Nieobecnosci',
     'service_prices':   'Ceny usług (historia)',
 }
@@ -85,6 +86,20 @@ class RoleRepository:
             cursor.execute(query, (role_id,))
             conn.commit()
             return cursor.rowcount > 0
+
+    def count_users(self, role_name: str) -> int:
+        """Ilu użytkowników ma przypisaną tę rolę (users.role to zwykły tekst, bez FK)."""
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) AS n FROM users WHERE role = %s", (role_name,))
+            return int(cursor.fetchone()['n'])
+
+    def get_user_counts(self) -> dict:
+        """{role_name: liczba użytkowników} jednym zapytaniem — dla listy ról."""
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT role, COUNT(*) AS n FROM users GROUP BY role")
+            return {row['role']: int(row['n']) for row in cursor.fetchall()}
 
     def get_permissions(self, role_id: int) -> dict:
         """

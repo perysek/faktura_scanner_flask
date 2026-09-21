@@ -8,6 +8,9 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   size?: 'medium' | 'large';
+  /** `sheet` anchors the panel to the bottom edge at phone width (thumb reach);
+   * above 640px it renders as the normal centered dialog. Default: `dialog`. */
+  variant?: 'dialog' | 'sheet';
   children: ReactNode;
   footer?: ReactNode;
 }
@@ -20,7 +23,7 @@ export interface ModalProps {
  * modal (not a confirm/cancel), first needed by the Sprzedawcy PDF-passwords
  * panel and the NIP-conflict picker (Faza 2).
  */
-export function Modal({ isOpen, onClose, title, size = 'medium', children, footer }: ModalProps) {
+export function Modal({ isOpen, onClose, title, size = 'medium', variant = 'dialog', children, footer }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useEscapeClaim(isOpen);
 
@@ -30,7 +33,7 @@ export function Modal({ isOpen, onClose, title, size = 'medium', children, foote
 
   return (
     <div
-      className="modal-overlay"
+      className={`modal-overlay${variant === 'sheet' ? ' modal-overlay--sheet' : ''}`}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -41,7 +44,7 @@ export function Modal({ isOpen, onClose, title, size = 'medium', children, foote
         }
       }}
     >
-      <div ref={panelRef} className={`modal-content modal-size-${size}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div ref={panelRef} className={`modal-content modal-size-${size}${variant === 'sheet' ? ' modal-content--sheet' : ''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div className="modal-header">
           <h3 id="modal-title">{title}</h3>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Zamknij">

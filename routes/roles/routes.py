@@ -3,6 +3,7 @@ Zarządzanie rolami i uprawnieniami — strony i API
 Dostępne tylko dla: superuser
 """
 import logging
+import re
 
 from flask import Blueprint, current_app, render_template, request, jsonify
 from flask_login import current_user, login_required
@@ -12,6 +13,9 @@ from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from repositories.roles.role_repository import RoleRepository, ALL_MODULES, MODULE_DISPLAY_NAMES
 
 roles_bp = Blueprint('roles', __name__, url_prefix='/system/roles')
+
+# Klucz roli trafia do users.role i do sprawdzeń uprawnień — tylko małe litery i "_".
+ROLE_NAME_RE = re.compile(r'^[a-z][a-z_]{1,49}$')
 
 
 def _role_repo() -> RoleRepository:
@@ -110,6 +114,7 @@ def api_list():
     try:
         role_repo = _role_repo()
         rows = role_repo.get_all()
+        user_counts = role_repo.get_user_counts()
         roles_data = []
         for row in rows:
             perms = role_repo.get_permissions(row['id'])
@@ -121,10 +126,12 @@ def api_list():
                 'display_name': row['display_name'],
                 'is_protected': bool(row['is_protected']),
                 'access_count': row['access_count'],
+                'user_count': user_counts.get(row['name'], 0),
                 'permissions': perms_flat,
                 'permissions_detail': perms,
             })
-        return jsonify({'roles': roles_data, 'count': len(roles_data)})
+        return jsonify({'roles': roles_data, 'count': len(roles_data),
+                        'module_display_names': MODULE_DISPLAY_NAMES})
     except AppError:
         raise
     except Exception as e:
@@ -144,6 +151,9 @@ def api_create():
 
     if not name or not display_name:
         raise ValidationError('Nazwa i wyswietlana nazwa sa wymagane')
+
+    if not ROLE_NAME_RE.match(name):
+        raise ValidationError('Klucz roli: tylko małe litery i podkreślenia, 2–50 znaków, zaczyna się od litery')
 
     role_repo = _role_repo()
     if role_repo.get_by_name(name):
@@ -219,6 +229,13 @@ def api_delete(role_id):
         if bool(role['is_protected']):
             from exceptions import PermissionDeniedError
             raise PermissionDeniedError('Nie mozna usunac chronionej roli systemowej')
+
+        # users.role is a plain string with no FK: deleting a role that people still
+        # hold would leave them logged in with no permissions at all.
+        holders = role_repo.count_users(role['name'])
+        if holders:
+            who = 'użytkownika' if holders == 1 else 'użytkowników'
+            raise ConflictError(f'Rola jest przypisana do {holders} {who} — najpierw zmień im rolę.')
 
         deleted = role_repo.delete(role_id)
         if deleted:

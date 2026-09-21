@@ -138,13 +138,15 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
 
         <div className="sidebar-footer">
           <div className="sidebar-user-row">
-            <div className="sidebar-avatar">{(auth.user?.full_name ?? '').slice(0, 2).toUpperCase()}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="sidebar-user-name">{auth.user?.full_name}</p>
-              <p className="sidebar-user-role">
-                {(auth.user && ROLE_LABELS[auth.user.role]) ?? auth.user?.role}
-              </p>
-            </div>
+            <NavLink to="/profil" className="sidebar-user-link" aria-label={`Mój profil: ${auth.user?.full_name ?? ''}`}>
+              <div className="sidebar-avatar">{(auth.user?.full_name ?? '').slice(0, 2).toUpperCase()}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="sidebar-user-name">{auth.user?.full_name}</p>
+                <p className="sidebar-user-role">
+                  {(auth.user && ROLE_LABELS[auth.user.role]) ?? auth.user?.role}
+                </p>
+              </div>
+            </NavLink>
             <ThemeSwitcher />
             <button
               type="button"

@@ -165,17 +165,18 @@ class UserRepository(BaseRepository):
     def get_all_with_employee(self) -> list:
         """
         Pobierz wszystkich użytkowników wraz z powiązanym pracownikiem (jeśli istnieje).
-        Zwraca surowe Row objects z polami: id, email, full_name, role, is_active,
-        last_login, created_at, employee_id, employee_first_name, employee_last_name
+        Zwraca surowe Row objects z polami: id, email, full_name, role, role_display_name,
+        is_active, last_login, created_at, employee_id, employee_first_name, employee_last_name
         """
         query = """
-            SELECT u.id, u.email, u.full_name, u.role, u.is_active,
-                   u.last_login, u.created_at,
+            SELECT u.id, u.email, u.full_name, u.role, r.display_name AS role_display_name,
+                   u.is_active, u.last_login, u.created_at,
                    e.id AS employee_id,
                    e.first_name AS employee_first_name,
                    e.last_name AS employee_last_name
             FROM users u
             LEFT JOIN employees e ON e.user_id = u.id
+            LEFT JOIN roles r ON r.name = u.role
             ORDER BY u.full_name
         """
         conn = self._get_conn()
@@ -265,6 +266,28 @@ class UserRepository(BaseRepository):
         cursor = conn.cursor()
         cursor.execute(query, (user_id,))
         return cursor.fetchone()
+
+    def get_profile_employee(self, user_id: int):
+        """Dane pracownika dla strony Profil. Wyłącznie jawna lista kolumn (bez gwiazdki) —
+        wynagrodzenie i prowizja nie mogą tu trafić nawet przypadkiem."""
+        return self._fetch_one(
+            "SELECT id, first_name, last_name, position, employment_status, hire_date "
+            "FROM employees WHERE user_id = %s",
+            (user_id,),
+        )
+
+    def get_employee_link_state(self, employee_id: int):
+        """Imię pracownika + konto, do którego jest przypięty (user_id) — do walidacji
+        przypięcia i etykiet audytu. None gdy pracownik nie istnieje."""
+        return self._fetch_one(
+            "SELECT id, first_name, last_name, user_id FROM employees WHERE id = %s",
+            (employee_id,),
+        )
+
+    def count_active_superusers(self) -> int:
+        """Liczba aktywnych kont superuser — ostatniego nie wolno wyłączyć ani zdegradować."""
+        row = self._fetch_one("SELECT COUNT(*) AS n FROM users WHERE role = 'superuser' AND is_active = TRUE")
+        return int(row['n'])
 
     def row_to_user(self, row: Any) -> User:
         """

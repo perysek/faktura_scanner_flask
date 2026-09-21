@@ -35,6 +35,8 @@ import { MyAbsencesPage } from './pages/absences/MyAbsencesPage';
 import { AbsencesManagementPage } from './pages/absences/AbsencesManagementPage';
 import { UsersListPage } from './pages/rbac/UsersListPage';
 import { UserFormPage } from './pages/rbac/UserFormPage';
+import { UserDetailPage } from './pages/rbac/UserDetailPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
 import { RolesListPage } from './pages/rbac/RolesListPage';
 import { RoleFormPage } from './pages/rbac/RoleFormPage';
 import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
@@ -72,7 +74,7 @@ export const router = createBrowserRouter([
           // authenticated user (D14 point 5). Faza 2, moduł Dashboard/Pulpit.
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'instrukcja', element: <ComingSoonPage title="Instrukcja obsługi" /> },
-          { path: 'profil', element: <ComingSoonPage title="Profil" /> },
+          { path: 'profil', element: <ProfilePage /> },
 
           // requireModule="invoices" — includes historia/ustawienia/email,
           // which the sidebar mis-labels 'reports'/'settings' (D14 pts 1-2).
@@ -187,6 +189,7 @@ export const router = createBrowserRouter([
               { path: 'uzytkownicy', element: <UsersListPage /> },
               { path: 'uzytkownicy/nowy', element: <UserFormPage mode="create" /> },
               { path: 'uzytkownicy/:id/edytuj', element: <UserFormPage mode="edit" /> },
+              { path: 'uzytkownicy/:id', element: <UserDetailPage /> },
             ],
           },
           {

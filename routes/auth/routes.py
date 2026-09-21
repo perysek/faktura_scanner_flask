@@ -15,8 +15,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import generate_csrf
 from repositories.users.user_repository import UserRepository
+from repositories.roles.role_repository import RoleRepository, MODULE_DISPLAY_NAMES
 from repositories.audit_repository import AuditRepository
 from services.auth.auth_service import AuthService
+from config.auth_config import get_all_permission_flags
 from config.database import DatabaseConnection
 from config.ui_messages import msg
 
@@ -191,10 +193,41 @@ def me():
     })
 
 
+def _iso(value):
+    return value.isoformat() if value else None
+
+
+def _profile_payload(user) -> dict:
+    """Everything the SPA's Profil page shows. The employee block is an explicit
+    allowlist (see UserRepository.get_profile_employee) — no compensation data,
+    not even the user's own."""
+    role_row = RoleRepository().get_by_name(user.role)
+    emp = UserRepository().get_profile_employee(user.id)
+    return {
+        'success': True,
+        'user': {
+            'id': user.id, 'email': user.email, 'full_name': user.full_name,
+            'role': user.role,
+            'role_display_name': role_row['display_name'] if role_row else user.role,
+            'is_active': user.is_active,
+            'last_login': _iso(user.last_login), 'created_at': _iso(user.created_at),
+        },
+        'employee': {
+            'id': emp['id'], 'first_name': emp['first_name'], 'last_name': emp['last_name'],
+            'position': emp['position'], 'employment_status': emp['employment_status'],
+            'hire_date': _iso(emp['hire_date']),
+        } if emp else None,
+        'permissions': get_all_permission_flags(user.role),
+        'module_display_names': MODULE_DISPLAY_NAMES,
+    }
+
+
 @auth_bp.route('/profile')
 @login_required
 def profile():
     """Profil użytkownika"""
+    if _wants_json():
+        return jsonify(_profile_payload(current_user))
     return render_template('auth/profile.html', user=current_user)
 
 
@@ -239,6 +272,12 @@ def change_password():
         )
 
         if success:
+            AuditRepository().safe_log_event(
+                entity_type='user', action='UPDATE',
+                entity_id=current_user.id, entity_label=current_user.email,
+                field_name='hasło', new_value='(zmieniono)',
+                user_id=current_user.id, user_name=current_user.full_name,
+            )
             if wants_json:
                 return jsonify({'success': True})
             flash(msg('auth.change_password.success'), 'success')

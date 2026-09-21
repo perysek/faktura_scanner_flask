@@ -1,11 +1,12 @@
-/** Types for Użytkownicy + Role (RBAC) — Faza 2, "Wymaga audytu" list.
- * Mirrors routes/users/routes.py + routes/roles/routes.py field names. */
+/** Types for Użytkownicy + Poziomy dostępu (RBAC) + Profil.
+ * Mirror routes/users/routes.py, routes/roles/routes.py and routes/auth/routes.py field names. */
 
 export interface UserListRow {
   id: number;
   email: string;
   full_name: string;
   role: string;
+  role_display_name: string;
   is_active: boolean;
   last_login: string | null;
   created_at: string | null;
@@ -18,7 +19,10 @@ export interface UserDetail {
   email: string;
   full_name: string;
   role: string;
+  role_display_name: string;
   is_active: boolean;
+  last_login: string | null;
+  created_at: string | null;
 }
 
 export interface LinkedEmployee {
@@ -33,11 +37,6 @@ export interface AvailableEmployee {
   last_name: string;
 }
 
-export interface AssignableRole {
-  name: string;
-  display_name: string;
-}
-
 export interface RolePermissionFlags {
   has_access: boolean;
   read_only: boolean;
@@ -46,12 +45,26 @@ export interface RolePermissionFlags {
   can_send_sms: boolean;
 }
 
+/** `/auth/me`-shaped permissions carry only the first three flags; the role
+ * endpoints carry all five. Chips render whichever are present. */
+export type ModuleFlags = Pick<RolePermissionFlags, 'has_access' | 'read_only' | 'own_data'> &
+  Partial<Pick<RolePermissionFlags, 'can_edit_price_history' | 'can_send_sms'>>;
+
+export type ModulePermissions = Record<string, ModuleFlags>;
+
+export interface AssignableRole {
+  name: string;
+  display_name: string;
+  permissions: Record<string, RolePermissionFlags>;
+}
+
 export interface RoleListRow {
   id: number;
   name: string;
   display_name: string;
   is_protected: boolean;
   access_count: number;
+  user_count: number;
   permissions: Record<string, boolean>;
   permissions_detail: Record<string, RolePermissionFlags>;
 }
@@ -62,13 +75,3 @@ export interface RoleDetail {
   display_name: string;
   is_protected: boolean;
 }
-
-export const MODULE_LABELS: Record<string, string> = {
-  invoices: 'Faktury',
-  appointments: 'Wizyty',
-  clients: 'Klienci',
-  employees: 'Pracownicy',
-  services: 'Usługi',
-  settings: 'Ustawienia',
-  reports: 'Historia',
-};

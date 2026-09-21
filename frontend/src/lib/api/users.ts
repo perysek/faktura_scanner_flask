@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { AssignableRole, AvailableEmployee, LinkedEmployee, UserDetail, UserListRow } from '../../types/rbac';
+import type { AssignableRole, AvailableEmployee, LinkedEmployee, RolePermissionFlags, UserDetail, UserListRow } from '../../types/rbac';
 
 export interface UserCreatePayload {
   email: string;
@@ -15,28 +15,40 @@ export interface UserUpdatePayload {
   full_name: string;
   role: string;
   is_active: boolean;
-  employee_id: number | null;
+  /** `null` unlinks the employee; omitting the key leaves the link untouched. */
+  employee_id?: number | null;
+}
+
+export interface UserDetailResponse {
+  success: true;
+  user: UserDetail;
+  linked_employee: LinkedEmployee | null;
+  /** The user's role, as module → flags (empty when the role row is gone). */
+  permissions: Record<string, RolePermissionFlags>;
+  module_display_names: Record<string, string>;
+}
+
+export interface UserFormOptions {
+  success: true;
+  available_employees: AvailableEmployee[];
+  roles: AssignableRole[];
+  module_display_names: Record<string, string>;
 }
 
 /** `/system/users/api*` (routes/users/routes.py) — CRUD already JSON;
- * `form-options`/single-`GET` are new siblings added for the React
- * create/edit forms (react-migration).
+ * `form-options`/single-`GET` are siblings added for the React forms.
  *
- * All failure paths here raise an `AppError` subclass (ValidationError/
+ * All failure paths raise an `AppError` subclass (ValidationError/
  * ConflictError/PermissionDeniedError/NotFoundError) rather than returning
- * `{success: false}` with a 200 — unlike e.g. absence_routes.py. Callers
- * catch `ApiError` (thrown by the shared `api.*` wrapper on any non-2xx
- * response) instead of checking a `.success` flag. `ApiError.message` carries
- * the precise validation text — app.py's `AppError` handler now recognizes
- * `/api/` as a path segment anywhere (not just a leading prefix), fixed
- * 2026-08-24 after this blueprint's `/system/users/api/*` paths were found
- * falling through to an HTML error page; see implementation-log.md. */
+ * `{success: false}` with a 200. Callers catch `ApiError` (thrown by the shared
+ * `api.*` wrapper on any non-2xx response); `ApiError.message` carries the
+ * precise Polish reason, e.g. the self-lockout and last-superuser refusals. */
 export const usersApi = {
   list: () => api.get<{ users: UserListRow[]; count: number }>('/system/users/api').then((r) => r.users),
 
-  get: (id: number) => api.get<{ success: true; user: UserDetail; linked_employee: LinkedEmployee | null }>(`/system/users/api/${id}`),
+  get: (id: number) => api.get<UserDetailResponse>(`/system/users/api/${id}`),
 
-  formOptions: () => api.get<{ success: true; available_employees: AvailableEmployee[]; roles: AssignableRole[] }>('/system/users/api/form-options'),
+  formOptions: () => api.get<UserFormOptions>('/system/users/api/form-options'),
 
   create: (payload: UserCreatePayload) => api.post<{ success: true; user_id: number }>('/system/users/api', payload),
 

@@ -1,24 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './RbacPages.css';
 import { rolesApi } from '../../lib/api/roles';
 import { ApiError } from '../../lib/api/client';
 import { useToast } from '../../components/feedback/ToastProvider';
-import { FormActions } from '../../components/ui/form';
+import { FormActions, FormCard, FormFieldset, TextField } from '../../components/ui/form';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
+import { EMPTY_FLAGS, PermissionGrid } from './PermissionGrid';
 import type { RolePermissionFlags } from '../../types/rbac';
 
 interface Props {
   mode: 'create' | 'edit';
 }
 
-const DEFAULT_FLAGS: RolePermissionFlags = { has_access: false, read_only: false, own_data: false, can_edit_price_history: false, can_send_sms: false };
-
-/** Nowa/Edytuj rolę — ported from templates/roles/{create,edit}.html. Create
- * is a simple has_access-only toggle per module (the extra flags default to
- * false server-side, same as the original create form); edit exposes the
- * full per-module flag set (read_only/own_data + the two module-specific
- * sub-flags for services/appointments). */
+/** Nowa/Edytuj rolę. One permission editor for both modes (the Jinja create form
+ * only had "access" switches, so a read-only role took a create-then-edit
+ * two-step). The key is fixed once created — it is what accounts point at. */
 export function RoleFormPage({ mode }: Props) {
   const { id } = useParams<{ id: string }>();
   const roleId = id ? Number(id) : undefined;
@@ -31,13 +29,12 @@ export function RoleFormPage({ mode }: Props) {
   const [error, setError] = useState('');
 
   const [allModules, setAllModules] = useState<string[]>([]);
-  const [moduleDisplayNames, setModuleDisplayNames] = useState<Record<string, string>>({});
+  const [moduleNames, setModuleNames] = useState<Record<string, string>>({});
+  const [isProtected, setIsProtected] = useState(false);
 
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [flags, setFlags] = useState<Record<string, RolePermissionFlags>>({});
-
-  const roleTitle = useMemo(() => (mode === 'create' ? 'Nowa rola' : displayName || '…'), [mode, displayName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,15 +45,16 @@ export function RoleFormPage({ mode }: Props) {
           const opts = await rolesApi.formOptions();
           if (cancelled) return;
           setAllModules(opts.all_modules);
-          setModuleDisplayNames(opts.module_display_names);
-          setFlags(Object.fromEntries(opts.all_modules.map((m) => [m, { ...DEFAULT_FLAGS }])));
+          setModuleNames(opts.module_display_names);
+          setFlags(Object.fromEntries(opts.all_modules.map((m) => [m, { ...EMPTY_FLAGS }])));
         } else if (roleId) {
           const detail = await rolesApi.get(roleId);
           if (cancelled) return;
           setAllModules(detail.all_modules);
-          setModuleDisplayNames(detail.module_display_names);
+          setModuleNames(detail.module_display_names);
           setDisplayName(detail.role.display_name);
           setName(detail.role.name);
+          setIsProtected(detail.role.is_protected);
           setFlags(detail.permissions);
         }
       } catch (err) {
@@ -73,19 +71,19 @@ export function RoleFormPage({ mode }: Props) {
   }, [mode, roleId]);
 
   function updateFlag(mod: string, key: keyof RolePermissionFlags, value: boolean) {
-    setFlags((prev) => ({ ...prev, [mod]: { ...(prev[mod] ?? DEFAULT_FLAGS), [key]: value } }));
+    setFlags((prev) => ({ ...prev, [mod]: { ...(prev[mod] ?? EMPTY_FLAGS), [key]: value } }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setSaving(true);
     try {
+      const permissions = Object.fromEntries(allModules.map((m) => [m, flags[m] ?? EMPTY_FLAGS]));
       if (mode === 'create') {
-        const permissions = Object.fromEntries(allModules.map((m) => [m, flags[m]?.has_access ?? false]));
         await rolesApi.create({ name: name.trim().toLowerCase().replace(/\s+/g, '_'), display_name: displayName.trim(), permissions });
       } else if (roleId) {
-        await rolesApi.update(roleId, { display_name: displayName.trim(), permissions: flags });
+        await rolesApi.update(roleId, { display_name: displayName.trim(), permissions });
       }
       toast.success(mode === 'create' ? 'Rola utworzona' : 'Uprawnienia zostały zapisane.');
       navigate('/poziomy-dostepu');
@@ -98,102 +96,48 @@ export function RoleFormPage({ mode }: Props) {
 
   return (
     <div className="refined-page rbac-page rbac-form-page animate-fade-up">
-      <h1 className="page-title">{roleTitle}</h1>
-      {mode === 'edit' && <p style={{ color: 'var(--color-ink-muted)', fontSize: '0.875rem', marginBottom: '2rem', fontFamily: 'monospace' }}>{name}</p>}
+      <header className="page-header rbac-page-header">
+        <div>
+          <h1 className="page-title">{mode === 'create' ? 'Nowa rola' : displayName || '…'}</h1>
+          <p className="page-subtitle">{mode === 'create' ? 'Zdefiniuj, do czego ma dostęp ta rola' : <span style={{ fontFamily: 'monospace' }}>{name}</span>}</p>
+        </div>
+      </header>
 
-      <div className="refined-card">
-        {error && <div className="rbac-error-msg">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          {mode === 'create' && (
-            <div className="field-group">
-              <label className="field-label" htmlFor="role-name">
-                Nazwa roli (klucz systemowy)
-              </label>
-              <input id="role-name" className="field-input" required pattern="[a-z_]+" title="Tylko małe litery i podkreślenia" placeholder="np. manager" value={name} onChange={(e) => setName(e.target.value)} />
-              <p className="field-hint">Tylko małe litery i podkreślenia. Np. "manager", "head_stylist"</p>
+      <form onSubmit={handleSubmit}>
+        <FormCard>
+          {error && (
+            <div className="rbac-error-msg" role="alert">
+              {error}
             </div>
           )}
-          <div className="field-group">
-            <label className="field-label" htmlFor="display-name">
-              Wyświetlana nazwa
-            </label>
-            <input id="display-name" className="field-input" required placeholder="np. Kierownik" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          </div>
+          {isProtected && <p className="rbac-note">To rola systemowa. Zmiana jej uprawnień dotyczy wszystkich kont, które ją mają — i nie da się jej usunąć.</p>}
 
-          <div className="rbac-section-title" style={{ marginTop: '1.5rem' }}>
-            Dostęp do modułów
-          </div>
-          <div>
-            {allModules.map((mod) => {
-              const f = flags[mod] ?? DEFAULT_FLAGS;
-              if (mode === 'create') {
-                return (
-                  <div key={mod} className="module-row module-row--simple">
-                    <div>
-                      <div className="module-name">{moduleDisplayNames[mod] ?? mod}</div>
-                      <div className="module-key">{mod}</div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" checked={f.has_access} onChange={(e) => updateFlag(mod, 'has_access', e.target.checked)} />
-                      <span className="toggle-slider" />
-                    </label>
-                  </div>
-                );
-              }
-              return (
-                <div key={mod} className="module-row">
-                  <div className="module-main">
-                    <div>
-                      <div className="module-name">{moduleDisplayNames[mod] ?? mod}</div>
-                      <div className="module-key">{mod}</div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" checked={f.has_access} onChange={(e) => updateFlag(mod, 'has_access', e.target.checked)} />
-                      <span className="toggle-slider" />
-                    </label>
-                  </div>
-                  <div className={`module-flags${f.has_access ? '' : ' disabled'}`}>
-                    <div className="flag-item">
-                      <label className="toggle toggle-sm">
-                        <input type="checkbox" checked={f.read_only} onChange={(e) => updateFlag(mod, 'read_only', e.target.checked)} />
-                        <span className="toggle-slider" />
-                      </label>
-                      <span>Tylko do odczytu</span>
-                    </div>
-                    <div className="flag-item">
-                      <label className="toggle toggle-sm">
-                        <input type="checkbox" checked={f.own_data} onChange={(e) => updateFlag(mod, 'own_data', e.target.checked)} />
-                        <span className="toggle-slider" />
-                      </label>
-                      <span>Tylko własne dane</span>
-                    </div>
-                    {mod === 'services' && (
-                      <div className="flag-item">
-                        <label className="toggle toggle-sm">
-                          <input type="checkbox" checked={f.can_edit_price_history} onChange={(e) => updateFlag(mod, 'can_edit_price_history', e.target.checked)} />
-                          <span className="toggle-slider" />
-                        </label>
-                        <span>Edycja historii zmian ceny</span>
-                      </div>
-                    )}
-                    {mod === 'appointments' && (
-                      <div className="flag-item">
-                        <label className="toggle toggle-sm">
-                          <input type="checkbox" checked={f.can_send_sms} onChange={(e) => updateFlag(mod, 'can_send_sms', e.target.checked)} />
-                          <span className="toggle-slider" />
-                        </label>
-                        <span>Wysyłanie SMS</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <FormFieldset legend="Rola">
+            {mode === 'create' && (
+              <TextField
+                label="Klucz roli"
+                required
+                pattern="[a-z][a-z_]{1,49}"
+                title="Małe litery i podkreślenia, 2–50 znaków, zaczyna się od litery"
+                placeholder="np. manager"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoCapitalize="none"
+                helper='Nie zmienia się po utworzeniu. Np. "manager", "head_stylist"'
+              />
+            )}
+            <TextField label="Wyświetlana nazwa" required placeholder="np. Kierownik" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </FormFieldset>
+
+          <FormFieldset legend="Dostęp do modułów">
+            <div className="form-field-full">
+              <PermissionGrid modules={allModules} names={moduleNames} flags={flags} onChange={updateFlag} />
+            </div>
+          </FormFieldset>
 
           <FormActions submitLabel={mode === 'create' ? 'Utwórz rolę' : 'Zapisz uprawnienia'} isLoading={saving || loading} cancelHref="/poziomy-dostepu" />
-        </form>
-      </div>
+        </FormCard>
+      </form>
     </div>
   );
 }
