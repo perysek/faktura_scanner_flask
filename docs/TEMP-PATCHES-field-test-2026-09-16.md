@@ -24,9 +24,11 @@ implemented, there is nothing from it to roll back.
 ## Branch / deploy scope
 
 All patches are on `react-migration` only, deployed to the Vultr
-`my-way-react-preview` service (port 8003 internally, public at
-`https://staging.my-way-solutions.com`). **`invoices-app` (port 8083, the
-main live Flask/Jinja2 app) was never touched by any of this.**
+`my-way-react-preview` service (public at `https://staging.my-way-solutions.com`,
+which enters via its own nginx vhost on :443 and reaches Gunicorn on
+`127.0.0.1:8085`; raw `:8003` is a separate on-box-only site to the same
+backend). **`invoices-app` (port 8083, the main live Flask/Jinja2 app) was
+never touched by any of this.**
 
 ## What changed, where, and how to revert
 
