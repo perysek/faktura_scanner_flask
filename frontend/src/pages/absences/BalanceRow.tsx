@@ -37,6 +37,13 @@ interface Props {
   row: AbsenceBalanceRow;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
+  /** `!hasModuleWrite('absences')` — fields render `readOnly` (not `disabled`,
+   * so they keep the normal enabled look; only the browser's dimmed-`disabled`
+   * treatment is what we're avoiding) and the spin-arrow mini-buttons don't
+   * render at all. Reset/Save/Undo are explicitly disabled too — the API
+   * already 403s these calls, this just stops the UI offering a button that
+   * would fail. */
+  readOnly: boolean;
   onChanged: (patch: Partial<AbsenceBalanceRow>) => void;
 }
 
@@ -46,7 +53,7 @@ interface Props {
  * "reset to zero" delete. Ported from balances.html's per-row spinbox/save/
  * undo/delete script — state that lived in `tr.dataset.*` there now lives as
  * local React state. */
-export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, onChanged }: Props) {
+export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, readOnly, onChanged }: Props) {
   const toast = useToast();
   const confirm = useConfirm();
   const step = row.unit === 'hours' ? 0.5 : 1;
@@ -161,7 +168,7 @@ export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, onChanged }
         {row.category_name}
       </td>
       <td data-label="Okres">
-        <input type="text" className="row-period-input" aria-label={`Okres — ${rowCtx}`} placeholder="np. 2026" value={period} onChange={(e) => setPeriod(e.target.value)} />
+        <input type="text" className="row-period-input" aria-label={`Okres — ${rowCtx}`} placeholder="np. 2026" readOnly={readOnly} value={period} onChange={(e) => setPeriod(e.target.value)} />
       </td>
       <td data-label="Wykorzystano">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}>
@@ -172,17 +179,20 @@ export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, onChanged }
               aria-label={`Wykorzystano — ${rowCtx}`}
               step={step}
               min={0}
+              readOnly={readOnly}
               value={used}
               onChange={(e) => setUsed(Math.max(0, Number(e.target.value) || 0))}
             />
-            <div className="row-spinbox-arrows">
-              <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(1, 'used')}>
-                <Icon name="expand_more" className="rot-180" />
-              </button>
-              <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(-1, 'used')}>
-                <Icon name="expand_more" />
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="row-spinbox-arrows">
+                <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(1, 'used')}>
+                  <Icon name="expand_more" className="rot-180" />
+                </button>
+                <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(-1, 'used')}>
+                  <Icon name="expand_more" />
+                </button>
+              </div>
+            )}
           </div>
           <span className="row-unit-label">{unitLabel(row.unit)}</span>
           {usedDirty && (
@@ -207,17 +217,20 @@ export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, onChanged }
               aria-label={`Limit — ${rowCtx}`}
               step={step}
               min={0}
+              readOnly={readOnly}
               value={limit}
               onChange={(e) => setLimit(Math.max(0, Number(e.target.value) || 0))}
             />
-            <div className="row-spinbox-arrows">
-              <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(1, 'limit')}>
-                <Icon name="expand_more" className="rot-180" />
-              </button>
-              <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(-1, 'limit')}>
-                <Icon name="expand_more" />
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="row-spinbox-arrows">
+                <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(1, 'limit')}>
+                  <Icon name="expand_more" className="rot-180" />
+                </button>
+                <button type="button" className="row-arrow" tabIndex={-1} onClick={() => step_(-1, 'limit')}>
+                  <Icon name="expand_more" />
+                </button>
+              </div>
+            )}
           </div>
           <span className="row-unit-label">{limit <= 0 ? '∞' : unitLabel(row.unit)}</span>
         </div>
@@ -235,13 +248,13 @@ export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, onChanged }
       </td>
       <td className="cell-actions" style={{ whiteSpace: 'nowrap' }}>
         <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
-          <button type="button" className="icon-btn delete-btn" title="Resetuj bilans do zera" disabled={saving} onClick={handleReset}>
+          <button type="button" className="icon-btn delete-btn" title="Resetuj bilans do zera" disabled={saving || readOnly} onClick={handleReset}>
             <Icon name="delete" />
           </button>
-          <button type="button" className="icon-btn save-btn" title="Zapisz zmiany" disabled={!canSave} onClick={handleSave}>
+          <button type="button" className="icon-btn save-btn" title="Zapisz zmiany" disabled={!canSave || readOnly} onClick={handleSave}>
             <Icon name="save" />
           </button>
-          <button type="button" className="icon-btn undo-btn" title="Cofnij ostatni zapis" disabled={!undoState || saving} onClick={handleUndo}>
+          <button type="button" className="icon-btn undo-btn" title="Cofnij ostatni zapis" disabled={!undoState || saving || readOnly} onClick={handleUndo}>
             <Icon name="undo" />
           </button>
         </div>

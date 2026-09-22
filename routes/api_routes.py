@@ -14,7 +14,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from config.admin_view import is_superuser, redact_compensation
-from config.auth_config import module_permission_required, role_required, own_data_employee_id
+from config.auth_config import module_permission_required, role_required, own_data_employee_id, formy_zatrudnienia_required
 from config.database import managed_transaction
 from database.models import Invoice
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
@@ -4621,7 +4621,7 @@ def set_employee_direct_reports(employee_id):
 
 @api_bp.route('/formy-zatrudnienia', methods=['GET'])
 @login_required
-@module_permission_required('employees')
+@formy_zatrudnienia_required
 def get_formy_zatrudnienia():
     """Pobierz wszystkie formy zatrudnienia"""
     try:
@@ -4650,7 +4650,7 @@ def get_formy_zatrudnienia():
 
 @api_bp.route('/formy-zatrudnienia', methods=['POST'])
 @login_required
-@module_permission_required('employees')
+@formy_zatrudnienia_required
 def create_forma_zatrudnienia():
     """Utwórz nową formę zatrudnienia"""
     try:
@@ -4677,7 +4677,7 @@ def create_forma_zatrudnienia():
 
 @api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['GET'])
 @login_required
-@module_permission_required('employees')
+@formy_zatrudnienia_required
 def get_forma_zatrudnienia(forma_id):
     """Pobierz formę zatrudnienia po ID"""
     try:
@@ -4705,7 +4705,7 @@ def get_forma_zatrudnienia(forma_id):
 
 @api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['PUT'])
 @login_required
-@module_permission_required('employees')
+@formy_zatrudnienia_required
 def update_forma_zatrudnienia(forma_id):
     """Zaktualizuj formę zatrudnienia"""
     try:
@@ -4738,7 +4738,7 @@ def update_forma_zatrudnienia(forma_id):
 
 @api_bp.route('/formy-zatrudnienia/<int:forma_id>', methods=['DELETE'])
 @login_required
-@module_permission_required('employees')
+@formy_zatrudnienia_required
 def delete_forma_zatrudnienia(forma_id):
     """Usuń formę zatrudnienia"""
     try:

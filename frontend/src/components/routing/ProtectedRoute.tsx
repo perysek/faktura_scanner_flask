@@ -38,6 +38,7 @@ export function ProtectedRoute({ requireModule, guard }: ProtectedRouteProps) {
     hasLinkedEmployee: auth.hasLinkedEmployee,
     hasModuleAccess: auth.hasModuleAccess,
     hasModuleWrite: auth.hasModuleWrite,
+    moduleFlags: auth.moduleFlags,
   };
 
   const allowed = guard ? guard(ctx) : requireModule ? auth.hasModuleAccess(requireModule) : true;

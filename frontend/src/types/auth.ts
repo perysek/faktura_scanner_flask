@@ -35,4 +35,10 @@ export interface NavVisibilityCtx {
    * (Add/Edit/Delete buttons) exactly like `user_write_permissions` already
    * does in the Jinja templates it replaces. */
   hasModuleWrite: (moduleName: string) => boolean;
+  /** The raw `{has_access, read_only, own_data}` triple for a module — for the
+   * guards `hasModuleAccess`/`hasModuleWrite` can't express, e.g. "own_data
+   * disqualifies entirely" (Zarządzanie nieobecnościami) or "own_data scopes
+   * the view instead of blocking it" (Bilanse urlopów). Returns all-false for
+   * a module the backend never sent (safe default, never opens a door). */
+  moduleFlags: (moduleName: string) => PermissionFlags;
 }

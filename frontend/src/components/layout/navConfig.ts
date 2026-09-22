@@ -1,5 +1,17 @@
 import type { NavVisibilityCtx } from '../../types/auth';
 
+/** Rodzaje zatrudnienia's real gate — superuser AND a genuinely unrestricted
+ * 'employees' grant (not read_only, not own_data). Shared verbatim between
+ * this file's nav link and router.tsx's route guard (DESIGN.md §13.5/§14.2:
+ * both must express the exact same boolean expression), and by the backend's
+ * `formy_zatrudnienia_required` (config/auth_config.py) — same three flags,
+ * same superuser check, just enforced server-side too. */
+export function hasFullEmployeesGrant(ctx: NavVisibilityCtx): boolean {
+  if (ctx.user?.role !== 'superuser') return false;
+  const f = ctx.moduleFlags('employees');
+  return f.has_access && !f.read_only && !f.own_data;
+}
+
 export interface NavLinkConfig {
   label: string;
   to: string;
@@ -123,7 +135,11 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         label: 'Nieobecności',
         to: '/nieobecnosci',
         iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-        visible: (ctx) => ctx.isSupervisor || ctx.hasModuleAccess('absences'),
+        // own_data on 'absences' means "only my own records" — that role
+        // belongs on Moje nieobecności, never the org-wide 3-tab console
+        // (Wnioski/Manualne/Kategorie). Bilanse urlopów below is deliberately
+        // NOT the same rule — own_data scopes that page instead of blocking it.
+        visible: (ctx) => ctx.isSupervisor || (ctx.hasModuleAccess('absences') && !ctx.moduleFlags('absences').own_data),
       },
       {
         label: 'Bilanse urlopów',
@@ -151,14 +167,22 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         to: '/kategorie-uslug',
         mobileHide: true,
         iconPath: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
-        visible: (ctx) => ctx.hasModuleAccess('services'),
+        // Every action on this page is a write (create/edit/delete a
+        // category) — there is no legitimate read-only mode for it, so a
+        // read_only 'services' role loses the whole page, not just its
+        // buttons (Usługi itself stays view-only reachable — see below).
+        visible: (ctx) => ctx.hasModuleWrite('services'),
       },
       {
         label: 'Rodzaje zatrudnienia',
         to: '/formy-zatrudnienia',
         mobileHide: true,
         iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-        visible: (ctx) => ctx.hasModuleAccess('services'),
+        // Exclusively superuser, and only with a genuinely unrestricted
+        // 'employees' grant — a superuser whose own role has employees
+        // read_only or own_data set gets no UI access either. Real gate is
+        // config.auth_config.formy_zatrudnienia_required (blocks GET too).
+        visible: hasFullEmployeesGrant,
       },
     ],
   },

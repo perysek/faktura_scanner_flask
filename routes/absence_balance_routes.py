@@ -17,7 +17,9 @@ import logging
 from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
-from config.auth_config import absence_management_required, get_linked_employee
+from config.auth_config import (
+    module_permission_required, get_linked_employee, own_data_employee_id,
+)
 from config.admin_view import is_employee_hidden
 from services.absence_balance_service import AbsenceBalanceService
 
@@ -30,10 +32,25 @@ def _balance_svc() -> AbsenceBalanceService:
     return AbsenceBalanceService()
 
 
+def _own_employee_scope_denied(employee_id: int):
+    """None when the caller may act on `employee_id`; a 403 JSON response
+    otherwise. `own_data_employee_id` returns None for a full-access role (no
+    scoping — module_permission_required's has_access/read_only check is
+    the whole story), or the caller's own employee id (or a -1 sentinel with
+    no linked employee) when the role is own_data-restricted for 'absences' —
+    closes the "edit/save any employee's balance" hole `absence_management_required`
+    left open (it only checked has_access, never read_only or own_data).
+    """
+    scope_id = own_data_employee_id(current_user, 'absences')
+    if scope_id is not None and scope_id != employee_id:
+        return jsonify({'success': False, 'error': 'Brak uprawnień do tego pracownika'}), 403
+    return None
+
+
 # ── HTML page ─────────────────────────────────────────────────────────────────
 
 @absence_balance_bp.route('/absence-balances')
-@absence_management_required
+@module_permission_required('absences')
 def balances_index():
     employees = current_app.employee_repo.get_all(active_only=True)
     tracked_categories = current_app.absence_category_repo.list_tracked()
@@ -47,7 +64,7 @@ def balances_index():
 # ── JSON API ──────────────────────────────────────────────────────────────────
 
 @absence_balance_bp.route('/api/absence-categories/tracked')
-@absence_management_required
+@module_permission_required('absences')
 def tracked_categories_json():
     """Zwraca aktualne śledzone kategorie jako JSON (do dynamicznych dropdownów)."""
     try:
@@ -60,7 +77,7 @@ def tracked_categories_json():
 
 
 @absence_balance_bp.route('/api/absence-categories')
-@absence_management_required
+@module_permission_required('absences')
 def all_categories_json():
     """Zwraca wszystkie aktywne kategorie jako JSON (do formularzy tworzenia nieobecności)."""
     try:
@@ -74,11 +91,19 @@ def all_categories_json():
 
 
 @absence_balance_bp.route('/api/absence-balances/summary')
-@absence_management_required
+@module_permission_required('absences')
 def balances_summary():
-    """Podsumowanie bilansu dla wszystkich pracowników (do listy pracowników)."""
+    """Podsumowanie bilansu dla wszystkich pracowników (do listy pracowników).
+
+    Scoped to the caller's own employee when their 'absences' grant is
+    own_data-restricted — "bilanse urlopów" stays reachable for that role
+    (unlike the management console), it just shows only their own row.
+    """
     try:
         summary = _balance_svc().get_balance_summary_for_list()
+        scope_id = own_data_employee_id(current_user, 'absences')
+        if scope_id is not None:
+            summary = {scope_id: summary[scope_id]} if scope_id in summary else {}
         return jsonify({'success': True, 'balances': summary})
     except Exception as e:
         logger.exception('balances_summary failed')
@@ -121,9 +146,12 @@ def employee_balances(employee_id: int):
 
 @absence_balance_bp.route('/api/employees/<int:employee_id>/absence-limits',
                            methods=['POST'])
-@absence_management_required
+@module_permission_required('absences')
 def set_employee_limit(employee_id: int):
     """Ustaw indywidualny limit dla pracownika."""
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     try:
         category_id = int(data['category_id'])
@@ -162,9 +190,12 @@ def set_employee_limit(employee_id: int):
 @absence_balance_bp.route(
     '/api/employees/<int:employee_id>/absence-limits/<int:limit_id>',
     methods=['DELETE'])
-@absence_management_required
+@module_permission_required('absences')
 def delete_employee_limit(employee_id: int, limit_id: int):
     """Usuń indywidualny limit pracownika."""
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     try:
         _balance_svc().remove_limit(
             limit_id=limit_id,
@@ -180,11 +211,14 @@ def delete_employee_limit(employee_id: int, limit_id: int):
 # ── adjustments ───────────────────────────────────────────────────────────────
 
 @absence_balance_bp.route('/api/employees/<int:employee_id>/absence-adjustments')
-@absence_management_required
+@module_permission_required('absences')
 def list_employee_adjustments(employee_id: int):
     """Historia korekt bilansu dla pracownika."""
     if is_employee_hidden(employee_id):
         return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     try:
         rows = current_app.absence_adjustment_repo.list_for_employee(employee_id)
         adjustments = []
@@ -206,9 +240,12 @@ def list_employee_adjustments(employee_id: int):
 
 @absence_balance_bp.route('/api/employees/<int:employee_id>/absence-adjustments',
                            methods=['POST'])
-@absence_management_required
+@module_permission_required('absences')
 def create_employee_adjustment(employee_id: int):
     """Utwórz korektę bilansu."""
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     data = request.get_json(silent=True) or {}
     try:
         category_id = int(data['category_id'])
@@ -250,9 +287,12 @@ def create_employee_adjustment(employee_id: int):
 @absence_balance_bp.route(
     '/api/employees/<int:employee_id>/absence-adjustments/<int:adj_id>',
     methods=['DELETE'])
-@absence_management_required
+@module_permission_required('absences')
 def delete_employee_adjustment(employee_id: int, adj_id: int):
     """Usuń korektę bilansu."""
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     try:
         _balance_svc().delete_adjustment(
             adj_id=adj_id,
@@ -268,11 +308,14 @@ def delete_employee_adjustment(employee_id: int, adj_id: int):
 # ── audit trail ───────────────────────────────────────────────────────────────
 
 @absence_balance_bp.route('/api/employees/<int:employee_id>/absence-balance-audit')
-@absence_management_required
+@module_permission_required('absences')
 def employee_balance_audit(employee_id: int):
     """Historia zmian limitów i korekt dla danego pracownika."""
     if is_employee_hidden(employee_id):
         return jsonify({'success': False, 'error': 'Pracownik nie znaleziony'}), 404
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     try:
         entries = current_app.audit_repo.get_for_employee_balance(employee_id)
         return jsonify({'success': True, 'entries': entries})
@@ -284,9 +327,12 @@ def employee_balance_audit(employee_id: int):
 @absence_balance_bp.route(
     '/api/employees/<int:employee_id>/absence-balance-audit',
     methods=['DELETE'])
-@absence_management_required
+@module_permission_required('absences')
 def clear_employee_balance_audit(employee_id: int):
     """Usuń historię zmian bilansów dla pracownika."""
+    denied = _own_employee_scope_denied(employee_id)
+    if denied:
+        return denied
     try:
         deleted = current_app.audit_repo.delete_for_employee_balance(employee_id)
         return jsonify({'success': True, 'deleted': deleted})

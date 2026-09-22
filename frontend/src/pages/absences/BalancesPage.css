@@ -93,6 +93,11 @@ table.balance-table tr.group-last td { border-bottom: 2px solid var(--color-bord
 
 .row-period-input { width: 6rem; padding: 0.2rem 0.4rem; font-family: var(--font-body); font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm, 2px); outline: none; }
 .row-period-input:focus { border-color: var(--color-ink-muted); }
+/* read_only (`hasModuleWrite('absences')` false) — same visual weight as
+   enabled, just non-interactive; the mini spin-buttons aren't rendered at
+   all in this state (see BalanceRow.tsx), so no rule needed to hide them. */
+.row-period-input:read-only,
+.row-spinbox:read-only { cursor: default; }
 
 .icon-btn {
   width: 1.75rem;

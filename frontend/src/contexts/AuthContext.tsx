@@ -145,6 +145,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [permissions],
   );
+  const moduleFlags = useCallback(
+    (moduleName: string): PermissionFlags => permissions[moduleName] ?? { has_access: false, read_only: false, own_data: false },
+    [permissions],
+  );
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -154,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       linkedEmployeeId,
       hasModuleAccess,
       hasModuleWrite,
+      moduleFlags,
       isLoading,
       login,
       logout,
@@ -168,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       linkedEmployeeId,
       hasModuleAccess,
       hasModuleWrite,
+      moduleFlags,
       isLoading,
       login,
       logout,

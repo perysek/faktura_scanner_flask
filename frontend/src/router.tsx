@@ -42,6 +42,7 @@ import { RoleFormPage } from './pages/rbac/RoleFormPage';
 import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
 import { DataImportPage } from './pages/dataImport/DataImportPage';
 import { HistoryPage } from './pages/history/HistoryPage';
+import { hasFullEmployeesGrant } from './components/layout/navConfig';
 
 /**
  * Route tree — DESIGN.md §14.1. Public auth routes sit outside any guard;
@@ -144,16 +145,31 @@ export const router = createBrowserRouter([
               { path: 'pracownicy/nowy', element: <EmployeeFormPage mode="create" /> },
               { path: 'pracownicy/:id/edytuj', element: <EmployeeFormPage mode="edit" /> },
               { path: 'pracownicy/:id', element: <EmployeeDetailPage /> },
-              { path: 'formy-zatrudnienia', element: <FormyZatrudnieniaPage /> },
             ],
           },
 
+          // Rodzaje zatrudnienia — exclusively superuser AND a genuinely
+          // unrestricted 'employees' grant (not read_only, not own_data).
+          // Deliberately its own guard group, not nested under
+          // requireModule="employees" above — same predicate as the sidebar
+          // (navConfig.ts) and the backend's formy_zatrudnienia_required.
+          {
+            element: <ProtectedRoute guard={hasFullEmployeesGrant} />,
+            children: [{ path: 'formy-zatrudnienia', element: <FormyZatrudnieniaPage /> }],
+          },
+
+          // Zarządzanie nieobecnościami — own_data on 'absences' disqualifies
+          // entirely (that role belongs on moje-nieobecnosci below, never the
+          // org-wide 3-tab console). Bilanse urlopów gets its own group with
+          // the ORIGINAL, unrestricted predicate — own_data scopes that page
+          // instead of blocking it (BalancesPage/BalanceRowView do the scoping).
+          {
+            element: <ProtectedRoute guard={(ctx) => ctx.isSupervisor || (ctx.hasModuleAccess('absences') && !ctx.moduleFlags('absences').own_data)} />,
+            children: [{ path: 'nieobecnosci', element: <AbsencesManagementPage /> }],
+          },
           {
             element: <ProtectedRoute guard={(ctx) => ctx.isSupervisor || ctx.hasModuleAccess('absences')} />,
-            children: [
-              { path: 'nieobecnosci', element: <AbsencesManagementPage /> },
-              { path: 'bilanse-urlopow', element: <BalancesPage /> },
-            ],
+            children: [{ path: 'bilanse-urlopow', element: <BalancesPage /> }],
           },
 
           {
@@ -170,8 +186,16 @@ export const router = createBrowserRouter([
               { path: 'uslugi/nowa', element: <ServiceFormPage mode="create" /> },
               { path: 'uslugi/:id/edytuj', element: <ServiceFormPage mode="edit" /> },
               { path: 'uslugi/:id', element: <ServiceDetailPage /> },
-              { path: 'kategorie-uslug', element: <ServiceCategoriesPage /> },
             ],
+          },
+
+          // Kategorie usług — every action on this page is a write (create/
+          // edit/delete a category); there is no read-only mode for it, so a
+          // read_only 'services' role loses the whole page (Usługi above
+          // stays view-only reachable via requireModule="services").
+          {
+            element: <ProtectedRoute guard={(ctx) => ctx.hasModuleWrite('services')} />,
+            children: [{ path: 'kategorie-uslug', element: <ServiceCategoriesPage /> }],
           },
 
           {

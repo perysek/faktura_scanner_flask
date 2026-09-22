@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import './BalancesPage.css';
 import { absenceBalancesApi } from '../../lib/api/absenceBalances';
 import { BalanceRowView } from './BalanceRow';
+import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import type { AbsenceBalanceRow, AbsenceCategory } from '../../types/absenceBalance';
 
@@ -13,9 +14,14 @@ function rowKey(r: Pick<AbsenceBalanceRow, 'employee_id' | 'category_id'>) {
  * templates/absences/balances.html: per-employee limits/usage against
  * tracked absence categories, inline-editable per row (spinboxes for
  * used/limit, a period label, save+undo+reset-to-zero), filterable by
- * name/category/status. Backend (routes/absence_balance_routes.py) was
- * already fully JSON — no server changes for this module. */
+ * name/category/status. Backend (routes/absence_balance_routes.py) now
+ * enforces read_only + own_data scoping server-side too; `readOnly` below
+ * mirrors that purely for the UI (own-data scoping itself is server-side —
+ * an own_data caller's own summary/balances calls already come back scoped
+ * to just their own employee). */
 export function BalancesPage() {
+  const auth = useAuth();
+  const readOnly = !auth.hasModuleWrite('absences');
   // Original page: any Escape navigates back to /absences (the "wnioski"
   // list) unless a confirm modal is open — ConfirmProvider already claims
   // Escape for itself while its own modal is open (useEscapeClaim), so this
@@ -159,7 +165,14 @@ export function BalancesPage() {
                   const isFirst = i === 0 || sorted[i - 1].employee_id !== row.employee_id;
                   const isLast = i === sorted.length - 1 || sorted[i + 1].employee_id !== row.employee_id;
                   return (
-                    <BalanceRowView key={rowKey(row)} row={row} isFirstInGroup={isFirst} isLastInGroup={isLast} onChanged={(patch) => patchRow(row.employee_id, row.category_id, patch)} />
+                    <BalanceRowView
+                      key={rowKey(row)}
+                      row={row}
+                      isFirstInGroup={isFirst}
+                      isLastInGroup={isLast}
+                      readOnly={readOnly}
+                      onChanged={(patch) => patchRow(row.employee_id, row.category_id, patch)}
+                    />
                   );
                 })
               )}

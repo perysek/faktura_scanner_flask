@@ -34,6 +34,7 @@ export function ServiceDetailPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const auth = useAuth();
+  const canWrite = auth.hasModuleWrite('services');
   const canSeePriceHistory = auth.hasModuleAccess('service_prices');
   // Backend's `can_edit_price_history` is role-based, not module-based (routes'
   // own config.auth_config.can_edit_service_price_history) — mirrored via the
@@ -347,15 +348,19 @@ export function ServiceDetailPage() {
 
       <div className="form-card">
         <div className="action-bar">
-          <ButtonLink variant="primary" icon="edit" to={`/uslugi/${service.id}/edytuj`}>
-            Edytuj usługę
-          </ButtonLink>
+          {canWrite && (
+            <ButtonLink variant="primary" icon="edit" to={`/uslugi/${service.id}/edytuj`}>
+              Edytuj usługę
+            </ButtonLink>
+          )}
           <ButtonLink variant="secondary" icon="arrow_back" to="/uslugi">
             Powrót do listy
           </ButtonLink>
-          <Button variant="danger" icon="delete" onClick={handleDeactivate}>
-            {service.is_active ? 'Dezaktywuj' : 'Usuń'}
-          </Button>
+          {canWrite && (
+            <Button variant="danger" icon="delete" onClick={handleDeactivate}>
+              {service.is_active ? 'Dezaktywuj' : 'Usuń'}
+            </Button>
+          )}
         </div>
       </div>
     </div>

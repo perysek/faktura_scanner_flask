@@ -230,6 +230,34 @@ def absence_management_required(f):
     return decorated_function
 
 
+def formy_zatrudnienia_required(f):
+    """Rodzaje zatrudnienia — exclusively superuser AND a genuinely
+    unrestricted 'employees' grant (has_access, not read_only, not own_data).
+
+    Unlike `module_permission_required`, GET is not exempted: this page edits
+    compensation-adjacent policy (min-wage/guaranteed-salary/commission
+    flags) that the principal wants under his sole control, so there is no
+    legitimate read-only audience for it — every method is denied outside the
+    exact qualifying combination, including a superuser whose own role has
+    `employees` read_only or own_data set.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash(msg('auth.guard.login_required'), 'error')
+            return redirect(url_for('auth.login'))
+
+        if current_user.role != 'superuser':
+            return _deny('auth.permission.role_denied')
+
+        flags = get_permission_flags(current_user.role, 'employees')
+        if not flags['has_access'] or flags['read_only'] or flags['own_data']:
+            return _deny('auth.permission.module_denied', module='employees')
+
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 def get_permission_flags(role_name: str, module_name: str) -> dict:
     """
     Zwraca pełne flagi uprawnień {has_access, read_only, own_data} dla roli+modułu.

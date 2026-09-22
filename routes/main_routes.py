@@ -7,7 +7,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 
-from config.auth_config import module_permission_required, role_required
+from config.auth_config import module_permission_required, role_required, formy_zatrudnienia_required
 from config.admin_view import is_superuser, is_employee_hidden, redact_compensation
 from config.database import get_db_connection
 
@@ -326,7 +326,7 @@ def edit_employee(employee_id):
 
 @main_bp.route('/formy-zatrudnienia')
 @login_required
-@module_permission_required('employees')
+@formy_zatrudnienia_required
 def formy_zatrudnienia_list():
     """Formy zatrudnienia — lista i zarządzanie"""
     return render_template('employees/formy_zatrudnienia/list.html')

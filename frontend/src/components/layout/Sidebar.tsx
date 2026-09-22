@@ -38,8 +38,9 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
       hasLinkedEmployee: auth.hasLinkedEmployee,
       hasModuleAccess: auth.hasModuleAccess,
       hasModuleWrite: auth.hasModuleWrite,
+      moduleFlags: auth.moduleFlags,
     }),
-    [auth.user, auth.isSupervisor, auth.hasLinkedEmployee, auth.hasModuleAccess, auth.hasModuleWrite],
+    [auth.user, auth.isSupervisor, auth.hasLinkedEmployee, auth.hasModuleAccess, auth.hasModuleWrite, auth.moduleFlags],
   );
 
   // Filter to only the links (and, transitively, only the non-empty
