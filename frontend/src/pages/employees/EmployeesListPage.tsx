@@ -10,6 +10,8 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Icon } from '../../lib/icons/Icon';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { MobileEmployeesListView } from './MobileEmployeesListView';
 import type { BalanceSummaryEntry, EmployeeListRow } from '../../types/employee';
 
 type SortColumn = 'full_name' | 'position' | 'status' | 'avg_satisfaction' | 'balance';
@@ -49,6 +51,7 @@ export function EmployeesListPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const isSuperuser = auth.user?.role === 'superuser';
+  const isMobile = useIsMobile(640);
 
   const initial = useMemo(() => {
     try {
@@ -270,6 +273,15 @@ export function EmployeesListPage() {
         </div>
       </div>
 
+      {isMobile ? (
+        <MobileEmployeesListView
+          employees={filtered}
+          loading={employeesState.loading}
+          error={employeesState.error?.message ?? null}
+          balances={balances}
+          canWrite={auth.hasModuleWrite('employees')}
+        />
+      ) : (
       <div className="table-container stack-cards-wrap">
         <table className="refined-table stack-cards">
           <thead>
@@ -365,6 +377,7 @@ export function EmployeesListPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       {hardDeleteTarget && (
         <Modal

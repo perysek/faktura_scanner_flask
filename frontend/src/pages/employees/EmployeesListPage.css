@@ -305,3 +305,141 @@ tr:hover .action-icon-btn.danger-reveal,
   .peak-hours-heatmap { font-size: 0.625rem; table-layout: fixed; }
   .peak-hours-heatmap td { min-width: 0; white-space: nowrap; overflow: hidden; }
 }
+
+/* ── Mobile Pracownicy list (MobileEmployeesListView.tsx) ─────────────
+   Card + swipe mechanics ported 1:1 from Appointments.css's
+   .mob-appt-* rules (MobileWizytyCalendarView.tsx, TASK3/TASK5) — same
+   thresholds, same "reveal sits behind the card, translates with it"
+   technique, same snap-back-on-release transition. Only the two actions
+   differ: both directions navigate here (left→Zobacz, right→Edytuj),
+   not the visit-card's action-sheet+navigate split. No `.mob-fixed-nav`
+   bottom bar on this page — the list has no calendar/employee-filter
+   chrome to pin there, so cards just fill the page under the existing
+   search/filter card. */
+.mob-emp-list { display: flex; flex-direction: column; gap: 0.625rem; }
+
+.mob-emp-card-wrap { position: relative; overflow: hidden; border-radius: 3px; }
+.mob-emp-swipe-reveal { position: absolute; inset: 0; z-index: 0; border: 1px solid var(--color-border); border-radius: 3px; }
+.mob-emp-swipe-reveal--left { background: var(--color-info-bg, #eff6ff); }
+.mob-emp-swipe-reveal--left.mob-emp-swipe-reveal--armed { border-color: var(--color-info, #1e6091); }
+.mob-emp-swipe-reveal--right { background: rgba(45, 106, 79, 0.08); }
+.mob-emp-swipe-reveal--right.mob-emp-swipe-reveal--armed { border-color: var(--color-success); }
+
+.mob-emp-swipe-content { position: absolute; top: 0; bottom: 0; width: 7.5rem; display: flex; align-items: center; gap: 0.375rem; padding: 0 0.625rem; }
+.mob-emp-swipe-content .icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.mob-emp-swipe-content--left { right: -7.5rem; color: var(--color-info-text-dark, #1e3a8a); }
+.mob-emp-swipe-content--right { left: -7.5rem; color: var(--color-success); }
+.mob-emp-swipe-label { width: 4.25rem; font-size: 0.9375rem; font-weight: 400; line-height: 1.15; text-align: center; white-space: normal; }
+
+.mob-emp-card {
+  position: relative; z-index: 1;
+  background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 3px;
+  padding: 0.75rem 1.375rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; cursor: pointer;
+  transition: transform 0.2s ease, background 0.15s ease;
+}
+.mob-emp-card:active { background: var(--color-surface); }
+.mob-emp-card--muted { opacity: 0.6; }
+.mob-emp-card--swipe-armed { background: rgba(30, 96, 145, 0.06); border-color: var(--color-info, #1e6091); }
+.mob-emp-card--swipe-armed-right { background: rgba(45, 106, 79, 0.06); border-color: var(--color-success); }
+
+.mob-emp-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.mob-emp-identity { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.mob-emp-avatar { width: 2.5rem; height: 2.5rem; font-size: 0.875rem; }
+.mob-emp-name-wrap { display: flex; flex-direction: column; min-width: 0; }
+.mob-emp-name { font-size: 1.0625rem; font-weight: 600; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-emp-position { font-size: 0.8125rem; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mob-emp-row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; flex-wrap: wrap; }
+.mob-emp-meta-row { justify-content: space-between; }
+.mob-emp-phone-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; margin-left: auto; flex-shrink: 0; border-radius: var(--radius-sm);
+  color: var(--color-ink-subtle); text-decoration: none;
+}
+.mob-emp-phone-btn .icon { width: 1.125rem; height: 1.125rem; }
+.mob-emp-phone-btn:active { background: var(--color-surface); color: var(--color-ink); }
+
+.mob-emp-tap-hint { position: absolute; right: 0.375rem; bottom: 0.5rem; width: 0.875rem; height: 0.875rem; color: var(--color-ink-subtle); opacity: 0.6; }
+
+/* ── Mobile Pracownik detail (EmployeeDetailPage.tsx) ──────────────────
+   New bespoke mobile chrome, CSS-only (no JSX changes) — the existing
+   desktop markup (`.page-header`, `.refined-card` sections, `.action-bar`)
+   is restructured at ≤640px into: a centered profile-style header, tighter
+   card padding that stacks with real gaps (desktop has none — out of scope
+   to fix there), and the bottom "Akcje" block promoted to a fixed,
+   safe-area-aware thumb-zone bar — `.mob-fixed-nav`'s own pattern
+   (Appointments.css) applied to plain <Button>/<ButtonLink> children
+   instead of custom nav buttons. */
+@media (max-width: 640px) {
+  .employee-detail-page .page-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 1.25rem;
+  }
+  .employee-detail-page .employee-avatar-large { margin: 0 auto 0.75rem; }
+  .employee-detail-page .page-header-actions { display: none; }
+
+  .employee-detail-page .refined-card {
+    padding: 1.25rem 1rem;
+    border-radius: 3px;
+    margin-bottom: 0.875rem;
+  }
+
+  /* Clears the fixed action bar below (~64px + safe-area) so the last
+     card's content is never hidden underneath it. */
+  .employee-detail-page { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+  /* The "Akcje" .refined-card only ever wraps .action-bar (EmployeeDetailPage.tsx) —
+     its own chrome (border/padding/shadow) is stripped so it doesn't leave a
+     collapsed empty box once .action-bar becomes position:fixed below and
+     exits its parent's layout flow. */
+  .employee-detail-page .refined-card:has(> .action-bar) {
+    background: none; border: none; box-shadow: none; padding: 0; margin-bottom: 0;
+  }
+  .employee-detail-page .action-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; gap: 0.5rem;
+    margin: 0;
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
+  }
+  .employee-detail-page .action-bar > a,
+  .employee-detail-page .action-bar > button { flex: 1; justify-content: center; }
+}
+
+/* ── Mobile Pracownik create/edit (EmployeeFormPage.tsx) ───────────────
+   Same "restructure the existing markup via CSS, no new JSX" approach as
+   the detail page above. Sections already divide with a top margin on
+   desktop (`.employee-form-page section + section`, above) — on mobile
+   that becomes a real divider line (mirrors `.form-fieldset + .form-fieldset`'s
+   own established convention elsewhere in the app, DESIGN.md §7), and the
+   submit/cancel row is promoted to a fixed thumb-zone bar so "Zapisz" is
+   always one thumb-reach away on a form this long, not buried after a
+   multi-screen scroll. */
+@media (max-width: 640px) {
+  .employee-form-page .page-header {
+    position: sticky; top: 0; z-index: 30;
+    background: var(--color-surface);
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .employee-form-page .form-card { padding: 0.875rem; }
+  .employee-form-page .form-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .employee-form-page section { margin-top: 0 !important; padding-top: 1.25rem; border-top: 1px solid var(--color-border-subtle); }
+  .employee-form-page section:first-of-type { padding-top: 0; border-top: none; }
+
+  /* Clears the fixed Zapisz/Anuluj bar below. */
+  .employee-form-page { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+  .employee-form-page .form-actions {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    margin: 0;
+    padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
+  }
+  .employee-form-page .form-actions > button { flex: 1; justify-content: center; }
+}
