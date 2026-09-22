@@ -33,8 +33,12 @@ export function Login() {
   const flash = state?.flash;
 
   // Already authenticated → redirect away immediately (§15.2 point 4).
+  // Default landing target is Profil, not the invoices-flavored Pulpit
+  // (`/` → `/dashboard`), which used to show regardless of module access —
+  // `next` still wins when the user was bounced here from a specific
+  // protected page (ProtectedRoute.tsx sets it), so deep links keep working.
   if (!auth.isLoading && auth.user) {
-    return <Navigate to={next || '/'} replace />;
+    return <Navigate to={next || '/profil'} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

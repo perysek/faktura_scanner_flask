@@ -56,7 +56,8 @@ export function EmployeeDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
-  const { isSuperuser } = useAuth();
+  const { isSuperuser, hasModuleWrite } = useAuth();
+  const canEditEmployees = hasModuleWrite('employees');
   useEscapeBack('/pracownicy');
 
   const employeeState = useApiData(() => employeesApi.get(employeeId), [employeeId]);
@@ -225,9 +226,11 @@ export function EmployeeDetailPage() {
           </p>
         </div>
         <div className="page-header-actions">
-          <ButtonLink variant="primary" icon="edit" small to={`/pracownicy/${employee.id}/edytuj`}>
-            Edytuj
-          </ButtonLink>
+          {canEditEmployees && (
+            <ButtonLink variant="primary" icon="edit" small to={`/pracownicy/${employee.id}/edytuj`}>
+              Edytuj
+            </ButtonLink>
+          )}
         </div>
       </header>
 
@@ -577,9 +580,11 @@ export function EmployeeDetailPage() {
       {/* Akcje */}
       <div className="refined-card">
         <div className="action-bar">
-          <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
-            Edytuj pracownika
-          </ButtonLink>
+          {canEditEmployees && (
+            <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
+              Edytuj pracownika
+            </ButtonLink>
+          )}
           <ButtonLink variant="secondary" icon="arrow_back" to="/pracownicy">
             Powrót do listy
           </ButtonLink>
