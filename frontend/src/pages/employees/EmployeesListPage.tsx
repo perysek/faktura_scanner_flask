@@ -290,13 +290,13 @@ export function EmployeesListPage() {
           <tbody>
             {employeesState.loading ? (
               <tr>
-                <td colSpan={6} className="empty-state">
+                <td colSpan={6} className="empty-state cell-empty">
                   <p className="empty-text">Ładowanie pracowników...</p>
                 </td>
               </tr>
             ) : employeesState.error ? (
               <tr>
-                <td colSpan={6} className="empty-state">
+                <td colSpan={6} className="empty-state cell-empty">
                   <p className="empty-text" style={{ color: 'var(--color-error)' }}>
                     Błąd ładowania: {employeesState.error.message}
                   </p>
@@ -304,7 +304,7 @@ export function EmployeesListPage() {
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="empty-state">
+                <td colSpan={6} className="empty-state cell-empty">
                   <Icon name="search_off" className="empty-icon" />
                   <p className="empty-text">Nie znaleziono pracowników</p>
                 </td>
