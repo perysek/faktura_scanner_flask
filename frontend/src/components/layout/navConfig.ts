@@ -27,6 +27,15 @@ export interface NavSectionConfig {
   id: string;
   title: string;
   links: NavLinkConfig[];
+  /** Section-wide gate, ANDed with every link's own `visible` (Sidebar.tsx) —
+   * for a section that must disappear as a whole regardless of any one
+   * link's individual rule (e.g. Finanse: 'Koszty' is otherwise
+   * always-visible, but the whole section still has to vanish when the
+   * viewer has no 'invoices' access). Omit for sections with no such
+   * whole-section rule — the default is "always visible" (each link's own
+   * `visible` is still the deciding factor, same as before this field
+   * existed). */
+  visible?: (ctx: NavVisibilityCtx) => boolean;
 }
 
 /**
@@ -48,6 +57,17 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
   {
     id: 'finanse',
     title: 'Finanse',
+    // Whole-section gate: without 'invoices' access, nothing in Finanse is
+    // reachable — including 'Koszty' (dashboard), whose OWN `visible` below
+    // is `() => true` (D14 point 5: the real route has no module gate at
+    // all) and 'Analiza biznesowa'/'Wskaźniki biznesowe', whose real routes
+    // require 'appointments', not 'invoices' (D14 point 3). Those two facts
+    // are unchanged — this is a sidebar-only override, not a route change:
+    // a viewer with 'appointments' but not 'invoices' loses the SIDEBAR
+    // entry to those two pages, but their own route guard (unchanged) still
+    // lets them in by direct URL if they have 'appointments'. Deliberate,
+    // scoped to what was asked (hide the section in the sidebar).
+    visible: (ctx) => ctx.hasModuleAccess('invoices'),
     links: [
       {
         label: 'Koszty',

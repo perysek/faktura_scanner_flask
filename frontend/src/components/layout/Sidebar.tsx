@@ -45,13 +45,19 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
 
   // Filter to only the links (and, transitively, only the non-empty
   // sections) the current user may see — recomputed every render, no
-  // separate "admin sidebar config" to keep in sync (§13.5).
+  // separate "admin sidebar config" to keep in sync (§13.5). A section's own
+  // `visible` (when present) is a whole-section AND gate — it drops every
+  // link regardless of each link's individual rule (e.g. Finanse requires
+  // 'invoices' access outright, even for 'Koszty', whose own `visible` is
+  // otherwise unconditional).
   const visibleSections = useMemo(
     () =>
-      NAV_SECTIONS.map((section) => ({
-        ...section,
-        links: section.links.filter((link) => link.visible(ctx)),
-      })).filter((section) => section.links.length > 0),
+      NAV_SECTIONS.filter((section) => section.visible?.(ctx) ?? true)
+        .map((section) => ({
+          ...section,
+          links: section.links.filter((link) => link.visible(ctx)),
+        }))
+        .filter((section) => section.links.length > 0),
     [ctx],
   );
 
