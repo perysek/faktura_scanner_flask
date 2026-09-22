@@ -424,7 +424,7 @@ class TestUserDetail:
 class TestFormOptions:
     def _opts(self, api, actor):
         urepo = MagicMock()
-        urepo.get_available_employees.return_value = [{'id': 1, 'first_name': 'A', 'last_name': 'B'}]
+        urepo.get_available_employees.return_value = [{'id': 1, 'first_name': 'A', 'last_name': 'B', 'email': 'a@test.pl'}]
         with as_user(actor), patch('routes.users.routes._user_repo', return_value=urepo), \
                 patch('routes.users.routes._role_repo', return_value=_role_repo_for('superuser', 'admin', 'stylist')):
             return api.get('/system/users/api/form-options', headers=XHR).get_json()
@@ -440,6 +440,18 @@ class TestFormOptions:
     def test_form_options_roles_carry_permission_summary(self, api):
         roles = self._opts(api, _user('admin'))['roles']
         assert all('permissions' in r and 'appointments' in r['permissions'] for r in roles)
+
+    def test_form_options_available_employees_carry_email(self, api):
+        employees = self._opts(api, _user('admin'))['available_employees']
+        assert employees == [{'id': 1, 'first_name': 'A', 'last_name': 'B', 'email': 'a@test.pl'}]
+
+    def test_form_options_available_employees_email_can_be_null(self, api):
+        urepo = MagicMock()
+        urepo.get_available_employees.return_value = [{'id': 2, 'first_name': 'C', 'last_name': 'D', 'email': None}]
+        with as_user(_user('admin')), patch('routes.users.routes._user_repo', return_value=urepo), \
+                patch('routes.users.routes._role_repo', return_value=_role_repo_for('superuser', 'admin', 'stylist')):
+            data = api.get('/system/users/api/form-options', headers=XHR).get_json()
+        assert data['available_employees'][0]['email'] is None
 
 
 # ─── ISC-22 · user audit rows ────────────────────────────────────────────────

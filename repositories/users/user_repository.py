@@ -225,7 +225,7 @@ class UserRepository(BaseRepository):
         Używane w formularzu tworzenia/edycji użytkownika.
         """
         query = """
-            SELECT id, first_name, last_name
+            SELECT id, first_name, last_name, email
             FROM employees
             WHERE user_id IS NULL AND is_active = TRUE
             ORDER BY last_name, first_name

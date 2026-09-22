@@ -100,7 +100,10 @@ export function UserFormPage({ mode }: Props) {
   }, [auth.user, roles, mode, role]);
 
   const employeeOptions = useMemo(() => {
-    const list = [...availableEmployees];
+    // Only id/first_name/last_name are read below — a plain union lets the
+    // currently-linked employee (no `email` in that API response) sit
+    // alongside the available-employees list (which has it, for autofill).
+    const list: Array<AvailableEmployee | LinkedEmployee> = [...availableEmployees];
     if (mode === 'edit' && linkedEmployee && !list.some((e) => e.id === linkedEmployee.id)) list.unshift(linkedEmployee);
     return list.map((e) => ({
       value: String(e.id),
@@ -110,6 +113,20 @@ export function UserFormPage({ mode }: Props) {
 
   const selectedRole = roles.find((r) => r.name === role);
   const noFreeEmployees = mode === 'create' && !loading && availableEmployees.length === 0;
+
+  /** Create mode only: picking an employee prefills the account's name and
+   * email from that employee's record — both stay editable afterward, and
+   * re-picking a different employee overwrites them again. Edit mode's own
+   * employee select (re-link an existing account) never calls this. */
+  function handleEmployeeSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value;
+    setEmployeeId(value);
+    const emp = availableEmployees.find((x) => String(x.id) === value);
+    if (emp) {
+      setFullName(`${emp.first_name} ${emp.last_name}`);
+      setEmail(emp.email ?? '');
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -193,72 +210,106 @@ export function UserFormPage({ mode }: Props) {
             </div>
           )}
 
-          <FormFieldset legend="Dane konta">
-            <TextField label="Imię i nazwisko" required disabled={loading} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" autoFocus={mode === 'create'} />
-            <TextField label="Email" type="email" required disabled={loading} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-          </FormFieldset>
-
-          {mode === 'create' && (
-            <FormFieldset legend="Hasło">
-              <TextField label="Hasło" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" helper="Minimum 8 znaków" />
-              <TextField label="Potwierdź hasło" type="password" required value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} autoComplete="new-password" />
-            </FormFieldset>
-          )}
-
-          <FormFieldset legend="Dostęp">
-            <SelectField
-              label="Rola"
-              required
-              disabled={loading || isSelf}
-              placeholder="-- Wybierz rolę --"
-              options={roleOptions}
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              helper={isSelf ? 'Nie możesz zmienić własnej roli.' : undefined}
-            />
-            <SelectField
-              label="Powiązany pracownik"
-              required={mode === 'create'}
-              disabled={loading}
-              placeholder={mode === 'create' ? '-- Wybierz pracownika --' : '-- Brak (odepnij od konta) --'}
-              options={employeeOptions}
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              helper={mode === 'create' ? 'Tylko pracownicy bez przypisanego konta.' : 'Wybierz „Brak”, aby odpiąć pracownika od tego konta.'}
-            />
-
-            {selectedRole && (
-              <div className="form-field-full">
-                <span className="form-label">Ta rola daje dostęp do</span>
-                <ModuleChips permissions={selectedRole.permissions} names={moduleNames} />
-              </div>
-            )}
-
-            {noFreeEmployees && (
-              <p className="rbac-note form-field-full">
-                Każdy aktywny pracownik ma już konto.
-                {auth.hasModuleWrite('employees') && (
-                  <>
-                    {' '}
-                    <Link to="/pracownicy/nowy">Dodaj pracownika</Link>, a potem wróć tutaj.
-                  </>
+          {mode === 'create' ? (
+            <>
+              <FormFieldset legend="Pracownik i rola">
+                <SelectField
+                  label="Powiązany pracownik"
+                  required
+                  disabled={loading}
+                  placeholder="-- Wybierz pracownika --"
+                  options={employeeOptions}
+                  value={employeeId}
+                  onChange={handleEmployeeSelect}
+                  helper="Tylko pracownicy bez przypisanego konta. Wypełni imię, nazwisko i email poniżej."
+                  autoFocus
+                />
+                <SelectField
+                  label="Rola"
+                  required
+                  disabled={loading}
+                  placeholder="-- Wybierz rolę --"
+                  options={roleOptions}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                />
+                {noFreeEmployees && (
+                  <p className="rbac-note form-field-full">
+                    Każdy aktywny pracownik ma już konto.
+                    {auth.hasModuleWrite('employees') && (
+                      <>
+                        {' '}
+                        <Link to="/pracownicy/nowy">Dodaj pracownika</Link>, a potem wróć tutaj.
+                      </>
+                    )}
+                  </p>
                 )}
-              </p>
-            )}
+              </FormFieldset>
 
-            {mode === 'edit' && (
-              <div className="form-field-full">
-                <label className="perm-row perm-row--main perm-standalone">
-                  <span className="perm-text">
-                    <span className="perm-flag-label">Konto aktywne</span>
-                    <span className="perm-hint">{isActive ? 'Może się logować' : 'Logowanie zablokowane'}</span>
-                  </span>
-                  <Switch checked={isActive} disabled={loading || isSelf} onChange={(e) => setIsActive(e.target.checked)} aria-label="Konto aktywne" />
-                </label>
-                {isSelf && <span className="form-helper-text">Nie możesz dezaktywować własnego konta.</span>}
-              </div>
-            )}
-          </FormFieldset>
+              <FormFieldset legend="Dane konta">
+                <TextField label="Imię i nazwisko" required disabled={loading} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
+                <TextField label="Email" type="email" required disabled={loading} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                {selectedRole && (
+                  <div className="form-field-full">
+                    <span className="form-label">Ta rola daje dostęp do</span>
+                    <ModuleChips permissions={selectedRole.permissions} names={moduleNames} />
+                  </div>
+                )}
+              </FormFieldset>
+
+              <FormFieldset legend="Hasło">
+                <TextField label="Hasło" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" helper="Minimum 8 znaków" />
+                <TextField label="Potwierdź hasło" type="password" required value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} autoComplete="new-password" />
+              </FormFieldset>
+            </>
+          ) : (
+            <>
+              <FormFieldset legend="Dane konta">
+                <TextField label="Imię i nazwisko" required disabled={loading} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
+                <TextField label="Email" type="email" required disabled={loading} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+              </FormFieldset>
+
+              <FormFieldset legend="Dostęp">
+                <SelectField
+                  label="Rola"
+                  required
+                  disabled={loading || isSelf}
+                  placeholder="-- Wybierz rolę --"
+                  options={roleOptions}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  helper={isSelf ? 'Nie możesz zmienić własnej roli.' : undefined}
+                />
+                <SelectField
+                  label="Powiązany pracownik"
+                  disabled={loading}
+                  placeholder="-- Brak (odepnij od konta) --"
+                  options={employeeOptions}
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  helper="Wybierz „Brak”, aby odpiąć pracownika od tego konta."
+                />
+
+                {selectedRole && (
+                  <div className="form-field-full">
+                    <span className="form-label">Ta rola daje dostęp do</span>
+                    <ModuleChips permissions={selectedRole.permissions} names={moduleNames} />
+                  </div>
+                )}
+
+                <div className="form-field-full">
+                  <label className="perm-row perm-row--main perm-standalone">
+                    <span className="perm-text">
+                      <span className="perm-flag-label">Konto aktywne</span>
+                      <span className="perm-hint">{isActive ? 'Może się logować' : 'Logowanie zablokowane'}</span>
+                    </span>
+                    <Switch checked={isActive} disabled={loading || isSelf} onChange={(e) => setIsActive(e.target.checked)} aria-label="Konto aktywne" />
+                  </label>
+                  {isSelf && <span className="form-helper-text">Nie możesz dezaktywować własnego konta.</span>}
+                </div>
+              </FormFieldset>
+            </>
+          )}
 
           <FormActions submitLabel={mode === 'create' ? 'Utwórz użytkownika' : 'Zapisz zmiany'} isLoading={saving || loading} cancelHref={backTo} />
         </FormCard>

@@ -171,7 +171,7 @@ def api_form_options():
         roles = [r for r in roles if r['name'] != 'superuser']
     return jsonify({
         'success': True,
-        'available_employees': [{'id': e['id'], 'first_name': e['first_name'], 'last_name': e['last_name']} for e in available_employees],
+        'available_employees': [{'id': e['id'], 'first_name': e['first_name'], 'last_name': e['last_name'], 'email': e['email']} for e in available_employees],
         'roles': [{'name': r['name'], 'display_name': r['display_name'],
                    'permissions': role_repo.get_permissions(r['id'])} for r in roles],
         'module_display_names': MODULE_DISPLAY_NAMES,
