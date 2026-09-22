@@ -40,6 +40,7 @@ import { ProfilePage } from './pages/profile/ProfilePage';
 import { RolesListPage } from './pages/rbac/RolesListPage';
 import { RoleFormPage } from './pages/rbac/RoleFormPage';
 import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
+import { AnalyticsDashboardPage } from './pages/analytics/AnalyticsDashboardPage';
 import { DataImportPage } from './pages/dataImport/DataImportPage';
 import { HistoryPage } from './pages/history/HistoryPage';
 import { hasFullEmployeesGrant } from './components/layout/navConfig';
@@ -119,7 +120,7 @@ export const router = createBrowserRouter([
               { path: 'wizyty/nowa', element: <WizytaFormPage mode="create" /> },
               { path: 'wizyty/:id/edytuj', element: <WizytaFormPage mode="edit" /> },
               { path: 'wizyty/:id', element: <WizytaDetailPage /> },
-              { path: 'analiza-biznesowa', element: <ComingSoonPage title="Analiza biznesowa" /> },
+              { path: 'analiza-biznesowa', element: <AnalyticsDashboardPage /> },
               { path: 'wskazniki-biznesowe', element: <KpiMatrixPage /> },
             ],
           },

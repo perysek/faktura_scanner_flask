@@ -1,0 +1,79 @@
+/* "Analiza biznesowa" — page-specific styles. Shared analytics primitives
+ * (.analytics-tabs, .analytics-kpi-*, .analytics-chart-*, .peak-hours-heatmap*)
+ * come from ../employees/EmployeesListPage.css, already the app's one home for
+ * that visual language (used by EmployeeAnalyticsSection's own tabs today). */
+
+.abiz-period-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.abiz-period-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--color-border);
+  background: white;
+  padding: 0.25rem;
+}
+.abiz-period-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border: 1px solid var(--color-border);
+  background: white;
+  padding: 0.25rem;
+}
+
+/* Risk-first "Wymaga uwagi" rail — sits above the tabs so what needs action
+ * today is never buried at the bottom of a scroll (BeCreative concept pick,
+ * 2026-09-22: lead with risk, not section order). */
+.abiz-alert-rail {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+.abiz-alert-pill {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 3px;
+  border: 1px solid;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
+  text-align: left;
+  white-space: nowrap;
+}
+.abiz-alert-pill .icon { width: 1rem; height: 1rem; flex-shrink: 0; }
+.abiz-alert-pill.severity-error   { color: var(--color-error);   border-color: rgba(155,44,44,0.3);  background: rgba(155,44,44,0.06); }
+.abiz-alert-pill.severity-warning { color: var(--color-warning); border-color: rgba(154,103,0,0.3);  background: rgba(154,103,0,0.06); }
+.abiz-alert-pill.severity-ok      { color: var(--color-success); border-color: rgba(45,106,79,0.3);  background: rgba(45,106,79,0.06); }
+
+.abiz-mini-stat-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.75rem; }
+.abiz-mini-stat { flex: 1 1 160px; }
+.abiz-mini-stat-label { font-size: 0.7rem; color: var(--color-ink-subtle); margin-bottom: 0.2rem; }
+.abiz-mini-stat-value { font-size: 1rem; font-weight: 600; color: var(--color-ink); }
+
+.abiz-modal-backdrop {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.abiz-employee-link { color: var(--color-status-scheduled); font-weight: 500; text-decoration: none; }
+.abiz-employee-link:hover { text-decoration: underline; }
+
+.abiz-insight-row { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; border-radius: 3px; border: 1px solid; }
+.abiz-insight-row + .abiz-insight-row { margin-top: 0.6rem; }
+.abiz-insight-icon { flex-shrink: 0; display: inline-flex; font-size: 1.35rem; }
+.abiz-insight-title { font-weight: 600; font-size: 0.9rem; }
+.abiz-insight-message { font-size: 0.85rem; margin-top: 0.15rem; color: var(--color-ink-muted); }
