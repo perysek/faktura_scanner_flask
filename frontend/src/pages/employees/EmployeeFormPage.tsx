@@ -370,7 +370,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                 </div>
               </div>
               {canWrite && (
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
                   <Button type="button" variant="secondary" small icon="restore" onClick={handleResetPin}>
                     Zresetuj PIN
                   </Button>
