@@ -119,6 +119,15 @@ tr:hover .action-icon-btn.danger-reveal,
   border-radius: 2px;
   font-size: 0.75rem;
   font-weight: 500;
+  /* No max-width originally — harmless for short spec names, but the
+     assigned-services pill list (EmployeeDetailPage.tsx, mobile) reuses
+     this exact class for real service names, which can run long. Without
+     a cap a single chip can render wider than the viewport regardless of
+     `.chips-container`'s own flex-wrap (that only spreads MULTIPLE items
+     across rows, it can't shrink one item that's wider than the row by
+     itself) — capped here and allowed to wrap instead. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .chip-remove { background: none; border: none; cursor: pointer; color: #2563eb; font-size: 0.875rem; padding: 0; line-height: 1; }
 .chip-add-row { display: flex; gap: 0.5rem; }
@@ -408,14 +417,21 @@ tr:hover .action-icon-btn.danger-reveal,
    "Aktualizuj preferencje" + "Dodaj pracownika", pulled out of the top
    header and down into the thumb zone, same `.rbac-mobile-cta` shape
    users-list-page uses for its own "Nowy użytkownik" button, now also
-   wired to useHideOnScroll like EmployeeDetailPage's bar below. `min-width:
-   0` on the buttons matters here: without it, "Aktualizuj preferencje"'s
-   own content refuses to shrink below its intrinsic width inside `flex:1`,
-   which was the actual cause of the bar (already bled edge-to-edge on
-   purpose) pushing past the real screen edge on the right. */
+   wired to useHideOnScroll like EmployeeDetailPage's bar below.
+
+   `min-width: 0` alone wasn't enough here — every `.refined-btn-*`
+   (components.css) sets `white-space: nowrap` on its own label, an
+   app-wide rule not safe to touch. `flex: 1` forced "Aktualizuj
+   preferencje" (a much longer label) and "Dodaj pracownika" into an EVEN
+   50/50 split; once that half-share fell below the longer label's nowrap
+   width, its own icon+text spilled past the button's box — nothing left
+   to shrink, since the text itself refuses to wrap or shrink further.
+   Stacking the two buttons instead — each full width, one per row — gives
+   every label its own full line regardless of length, so this can't
+   recur no matter how the copy changes later. */
 .employees-mobile-cta {
   position: sticky; bottom: 0; z-index: 15;
-  display: flex; gap: 0.75rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
   margin: 1rem -1.5rem -1rem;
   padding: 0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
   background: var(--color-surface-elevated);
@@ -423,7 +439,7 @@ tr:hover .action-icon-btn.danger-reveal,
   box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
   transition: transform 0.25s ease;
 }
-.employees-mobile-cta > * { flex: 1; min-width: 0; min-height: 3rem; font-size: 0.9375rem; }
+.employees-mobile-cta > * { width: 100%; min-height: 3rem; font-size: 0.9375rem; }
 .employees-mobile-cta--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
 
 /* Bottom action sheet (Modal variant="sheet") for the "⋯" trigger above —
@@ -480,6 +496,15 @@ tr:hover .action-icon-btn.danger-reveal,
     margin-bottom: 0.875rem;
   }
   .employee-detail-page .section-title--danger { color: var(--color-error); }
+
+  /* "X% — okres od <date>" next to "used / limit unit": a plain inline-
+     style flex row with justify-content: space-between and no wrap — both
+     spans are flex items with the usual default min-width: auto floor, so
+     a long category note plus the usage figure could refuse to shrink and
+     push the row past the card's edge. Inline `style=` never set
+     flex-wrap/min-width, so this external rule can add them cleanly. */
+  .employee-detail-page .balance-meta-row { flex-wrap: wrap; row-gap: 0.125rem; }
+  .employee-detail-page .balance-meta-row > span { min-width: 0; }
 
   /* position: sticky, not fixed — AppShell's `<main id="main-content">` is
      this app's ONLY real scroll region (`.app-shell-content { overflow:
@@ -544,11 +569,19 @@ tr:hover .action-icon-btn.danger-reveal,
      (over the app-shell footer), which is what let it float over page
      content. Sticky is real flow, so no page-level padding-bottom hack is
      needed either — removed the old `calc(76px + …)` rule entirely.
-     `min-width: 0` on the buttons matters too: without it, "Zapisz
-     pracownika"'s own text refused to shrink inside `flex: 1`, which was
-     pushing this bar's total width past the real screen edge (the actual
-     cause of the reported horizontal scroll on this page, not the bar's
-     positioning). */
+
+     `flex: 1` (even 50/50 split) plus `min-width: 0` alone was NOT enough:
+     every `.refined-btn-*` (components.css) hardcodes `white-space: nowrap`
+     on its own label, so shrinking the button's box doesn't shrink its
+     text — "Zapisz pracownika"/"Zapisz zmiany" is much longer than
+     "Anuluj", and once its forced half-share fell below that nowrap
+     width, the label spilled past the button's own edge with nothing
+     left to give. `flex: 1 1 auto` instead sizes each button to its own
+     content first (only sharing genuinely spare space), and `flex-wrap:
+     wrap` is the fallback if the pair still doesn't fit a line — the same
+     content-first-then-wrap approach .chip-add-row already uses above,
+     applied here instead of forcing an even split that ignores how long
+     either label actually is. */
   .employee-form-page .employee-form-actions-wrap {
     position: sticky; bottom: 0; z-index: 15;
     background: var(--color-surface); border-top: 1px solid var(--color-border);
@@ -561,8 +594,8 @@ tr:hover .action-icon-btn.danger-reveal,
      padding-top + border-top divider above the buttons — reset both here
      since the wrapper now owns that "divider between content and bar" job
      (its own border-top + padding), or the two would stack. */
-  .employee-form-page .employee-form-actions-wrap .form-actions { margin: 0; padding-top: 0; border-top: none; }
-  .employee-form-page .employee-form-actions-wrap .form-actions > button { flex: 1; min-width: 0; justify-content: center; }
+  .employee-form-page .employee-form-actions-wrap .form-actions { margin: 0; padding-top: 0; border-top: none; flex-wrap: wrap; }
+  .employee-form-page .employee-form-actions-wrap .form-actions > button { flex: 1 1 auto; min-width: 0; justify-content: center; }
   .employee-form-page .employee-form-actions-wrap--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom))); }
 
   /* Skill rows ("Umiejętności", create mode) were a bare 3-column grid

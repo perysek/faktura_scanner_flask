@@ -326,7 +326,7 @@ export function EmployeeDetailPage() {
                   <div className="balance-bar-track">
                     <div className="balance-bar-fill" style={{ width: `${pct}%`, background: balanceBarColor(b.status) }} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '0.25rem' }}>
+                  <div className="balance-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '0.25rem' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-ink-subtle)' }}>
                       {b.has_limit ? `${b.pct.toFixed(1)}%` : 'Brak limitu'} — okres od {b.period_start || ''}
                     </span>
