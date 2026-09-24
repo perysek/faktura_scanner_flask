@@ -3,6 +3,7 @@ import type { TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
+import { Modal } from '../../components/ui/Modal';
 import type { BalanceSummaryEntry, EmployeeListRow } from '../../types/employee';
 
 /** Same mechanics as MobileWizytyCalendarView's card swipe (TASK5/TASK3 there)
@@ -52,6 +53,7 @@ export interface MobileEmployeesListViewProps {
 export function MobileEmployeesListView({ employees, loading, error, balances, canWrite }: MobileEmployeesListViewProps) {
   const navigate = useNavigate();
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
+  const [sheetTarget, setSheetTarget] = useState<EmployeeListRow | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
   const suppressClickRef = useRef<number | null>(null);
 
@@ -169,7 +171,22 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
                     <span className="mob-emp-position">{emp.position || '—'}</span>
                   </div>
                 </div>
-                <span className={`status-badge ${badge.cls}`}>{badge.label}</span>
+                <div className="mob-emp-top-actions">
+                  <span className={`status-badge ${badge.cls}`}>{badge.label}</span>
+                  {canWrite && (
+                    <button
+                      type="button"
+                      className="mob-emp-more"
+                      aria-label={`Akcje: ${emp.full_name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSheetTarget(emp);
+                      }}
+                    >
+                      <Icon name="more_horiz" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="mob-emp-row mob-emp-meta-row">
@@ -198,6 +215,41 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
           </div>
         );
       })}
+
+      <Modal isOpen={sheetTarget !== null} onClose={() => setSheetTarget(null)} title={sheetTarget?.full_name ?? ''} variant="sheet">
+        {sheetTarget && (
+          <ul className="action-sheet">
+            <li>
+              <button
+                type="button"
+                className="action-sheet-item"
+                onClick={() => {
+                  const id = sheetTarget.id;
+                  setSheetTarget(null);
+                  navigate(`/pracownicy/${id}`);
+                }}
+              >
+                <Icon name="badge" /> Zobacz szczegóły
+              </button>
+            </li>
+            {canWrite && (
+              <li>
+                <button
+                  type="button"
+                  className="action-sheet-item"
+                  onClick={() => {
+                    const id = sheetTarget.id;
+                    setSheetTarget(null);
+                    navigate(`/pracownicy/${id}/edytuj`);
+                  }}
+                >
+                  <Icon name="edit" /> Edytuj pracownika
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+      </Modal>
     </div>
   );
 }

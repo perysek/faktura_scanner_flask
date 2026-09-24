@@ -338,8 +338,14 @@ export function EmployeeDetailPage() {
         {adjOpen && (
           <div style={{ marginTop: '1rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '1rem' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-ink-subtle)', marginBottom: '0.5rem' }}>Historia korekt bilansu</div>
+            {/* `stack-cards` (the same opt-in the assigned-services table below
+                uses) turns each row into its own card at ≤640px instead of
+                relying on `.scroll-thin`'s bare `overflow: auto` — which gave
+                this 5-column table its own internal horizontal scrollbar on
+                phones, exactly the "slider inside a card" look this pass was
+                called in to remove. */}
             <div className="scroll-thin" style={{ maxHeight: '280px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+            <table className="refined-table stack-cards" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
               <thead>
                 <tr>
                   {['Kategoria', 'Korekta', 'Powód', 'Kto', 'Kiedy'].map((h) => (
@@ -367,27 +373,27 @@ export function EmployeeDetailPage() {
               <tbody>
                 {adjLoading ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '0.5rem', color: 'var(--color-ink-subtle)' }}>
+                    <td colSpan={5} className="cell-empty" style={{ padding: '0.5rem', color: 'var(--color-ink-subtle)' }}>
                       Ładowanie…
                     </td>
                   </tr>
                 ) : !adjustments || adjustments.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '0.5rem', color: 'var(--color-ink-subtle)' }}>
+                    <td colSpan={5} className="cell-empty" style={{ padding: '0.5rem', color: 'var(--color-ink-subtle)' }}>
                       Brak korekt.
                     </td>
                   </tr>
                 ) : (
                   adjustments.map((a) => (
                     <tr key={a.id}>
-                      <td style={{ padding: '0.375rem 0.5rem' }}>{a.category_name}</td>
-                      <td style={{ padding: '0.375rem 0.5rem', fontVariantNumeric: 'tabular-nums' }}>
+                      <td className="cell-name" data-label="Kategoria" style={{ padding: '0.375rem 0.5rem' }}>{a.category_name}</td>
+                      <td data-label="Korekta" style={{ padding: '0.375rem 0.5rem', fontVariantNumeric: 'tabular-nums' }}>
                         {a.delta_value > 0 ? '+' : ''}
                         {a.delta_value.toFixed(1)}
                       </td>
-                      <td style={{ padding: '0.375rem 0.5rem' }}>{a.reason}</td>
-                      <td style={{ padding: '0.375rem 0.5rem', color: 'var(--color-ink-subtle)' }}>{a.created_by_name || '—'}</td>
-                      <td style={{ padding: '0.375rem 0.5rem', color: 'var(--color-ink-subtle)' }}>{a.created_at ? new Date(a.created_at).toLocaleDateString('pl-PL') : '—'}</td>
+                      <td data-label="Powód" style={{ padding: '0.375rem 0.5rem' }}>{a.reason}</td>
+                      <td data-label="Kto" style={{ padding: '0.375rem 0.5rem', color: 'var(--color-ink-subtle)' }}>{a.created_by_name || '—'}</td>
+                      <td data-label="Kiedy" style={{ padding: '0.375rem 0.5rem', color: 'var(--color-ink-subtle)' }}>{a.created_at ? new Date(a.created_at).toLocaleDateString('pl-PL') : '—'}</td>
                     </tr>
                   ))
                 )}

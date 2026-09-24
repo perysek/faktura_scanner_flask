@@ -349,17 +349,58 @@ tr:hover .action-icon-btn.danger-reveal,
 .mob-emp-name { font-size: 1.0625rem; font-weight: 600; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mob-emp-position { font-size: 0.8125rem; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Status badge + "⋯" more-actions trigger share the card's top-right corner.
+   The trigger is the swipe-right→Edytuj gesture's non-gesture equivalent —
+   users-list-page's own `.user-card-more` never made you discover a swipe
+   to reach it, and this card shouldn't require one either (Guidelines
+   §Gestures: "Always provide non-gesture alternatives"). */
+.mob-emp-top-actions { display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0; }
+.mob-emp-more {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 3rem; min-height: 3rem; margin: -0.625rem -0.75rem -0.625rem 0;
+  font-size: 1.25rem; color: var(--color-ink-muted);
+  background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer;
+}
+.mob-emp-more:active { background: var(--color-surface); }
+
 .mob-emp-row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; flex-wrap: wrap; }
 .mob-emp-meta-row { justify-content: space-between; }
 .mob-emp-phone-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2rem; height: 2rem; margin-left: auto; flex-shrink: 0; border-radius: var(--radius-sm);
+  width: 3rem; min-height: 3rem; margin: -0.5rem -0.5rem -0.5rem auto; flex-shrink: 0; border-radius: var(--radius-sm);
   color: var(--color-ink-subtle); text-decoration: none;
 }
 .mob-emp-phone-btn .icon { width: 1.125rem; height: 1.125rem; }
 .mob-emp-phone-btn:active { background: var(--color-surface); color: var(--color-ink); }
 
 .mob-emp-tap-hint { position: absolute; right: 0.375rem; bottom: 0.5rem; width: 0.875rem; height: 0.875rem; color: var(--color-ink-subtle); opacity: 0.6; }
+
+/* Bottom action sheet (Modal variant="sheet") for the "⋯" trigger above —
+   same visual language as rbac-page's own `.action-sheet` (RbacPages.css),
+   duplicated here rather than shared because this module owns one
+   stylesheet per DESIGN.md convention (see file header) and the two never
+   load on the same page. */
+.employees-page .action-sheet { list-style: none; margin: 0; padding: 0; }
+.employees-page .action-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 0.25rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--color-ink);
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.employees-page .action-sheet-item .icon { font-size: 1.25rem; color: var(--color-ink-muted); }
+.employees-page .action-sheet-item:active { background: var(--color-surface); }
+.employees-page .action-sheet li + li { border-top: 1px solid var(--color-border-subtle); }
 
 /* ── Mobile Pracownik detail (EmployeeDetailPage.tsx) ──────────────────
    New bespoke mobile chrome, CSS-only (no JSX changes) — the existing
@@ -442,4 +483,29 @@ tr:hover .action-icon-btn.danger-reveal,
     padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
   }
   .employee-form-page .form-actions > button { flex: 1; justify-content: center; }
+
+  /* Skill rows ("Umiejętności", create mode) were a bare 3-column grid
+     (name input | rating select, pinned to a 160px min-width | remove
+     button) with no responsive fallback — unlike every other multi-column
+     row on this page (.schedule-row, .assign-form-row), which already got
+     one. On a phone that 160px floor plus the name input's own content
+     width push the row past the right edge, producing the horizontal
+     overflow this pass was called in to fix. Restack: name input on its
+     own full-width row, rating + remove button sharing the row below —
+     `!important` is needed only for the select because its 160px floor is
+     an inline style (React `style=`), which normal cascade specificity
+     can't out-rank. */
+  .employee-form-page .skill-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+  .employee-form-page .skill-row input.form-input { grid-column: 1 / -1; grid-row: 1; }
+  .employee-form-page .skill-row select.form-select { grid-column: 1; grid-row: 2; min-width: 0 !important; width: 100%; }
+  .employee-form-page .skill-row .skill-remove-btn { grid-column: 2; grid-row: 2; }
+
+  /* Spec chip-add row ("Specjalizacje", create mode): input capped at
+     260px + an inline "Dodaj" button, same unguarded flex row. Letting it
+     wrap is enough — the capped input already fits, only the button needs
+     somewhere to fall back to instead of forcing extra width. */
+  .employee-form-page .chip-add-row { flex-wrap: wrap; }
 }
