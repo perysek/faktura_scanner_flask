@@ -188,17 +188,34 @@ export function EmployeesListPage() {
           <h1 className="page-title">Pracownicy</h1>
           <p className="page-subtitle">Zarządzanie personelem salonu</p>
         </div>
-        <div className="page-header-actions">
-          <Button variant="secondary" icon="sync" isLoading={bulkUpdating} loadingText="Aktualizowanie…" onClick={handleBulkUpdate}>
-            Aktualizuj preferencje
-          </Button>
-          {auth.hasModuleWrite('employees') && (
-            <ButtonLink variant="primary" icon="add" to="/pracownicy/nowy">
-              Dodaj pracownika
-            </ButtonLink>
-          )}
-        </div>
+        {!isMobile && (
+          <div className="page-header-actions">
+            <Button variant="secondary" icon="sync" isLoading={bulkUpdating} loadingText="Aktualizowanie…" onClick={handleBulkUpdate}>
+              Aktualizuj preferencje
+            </Button>
+            {auth.hasModuleWrite('employees') && (
+              <ButtonLink variant="primary" icon="add" to="/pracownicy/nowy">
+                Dodaj pracownika
+              </ButtonLink>
+            )}
+          </div>
+        )}
       </header>
+
+      {isMobile && (
+        <div className="employees-mobile-search">
+          <div className="search-input-wrap">
+            <input type="text" className="refined-input" placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            {search && (
+              <button type="button" className="search-clear-btn" aria-label="Wyczyść wyszukiwanie" onClick={() => setSearch('')}>
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -245,33 +262,35 @@ export function EmployeesListPage() {
         </div>
       </div>
 
-      <div className="search-card">
-        <div className="search-wrapper">
-          <div className="search-input-wrap">
-            <input type="text" className="refined-input" placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            {search && (
-              <button type="button" className="search-clear-btn" aria-label="Wyczyść wyszukiwanie" onClick={() => setSearch('')}>
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+      {!isMobile && (
+        <div className="search-card">
+          <div className="search-wrapper">
+            <div className="search-input-wrap">
+              <input type="text" className="refined-input" placeholder="Szukaj po imieniu, nazwisku, telefonie lub emailu..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              {search && (
+                <button type="button" className="search-clear-btn" aria-label="Wyczyść wyszukiwanie" onClick={() => setSearch('')}>
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <select className="form-select" aria-label="Filtruj według stanowiska" style={{ minWidth: '180px' }} value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)}>
+              <option value="">Wszystkie stanowiska</option>
+              {(positionsState.data ?? []).map((pos) => (
+                <option key={pos} value={pos}>
+                  {pos}
+                </option>
+              ))}
+            </select>
+            <select className="form-select" aria-label="Filtruj według statusu" style={{ minWidth: '150px' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">Wszystkie statusy</option>
+              <option value="active">Aktywni</option>
+              <option value="inactive">Nieaktywni</option>
+            </select>
           </div>
-          <select className="form-select" aria-label="Filtruj według stanowiska" style={{ minWidth: '180px' }} value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)}>
-            <option value="">Wszystkie stanowiska</option>
-            {(positionsState.data ?? []).map((pos) => (
-              <option key={pos} value={pos}>
-                {pos}
-              </option>
-            ))}
-          </select>
-          <select className="form-select" aria-label="Filtruj według statusu" style={{ minWidth: '150px' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">Wszystkie statusy</option>
-            <option value="active">Aktywni</option>
-            <option value="inactive">Nieaktywni</option>
-          </select>
         </div>
-      </div>
+      )}
 
       {isMobile ? (
         <MobileEmployeesListView
@@ -377,6 +396,19 @@ export function EmployeesListPage() {
           </tbody>
         </table>
       </div>
+      )}
+
+      {isMobile && (
+        <div className="employees-mobile-cta">
+          <Button variant="secondary" icon="sync" isLoading={bulkUpdating} loadingText="Aktualizowanie…" onClick={handleBulkUpdate}>
+            Aktualizuj preferencje
+          </Button>
+          {auth.hasModuleWrite('employees') && (
+            <ButtonLink variant="primary" icon="add" to="/pracownicy/nowy">
+              Dodaj pracownika
+            </ButtonLink>
+          )}
+        </div>
       )}
 
       {hardDeleteTarget && (

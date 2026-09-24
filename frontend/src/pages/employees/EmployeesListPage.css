@@ -5,6 +5,15 @@
 .employees-page { max-width: 1400px; margin: 0 auto; }
 .page-header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
+/* Phone-only search bar (EmployeesListPage.tsx, isMobile branch): the free
+   -text field pulled out of `.search-card`/`.search-wrapper` and placed
+   right under the subtitle, full viewport width — the position/status
+   selects stay desktop-only (kept fully functional there; just not
+   rendered here). `.search-input-wrap` is the same class the desktop
+   search-card uses, so the input keeps the exact same height. */
+.employees-mobile-search { margin-bottom: 1rem; }
+.employees-mobile-search .search-input-wrap { min-width: 0; }
+
 .search-input-wrap { position: relative; flex: 1; min-width: 220px; }
 .search-input-wrap input { width: 100%; }
 .search-clear-btn {
@@ -331,10 +340,24 @@ tr:hover .action-icon-btn.danger-reveal,
 .mob-emp-swipe-content--right { left: -7.5rem; color: var(--color-success); }
 .mob-emp-swipe-label { width: 4.25rem; font-size: 0.9375rem; font-weight: 400; line-height: 1.15; text-align: center; white-space: normal; }
 
+/* Card shape is now a deliberate design-copy of users-list-page's
+   `.user-card`/`.user-card-main`: one flex row (identity block left,
+   actions column right), same 4rem min-height floor, same
+   overflow-wrap:anywhere name treatment (a long name wraps to a second
+   line instead of the old white-space:nowrap + ellipsis, which is what
+   was stripping names down to "..."). Status badge/rating/balance, which
+   used to live in a separate full-width row below, now sit in
+   `.mob-emp-meta` directly under the name — the same "meta chips under
+   the name" placement `.user-card-meta` uses. The old `.mob-emp-tap-hint`
+   chevron is gone: it was there to hint the card was tappable when the
+   only way to reach Edytuj was an undiscoverable swipe; the explicit "⋯"
+   button below already signals that now, same as users-list-page never
+   needed a chevron either. */
 .mob-emp-card {
   position: relative; z-index: 1;
+  display: flex; align-items: stretch; gap: 0.5rem;
   background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 3px;
-  padding: 0.75rem 1.375rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; cursor: pointer;
+  padding: 0.875rem 0.5rem 0.875rem 0.875rem; cursor: pointer;
   transition: transform 0.2s ease, background 0.15s ease;
 }
 .mob-emp-card:active { background: var(--color-surface); }
@@ -342,38 +365,52 @@ tr:hover .action-icon-btn.danger-reveal,
 .mob-emp-card--swipe-armed { background: rgba(30, 96, 145, 0.06); border-color: var(--color-info, #1e6091); }
 .mob-emp-card--swipe-armed-right { background: rgba(45, 106, 79, 0.06); border-color: var(--color-success); }
 
-.mob-emp-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
-.mob-emp-identity { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
-.mob-emp-avatar { width: 2.5rem; height: 2.5rem; font-size: 0.875rem; }
-.mob-emp-name-wrap { display: flex; flex-direction: column; min-width: 0; }
-.mob-emp-name { font-size: 1.0625rem; font-weight: 600; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-emp-identity { display: flex; align-items: flex-start; gap: 0.75rem; min-width: 0; min-height: 4rem; flex: 1; }
+.mob-emp-avatar { width: 2.5rem; height: 2.5rem; font-size: 0.875rem; flex-shrink: 0; margin-top: 0.125rem; }
+.mob-emp-name-wrap { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; padding-top: 0.125rem; }
+.mob-emp-name { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
 .mob-emp-position { font-size: 0.8125rem; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-emp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.125rem; font-size: 0.8125rem; }
 
-/* Status badge + "⋯" more-actions trigger share the card's top-right corner.
-   The trigger is the swipe-right→Edytuj gesture's non-gesture equivalent —
-   users-list-page's own `.user-card-more` never made you discover a swipe
-   to reach it, and this card shouldn't require one either (Guidelines
-   §Gestures: "Always provide non-gesture alternatives"). */
-.mob-emp-top-actions { display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0; }
+/* Phone-call + "⋯" actions, stacked in a column on the card's right edge —
+   the two-action equivalent of `.user-card-more` sitting alone there.
+   The trigger is also the swipe-right→Edytuj gesture's non-gesture
+   equivalent — users-list-page's own more-button never made you discover
+   a swipe to reach it, and this card shouldn't require one either
+   (Guidelines §Gestures: "Always provide non-gesture alternatives"). */
+.mob-emp-actions { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin: -0.5rem -0.5rem -0.5rem 0; }
+.mob-emp-phone-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 3rem; min-height: 3rem; flex-shrink: 0; border-radius: var(--radius-sm);
+  color: var(--color-ink-subtle); text-decoration: none;
+}
+.mob-emp-phone-btn .icon { width: 1.125rem; height: 1.125rem; }
+.mob-emp-phone-btn:active { background: var(--color-surface); color: var(--color-ink); }
 .mob-emp-more {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 3rem; min-height: 3rem; margin: -0.625rem -0.75rem -0.625rem 0;
+  width: 3rem; min-height: 3rem; flex-shrink: 0;
   font-size: 1.25rem; color: var(--color-ink-muted);
   background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer;
 }
 .mob-emp-more:active { background: var(--color-surface); }
 
-.mob-emp-row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; flex-wrap: wrap; }
-.mob-emp-meta-row { justify-content: space-between; }
-.mob-emp-phone-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 3rem; min-height: 3rem; margin: -0.5rem -0.5rem -0.5rem auto; flex-shrink: 0; border-radius: var(--radius-sm);
-  color: var(--color-ink-subtle); text-decoration: none;
+/* List-page sticky bottom bar (EmployeesListPage.tsx, isMobile branch) —
+   "Aktualizuj preferencje" + "Dodaj pracownika", pulled out of the top
+   header and down into the thumb zone, same `.rbac-mobile-cta` shape
+   users-list-page uses for its own "Nowy użytkownik" button (plain
+   position: sticky, no scroll-direction motion — that behavior doesn't
+   exist on that reference page either, see EmployeeDetailPage's own
+   `.employee-mobile-action-bar` below for where a new one was built). */
+.employees-mobile-cta {
+  position: sticky; bottom: 0; z-index: 15;
+  display: flex; gap: 0.75rem;
+  margin: 1rem -1.5rem -1rem;
+  padding: 0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  background: var(--color-surface-elevated);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
 }
-.mob-emp-phone-btn .icon { width: 1.125rem; height: 1.125rem; }
-.mob-emp-phone-btn:active { background: var(--color-surface); color: var(--color-ink); }
-
-.mob-emp-tap-hint { position: absolute; right: 0.375rem; bottom: 0.5rem; width: 0.875rem; height: 0.875rem; color: var(--color-ink-subtle); opacity: 0.6; }
+.employees-mobile-cta > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
 
 /* Bottom action sheet (Modal variant="sheet") for the "⋯" trigger above —
    same visual language as rbac-page's own `.action-sheet` (RbacPages.css),
@@ -403,14 +440,16 @@ tr:hover .action-icon-btn.danger-reveal,
 .employees-page .action-sheet li + li { border-top: 1px solid var(--color-border-subtle); }
 
 /* ── Mobile Pracownik detail (EmployeeDetailPage.tsx) ──────────────────
-   New bespoke mobile chrome, CSS-only (no JSX changes) — the existing
-   desktop markup (`.page-header`, `.refined-card` sections, `.action-bar`)
-   is restructured at ≤640px into: a centered profile-style header, tighter
-   card padding that stacks with real gaps (desktop has none — out of scope
-   to fix there), and the bottom "Akcje" block promoted to a fixed,
-   safe-area-aware thumb-zone bar — `.mob-fixed-nav`'s own pattern
-   (Appointments.css) applied to plain <Button>/<ButtonLink> children
-   instead of custom nav buttons. */
+   Bespoke mobile chrome: centered profile-style header, tighter card
+   padding that stacks with real gaps (desktop has none — out of scope to
+   fix there). `.action-bar` (the original 3-button desktop row: Edytuj +
+   Powrót + Dezaktywuj) is now desktop-only — JS-gated in the component,
+   not CSS-hidden — because cramming all three into one fixed bar is what
+   was pushing the bar tall enough to cover the last section's content.
+   Mobile instead gets `.section-title--danger`'s "Strefa ryzyka" card
+   (Dezaktywuj/Usuń, same in-content placement UserDetailPage.tsx's own
+   mobile block uses for its danger action) plus `.employee-mobile-action-bar`
+   below, holding just the one primary action. */
 @media (max-width: 640px) {
   .employee-detail-page .page-header {
     flex-direction: column;
@@ -426,28 +465,27 @@ tr:hover .action-icon-btn.danger-reveal,
     border-radius: 3px;
     margin-bottom: 0.875rem;
   }
+  .employee-detail-page .section-title--danger { color: var(--color-error); }
 
   /* Clears the fixed action bar below (~64px + safe-area) so the last
      card's content is never hidden underneath it. */
   .employee-detail-page { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 
-  /* The "Akcje" .refined-card only ever wraps .action-bar (EmployeeDetailPage.tsx) —
-     its own chrome (border/padding/shadow) is stripped so it doesn't leave a
-     collapsed empty box once .action-bar becomes position:fixed below and
-     exits its parent's layout flow. */
-  .employee-detail-page .refined-card:has(> .action-bar) {
-    background: none; border: none; box-shadow: none; padding: 0; margin-bottom: 0;
-  }
-  .employee-detail-page .action-bar {
+  /* First bar in the app to hide-on-scroll-down / reveal-on-scroll-up
+     (useHideOnScroll) — confirmed before building it that no existing bar,
+     including user-view/user-edit's own, already does this; see the hook's
+     own docstring. */
+  .employee-detail-page .employee-mobile-action-bar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    display: flex; gap: 0.5rem;
-    margin: 0;
     background: var(--color-surface); border-top: 1px solid var(--color-border);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
     padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
+    transition: transform 0.25s ease;
   }
-  .employee-detail-page .action-bar > a,
-  .employee-detail-page .action-bar > button { flex: 1; justify-content: center; }
+  .employee-detail-page .employee-mobile-action-bar > a { display: flex; justify-content: center; width: 100%; }
+  .employee-detail-page .employee-mobile-action-bar--hidden {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+  }
 }
 
 /* ── Mobile Pracownik create/edit (EmployeeFormPage.tsx) ───────────────

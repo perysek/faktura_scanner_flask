@@ -163,45 +163,43 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
               onTouchMove={(e) => handleCardTouchMove(emp.id, e)}
               onTouchEnd={() => handleCardTouchEnd(emp)}
             >
-              <div className="mob-emp-top">
-                <div className="mob-emp-identity">
-                  <div className="employee-avatar mob-emp-avatar">{initials}</div>
-                  <div className="mob-emp-name-wrap">
-                    <span className="mob-emp-name">{emp.full_name}</span>
-                    <span className="mob-emp-position">{emp.position || '—'}</span>
+              <div className="mob-emp-identity">
+                <div className="employee-avatar mob-emp-avatar">{initials}</div>
+                <div className="mob-emp-name-wrap">
+                  <span className="mob-emp-name">{emp.full_name}</span>
+                  <span className="mob-emp-position">{emp.position || '—'}</span>
+                  <div className="mob-emp-meta">
+                    <span className={`status-badge ${badge.cls}`}>{badge.label}</span>
+                    {emp.avg_satisfaction != null ? (
+                      <span className={ratingClass(emp.avg_satisfaction)}>
+                        ★ {emp.avg_satisfaction.toFixed(1)} <span className="rating-count">({emp.rated_count})</span>
+                      </span>
+                    ) : (
+                      <span className="dim">Brak ocen</span>
+                    )}
+                    {balance && balance.status !== 'unlimited' && (
+                      <span className={balance.status === 'exceeded' ? 'balance-exceeded' : balance.status === 'warning' ? 'balance-warning' : 'balance-ok'}>
+                        {Math.round(balance.used)}/{balance.limit}
+                        {balance.unit === 'hours' ? 'h' : 'd'} urlopu
+                      </span>
+                    )}
                   </div>
-                </div>
-                <div className="mob-emp-top-actions">
-                  <span className={`status-badge ${badge.cls}`}>{badge.label}</span>
-                  {canWrite && (
-                    <button
-                      type="button"
-                      className="mob-emp-more"
-                      aria-label={`Akcje: ${emp.full_name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSheetTarget(emp);
-                      }}
-                    >
-                      <Icon name="more_horiz" />
-                    </button>
-                  )}
                 </div>
               </div>
 
-              <div className="mob-emp-row mob-emp-meta-row">
-                {emp.avg_satisfaction != null ? (
-                  <span className={ratingClass(emp.avg_satisfaction)}>
-                    ★ {emp.avg_satisfaction.toFixed(1)} <span className="rating-count">({emp.rated_count})</span>
-                  </span>
-                ) : (
-                  <span className="dim">Brak ocen</span>
-                )}
-                {balance && balance.status !== 'unlimited' && (
-                  <span className={balance.status === 'exceeded' ? 'balance-exceeded' : balance.status === 'warning' ? 'balance-warning' : 'balance-ok'}>
-                    {Math.round(balance.used)}/{balance.limit}
-                    {balance.unit === 'hours' ? 'h' : 'd'} urlopu
-                  </span>
+              <div className="mob-emp-actions">
+                {canWrite && (
+                  <button
+                    type="button"
+                    className="mob-emp-more"
+                    aria-label={`Akcje: ${emp.full_name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSheetTarget(emp);
+                    }}
+                  >
+                    <Icon name="more_horiz" />
+                  </button>
                 )}
                 {emp.phone && (
                   <a className="mob-emp-phone-btn" href={telHref(emp.phone)} title={formatPhone(emp.phone)} aria-label={`Zadzwoń: ${formatPhone(emp.phone)}`} onClick={(e) => e.stopPropagation()}>
@@ -209,8 +207,6 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
                   </a>
                 )}
               </div>
-
-              <Icon name="chevron_right" className="mob-emp-tap-hint" />
             </div>
           </div>
         );

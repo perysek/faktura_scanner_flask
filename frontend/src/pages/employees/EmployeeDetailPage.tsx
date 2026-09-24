@@ -14,8 +14,10 @@ import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatPLN } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useEscapeClose } from '../../lib/a11y/useEscapeClose';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { useAuth } from '../../contexts/AuthContext';
 import { EmployeeAnalyticsSection } from './EmployeeAnalyticsSection';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
 import type { BalanceAdjustment } from '../../types/employee';
 import type { Service } from '../../types/service';
 
@@ -58,6 +60,8 @@ export function EmployeeDetailPage() {
   const confirm = useConfirm();
   const { isSuperuser, hasModuleWrite } = useAuth();
   const canEditEmployees = hasModuleWrite('employees');
+  const isMobile = useIsMobile(640);
+  const mobileBarHidden = useHideOnScroll();
   useEscapeBack('/pracownicy');
 
   const employeeState = useApiData(() => employeesApi.get(employeeId), [employeeId]);
@@ -335,7 +339,7 @@ export function EmployeeDetailPage() {
             })}
           </div>
         )}
-        {adjOpen && (
+        {!isMobile && adjOpen && (
           <div style={{ marginTop: '1rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '1rem' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-ink-subtle)', marginBottom: '0.5rem' }}>Historia korekt bilansu</div>
             {/* `stack-cards` (the same opt-in the assigned-services table below
@@ -402,11 +406,13 @@ export function EmployeeDetailPage() {
             </div>
           </div>
         )}
-        <div style={{ marginTop: '0.75rem' }}>
-          <Button variant="secondary" small icon="history" onClick={toggleAdjHistory}>
-            Historia korekt
-          </Button>
-        </div>
+        {!isMobile && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <Button variant="secondary" small icon="history" onClick={toggleAdjHistory}>
+              Historia korekt
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Umiejętności i specjalizacje */}
@@ -526,6 +532,26 @@ export function EmployeeDetailPage() {
             <Icon name="content_cut" className="empty-icon" />
             <p className="empty-text">Brak przypisanych usług</p>
           </div>
+        ) : isMobile ? (
+          /* Pill list instead of the desktop table: reuses the exact
+             `.chips-container`/`.chip`/`.chip-remove` classes the
+             "Specjalizacje" section already established, soft-wraps, and
+             has no maxHeight — the wrapper grows with content instead of
+             being a fixed-height scroll box. */
+          <div className="chips-container">
+            {assignedServices.map((svc) => {
+              const isCustom = svc.custom_price != null;
+              const price = svc.effective_price != null ? svc.effective_price.toFixed(2) : '0.00';
+              return (
+                <span className="chip" key={svc.id}>
+                  {svc.service_name} · <span className={isCustom ? 'price-custom' : 'price-default'}>{price} zł</span>
+                  <button type="button" className="chip-remove" aria-label={`Usuń usługę: ${svc.service_name}`} onClick={() => handleRemoveService(svc.id)}>
+                    ×
+                  </button>
+                </span>
+              );
+            })}
+          </div>
         ) : (
           <div className="table-container" style={{ maxHeight: '420px' }}>
           <table className="refined-table stack-cards">
@@ -580,25 +606,53 @@ export function EmployeeDetailPage() {
       )}
 
       {/* Analizy i wyniki — superuser-only (2026-09-16 temporary field-test patch,
-          mirrors the Jinja view.html gate) */}
-      {isSuperuser && <EmployeeAnalyticsSection employeeId={employee.id} />}
+          mirrors the Jinja view.html gate), desktop-only on top of that: the
+          5-tab/8-chart/heatmap/radar dashboard doesn't fit a phone screen
+          usefully — still fully intact and reachable on desktop. */}
+      {isSuperuser && !isMobile && <EmployeeAnalyticsSection employeeId={employee.id} />}
 
-      {/* Akcje */}
-      <div className="refined-card">
-        <div className="action-bar">
-          {canEditEmployees && (
-            <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
-              Edytuj pracownika
+      {/* Akcje — desktop keeps the original single in-flow bar untouched.
+          Mobile splits it the way user-view's own mobile block does: the
+          risky/secondary action (Dezaktywuj/Usuń) moves into a "Strefa
+          ryzyka" card in the normal content flow, and the fixed thumb-zone
+          bar underneath is left holding just the one primary action
+          (Edytuj) — a single button needs far less bar height than three
+          ever did, which is what was letting it ride up over the last
+          section's content. */}
+      {!isMobile && (
+        <div className="refined-card">
+          <div className="action-bar">
+            {canEditEmployees && (
+              <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
+                Edytuj pracownika
+              </ButtonLink>
+            )}
+            <ButtonLink variant="secondary" icon="arrow_back" to="/pracownicy">
+              Powrót do listy
             </ButtonLink>
-          )}
-          <ButtonLink variant="secondary" icon="arrow_back" to="/pracownicy">
-            Powrót do listy
-          </ButtonLink>
-          <Button variant="danger" icon="delete" onClick={handleDeactivate}>
-            {employee.is_active ? 'Dezaktywuj' : 'Usuń'}
+            <Button variant="danger" icon="delete" onClick={handleDeactivate}>
+              {employee.is_active ? 'Dezaktywuj' : 'Usuń'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isMobile && (
+        <div className="refined-card">
+          <h2 className="section-title section-title--danger">Strefa ryzyka</h2>
+          <Button variant="danger" icon="delete" onClick={handleDeactivate} style={{ width: '100%' }}>
+            {employee.is_active ? 'Dezaktywuj pracownika' : 'Usuń pracownika'}
           </Button>
         </div>
-      </div>
+      )}
+
+      {isMobile && canEditEmployees && (
+        <div className={`employee-mobile-action-bar${mobileBarHidden ? ' employee-mobile-action-bar--hidden' : ''}`}>
+          <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
+            Edytuj pracownika
+          </ButtonLink>
+        </div>
+      )}
     </div>
   );
 }
