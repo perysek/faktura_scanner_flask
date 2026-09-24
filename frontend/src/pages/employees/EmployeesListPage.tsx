@@ -11,6 +11,7 @@ import { Button, ButtonLink } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Icon } from '../../lib/icons/Icon';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { MobileEmployeesListView } from './MobileEmployeesListView';
 import type { BalanceSummaryEntry, EmployeeListRow } from '../../types/employee';
 
@@ -52,6 +53,7 @@ export function EmployeesListPage() {
   const toast = useToast();
   const isSuperuser = auth.user?.role === 'superuser';
   const isMobile = useIsMobile(640);
+  const mobileCtaHidden = useHideOnScroll();
 
   const initial = useMemo(() => {
     try {
@@ -399,7 +401,7 @@ export function EmployeesListPage() {
       )}
 
       {isMobile && (
-        <div className="employees-mobile-cta">
+        <div className={`employees-mobile-cta${mobileCtaHidden ? ' employees-mobile-cta--hidden' : ''}`}>
           <Button variant="secondary" icon="sync" isLoading={bulkUpdating} loadingText="Aktualizowanie…" onClick={handleBulkUpdate}>
             Aktualizuj preferencje
           </Button>

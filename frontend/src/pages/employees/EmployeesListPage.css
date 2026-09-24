@@ -137,7 +137,17 @@ tr:hover .action-icon-btn.danger-reveal,
 }
 .schedule-time:disabled { background: var(--color-surface-warm); color: var(--color-ink-subtle); }
 @media (max-width: 640px) {
-  .schedule-row { grid-template-columns: 1fr 6rem 6rem; column-gap: 0.4rem; }
+  /* Was still a grid with two 6rem time-input tracks squeezed alongside
+     the day-label column — a real `<input type="time">` doesn't reliably
+     render that narrow on phones, so it overflowed the row (and the
+     viewport) regardless of the track width. Switched to flex-wrap: the
+     label (`flex-basis: 100%`) always claims the whole first line by
+     itself, which pushes the two time inputs onto their own second line
+     with the FULL row width to share instead of splitting it three ways
+     with the label — plenty of room for two real time pickers. */
+  .schedule-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .schedule-day-label { flex: 1 0 100%; }
+  .schedule-time { flex: 1; min-width: 0; }
   .schedule-sep { display: none; }
 }
 
@@ -397,10 +407,12 @@ tr:hover .action-icon-btn.danger-reveal,
 /* List-page sticky bottom bar (EmployeesListPage.tsx, isMobile branch) —
    "Aktualizuj preferencje" + "Dodaj pracownika", pulled out of the top
    header and down into the thumb zone, same `.rbac-mobile-cta` shape
-   users-list-page uses for its own "Nowy użytkownik" button (plain
-   position: sticky, no scroll-direction motion — that behavior doesn't
-   exist on that reference page either, see EmployeeDetailPage's own
-   `.employee-mobile-action-bar` below for where a new one was built). */
+   users-list-page uses for its own "Nowy użytkownik" button, now also
+   wired to useHideOnScroll like EmployeeDetailPage's bar below. `min-width:
+   0` on the buttons matters here: without it, "Aktualizuj preferencje"'s
+   own content refuses to shrink below its intrinsic width inside `flex:1`,
+   which was the actual cause of the bar (already bled edge-to-edge on
+   purpose) pushing past the real screen edge on the right. */
 .employees-mobile-cta {
   position: sticky; bottom: 0; z-index: 15;
   display: flex; gap: 0.75rem;
@@ -409,8 +421,10 @@ tr:hover .action-icon-btn.danger-reveal,
   background: var(--color-surface-elevated);
   border-top: 1px solid var(--color-border);
   box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
+  transition: transform 0.25s ease;
 }
-.employees-mobile-cta > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
+.employees-mobile-cta > * { flex: 1; min-width: 0; min-height: 3rem; font-size: 0.9375rem; }
+.employees-mobile-cta--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
 
 /* Bottom action sheet (Modal variant="sheet") for the "⋯" trigger above —
    same visual language as rbac-page's own `.action-sheet` (RbacPages.css),
@@ -467,22 +481,27 @@ tr:hover .action-icon-btn.danger-reveal,
   }
   .employee-detail-page .section-title--danger { color: var(--color-error); }
 
-  /* Clears the fixed action bar below (~64px + safe-area) so the last
-     card's content is never hidden underneath it. */
-  .employee-detail-page { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-
-  /* First bar in the app to hide-on-scroll-down / reveal-on-scroll-up
-     (useHideOnScroll) — confirmed before building it that no existing bar,
-     including user-view/user-edit's own, already does this; see the hook's
-     own docstring. */
+  /* position: sticky, not fixed — AppShell's `<main id="main-content">` is
+     this app's ONLY real scroll region (`.app-shell-content { overflow:
+     auto }`, the window/document itself never scrolls), and `<main>` is
+     ALSO flanked by its own header/footer bars outside its box. A `fixed;
+     left:0;right:0;bottom:0` bar anchors to the true viewport instead,
+     which sits past `<main>`'s real bottom edge (behind/over the app
+     footer) — that mismatch, not a missing padding-bottom number, is what
+     was letting the bar float over page content instead of sitting below
+     it. `sticky` anchors correctly to `<main>` and — being real flow, not
+     an out-of-flow overlay — needs no page-level padding-bottom
+     compensation at all, exactly like users-list-page's own
+     `.rbac-mobile-cta` (RbacPages.css), which has never needed one either. */
   .employee-detail-page .employee-mobile-action-bar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    position: sticky; bottom: 0; z-index: 15;
+    margin: 1rem -1.5rem -1rem;
     background: var(--color-surface); border-top: 1px solid var(--color-border);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-    padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
+    padding: 0.625rem 1.5rem calc(0.625rem + env(safe-area-inset-bottom));
     transition: transform 0.25s ease;
   }
-  .employee-detail-page .employee-mobile-action-bar > a { display: flex; justify-content: center; width: 100%; }
+  .employee-detail-page .employee-mobile-action-bar > a { display: flex; justify-content: center; width: 100%; min-width: 0; }
   .employee-detail-page .employee-mobile-action-bar--hidden {
     transform: translateY(calc(100% + env(safe-area-inset-bottom)));
   }
@@ -510,17 +529,41 @@ tr:hover .action-icon-btn.danger-reveal,
   .employee-form-page section { margin-top: 0 !important; padding-top: 1.25rem; border-top: 1px solid var(--color-border-subtle); }
   .employee-form-page section:first-of-type { padding-top: 0; border-top: none; }
 
-  /* Clears the fixed Zapisz/Anuluj bar below. */
-  .employee-form-page { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  /* `<FormActions>` (components/ui/form.tsx) is shared by every form page
+     in the app, not just this one — the sticky/hide-on-scroll treatment
+     can't be applied to `.form-actions` itself without also changing every
+     other form (Users, Role, Service, …). It's wrapped in
+     `.employee-form-actions-wrap` (EmployeeFormPage.tsx) instead, scoped to
+     this page only, which gets the positioning; `.form-actions` inside it
+     is untouched and just fills the wrapper normally.
 
-  .employee-form-page .form-actions {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+     position: sticky, not fixed — see EmployeeDetailPage's own
+     `.employee-mobile-action-bar` comment (same file, above) for why: this
+     app's `<main id="main-content">` is the only real scroll region, and a
+     `fixed;left:0;right:0` bar anchors past its real bottom edge instead
+     (over the app-shell footer), which is what let it float over page
+     content. Sticky is real flow, so no page-level padding-bottom hack is
+     needed either — removed the old `calc(76px + …)` rule entirely.
+     `min-width: 0` on the buttons matters too: without it, "Zapisz
+     pracownika"'s own text refused to shrink inside `flex: 1`, which was
+     pushing this bar's total width past the real screen edge (the actual
+     cause of the reported horizontal scroll on this page, not the bar's
+     positioning). */
+  .employee-form-page .employee-form-actions-wrap {
+    position: sticky; bottom: 0; z-index: 15;
     background: var(--color-surface); border-top: 1px solid var(--color-border);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-    margin: 0;
+    margin: 1.5rem -0.875rem -0.875rem;
     padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
+    transition: transform 0.25s ease;
   }
-  .employee-form-page .form-actions > button { flex: 1; justify-content: center; }
+  /* .form-actions's own base rule (components.css) adds its own
+     padding-top + border-top divider above the buttons — reset both here
+     since the wrapper now owns that "divider between content and bar" job
+     (its own border-top + padding), or the two would stack. */
+  .employee-form-page .employee-form-actions-wrap .form-actions { margin: 0; padding-top: 0; border-top: none; }
+  .employee-form-page .employee-form-actions-wrap .form-actions > button { flex: 1; min-width: 0; justify-content: center; }
+  .employee-form-page .employee-form-actions-wrap--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom))); }
 
   /* Skill rows ("Umiejętności", create mode) were a bare 3-column grid
      (name input | rating select, pinned to a 160px min-width | remove

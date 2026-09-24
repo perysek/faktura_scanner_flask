@@ -12,6 +12,7 @@ import { formyZatrudnieniaApi } from '../../lib/api/formyZatrudnienia';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { FormActions, FormCard, SelectField, TextareaField, TextField } from '../../components/ui/form';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import type { EmploymentStatus, MobilePinStatus } from '../../types/employee';
 
 export interface EmployeeFormPageProps {
@@ -57,6 +58,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   const confirm = useConfirm();
   const auth = useAuth();
   const canWrite = auth.hasModuleWrite('employees');
+  const actionsBarHidden = useHideOnScroll();
 
   const employeeState = useApiData(() => (mode === 'edit' && employeeId ? employeesApi.get(employeeId) : Promise.resolve(null)), [mode, employeeId]);
   const userOptionsState = useApiData(() => employeesApi.userOptions(), []);
@@ -548,7 +550,9 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
             </section>
           )}
 
-          <FormActions submitLabel={mode === 'create' ? 'Zapisz pracownika' : 'Zapisz zmiany'} isLoading={isSubmitting} cancelHref={cancelHref} />
+          <div className={`employee-form-actions-wrap${actionsBarHidden ? ' employee-form-actions-wrap--hidden' : ''}`}>
+            <FormActions submitLabel={mode === 'create' ? 'Zapisz pracownika' : 'Zapisz zmiany'} isLoading={isSubmitting} cancelHref={cancelHref} />
+          </div>
         </form>
       </FormCard>
 

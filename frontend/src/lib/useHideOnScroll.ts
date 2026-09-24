@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * Hides the caller while the page scrolls down past `revealAfterPx`, shows
- * it again the moment the user scrolls up — for a `position: fixed` bottom
- * bar that would otherwise sit permanently over page content on a phone.
- * No existing bar in this app did this before (confirmed against
- * users-list-page / user-view / user-edit, which all use a plain
- * `position: sticky` bar with no scroll-direction behavior) — this is a new
- * pattern, not a port of one. `delayMs` debounces the scroll handler so a
- * few pixels of jitter don't flicker the bar in and out.
+ * it again the moment the user scrolls up — for a `position: sticky` bottom
+ * bar the caller wants to temporarily slide out of the way instead of
+ * sitting permanently over content while scrolling.
+ *
+ * Listens on `#main-content` (AppShell.tsx's `<main>`), not `window`: this
+ * app's shell is a fixed-height flex frame where `<main>` owns the only
+ * real scroll region (`.app-shell-content { overflow: auto }`, unconditional
+ * — the window/document itself never scrolls here). A `window` scroll
+ * listener would simply never fire. Falls back to `window` if that element
+ * isn't mounted yet, so the hook still degrades gracefully outside AppShell.
+ *
+ * `delayMs` debounces the scroll handler so a few pixels of jitter don't
+ * flicker the bar in and out.
  */
 export function useHideOnScroll(delayMs = 120, revealAfterPx = 80): boolean {
   const [hidden, setHidden] = useState(false);
@@ -16,11 +22,14 @@ export function useHideOnScroll(delayMs = 120, revealAfterPx = 80): boolean {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    lastY.current = window.scrollY;
+    const scroller: HTMLElement | Window = document.getElementById('main-content') ?? window;
+    const getY = () => (scroller instanceof Window ? scroller.scrollY : scroller.scrollTop);
+    lastY.current = getY();
+
     function onScroll() {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
-        const y = window.scrollY;
+        const y = getY();
         const delta = y - lastY.current;
         if (Math.abs(delta) > 8) {
           setHidden(delta > 0 && y > revealAfterPx);
@@ -28,9 +37,10 @@ export function useHideOnScroll(delayMs = 120, revealAfterPx = 80): boolean {
         }
       }, delayMs);
     }
-    window.addEventListener('scroll', onScroll, { passive: true });
+
+    scroller.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', onScroll);
+      scroller.removeEventListener('scroll', onScroll);
       if (timer.current) clearTimeout(timer.current);
     };
   }, [delayMs, revealAfterPx]);
