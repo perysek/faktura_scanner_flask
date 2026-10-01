@@ -508,6 +508,8 @@ export function MobileWizytyCalendarView({
   }
 
   const stripDays = useMemo(() => Array.from({ length: 6 }, (_, i) => addDays(weekAnchor, i)), [weekAnchor]);
+  // Month (1-12) of the selected day, drawn inside the month-toggle's calendar glyph.
+  const selectedMonthNumber = Number(selectedDate.slice(5, 7));
 
   const totalDays = daysInMonth(monthAnchor.getFullYear(), monthAnchor.getMonth());
   const firstWeekday = (new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1).getDay() + 6) % 7;
@@ -517,8 +519,6 @@ export function MobileWizytyCalendarView({
 
   return (
     <div className="mob-cal-view">
-  // Month (1-12) of the selected day, drawn inside the month-toggle's calendar glyph.
-  const selectedMonthNumber = Number(selectedDate.slice(5, 7));
       <div className="mob-appt-list" ref={listRef}>
         {selectedDate && <div className="mob-selected-date-label">{formatDateLong(selectedDate)}</div>}
         {loading ? (
