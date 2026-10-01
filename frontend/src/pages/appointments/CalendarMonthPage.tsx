@@ -51,22 +51,30 @@ export function CalendarMonthPage() {
   // "Przychód: actual / expected" in each day cell — only for an employee this viewer
   // may see income for (own employee, or any with superuser + full Employees grant).
   const income = useIncomeSummary(monthStart, monthEnd);
-  const employeesReady = employees.length > 0;
+  // The default selection (effect below) has landed, so the first fetch already uses
+  // the final employee instead of flashing everyone's visits first.
+  const [selectionReady, setSelectionReady] = useState(false);
 
   useEffect(() => {
-    appointmentsApi.employees().then((list) => {
-      setEmployees(list);
-      setEmployeeId((cur) => cur ?? list[0]?.id ?? null);
-    });
+    appointmentsApi.employees().then(setEmployees);
   }, []);
+
+  // Default selection once both the employee list and the session are known: a superuser
+  // opens on "Wszyscy" (employeeId null), everyone else on the first employee. An
+  // ?employee_id= carried over from another view always wins.
+  useEffect(() => {
+    if (selectionReady || auth.isLoading || employees.length === 0) return;
+    setEmployeeId((cur) => cur ?? (canPickAll ? null : (employees[0]?.id ?? null)));
+    setSelectionReady(true);
+  }, [selectionReady, auth.isLoading, employees, canPickAll]);
 
   // `silent` = refresh in place after visits changed elsewhere: no "Ładowanie…"
   // swap, so the grid doesn't blink out from under the user.
   const load = useCallback(
     (silent: boolean) => {
-      // Wait for the employee list (it also applies the default selection in the same
-      // batch). After that a null employee is the deliberate "Wszyscy": no filter sent.
-      if (!employeesReady) return;
+      // Wait for the default selection. After that a null employee is the deliberate
+      // "Wszyscy": no employee filter sent.
+      if (!selectionReady) return;
       const id = ++requestRef.current;
       if (!silent) setLoading(true);
       appointmentsApi
@@ -78,7 +86,7 @@ export function CalendarMonthPage() {
           if (id === requestRef.current) setLoading(false);
         });
     },
-    [employeesReady, employeeId, monthStart, monthEnd],
+    [selectionReady, employeeId, monthStart, monthEnd],
   );
 
   useEffect(() => {

@@ -119,8 +119,8 @@ export function WizytyListPage() {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeeId, setEmployeeId] = useState<number | null>(restored ? restored.employeeId : null);
   const [searchQuery, setSearchQuery] = useState('');
-  // Default the "Pracownik" filter to the logged-in user's own linked
-  // employee (once /auth/me resolves), instead of leaving it on "Wszyscy".
+  // Default the "Pracownik" filter once /auth/me resolves: "Wszyscy" for a
+  // superuser, the logged-in user's own linked employee for everyone else.
   // Guarded to fire exactly once so it never clobbers a selection the user
   // made themselves on a later auth refetch.
   //
@@ -146,6 +146,10 @@ export function WizytyListPage() {
     // "Dane własne" mode: there the server hard-scopes every query to the
     // superuser's own employee, so any other remembered name would be a lie.
     if (restored && !auth.ownDataActive) return;
+    // Superusers open on "Wszyscy" (employeeId stays null = everyone's visits, income
+    // summed). Not in "Dane własne" mode: the server pins every query to their own
+    // employee there, so that case still falls through to the own-employee default.
+    if (auth.isSuperuser && !auth.ownDataActive) return;
     if (auth.linkedEmployeeId !== null) setEmployeeId(auth.linkedEmployeeId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isLoading, auth.linkedEmployeeId, auth.ownDataActive]);

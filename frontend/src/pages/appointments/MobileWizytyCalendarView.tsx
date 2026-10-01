@@ -239,7 +239,7 @@ export function MobileWizytyCalendarView({
     setEmployeePopupOpen(false);
     setTimeout(() => setEmployeePopupMounted(false), 200);
   }
-  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? (employeeId === null && auth.isSuperuser && !auth.isLoading ? 'Wszyscy' : '—');
+  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? (employeeId === null && auth.isSuperuser && !auth.isLoading && !auth.ownDataActive ? 'Wszyscy' : '—');
 
   // "Dane własne" long-press (superuser-only) — the mobile employee
   // selector's long-press replaces the old sidebar switch entirely.
