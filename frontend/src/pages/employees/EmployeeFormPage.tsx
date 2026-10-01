@@ -11,7 +11,7 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { formyZatrudnieniaApi } from '../../lib/api/formyZatrudnienia';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { FormActions, FormCard, SelectField, TextareaField, TextField } from '../../components/ui/form';
+import { FormActions, FormCard, SearchableSelectField, SelectField, TextareaField, TextField } from '../../components/ui/form';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import type { EmploymentStatus, MobilePinStatus } from '../../types/employee';
 
@@ -343,13 +343,14 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                 onChange={(e) => setFormaId(e.target.value)}
                 options={(formyState.data ?? []).map((f) => ({ value: String(f.id), label: f.nazwa }))}
               />
-              <SelectField
+              <SearchableSelectField
                 label="Konto użytkownika"
                 id="user_id"
                 placeholder="— brak konta —"
+                searchPlaceholder="Szukaj konta…"
                 helper="Opcjonalne powiązanie z kontem logowania"
                 value={userId}
-                onChange={(e) => setUserId(e.target.value)}
+                onChange={setUserId}
                 options={(userOptionsState.data ?? []).map((u) => ({ value: String(u.id), label: `${u.full_name} (${u.email})` }))}
               />
               <TextField label="Ścieżka do zdjęcia" id="photo_path" placeholder="np. /static/photos/anna.jpg" value={photoPath} onChange={(e) => setPhotoPath(e.target.value)} helper="Opcjonalna ścieżka do zdjęcia profilowego" />
