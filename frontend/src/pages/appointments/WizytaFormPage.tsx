@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { FormActions, FormSection, SelectField, TextareaField, TextField } from '../../components/ui/form';
 import { useEscapeAction } from '../../lib/a11y/escapeScope';
+import { useIsMobile } from './MobileWizytyCalendarView';
 import { formatPLN } from '../../lib/format';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentFormService, AppointmentService, AppointmentStatus, AvailableSlot } from '../../types/appointment';
@@ -58,6 +59,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   const toast = useToast();
   const auth = useAuth();
   const confirm = useConfirm();
+  const isMobile = useIsMobile(640);
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [employees, setEmployees] = useState<Array<{ id: number; full_name: string; position: string | null }>>([]);
@@ -408,7 +410,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   useEscapeAction(() => navigate(backUrl()), mode === 'create');
 
   return (
-    <div className="refined-page animate-fade-up">
+    <div className="refined-page appt-form-page animate-fade-up">
       <header className="page-header">
         <div>
           <h1 className="page-title">{mode === 'create' ? 'Nowa wizyta' : `Edytuj wizytę #${appointmentId}`}</h1>
@@ -526,7 +528,11 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
             <TextareaField label="Uwagi" id="appt-notes" fullWidth rows={3} placeholder="Opcjonalne uwagi do wizyty..." value={notes} onChange={(e) => setNotes(e.target.value)} />
           </FormSection>
 
-          {mode === 'edit' && <FormActions submitLabel="Zapisz zmiany" isLoading={isSubmitting} cancelHref={backUrl()} />}
+          {mode === 'edit' && (
+            <div className="appt-form-actions-wrap">
+              <FormActions submitLabel="Zapisz zmiany" isLoading={isSubmitting} cancelHref={backUrl()} />
+            </div>
+          )}
         </form>
 
         {mode === 'create' && (
@@ -554,23 +560,45 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
                 <span>{formatPLN(createTotals.price)}</span>
               </div>
             </div>
-            <Button variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit} style={{ width: '100%', justifyContent: 'center' }}>
-              Zarezerwuj wizytę
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate(backUrl())} style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}>
-              Anuluj
-            </Button>
+            {!isMobile && (
+              <>
+                <Button variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit} style={{ width: '100%', justifyContent: 'center' }}>
+                  Zarezerwuj wizytę
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => navigate(backUrl())} style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}>
+                  Anuluj
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
+
+      {isMobile && mode === 'create' && (
+        <div className="appt-form-bar">
+          <div className="appt-form-bar-total">
+            <span>{createTotals.duration ? `${createTotals.duration} min` : '—'}</span>
+            <strong>{formatPLN(createTotals.price)}</strong>
+          </div>
+          <div className="appt-form-bar-actions">
+            <Button type="button" variant="secondary" onClick={() => navigate(backUrl())}>
+              Anuluj
+            </Button>
+            <Button variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit}>
+              Zarezerwuj
+            </Button>
+          </div>
+        </div>
+      )}
 
       {timingModal && (
         <Modal
           isOpen
           onClose={() => setTimingModal(null)}
           title="Zmiana terminu potwierdzonej wizyty"
+          variant="sheet"
           footer={
-            <>
+            <div className="appt-timing-footer">
               <Button
                 variant="secondary"
                 icon="person"
@@ -595,7 +623,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
               >
                 Salon zmienił termin (wyślij SMS)
               </Button>
-            </>
+            </div>
           }
         >
           <p>

@@ -16,6 +16,8 @@ import { StatusDropdown } from './StatusDropdown';
 import { CompleteVisitModal } from './CompleteVisitModal';
 import { StatusHistorySection } from './StatusHistorySection';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
+import { useIsMobile } from './MobileWizytyCalendarView';
 import type { AppointmentFormService } from '../../types/appointment';
 
 function clientInitials(name: string | null): string {
@@ -41,6 +43,8 @@ export function WizytaDetailPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = auth.hasModuleWrite('appointments');
+  const isMobile = useIsMobile(640);
+  const mobileBarHidden = useHideOnScroll();
   useEscapeBack('/wizyty');
 
   const detailState = useApiData(() => appointmentsApi.get(appointmentId), [appointmentId]);
@@ -120,6 +124,7 @@ export function WizytaDetailPage() {
 
   const { main_services, addon_services, totals } = detailState.data;
   const services = [...main_services, ...addon_services];
+  const canEditAppt = canWrite && appt.status !== 'cancelled' && appt.status !== 'completed' && appt.status !== 'rescheduled';
 
   return (
     <div className="refined-page appt-detail-page fade-in">
@@ -164,21 +169,23 @@ export function WizytaDetailPage() {
       {appt.confirmation_status === 'confirmed' && <div className="confirm-chip confirm-chip--ok">✓ Klient potwierdził przez SMS</div>}
       {appt.confirmation_status === 'declined' && <div className="confirm-chip confirm-chip--bad">✕ Klient odmówił przez SMS</div>}
 
-      <div className="action-bar">
-        {canWrite && appt.status !== 'cancelled' && appt.status !== 'completed' && appt.status !== 'rescheduled' && (
-          <ButtonLink variant="secondary" icon="edit" to={`/wizyty/${appointmentId}/edytuj`}>
-            Edytuj
+      {!isMobile && (
+        <div className="action-bar">
+          {canEditAppt && (
+            <ButtonLink variant="secondary" icon="edit" to={`/wizyty/${appointmentId}/edytuj`}>
+              Edytuj
+            </ButtonLink>
+          )}
+          <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
+            Powrót do listy
           </ButtonLink>
-        )}
-        <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
-          Powrót do listy
-        </ButtonLink>
-        {canWrite && (
-          <Button variant="ghost" icon="delete" onClick={handleDelete}>
-            Usuń
-          </Button>
-        )}
-      </div>
+          {canWrite && (
+            <Button variant="ghost" icon="delete" onClick={handleDelete}>
+              Usuń
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="form-card">
         <h3 className="card-title">Szczegóły</h3>
@@ -287,6 +294,28 @@ export function WizytaDetailPage() {
       )}
 
       <StatusHistorySection appointmentId={appointmentId} appointmentStatus={appt.status} />
+
+      {isMobile && canWrite && (
+        <div className="form-card appt-danger-zone">
+          <h3 className="card-title card-title--danger">Strefa ryzyka</h3>
+          <Button variant="danger" icon="delete" onClick={handleDelete}>
+            Usuń wizytę
+          </Button>
+        </div>
+      )}
+
+      {isMobile && (
+        <div className={`appt-mobile-action-bar${mobileBarHidden ? ' appt-mobile-action-bar--hidden' : ''}`}>
+          <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
+            Powrót
+          </ButtonLink>
+          {canEditAppt && (
+            <ButtonLink variant="primary" icon="edit" to={`/wizyty/${appointmentId}/edytuj`}>
+              Edytuj wizytę
+            </ButtonLink>
+          )}
+        </div>
+      )}
 
       <CompleteVisitModal
         isOpen={completeOpen}

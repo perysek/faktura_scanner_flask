@@ -90,3 +90,80 @@
 .star-btn.active { color: #c9a227; }
 .star-btn:disabled { cursor: default; }
 .score-label { margin-left: 0.5rem; font-size: 0.8125rem; color: var(--color-ink-muted); }
+
+/* ── Mobile Wizyta detail (WizytaDetailPage.tsx) — iteration 0 ──────────
+   Same shape as the Pracownik detail mobile pass (EmployeesListPage.css):
+   hero becomes a card, cards stack with real gaps (the shared `.form-card`
+   carries no margin of its own), touch targets reach 44px, and the desktop
+   top `.action-bar` is JS-gated off in favour of a sticky thumb-zone bar +
+   an in-content "Strefa ryzyka" card for the destructive action.
+   `position: sticky`, not fixed, for the bar — `<main id="main-content">`
+   is this app's only scroll region (see the long note on
+   `.employee-mobile-action-bar`); `.refined-btn-*` hardcodes
+   `white-space: nowrap`, so the bar's buttons size to their own content
+   first (`flex: 1 1 auto`) and wrap as the fallback instead of forcing an
+   even split. Everything is scoped under `.appt-detail-page` — this file
+   is global once bundled. */
+@media (max-width: 640px) {
+  .appt-detail-page .appt-hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "avatar info" "price price";
+    column-gap: 0.875rem;
+    row-gap: 0.75rem;
+    align-items: center;
+    padding: 1rem;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    box-shadow: var(--shadow-sm);
+  }
+  .appt-detail-page .appt-hero-avatar { grid-area: avatar; width: 3rem; height: 3rem; font-size: 1rem; }
+  .appt-detail-page .appt-hero-info { grid-area: info; }
+  .appt-detail-page .appt-hero-info .page-title { display: block; margin: 0 0 0.375rem; font-size: 1.25rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .appt-detail-page .appt-hero-info .page-subtitle { margin-top: 0.5rem; line-height: 1.5; }
+  .appt-detail-page .appt-hero-price {
+    grid-area: price;
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-top: 0.75rem; border-top: 1px solid var(--color-border-subtle);
+    font-size: 1.375rem;
+  }
+  .appt-detail-page .appt-hero-price::before {
+    content: 'Razem';
+    font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-subtle);
+  }
+
+  .appt-detail-page .confirm-chip { display: flex; margin-bottom: 0.75rem; }
+  .appt-detail-page .form-card { padding: 1rem; margin-bottom: 0.75rem; }
+
+  .appt-detail-page .appt-detail-grid { grid-template-columns: 1fr 1fr; gap: 1rem 0.75rem; }
+  .appt-detail-page .appt-detail-grid > div:first-child { grid-column: 1 / -1; }
+
+  .appt-detail-page .svc-item { align-items: flex-start; gap: 0.75rem; }
+  .appt-detail-page .svc-item > div:first-child { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; min-width: 0; }
+  .appt-detail-page .svc-name { overflow-wrap: anywhere; }
+  .appt-detail-page .service-item-badge { margin-left: 0; }
+  .appt-detail-page .svc-price { white-space: nowrap; }
+
+  .appt-detail-page .addon-btn { min-height: 2.75rem; padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
+
+  .appt-detail-page .satisfaction-stars { flex-wrap: wrap; }
+  .appt-detail-page .star-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; font-size: 1.75rem; }
+  .appt-detail-page .score-label { flex-basis: 100%; margin: 0.25rem 0 0; }
+  .appt-detail-page .form-card > .refined-btn-primary { width: 100%; min-height: 2.75rem; }
+
+  .appt-detail-page .card-title--danger { color: var(--color-error); }
+  .appt-detail-page .appt-danger-zone .refined-btn-danger { width: 100%; min-height: 2.75rem; font-size: 0.875rem; }
+
+  .appt-detail-page .appt-mobile-action-bar {
+    position: sticky; bottom: 0; z-index: 15;
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin: 1rem -1.5rem -1rem;
+    padding: 0.625rem 1.5rem calc(0.625rem + env(safe-area-inset-bottom));
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    transition: transform 0.25s ease;
+  }
+  .appt-detail-page .appt-mobile-action-bar > a { flex: 1 1 auto; min-width: 0; min-height: 2.75rem; justify-content: center; }
+  .appt-detail-page .appt-mobile-action-bar--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom))); }
+}
