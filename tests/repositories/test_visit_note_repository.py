@@ -78,6 +78,49 @@ class TestListForClient:
         assert cap['params'] == [5, 9, 7, 10, 20]  # client, hidden, own, limit, offset
 
 
+class TestVisitFilter:
+    """`appointment_id` narrows to one visit (visit page) and ANDs with the scope."""
+
+    def test_list_adds_the_visit_clause_after_the_client_condition(self, app):
+        cap, p = _capture('_fetch_all')
+        with app.app_context(), _hidden(()), p:
+            _repo().list_for_client(5, None, 10, 0, appointment_id=100)
+        assert 'n.appointment_id = %s' in cap['sql']
+        assert cap['params'] == [5, 100, 10, 0]  # client, visit, limit, offset
+
+    def test_no_visit_clause_without_appointment_id(self, app):
+        cap, p = _capture('_fetch_all')
+        with app.app_context(), _hidden(()), p:
+            _repo().list_for_client(5, None, 10, 0)
+        assert 'n.appointment_id = %s' not in cap['sql']
+        assert cap['params'] == [5, 10, 0]
+
+    def test_visit_filter_keeps_hidden_owner_and_own_data_scope(self, app):
+        """Narrowing to a visit is an extra AND — it can never widen access."""
+        cap, p = _capture('_fetch_all')
+        with app.app_context(), _hidden((9,)), p:
+            _repo().list_for_client(5, 7, 10, 20, appointment_id=100)
+        sql = cap['sql']
+        assert 'n.appointment_id = %s' in sql
+        assert 'a.employee_id NOT IN' in sql and 'a.employee_id = %s' in sql
+        assert cap['params'] == [5, 100, 9, 7, 10, 20]  # client, visit, hidden, own, limit, offset
+
+    def test_count_uses_the_same_filter_and_scope(self, app):
+        cap, p = _capture('_fetch_one', rows={'total': 2})
+        with app.app_context(), _hidden((9,)), p:
+            total = _repo().count_for_client(5, 7, appointment_id=100)
+        assert total == 2
+        assert 'n.appointment_id = %s' in cap['sql']
+        assert cap['params'] == [5, 100, 9, 7]  # client, visit, hidden, own
+
+    def test_other_clients_visit_matches_nothing_by_construction(self, app):
+        """The client condition stays in force, so a visit id of another client yields no rows."""
+        cap, p = _capture('_fetch_all')
+        with app.app_context(), _hidden(()), p:
+            _repo().list_for_client(5, None, 10, 0, appointment_id=999)
+        assert 'a.client_id = %s' in cap['sql'] and cap['params'][:2] == [5, 999]
+
+
 class TestCountForClient:
     def test_count_applies_the_same_scope(self, app):
         cap, p = _capture('_fetch_one', rows={'total': 3})

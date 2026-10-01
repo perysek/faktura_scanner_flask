@@ -93,7 +93,18 @@ tr:hover .action-icon-btn.danger-reveal,
 /* ── Employee form (create/edit) ───────────────────────────────────── */
 
 .employee-form-page { max-width: 900px; margin: 0 auto; }
-.employee-form-page section + section { margin-top: 2rem; }
+/* Sections of one card follow the design system's multi-topic pattern (the same numbers as
+   `.form-fieldset + .form-fieldset` in components.css, DESIGN.md §7): a divider, 1.5rem above
+   it and 1.5rem below it. Before this they were separated by bare 2rem of whitespace, so the
+   sections ran together. >=641px only: the mobile block below already draws its own
+   divider (padding 1.25rem) and would be overridden by this more specific selector. */
+@media (min-width: 641px) {
+  .employee-form-page section + section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+}
 
 .skill-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
 .skill-remove-btn {
@@ -212,6 +223,11 @@ tr:hover .action-icon-btn.danger-reveal,
   font-size: 1.75rem;
   margin-bottom: 1rem;
 }
+/* The page's cards (.refined-card) touched at 0px on desktop; the mobile block below always
+   had a gap ("desktop has none — out of scope to fix there"). 1rem, the design system's scale
+   step. The mobile block's 0.875rem rule has the same specificity and comes later, so phones
+   are unchanged. */
+.employee-detail-page .refined-card { margin-bottom: 1rem; }
 .employee-detail-page .section-title {
   font-size: 1rem;
   font-weight: 600;

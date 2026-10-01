@@ -324,6 +324,16 @@ Four **light-family** themes, switched at runtime via `data-theme` on `<html>`:
 - Page-level content padding: `.refined-page` → `padding: 1rem 1.5rem`.
 - Card padding: `.form-card` → `1rem 1.125rem`; auth cards → `2.5rem` (auth screens get generous
   breathing room since they're single-purpose, low-density screens).
+- **Stacked cards: `1rem` apart.** `.form-card` (and `.refined-card` on the employee view) carries
+  **no margin of its own, on purpose** — a global `.form-card + .form-card` rule would shift every
+  page that already spaces its cards. A page that stacks cards adds the gap itself, page-scoped,
+  *before* its phone media block (phones keep their tighter 0.75–0.875rem). Pages with no gap are
+  a bug, not a design: the visit view/edit and employee view had 0px until 2026-10-01.
+- **Sections inside one card:** the multi-topic pattern (§7) — a `1px` divider with `1.5rem` margin
+  above and `1.5rem` padding below (`.form-fieldset + .form-fieldset`; the employee form's
+  `<section>`s use the same numbers). `.form-fieldset > legend` is **floated** so it sits inside
+  that padding: an unfloated `<legend>` ignores the fieldset's `padding-top`, lands on the border
+  line and (at `width: 100%`) hides the divider entirely.
 - Form field grid: `.form-grid` uses `grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`
   — **`auto-fit`, deliberately not `auto-fill`.** This matters: `auto-fill` reserves empty grid
   tracks a row *could* hold even when nothing is placed in them, leaving visible dead space next

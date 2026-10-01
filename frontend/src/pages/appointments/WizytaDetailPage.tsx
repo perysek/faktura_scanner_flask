@@ -289,16 +289,22 @@ export function WizytaDetailPage() {
 
       {appt.notes && (
         <div className="form-card">
-          <h3 className="card-title">Uwagi</h3>
+          <h3 className="card-title">Uwagi specjalne przed rozpoczęciem wizyty</h3>
           <p>{appt.notes}</p>
         </div>
       )}
 
-      {/* The client's notes across ALL their visits (useful before a visit too); the add
-          button is bound to THIS visit and the server shows it only once it's completed.
-          `refreshKey` refetches when the status flips, so completing the visit reveals it. */}
-      {auth.hasModuleAccess('appointments') && (
-        <VisitNotesSection variant="form" clientId={appt.client_id} appointmentId={appointmentId} refreshKey={appt.status} />
+      {/* Notes written AFTER the visit belong to a completed visit: only this visit's notes,
+          and nothing at all (no section, no add button) for any other status. Completing
+          the visit from this page mounts the section, which then fetches its own data. */}
+      {appt.status === 'completed' && auth.hasModuleAccess('appointments') && (
+        <VisitNotesSection
+          variant="form"
+          clientId={appt.client_id}
+          appointmentId={appointmentId}
+          title="Uwagi i zalecenia po zakończonej wizycie"
+          emptyText="Brak uwag po zakończonej wizycie."
+        />
       )}
 
       <StatusHistorySection appointmentId={appointmentId} appointmentStatus={appt.status} />

@@ -10,6 +10,14 @@
    mobile can flip their visual order (Usługi above the slot grid) without
    disturbing where the pair sits relative to the surrounding form sections. */
 .time-and-services { display: flex; flex-direction: column; }
+/* The shared `.form-card` carries no margin, so the form's cards (Klient i pracownik, Data i
+   godzina, Usługi, Uwagi) sat flush at 0px on desktop. 1rem between them; phones already get
+   an explicit 0.75rem gap in the mobile block below, so this is >=641px only. The actions row
+   keeps its own top margin/divider (`.form-actions`), hence the :not(). */
+@media (min-width: 641px) {
+  .appt-form-page .appt-form-layout > form > * + *:not(.appt-form-actions-wrap) { margin-top: 1rem; }
+  .appt-form-page .time-and-services { gap: 1rem; }
+}
 @media (max-width: 768px) {
   .time-and-services { flex-direction: column-reverse; }
 }

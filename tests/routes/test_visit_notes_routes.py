@@ -435,6 +435,27 @@ class TestList:
             row = _list(env).get_json()['notes'][0]
         assert row['can_edit'] is False
 
+    def test_appointment_id_narrows_list_and_count_to_that_visit(self, env):
+        """Visit page: only THIS visit's notes, and total/has_more count only those."""
+        with _as(_user(), FULL):
+            _list(env, '?appointment_id=100')
+        assert env.notes.list_for_client.call_args.kwargs == {'appointment_id': 100}
+        assert env.notes.count_for_client.call_args.kwargs == {'appointment_id': 100}
+
+    def test_without_appointment_id_the_list_stays_client_wide(self, env):
+        """Client page: no narrowing — the visit filter must be absent, not defaulted."""
+        with _as(_user(), FULL):
+            _list(env)
+        assert env.notes.list_for_client.call_args.kwargs == {'appointment_id': None}
+        assert env.notes.count_for_client.call_args.kwargs == {'appointment_id': None}
+
+    def test_visit_filter_never_widens_own_data_scope(self, env):
+        with _as(_user(), OWN_DATA, own_employee_id=7):
+            _list(env, '?appointment_id=100')
+        # scope (own employee) is still passed positionally next to the visit filter
+        assert env.notes.list_for_client.call_args.args == (5, 7, 10, 0)
+        assert env.notes.list_for_client.call_args.kwargs == {'appointment_id': 100}
+
     def test_unknown_client_is_404(self, env):
         env.app.client_repo.get_by_id.return_value = None
         with _as(_user(), FULL):

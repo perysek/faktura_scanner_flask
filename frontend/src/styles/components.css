@@ -304,6 +304,13 @@
   padding-top: 1.5rem;
 }
 .form-fieldset > legend {
+  /* A <legend> is special: it ignores its fieldset's padding-top and sits ON the border
+     line. With `width: 100%` it covered the whole `border-top` divider of every fieldset
+     after the first, put the heading flush against the section above, and pushed the
+     24px of padding BELOW it (a ~56px hole under "Dostęp", "Hasło", ...). Floating it makes
+     the legend an ordinary block inside the padding box, so the divider shows and the
+     spacing is 24px divider-to-heading, 20px heading-to-fields as designed (§7). */
+  float: left;
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 600;
@@ -313,6 +320,8 @@
   padding: 0;
   width: 100%;
 }
+/* Whatever follows the floated legend starts below it. */
+.form-fieldset > legend + * { clear: both; }
 
 /* auto-fit, deliberately not auto-fill — see DESIGN.md §5. */
 .form-grid {

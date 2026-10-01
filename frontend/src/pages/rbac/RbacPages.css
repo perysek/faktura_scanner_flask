@@ -34,6 +34,9 @@
   padding: 0.625rem 0.75rem;
   margin-bottom: 1rem;
 }
+/* A note placed straight under a form card ("Własne hasło zmienisz w Profilu") touched its
+   bottom edge at 0px; the shared `.form-card` has no margin. */
+.rbac-page .form-card + .rbac-note { margin-top: 1rem; }
 .rbac-page .rbac-error-msg {
   color: var(--color-error);
   font-size: 0.8125rem;

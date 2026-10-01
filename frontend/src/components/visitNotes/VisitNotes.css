@@ -99,7 +99,17 @@
 .refined-table.vn-list-table th,
 .refined-table.vn-list-table td { padding-left: 0.5rem; padding-right: 0.5rem; }
 .refined-table.vn-list-table th.vn-th-notes,
-.refined-table.vn-list-table td.vn-cell-notes { width: 14rem; min-width: 14rem; max-width: 14rem; }
+.refined-table.vn-list-table td.vn-cell-notes { width: 16rem; min-width: 16rem; max-width: 16rem; }
+
+/* The Status pill was 9rem (144px) — a width LEAKED into the global `.status-badge` from the
+   absences page's stylesheet (BalancesPage.css; Vite ships one CSS file). The widest status
+   label here, "Potwierdzona", needs 109px, so 7rem (112px, -22%) still fits it and frees
+   32px per row; that width went to the notes column above (14rem -> 16rem), so the table
+   is no wider than before. 25% (108px) would clip "Potwierdzona" by 1px. Scoped to this
+   table: every other status pill keeps its width. Not applied to stacked cards (<=640px). */
+@media (min-width: 641px) {
+  .refined-table.vn-list-table .status-badge { width: 7rem; }
+}
 
 /* Even compacted, 10 columns (the Status dropdown pill alone is 9rem) are wider than the
    visits page's table area at 1440px, so the table scrolls sideways — and its last column,

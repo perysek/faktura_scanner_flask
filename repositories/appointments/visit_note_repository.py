@@ -50,10 +50,24 @@ class VisitNoteRepository(BaseRepository):
 
     # ── reads ────────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _visit_filter(appointment_id: Optional[int]) -> tuple:
+        """Optional "this one visit only" clause + its params (empty when no visit given).
+
+        It ANDs with the scope clause, so narrowing to a visit can never widen access.
+        Placed right after the client condition in every query, which fixes the
+        parameter order: client id, [visit id], scope params, ..."""
+        if appointment_id is None:
+            return '', []
+        return ' AND n.appointment_id = %s', [appointment_id]
+
     def list_for_client(self, client_id: int, own_employee_id: Optional[int],
-                        limit: int, offset: int) -> List[Any]:
-        """A client's live notes across all their visits, newest edit first."""
+                        limit: int, offset: int,
+                        appointment_id: Optional[int] = None) -> List[Any]:
+        """A client's live notes across all their visits, newest edit first —
+        or, with ``appointment_id``, only the notes of that one visit."""
         scope_sql, scope_params = self._scope(own_employee_id)
+        visit_sql, visit_params = self._visit_filter(appointment_id)
         query = f"""
             SELECT n.id, n.appointment_id, n.note_text, n.updated_at,
                    a.appointment_date, a.employee_id,
@@ -65,21 +79,23 @@ class VisitNoteRepository(BaseRepository):
             JOIN clients c ON c.id = a.client_id
             LEFT JOIN users u ON u.id = n.updated_by
             {_FIRST_SERVICE}
-            WHERE a.client_id = %s AND n.is_deleted = FALSE {scope_sql}
+            WHERE a.client_id = %s AND n.is_deleted = FALSE {visit_sql} {scope_sql}
             ORDER BY n.updated_at DESC, n.id DESC
             LIMIT %s OFFSET %s
         """
-        return self._fetch_all(query, tuple([client_id] + scope_params + [limit, offset]))
+        return self._fetch_all(query, tuple([client_id] + visit_params + scope_params + [limit, offset]))
 
-    def count_for_client(self, client_id: int, own_employee_id: Optional[int]) -> int:
+    def count_for_client(self, client_id: int, own_employee_id: Optional[int],
+                         appointment_id: Optional[int] = None) -> int:
         scope_sql, scope_params = self._scope(own_employee_id)
+        visit_sql, visit_params = self._visit_filter(appointment_id)
         query = f"""
             SELECT COUNT(*) AS total
             FROM visit_notes n
             JOIN appointments a ON a.id = n.appointment_id AND a.is_deleted = FALSE
-            WHERE a.client_id = %s AND n.is_deleted = FALSE {scope_sql}
+            WHERE a.client_id = %s AND n.is_deleted = FALSE {visit_sql} {scope_sql}
         """
-        row = self._fetch_one(query, tuple([client_id] + scope_params))
+        row = self._fetch_one(query, tuple([client_id] + visit_params + scope_params))
         return int(row['total']) if row else 0
 
     def eligible_visits(self, client_id: int, own_employee_id: Optional[int],

@@ -1,5 +1,10 @@
 /* Wizyta — widok szczegółów. Ported from templates/appointments/view.html. */
 .appt-detail-page { max-width: 760px; margin: 0 auto; }
+/* The shared `.form-card` carries no margin (components.css, on purpose), so the stacked
+   sections here sat flush: 0px between Szczegóły, Usługi, notes, history. 1rem is the
+   design system's scale step (DESIGN.md §5) and what the hero above already uses. The phone
+   block further down keeps its tighter 0.75rem — same selector, later in the file, wins. */
+.appt-detail-page .form-card { margin-bottom: 1rem; }
 
 .card-title { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border-subtle); }
 

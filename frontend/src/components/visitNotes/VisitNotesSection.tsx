@@ -32,24 +32,35 @@ const HOST = {
 
 export interface VisitNotesSectionProps {
   clientId: number;
-  /** Visit page only: the visit being viewed. The add button binds to it and shows
-   * only while it is completed; leave unset on the client page (picker instead). */
+  /** Visit page only: narrows the list to THIS visit's notes (the server filters, so
+   * the count and paging are this visit's too) and binds the add button to it. The
+   * page mounts the section only for a completed visit. Leave unset on the client
+   * page: all of the client's notes across visits, with a visit picker on add. */
   appointmentId?: number;
-  /** Change it to refetch from outside, e.g. when the visit's status changes. */
-  refreshKey?: string | number;
   /** Which page's card styling to borrow. */
   variant: keyof typeof HOST;
+  /** Section heading; defaults to the client page's wording. */
+  title?: string;
+  /** Shown when there are no notes; defaults to the client page's wording. */
+  emptyText?: string;
 }
 
 /**
- * "Uwagi i zalecenia z wizyt": a client's notes across all their visits, newest
- * edit first, ten at a time. Shared by the client page and the visit page.
+ * Visit notes section, newest edit first, ten at a time. Shared by the client page
+ * (the client's notes across all visits: "Uwagi i zalecenia z wizyt") and the visit
+ * page (only the viewed completed visit's notes: "…po zakończonej wizycie").
  *
  * Who may edit/delete/add is decided by the server per row (`can_edit`) and once
  * for the section (`can_add`) from the `appointments` flags + own-data scope —
  * the UI only reflects it, it never re-derives it.
  */
-export function VisitNotesSection({ clientId, appointmentId, refreshKey, variant }: VisitNotesSectionProps) {
+export function VisitNotesSection({
+  clientId,
+  appointmentId,
+  variant,
+  title = 'Uwagi i zalecenia z wizyt',
+  emptyText = 'Brak uwag z wizyt.',
+}: VisitNotesSectionProps) {
   const toast = useToast();
   const confirm = useConfirm();
   const host = HOST[variant];
@@ -98,7 +109,7 @@ export function VisitNotesSection({ clientId, appointmentId, refreshKey, variant
 
   useEffect(() => {
     load(PAGE_SIZE);
-  }, [load, refreshKey]);
+  }, [load]);
 
   async function handleLoadMore() {
     setLoadingMore(true);
@@ -141,7 +152,7 @@ export function VisitNotesSection({ clientId, appointmentId, refreshKey, variant
   return (
     <div className={`${host.card} vn-section`}>
       <div className={host.header}>
-        <host.Tag className={host.title}>Uwagi i zalecenia z wizyt</host.Tag>
+        <host.Tag className={host.title}>{title}</host.Tag>
         {status === 'ready' && total > 0 && <span className="vn-count">{total} wpisów łącznie</span>}
       </div>
 
@@ -159,7 +170,7 @@ export function VisitNotesSection({ clientId, appointmentId, refreshKey, variant
       ) : (
         <>
           {notes.length === 0 ? (
-            <p className="empty-text vn-empty">Brak uwag z wizyt.</p>
+            <p className="empty-text vn-empty">{emptyText}</p>
           ) : (
             <div className="vn-table-wrap stack-cards-wrap">
               <table className="refined-table stack-cards vn-table">

@@ -91,9 +91,16 @@ class VisitNoteService:
 
     def list_for_client(self, client_id: int, scope: VisitNoteScope, limit: int,
                         offset: int, appointment_id: Optional[int] = None) -> Dict[str, Any]:
-        """One page of a client's notes plus paging flags and whether adding is possible."""
-        rows = self.notes.list_for_client(client_id, scope.own_employee_id, limit, offset)
-        total = self.notes.count_for_client(client_id, scope.own_employee_id)
+        """One page of a client's notes plus paging flags and whether adding is possible.
+
+        With ``appointment_id`` (the visit page) the page is narrowed to THAT visit's
+        notes — ``total``/``has_more`` count only those — and ``can_add`` is about that
+        same visit. Without it (the client page) it is the client's notes across all
+        visits. Narrowing is an extra AND, so scoping still applies on top."""
+        rows = self.notes.list_for_client(
+            client_id, scope.own_employee_id, limit, offset, appointment_id=appointment_id)
+        total = self.notes.count_for_client(
+            client_id, scope.own_employee_id, appointment_id=appointment_id)
         return {
             'notes': [self._serialize(row, scope) for row in rows],
             'total': total,
