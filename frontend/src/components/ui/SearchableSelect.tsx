@@ -33,12 +33,26 @@ export interface SearchableSelectProps {
   'aria-label'?: string;
 }
 
-/** Room below which a panel prefers flipping above the trigger. */
-const COMFORTABLE_PX = 220;
 const MAX_PANEL_PX = 340;
+/** Floor for the panel's height (search box + a couple of rows) when there is
+ * genuinely no more room below and nothing left to scroll. */
+const MIN_PANEL_PX = 120;
 const MIN_PANEL_WIDTH_PX = 208;
 const GAP_PX = 4;
 const EDGE_PX = 8;
+/** Room below the field we try to guarantee by scrolling it up. */
+const SCROLL_TARGET_PX = 240;
+/** Never scroll the field closer than this to the top of the screen (sticky page header). */
+const HEADER_CLEARANCE_PX = 72;
+
+/** The element that actually scrolls the page content the field lives in. */
+function nearestScroller(el: HTMLElement): HTMLElement {
+  for (let parent = el.parentElement; parent; parent = parent.parentElement) {
+    const { overflowY } = getComputedStyle(parent);
+    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) return parent;
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement;
+}
 
 function firstEnabledIndex(list: SearchableSelectOption[]): number {
   return list.findIndex((o) => !o.disabled);
@@ -98,20 +112,25 @@ function SearchableSelectPanel({ triggerRef, listboxId, options, value, searchPl
     const vv = window.visualViewport;
     const viewTop = vv?.offsetTop ?? 0;
     const viewBottom = viewTop + (vv?.height ?? window.innerHeight);
-    const rect = trigger.getBoundingClientRect();
+    const roomBelow = (r: DOMRect) => viewBottom - r.bottom - GAP_PX - EDGE_PX;
 
-    const below = viewBottom - rect.bottom - GAP_PX - EDGE_PX;
-    const above = rect.top - viewTop - GAP_PX - EDGE_PX;
-    const flipUp = below < COMFORTABLE_PX && above > below;
-    const room = Math.max(flipUp ? above : below, 120);
+    // The panel ALWAYS opens downward — flipping it above the field made it ride
+    // off the top of the screen. When the field sits too low to leave a usable
+    // list (low on the page, or the soft keyboard shrank the visible area), bring
+    // the field up by scrolling instead, but never under the page header.
+    let rect = trigger.getBoundingClientRect();
+    const scrollBy = Math.min(SCROLL_TARGET_PX - roomBelow(rect), rect.top - viewTop - HEADER_CLEARANCE_PX);
+    if (scrollBy > 1) {
+      nearestScroller(trigger).scrollTop += scrollBy;
+      rect = trigger.getBoundingClientRect();
+    }
 
     const width = Math.max(rect.width, MIN_PANEL_WIDTH_PX);
     const left = Math.max(EDGE_PX, Math.min(rect.left, window.innerWidth - width - EDGE_PX));
-    const top = flipUp ? rect.top - GAP_PX : rect.bottom + GAP_PX;
+    const top = rect.bottom + GAP_PX;
 
     panel.style.width = `${width}px`;
-    panel.style.maxHeight = `${Math.min(MAX_PANEL_PX, room)}px`;
-    panel.style.transform = flipUp ? 'translateY(-100%)' : '';
+    panel.style.maxHeight = `${Math.min(MAX_PANEL_PX, Math.max(roomBelow(rect), MIN_PANEL_PX))}px`;
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
 
@@ -120,7 +139,7 @@ function SearchableSelectPanel({ triggerRef, listboxId, options, value, searchPl
     // really landed and absorb any offset, so it can't drift off its trigger.
     const landed = panel.getBoundingClientRect();
     const dx = landed.left - left;
-    const dy = landed.top - (flipUp ? top - landed.height : top);
+    const dy = landed.top - top;
     if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
       panel.style.left = `${left - dx}px`;
       panel.style.top = `${top - dy}px`;
