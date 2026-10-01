@@ -168,7 +168,7 @@ export function CalendarDayPage() {
           )}
           {/* The day view has no employee selector: it is the whole day, so the total needs
               the 'all' scope (canShow(null)) — the same rule as every "everyone" figure. */}
-          {isSuperuser && income.canShow(null) && <IncomeBanner label="Przychód dnia" income={income.forRange(date, date, null)} />}
+          {isSuperuser && income.canShow(null) && <IncomeBanner alignEnd income={income.forRange(date, date, null)} />}
         </div>
 
         {loading || !data ? (

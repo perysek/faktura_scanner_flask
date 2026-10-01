@@ -147,7 +147,7 @@ export function CalendarWeekPage() {
         <div className="empf-divider" />
         <span className="empf-label">Pracownik:</span>
         <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} />
-        {income.canShow(employeeId) && <IncomeBanner label="Przychód tygodnia" income={income.forRange(iso(weekStart), iso(addDays(weekStart, 6)), employeeId)} />}
+        {income.canShow(employeeId) && <IncomeBanner alignEnd income={income.forRange(iso(weekStart), iso(addDays(weekStart, 6)), employeeId)} />}
       </div>
 
       {loading ? (

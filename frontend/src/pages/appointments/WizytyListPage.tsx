@@ -567,7 +567,7 @@ export function WizytyListPage() {
             <div className="empf-divider" />
             <span className="empf-label">Pracownik:</span>
             <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll />
-            {bannerIncome && <IncomeBanner label={mode === 'chain' ? 'Przychód dni' : 'Przychód tygodnia'} income={bannerIncome} />}
+            {bannerIncome && <IncomeBanner income={bannerIncome} />}
             <div className="list-search">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

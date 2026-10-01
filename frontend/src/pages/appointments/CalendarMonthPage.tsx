@@ -163,7 +163,7 @@ export function CalendarMonthPage() {
         <div className="empf-divider" />
         <span className="empf-label">Pracownik:</span>
         <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll={canPickAll} />
-        {showIncome && <IncomeBanner label="Przychód miesiąca" income={income.forRange(monthStart, monthEnd, employeeId)} />}
+        {showIncome && <IncomeBanner alignEnd income={income.forRange(monthStart, monthEnd, employeeId)} />}
       </div>
 
       {loading ? (

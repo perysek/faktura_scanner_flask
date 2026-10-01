@@ -45,10 +45,11 @@
 .empf-dropdown select { padding: 0.3125rem 0.5rem; font-size: 0.75rem; border: 1px solid var(--color-border); border-radius: 2px; background: var(--color-surface-elevated); color: var(--color-ink); }
 .empf-dd-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-/* Search can give up to 25% of its 320px (→ 15rem floor) to the income banner beside
-   it; below that it wraps to its own line instead of squeezing further. */
-.list-search { position: relative; flex: 1 1 15rem; min-width: 15rem; max-width: 320px; margin-left: auto; }
-.list-search input { width: 100%; padding: 0.4rem 0.625rem 0.4rem 1.75rem; font-family: inherit; font-size: 0.75rem; font-weight: 300; color: var(--color-ink); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+/* Search is the one flexible item in the list's nav row: basis 0 + a small floor, so it
+   takes whatever room the income banner and the other controls leave (up to 320px) and
+   stays on the same line instead of wrapping under them. */
+.list-search { position: relative; flex: 1 1 0; min-width: 6.5rem; max-width: 320px; margin-left: auto; }
+.list-search input { text-overflow: ellipsis; width: 100%; padding: 0.4rem 0.625rem 0.4rem 1.75rem; font-family: inherit; font-size: 0.75rem; font-weight: 300; color: var(--color-ink); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
 .list-search input:focus { border-color: var(--color-ink-muted); box-shadow: 0 0 0 3px rgba(26,26,26,0.04); }
 .list-search svg { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); width: 0.8125rem; height: 0.8125rem; color: var(--color-ink-subtle); pointer-events: none; }
 
@@ -81,6 +82,9 @@
   box-shadow: 0 2px 8px var(--color-accent-muted);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
+/* Month / week / day: banner pushed to the row's right end, i.e. flush with the right
+   edge of the calendar grid below (both are full-width children of the same parent). */
+.inc-banner--end { margin-left: auto; }
 .inc-banner-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .inc-banner-actual { font-size: 0.8125rem; font-weight: 700; color: var(--color-accent-deep); }
 
