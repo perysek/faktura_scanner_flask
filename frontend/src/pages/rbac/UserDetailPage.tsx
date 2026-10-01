@@ -223,6 +223,9 @@ export function UserDetailPage() {
           </FormCard>
         )}
         <div className="rbac-mobile-cta">
+          <ButtonLink to="/uzytkownicy" variant="secondary" icon="arrow_back">
+            Powrót
+          </ButtonLink>
           <ButtonLink to={`/uzytkownicy/${user.id}/edytuj`} variant="primary" icon="edit">
             Edytuj
           </ButtonLink>

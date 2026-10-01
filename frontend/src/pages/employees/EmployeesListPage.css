@@ -528,7 +528,11 @@ tr:hover .action-icon-btn.danger-reveal,
     padding: 0.625rem var(--page-gutter, 1.25rem) calc(0.625rem + env(safe-area-inset-bottom));
     transition: transform 0.25s ease;
   }
-  .employee-detail-page .employee-mobile-action-bar > a { display: flex; justify-content: center; width: 100%; min-width: 0; }
+  /* Powrót + Edytuj share one row; content-first sizing (`flex: 1 1 auto`)
+     with wrap as the fallback, because `.refined-btn-*` is nowrap and an
+     even split can't be trusted with longer labels. */
+  .employee-detail-page .employee-mobile-action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .employee-detail-page .employee-mobile-action-bar > a { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; min-height: 2.75rem; }
   .employee-detail-page .employee-mobile-action-bar--hidden {
     transform: translateY(calc(100% + env(safe-area-inset-bottom)));
   }

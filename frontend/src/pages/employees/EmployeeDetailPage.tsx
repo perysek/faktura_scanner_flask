@@ -646,11 +646,16 @@ export function EmployeeDetailPage() {
         </div>
       )}
 
-      {isMobile && canEditEmployees && (
+      {isMobile && (
         <div className={`employee-mobile-action-bar${mobileBarHidden ? ' employee-mobile-action-bar--hidden' : ''}`}>
-          <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
-            Edytuj pracownika
+          <ButtonLink variant="secondary" icon="arrow_back" to="/pracownicy">
+            Powrót
           </ButtonLink>
+          {canEditEmployees && (
+            <ButtonLink variant="primary" icon="edit" to={`/pracownicy/${employee.id}/edytuj`}>
+              Edytuj pracownika
+            </ButtonLink>
+          )}
         </div>
       )}
     </div>
