@@ -825,6 +825,22 @@ export function MobileWizytyCalendarView({
               <Icon name="person" />
               <span className="mob-employee-select-label">{selectedEmployeeName}</span>
             </button>
+            <button
+              type="button"
+              className="mob-cal-nav-btn mob-today-btn"
+              onClick={() => {
+                // Fresh date, not the mount-time `today` — the page can stay
+                // open across midnight. Resync the month grid too, otherwise
+                // jumping from another month leaves it showing the old one.
+                const now = new Date();
+                setMonthAnchor(new Date(now.getFullYear(), now.getMonth(), 1));
+                handleDayTap(iso(now));
+              }}
+              aria-label="Przejdź do dzisiaj"
+              title="Dziś"
+            >
+              Dziś
+            </button>
             <button type="button" className="mob-cal-nav-btn mob-month-toggle-btn" onClick={() => setMonthExpanded((v) => !v)} aria-pressed={monthExpanded} aria-label={`${monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'} (${MONTH_NAMES[selectedMonthNumber - 1] ?? ''})`} title={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'}>
               <span className="mob-month-icon">
                 <Icon name="calendar_today" />
