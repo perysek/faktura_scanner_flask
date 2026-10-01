@@ -320,8 +320,12 @@
      full-width pinned footer (the sheet already adds the safe-area padding). */
   .ab-phone-page .form-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
   .ab-phone-page .form-grid > * { min-width: 0; }
-  .ab-phone-page .ab-slot-grid > div:empty { display: none; }
+  .ab-phone-page .form-grid > div:empty { display: none; }
   .ab-phone-page .ab-slot-grid > .ab-slot-date { grid-column: 1 / -1; }
+  /* Manual-entry form: names/categories in a half-width select get truncated, so
+     those fields (and a lone date in an hourly entry) take the full row. */
+  .ab-phone-page .ab-manual-grid > .ab-field-wide { grid-column: 1 / -1; }
+  .ab-phone-page .ab-sheet-hint { margin: 0 0 1rem; font-size: 0.8125rem; color: var(--color-ink-subtle); }
   .ab-phone-page .modal-content--sheet .modal-footer { padding: 0.75rem 1.25rem; }
   .ab-phone-page .modal-content--sheet .modal-footer > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
 
@@ -330,12 +334,15 @@
      than the viewport: "Kategorie" was cut off and the whole page scrolled
      sideways). Icons are dropped to buy the width; the bar sticks to the top
      of <main> so switching tab never needs a scroll back up. */
+  /* margin-top/padding-top cancel out (-1rem/+1rem) so the bar's opaque
+     background also covers the page's own 1rem top padding; without that,
+     scrolled cards showed through the gap above the pinned tabs. */
   .ab-phone-page .ab-tabs {
     position: sticky;
     top: 0;
     z-index: 10;
-    margin: 0 calc(-1 * var(--page-gutter)) 0.875rem;
-    padding: 0 var(--page-gutter);
+    margin: -1rem calc(-1 * var(--page-gutter)) 0.875rem;
+    padding: 1rem var(--page-gutter) 0;
     background: var(--color-surface-warm);
   }
   .ab-phone-page .ab-tab { flex: 1 1 0; min-width: 0; min-height: 3rem; justify-content: center; gap: 0.375rem; padding: 0.5rem 0.25rem; font-size: 0.8125rem; }
@@ -410,7 +417,12 @@
   .ab-phone-page .ab-action-sheet-danger .ab-action-sheet-item,
   .ab-phone-page .ab-action-sheet-danger .ab-action-sheet-item .icon { color: var(--color-error); }
 
-  /* Reject-reason sheet: buttons stack full width, primary action on top. */
+  /* Reject-reason sheet: buttons stack full width with the deciding action LAST,
+     i.e. at the bottom in the thumb zone (column-reverse flips the DOM order).
+     The global danger button is flat red text, which made the bordered "Anuluj"
+     above it the louder of the two; inside a phone sheet the destructive action
+     is a solid button so the eye lands on the real decision. */
   .ab-phone-page .modal-content--sheet .modal-body .form-actions { flex-direction: column-reverse; padding-top: 1rem; margin-top: 1rem; }
   .ab-phone-page .modal-content--sheet .modal-body .form-actions > * { width: 100%; min-height: 3rem; font-size: 0.9375rem; }
+  .ab-phone-page .modal-content--sheet .refined-btn-danger:not(:disabled) { color: #fff; background: var(--color-error); border-color: var(--color-error); }
 }

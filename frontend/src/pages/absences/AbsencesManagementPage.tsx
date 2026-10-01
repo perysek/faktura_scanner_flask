@@ -12,6 +12,7 @@ import { CategoryFormModal } from './CategoryFormModal';
 import { ConflictResolutionModal } from './ConflictResolutionModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { formatPeriodPhone, formatStampPhone } from './absenceFormat';
 import type { AbsenceCategory, AbsenceRecord, AppointmentConflict, BalanceSummaryEntry } from '../../types/absence';
 import type { EmployeeListRow } from '../../types/employee';
@@ -743,6 +744,10 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
   const [timeTo, setTimeTo] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const isMobile = useIsMobile(640);
+  const ctaHidden = useHideOnScroll();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const initialLoad = loading && manualList.length === 0;
 
   const selectedCategory = categories.find((c) => String(c.id) === categoryId);
   const isFullDay = !selectedCategory || selectedCategory.absence_full_day;
@@ -802,6 +807,7 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
       setTimeTo('');
       setNotes('');
       setLimitWarning(null);
+      setSheetOpen(false);
       onCreated();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Błąd zapisu');
@@ -834,6 +840,141 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
     doSubmit();
   }
 
+  const manualFields = (
+    <div className="form-grid ab-manual-grid">
+      <div className="ab-field-wide">
+        <label className="field-label" htmlFor="manual-employee">
+          Pracownik <span className="field-required">*</span>
+        </label>
+        <select id="manual-employee" className="refined-select" required value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+          <option value="">— wybierz pracownika —</option>
+          {employees.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.full_name}
+              {e.position ? ` – ${e.position}` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="ab-field-wide">
+        <label className="field-label" htmlFor="manual-category">
+          Kategoria <span className="field-required">*</span>
+        </label>
+        <select id="manual-category" className="refined-select" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <option value="">— wybierz —</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div />
+
+      <div className={isFullDay ? undefined : 'ab-field-wide'}>
+        <label className="field-label" htmlFor="manual-date-from">
+          Data od <span className="field-required">*</span>
+        </label>
+        <input id="manual-date-from" type="date" className="refined-input" required value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+      </div>
+      {isFullDay && (
+        <div>
+          <label className="field-label" htmlFor="manual-date-to">
+            Data do <span className="field-required">*</span>
+          </label>
+          <input id="manual-date-to" type="date" className="refined-input" required value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </div>
+      )}
+      <div />
+
+      {!isFullDay && (
+        <div className="form-col-full">
+          <div className="form-grid">
+            <div>
+              <label className="field-label" htmlFor="manual-time-from">
+                Godzina od <span className="field-required">*</span>
+              </label>
+              <input id="manual-time-from" type="time" className="refined-input" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="manual-time-to">
+                Godzina do <span className="field-required">*</span>
+              </label>
+              <input id="manual-time-to" type="time" className="refined-input" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
+            </div>
+            <div />
+          </div>
+        </div>
+      )}
+
+      <div className="form-col-full">
+        <label className="field-label" htmlFor="manual-notes">
+          Uwagi
+        </label>
+        <textarea id="manual-notes" className="refined-textarea" placeholder="Np. numer zwolnienia L4, dodatkowe informacje…" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <h2 className="ab-section-title">
+          <span>Zarejestrowane wpisy</span>
+          <span className="ab-section-count">{manualList.length}</span>
+        </h2>
+
+        {initialLoad ? (
+          <p className="ab-phone-empty">Ładowanie…</p>
+        ) : manualList.length === 0 ? (
+          <p className="ab-phone-empty">Brak manualnych nieobecności. Stuknij „Nowy wpis”, żeby dodać pierwszą.</p>
+        ) : (
+          <ul className="ab-cards">
+            {manualList.map((a) => (
+              <li key={a.id} className="ab-card">
+                <div className="ab-card-top">
+                  <span className="ab-card-title">
+                    {a.employee_name}
+                    {renderBalanceHint(a, balanceSummary)}
+                  </span>
+                  <span className="ab-status ab-status--manual">Ręczna</span>
+                </div>
+                <div className="ab-card-period">{formatPeriodPhone(a)}</div>
+                <div className="ab-card-meta">{a.category_name}</div>
+                {a.notes && <div className="ab-card-meta">{a.notes}</div>}
+                <div className="ab-card-meta">Dodano {formatStampPhone(a.requested_at)}</div>
+                <button type="button" className="ab-card-cancel" onClick={() => onDelete(a)}>
+                  Usuń wpis
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className={`ab-mobile-cta${ctaHidden ? ' ab-mobile-cta--hidden' : ''}`}>
+          <Button variant="primary" icon="add" onClick={() => setSheetOpen(true)}>
+            Nowy wpis
+          </Button>
+        </div>
+
+        <Modal
+          isOpen={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          title="Nowa nieobecność"
+          variant="sheet"
+          footer={
+            <Button variant="primary" icon="save" isLoading={saving} loadingText="Zapisywanie…" onClick={handleSubmit}>
+              Zapisz nieobecność
+            </Button>
+          }
+        >
+          <p className="ab-sheet-hint">L4 i inne wpisy ręczne są zatwierdzane automatycznie.</p>
+          {manualFields}
+        </Modal>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="card">
@@ -842,79 +983,7 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
           <span className="card-count">Nieobecności L4 i inne — automatycznie zatwierdzone</span>
         </div>
         <div className="card-body">
-          <div className="form-grid">
-            <div>
-              <label className="field-label" htmlFor="manual-employee">
-                Pracownik <span className="field-required">*</span>
-              </label>
-              <select id="manual-employee" className="refined-select" required value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-                <option value="">— wybierz pracownika —</option>
-                {employees.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.full_name}
-                    {e.position ? ` – ${e.position}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="manual-category">
-                Kategoria <span className="field-required">*</span>
-              </label>
-              <select id="manual-category" className="refined-select" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                <option value="">— wybierz —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div />
-
-            <div>
-              <label className="field-label" htmlFor="manual-date-from">
-                Data od <span className="field-required">*</span>
-              </label>
-              <input id="manual-date-from" type="date" className="refined-input" required value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            </div>
-            {isFullDay && (
-              <div>
-                <label className="field-label" htmlFor="manual-date-to">
-                  Data do <span className="field-required">*</span>
-                </label>
-                <input id="manual-date-to" type="date" className="refined-input" required value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-              </div>
-            )}
-            <div />
-
-            {!isFullDay && (
-              <div className="form-col-full">
-                <div className="form-grid">
-                  <div>
-                    <label className="field-label" htmlFor="manual-time-from">
-                      Godzina od <span className="field-required">*</span>
-                    </label>
-                    <input id="manual-time-from" type="time" className="refined-input" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="field-label" htmlFor="manual-time-to">
-                      Godzina do <span className="field-required">*</span>
-                    </label>
-                    <input id="manual-time-to" type="time" className="refined-input" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
-                  </div>
-                  <div />
-                </div>
-              </div>
-            )}
-
-            <div className="form-col-full">
-              <label className="field-label" htmlFor="manual-notes">
-                Uwagi
-              </label>
-              <textarea id="manual-notes" className="refined-textarea" placeholder="Np. numer zwolnienia L4, dodatkowe informacje…" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-          </div>
+          {manualFields}
           <div className="form-actions">
             <Button variant="primary" icon="save" isLoading={saving} loadingText="Zapisywanie…" onClick={handleSubmit}>
               Zapisz nieobecność
