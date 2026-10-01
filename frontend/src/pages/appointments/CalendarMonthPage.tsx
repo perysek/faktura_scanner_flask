@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
 import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { IncomeFooter } from './IncomeFooter';
@@ -28,6 +29,11 @@ function todayIso(): string {
  * BEZ bocznego paska (spec: tylko dzień + lista).
  */
 export function CalendarMonthPage() {
+  const auth = useAuth();
+  // "Wszyscy" is a superuser option. Not offered in "Dane własne" mode: the server
+  // hard-scopes every query to the superuser's own employee there, so an "everyone"
+  // label would sit on top of one person's visits.
+  const canPickAll = auth.isSuperuser && !auth.ownDataActive;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialDate = searchParams.get('date');
@@ -45,6 +51,7 @@ export function CalendarMonthPage() {
   // "Przychód: actual / expected" in each day cell — only for an employee this viewer
   // may see income for (own employee, or any with superuser + full Employees grant).
   const income = useIncomeSummary(monthStart, monthEnd);
+  const employeesReady = employees.length > 0;
 
   useEffect(() => {
     appointmentsApi.employees().then((list) => {
@@ -57,11 +64,13 @@ export function CalendarMonthPage() {
   // swap, so the grid doesn't blink out from under the user.
   const load = useCallback(
     (silent: boolean) => {
-      if (!employeeId) return;
+      // Wait for the employee list (it also applies the default selection in the same
+      // batch). After that a null employee is the deliberate "Wszyscy": no filter sent.
+      if (!employeesReady) return;
       const id = ++requestRef.current;
       if (!silent) setLoading(true);
       appointmentsApi
-        .list({ start_date: monthStart, end_date: monthEnd, employee_id: employeeId })
+        .list({ start_date: monthStart, end_date: monthEnd, ...(employeeId ? { employee_id: employeeId } : {}) })
         .then((res) => {
           if (id === requestRef.current) setAppointments(res.appointments);
         })
@@ -69,7 +78,7 @@ export function CalendarMonthPage() {
           if (id === requestRef.current) setLoading(false);
         });
     },
-    [employeeId, monthStart, monthEnd],
+    [employeesReady, employeeId, monthStart, monthEnd],
   );
 
   useEffect(() => {
@@ -144,7 +153,7 @@ export function CalendarMonthPage() {
         </button>
         <div className="empf-divider" />
         <span className="empf-label">Pracownik:</span>
-        <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} />
+        <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll={canPickAll} />
       </div>
 
       {loading ? (

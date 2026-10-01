@@ -554,7 +554,7 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    not permanently-reserved space. */
 .mob-appt-list { display: flex; flex-direction: column; gap: 0.625rem; padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 
-/* "Przychód dnia" card under a day's last visit (MobileIncomeCard.tsx). Accent token
+/* "Przychód dnia" card under a day's date label, above its first visit (MobileIncomeCard.tsx). Accent token
    spectrum, one step per job so it reads in every theme: -muted tints the card and
    the bar track, plain accent is the bar fill + hairline border, -deep is the headline
    figure. Everything small (label, %, "z X zł") stays on ink tokens — -deep on the

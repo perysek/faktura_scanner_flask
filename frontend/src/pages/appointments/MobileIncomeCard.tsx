@@ -1,7 +1,7 @@
 import type { DayIncome } from '../../lib/appointments/useIncomeSummary';
 import { formatPLN, formatZl } from '../../lib/format';
 
-/** "Przychód dnia" card under a day's last visit on the phone list — recorded income
+/** "Przychód dnia" card right under a day's weekday/date label (above its first visit) on the phone list — recorded income
  * of completed visits over the day's expected total (completed + still planned).
  * The bar is purely decorative (aria-hidden): the same numbers are in the group's
  * accessible name, so a screen reader hears them once instead of a bare percentage. */

@@ -239,7 +239,7 @@ export function MobileWizytyCalendarView({
     setEmployeePopupOpen(false);
     setTimeout(() => setEmployeePopupMounted(false), 200);
   }
-  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? '—';
+  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? (employeeId === null && auth.isSuperuser && !auth.isLoading ? 'Wszyscy' : '—');
 
   // "Dane własne" long-press (superuser-only) — the mobile employee
   // selector's long-press replaces the old sidebar switch entirely.
@@ -661,6 +661,9 @@ export function MobileWizytyCalendarView({
                   <div id={`mob-day-${day}`} className={`mob-selected-date-label${idx > 0 ? ' mob-day-label--next' : ''}`}>
                     {formatDateLong(day)}
                   </div>
+                  {/* Income card sits right under the weekday/date label, ahead of the
+                      day's first visit card (it used to trail the last one). */}
+                  {dayIncome && (dayIncome.actual > 0 || dayIncome.expected > 0) && <MobileIncomeCard income={dayIncome} />}
                   {dayAppts.length === 0 ? (
                     <div className="empty-state">
                       <Icon name="calendar_today" className="empty-icon" />
@@ -669,7 +672,6 @@ export function MobileWizytyCalendarView({
                   ) : (
                     dayAppts.map(renderCard)
                   )}
-                  {dayIncome && (dayIncome.actual > 0 || dayIncome.expected > 0) && <MobileIncomeCard income={dayIncome} />}
                 </Fragment>
               );
             })}
@@ -797,6 +799,21 @@ export function MobileWizytyCalendarView({
                   and actually animates in, instead of snapping straight to
                   open. */}
               <div className={`mob-emp-popup-sheet${employeePopupOpen ? ' mob-emp-popup-sheet--open' : ''}`} onClick={(e) => e.stopPropagation()}>
+                {/* "Wszyscy" = employeeId null: every employee's visits, income
+                    summed across all of them. Superusers only (this popup never
+                    opens in "Dane własne" mode, see openEmployeePopup). */}
+                {auth.isSuperuser && (
+                  <button
+                    type="button"
+                    className={`mob-emp-popup-item${employeeId === null ? ' active' : ''}`}
+                    onClick={() => {
+                      onSelectEmployee(null);
+                      closeEmployeePopup();
+                    }}
+                  >
+                    Wszyscy
+                  </button>
+                )}
                 {employees.map((e) => (
                   <button
                     key={e.id}
