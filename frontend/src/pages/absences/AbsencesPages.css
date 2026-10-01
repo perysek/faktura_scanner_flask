@@ -529,14 +529,17 @@
   }
   .ab-phone-page .modal-content--sheet .modal-body .form-actions.crm-actions--steps { flex-direction: column; }
 
-  /* List step has FOUR actions; stacked they ate ~290px of a 717px sheet and left
-     room for 1.5 conflicts. A 2x2 grid is ~130px. DOM order is [Zatwierdź,
-     Zatwierdź mimo to, Odrzuć, Anuluj]; placement puts the deciding pair on the
-     bottom row (primary bottom-right, in the thumb zone) and the two exits above. */
+  /* List step has up to FOUR actions; stacked they ate ~290px of a 717px sheet and
+     left room for 1.5 conflicts. A 2x2 grid is ~130px. Placed by class, not by
+     position, because "Zatwierdź mimo to" disappears once every conflict is
+     resolved: exits (Odrzuć, Anuluj) on the top row, the approving pair below
+     with the primary bottom-right (thumb zone). With the force button gone the
+     lone Zatwierdź takes the whole bottom row (--resolved). */
   .ab-phone-page .modal-content--sheet .modal-body .form-actions.crm-actions:not(.crm-actions--steps) { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
   .ab-phone-page .modal-content--sheet .modal-body .form-actions.crm-actions:not(.crm-actions--steps) > * { font-size: 0.875rem; padding-left: 0.5rem; padding-right: 0.5rem; }
-  .ab-phone-page .crm-actions:not(.crm-actions--steps) > :nth-child(1) { grid-area: 2 / 2; }
-  .ab-phone-page .crm-actions:not(.crm-actions--steps) > :nth-child(2) { grid-area: 2 / 1; }
-  .ab-phone-page .crm-actions:not(.crm-actions--steps) > :nth-child(3) { grid-area: 1 / 1; }
-  .ab-phone-page .crm-actions:not(.crm-actions--steps) > :nth-child(4) { grid-area: 1 / 2; }
+  .ab-phone-page .crm-actions .crm-act-reject { grid-area: 1 / 1; }
+  .ab-phone-page .crm-actions .crm-act-cancel { grid-area: 1 / 2; }
+  .ab-phone-page .crm-actions .crm-act-force { grid-area: 2 / 1; }
+  .ab-phone-page .crm-actions .crm-act-approve { grid-area: 2 / 2; }
+  .ab-phone-page .crm-actions--resolved .crm-act-approve { grid-area: 2 / 1 / 3 / 3; }
 }

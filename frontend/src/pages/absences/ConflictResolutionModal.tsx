@@ -386,17 +386,21 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                 Historia rozwiązań →
               </button>
             )}
-            <div className="form-actions crm-actions">
-              <Button variant="primary" disabled={conflicts.length > 0 || approving !== null} isLoading={approving === 'true'} loadingText="Zatwierdzanie…" onClick={handleTrueApprove}>
+            <div className={`form-actions crm-actions${conflicts.length === 0 ? ' crm-actions--resolved' : ''}`}>
+              <Button variant="primary" className="crm-act-approve" disabled={conflicts.length > 0 || approving !== null} isLoading={approving === 'true'} loadingText="Zatwierdzanie…" onClick={handleTrueApprove}>
                 Zatwierdź
               </Button>
-              <Button variant="danger" disabled={approving !== null} isLoading={approving === 'force'} loadingText="Zatwierdzanie…" onClick={handleForceApprove}>
-                Zatwierdź mimo to
-              </Button>
-              <Button variant="secondary" onClick={onReject}>
+              {/* "Mimo to" only means something while conflicts remain: with none left
+                  the plain Zatwierdź is the one honest way to approve. */}
+              {conflicts.length > 0 && (
+                <Button variant="danger" className="crm-act-force" disabled={approving !== null} isLoading={approving === 'force'} loadingText="Zatwierdzanie…" onClick={handleForceApprove}>
+                  Zatwierdź mimo to
+                </Button>
+              )}
+              <Button variant="secondary" className="crm-act-reject" onClick={onReject}>
                 Odrzuć
               </Button>
-              <Button variant="secondary" onClick={onClose}>
+              <Button variant="secondary" className="crm-act-cancel" onClick={onClose}>
                 Anuluj
               </Button>
             </div>
