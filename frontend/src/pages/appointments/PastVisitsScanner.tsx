@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import './PastVisitsScanner.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useToast } from '../../components/feedback/ToastProvider';
@@ -7,14 +8,8 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import type { PastPendingAppointment, PastResolutionStatus } from '../../types/appointment';
 import { STATUS_LABELS } from '../../types/appointment';
-
-const RESOLUTIONS: PastResolutionStatus[] = ['completed', 'cancelled', 'no_show'];
-
-const STATUS_LABELS_SHORT: Record<PastResolutionStatus, string> = {
-  completed: 'Zakończona',
-  cancelled: 'Anulowana',
-  no_show: 'No-show',
-};
+import { useIsMobile } from './MobileWizytyCalendarView';
+import { RESOLUTIONS, durationMinutes, fmtDateMonth, fmtHours, fmtTime, pluralVisits } from './pastVisitsShared';
 
 const STATUS_VAR: Record<string, string> = {
   scheduled: '--color-status-scheduled',
@@ -25,46 +20,8 @@ const STATUS_VAR: Record<string, string> = {
   no_show: '--color-status-no-show',
 };
 
-const MONTHS_PL = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
-
-function fmtDateMonth(dateStr: string): string {
-  const [, m, d] = dateStr.split('-').map(Number);
-  return `${d} ${MONTHS_PL[m - 1] ?? ''}`.trim();
-}
-function fmtTime(t: string): string {
-  return t.slice(0, 5);
-}
-function durationMinutes(start: string, end: string): number | null {
-  const toMin = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return Number.isNaN(h) || Number.isNaN(m) ? null : h * 60 + m;
-  };
-  const a = toMin(start);
-  const b = toMin(end);
-  if (a == null || b == null) return null;
-  let diff = b - a;
-  if (diff < 0) diff += 24 * 60;
-  return diff;
-}
-function fmtHours(minutes: number): string {
-  return String(Math.round((minutes / 60) * 100) / 100).replace('.', ',');
-}
-function initials(name: string | null): string {
-  if (!name) return '—';
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-function pluralVisits(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (n === 1) return 'wizytę';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'wizyty';
-  return 'wizyt';
-}
-
 /** Reads a `--color-status-*` custom property at call time and returns the
- * cycle-button/card-toggle inline style — mirrors static/js/
+ * cycle-button inline style — mirrors static/js/
  * past_visits_scanner.js's `badgeStyle()`/`cssVar()`/`cssVarAlpha()`, which
  * read the CSS custom property live (so it follows theme switches) rather
  * than hardcoding a palette here. */
@@ -81,18 +38,19 @@ function statusStyle(status: string): CSSProperties {
   };
 }
 
-/** "Rozlicz przeszłe wizyty" — a shared trigger button + modal dropped into
- * every Wizyty page's header (list + 3 calendar views), ported from
+/** "Rozlicz przeszłe wizyty" — a shared trigger + modal dropped into every
+ * Wizyty page's header (list + 3 calendar views), ported from
  * static/js/past_visits_scanner.js. Self-contained: fetches its own count on
- * mount, stays hidden while zero, opens a modal on click. Desktop shows a
- * compact sticky-header table with a single per-row "cycle status" button
- * (original → completed → cancelled → no_show → original …); mobile (≤640px,
- * `.pv-mobile`/`.pv-desktop` toggle in PastVisitsScanner.css, ported 1:1 from
- * static/css/input.css) shows horizontally-scrollable cards with a 3-way
- * toggle instead. Backend (`/api/appointments/past-pending` +
- * `/api/appointments/<id>/past-status`) was already fully JSON. */
+ * mount and stays hidden while zero. Desktop opens a modal with a compact
+ * sticky-header table and a single per-row "cycle status" button (original →
+ * completed → cancelled → no_show → original …). Phones (≤640px) don't get the
+ * modal at all — the trigger is a link to the full-screen `PastVisitsPage`
+ * (`/wizyty/rozlicz`), which is built for thumbs. Backend
+ * (`/api/appointments/past-pending` + `/api/appointments/<id>/past-status`)
+ * was already fully JSON. */
 export function PastVisitsScanner() {
   const toast = useToast();
+  const isPhone = useIsMobile(640);
   const [appointments, setAppointments] = useState<PastPendingAppointment[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selections, setSelections] = useState<Record<number, PastResolutionStatus>>({});
@@ -141,18 +99,6 @@ export function PastVisitsScanner() {
     });
   }
 
-  function selectStatus(apt: PastPendingAppointment, status: PastResolutionStatus) {
-    setSelections((prev) => {
-      const copy = { ...prev };
-      if (copy[apt.id] === status) {
-        delete copy[apt.id];
-      } else {
-        copy[apt.id] = status;
-      }
-      return copy;
-    });
-  }
-
   function markAllCompleted() {
     const next: Record<number, PastResolutionStatus> = {};
     appointments.forEach((a) => {
@@ -195,6 +141,18 @@ export function PastVisitsScanner() {
 
   if (appointments.length === 0) return null;
 
+  if (isPhone) {
+    return (
+      <Link
+        to="/wizyty/rozlicz"
+        className="refined-btn-secondary refined-btn-sm pv-trigger pv-trigger--phone"
+        aria-label={`Rozlicz przeszłe wizyty, ${appointments.length} do rozliczenia`}
+      >
+        Rozlicz <span className="pv-trigger-count" aria-hidden="true">{appointments.length}</span>
+      </Link>
+    );
+  }
+
   return (
     <>
       <button type="button" className="refined-btn-secondary refined-btn-sm pv-trigger" onClick={open}>
@@ -204,7 +162,7 @@ export function PastVisitsScanner() {
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Przeszłe wizyty do rozliczenia" size="large">
         <div className="pv-note">Zaktualizuj status przeszłych wizyt.</div>
 
-        <div className="pv-desktop">
+        <>
           <div className="pv-table-wrap">
             <table className="pv-table">
               <thead>
@@ -260,49 +218,7 @@ export function PastVisitsScanner() {
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div className="pv-mobile">
-          <div className="pv-cards">
-            {appointments.map((apt) => {
-              const selected = selections[apt.id];
-              const mins = durationMinutes(apt.start_time, apt.end_time);
-              return (
-                <div key={apt.id} className={`pv-card${selected ? ' pv-card--changed' : ''}`}>
-                  <div className="pv-card-name" title={apt.client_name ?? ''}>
-                    {apt.client_name}
-                  </div>
-                  <div className="pv-card-service" title={apt.service_names ?? 'Brak usługi'}>
-                    {apt.service_names ?? 'Brak usługi'}
-                  </div>
-                  <div className="pv-card-meta">
-                    <span className="pv-card-initials" title={apt.employee_name ?? ''}>
-                      {initials(apt.employee_name)}
-                    </span>
-                    <span className="pv-card-dt">
-                      {fmtDateMonth(apt.appointment_date)}, {fmtTime(apt.start_time)}
-                      {mins != null ? ` · ${mins}min` : ''}
-                    </span>
-                  </div>
-                  <div className="pv-card-toggle" role="group" aria-label="Status wizyty">
-                    {RESOLUTIONS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        className="pv-toggle-btn"
-                        style={selected === s ? statusStyle(s) : undefined}
-                        aria-pressed={selected === s}
-                        onClick={() => selectStatus(apt, s)}
-                      >
-                        {STATUS_LABELS_SHORT[s]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        </>
 
         <div className="form-actions pv-footer">
           <Button variant="secondary" onClick={markAllCompleted}>

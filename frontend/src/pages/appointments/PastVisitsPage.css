@@ -1,0 +1,260 @@
+/* Rozlicz przeszłe wizyty — phone page (PastVisitsPage.tsx). The desktop modal's
+   styles stay in PastVisitsScanner.css; nothing here is shared with them.
+
+   Layout contract (same as .ab-phone-page): the page is a flex column that fills
+   <main>, so the pinned bottom bar sits at the bottom even with two cards, and
+   --page-gutter is the ONE number both the page padding and the bar's bleed read
+   (the 24px-vs-20px sideways scroll from ad623be). overflow-x: clip, not hidden —
+   it creates no scroll container, so the sticky bars still anchor to <main>. */
+
+.refined-page.pvp-page {
+  --page-gutter: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1rem var(--page-gutter) var(--page-gutter);
+  overflow-x: clip;
+}
+
+/* ── Pinned header: back link, live counter, progress ─────────────────────── */
+.pvp-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 calc(-1 * var(--page-gutter)) 0.75rem;
+  padding: 0 var(--page-gutter);
+  background: var(--color-surface-warm);
+}
+.pvp-top-row { display: flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; }
+.pvp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.75rem;
+  margin-left: -0.25rem;
+  padding: 0 0.5rem 0 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.pvp-back .icon { width: 1.25rem; height: 1.25rem; }
+.pvp-counter { margin: 0 0 0 auto; font-size: 0.875rem; color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+.pvp-counter strong { color: var(--color-ink); }
+.pvp-clear {
+  min-height: 2.75rem;
+  margin-right: -0.5rem;
+  padding: 0 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+/* Reserves its slot while idle so the counter doesn't jump left on the first pick;
+   visibility (not opacity) also drops it from the tab order and the a11y tree. */
+.pvp-clear--idle { visibility: hidden; }
+.pvp-progress { height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden; }
+.pvp-progress span { display: block; height: 100%; background: var(--color-status-completed); transition: width 0.25s ease; }
+
+/* ── Employee filter ──────────────────────────────────────────────────────── */
+.pvp-filter { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.25rem 0 0; }
+.pvp-filter-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); }
+.pvp-filter .refined-select { width: 100%; min-height: 2.75rem; }
+
+/* ── Day groups ───────────────────────────────────────────────────────────── */
+.pvp-day { margin-top: 1rem; }
+.pvp-day:last-of-type { margin-bottom: 1rem; }
+.pvp-day-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 0.75rem; min-height: 2.75rem; }
+.pvp-day-title { margin: 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-muted); }
+.pvp-day-rel { color: var(--color-ink); }
+.pvp-day-count { font-weight: 500; color: var(--color-ink-subtle); }
+.pvp-day-bulk {
+  min-height: 2.75rem;
+  margin-right: -0.25rem;
+  padding: 0 0.25rem;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-status-completed);
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.pvp-day-bulk:disabled { color: var(--color-ink-subtle); text-decoration: none; cursor: default; }
+
+/* ── Visit card ───────────────────────────────────────────────────────────── */
+.pvp-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
+.pvp-card {
+  --pvp-accent: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 0.875rem 0.875rem 1.125rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  /* The accent stripe is what says "this one is picked" from across the list —
+     the pressed button inside carries the same meaning in text, never colour alone. */
+  box-shadow: inset 4px 0 0 var(--pvp-accent), var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+.pvp-card[data-status="completed"] { --pvp-accent: var(--color-status-completed); }
+.pvp-card[data-status="cancelled"] { --pvp-accent: var(--color-status-cancelled-dark); }
+.pvp-card[data-status="no_show"] { --pvp-accent: var(--color-status-no-show); }
+.pvp-card--error { border-color: var(--color-status-cancelled); }
+
+.pvp-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.pvp-time { font-size: 0.9375rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.pvp-dur { font-weight: 400; color: var(--color-ink-muted); }
+.pvp-current {
+  flex-shrink: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+}
+.pvp-client { margin: 0.125rem 0 0; font-size: 1.0625rem; font-weight: 600; line-height: 1.25; color: var(--color-ink); overflow-wrap: anywhere; }
+.pvp-services { margin: 0; font-size: 0.875rem; line-height: 1.4; color: var(--color-ink-muted); overflow-wrap: anywhere; }
+.pvp-employee { margin: 0.25rem 0 0; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--color-ink-muted); }
+.pvp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 2px);
+}
+
+/* Three equal 56px targets with an 8px gap: wide enough that a thumb on the
+   wrong card lands on the gap, not on a neighbouring status. Icon over label
+   because "Zakończona" + glyph side by side doesn't fit a third of 360px. */
+.pvp-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
+.pvp-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 3.5rem;
+  padding: 0.375rem 0.25rem;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-ink);
+  background: var(--color-surface-elevated);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.pvp-choice .icon { width: 1.25rem; height: 1.25rem; }
+.pvp-choice[data-status="completed"] .icon { color: var(--color-status-completed); }
+.pvp-choice[data-status="cancelled"] .icon { color: var(--color-status-cancelled-dark); }
+.pvp-choice[data-status="no_show"] .icon { color: var(--color-status-no-show); }
+.pvp-choice:active:not(:disabled) { background: var(--color-surface); }
+.pvp-choice:disabled { opacity: 0.6; cursor: default; }
+
+.pvp-choice[aria-pressed="true"] { color: #fff; }
+.pvp-choice[aria-pressed="true"] .icon { color: #fff; }
+.pvp-choice[aria-pressed="true"][data-status="completed"] { background: var(--color-status-completed); border-color: var(--color-status-completed); }
+.pvp-choice[aria-pressed="true"][data-status="cancelled"] { background: var(--color-status-cancelled-dark); border-color: var(--color-status-cancelled-dark); }
+.pvp-choice[aria-pressed="true"][data-status="no_show"] { background: var(--color-status-no-show); border-color: var(--color-status-no-show); }
+
+.pvp-choice:focus-visible,
+.pvp-back:focus-visible,
+.pvp-clear:focus-visible,
+.pvp-day-bulk:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.pvp-error {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-status-cancelled-dark);
+  background: var(--color-status-cancelled-bg);
+  border-radius: var(--radius-sm, 2px);
+}
+
+/* ── Loading / error / all-done ───────────────────────────────────────────── */
+.pvp-state { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin: 2.5rem 0; text-align: center; }
+.pvp-state-svg { width: 3rem; height: 3rem; color: var(--color-status-completed); }
+.pvp-state-title { margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--color-ink); }
+.pvp-state-title:focus { outline: none; }
+.pvp-state-text { margin: 0 0 0.75rem; font-size: 0.9375rem; color: var(--color-ink-muted); }
+.pvp-loading { margin: 2rem 0; text-align: center; }
+
+/* ── Pinned bulk/save bar — same shape as .ab-mobile-cta. Deliberately NOT wired
+   to useHideOnScroll: the Save button + count are what the whole page is for. ── */
+.pvp-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  gap: 0.5rem;
+  margin: auto calc(-1 * var(--page-gutter)) calc(-1 * var(--page-gutter));
+  padding: 0.75rem var(--page-gutter) calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  background: var(--color-surface-elevated);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
+}
+.pvp-bar-btn { flex: 1 1 0; min-width: 0; min-height: 3rem; justify-content: center; font-size: 0.9375rem; line-height: 1.15; }
+.pvp-bar-btn:last-child { flex-grow: 1.15; }
+.pvp-bar-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 0.375rem;
+  padding: 0 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: var(--color-status-completed);
+  border-radius: 9999px;
+}
+
+/* ── Phone ────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* The app bar already names the page — keep the h1 for screen readers only. */
+  .pvp-page > .page-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  /* margin-top/padding-top cancel (-1rem/+1rem): the opaque bar also covers the
+     page's own 1rem top padding, so scrolled cards don't peek through above it. */
+  .pvp-top { margin-top: -1rem; padding-top: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pvp-card, .pvp-choice, .pvp-progress span { transition: none; }
+}

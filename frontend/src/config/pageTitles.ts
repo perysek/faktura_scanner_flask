@@ -14,6 +14,7 @@ export const PAGE_TITLE_ENTRIES: Array<[string, string]> = [
   ['/import-dokumentow', 'Wgraj faktury'],
   ['/analiza-biznesowa', 'Analityka'],
   ['/wskazniki-biznesowe', 'Wskaźniki biznesowe'],
+  ['/wizyty/rozlicz', 'Rozlicz wizyty'],
   ['/wizyty', 'Wizyty'],
   ['/klienci/nowy', 'Nowy klient'],
   ['/klienci', 'Klienci'],

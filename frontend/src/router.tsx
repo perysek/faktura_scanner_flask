@@ -24,6 +24,7 @@ import { FakturaFormPage } from './pages/faktury/FakturaFormPage';
 import { WizytyListPage } from './pages/appointments/WizytyListPage';
 import { WizytaDetailPage } from './pages/appointments/WizytaDetailPage';
 import { WizytaFormPage } from './pages/appointments/WizytaFormPage';
+import { PastVisitsPage } from './pages/appointments/PastVisitsPage';
 import { CalendarDayPage } from './pages/appointments/CalendarDayPage';
 import { CalendarWeekPage } from './pages/appointments/CalendarWeekPage';
 import { CalendarMonthPage } from './pages/appointments/CalendarMonthPage';
@@ -117,6 +118,7 @@ export const router = createBrowserRouter([
               { path: 'wizyty/kalendarz', element: <CalendarDayPage /> },
               { path: 'wizyty/kalendarz/tydzien', element: <CalendarWeekPage /> },
               { path: 'wizyty/kalendarz/miesiac', element: <CalendarMonthPage /> },
+              { path: 'wizyty/rozlicz', element: <PastVisitsPage /> },
               { path: 'wizyty/nowa', element: <WizytaFormPage mode="create" /> },
               { path: 'wizyty/:id/edytuj', element: <WizytaFormPage mode="edit" /> },
               { path: 'wizyty/:id', element: <WizytaDetailPage /> },
