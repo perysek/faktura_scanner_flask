@@ -58,7 +58,6 @@ interface PanelProps {
   value: string;
   searchPlaceholder: string;
   emptyText: string;
-  focusSearch: boolean;
   onPick: (value: string) => void;
   onClose: (returnFocus: boolean) => void;
 }
@@ -67,7 +66,7 @@ interface PanelProps {
  * Mounted only while the dropdown is open, so the query (and its debounce) start
  * empty on every open without any reset logic.
  */
-function SearchableSelectPanel({ triggerRef, listboxId, options, value, searchPlaceholder, emptyText, focusSearch, onPick, onClose }: PanelProps) {
+function SearchableSelectPanel({ triggerRef, listboxId, options, value, searchPlaceholder, emptyText, onPick, onClose }: PanelProps) {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const filtered = useMemo(() => filterByLabel(options, debouncedQuery, (o) => o.label), [options, debouncedQuery]);
@@ -162,9 +161,14 @@ function SearchableSelectPanel({ triggerRef, listboxId, options, value, searchPl
     return () => document.removeEventListener('click', onDocClick, true);
   }, [onClose, triggerRef]);
 
-  useEffect(() => {
-    if (focusSearch) searchRef.current?.focus({ preventScroll: true });
-  }, [focusSearch]);
+  // Layout effect, not useEffect: for a tap this commit runs synchronously inside
+  // the click's own call stack, which is the only place iOS/Android will let
+  // focus() raise the soft keyboard. (A deferred focus focuses the field but
+  // leaves the keyboard down.) Declared after the positioning effect so the
+  // panel is already placed — `preventScroll` keeps the page from jumping anyway.
+  useLayoutEffect(() => {
+    searchRef.current?.focus({ preventScroll: true });
+  }, []);
 
   // Keep the highlighted row visible. Manual scrollTop (not scrollIntoView) so
   // the page behind never scrolls as a side effect.
@@ -279,7 +283,6 @@ export function SearchableSelect({
   const generatedId = useId();
   const listboxId = `${id ?? generatedId}-listbox`;
   const [isOpen, setIsOpen] = useState(false);
-  const [focusSearch, setFocusSearch] = useState(true);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const listOptions = useMemo(() => {
@@ -295,9 +298,8 @@ export function SearchableSelect({
     if (returnFocus) triggerRef.current?.focus();
   }, []);
 
-  function open(withSearchFocus: boolean) {
+  function open() {
     if (disabled) return;
-    setFocusSearch(withSearchFocus);
     setIsOpen(true);
   }
 
@@ -327,17 +329,11 @@ export function SearchableSelect({
         aria-expanded={isOpen}
         aria-controls={isOpen ? listboxId : undefined}
         aria-label={ariaLabel ? `${ariaLabel}: ${triggerText}` : undefined}
-        onClick={(event) => {
-          if (isOpen) return close(true);
-          // A finger tap on a phone must not summon the keyboard before the user
-          // has even seen the list; keyboard-initiated opens (detail === 0) always focus search.
-          const touchTap = event.detail > 0 && window.matchMedia('(pointer: coarse)').matches;
-          open(!touchTap);
-        }}
+        onClick={() => (isOpen ? close(true) : open())}
         onKeyDown={(event) => {
           if (!isOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault();
-            open(true);
+            open();
           }
         }}
       >
@@ -362,7 +358,7 @@ export function SearchableSelect({
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
               event.preventDefault(); // Enter must not submit the form from here
-              open(true);
+              open();
             }
           }}
         />
@@ -376,7 +372,6 @@ export function SearchableSelect({
           value={value}
           searchPlaceholder={searchPlaceholder}
           emptyText={emptyText}
-          focusSearch={focusSearch}
           onPick={handlePick}
           onClose={close}
         />

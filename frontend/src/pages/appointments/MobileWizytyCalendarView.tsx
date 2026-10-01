@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent, TouchEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
@@ -181,6 +181,13 @@ function EmployeePopupSheet({ employees, selectedId, showAll, isOpen, onSelect, 
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const keyboard = useKeyboardInset(true);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Layout effect so the focus happens inside the tap that opened the sheet — the
+  // only moment mobile browsers let focus() raise the soft keyboard (see SearchableSelect).
+  useLayoutEffect(() => {
+    searchRef.current?.focus({ preventScroll: true });
+  }, []);
 
   const rows = useMemo(() => {
     const all: Array<{ id: number | null; label: string }> = [
@@ -201,6 +208,7 @@ function EmployeePopupSheet({ employees, selectedId, showAll, isOpen, onSelect, 
           <div className="mob-emp-popup-search-field">
             <Icon name="search" />
             <input
+              ref={searchRef}
               type="text"
               placeholder="Szukaj pracownika…"
               aria-label="Szukaj pracownika"
