@@ -517,6 +517,8 @@ export function MobileWizytyCalendarView({
 
   return (
     <div className="mob-cal-view">
+  // Month (1-12) of the selected day, drawn inside the month-toggle's calendar glyph.
+  const selectedMonthNumber = Number(selectedDate.slice(5, 7));
       <div className="mob-appt-list" ref={listRef}>
         {selectedDate && <div className="mob-selected-date-label">{formatDateLong(selectedDate)}</div>}
         {loading ? (
@@ -788,8 +790,13 @@ export function MobileWizytyCalendarView({
               <Icon name="person" />
               <span className="mob-employee-select-label">{selectedEmployeeName}</span>
             </button>
-            <button type="button" className="mob-cal-nav-btn mob-month-toggle-btn" onClick={() => setMonthExpanded((v) => !v)} aria-pressed={monthExpanded} aria-label={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'} title={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'}>
-              <Icon name="calendar_today" />
+            <button type="button" className="mob-cal-nav-btn mob-month-toggle-btn" onClick={() => setMonthExpanded((v) => !v)} aria-pressed={monthExpanded} aria-label={`${monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'} (${MONTH_NAMES[selectedMonthNumber - 1] ?? ''})`} title={monthExpanded ? 'Ukryj pełny miesiąc' : 'Pokaż pełny miesiąc'}>
+              <span className="mob-month-icon">
+                <Icon name="calendar_today" />
+                <span className="mob-month-icon-num" aria-hidden="true">
+                  {selectedMonthNumber}
+                </span>
+              </span>
             </button>
           </div>
         </div>
