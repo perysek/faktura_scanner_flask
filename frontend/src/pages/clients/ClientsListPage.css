@@ -63,6 +63,13 @@
    column needs a real share of the row, and the narrow numeric columns don't miss it. */
 .clients-table th,
 .clients-table td { padding-left: 0.625rem; padding-right: 0.625rem; }
+/* With the notes column the columns can't be squeezed below their content: under this
+   width the table scrolls inside its container instead (it already has overflow-x:auto). */
+.clients-table.clients-table--notes { min-width: 940px; }
+/* Another page's stylesheet (bundled into the same CSS file) sets `.status-badge { width: 9rem }`,
+   which made this pill overflow its column. It never showed until a neighbour column
+   (the notes) sat right next to it; let the pill be its natural width here. */
+.clients-table .status-badge { width: auto; max-width: 100%; }
 
 .client-avatar {
   width: 2.5rem;

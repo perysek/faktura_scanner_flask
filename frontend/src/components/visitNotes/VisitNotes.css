@@ -8,17 +8,24 @@
 .vn-count { font-size: 0.75rem; color: var(--color-ink-subtle); white-space: nowrap; }
 
 .vn-table-wrap { overflow-x: auto; }
+/* Fixed layout + the <colgroup> percentages: columns share the card's width instead of
+   each growing to its content (which pushed the table past the card and the action
+   icons off-screen). min-width is only a floor for very narrow desktop windows; below
+   it the wrapper scrolls. Tighter side padding than the shared 1rem, same reason. */
+.vn-table { table-layout: fixed; width: 100%; min-width: 660px; }
 .vn-table th,
-.vn-table td { vertical-align: top; }
-.vn-table td { line-height: 1.4; }
+.vn-table td { vertical-align: top; padding-left: 0.5rem; padding-right: 0.5rem; overflow-wrap: anywhere; }
+/* 12px: the visit page's card is only 683px wide inside, and seven columns (one of them a
+   16-character stamp that must stay on one line) don't fit at the shared 13px. */
+.vn-table td { font-size: 0.75rem; line-height: 1.4; }
 .vn-cell-date { white-space: nowrap; font-weight: 500; }
 .vn-visit-link { color: inherit; text-decoration: none; }
 .vn-visit-link:hover { text-decoration: underline; }
-/* Fixed-width stamp so the column doesn't jitter between rows. */
+/* The stamp is exactly 16 characters and must never break mid-way. */
 .vn-cell-stamp { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--color-ink-muted); }
 /* pre-wrap keeps the line breaks the author typed; anywhere stops a long unbroken
    string from pushing the table wider than its card. */
-.vn-cell-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 14rem; }
+.vn-cell-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* Delete: unmistakably red on hover (the shared `.danger:hover` is only a faint tint). */
 .vn-action-delete:hover,
@@ -47,6 +54,8 @@
 /* Phone: the shared stack-cards rule lays each cell out as `label … value` on one
    line; a note's text needs the full card width instead of a squeezed right half. */
 @media (max-width: 640px) {
+  /* Stacked cards have the full width: back to the shared, more readable size. */
+  .vn-table td { font-size: 0.8125rem; }
   .vn-table td.vn-cell-text { flex-direction: column; align-items: flex-start; gap: 0.25rem; min-width: 0; }
   .vn-footer { flex-wrap: wrap; }
 }
@@ -73,7 +82,17 @@
 
 /* Header wraps onto (at most) two lines instead of forcing the column wide. */
 .refined-table th.vn-th-notes { white-space: normal; word-break: normal; overflow-wrap: normal; line-height: 1.25; }
-.refined-table td.vn-cell-notes { vertical-align: top; }
+/* Centered like every other cell in the row (the section table below tops its cells instead). */
+.refined-table td.vn-cell-notes { vertical-align: middle; }
+
+/* Visits list (auto-layout table): the columns size to their content, so with 10 columns
+   the table overflowed its container and pushed the action icons off-screen. A tighter side
+   padding buys back ~160px, and the notes column gets a fixed width — wide enough for about
+   three wrapped lines — instead of whatever is left over. */
+.refined-table.vn-list-table th,
+.refined-table.vn-list-table td { padding-left: 0.5rem; padding-right: 0.5rem; }
+.refined-table.vn-list-table th.vn-th-notes,
+.refined-table.vn-list-table td.vn-cell-notes { width: 14rem; min-width: 14rem; max-width: 14rem; }
 
 /* Desktop only (>= 1024px, the app's own desktop/mobile split): below it the column
    disappears entirely — header, cells and the <col> that sizes it. */

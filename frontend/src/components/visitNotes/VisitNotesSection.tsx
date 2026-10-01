@@ -13,6 +13,14 @@ import { VisitNoteModal } from './VisitNoteModal';
 import type { VisitNote } from '../../types/visitNote';
 
 const PAGE_SIZE = 10;
+// <colgroup> widths (%) for the fixed-layout table: Data wizyty, Klient, Usługa, Ostatnia
+// edycja, Edytował, Treść uwagi[, Akcje]. The stamp column must fit "01.10.2026@09:38" on one
+// line; the actions column (two icons) only exists when some row is editable, and its share
+// goes to the text column when it's absent. Each set sums to 100.
+// Tuned for the NARROWEST host, the visit page: its card is 720px (683px inside). At 12px text the
+// stamp needs ~116px = 17%, the date ~78px, two icons ~80px.
+const COL_WIDTHS = [11.5, 12, 14, 17, 11, 22.5, 12];
+const COL_WIDTHS_NO_ACTIONS = [11.5, 12, 14, 17, 11, 34.5];
 /** The server never returns more than this per request (MAX_PAGE_SIZE). */
 const MAX_REFETCH = 50;
 
@@ -155,6 +163,11 @@ export function VisitNotesSection({ clientId, appointmentId, refreshKey, variant
           ) : (
             <div className="vn-table-wrap stack-cards-wrap">
               <table className="refined-table stack-cards vn-table">
+                <colgroup>
+                  {(showActions ? COL_WIDTHS : COL_WIDTHS_NO_ACTIONS).map((width, i) => (
+                    <col key={i} style={{ width: `${width}%` }} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Data wizyty</th>

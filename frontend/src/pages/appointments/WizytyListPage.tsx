@@ -568,7 +568,7 @@ export function WizytyListPage() {
           />
         ) : (
         <div className="table-container stack-cards-wrap">
-          <table className="refined-table stack-cards">
+          <table className="refined-table stack-cards vn-list-table">
             <thead>
               <tr>
                 {columns.map((col) => (

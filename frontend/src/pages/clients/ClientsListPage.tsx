@@ -54,7 +54,9 @@ const SORT_COLUMNS: Array<{ field: SortField; label: ReactNode }> = [
 // wizyta, Wizyt, No-show, Trend, Status, [Aktualne uwagi i zalecenia], Akcje. Each set
 // sums to 100. The notes column only exists for callers with `appointments` access.
 const COL_WIDTHS = [24, 12, 14, 8, 9, 13, 11, 9];
-const COL_WIDTHS_WITH_NOTES = [17, 9, 10, 5, 6, 9, 8, 28, 8];
+// Sized from measured minimums at 1440px (table ~1117px): No-show's header needs ~90px,
+// the Status pill ~100px incl. padding, Akcje (2 icons) ~90px; the notes column takes the rest.
+const COL_WIDTHS_WITH_NOTES = [19, 9, 9, 5, 8, 8, 9, 25, 8];
 
 /**
  * Klienci — list page. Pilot module, Faza 1 (phase-01-pilot-clients.md §1.3).
@@ -304,7 +306,7 @@ export function ClientsListPage() {
       </div>
 
       <div className="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista klientów">
-        <table className="refined-table clients-table stack-cards">
+        <table className={`refined-table clients-table stack-cards${showNotes ? ' clients-table--notes' : ''}`}>
           <colgroup>
             {colWidths.map((width, i) => (
               <col key={i} className={showNotes && i === notesColIndex ? 'vn-col-notes' : undefined} style={{ width: `${width}%` }} />
