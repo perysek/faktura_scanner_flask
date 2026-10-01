@@ -238,6 +238,7 @@ def create_app():
     from routes.employee_service_routes import employee_service_bp
     from routes.service_addon_routes import service_addon_bp
     from routes.client_preference_routes import client_preference_bp
+    from routes.visit_note_routes import visit_note_bp
     from routes.income_routes import income_bp
     from routes.analytics_routes import analytics_bp
     from routes.users.routes import users_bp
@@ -258,6 +259,7 @@ def create_app():
     app.register_blueprint(employee_service_bp, url_prefix='/api')
     app.register_blueprint(service_addon_bp, url_prefix='/api')
     app.register_blueprint(client_preference_bp, url_prefix='/api')
+    app.register_blueprint(visit_note_bp, url_prefix='/api')
     app.register_blueprint(income_bp, url_prefix='/api')
     app.register_blueprint(analytics_bp, url_prefix='/api')
     app.register_blueprint(users_bp)

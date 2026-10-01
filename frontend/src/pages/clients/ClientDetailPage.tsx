@@ -11,6 +11,7 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { SelectField, TextareaField } from '../../components/ui/form';
 import { Icon } from '../../lib/icons/Icon';
+import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { formatDate, formatPhone } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 
@@ -455,6 +456,8 @@ export function ClientDetailPage() {
           </div>
         )}
       </div>
+
+      {auth.hasModuleAccess('appointments') && <VisitNotesSection variant="detail" clientId={clientId} />}
 
       <div className="detail-card">
         <div className="action-bar">

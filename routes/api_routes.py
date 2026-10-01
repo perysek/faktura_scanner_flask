@@ -19,6 +19,7 @@ from config.database import managed_transaction
 from database.models import Invoice
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.ocr_service import PDFPasswordRequired
+from services.visit_note_service import VisitNoteService, visit_note_scope
 from utils.validators import DateParser
 from repositories.audit_repository import AuditRepository
 
@@ -2652,6 +2653,17 @@ def get_clients():
             client_dict['next_visit_time'] = nv_time.strftime('%H:%M') if nv_time else None
             client_dict['next_visit_employee'] = row['next_visit_employee']
             clients_data.append(client_dict)
+
+        # Opt-in ("Aktualne uwagi i zalecenia" column): the 2 newest visit notes per
+        # client, one batched query, scoped by the caller's `appointments` flags. A
+        # caller without that access still gets the list — just without the notes.
+        if request.args.get('include_notes') == '1':
+            scope = visit_note_scope(current_user)
+            if scope.has_access:
+                recent = VisitNoteService().recent_by_client(
+                    [c['id'] for c in clients_data], scope, 2)
+                for client_dict in clients_data:
+                    client_dict['recent_notes'] = recent.get(client_dict['id'], [])
 
         return jsonify({
             'success': True,

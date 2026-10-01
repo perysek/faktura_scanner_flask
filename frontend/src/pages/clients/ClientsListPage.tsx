@@ -11,6 +11,7 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { TrendSparkline, isVipClient } from '../../components/clients/TrendSparkline';
+import { NotesDigest } from '../../components/visitNotes/NotesDigest';
 import { ScrollTopButton } from '../../components/ui/ScrollTopButton';
 import { formatDate, formatNextVisitLine1, formatPhone, parseDateForSort } from '../../lib/format';
 import type { Client } from '../../types/client';
@@ -49,6 +50,12 @@ const SORT_COLUMNS: Array<{ field: SortField; label: ReactNode }> = [
   { field: 'no_show_count', label: <>No&#8209;show</> },
 ];
 
+// <colgroup> widths (%) for the fixed-layout table — Klient, Ostatnia wizyta, Następna
+// wizyta, Wizyt, No-show, Trend, Status, [Aktualne uwagi i zalecenia], Akcje. Each set
+// sums to 100. The notes column only exists for callers with `appointments` access.
+const COL_WIDTHS = [24, 12, 14, 8, 9, 13, 11, 9];
+const COL_WIDTHS_WITH_NOTES = [17, 9, 10, 5, 6, 9, 8, 28, 8];
+
 /**
  * Klienci — list page. Pilot module, Faza 1 (phase-01-pilot-clients.md §1.3).
  * Ported 1:1 from templates/clients/list.html: same columns, same client-side
@@ -62,6 +69,9 @@ export function ClientsListPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = auth.hasModuleWrite('clients');
+  // "Aktualne uwagi i zalecenia" shows visit notes, so it follows the `appointments`
+  // module (the server drops `recent_notes` for anyone without it).
+  const showNotes = auth.hasModuleAccess('appointments');
 
   const initial = useMemo(loadSessionState, []);
   const [searchInput, setSearchInput] = useState(initial.searchInput ?? '');
@@ -91,7 +101,10 @@ export function ClientsListPage() {
 
   // Always fetch inactive too — the chips filter client-side and need
   // accurate counts for all three states (Aktywni / VIP / Nieaktywni).
-  const clientsState = useApiData(() => clientsApi.list({ search: debouncedSearch, includeInactive: true }), [debouncedSearch]);
+  const clientsState = useApiData(
+    () => clientsApi.list({ search: debouncedSearch, includeInactive: true, includeNotes: showNotes }),
+    [debouncedSearch, showNotes],
+  );
   const trendsState = useApiData(() => clientsApi.visitTrends(), []);
   const statsState = useApiData(() => clientsApi.statistics(), []);
 
@@ -185,6 +198,10 @@ export function ClientsListPage() {
   }
 
   const isActiveSort = sortIndicator('is_active');
+  const colWidths = showNotes ? COL_WIDTHS_WITH_NOTES : COL_WIDTHS;
+  // Columns in the body: 8 base + the notes column.
+  const columnCount = colWidths.length;
+  const notesColIndex = 7;
 
   return (
     <div className="refined-page clients-page page-fills-viewport animate-fade-up">
@@ -289,14 +306,9 @@ export function ClientsListPage() {
       <div className="table-container stack-cards-wrap" aria-live="polite" aria-label="Lista klientów">
         <table className="refined-table clients-table stack-cards">
           <colgroup>
-            <col style={{ width: '24%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '9%' }} />
+            {colWidths.map((width, i) => (
+              <col key={i} className={showNotes && i === notesColIndex ? 'vn-col-notes' : undefined} style={{ width: `${width}%` }} />
+            ))}
           </colgroup>
           <thead>
             <tr>
@@ -326,6 +338,7 @@ export function ClientsListPage() {
                   </span>
                 </button>
               </th>
+              {showNotes && <th className="vn-th-notes">Aktualne uwagi i zalecenia</th>}
               <th>Akcje</th>
             </tr>
           </thead>
@@ -333,7 +346,7 @@ export function ClientsListPage() {
             {clientsState.loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i}>
-                  {Array.from({ length: 8 }).map((_, c) => (
+                  {Array.from({ length: columnCount }).map((_, c) => (
                     <td key={c} className={c >= 3 ? 'cell-hide-sm' : ''}>
                       <div className="skeleton" style={{ height: '1rem', borderRadius: '2px' }} />
                     </td>
@@ -342,7 +355,7 @@ export function ClientsListPage() {
               ))
             ) : clientsState.error ? (
               <tr>
-                <td colSpan={8} className="empty-state cell-empty">
+                <td colSpan={columnCount} className="empty-state cell-empty">
                   <p className="empty-text" style={{ color: 'var(--color-error)' }}>
                     Błąd ładowania klientów: {clientsState.error.message}
                   </p>
@@ -353,14 +366,14 @@ export function ClientsListPage() {
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={8} className="empty-state cell-empty">
+                <td colSpan={columnCount} className="empty-state cell-empty">
                   <Icon name="search_off" className="empty-icon" />
                   <p className="empty-text">Nie znaleziono klientów</p>
                 </td>
               </tr>
             ) : (
               sorted.map((client) => (
-                <ClientRow key={client.id} client={client} trend={trends[client.id]} canWrite={canWrite} onDeactivate={handleDeactivate} onRowClick={handleRowClick} />
+                <ClientRow key={client.id} client={client} trend={trends[client.id]} canWrite={canWrite} showNotes={showNotes} onDeactivate={handleDeactivate} onRowClick={handleRowClick} />
               ))
             )}
           </tbody>
@@ -376,11 +389,12 @@ interface ClientRowProps {
   client: Client;
   trend: number[] | undefined;
   canWrite: boolean;
+  showNotes: boolean;
   onDeactivate: (client: Client) => void;
   onRowClick: (client: Client, event: MouseEvent<HTMLTableRowElement>) => void;
 }
 
-function ClientRow({ client, trend, canWrite, onDeactivate, onRowClick }: ClientRowProps) {
+function ClientRow({ client, trend, canWrite, showNotes, onDeactivate, onRowClick }: ClientRowProps) {
   const initials = `${client.first_name.charAt(0)}${(client.last_name || '').charAt(0)}`.toUpperCase();
   const noShows = client.no_show_count ?? 0;
   const isVip = isVipClient(client);
@@ -435,6 +449,11 @@ function ClientRow({ client, trend, canWrite, onDeactivate, onRowClick }: Client
       <td className="status-cell" data-label="Status">
         <span className={`status-badge ${client.is_active ? 'active' : 'inactive'}`}>{client.is_active ? 'Aktywny' : 'Nieaktywny'}</span>
       </td>
+      {showNotes && (
+        <td className="vn-cell-notes" data-label="Aktualne uwagi i zalecenia">
+          <NotesDigest notes={client.recent_notes} />
+        </td>
+      )}
       <td className="cell-actions" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
         <div className="action-icons">
           <Link to={`/klienci/${client.id}`} className="action-icon-btn" title="Zobacz" aria-label="Zobacz">

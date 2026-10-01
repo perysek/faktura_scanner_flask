@@ -68,8 +68,10 @@ interface UpdateAppointmentPayload {
 export const appointmentsApi = {
   /** GET /api/appointments — date-range/employee/status filtered list.
    * `mode: 'latest'` (used by the Dashboard widget) isn't wrapped here — this
-   * client is for the Wizyty pages, which always pass a date range. */
-  list: (params: { start_date: string; end_date: string; employee_id?: number; status?: string }) =>
+   * client is for the Wizyty pages, which always pass a date range.
+   * `include_notes: 1` adds each row's `latest_note` (the desktop list's "Aktualne
+   * uwagi i zalecenia" column) — opt-in so calendars never pay for it. */
+  list: (params: { start_date: string; end_date: string; employee_id?: number; status?: string; include_notes?: 1 }) =>
     api.get<AppointmentsListResponse>('/api/appointments', params),
 
   get: (id: number) => api.get<AppointmentDetailResponse>(`/api/appointments/${id}`),

@@ -4,7 +4,7 @@
  * row dict unmodified). */
 
 export type HistoryEntityType =
-  | 'invoice' | 'import' | 'appointment' | 'client' | 'client_preference' | 'employee' | 'employee_service'
+  | 'invoice' | 'import' | 'appointment' | 'visit_note' | 'client' | 'client_preference' | 'employee' | 'employee_service'
   | 'service' | 'service_category' | 'seller' | 'seller_password' | 'login'
   | 'absence' | 'absence_limit' | 'absence_adjustment' | 'absence_category'
   | 'user' | 'role' | 'sms';

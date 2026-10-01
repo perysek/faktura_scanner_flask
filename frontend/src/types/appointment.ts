@@ -15,6 +15,8 @@
  * `/my-visits` (mobilny widok pracownika, bez bramki modułowej — nie ten
  * frontend). */
 
+import type { RecentNote } from './visitNote';
+
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled';
 
 export const STATUS_LABELS: Record<AppointmentStatus, string> = {
@@ -86,6 +88,9 @@ export interface AppointmentListItem {
   satisfaction_score: number | null;
   confirmation_status: 'pending' | 'confirmed' | 'declined' | null;
   notes: string | null;
+  /** Only on GET /api/appointments?include_notes=1: the newest visit note of this
+   * row's CLIENT (any of their visits), or null when they have none. */
+  latest_note?: RecentNote | null;
 }
 
 export interface AppointmentsListResponse {

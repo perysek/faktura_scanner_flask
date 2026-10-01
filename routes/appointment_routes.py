@@ -15,6 +15,7 @@ from config.appointment_statuses import AppointmentStatus
 from config.auth_config import module_permission_required, role_required, absence_management_required, own_data_employee_id
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
+from services.visit_note_service import VisitNoteService, visit_note_scope
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
 from repositories.appointments.income_repository import IncomeRepository
@@ -312,6 +313,16 @@ def get_appointments():
             rows = repo.get_by_date_range(start_date, end_date, employee_id, status)
 
         appointments = [dict(row) for row in rows]
+
+        # Opt-in ("Aktualne uwagi i zalecenia" column of the desktop list): the single
+        # newest visit note of each row's client, one batched query. Calendars never
+        # ask for it, so they never pay for it.
+        if request.args.get('include_notes') == '1':
+            client_ids = list(dict.fromkeys(a['client_id'] for a in appointments))
+            latest = VisitNoteService().recent_by_client(client_ids, visit_note_scope(current_user), 1)
+            for a in appointments:
+                notes = latest.get(a['client_id'])
+                a['latest_note'] = notes[0] if notes else None
 
         # Batch-load SMS state for the visible appointments
         sms_sent_map: dict = {}

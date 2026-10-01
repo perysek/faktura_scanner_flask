@@ -15,6 +15,7 @@ import { empColor } from '../../lib/appointments/employeeColor';
 import { StatusDropdown } from './StatusDropdown';
 import { CompleteVisitModal } from './CompleteVisitModal';
 import { StatusHistorySection } from './StatusHistorySection';
+import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { useIsMobile } from './MobileWizytyCalendarView';
@@ -291,6 +292,13 @@ export function WizytaDetailPage() {
           <h3 className="card-title">Uwagi</h3>
           <p>{appt.notes}</p>
         </div>
+      )}
+
+      {/* The client's notes across ALL their visits (useful before a visit too); the add
+          button is bound to THIS visit and the server shows it only once it's completed.
+          `refreshKey` refetches when the status flips, so completing the visit reveals it. */}
+      {auth.hasModuleAccess('appointments') && (
+        <VisitNotesSection variant="form" clientId={appt.client_id} appointmentId={appointmentId} refreshKey={appt.status} />
       )}
 
       <StatusHistorySection appointmentId={appointmentId} appointmentStatus={appt.status} />

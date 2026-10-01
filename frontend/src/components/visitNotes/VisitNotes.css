@@ -1,0 +1,84 @@
+/* Visit notes ("Uwagi i zalecenia z wizyt") — section, add/edit modal and the
+   "Aktualne uwagi i zalecenia" list columns. Tokens only; flat fills, small radii. */
+
+/* ── Section (client page + visit page) ──────────────────────────────────── */
+/* The visit page's `form-card` has no header class of its own; the client page
+   brings `detail-section-header`. */
+.vn-header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+.vn-count { font-size: 0.75rem; color: var(--color-ink-subtle); white-space: nowrap; }
+
+.vn-table-wrap { overflow-x: auto; }
+.vn-table th,
+.vn-table td { vertical-align: top; }
+.vn-table td { line-height: 1.4; }
+.vn-cell-date { white-space: nowrap; font-weight: 500; }
+.vn-visit-link { color: inherit; text-decoration: none; }
+.vn-visit-link:hover { text-decoration: underline; }
+/* Fixed-width stamp so the column doesn't jitter between rows. */
+.vn-cell-stamp { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--color-ink-muted); }
+/* pre-wrap keeps the line breaks the author typed; anywhere stops a long unbroken
+   string from pushing the table wider than its card. */
+.vn-cell-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 14rem; }
+
+/* Delete: unmistakably red on hover (the shared `.danger:hover` is only a faint tint). */
+.vn-action-delete:hover,
+.vn-action-delete:focus-visible { background: var(--color-error); color: #fff; }
+
+.vn-empty { padding: 0.5rem 0; }
+.vn-error { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+
+/* Bottom row: "Zobacz starsze wpisy →" on the left, "Dodaj uwagę" at the bottom-right. */
+.vn-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.75rem; min-height: 2.5rem; }
+.vn-more {
+  padding: 0.25rem 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.vn-more:hover { color: var(--color-ink); }
+.vn-more:disabled { cursor: default; opacity: 0.6; text-decoration: none; }
+.vn-more:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* Phone: the shared stack-cards rule lays each cell out as `label … value` on one
+   line; a note's text needs the full card width instead of a squeezed right half. */
+@media (max-width: 640px) {
+  .vn-table td.vn-cell-text { flex-direction: column; align-items: flex-start; gap: 0.25rem; min-width: 0; }
+  .vn-footer { flex-wrap: wrap; }
+}
+
+/* ── Add / edit modal ────────────────────────────────────────────────────── */
+.vn-modal-context { margin: 0 0 0.875rem; font-size: 0.8125rem; color: var(--color-ink-muted); }
+.vn-modal-error { margin: 0 0 0.875rem; font-size: 0.8125rem; color: var(--color-error); }
+
+/* ── "Aktualne uwagi i zalecenia" list columns (clients + visits, desktop only) ─ */
+/* Small but readable; soft-wraps in the column and is NEVER clipped — no
+   ellipsis, no line clamp. Long unbroken strings break instead of overflowing. */
+.vn-digest {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-ink);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* The stamp stays on one line so a `[dd.mm.yy@HH:MM]` is never split mid-way. */
+.vn-digest-stamp { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--color-ink-subtle); }
+.vn-digest-empty { color: var(--color-ink-subtle); }
+
+/* Header wraps onto (at most) two lines instead of forcing the column wide. */
+.refined-table th.vn-th-notes { white-space: normal; word-break: normal; overflow-wrap: normal; line-height: 1.25; }
+.refined-table td.vn-cell-notes { vertical-align: top; }
+
+/* Desktop only (>= 1024px, the app's own desktop/mobile split): below it the column
+   disappears entirely — header, cells and the <col> that sizes it. */
+@media (max-width: 1023px) {
+  .vn-col-notes,
+  .refined-table th.vn-th-notes,
+  .refined-table td.vn-cell-notes { display: none !important; }
+}

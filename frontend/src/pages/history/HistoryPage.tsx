@@ -10,7 +10,7 @@ const ENTITY_TABS: Array<{ id: string; label: string; types: string[] }> = [
   { id: 'all', label: 'Wszystkie', types: [] },
   { id: 'invoice', label: 'Faktury', types: ['invoice'] },
   { id: 'import', label: 'Import', types: ['import'] },
-  { id: 'appointment', label: 'Wizyty', types: ['appointment'] },
+  { id: 'appointment', label: 'Wizyty', types: ['appointment', 'visit_note'] },
   { id: 'client', label: 'Klienci', types: ['client', 'client_preference'] },
   { id: 'employee', label: 'Pracownicy', types: ['employee', 'employee_service'] },
   { id: 'absence', label: 'Nieobecności', types: ['absence', 'absence_limit', 'absence_adjustment', 'absence_category'] },
@@ -23,6 +23,7 @@ const ENTITY_TABS: Array<{ id: string; label: string; types: string[] }> = [
 const ENTITY_LABELS: Record<string, string> = {
   invoice: 'Faktura',
   appointment: 'Wizyta',
+  visit_note: 'Uwaga z wizyty',
   client: 'Klient',
   client_preference: 'Preferencja klienta',
   employee: 'Pracownik',

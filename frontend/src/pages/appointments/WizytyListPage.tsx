@@ -15,6 +15,8 @@ import { StatusDropdown } from './StatusDropdown';
 import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
+import { NotesDigest } from '../../components/visitNotes/NotesDigest';
+import { VisitNoteModal } from '../../components/visitNotes/VisitNoteModal';
 import { MobileWizytyCalendarView, useIsMobile, OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY } from './MobileWizytyCalendarView';
 import { readWizytyListState, writeWizytyListState } from '../../lib/wizytyListState';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
@@ -150,6 +152,8 @@ export function WizytyListPage() {
   const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });
 
   const [rescheduleTarget, setRescheduleTarget] = useState<AppointmentListItem | null>(null);
+  // Desktop row action "Dodaj uwagę" (completed visits only): the visit being annotated.
+  const [noteTarget, setNoteTarget] = useState<AppointmentListItem | null>(null);
 
   const [weekAppointments, setWeekAppointments] = useState<AppointmentListItem[]>([]);
   const [weekLoading, setWeekLoading] = useState(true);
@@ -207,7 +211,7 @@ export function WizytyListPage() {
     setWeekLoading(true);
     setWeekError(null);
     appointmentsApi
-      .list({ start_date: iso(weekStart), end_date: iso(addDays(weekStart, 6)) })
+      .list({ start_date: iso(weekStart), end_date: iso(addDays(weekStart, 6)), include_notes: 1 })
       .then((res) => setWeekAppointments(res.appointments))
       .catch((err: unknown) => setWeekError(err instanceof Error ? err : new Error(String(err))))
       .finally(() => setWeekLoading(false));
@@ -236,7 +240,7 @@ export function WizytyListPage() {
     const [y, m] = key.split('-').map(Number);
     const start = `${key}-01`;
     const end = iso(new Date(y, m, 0));
-    const res = await appointmentsApi.list({ start_date: start, end_date: end });
+    const res = await appointmentsApi.list({ start_date: start, end_date: end, include_notes: 1 });
     const byDate = groupByDate(res.appointments);
     setMonthCache({ key, byDate });
     return byDate;
@@ -257,7 +261,7 @@ export function WizytyListPage() {
     const cached = monthFetchRef.current.get(key);
     if (cached) return cached;
     const [y, m] = key.split('-').map(Number);
-    const res = await appointmentsApi.list({ start_date: `${key}-01`, end_date: iso(new Date(y, m, 0)) });
+    const res = await appointmentsApi.list({ start_date: `${key}-01`, end_date: iso(new Date(y, m, 0)), include_notes: 1 });
     const byDate = groupByDate(res.appointments);
     monthFetchRef.current.set(key, byDate);
     return byDate;
@@ -574,6 +578,7 @@ export function WizytyListPage() {
                     </button>
                   </th>
                 ))}
+                <th className="vn-th-notes">Aktualne uwagi i zalecenia</th>
                 <th>
                   <span className="sr-only">Akcje</span>
                 </th>
@@ -582,13 +587,13 @@ export function WizytyListPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="empty-state">
+                  <td colSpan={10} className="empty-state">
                     <p className="empty-text">Ładowanie wizyt...</p>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={9} className="empty-state">
+                  <td colSpan={10} className="empty-state">
                     <p className="empty-text" style={{ color: 'var(--color-error)' }}>
                       Błąd ładowania wizyt: {error.message}
                     </p>
@@ -599,7 +604,7 @@ export function WizytyListPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="empty-state">
+                  <td colSpan={10} className="empty-state">
                     <Icon name="calendar_today" className="empty-icon" />
                     <p className="empty-text">Brak wizyt w tym okresie.</p>
                   </td>
@@ -641,8 +646,25 @@ export function WizytyListPage() {
                       <td data-label="Ocena">
                         <span className={appt.satisfaction_score ? 'stars-desktop' : 'stars-none'}>{stars(appt.satisfaction_score)}</span>
                       </td>
+                      <td className="vn-cell-notes" data-label="Aktualne uwagi i zalecenia">
+                        <NotesDigest notes={appt.latest_note ? [appt.latest_note] : null} />
+                      </td>
                       <td className="cell-actions">
                         <div className="action-icons">
+                          {canWrite && appt.status === 'completed' && (
+                            <button
+                              type="button"
+                              className="action-icon-btn action-icon-btn--note"
+                              title="Dodaj uwagę"
+                              aria-label="Dodaj uwagę"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNoteTarget(appt);
+                              }}
+                            >
+                              <Icon name="note_add" />
+                            </button>
+                          )}
                           {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
                             <button
                               type="button"
@@ -694,6 +716,16 @@ export function WizytyListPage() {
         onClose={() => setRescheduleTarget(null)}
         employees={employees}
         onRescheduled={handleStatusUpdated}
+      />
+
+      <VisitNoteModal
+        isOpen={noteTarget !== null}
+        onClose={() => setNoteTarget(null)}
+        appointmentId={noteTarget?.id ?? null}
+        visitLabel={
+          noteTarget ? [formatDateShort(noteTarget.appointment_date), noteTarget.client_name, noteTarget.service_name].filter(Boolean).join(' · ') : undefined
+        }
+        onSaved={handleStatusUpdated}
       />
     </div>
   );

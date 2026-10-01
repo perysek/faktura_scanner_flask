@@ -1,3 +1,5 @@
+import type { RecentNote } from './visitNote';
+
 /**
  * Mirrors GET /api/clients / GET /api/clients/<id> 1:1 — routes/api_routes.py
  * lines ~2552-3078 (phase-01-pilot-clients.md §1.2). Dates are ISO strings
@@ -29,6 +31,9 @@ export interface Client {
   next_visit_date?: string | null;
   next_visit_time?: string | null;
   next_visit_employee?: string | null;
+  // Only on GET /api/clients?include_notes=1, and only for a caller with
+  // `appointments` access: the 2 newest visit notes, newest first.
+  recent_notes?: RecentNote[];
 }
 
 export interface DuplicateMatch {

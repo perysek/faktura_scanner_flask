@@ -59,6 +59,10 @@
 
 .clients-table { min-width: 860px; table-layout: fixed; }
 .clients-table th:last-child { text-align: right; }
+/* Tighter horizontal padding than the shared 1rem: the "Aktualne uwagi i zalecenia"
+   column needs a real share of the row, and the narrow numeric columns don't miss it. */
+.clients-table th,
+.clients-table td { padding-left: 0.625rem; padding-right: 0.625rem; }
 
 .client-avatar {
   width: 2.5rem;
