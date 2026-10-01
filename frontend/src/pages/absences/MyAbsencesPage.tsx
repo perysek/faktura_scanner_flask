@@ -9,6 +9,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Icon } from '../../lib/icons/Icon';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { formatPeriodPhone, formatStampPhone } from './absenceFormat';
 import type { AbsenceCategory, AbsenceRecord, AbsenceSupervisor } from '../../types/absence';
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
@@ -22,36 +23,6 @@ function formatPeriod(a: AbsenceRecord) {
   if (a.time_from) return `${a.date_from}, ${a.time_from}–${a.time_to}`;
   if (a.date_from === a.date_to) return a.date_from;
   return `${a.date_from} – ${a.date_to}`;
-}
-
-// Hardcoded, not Intl: the phone cards must read the same on every device
-// locale, and Intl's short-month output differs between engines.
-const MONTHS_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
-
-function parseYmd(ymd: string) {
-  const [y, m, d] = ymd.split('-').map(Number);
-  return { y, m, d };
-}
-
-/** "12–16 paź 2026", "28 wrz – 3 paź 2026", "5 paź 2026, 14:00–16:30" — the
- * phone card's headline, so it has to be scannable at a glance. */
-function formatPeriodPhone(a: AbsenceRecord) {
-  const from = parseYmd(a.date_from);
-  const to = parseYmd(a.date_to);
-  const day = (p: typeof from, withYear: boolean) => `${p.d} ${MONTHS_SHORT[p.m - 1]}${withYear ? ` ${p.y}` : ''}`;
-  if (a.time_from) return `${day(from, true)}, ${a.time_from}–${a.time_to}`;
-  if (a.date_from === a.date_to) return day(from, true);
-  if (from.y === to.y && from.m === to.m) return `${from.d}–${to.d} ${MONTHS_SHORT[to.m - 1]} ${to.y}`;
-  if (from.y === to.y) return `${day(from, false)} – ${day(to, true)}`;
-  return `${day(from, true)} – ${day(to, true)}`;
-}
-
-/** "1 paź, 08:14" (year only when it isn't the current one). */
-function formatRequestedPhone(ts: string | null) {
-  if (!ts) return '—';
-  const { y, m, d } = parseYmd(ts.slice(0, 10));
-  const year = y === new Date().getFullYear() ? '' : ` ${y}`;
-  return `${d} ${MONTHS_SHORT[m - 1]}${year}, ${ts.slice(11, 16)}`;
 }
 
 /** Moje nieobecności — self-service request form + history. Ported from
@@ -308,7 +279,7 @@ export function MyAbsencesPage() {
   );
 
   return (
-    <div className="refined-page absences-page my-absences-page animate-fade-up">
+    <div className="refined-page absences-page my-absences-page ab-phone-page animate-fade-up">
       <header className="page-header">
         <div>
           <h1 className="page-title">Moje nieobecności</h1>
@@ -340,12 +311,12 @@ export function MyAbsencesPage() {
                 return (
                   <li key={a.id} className="ab-card">
                     <div className="ab-card-top">
-                      <span className="ab-card-category">{a.category_name}</span>
+                      <span className="ab-card-title">{a.category_name}</span>
                       <span className={`ab-status ${status.className}`}>{status.label}</span>
                     </div>
                     <div className="ab-card-period">{formatPeriodPhone(a)}</div>
                     <div className="ab-card-meta">Przełożony: {a.approver_name || '—'}</div>
-                    <div className="ab-card-meta">Złożono {formatRequestedPhone(a.requested_at)}</div>
+                    <div className="ab-card-meta">Złożono {formatStampPhone(a.requested_at)}</div>
                     {a.status === 'rejected' && a.rejection_reason && <p className="rejection-note ab-card-note">{a.rejection_reason}</p>}
                     {canCancel && (
                       <button type="button" className="ab-card-cancel" onClick={() => cancelRecord(a)}>

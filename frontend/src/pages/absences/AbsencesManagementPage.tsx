@@ -11,6 +11,8 @@ import { Icon } from '../../lib/icons/Icon';
 import { CategoryFormModal } from './CategoryFormModal';
 import { ConflictResolutionModal } from './ConflictResolutionModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { formatPeriodPhone, formatStampPhone } from './absenceFormat';
 import type { AbsenceCategory, AbsenceRecord, AppointmentConflict, BalanceSummaryEntry } from '../../types/absence';
 import type { EmployeeListRow } from '../../types/employee';
 
@@ -63,6 +65,7 @@ export function AbsencesManagementPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const auth = useAuth();
+  const isMobile = useIsMobile(640);
 
   const [tab, setTab] = useState<'requests' | 'manual' | 'categories'>('requests');
   const [requests, setRequests] = useState<AbsenceRecord[]>([]);
@@ -303,7 +306,7 @@ export function AbsencesManagementPage() {
   }
 
   return (
-    <div className="refined-page absences-page management-page animate-fade-up">
+    <div className="refined-page absences-page management-page ab-phone-page animate-fade-up">
       <header className="page-header">
         <div>
           <h1 className="page-title">Zarządzanie nieobecnościami</h1>
@@ -326,7 +329,21 @@ export function AbsencesManagementPage() {
         )}
       </div>
 
-      {tab === 'requests' && (
+      {tab === 'requests' && isMobile && (
+        <RequestsPhone
+          requests={requests}
+          loading={loading}
+          isSuperuser={isSuperuser}
+          busyId={busyId}
+          balanceSummary={balanceSummary}
+          onApprove={handleApprove}
+          onReject={setRejectId}
+          onCancelApproved={handleCancelApproved}
+          onHardDelete={handleHardDeleteAbsence}
+        />
+      )}
+
+      {tab === 'requests' && !isMobile && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">Wnioski pracowników</span>
@@ -456,7 +473,7 @@ export function AbsencesManagementPage() {
         />
       )}
 
-      <Modal isOpen={rejectId !== null} onClose={() => setRejectId(null)} title="Odrzuć wniosek">
+      <Modal isOpen={rejectId !== null} onClose={() => setRejectId(null)} title="Odrzuć wniosek" variant="sheet">
         <p style={{ color: 'var(--color-ink-subtle)', fontSize: '0.8125rem', marginBottom: '0.75rem' }}>Podaj powód odrzucenia — zostanie on przekazany pracownikowi.</p>
         <textarea className="refined-textarea" rows={3} placeholder="Powód odrzucenia wniosku…" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} autoFocus />
         <div className="form-actions">
@@ -481,6 +498,124 @@ export function AbsencesManagementPage() {
 
       <CategoryFormModal isOpen={categoryModal.open} category={categoryModal.category} onClose={() => setCategoryModal({ open: false, category: null })} onSaved={reload} />
     </div>
+  );
+}
+
+interface RequestsPhoneProps {
+  requests: AbsenceRecord[];
+  loading: boolean;
+  isSuperuser: boolean;
+  busyId: number | null;
+  balanceSummary: Record<number, BalanceSummaryEntry>;
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+  onCancelApproved: (id: number) => void;
+  onHardDelete: (a: AbsenceRecord) => void;
+}
+
+/** Wnioski on a phone (≤640px): status-first cards instead of the 7-column
+ * sortable table. The supervisor's core job (Zatwierdź / Odrzuć) is a pair of
+ * real 48px buttons on every pending card; the rare, dangerous one (superuser
+ * permanent delete) hides behind ⋯ in a bottom sheet, never in the thumb zone.
+ * Sorting is desktop-only: on a phone the useful cut is "what needs me?", so
+ * there are two filters instead — pending (default while any exist) and all. */
+function RequestsPhone({ requests, loading, isSuperuser, busyId, balanceSummary, onApprove, onReject, onCancelApproved, onHardDelete }: RequestsPhoneProps) {
+  const [phoneFilter, setPhoneFilter] = useState<'pending' | 'all' | null>(null);
+  const [sheetTarget, setSheetTarget] = useState<AbsenceRecord | null>(null);
+
+  const pending = requests.filter((r) => r.status === 'pending');
+  // Until the supervisor picks one, show what needs them; once the queue is
+  // empty fall through to the full history instead of an empty screen.
+  const filter = phoneFilter ?? (pending.length > 0 ? 'pending' : 'all');
+  const visible = filter === 'pending' ? pending : requests;
+  const initialLoad = loading && requests.length === 0;
+
+  return (
+    <>
+      <div className="ab-filter" role="group" aria-label="Filtr wniosków">
+        <button type="button" className={`ab-chip${filter === 'pending' ? ' active' : ''}`} aria-pressed={filter === 'pending'} onClick={() => setPhoneFilter('pending')}>
+          Oczekujące <span className="ab-chip-count">{pending.length}</span>
+        </button>
+        <button type="button" className={`ab-chip${filter === 'all' ? ' active' : ''}`} aria-pressed={filter === 'all'} onClick={() => setPhoneFilter('all')}>
+          Wszystkie <span className="ab-chip-count">{requests.length}</span>
+        </button>
+      </div>
+
+      {initialLoad ? (
+        <p className="ab-phone-empty">Ładowanie…</p>
+      ) : visible.length === 0 ? (
+        <p className="ab-phone-empty">{filter === 'pending' ? 'Brak oczekujących wniosków.' : 'Brak wniosków.'}</p>
+      ) : (
+        <ul className="ab-cards">
+          {visible.map((a) => {
+            const status = STATUS_LABEL[a.status];
+            return (
+              <li key={a.id} className="ab-card">
+                <div className="ab-card-top">
+                  <span className="ab-card-title">
+                    {a.employee_name}
+                    {renderBalanceHint(a, balanceSummary)}
+                  </span>
+                  <span className="ab-card-top-end">
+                    <span className={`ab-status ${status.className}`}>{status.label}</span>
+                    {isSuperuser && (
+                      <button type="button" className="ab-card-more" aria-label={`Więcej: ${a.employee_name ?? 'wniosek'}`} onClick={() => setSheetTarget(a)}>
+                        <Icon name="more_horiz" />
+                      </button>
+                    )}
+                  </span>
+                </div>
+                <div className="ab-card-period">{formatPeriodPhone(a)}</div>
+                <div className="ab-card-meta">
+                  {a.category_name}
+                  {a.absence_full_day === false && ' · godzinowa'}
+                </div>
+                <div className="ab-card-meta">
+                  Złożono {formatStampPhone(a.requested_at)}
+                  {a.responded_at && ` · odpowiedź ${formatStampPhone(a.responded_at)}`}
+                </div>
+                {a.status === 'rejected' && a.rejection_reason && <p className="rejection-note ab-card-note">{a.rejection_reason}</p>}
+                {a.status === 'pending' && (
+                  <div className="ab-card-actions">
+                    <Button variant="secondary" onClick={() => onReject(a.id)}>
+                      Odrzuć
+                    </Button>
+                    <Button variant="primary" icon="check" isLoading={busyId === a.id} loadingText="Zatwierdzanie…" onClick={() => onApprove(a.id)}>
+                      Zatwierdź
+                    </Button>
+                  </div>
+                )}
+                {a.status === 'approved' && isSuperuser && (
+                  <button type="button" className="ab-card-cancel" onClick={() => onCancelApproved(a.id)}>
+                    Anuluj nieobecność
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Modal isOpen={sheetTarget !== null} onClose={() => setSheetTarget(null)} title={sheetTarget?.employee_name ?? 'Wniosek'} variant="sheet">
+        {sheetTarget && (
+          <ul className="ab-action-sheet">
+            <li className="ab-action-sheet-danger">
+              <button
+                type="button"
+                className="ab-action-sheet-item"
+                onClick={() => {
+                  const target = sheetTarget;
+                  setSheetTarget(null);
+                  onHardDelete(target);
+                }}
+              >
+                <Icon name="delete" /> Usuń trwale
+              </button>
+            </li>
+          </ul>
+        )}
+      </Modal>
+    </>
   );
 }
 
