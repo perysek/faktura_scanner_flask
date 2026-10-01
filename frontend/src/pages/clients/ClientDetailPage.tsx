@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
-import { SelectField, TextareaField } from '../../components/ui/form';
+import { SearchableSelectField, SelectField, TextareaField } from '../../components/ui/form';
 import { Icon } from '../../lib/icons/Icon';
 import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { formatDate, formatPhone } from '../../lib/format';
@@ -323,12 +323,13 @@ export function ClientDetailPage() {
                 onChange={(e) => handleServiceFilterChange(e.target.value)}
                 error={prefError?.field === 'service' ? prefError.message : undefined}
               />
-              <SelectField
+              <SearchableSelectField
                 label="Preferowany pracownik"
                 placeholder="Wybierz pracownika..."
+                searchPlaceholder="Szukaj pracownika…"
                 options={employeeOptions}
                 value={selectedEmployeeId}
-                onChange={(e) => handleEmployeeFilterChange(e.target.value)}
+                onChange={handleEmployeeFilterChange}
                 error={prefError?.field === 'employee' ? prefError.message : undefined}
               />
               <Button variant="primary" small onClick={handleAddPreference} style={{ marginTop: '1.25rem' }}>

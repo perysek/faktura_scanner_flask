@@ -7,6 +7,7 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { Icon } from '../../lib/icons/Icon';
 import { CategoryFormModal } from './CategoryFormModal';
 import { ConflictResolutionModal } from './ConflictResolutionModal';
@@ -916,15 +917,16 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
         <label className="field-label" htmlFor="manual-employee">
           Pracownik <span className="field-required">*</span>
         </label>
-        <select id="manual-employee" className="refined-select" required value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-          <option value="">— wybierz pracownika —</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.full_name}
-              {e.position ? ` – ${e.position}` : ''}
-            </option>
-          ))}
-        </select>
+        <SearchableSelect
+          id="manual-employee"
+          triggerClassName="refined-select"
+          required
+          placeholder="— wybierz pracownika —"
+          searchPlaceholder="Szukaj pracownika…"
+          options={employees.map((e) => ({ value: String(e.id), label: `${e.full_name}${e.position ? ` – ${e.position}` : ''}` }))}
+          value={employeeId}
+          onChange={setEmployeeId}
+        />
       </div>
       <div className="ab-field-wide">
         <label className="field-label" htmlFor="manual-category">

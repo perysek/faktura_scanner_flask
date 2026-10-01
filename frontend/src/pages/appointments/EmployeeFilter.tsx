@@ -1,3 +1,4 @@
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { empColor } from '../../lib/appointments/employeeColor';
 import type { EmployeeOption } from '../../types/appointment';
 
@@ -51,13 +52,14 @@ export function EmployeeFilter({ employees, selectedId, onSelect, allowAll = fal
   return (
     <div className="empf-dropdown">
       <span className="empf-dd-dot" style={{ background: selectedId ? empColor(selectedId) : '#6b7280' }} />
-      <select value={selectedId ?? ''} onChange={(e) => onSelect(e.target.value === '' ? null : Number(e.target.value))}>
-        {options.map((e) => (
-          <option key={e.id ?? 'all'} value={e.id ?? ''}>
-            {e.full_name}
-          </option>
-        ))}
-      </select>
+      <SearchableSelect
+        triggerClassName="empf-trigger"
+        aria-label="Pracownik"
+        searchPlaceholder="Szukaj pracownika…"
+        options={options.map((e) => ({ value: e.id === null ? '' : String(e.id), label: e.full_name }))}
+        value={selectedId === null ? '' : String(selectedId)}
+        onChange={(v) => onSelect(v === '' ? null : Number(v))}
+      />
     </div>
   );
 }

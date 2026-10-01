@@ -11,7 +11,7 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { FormActions, FormSection, SelectField, TextareaField, TextField } from '../../components/ui/form';
+import { FormActions, FormSection, SearchableSelectField, SelectField, TextareaField, TextField } from '../../components/ui/form';
 import { useEscapeAction } from '../../lib/a11y/escapeScope';
 import { useIsMobile } from './MobileWizytyCalendarView';
 import { formatPLN } from '../../lib/format';
@@ -424,15 +424,25 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
       <div className="appt-form-layout">
         <form onSubmit={handleSubmit}>
           <FormSection legend="Klient i pracownik">
-            <SelectField label="Klient" required id="client-select" placeholder="Wybierz klienta..." options={clients.map((c) => ({ value: String(c.id), label: c.label }))} value={clientId} onChange={(e) => setClientId(e.target.value)} />
-            <SelectField
+            <SearchableSelectField
+              label="Klient"
+              required
+              id="client-select"
+              placeholder="Wybierz klienta..."
+              searchPlaceholder="Szukaj klienta…"
+              options={clients.map((c) => ({ value: String(c.id), label: c.label }))}
+              value={clientId}
+              onChange={setClientId}
+            />
+            <SearchableSelectField
               label="Pracownik"
               required
               id="employee-select"
               placeholder="Wybierz pracownika..."
+              searchPlaceholder="Szukaj pracownika…"
               options={employees.map((e) => ({ value: String(e.id), label: e.position ? `${e.full_name} — ${e.position}` : e.full_name }))}
               value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
+              onChange={setEmployeeId}
             />
             {mode === 'edit' && <SelectField label="Status" id="status-select" options={STATUS_OPTIONS} value={status} onChange={(e) => setStatus(e.target.value as AppointmentStatus)} />}
           </FormSection>

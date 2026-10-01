@@ -7,6 +7,8 @@ import type {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
+import { SearchableSelect } from './SearchableSelect';
+import type { SearchableSelectProps } from './SearchableSelect';
 import { useEscapeAction } from '../../lib/a11y/escapeScope';
 
 /**
@@ -116,6 +118,26 @@ export function SelectField({
           </option>
         ))}
       </select>
+    </FieldWrapper>
+  );
+}
+
+export interface SearchableSelectFieldProps extends Omit<SearchableSelectProps, 'id' | 'invalid'> {
+  label: string;
+  error?: string;
+  helper?: string;
+  fullWidth?: boolean;
+  id?: string;
+}
+
+/** `SelectField` with a type-to-filter search box on top — the field to use for
+ * every employee and client picker. `onChange` takes the new value, not an event. */
+export function SearchableSelectField({ label, error, helper, fullWidth, id, required, ...rest }: SearchableSelectFieldProps) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
+  return (
+    <FieldWrapper id={fieldId} label={label} required={required} error={error} helper={helper} fullWidth={fullWidth}>
+      <SearchableSelect id={fieldId} required={required} invalid={!!error} {...rest} />
     </FieldWrapper>
   );
 }

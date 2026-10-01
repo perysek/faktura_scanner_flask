@@ -6,6 +6,7 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { Icon } from '../../lib/icons/Icon';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
@@ -245,15 +246,16 @@ export function MyAbsencesPage() {
           <label className="field-label" htmlFor="ab-approver">
             Przełożony (zatwierdzający) <span className="field-required">*</span>
           </label>
-          <select id="ab-approver" className="refined-select" required value={approverId} onChange={(e) => setApproverId(e.target.value)}>
-            <option value="">— wybierz przełożonego —</option>
-            {supervisors.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.first_name} {s.last_name}
-                {s.position ? ` – ${s.position}` : ''}
-              </option>
-            ))}
-          </select>
+          <SearchableSelect
+            id="ab-approver"
+            triggerClassName="refined-select"
+            required
+            placeholder="— wybierz przełożonego —"
+            searchPlaceholder="Szukaj przełożonego…"
+            options={supervisors.map((s) => ({ value: String(s.id), label: `${s.first_name} ${s.last_name}${s.position ? ` – ${s.position}` : ''}` }))}
+            value={approverId}
+            onChange={setApproverId}
+          />
         </div>
 
         <div className="form-col-full">

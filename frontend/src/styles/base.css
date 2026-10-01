@@ -59,7 +59,9 @@ html, body, #root {
   .refined-input,
   .form-input,
   .form-select,
-  .form-textarea {
+  .form-textarea,
+  .ssel-trigger,
+  .ssel-search-input {
     font-size: 16px !important;
   }
 }

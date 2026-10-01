@@ -6,7 +6,7 @@ import { usersApi } from '../../lib/api/users';
 import { ApiError } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/feedback/ToastProvider';
-import { FormActions, FormCard, FormFieldset, SelectField, TextField } from '../../components/ui/form';
+import { FormActions, FormCard, FormFieldset, SearchableSelectField, SelectField, TextField } from '../../components/ui/form';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { ModuleChips } from './ModuleChips';
 import { Switch } from './Switch';
@@ -118,8 +118,7 @@ export function UserFormPage({ mode }: Props) {
    * email from that employee's record — both stay editable afterward, and
    * re-picking a different employee overwrites them again. Edit mode's own
    * employee select (re-link an existing account) never calls this. */
-  function handleEmployeeSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    const value = e.target.value;
+  function handleEmployeeSelect(value: string) {
     setEmployeeId(value);
     const emp = availableEmployees.find((x) => String(x.id) === value);
     if (emp) {
@@ -213,11 +212,12 @@ export function UserFormPage({ mode }: Props) {
           {mode === 'create' ? (
             <>
               <FormFieldset legend="Pracownik i rola">
-                <SelectField
+                <SearchableSelectField
                   label="Powiązany pracownik"
                   required
                   disabled={loading}
                   placeholder="-- Wybierz pracownika --"
+                  searchPlaceholder="Szukaj pracownika…"
                   options={employeeOptions}
                   value={employeeId}
                   onChange={handleEmployeeSelect}
@@ -280,13 +280,14 @@ export function UserFormPage({ mode }: Props) {
                   onChange={(e) => setRole(e.target.value)}
                   helper={isSelf ? 'Nie możesz zmienić własnej roli.' : undefined}
                 />
-                <SelectField
+                <SearchableSelectField
                   label="Powiązany pracownik"
                   disabled={loading}
                   placeholder="-- Brak (odepnij od konta) --"
+                  searchPlaceholder="Szukaj pracownika…"
                   options={employeeOptions}
                   value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
+                  onChange={setEmployeeId}
                   helper="Wybierz „Brak”, aby odpiąć pracownika od tego konta."
                 />
 

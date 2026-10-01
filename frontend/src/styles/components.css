@@ -241,6 +241,112 @@
   box-shadow: 0 0 0 3px rgba(155, 44, 44, 0.1);
 }
 
+/* ── SearchableSelect (components/ui/SearchableSelect.tsx) ───────────────────
+   The employee/client picker: a button that LOOKS like the select it replaces
+   (it also carries `.form-select` / `.refined-select`, which supply the skin),
+   plus a search-on-top option panel. The panel is `position: fixed` and placed
+   from JS: `.modal-body`/`.modal-content` clip with overflow, so an absolute
+   panel would be cut off inside every dialog. z-index sits above `.modal-overlay`
+   (9999) so it also works inside modals. */
+.ssel-root { position: relative; width: 100%; }
+.ssel-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+.ssel-trigger:disabled { cursor: not-allowed; }
+/* `.form-select` reserves 2.5rem for a native chevron this control draws itself. */
+.ssel-trigger.form-select { padding-right: 0.625rem; }
+.ssel-value { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ssel-value.is-placeholder { color: var(--color-ink-subtle); }
+.ssel-chevron { flex: 0 0 auto; width: 1.125rem; height: 1.125rem; color: var(--color-ink-subtle); transition: transform 0.15s ease; }
+.ssel-trigger[aria-expanded='true'] .ssel-chevron { transform: rotate(180deg); }
+/* `:focus-within` (not `:focus`) so the ring also shows while the search box in the
+   open panel — or the invisible required-proxy below — holds focus. */
+.ssel-root:focus-within > .ssel-trigger { outline: none; border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
+
+/* Invisible `required` mirror (see the component): laid exactly over the trigger so
+   the browser's validation bubble anchors to the control; never seen or clicked. */
+.ssel-required-proxy {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ssel-panel {
+  position: fixed;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.ssel-search { position: relative; flex: 0 0 auto; padding: 0.5rem; border-bottom: 1px solid var(--color-border-subtle); }
+.ssel-search .icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-ink-subtle);
+  pointer-events: none;
+}
+.ssel-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4375rem 0.625rem 0.4375rem 2rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.ssel-search-input:focus { border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
+.ssel-list {
+  position: relative; /* offsetParent for the keyboard-scroll math */
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ssel-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.ssel-option.is-active { background: var(--color-surface-warm); }
+.ssel-option.is-selected { font-weight: 600; }
+.ssel-option[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+.ssel-option-label { min-width: 0; overflow-wrap: anywhere; }
+.ssel-option-check { flex: 0 0 auto; width: 1rem; height: 1rem; color: var(--color-ink-muted); }
+.ssel-empty { padding: 0.75rem; font-size: 0.8125rem; color: var(--color-ink-subtle); text-align: center; }
+@media (max-width: 1023px) {
+  /* Touch targets: the desktop rows (~34px) are too tight for a thumb. */
+  .ssel-option { padding: 0.75rem; }
+}
+
 .form-error-text {
   display: block;
   color: var(--color-error);

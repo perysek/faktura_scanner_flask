@@ -4,6 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { useKeyboardInset } from '../../lib/useKeyboardInset';
+import { filterByLabel, SEARCH_DEBOUNCE_MS } from '../../lib/searchOptions';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
@@ -155,6 +158,70 @@ export interface MobileWizytyCalendarViewProps {
   nextDayLoading: boolean;
   /** The search ran out of days with visits; replaces the button with a note. */
   noMoreDays: boolean;
+}
+
+interface EmployeePopupSheetProps {
+  employees: EmployeeOption[];
+  selectedId: number | null;
+  /** Prepend "Wszyscy" (employeeId null) — superusers only. */
+  showAll: boolean;
+  /** Drives the `--open` CSS class; the parent flips it one frame after mount. */
+  isOpen: boolean;
+  onSelect: (id: number | null) => void;
+  onDismiss: () => void;
+}
+
+/**
+ * The phone employee picker's bottom sheet, with a type-to-filter box on top.
+ * Mounted only while the popup is up, so the query and its debounce start
+ * empty on every open. `useKeyboardInset` lifts the sheet above the soft
+ * keyboard — a plain `bottom: 0` fixed sheet would end up hidden behind it.
+ */
+function EmployeePopupSheet({ employees, selectedId, showAll, isOpen, onSelect, onDismiss }: EmployeePopupSheetProps) {
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+  const keyboard = useKeyboardInset(true);
+
+  const rows = useMemo(() => {
+    const all: Array<{ id: number | null; label: string }> = [
+      ...(showAll ? [{ id: null, label: 'Wszyscy' }] : []),
+      ...employees.map((e) => ({ id: e.id, label: e.full_name })),
+    ];
+    return filterByLabel(all, debouncedQuery, (r) => r.label);
+  }, [employees, showAll, debouncedQuery]);
+
+  return (
+    <div className="mob-emp-popup-overlay" onClick={onDismiss}>
+      <div
+        className={`mob-emp-popup-sheet${isOpen ? ' mob-emp-popup-sheet--open' : ''}`}
+        style={keyboard.visibleHeight ? { bottom: keyboard.bottom, maxHeight: `${Math.round(keyboard.visibleHeight * 0.85)}px` } : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mob-emp-popup-search">
+          <div className="mob-emp-popup-search-field">
+            <Icon name="search" />
+            <input
+              type="text"
+              placeholder="Szukaj pracownika…"
+              aria-label="Szukaj pracownika"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        {rows.length === 0 && <p className="mob-emp-popup-empty">Brak wyników</p>}
+        {rows.map((r) => (
+          <button key={r.id ?? 'all'} type="button" className={`mob-emp-popup-item${r.id === selectedId ? ' active' : ''}`} onClick={() => onSelect(r.id)}>
+            {r.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -792,43 +859,24 @@ export function MobileWizytyCalendarView({
             viewport bottom (see Appointments.css) rather than anchored to
             this row, so where it sits in the JSX tree doesn't matter. */}
         <div className="mob-fixed-nav-actions-wrap">
+          {/* `employeePopupOpen` toggles one frame after mount (rAF in
+              openEmployeePopup) so the sheet starts from the closed transform
+              and actually animates in, instead of snapping straight to open.
+              `showAll`: "Wszyscy" = employeeId null — every employee's visits,
+              income summed across all of them. Superusers only (this popup
+              never opens in "Dane własne" mode, see openEmployeePopup). */}
           {employeePopupMounted && (
-            <div className="mob-emp-popup-overlay" onClick={closeEmployeePopup}>
-              {/* `employeePopupOpen` toggles one frame after mount (rAF in
-                  openEmployeePopup) so this starts from the closed transform
-                  and actually animates in, instead of snapping straight to
-                  open. */}
-              <div className={`mob-emp-popup-sheet${employeePopupOpen ? ' mob-emp-popup-sheet--open' : ''}`} onClick={(e) => e.stopPropagation()}>
-                {/* "Wszyscy" = employeeId null: every employee's visits, income
-                    summed across all of them. Superusers only (this popup never
-                    opens in "Dane własne" mode, see openEmployeePopup). */}
-                {auth.isSuperuser && (
-                  <button
-                    type="button"
-                    className={`mob-emp-popup-item${employeeId === null ? ' active' : ''}`}
-                    onClick={() => {
-                      onSelectEmployee(null);
-                      closeEmployeePopup();
-                    }}
-                  >
-                    Wszyscy
-                  </button>
-                )}
-                {employees.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    className={`mob-emp-popup-item${e.id === employeeId ? ' active' : ''}`}
-                    onClick={() => {
-                      onSelectEmployee(e.id);
-                      closeEmployeePopup();
-                    }}
-                  >
-                    {e.full_name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <EmployeePopupSheet
+              employees={employees}
+              selectedId={employeeId}
+              showAll={auth.isSuperuser}
+              isOpen={employeePopupOpen}
+              onSelect={(id) => {
+                onSelectEmployee(id);
+                closeEmployeePopup();
+              }}
+              onDismiss={closeEmployeePopup}
+            />
           )}
           <div className="mob-fixed-nav-actions">
             {canWrite && (

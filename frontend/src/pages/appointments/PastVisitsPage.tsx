@@ -7,6 +7,7 @@ import { ApiError } from '../../lib/api/client';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { Icon } from '../../lib/icons/Icon';
 import type { PastPendingAppointment, PastResolutionStatus } from '../../types/appointment';
 import { STATUS_LABELS } from '../../types/appointment';
@@ -284,14 +285,14 @@ export function PastVisitsPage() {
             <label className="pvp-filter-label" htmlFor="pvp-employee">
               Pracownik
             </label>
-            <select id="pvp-employee" className="refined-select" value={activeEmployee} onChange={(e) => setEmployeeId(e.target.value)}>
-              <option value="">Wszyscy ({total})</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name} ({e.count})
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              id="pvp-employee"
+              triggerClassName="refined-select"
+              searchPlaceholder="Szukaj pracownika…"
+              options={[{ value: '', label: `Wszyscy (${total})` }, ...employees.map((e) => ({ value: String(e.id), label: `${e.name} (${e.count})` }))]}
+              value={activeEmployee}
+              onChange={setEmployeeId}
+            />
           </div>
         )}
 

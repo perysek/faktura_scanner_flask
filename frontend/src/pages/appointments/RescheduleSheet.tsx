@@ -4,6 +4,7 @@ import { ApiError } from '../../lib/api/client';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import type { AppointmentDetailResponse, AppointmentListItem, AvailableSlot, EmployeeOption } from '../../types/appointment';
 
 export interface RescheduleSheetProps {
@@ -190,14 +191,14 @@ export function RescheduleSheet({ appointment, isOpen, onClose, employees, onRes
               ) : employeeOptions && employeeOptions.length === 0 ? (
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-ink-subtle)' }}>Brak dostępnych pracowników tego dnia.</p>
               ) : (
-                <select id="reschedule-employee" className="form-select" value={employeeId ?? ''} onChange={(e) => setEmployeeId(e.target.value === '' ? null : Number(e.target.value))}>
-                  <option value="">Wybierz pracownika</option>
-                  {(employeeOptions ?? []).map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.full_name}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  id="reschedule-employee"
+                  placeholder="Wybierz pracownika"
+                  searchPlaceholder="Szukaj pracownika…"
+                  options={(employeeOptions ?? []).map((e) => ({ value: String(e.id), label: e.full_name }))}
+                  value={employeeId == null ? '' : String(employeeId)}
+                  onChange={(v) => setEmployeeId(v === '' ? null : Number(v))}
+                />
               )}
             </div>
           )}
