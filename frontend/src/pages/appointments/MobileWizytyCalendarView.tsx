@@ -10,6 +10,7 @@ import { filterByLabel, SEARCH_DEBOUNCE_MS } from '../../lib/searchOptions';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
+import { NotesDigest } from '../../components/visitNotes/NotesDigest';
 import { MobileIncomeCard } from './MobileIncomeCard';
 import { RescheduleSheet } from './RescheduleSheet';
 import { StatusDropdown } from './StatusDropdown';
@@ -710,6 +711,15 @@ export function MobileWizytyCalendarView({
         {/* Employee row dropped entirely (redesign). Service — bare
             name, no "Usługa:" caption. */}
         <span className="mob-appt-service">{appt.service_name || '—'}</span>
+
+        {/* Post-visit note — same digest the desktop "Aktualne uwagi i
+            zalecenia" column shows (client's newest note, small type, never
+            clipped). Only rendered when there is one: no "—" placeholder. */}
+        {appt.latest_note && (
+          <div className="mob-appt-note">
+            <NotesDigest notes={[appt.latest_note]} />
+          </div>
+        )}
 
         {/* Minimal "this is tappable" hint (TASK3). */}
         <Icon name="chevron_right" className="mob-appt-tap-hint" />

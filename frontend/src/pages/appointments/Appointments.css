@@ -796,6 +796,11 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    (employee) row is dropped entirely, not just its caption. */
 .mob-appt-service { font-size: 1rem; color: var(--color-ink-muted); }
 
+/* Post-visit note — a hairline-separated block under the service. The type size
+   (0.75rem) comes from `.vn-digest` in VisitNotes.css so the card and the desktop
+   notes column stay in step; this only owns the divider and spacing. */
+.mob-appt-note { padding-top: 0.5rem; border-top: 1px solid var(--color-border); }
+
 .mob-appt-card .status-badge { font-size: 0.8125rem; padding: 0.375rem 0.625rem; min-height: 32px; flex-shrink: 0; }
 
 .list-chain-more {
