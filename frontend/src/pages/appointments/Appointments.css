@@ -430,13 +430,6 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .mob-fixed-nav-actions .mob-cal-nav-btn { flex-shrink: 0; }
 .mob-month-toggle-btn[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
 
-/* Employee selector — replaces the old filter modal entirely. Expands to
-   fill the row's remaining width (the "+" and month-toggle buttons either
-   side keep their fixed 44px via `.mob-fixed-nav-actions .mob-cal-nav-btn`
-   above), icon + name centered together as one group. */
-.mob-employee-select-btn {
-  flex: 1 1 auto; width: auto; min-width: 0; gap: 0.5rem; padding: 0 0.75rem;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 /* Month number of the selected day, drawn INSIDE the calendar glyph. The Material
    `calendar_today` body spans ~19-81% across and ~41-85% down its box, so the
    number is centred at 50% / 63%. currentColor, so it inverts with the pressed
@@ -449,6 +442,13 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   font-variant-numeric: tabular-nums; pointer-events: none;
 }
 
+/* Employee selector — replaces the old filter modal entirely. Expands to
+   fill the row's remaining width (the "+" and month-toggle buttons either
+   side keep their fixed 44px via `.mob-fixed-nav-actions .mob-cal-nav-btn`
+   above), icon + name centered together as one group. */
+.mob-employee-select-btn {
+  flex: 1 1 auto; width: auto; min-width: 0; gap: 0.5rem; padding: 0 0.75rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 .mob-employee-select-label { font-size: 0.875rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
