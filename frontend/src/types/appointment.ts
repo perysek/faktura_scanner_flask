@@ -255,6 +255,26 @@ export interface CalendarAbsence {
   status: 'approved' | 'pending';
 }
 
+/** GET /api/appointments/income-summary — one row per (visit date, employee) the
+ * viewer may see. `actual` = recorded net income of completed visits; `expected` =
+ * recorded income of completed + planned price of scheduled/confirmed/in-progress
+ * (cancelled, no-show and rescheduled never count). `scope` says WHOSE rows these
+ * are: 'all' (superuser with full Employees grant), 'own' (only the viewer's own
+ * linked employee, `own_employee_id`), 'none' (nothing). */
+export interface IncomeSummaryRow {
+  date: string;
+  employee_id: number;
+  actual: number;
+  expected: number;
+}
+
+export interface IncomeSummaryResponse {
+  success: true;
+  scope: 'all' | 'own' | 'none';
+  own_employee_id: number | null;
+  rows: IncomeSummaryRow[];
+}
+
 /** GET /api/appointments/multi-employee-schedule — day-view's paginated
  * multi-employee columns. */
 export interface MultiEmployeeScheduleResponse {

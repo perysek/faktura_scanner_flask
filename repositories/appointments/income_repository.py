@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 from datetime import datetime, date
 from config.database import get_db_connection, safe_commit
 from config.admin_view import emp_exclusion_sql
+from config.appointment_statuses import AppointmentStatus
 from database.models import IncomeRecord
 from repositories.db_utils import parse_dt, parse_date
 
@@ -101,6 +102,60 @@ class IncomeRepository:
             JOIN employees e ON e.id = ir.employee_id
             WHERE ir.is_deleted = FALSE AND ir.payment_date BETWEEN %s AND %s {employee_filter} {excl_sql}
             ORDER BY ir.payment_date DESC
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(params))
+            return cursor.fetchall()
+
+    def get_daily_summary(self, start_date: date, end_date: date,
+                          employee_id: Optional[int] = None) -> List[Any]:
+        """Przychód per (dzień wizyty, pracownik): zapisany vs oczekiwany.
+
+        Pod stopki kalendarza ("Przychód: actual / expected"). Grupuje po
+        ``appointment_date`` wizyty, NIE po ``payment_date`` — wizyta rozliczona
+        post factum (skaner przeszłych wizyt) ma payment_date z dnia rozliczenia,
+        a ma wpaść do dnia, w którym się odbyła.
+
+        * ``actual``   — suma ``net_amount`` (po rabacie) rekordów przychodu wizyt
+          ze statusem 'completed'.
+        * ``expected`` — jak wyżej dla 'completed' (zapisana kwota; gdyby rekordu
+          brakowało — cena wizyty) + ``total_price`` wizyt zaplanowanych / potwierdzonych /
+          w trakcie. Anulowane, no-show i przełożone (zamrożony oryginał) są poza sumą —
+          dokładnie ``AppointmentStatus.EXCLUDED_FROM_SCHEDULE``.
+
+        Dzięki temu gdy dzień się domknie, actual == expected.
+        """
+        params: list = [start_date.isoformat(), end_date.isoformat()]
+        employee_filter = ""
+        if employee_id:
+            employee_filter = "AND a.employee_id = %s"
+            params.append(employee_id)
+
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
+        params.extend(excl_params)
+
+        completed = AppointmentStatus.COMPLETED
+        active = ', '.join(f"'{s}'" for s in sorted(AppointmentStatus.ACTIVE))  # stałe z configu, nie input
+        query = f"""
+            SELECT
+                a.appointment_date AS day,
+                a.employee_id,
+                COALESCE(SUM(CASE WHEN a.status = '{completed}' THEN COALESCE(ir.net_amount, 0) ELSE 0 END), 0) AS actual,
+                COALESCE(SUM(CASE
+                    WHEN a.status = '{completed}' THEN COALESCE(ir.net_amount, a.total_price, 0)
+                    WHEN a.status IN ({active}) THEN COALESCE(a.total_price, 0)
+                    ELSE 0
+                END), 0) AS expected
+            FROM appointments a
+            LEFT JOIN LATERAL (
+                SELECT SUM(net_amount) AS net_amount
+                FROM income_records
+                WHERE appointment_id = a.id AND is_deleted = FALSE
+            ) ir ON TRUE
+            WHERE a.is_deleted = FALSE AND a.appointment_date BETWEEN %s AND %s {employee_filter} {excl_sql}
+            GROUP BY a.appointment_date, a.employee_id
+            ORDER BY a.appointment_date, a.employee_id
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()

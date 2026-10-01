@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useToast } from './ToastProvider';
 import { useAuth } from '../../contexts/AuthContext';
+import { notifyAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
 
 const STATUS_LABELS: Record<string, string> = {
   in_progress: 'W trakcie',
@@ -46,6 +47,8 @@ export function StatusEventsPoller() {
       try {
         const data = await appointmentsApi.statusEvents(lastPollRef.current);
         lastPollRef.current = data.server_time;
+        // A status changed somewhere else — refresh whatever on screen is derived from visits.
+        if (data.events.length > 0) notifyAppointmentsChanged();
         data.events.forEach((evt) => {
           const label = STATUS_LABELS[evt.new_status] ?? evt.new_status;
           toast.info(`Wizyta — ${evt.client_name ?? '—'}: status → "${label}"`);

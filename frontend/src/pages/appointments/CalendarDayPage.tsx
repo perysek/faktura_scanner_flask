@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
+import { useAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
 import { empColor } from '../../lib/appointments/employeeColor';
+import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
+import { useAuth } from '../../contexts/AuthContext';
 import { useElementHeight } from '../../lib/useElementHeight';
+import { IncomeFooter } from './IncomeFooter';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
@@ -65,14 +69,35 @@ export function CalendarDayPage() {
   const [data, setData] = useState<MultiEmployeeScheduleResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [laneRef, laneHeight] = useElementHeight<HTMLDivElement>(LANE_HEIGHT_FALLBACK);
+  const requestRef = useRef(0);
+
+  // Per-employee income footers: superuser-only here (the server additionally
+  // narrows to employees this viewer may see — see useIncomeSummary).
+  const isSuperuser = useAuth().user?.role === 'superuser';
+  const income = useIncomeSummary(date, date, isSuperuser);
+
+  // `silent` = refresh in place after visits changed elsewhere: no "Ładowanie…"
+  // swap, so the grid doesn't blink out from under the user.
+  const load = useCallback(
+    (silent: boolean) => {
+      const id = ++requestRef.current;
+      if (!silent) setLoading(true);
+      appointmentsApi
+        .multiEmployeeSchedule(date, page * 8, 8)
+        .then((res) => {
+          if (id === requestRef.current) setData(res);
+        })
+        .finally(() => {
+          if (id === requestRef.current) setLoading(false);
+        });
+    },
+    [date, page],
+  );
 
   useEffect(() => {
-    setLoading(true);
-    appointmentsApi
-      .multiEmployeeSchedule(date, page * 8, 8)
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, [date, page]);
+    load(false);
+  }, [load]);
+  useAppointmentsChanged(() => load(true));
 
   function goDay(offset: number) {
     setDate((d) => addDaysIso(d, offset));
@@ -220,6 +245,16 @@ export function CalendarDayPage() {
                 );
               })}
             </div>
+            {isSuperuser && income.scope !== null && income.scope !== 'none' && (
+              <div className="cal-grid-footer">
+                <div style={{ width: '3rem', flexShrink: 0 }} />
+                {data.employees.map((emp) => (
+                  <div key={emp.id} className="cal-footer-cell" style={{ flex: 1, minWidth: 160 }}>
+                    {income.canShow(emp.id) && <IncomeFooter income={income.forDay(date, emp.id)} dashWhenEmpty />}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

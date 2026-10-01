@@ -6,6 +6,8 @@ import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentsApi } from '../../lib/api/appointments';
+import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
+import { MobileIncomeCard } from './MobileIncomeCard';
 import { RescheduleSheet } from './RescheduleSheet';
 import { StatusDropdown } from './StatusDropdown';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
@@ -361,6 +363,13 @@ export function MobileWizytyCalendarView({
     }
     return map;
   }, [appointments]);
+  // "Przychód dnia" cards: one request spanning every day currently shown, refreshed
+  // live (status changes, other users, tab refocus). The server only sends rows this
+  // viewer may see; `canShow` then keeps the card off for any employee selection that
+  // would expose someone else's income (see useIncomeSummary).
+  const sortedDays = [...days].sort();
+  const income = useIncomeSummary(sortedDays[0] ?? null, sortedDays[sortedDays.length - 1] ?? null);
+  const showIncome = income.canShow(employeeId);
   const firstDayAppts = byDay.get(days[0]) ?? [];
   // Content key of the FIRST day only: the jump-to-next-visit effect below must
   // not re-fire (and yank the scroll back up) just because "Pokaż kolejny dzień"
@@ -646,6 +655,7 @@ export function MobileWizytyCalendarView({
           <>
             {days.map((day, idx) => {
               const dayAppts = byDay.get(day) ?? [];
+              const dayIncome = showIncome && dayAppts.length > 0 ? income.forDay(day, employeeId) : null;
               return (
                 <Fragment key={day}>
                   <div id={`mob-day-${day}`} className={`mob-selected-date-label${idx > 0 ? ' mob-day-label--next' : ''}`}>
@@ -659,6 +669,7 @@ export function MobileWizytyCalendarView({
                   ) : (
                     dayAppts.map(renderCard)
                   )}
+                  {dayIncome && (dayIncome.actual > 0 || dayIncome.expected > 0) && <MobileIncomeCard income={dayIncome} />}
                 </Fragment>
               );
             })}

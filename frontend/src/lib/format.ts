@@ -65,6 +65,17 @@ export function formatPLN(amount: number | null | undefined): string {
   }).format(amount);
 }
 
+/** Compact PLN number without the currency sign → "1 200" (whole złoty) or
+ * "1 234,50" (only when there are grosze). For tight spots — calendar cells,
+ * "actual / expected" pairs — where formatPLN's "1 200,00 zł" is too long;
+ * the caller appends " zł" once, and puts the exact value in a `title`. */
+export function formatZl(n: number): string {
+  return new Intl.NumberFormat('pl-PL', {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
 /** Multi-currency variant (static/js/utils.js's formatCurrency) — used where
  * an invoice's own `currency` field (not always PLN) must be respected. */
 export function formatCurrency(amount: number | null | undefined, currency = 'PLN'): string {

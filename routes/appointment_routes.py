@@ -342,6 +342,81 @@ def get_appointments():
         raise AppError('Wystapil blad serwera')
 
 
+def _income_visibility():
+    """Whose income this user may see: ('all', None) | ('own', employee_id) | ('none', None).
+
+    'all' — superuser with a genuinely unrestricted 'employees' grant (same
+    predicate as formy_zatrudnienia_required / the SPA's hasFullEmployeesGrant).
+    'own' — everyone else who is linked to an employee: only that employee.
+    The SQL never sees employees outside this scope, so the figures aren't merely
+    hidden in the UI — they are not sent."""
+    from config.auth_config import get_permission_flags, get_linked_employee
+    if current_user.role == 'superuser':
+        flags = get_permission_flags(current_user.role, 'employees')
+        if flags['has_access'] and not flags['read_only'] and not flags['own_data']:
+            return 'all', None
+    linked = get_linked_employee(current_user)
+    return ('own', linked['id']) if linked else ('none', None)
+
+
+@appointment_bp.route('/appointments/income-summary', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def get_income_summary():
+    """Przychód per dzień i pracownik — zapisany (wizyty completed) vs oczekiwany.
+
+    Query: start_date, end_date (YYYY-MM-DD, wymagane), employee_id (opcjonalne).
+    Zwraca ``rows`` = [{date, employee_id, actual, expected}] tylko dla pracowników,
+    których przychód wolno temu użytkownikowi widzieć (patrz ``_income_visibility``),
+    oraz ``scope`` / ``own_employee_id``, żeby frontend wiedział, czy wybór
+    "wszyscy pracownicy" jest pełną sumą (scope 'all') czy nie.
+    """
+    try:
+        try:
+            start_date = _parse_date(request.args.get('start_date'))
+            end_date = _parse_date(request.args.get('end_date'))
+        except ValueError:
+            raise ValidationError('Nieprawidłowy format daty (RRRR-MM-DD)')
+        if not start_date or not end_date or end_date < start_date:
+            raise ValidationError('Podaj poprawny zakres dat')
+        if (end_date - start_date).days > 400:
+            raise ValidationError('Zakres dat jest zbyt duży')
+
+        employee_id = request.args.get('employee_id', type=int)
+        # Rola z own_data na 'appointments' widzi tylko własnego pracownika — jak w get_appointments.
+        own_emp = own_data_employee_id(current_user, 'appointments')
+        if own_emp is not None:
+            employee_id = own_emp
+
+        scope, own_employee_id = _income_visibility()
+        if scope == 'none' or (scope == 'own' and employee_id is not None and employee_id != own_employee_id):
+            rows = []
+        else:
+            if scope == 'own':
+                employee_id = own_employee_id
+            rows = IncomeRepository().get_daily_summary(start_date, end_date, employee_id)
+
+        return jsonify({
+            'success': True,
+            'scope': scope,
+            'own_employee_id': own_employee_id,
+            'rows': [
+                {
+                    'date': r['day'].isoformat() if hasattr(r['day'], 'isoformat') else str(r['day']),
+                    'employee_id': r['employee_id'],
+                    'actual': round(float(r['actual']), 2),
+                    'expected': round(float(r['expected']), 2),
+                }
+                for r in rows
+            ],
+        })
+    except AppError:
+        raise
+    except Exception:
+        logging.exception('Unexpected error in get_income_summary')
+        raise AppError('Wystapil blad serwera')
+
+
 @appointment_bp.route('/appointments/table-data', methods=['GET'])
 @login_required
 @module_permission_required('data_correction')

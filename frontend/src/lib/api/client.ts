@@ -12,6 +12,8 @@
  * always go through `api`.
  */
 
+import { notifyAppointmentsChanged } from '../appointments/appointmentEvents';
+
 export class ApiError extends Error {
   status: number;
   /** Full parsed JSON error body, when there was one — beyond `.message`
@@ -101,6 +103,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     const message = (data && (data.error as string)) || `Błąd serwera (${response.status})`;
     throw new ApiError(response.status, message, data);
   }
+
+  // Any successful write under /api/appointments may change what the calendar
+  // blocks and income footers show — tell them (see appointmentEvents.ts).
+  if (method !== 'GET' && path.startsWith('/api/appointments')) notifyAppointmentsChanged();
 
   return data as T;
 }

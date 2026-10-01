@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
+import { useAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
+import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { useElementHeight } from '../../lib/useElementHeight';
+import { IncomeFooter } from './IncomeFooter';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
@@ -75,6 +78,10 @@ export function CalendarWeekPage() {
   const [absences, setAbsences] = useState<CalendarAbsence[]>([]);
   const [loading, setLoading] = useState(true);
   const [laneRef, laneHeight] = useElementHeight<HTMLDivElement>(LANE_HEIGHT_FALLBACK);
+  const requestRef = useRef(0);
+  // "Przychód: actual / expected" under each day — only for an employee this viewer
+  // may see income for (own employee, or any with superuser + full Employees grant).
+  const income = useIncomeSummary(iso(weekStart), iso(addDays(weekStart, 6)));
 
   useEffect(() => {
     appointmentsApi.employees().then((list) => {
@@ -83,18 +90,32 @@ export function CalendarWeekPage() {
     });
   }, []);
 
+  // `silent` = refresh in place after visits changed elsewhere: no "Ładowanie…"
+  // swap, so the grid doesn't blink out from under the user.
+  const load = useCallback(
+    (silent: boolean) => {
+      if (!employeeId) return;
+      const id = ++requestRef.current;
+      if (!silent) setLoading(true);
+      const start = iso(weekStart);
+      const end = iso(addDays(weekStart, 6));
+      Promise.all([appointmentsApi.list({ start_date: start, end_date: end, employee_id: employeeId }), appointmentsApi.absences(start, end)])
+        .then(([apptRes, absRes]) => {
+          if (id !== requestRef.current) return;
+          setAppointments(apptRes.appointments);
+          setAbsences(absRes.filter((a) => a.employee_id === employeeId));
+        })
+        .finally(() => {
+          if (id === requestRef.current) setLoading(false);
+        });
+    },
+    [employeeId, weekStart],
+  );
+
   useEffect(() => {
-    if (!employeeId) return;
-    setLoading(true);
-    const start = iso(weekStart);
-    const end = iso(addDays(weekStart, 6));
-    Promise.all([appointmentsApi.list({ start_date: start, end_date: end, employee_id: employeeId }), appointmentsApi.absences(start, end)])
-      .then(([apptRes, absRes]) => {
-        setAppointments(apptRes.appointments);
-        setAbsences(absRes.filter((a) => a.employee_id === employeeId));
-      })
-      .finally(() => setLoading(false));
-  }, [employeeId, weekStart]);
+    load(false);
+  }, [load]);
+  useAppointmentsChanged(() => load(true));
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -207,6 +228,16 @@ export function CalendarWeekPage() {
               );
             })}
           </div>
+          {income.canShow(employeeId) && (
+            <div className="cal-grid-footer">
+              <div style={{ width: '3rem', flexShrink: 0 }} />
+              {days.map((day) => (
+                <div key={iso(day)} className="cal-footer-cell" style={{ flex: 1, minWidth: 120 }}>
+                  <IncomeFooter income={income.forDay(iso(day), employeeId)} dashWhenEmpty />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

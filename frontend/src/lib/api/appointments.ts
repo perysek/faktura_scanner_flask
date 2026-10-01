@@ -9,6 +9,7 @@ import type {
   CancelForAbsenceResult,
   ConflictCheckResult,
   EmployeeOption,
+  IncomeSummaryResponse,
   MultiEmployeeScheduleResponse,
   PastPendingAppointment,
   PastResolutionStatus,
@@ -101,6 +102,11 @@ export const appointmentsApi = {
 
   absences: (startDate: string, endDate: string) =>
     api.get<{ success: true; absences: CalendarAbsence[] }>('/api/appointments/absences', { start_date: startDate, end_date: endDate }).then((r) => r.absences),
+
+  /** GET /api/appointments/income-summary — "Przychód: actual / expected" per day
+   * and employee, already filtered server-side to what this viewer may see. */
+  incomeSummary: (startDate: string, endDate: string) =>
+    api.get<IncomeSummaryResponse>('/api/appointments/income-summary', { start_date: startDate, end_date: endDate }),
 
   multiEmployeeSchedule: (date: string, offset = 0, limit = 8) =>
     api.get<MultiEmployeeScheduleResponse>('/api/appointments/multi-employee-schedule', { date, offset, limit }),

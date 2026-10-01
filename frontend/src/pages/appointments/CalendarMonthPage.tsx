@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
+import { useAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
+import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
+import { IncomeFooter } from './IncomeFooter';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
@@ -35,7 +38,13 @@ export function CalendarMonthPage() {
   const [employeeId, setEmployeeId] = useState<number | null>(searchParams.get('employee_id') ? Number(searchParams.get('employee_id')) : null);
   const [appointments, setAppointments] = useState<AppointmentListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const requestRef = useRef(0);
   const today = todayIso();
+  const monthStart = iso(year, month, 1);
+  const monthEnd = iso(year, month, new Date(year, month + 1, 0).getDate());
+  // "Przychód: actual / expected" in each day cell — only for an employee this viewer
+  // may see income for (own employee, or any with superuser + full Employees grant).
+  const income = useIncomeSummary(monthStart, monthEnd);
 
   useEffect(() => {
     appointmentsApi.employees().then((list) => {
@@ -44,16 +53,30 @@ export function CalendarMonthPage() {
     });
   }, []);
 
+  // `silent` = refresh in place after visits changed elsewhere: no "Ładowanie…"
+  // swap, so the grid doesn't blink out from under the user.
+  const load = useCallback(
+    (silent: boolean) => {
+      if (!employeeId) return;
+      const id = ++requestRef.current;
+      if (!silent) setLoading(true);
+      appointmentsApi
+        .list({ start_date: monthStart, end_date: monthEnd, employee_id: employeeId })
+        .then((res) => {
+          if (id === requestRef.current) setAppointments(res.appointments);
+        })
+        .finally(() => {
+          if (id === requestRef.current) setLoading(false);
+        });
+    },
+    [employeeId, monthStart, monthEnd],
+  );
+
   useEffect(() => {
-    if (!employeeId) return;
-    setLoading(true);
-    const start = iso(year, month, 1);
-    const end = iso(year, month, new Date(year, month + 1, 0).getDate());
-    appointmentsApi
-      .list({ start_date: start, end_date: end, employee_id: employeeId })
-      .then((res) => setAppointments(res.appointments))
-      .finally(() => setLoading(false));
-  }, [employeeId, year, month]);
+    load(false);
+  }, [load]);
+  useAppointmentsChanged(() => load(true));
+  const showIncome = income.canShow(employeeId);
 
   const byDate = useMemo(() => {
     const m = new Map<string, AppointmentListItem[]>();
@@ -156,6 +179,7 @@ export function CalendarMonthPage() {
                     );
                   })}
                   {more > 0 && <span className="month-cell-more">+{more} więcej</span>}
+                  {showIncome && !cell.outside && <IncomeFooter income={income.forDay(cell.dateStr, employeeId)} />}
                 </div>
               );
             })}
