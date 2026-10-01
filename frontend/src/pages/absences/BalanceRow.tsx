@@ -72,7 +72,9 @@ export function BalanceRowView({ row, isFirstInGroup, isLastInGroup, readOnly, o
   const reasonOk = !usedDirty || reason.trim().length > 0;
   const canSave = dirty && reasonOk && !saving;
 
-  const live = computeLiveStatus(used, limit, row.warning_threshold_pct ? row.warning_threshold_pct / 100 : 0.8);
+  // warning_threshold_pct is already a 0–1 fraction (DB CHECK 0..1, server rule
+  // net_used >= limit * warning_pct) — do NOT divide by 100 again.
+  const live = computeLiveStatus(used, limit, row.warning_threshold_pct ?? 0.8);
   const displayStatus = limit > 0 ? live.status : 'unlimited';
   const displayPct = limit > 0 ? Math.min(live.pct, 100) : 0;
   const statusLabel = displayStatus === 'ok' ? `Zostało: ${(limit - used).toFixed(step === 1 ? 0 : 1)} ${unitLabel(row.unit)}` : badgeLabel(displayStatus);
