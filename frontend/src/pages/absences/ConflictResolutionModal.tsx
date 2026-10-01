@@ -6,6 +6,8 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { formatPeriodPhone } from './absenceFormat';
 import type { AppointmentConflict, ConflictResolution } from '../../types/absence';
 import type { AvailableSlot, ReassignmentCandidate } from '../../types/appointment';
 
@@ -72,6 +74,7 @@ function resolutionDetail(r: ConflictResolution) {
  */
 export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initialConflicts, onClose, onReject, onApproved }: Props) {
   const toast = useToast();
+  const isMobile = useIsMobile(640);
   const [step, setStep] = useState<Step>('list');
   const [conflicts, setConflicts] = useState<AppointmentConflict[]>(initialConflicts);
   const [activeConflict, setActiveConflict] = useState<AppointmentConflict | null>(null);
@@ -310,7 +313,7 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={TITLES[step]} size="large">
+      <Modal isOpen={isOpen} onClose={onClose} title={TITLES[step]} size="large" variant="sheet">
         {step === 'list' && (
           <>
             {conflicts.length === 0 ? (
@@ -320,7 +323,28 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                 Zatwierdzenie tej nieobecności koliduje z poniższymi wizytami klientów. Zmień stylistę lub termin każdej z nich, albo zatwierdź mimo to.
               </p>
             )}
-            {conflicts.length > 0 && (
+            {conflicts.length > 0 && isMobile && (
+              <ul className="crm-conflicts">
+                {conflicts.map((c) => (
+                  <li key={c.appointment_id} className="crm-conflict">
+                    <div className="crm-conflict-when">
+                      {formatPeriodPhone({ date_from: c.date, date_to: c.date, time_from: c.start_time.slice(0, 5), time_to: c.end_time.slice(0, 5) })}
+                    </div>
+                    <div className="crm-conflict-who">{c.client_name ?? '—'}</div>
+                    <div className="ab-card-meta">{c.service_name ?? '—'}</div>
+                    <div className="crm-conflict-actions">
+                      <Button variant="secondary" icon="person_search" onClick={() => openReassign(c)}>
+                        Zmień stylistę
+                      </Button>
+                      <Button variant="secondary" icon="edit_calendar" onClick={() => openReschedule(c)}>
+                        Zmień termin
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {conflicts.length > 0 && !isMobile && (
               <div className="table-container">
                 <table className="refined-table">
                   <thead>
@@ -362,7 +386,7 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                 Historia rozwiązań →
               </button>
             )}
-            <div className="form-actions">
+            <div className="form-actions crm-actions">
               <Button variant="primary" disabled={conflicts.length > 0 || approving !== null} isLoading={approving === 'true'} loadingText="Zatwierdzanie…" onClick={handleTrueApprove}>
                 Zatwierdź
               </Button>
@@ -385,6 +409,31 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-ink-subtle)' }}>Szukam dostępnych zastępstw…</p>
             ) : (
               <>
+                {isMobile ? (
+                  <ul className="crm-candidates">
+                    {candidates.map((c) => (
+                      <li key={c.employee_id}>
+                        <label className={`crm-candidate-card${selectedCandidate === c.employee_id ? ' selected' : ''}`}>
+                          <input type="radio" name="reassign-candidate" checked={selectedCandidate === c.employee_id} onChange={() => setSelectedCandidate(c.employee_id)} />
+                          <span className="crm-candidate-text">
+                            <span className="crm-candidate-name">{c.name}</span>
+                            <span className="crm-candidate-pos">{c.position ?? '—'}</span>
+                          </span>
+                          {!c.is_preferred && (
+                            <span
+                              role="img"
+                              aria-label="nie figuruje na liście preferowanych przez klienta stylistów"
+                              title="Nie figuruje na liście preferowanych przez klienta stylistów"
+                              className="crm-warning-icon"
+                            >
+                              <Icon name="warning_amber" />
+                            </span>
+                          )}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
                 <div className="table-container" style={{ marginBottom: '0.75rem' }}>
                   <table className="refined-table">
                     <thead>
@@ -421,13 +470,14 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                     </tbody>
                   </table>
                 </div>
+                )}
                 <label className="crm-checkbox-row">
                   <input type="checkbox" checked={reassignBulk} onChange={(e) => setReassignBulk(e.target.checked)} />
                   Zastosuj wybór do wszystkich pozostałych konfliktów tego pracownika
                 </label>
               </>
             )}
-            <div className="form-actions">
+            <div className="form-actions crm-actions crm-actions--steps">
               <Button variant="secondary" onClick={backToList}>
                 ← Wróć
               </Button>
@@ -453,7 +503,7 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
               <input type="checkbox" checked={cancelBulk} onChange={(e) => setCancelBulk(e.target.checked)} />
               Anuluj też wszystkie pozostałe skonfliktowane wizyty tego pracownika
             </label>
-            <div className="form-actions">
+            <div className="form-actions crm-actions crm-actions--steps">
               <Button variant="secondary" onClick={backToList}>
                 ← Wróć
               </Button>
@@ -494,7 +544,7 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                 </div>
               )}
             </div>
-            <div className="form-actions">
+            <div className="form-actions crm-actions crm-actions--steps">
               <Button variant="secondary" onClick={backToList}>
                 ← Wróć
               </Button>
@@ -514,6 +564,7 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
 /** Read-only leaf view (its own Modal, not a step) — ported from
  * `static/js/absences.js`'s `showResolutionHistory()`. */
 function ResolutionHistoryModal({ isOpen, absenceId, onClose }: { isOpen: boolean; absenceId: number; onClose: () => void }) {
+  const isMobile = useIsMobile(640);
   const [resolutions, setResolutions] = useState<ConflictResolution[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -530,11 +581,27 @@ function ResolutionHistoryModal({ isOpen, absenceId, onClose }: { isOpen: boolea
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Historia rozwiązań" size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title="Historia rozwiązań" size="large" variant="sheet">
       {loading ? (
         <p className="empty-text">Ładowanie…</p>
       ) : resolutions.length === 0 ? (
         <p style={{ fontSize: '0.8125rem', color: 'var(--color-ink-subtle)' }}>Brak zapisanej historii.</p>
+      ) : isMobile ? (
+        <ul className="crm-conflicts">
+          {resolutions.map((r) => (
+            <li key={r.id} className="crm-conflict">
+              <div className="crm-conflict-who">
+                {r.client_name ?? '—'} · {r.service_name ?? '—'}
+              </div>
+              <div className="crm-conflict-when">{RESOLUTION_TYPE_LABEL[r.resolution_type] ?? r.resolution_type}</div>
+              <div className="ab-card-meta">{resolutionDetail(r)}</div>
+              <div className="ab-card-meta">
+                {r.resolved_by_name ?? '—'}
+                {r.resolved_at ? ` · ${r.resolved_at}` : ''}
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : (
         <div className="table-container">
           <table className="refined-table">

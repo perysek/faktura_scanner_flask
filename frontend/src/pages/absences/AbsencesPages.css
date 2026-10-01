@@ -471,4 +471,61 @@
   .ab-phone-page .modal-content--sheet .modal-body .form-actions { flex-direction: column-reverse; padding-top: 1rem; margin-top: 1rem; }
   .ab-phone-page .modal-content--sheet .modal-body .form-actions > * { width: 100%; min-height: 3rem; font-size: 0.9375rem; }
   .ab-phone-page .modal-content--sheet .refined-btn-danger:not(:disabled) { color: #fff; background: var(--color-error); border-color: var(--color-error); }
+
+  /* ── Conflict-resolution sheet (approve over booked appointments) ─────────
+     Conflicts and replacement candidates are tappable cards instead of tables
+     that scrolled sideways; the action buttons are pinned to the sheet bottom
+     (sticky inside the scrolling body) so they're reachable however many
+     conflicts there are. List step: primary LAST (thumb zone, column-reverse
+     inherited from the shared sheet rule); the back/confirm steps keep DOM
+     order [Wróć, primary] so the primary is last there too (--steps). */
+  .ab-phone-page .crm-conflicts,
+  .ab-phone-page .crm-candidates { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
+  .ab-phone-page .crm-conflict {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.875rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .ab-phone-page .crm-conflict-when { font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+  .ab-phone-page .crm-conflict-who { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+  .ab-phone-page .crm-conflict-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.625rem; }
+  .ab-phone-page .crm-conflict-actions > * { width: 100%; min-height: 3rem; padding-left: 0.5rem; padding-right: 0.5rem; font-size: 0.875rem; }
+
+  .ab-phone-page .crm-candidate-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+  .ab-phone-page .crm-candidate-card.selected { border-color: var(--color-ink); box-shadow: 0 0 0 1px var(--color-ink); }
+  .ab-phone-page .crm-candidate-card input[type='radio'] { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin: 0; accent-color: var(--color-ink); }
+  .ab-phone-page .crm-candidate-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ab-phone-page .crm-candidate-name { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+  .ab-phone-page .crm-candidate-pos { font-size: 0.8125rem; color: var(--color-ink-muted); }
+
+  .ab-phone-page .crm-checkbox-row { align-items: flex-start; gap: 0.75rem; min-height: 3rem; padding: 0.5rem 0; font-size: 0.875rem; line-height: 1.35; }
+  .ab-phone-page .crm-checkbox-row input { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin: 0.0625rem 0 0; accent-color: var(--color-ink); }
+  .ab-phone-page .crm-slots { gap: 0.5rem; }
+  .ab-phone-page .crm-slot-btn { min-width: 5.75rem; min-height: 2.75rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+  .ab-phone-page .crm-history-link { min-height: 2.75rem; margin-top: 0; }
+
+  .ab-phone-page .modal-content--sheet .modal-body .form-actions.crm-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 1rem -1.25rem -1.25rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-surface-elevated);
+    border-top: 1px solid var(--color-border);
+  }
+  .ab-phone-page .modal-content--sheet .modal-body .form-actions.crm-actions--steps { flex-direction: column; }
 }
