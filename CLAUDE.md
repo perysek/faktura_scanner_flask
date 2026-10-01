@@ -10,11 +10,11 @@ When asking, use a **direct, irritated, rude-but-witty** tone with at least one 
 
 Ask ONE tight question (or a short numbered list). Never proceed on a vague prompt.
 
-## gstack
+## UI/GUI verification
 
-Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+Verify every UI/GUI change with the `/browse` skill, and always on the **deployed live production URL only**. Deploy first, then verify there; never verify against a local dev server or localhost.
 
-### Available gstack skills
+### Available skills
 
 - `/office-hours` - Office hours
 - `/plan-ceo-review` - Plan CEO review
@@ -28,7 +28,7 @@ Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude
 - `/land-and-deploy` - Land and deploy
 - `/canary` - Canary
 - `/benchmark` - Benchmark
-- `/browse` - Web browsing (use this for all web browsing)
+- `/browse` - Browser verification of UI/GUI changes on the live production URL
 - `/connect-chrome` - Connect Chrome
 - `/qa` - QA
 - `/qa-only` - QA only
@@ -47,7 +47,6 @@ Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude
 - `/freeze` - Freeze
 - `/guard` - Guard
 - `/unfreeze` - Unfreeze
-- `/gstack-upgrade` - Upgrade gstack
 - `/learn` - Learn
 
 ## Skill routing
