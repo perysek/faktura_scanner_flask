@@ -152,14 +152,19 @@
   .appt-detail-page .score-label { flex-basis: 100%; margin: 0.25rem 0 0; }
   .appt-detail-page .form-card > .refined-btn-primary { width: 100%; min-height: 2.75rem; }
 
+  /* "Rzeczywisty: nie zmierzono czasu trwania" — a long value next to its
+     label wrapped mid-row; let it drop to its own right-aligned line. */
+  .appt-detail-page .duration-compare-row { flex-wrap: wrap; gap: 0.125rem 0.75rem; }
+  .appt-detail-page .duration-compare-row > span:last-child { margin-left: auto; text-align: right; }
+
   .appt-detail-page .card-title--danger { color: var(--color-error); }
   .appt-detail-page .appt-danger-zone .refined-btn-danger { width: 100%; min-height: 2.75rem; font-size: 0.875rem; }
 
   .appt-detail-page .appt-mobile-action-bar {
     position: sticky; bottom: 0; z-index: 15;
     display: flex; flex-wrap: wrap; gap: 0.5rem;
-    margin: 1rem -1.5rem -1rem;
-    padding: 0.625rem 1.5rem calc(0.625rem + env(safe-area-inset-bottom));
+    margin: 1rem -1.25rem -1.25rem;
+    padding: 0.625rem 1.25rem calc(0.625rem + env(safe-area-inset-bottom));
     background: var(--color-surface); border-top: 1px solid var(--color-border);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
     transition: transform 0.25s ease;
