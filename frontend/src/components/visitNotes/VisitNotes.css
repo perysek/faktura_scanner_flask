@@ -59,6 +59,10 @@
 @media (max-width: 640px) {
   /* Stacked cards have the full width: back to the shared, more readable size. */
   .vn-table td { font-size: 0.8125rem; }
+  /* The shared card rule forces `white-space: normal !important` on every cell, which split
+     the stamp as "01.10.2026@09:" / "52". Keep it whole; if label + stamp don't fit on one
+     line, the stamp drops below its label instead of breaking. */
+  .vn-table td.vn-cell-stamp { white-space: nowrap !important; flex-wrap: wrap; row-gap: 0.125rem; }
   .vn-table td.vn-cell-text { flex-direction: column; align-items: flex-start; gap: 0.25rem; min-width: 0; }
   .vn-footer { flex-wrap: wrap; }
 }

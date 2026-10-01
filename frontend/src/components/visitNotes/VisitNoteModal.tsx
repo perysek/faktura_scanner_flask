@@ -25,6 +25,8 @@ export interface VisitNoteModalProps {
   onSaved: () => void;
 }
 
+const TEXT_FIELD_ID = 'visit-note-text';
+
 function visitOptionLabel(v: NoteableVisit): string {
   return [formatDate(v.appointment_date), v.service_name, v.employee_name].filter(Boolean).join(' · ');
 }
@@ -52,6 +54,14 @@ export function VisitNoteModal({ isOpen, onClose, note, appointmentId, clientId,
     if (!isOpen) return;
     setText(note?.note_text ?? '');
     setSaving(false);
+    // The shared focus trap puts focus on the first control (the "×"). A text-entry dialog
+    // should start in the text, caret at the end. This effect runs after the trap's: the
+    // Modal is our child, and child effects fire before the parent's.
+    const field = document.getElementById(TEXT_FIELD_ID);
+    if (field instanceof HTMLTextAreaElement) {
+      field.focus();
+      field.setSelectionRange(field.value.length, field.value.length);
+    }
   }, [isOpen, note]);
 
   // Client page: load the completed visits to pick from, newest preselected.
@@ -140,9 +150,9 @@ export function VisitNoteModal({ isOpen, onClose, note, appointmentId, clientId,
         context && <p className="vn-modal-context">{context}</p>
       )}
       <TextareaField
+        id={TEXT_FIELD_ID}
         label="Treść uwagi"
         rows={5}
-        autoFocus
         maxLength={MAX_NOTE_LENGTH}
         value={text}
         onChange={(e) => setText(e.target.value)}
