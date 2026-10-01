@@ -632,12 +632,82 @@ interface CategoriesTabProps {
 
 const COUNT_PERIOD_LABEL: Record<string, string> = { yearly: 'Roczny', monthly: 'Miesięczny', rolling: 'Kroczący' };
 
+/** One-line "what does this category track" for the phone card, replacing the
+ * table's Śledzony / Okres / Reset / Limit columns: "limit 26 d · roczny · reset: dzień 1". */
+function trackingSummary(c: AbsenceCategory) {
+  if (!c.is_tracked) return 'Bez śledzenia bilansu';
+  const limit = c.default_max_value === 0 ? 'bez limitu' : `limit ${Math.trunc(c.default_max_value)} ${c.absence_full_day ? 'd' : 'h'}`;
+  const period = (COUNT_PERIOD_LABEL[c.count_period] ?? c.count_period).toLowerCase();
+  const reset = c.count_period === 'rolling' ? `okno ${c.rolling_days ?? '—'} d` : `reset: dzień ${c.resets_at ?? 1}`;
+  return `${limit} · ${period} · ${reset}`;
+}
+
 /** Kategorie tab — admin CRUD for absence categories, ported from
  * templates/absences/management.html's TAB 3 + static/js/absences.js's
  * openCategoryForm()/deleteCategory()/hardDeleteCategory(). Gated by the
  * same `hasModuleAccess('absences')` check as the original's `{% if
  * user_permissions.absences %}`. */
 function CategoriesTab({ categories, loading, isSuperuser, onNew, onEdit, onDelete, onHardDelete }: CategoriesTabProps) {
+  const isMobile = useIsMobile(640);
+  const ctaHidden = useHideOnScroll();
+
+  if (isMobile) {
+    return (
+      <>
+        <h2 className="ab-section-title">
+          <span>Kategorie nieobecności</span>
+          <span className="ab-section-count">{categories.length}</span>
+        </h2>
+
+        {loading && categories.length === 0 ? (
+          <p className="ab-phone-empty">Ładowanie…</p>
+        ) : categories.length === 0 ? (
+          <p className="ab-phone-empty">Brak kategorii. Stuknij „Nowa kategoria”, żeby dodać pierwszą.</p>
+        ) : (
+          <ul className="ab-cards">
+            {categories.map((c) => (
+              <li key={c.id} className={`ab-card${c.is_deleted ? ' ab-card--deleted' : ''}`}>
+                <div className="ab-card-top">
+                  <span className="ab-card-title">{c.name}</span>
+                  {c.is_deleted ? <span className="ab-status ab-status--cancelled">Usunięta</span> : <span className="ab-status ab-status--approved">Aktywna</span>}
+                </div>
+                <div className="ab-card-tags">
+                  <span className={`cat-type-badge ${c.absence_full_day ? 'cat-type-full' : 'cat-type-slot'}`}>{c.absence_full_day ? 'Całodniowa' : 'Godzinowa'}</span>
+                  <span className="ab-card-meta">{trackingSummary(c)}</span>
+                </div>
+                {c.description && <p className="ab-card-desc">{c.description}</p>}
+                {!c.is_deleted ? (
+                  <div className="ab-card-footer">
+                    <button type="button" onClick={() => onEdit(c)}>
+                      Edytuj
+                    </button>
+                    <button type="button" onClick={() => onDelete(c)}>
+                      Usuń
+                    </button>
+                  </div>
+                ) : (
+                  isSuperuser && (
+                    <div className="ab-card-footer">
+                      <button type="button" onClick={() => onHardDelete(c)}>
+                        Usuń trwale
+                      </button>
+                    </div>
+                  )
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className={`ab-mobile-cta${ctaHidden ? ' ab-mobile-cta--hidden' : ''}`}>
+          <Button variant="primary" icon="add" onClick={onNew}>
+            Nowa kategoria
+          </Button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="card">
       <div className="card-header">

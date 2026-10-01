@@ -226,6 +226,12 @@
     padding-right: var(--page-gutter);
     padding-bottom: var(--page-gutter);
     overflow-x: clip;
+    /* Fill the scroll area so the sticky action bar can sit at the bottom even
+       when the list is short (margin-top: auto on .ab-mobile-cta). A sticky bar
+       only pins once content overflows; with two cards it floated mid-screen. */
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
   }
 
   /* The top bar already names the page — keep the h1 for screen readers only. */
@@ -305,13 +311,15 @@
     position: sticky;
     bottom: 0;
     z-index: 15;
-    margin: 1rem calc(-1 * var(--page-gutter)) calc(-1 * var(--page-gutter));
+    margin: auto calc(-1 * var(--page-gutter)) calc(-1 * var(--page-gutter));
     padding: 0.75rem var(--page-gutter) calc(0.75rem + env(safe-area-inset-bottom, 0px));
     background: var(--color-surface-elevated);
     border-top: 1px solid var(--color-border);
     box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
     transition: transform 0.25s ease;
   }
+  /* The bar's own margin-top is now `auto`, so the gap above it lives on the list. */
+  .ab-phone-page .ab-cards { margin-bottom: 1rem; }
   .ab-phone-page .ab-mobile-cta > * { width: 100%; min-height: 3rem; font-size: 0.9375rem; }
   .ab-phone-page .ab-mobile-cta--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
 
@@ -387,6 +395,40 @@
   }
   .ab-phone-page .ab-card-more:active { background: var(--color-surface); }
   .ab-phone-page .ab-card-title .balance-hint { margin-left: 0.375rem; }
+
+  /* Kategorie card: tags row, clamped description, and a full-bleed footer that
+     holds Edytuj | Usuń as two quiet 48px text actions split by a hairline (the
+     dangerous half is the right-hand one, never the default). */
+  .ab-phone-page .ab-card-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.125rem; }
+  .ab-phone-page .ab-card-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-ink-subtle);
+  }
+  .ab-phone-page .ab-card--deleted { opacity: 0.6; }
+  .ab-phone-page .ab-card-footer { display: flex; margin: 0.625rem -0.875rem -0.875rem; border-top: 1px solid var(--color-border-subtle); }
+  .ab-phone-page .ab-card-footer > button {
+    flex: 1;
+    min-height: 3rem;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+  .ab-phone-page .ab-card-footer > button:first-child { border-radius: 0 0 0 var(--radius-md); }
+  .ab-phone-page .ab-card-footer > button:last-child { border-radius: 0 0 var(--radius-md) 0; }
+  .ab-phone-page .ab-card-footer > button + button,
+  .ab-phone-page .ab-card-footer > button:only-child { color: #c2410c; }
+  .ab-phone-page .ab-card-footer > button + button { border-left: 1px solid var(--color-border-subtle); }
+  .ab-phone-page .ab-card-footer > button:only-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+  .ab-phone-page .ab-card-footer > button:active { background: var(--color-surface); }
 
   /* Approve / reject: the supervisor's core job, so two real 48px buttons. */
   .ab-phone-page .ab-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }

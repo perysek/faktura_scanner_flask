@@ -4,6 +4,7 @@ import { ApiError } from '../../lib/api/client';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
 import type { AbsenceCategory } from '../../types/absence';
 
 interface Props {
@@ -33,6 +34,7 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
   const toast = useToast();
   const [values, setValues] = useState<CategoryPayload>(DEFAULTS);
   const [saving, setSaving] = useState(false);
+  const isMobile = useIsMobile(640);
   const isNew = category === null;
 
   useEffect(() => {
@@ -77,12 +79,12 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isNew ? 'Nowa kategoria nieobecności' : 'Edytuj kategorię'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={isNew ? 'Nowa kategoria nieobecności' : 'Edytuj kategorię'} variant="sheet">
       <div className="field-group">
         <label className="field-label" htmlFor="cat-name">
           Nazwa <span className="required-mark">*</span>
         </label>
-        <input id="cat-name" className="field-input" placeholder="np. Urlop okolicznościowy" value={values.name} onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))} autoFocus />
+        <input id="cat-name" className="field-input" placeholder="np. Urlop okolicznościowy" value={values.name} onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))} autoFocus={isNew || !isMobile} />
       </div>
       <div className="field-group">
         <label className="field-label" htmlFor="cat-desc">
