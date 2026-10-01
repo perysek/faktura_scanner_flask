@@ -16,6 +16,7 @@ import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { MobileWizytyCalendarView, useIsMobile, OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY } from './MobileWizytyCalendarView';
+import { readWizytyListState, writeWizytyListState } from '../../lib/wizytyListState';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
 type SortColumn = 'appointment_date' | 'start_time' | 'client_name' | 'service_name' | 'employee_name' | 'total_price' | 'status' | 'satisfaction_score';
@@ -78,14 +79,29 @@ export function WizytyListPage() {
     setMobileHeaderSlot(document.getElementById('mobile-header-actions'));
   }, []);
 
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
-  const [mode, setMode] = useState<'week' | 'chain'>('week');
-  const [chainDates, setChainDates] = useState<string[]>([]);
+  // Phone only: what this list showed the last time it was on screen (selected
+  // day + employee). Every way back to /wizyty remounts this page, and a fresh
+  // mount used to land on today + the user's own employee, discarding whatever
+  // was picked. Read ONCE, synchronously, so the very first render already has
+  // the right day/strip/employee (no flash of "today"). See lib/wizytyListState.
+  const [restored] = useState(() => (isMobile ? readWizytyListState() : null));
+  const [weekStart, setWeekStart] = useState(() => {
+    if (!restored) return getMonday(new Date());
+    const [y, m, d] = restored.date.split('-').map(Number);
+    return getMonday(new Date(y, m - 1, d));
+  });
+  // The phone's "selected day" IS chain mode with one date (selectedDate =
+  // chainDates[0]); starting there also makes the mobile view skip its
+  // select-today-on-mount effect.
+  const [mode, setMode] = useState<'week' | 'chain'>(restored ? 'chain' : 'week');
+  const [chainDates, setChainDates] = useState<string[]>(restored ? [restored.date] : []);
   const [monthCache, setMonthCache] = useState<{ key: string; byDate: Map<string, AppointmentListItem[]> } | null>(null);
-  const [chainLoading, setChainLoading] = useState(false);
+  // Restored: the month for that day is fetched in the effect below; show the
+  // loading state until then instead of a false "Brak wizyt tego dnia".
+  const [chainLoading, setChainLoading] = useState(restored !== null);
 
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
-  const [employeeId, setEmployeeId] = useState<number | null>(null);
+  const [employeeId, setEmployeeId] = useState<number | null>(restored ? restored.employeeId : null);
   const [searchQuery, setSearchQuery] = useState('');
   // Default the "Pracownik" filter to the logged-in user's own linked
   // employee (once /auth/me resolves), instead of leaving it on "Wszyscy".
@@ -110,8 +126,13 @@ export function WizytyListPage() {
       setEmployeeId(override === 'null' ? null : Number(override));
       return;
     }
+    // A remembered employee wins over the "own employee" default, except in
+    // "Dane własne" mode: there the server hard-scopes every query to the
+    // superuser's own employee, so any other remembered name would be a lie.
+    if (restored && !auth.ownDataActive) return;
     if (auth.linkedEmployeeId !== null) setEmployeeId(auth.linkedEmployeeId);
-  }, [auth.isLoading, auth.linkedEmployeeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.isLoading, auth.linkedEmployeeId, auth.ownDataActive]);
   const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });
 
   const [rescheduleTarget, setRescheduleTarget] = useState<AppointmentListItem | null>(null);
@@ -124,6 +145,40 @@ export function WizytyListPage() {
   useEffect(() => {
     appointmentsApi.employees().then(setEmployees).catch(() => {});
   }, []);
+
+  // Restored selection: load that day's month (the mobile view also loads one
+  // for its strip) and drop the loading flag once it lands. NOT
+  // handleSidebarDayClick: that one hops to the next day WITH visits when the
+  // tapped day is empty, and a remembered day has to come back exactly as left.
+  useEffect(() => {
+    if (!restored) return;
+    ensureMonthLoaded(restored.date)
+      .catch(() => {})
+      .finally(() => setChainLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Remember the selection as it changes. Skips week mode (the transient state
+  // before the phone's first day is picked, whose "selected day" would be a
+  // Monday nobody chose) and anything before auth settles, so the pre-default
+  // employee can never overwrite a remembered one.
+  useEffect(() => {
+    if (!isMobile || auth.isLoading || mode !== 'chain' || chainDates.length === 0) return;
+    writeWizytyListState({ date: chainDates[0], employeeId });
+  }, [isMobile, auth.isLoading, mode, chainDates, employeeId]);
+
+  // A remembered employee can be gone by the time we're back (deactivated). Check
+  // once, when the list first arrives, and fall back to the user's own employee
+  // rather than filtering the day down to a name that no longer exists.
+  const restoredEmployeeCheckedRef = useRef(false);
+  useEffect(() => {
+    if (restoredEmployeeCheckedRef.current || !restored || employees.length === 0) return;
+    restoredEmployeeCheckedRef.current = true;
+    if (employeeId !== null && employeeId === restored.employeeId && !employees.some((e) => e.id === employeeId)) {
+      setEmployeeId(auth.linkedEmployeeId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employees]);
 
   const loadWeek = useCallback(() => {
     if (mode !== 'week') return;

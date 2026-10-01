@@ -369,11 +369,21 @@ export function MobileWizytyCalendarView({
   // Monday falls in, so both the strip's dots and the expandable grid read
   // the same cache instead of two `ensureMonthLoaded` calls racing each
   // other and thrashing the shared cache between two different months.
+  //
+  // Which month: the SELECTED day's when that day sits inside the displayed
+  // week, otherwise the Monday's. They differ for a week that straddles two
+  // months (Mon 28 Sep – Sat 3 Oct with 1 Oct selected). Following the Monday
+  // there pulled the cache to the wrong month right after mount, so a day that
+  // was just restored from the previous visit (or picked) showed an empty list
+  // even though it had visits, and the strip's dots vanished.
   useEffect(() => {
-    const y = weekAnchor.getFullYear();
-    const m = weekAnchor.getMonth();
+    const [sy, sm, sd] = selectedDate.split('-').map(Number);
+    const selected = new Date(sy, sm - 1, sd);
+    const anchorDay = selected >= weekAnchor && selected <= addDays(weekAnchor, 6) ? selected : weekAnchor;
+    const y = anchorDay.getFullYear();
+    const m = anchorDay.getMonth();
     setMonthAnchor((cur) => (cur.getFullYear() === y && cur.getMonth() === m ? cur : new Date(y, m, 1)));
-  }, [weekAnchor]);
+  }, [weekAnchor, selectedDate]);
 
   useEffect(() => {
     ensureMonthLoaded(iso(monthAnchor));

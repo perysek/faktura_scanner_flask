@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { api, ApiError } from '../lib/api/client';
 import type { AuthUser, NavVisibilityCtx, PermissionFlags } from '../types/auth';
+import { clearWizytyListState } from '../lib/wizytyListState';
 
 interface MeResponse {
   success: true;
@@ -98,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string, remember: boolean): Promise<LoginResult> => {
       try {
         await api.post('/auth/login', { email, password, remember });
+        // A new session never inherits the previous user's remembered Wizyty selection.
+        clearWizytyListState();
         // Re-fetch /auth/me to hydrate the full user/permissions/role context
         // (DESIGN.md §15.2 step 2) rather than trusting the login response.
         await hydrate();
@@ -114,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.get('/auth/logout');
     } finally {
+      clearWizytyListState();
       setUser(null);
       setPermissions({});
       setIsSupervisor(false);
