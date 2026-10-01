@@ -225,6 +225,12 @@
     padding-right: var(--page-gutter);
     padding-bottom: var(--page-gutter);
     overflow-x: clip;
+    /* .animate-fade-up is `forwards`, which pins `transform: matrix(1,0,0,1,0,0)`
+       on this element for good. Any transform makes it the containing block for
+       `position: fixed` descendants, so the sheet's overlay (inset: 0) filled
+       THIS page's box instead of the viewport and the sticky bar showed through
+       under it. `backwards` gives the same entrance and leaves no transform. */
+    animation-fill-mode: backwards;
   }
 
   /* The top bar already names the page — keep the h1 for screen readers only. */
@@ -280,16 +286,21 @@
     background: rgba(155, 44, 44, 0.06);
     border-radius: var(--radius-sm);
   }
+  /* Cancel is a card-footer action (full-bleed, hairline above, still a labelled
+     48px target) rather than a bordered box: it's a rare, deliberate action and
+     must not out-shout the status and dates it belongs to. */
   .my-absences-page .ab-card-cancel {
-    width: 100%;
+    width: calc(100% + 1.75rem);
     min-height: 3rem;
-    margin-top: 0.625rem;
+    margin: 0.625rem -0.875rem -0.875rem;
     font-family: var(--font-body);
     font-size: 0.9375rem;
+    font-weight: 500;
     color: #c2410c;
     background: transparent;
-    border: 1px solid rgba(194, 65, 12, 0.35);
-    border-radius: var(--radius-sm);
+    border: none;
+    border-top: 1px solid var(--color-border-subtle);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
     cursor: pointer;
   }
   .my-absences-page .ab-card-cancel:active { background: rgba(194, 65, 12, 0.08); }
