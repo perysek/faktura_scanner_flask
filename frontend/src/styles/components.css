@@ -831,7 +831,16 @@ table.stack-cards td.cell-hide-lg { display: none; }
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-up { animation: fade-up 0.4s ease-out forwards; }
+/* `backwards`, NOT `forwards`: this class sits on ~33 page roots, and `forwards`
+   pins `transform: matrix(1,0,0,1,0,0)` on them for good. ANY transform (even
+   identity) makes the element the containing block for `position: fixed`
+   descendants, so every `Modal variant="sheet"` rendered inside a page had an
+   overlay the size of the PAGE, not the viewport (measured on Pracownicy:
+   1728px tall instead of 844), and the sheet floated wherever the page bottom
+   happened to be. The end keyframe equals the element's natural state, so
+   dropping `forwards` changes nothing visually. Don't add `forwards` back to
+   any animation whose last keyframe sets a transform on a container. */
+.animate-fade-up { animation: fade-up 0.4s ease-out backwards; }
 
 @keyframes fade-in {
   from { opacity: 0; }
