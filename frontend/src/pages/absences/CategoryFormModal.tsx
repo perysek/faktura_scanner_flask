@@ -80,17 +80,17 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isNew ? 'Nowa kategoria nieobecności' : 'Edytuj kategorię'} variant="sheet">
-      <div className="field-group">
+      <div className="cat-field">
         <label className="field-label" htmlFor="cat-name">
           Nazwa <span className="required-mark">*</span>
         </label>
-        <input id="cat-name" className="field-input" placeholder="np. Urlop okolicznościowy" value={values.name} onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))} autoFocus={isNew || !isMobile} />
+        <input id="cat-name" className="refined-input" placeholder="np. Urlop okolicznościowy" value={values.name} onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))} autoFocus={isNew || !isMobile} />
       </div>
-      <div className="field-group">
+      <div className="cat-field">
         <label className="field-label" htmlFor="cat-desc">
           Opis
         </label>
-        <input id="cat-desc" className="field-input" placeholder="Opcjonalny opis…" value={values.description} onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))} />
+        <input id="cat-desc" className="refined-input" placeholder="Opcjonalny opis…" value={values.description} onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))} />
       </div>
       <div className="checkbox-wrapper cat-toggle-row" onClick={() => setValues((v) => ({ ...v, absence_full_day: !v.absence_full_day }))}>
         <input type="checkbox" className="refined-checkbox" checked={values.absence_full_day} onChange={(e) => setValues((v) => ({ ...v, absence_full_day: e.target.checked }))} />
@@ -115,7 +115,7 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
               <label className="field-label" htmlFor="cat-period">
                 Okres rozliczeniowy
               </label>
-              <select id="cat-period" className="field-select" value={values.count_period} onChange={(e) => setValues((v) => ({ ...v, count_period: e.target.value }))}>
+              <select id="cat-period" className="refined-select" value={values.count_period} onChange={(e) => setValues((v) => ({ ...v, count_period: e.target.value }))}>
                 <option value="yearly">Roczny</option>
                 <option value="monthly">Miesięczny</option>
                 <option value="rolling">Kroczący</option>
@@ -130,7 +130,7 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
                 type="number"
                 min={1}
                 max={28}
-                className="field-input"
+                className="refined-input"
                 value={values.resets_at}
                 onChange={(e) => setValues((v) => ({ ...v, resets_at: Number(e.target.value) || 1 }))}
               />
@@ -144,7 +144,7 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
                 type="number"
                 min={0}
                 step={0.5}
-                className="field-input"
+                className="refined-input"
                 value={values.default_max_value}
                 onChange={(e) => setValues((v) => ({ ...v, default_max_value: Number(e.target.value) || 0 }))}
               />
@@ -159,7 +159,7 @@ export function CategoryFormModal({ isOpen, category, onClose, onSaved }: Props)
                 min={0}
                 max={100}
                 step={5}
-                className="field-input"
+                className="refined-input"
                 value={Math.round(values.warning_threshold_pct * 100)}
                 onChange={(e) => setValues((v) => ({ ...v, warning_threshold_pct: (Number(e.target.value) || 0) / 100 }))}
               />

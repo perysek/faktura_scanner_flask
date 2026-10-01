@@ -132,6 +132,10 @@
 .small-status { font-size: 0.6875rem; }
 .ab-dash { color: var(--color-ink-subtle); }
 
+/* CategoryFormModal field wrapper. It used `.field-group/.field-input/.field-select`,
+   which exist in no stylesheet (a 1:1 port from the Jinja templates), so every
+   field in the modal was an unstyled browser control. Now the real refined-* classes. */
+.cat-field { margin-bottom: 1rem; }
 .cat-toggle-row { padding: 0.5rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm, 2px); cursor: pointer; margin-bottom: 0.75rem; }
 .cat-toggle-title { font-size: 0.8125rem; font-weight: 500; color: var(--color-ink); }
 .cat-toggle-hint { font-size: 0.75rem; color: var(--color-ink-subtle); }
