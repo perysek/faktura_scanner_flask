@@ -13,6 +13,7 @@ import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
 import { IncomeBanner } from './IncomeBanner';
+import { ScrollJumpButtons } from './ScrollJumpButtons';
 import { StatusDropdown } from './StatusDropdown';
 import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
@@ -83,6 +84,8 @@ export function WizytyListPage() {
   // instead of scrolling away with `.page-header` (which is dropped
   // outright on mobile, TASK4).
   const [mobileHeaderSlot, setMobileHeaderSlot] = useState<HTMLElement | null>(null);
+  // The desktop list's own scroll box (viewport-bounded layouts) — read by ScrollJumpButtons.
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setMobileHeaderSlot(document.getElementById('mobile-header-actions'));
   }, []);
@@ -595,7 +598,7 @@ export function WizytyListPage() {
             noMoreDays={noMoreDays}
           />
         ) : (
-        <div className="table-container stack-cards-wrap">
+        <div className="table-container stack-cards-wrap" ref={tableContainerRef}>
           <table className="refined-table stack-cards vn-list-table">
             <thead>
               <tr>
@@ -733,6 +736,7 @@ export function WizytyListPage() {
           </div>
         </div>
         )}
+        <ScrollJumpButtons innerScrollerRef={tableContainerRef} />
       </div>
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />
