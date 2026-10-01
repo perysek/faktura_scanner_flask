@@ -19,8 +19,8 @@ const PAGE_SIZE = 10;
 // goes to the text column when it's absent. Each set sums to 100.
 // Tuned for the NARROWEST host, the visit page: its card is 720px (683px inside). At 12px text the
 // stamp needs ~116px = 17%, the date ~78px, two icons ~80px.
-const COL_WIDTHS = [11.5, 12, 14, 17, 11, 22.5, 12];
-const COL_WIDTHS_NO_ACTIONS = [11.5, 12, 14, 17, 11, 34.5];
+const COL_WIDTHS = [11.5, 11, 14, 17, 12, 22.5, 12];
+const COL_WIDTHS_NO_ACTIONS = [11.5, 11, 14, 17, 12, 34.5];
 /** The server never returns more than this per request (MAX_PAGE_SIZE). */
 const MAX_REFETCH = 50;
 
