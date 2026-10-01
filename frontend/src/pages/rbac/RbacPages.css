@@ -34,9 +34,12 @@
   padding: 0.625rem 0.75rem;
   margin-bottom: 1rem;
 }
-/* A note placed straight under a form card ("Własne hasło zmienisz w Profilu") touched its
-   bottom edge at 0px; the shared `.form-card` has no margin. */
-.rbac-page .form-card + .rbac-note { margin-top: 1rem; }
+/* On the user form the card lives inside a <form>, so what follows the card is the next
+   *form* (the separate "Zmiana hasła" card) or the note ("Własne hasło zmienisz w
+   Profilu"), and both touched the card above at 0px — the shared `.form-card` has no
+   margin. 1rem, the design system's gap between stacked cards (DESIGN.md §5). */
+.rbac-page > form + form,
+.rbac-page > form + .rbac-note { margin-top: 1rem; }
 .rbac-page .rbac-error-msg {
   color: var(--color-error);
   font-size: 0.8125rem;
