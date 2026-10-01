@@ -9,8 +9,10 @@ import { Button, ButtonLink } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPLN } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
+import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
+import { IncomeBanner } from './IncomeBanner';
 import { StatusDropdown } from './StatusDropdown';
 import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
@@ -402,6 +404,27 @@ export function WizytyListPage() {
 
   const revenue = useMemo(() => filtered.reduce((sum, a) => sum + (a.total_price || 0), 0), [filtered]);
 
+  // Desktop income banner: totals for what the list covers — the week, or in day-chain
+  // mode just the chosen days. The phone's per-day cards fetch their own range inside
+  // MobileWizytyCalendarView, so no request here on a phone (null range = skipped).
+  const incomeDays = mode === 'chain' && chainDates.length > 0 ? [...chainDates].sort() : null;
+  const weekFrom = iso(weekStart);
+  const weekTo = iso(addDays(weekStart, 6));
+  const income = useIncomeSummary(isMobile ? null : (incomeDays?.[0] ?? weekFrom), isMobile ? null : (incomeDays?.[incomeDays.length - 1] ?? weekTo));
+  const bannerIncome = useMemo(() => {
+    if (isMobile || !income.canShow(employeeId)) return null;
+    if (!incomeDays) return income.forRange(weekFrom, weekTo, employeeId);
+    // Chosen days need not be contiguous: sum exactly those, not the span between them.
+    return incomeDays.reduce(
+      (sum, d) => {
+        const day = income.forDay(d, employeeId);
+        return day ? { actual: sum.actual + day.actual, expected: sum.expected + day.expected } : sum;
+      },
+      { actual: 0, expected: 0 },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, income, employeeId, mode, chainDates, weekFrom, weekTo]);
+
   function handleSort(column: SortColumn) {
     setSort((cur) => (cur.column === column ? { column, dir: cur.dir === 'asc' ? 'desc' : 'asc' } : { column, dir: 'asc' }));
   }
@@ -541,6 +564,7 @@ export function WizytyListPage() {
             <div className="empf-divider" />
             <span className="empf-label">Pracownik:</span>
             <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll />
+            {bannerIncome && <IncomeBanner label={mode === 'chain' ? 'Przychód dni' : 'Przychód tygodnia'} income={bannerIncome} />}
             <div className="list-search">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

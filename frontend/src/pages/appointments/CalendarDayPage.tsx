@@ -8,6 +8,7 @@ import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { useAuth } from '../../contexts/AuthContext';
 import { useElementHeight } from '../../lib/useElementHeight';
 import { IncomeFooter } from './IncomeFooter';
+import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
@@ -165,6 +166,9 @@ export function CalendarDayPage() {
               </button>
             </div>
           )}
+          {/* The day view has no employee selector: it is the whole day, so the total needs
+              the 'all' scope (canShow(null)) — the same rule as every "everyone" figure. */}
+          {isSuperuser && income.canShow(null) && <IncomeBanner label="Przychód dnia" income={income.forRange(date, date, null)} />}
         </div>
 
         {loading || !data ? (

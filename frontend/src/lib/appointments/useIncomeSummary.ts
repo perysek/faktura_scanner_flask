@@ -21,6 +21,10 @@ export interface IncomeSummary {
   /** Σ actual / Σ expected for a day, over one employee or (null) all rows sent.
    * `null` when there is nothing for that day. */
   forDay: (date: string, employeeId: number | null) => DayIncome | null;
+  /** Σ actual / Σ expected over every day in [startDate, endDate] (inclusive), for one
+   * employee or (null) all rows sent. Zeros — never null — when the range is empty, so
+   * a banner can show "0 / 0 zł". Only covers days inside the range the hook fetched. */
+  forRange: (startDate: string, endDate: string, employeeId: number | null) => DayIncome;
 }
 
 /** Live "Przychód: actual / expected" for a date range. One request returns every
@@ -80,6 +84,20 @@ export function useIncomeSummary(startDate: string | null, endDate: string | nul
           actual: rows.reduce((s, r) => s + r.actual, 0),
           expected: rows.reduce((s, r) => s + r.expected, 0),
         };
+      },
+      forRange: (startDate, endDate, employeeId) => {
+        let actual = 0;
+        let expected = 0;
+        // ISO dates compare correctly as plain strings.
+        for (const [date, rows] of byDate) {
+          if (date < startDate || date > endDate) continue;
+          for (const r of rows) {
+            if (employeeId !== null && r.employee_id !== employeeId) continue;
+            actual += r.actual;
+            expected += r.expected;
+          }
+        }
+        return { actual, expected };
       },
     };
   }, [data]);

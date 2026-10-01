@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
 import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { IncomeFooter } from './IncomeFooter';
+import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
@@ -162,6 +163,7 @@ export function CalendarMonthPage() {
         <div className="empf-divider" />
         <span className="empf-label">Pracownik:</span>
         <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll={canPickAll} />
+        {showIncome && <IncomeBanner label="Przychód miesiąca" income={income.forRange(monthStart, monthEnd, employeeId)} />}
       </div>
 
       {loading ? (
