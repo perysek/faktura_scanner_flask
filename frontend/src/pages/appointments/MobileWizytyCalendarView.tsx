@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent, TouchEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
@@ -144,6 +144,15 @@ export interface MobileWizytyCalendarViewProps {
   /** Refresh the host page's data after a successful reschedule (TASK5) —
    * same callback StatusChangeModal's `onSuccess` already uses. */
   onDataChanged: () => void;
+  /** Days shown, in order: the selected day first, then every day appended below
+   * it by "Pokaż kolejny dzień". Empty before the first day is picked. */
+  loadedDays: string[];
+  /** Append the next day (after the last one shown) that has visits for the
+   * selected employee. */
+  onLoadNextDay: () => void;
+  nextDayLoading: boolean;
+  /** The search ran out of days with visits; replaces the button with a note. */
+  noMoreDays: boolean;
 }
 
 /**
@@ -166,6 +175,10 @@ export function MobileWizytyCalendarView({
   onSelectEmployee,
   canWrite,
   onDataChanged,
+  loadedDays,
+  onLoadNextDay,
+  nextDayLoading,
+  noMoreDays,
 }: MobileWizytyCalendarViewProps) {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -337,6 +350,23 @@ export function MobileWizytyCalendarView({
   const autoSelectedRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // The selected day first, then days appended below it. `appointments` arrives
+  // flat and sorted by date+time, so group it back per day for the headers.
+  const days = loadedDays.length > 0 ? loadedDays : [selectedDate];
+  const byDay = useMemo(() => {
+    const map = new Map<string, AppointmentListItem[]>();
+    for (const a of appointments) {
+      if (!map.has(a.appointment_date)) map.set(a.appointment_date, []);
+      map.get(a.appointment_date)!.push(a);
+    }
+    return map;
+  }, [appointments]);
+  const firstDayAppts = byDay.get(days[0]) ?? [];
+  // Content key of the FIRST day only: the jump-to-next-visit effect below must
+  // not re-fire (and yank the scroll back up) just because "Pokaż kolejny dzień"
+  // appended more days.
+  const firstDayKey = firstDayAppts.map((a) => `${a.id}:${a.status}:${a.start_time}`).join(',');
+
   // On every appointments-list update (day change, filter change, a
   // reschedule/status change that reloads the list, etc.) — jump to and
   // highlight the next upcoming visit instead of just resetting scroll to
@@ -351,8 +381,8 @@ export function MobileWizytyCalendarView({
   // scroll container, not the window — the whole shell frame is fixed-height
   // and never scrolls itself. Walk up to that real scroll container instead.
   useEffect(() => {
-    if (appointments.length === 0) return;
-    const target = appointments.find((a) => isUpcoming(a, Date.now()));
+    if (firstDayAppts.length === 0) return;
+    const target = firstDayAppts.find((a) => isUpcoming(a, Date.now()));
     const targetEl = target && cardRefs.current.get(target.id);
     if (target && targetEl) {
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -361,7 +391,21 @@ export function MobileWizytyCalendarView({
       return () => clearTimeout(timer);
     }
     listRef.current?.closest('.app-shell-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [appointments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstDayKey]);
+
+  // A day was appended: bring its header to the top so the new cards are what
+  // you see, instead of leaving the view on the button you just pressed. Only
+  // growth triggers it (not a restore, not a reset back to one day).
+  const dayCount = days.length;
+  const lastDay = days[days.length - 1];
+  const prevDayCountRef = useRef(dayCount);
+  useEffect(() => {
+    if (dayCount > prevDayCountRef.current) {
+      document.getElementById(`mob-day-${lastDay}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    prevDayCountRef.current = dayCount;
+  }, [dayCount, lastDay]);
 
   // `monthAnchor` is the single source of truth for which month's data is
   // loaded (the host page's `monthCache` only ever holds one month at a
@@ -414,41 +458,6 @@ export function MobileWizytyCalendarView({
     const [y, m, d] = dateStr.split('-').map(Number);
     setWeekAnchor(getMonday(new Date(y, m - 1, d)));
     onDayClick(dateStr);
-  }
-
-  const [findingNextVisit, setFindingNextVisit] = useState(false);
-  // Empty-day CTA — scans forward month-by-month (via the same
-  // `ensureMonthLoaded` cache the strip/month grid share, unfiltered by
-  // employee server-side, so filtered here) for the next day with a
-  // qualifying visit for the ACTIVE employee filter, then jumps there. The
-  // existing scroll-to-upcoming effect (keyed on `appointments`) takes it
-  // from there once that day's data loads — no separate scroll/highlight
-  // logic needed here. Capped at 6 months ahead so a genuinely empty future
-  // doesn't spin forever. Ignores the free-text search filter (this is
-  // about the employee's own schedule, not a client/service lookup).
-  async function goToNextVisit() {
-    setFindingNextVisit(true);
-    try {
-      let cursor = new Date(monthAnchor);
-      for (let i = 0; i < 6; i++) {
-        const cache = await ensureMonthLoaded(iso(cursor));
-        const dateStrs = Array.from(cache.keys()).sort();
-        for (const dateStr of dateStrs) {
-          if (dateStr <= selectedDate) continue;
-          const list = cache.get(dateStr) ?? [];
-          const hasQualifying = list.some(
-            (a) => (employeeId === null || a.employee_id === employeeId) && (a.status === 'scheduled' || a.status === 'confirmed'),
-          );
-          if (hasQualifying) {
-            handleDayTap(dateStr);
-            return;
-          }
-        }
-        cursor = addMonths(cursor, 1);
-      }
-    } finally {
-      setFindingNextVisit(false);
-    }
   }
 
   // TASK5 — card swipe-left opens the reschedule sheet. Hand-rolled (no
@@ -517,129 +526,155 @@ export function MobileWizytyCalendarView({
   for (let i = 0; i < firstWeekday; i++) monthCells.push(null);
   for (let d = 1; d <= totalDays; d++) monthCells.push({ day: d, dateStr: `${monthKey}-${String(d).padStart(2, '0')}` });
 
+  // `transition: 'none'` while actively dragging (below) — the card's own CSS
+  // class carries a 0.2s snap-back transition, which would otherwise smooth (lag
+  // behind) every touchmove update too, instead of tracking the finger 1:1.
+  // Dropping the inline style entirely on release (swipeState → null) lets that
+  // CSS transition take back over for the snap.
+  function renderCard(appt: AppointmentListItem) {
+    const swipeDx = swipeState?.id === appt.id ? swipeState.dx : 0;
+    return (
+      <div
+        key={appt.id}
+        className="mob-appt-card-wrap"
+        ref={(el) => {
+          if (el) cardRefs.current.set(appt.id, el);
+          else cardRefs.current.delete(appt.id);
+        }}
+      >
+        {isReschedulable(appt.status) && swipeDx < 0 && (
+          <div
+            className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
+            aria-hidden="true"
+          >
+            {/* The whole icon+label unit translates by the SAME dx as
+                the card, so it stays pinned to the card's trailing
+                edge as it slides ("stuck" to the card) — icon sits at
+                the unit's near edge (glued to the card from the first
+                px), label trails behind it, wrapped to 2 lines so it
+                needs less exposed width to read clearly. No opacity
+                fade (removed) — a fast real-world flick covers the
+                whole drag range in under 150ms, so any drag-progress
+                -based fade was already over before it was perceptible. */}
+            <div className="mob-appt-swipe-content mob-appt-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
+              <Icon name="calendar_month" />
+              <span className="mob-appt-swipe-label">Zmień termin</span>
+            </div>
+          </div>
+        )}
+        {swipeDx > 0 && (
+          <div
+            className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--right', swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
+            aria-hidden="true"
+          >
+            <div className="mob-appt-swipe-content mob-appt-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
+              <span className="mob-appt-swipe-label">Zobacz więcej</span>
+              <Icon name="chevron_right" />
+            </div>
+          </div>
+        )}
+        <div
+          className={[
+            'mob-appt-card',
+            appt.status === 'cancelled' || appt.status === 'no_show' || appt.status === 'rescheduled' ? 'mob-appt-card--muted' : '',
+            swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
+            swipeState?.id === appt.id && swipeState.dx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-card--swipe-armed-right' : '',
+            appt.id === highlightId ? 'mob-appt-card--highlight' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={swipeState?.id === appt.id ? { transform: `translateX(${swipeState.dx}px)`, transition: 'none' } : undefined}
+          onClick={(e) => handleCardClick(appt, e)}
+          onTouchStart={(e) => handleCardTouchStart(appt.id, e)}
+          onTouchMove={(e) => handleCardTouchMove(appt.id, appt.status, e)}
+          onTouchEnd={() => handleCardTouchEnd(appt.id, appt)}
+        >
+        <div className="mob-appt-top">
+          {/* Date dropped (redesign) — start time + duration only, one
+              line, time bold/duration regular. */}
+          <span className="mob-appt-datetime">
+            <span className="mob-appt-time">{appt.start_time.slice(0, 5)}</span>{' '}
+            <span className="mob-appt-duration">({formatDuration(appt.start_time, appt.end_time)})</span>
+          </span>
+          <StatusDropdown
+            appointmentId={appt.id}
+            currentStatus={appt.status}
+            appointmentDate={appt.appointment_date}
+            startTime={appt.start_time}
+            canWrite={canWrite}
+            onSuccess={onDataChanged}
+          />
+        </div>
+
+        {/* Client name (no caption) + phone as an icon-only tel: link
+            (redesign — digits/label dropped, same click behavior). */}
+        <div className="mob-appt-row mob-appt-client-row">
+          <span className="mob-appt-client-name">{appt.client_name || '—'}</span>
+          {appt.client_phone && (
+            <a
+              className="mob-appt-phone-btn"
+              href={telHref(appt.client_phone)}
+              title={formatPhone(appt.client_phone)}
+              aria-label={`Zadzwoń: ${formatPhone(appt.client_phone)}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Icon name="call" />
+            </a>
+          )}
+        </div>
+
+        {/* Employee row dropped entirely (redesign). Service — bare
+            name, no "Usługa:" caption. */}
+        <span className="mob-appt-service">{appt.service_name || '—'}</span>
+
+        {/* Minimal "this is tappable" hint (TASK3). */}
+        <Icon name="chevron_right" className="mob-appt-tap-hint" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mob-cal-view">
       <div className="mob-appt-list" ref={listRef}>
-        {selectedDate && <div className="mob-selected-date-label">{formatDateLong(selectedDate)}</div>}
         {loading ? (
-          <p className="empty-text">Ładowanie wizyt...</p>
-        ) : appointments.length === 0 ? (
-          <div className="empty-state">
-            <Icon name="calendar_today" className="empty-icon" />
-            <p className="empty-text">Brak wizyt tego dnia.</p>
-            <Button variant="secondary" onClick={goToNextVisit} isLoading={findingNextVisit} loadingText="Szukam...">
-              Przejdź do najbliższej umówionej wizyty
-            </Button>
-          </div>
+          <>
+            {selectedDate && <div className="mob-selected-date-label">{formatDateLong(selectedDate)}</div>}
+            <p className="empty-text">Ładowanie wizyt...</p>
+          </>
         ) : (
-          // `transition: 'none'` while actively dragging (below) — the card's
-          // own CSS class carries a 0.2s snap-back transition, which would
-          // otherwise smooth (lag behind) every touchmove update too, instead
-          // of tracking the finger 1:1. Dropping the inline style entirely on
-          // release (swipeState → null) lets that CSS transition take back
-          // over for the snap.
-          appointments.map((appt) => {
-            const swipeDx = swipeState?.id === appt.id ? swipeState.dx : 0;
-            return (
-            <div
-              key={appt.id}
-              className="mob-appt-card-wrap"
-              ref={(el) => {
-                if (el) cardRefs.current.set(appt.id, el);
-                else cardRefs.current.delete(appt.id);
-              }}
-            >
-              {isReschedulable(appt.status) && swipeDx < 0 && (
-                <div
-                  className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
-                  aria-hidden="true"
-                >
-                  {/* The whole icon+label unit translates by the SAME dx as
-                      the card, so it stays pinned to the card's trailing
-                      edge as it slides ("stuck" to the card) — icon sits at
-                      the unit's near edge (glued to the card from the first
-                      px), label trails behind it, wrapped to 2 lines so it
-                      needs less exposed width to read clearly. No opacity
-                      fade (removed) — a fast real-world flick covers the
-                      whole drag range in under 150ms, so any drag-progress
-                      -based fade was already over before it was perceptible. */}
-                  <div className="mob-appt-swipe-content mob-appt-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
-                    <Icon name="calendar_month" />
-                    <span className="mob-appt-swipe-label">Zmień termin</span>
+          <>
+            {days.map((day, idx) => {
+              const dayAppts = byDay.get(day) ?? [];
+              return (
+                <Fragment key={day}>
+                  <div id={`mob-day-${day}`} className={`mob-selected-date-label${idx > 0 ? ' mob-day-label--next' : ''}`}>
+                    {formatDateLong(day)}
                   </div>
-                </div>
+                  {dayAppts.length === 0 ? (
+                    <div className="empty-state">
+                      <Icon name="calendar_today" className="empty-icon" />
+                      <p className="empty-text">Brak wizyt tego dnia.</p>
+                    </div>
+                  ) : (
+                    dayAppts.map(renderCard)
+                  )}
+                </Fragment>
+              );
+            })}
+            {/* One button under the whole list, for the empty-day case too (it replaces
+                the old "Przejdź do najbliższej umówionej wizyty"): appends the next
+                day that has visits for the selected employee. */}
+            <div className="mob-more-wrap">
+              {noMoreDays ? (
+                <p className="empty-text">Brak kolejnych dni z wizytami.</p>
+              ) : (
+                <Button variant="secondary" icon="expand_more" onClick={onLoadNextDay} isLoading={nextDayLoading} loadingText="Szukam…">
+                  Pokaż kolejny dzień
+                </Button>
               )}
-              {swipeDx > 0 && (
-                <div
-                  className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--right', swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
-                  aria-hidden="true"
-                >
-                  <div className="mob-appt-swipe-content mob-appt-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
-                    <span className="mob-appt-swipe-label">Zobacz więcej</span>
-                    <Icon name="chevron_right" />
-                  </div>
-                </div>
-              )}
-              <div
-                className={[
-                  'mob-appt-card',
-                  appt.status === 'cancelled' || appt.status === 'no_show' || appt.status === 'rescheduled' ? 'mob-appt-card--muted' : '',
-                  swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
-                  swipeState?.id === appt.id && swipeState.dx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-card--swipe-armed-right' : '',
-                  appt.id === highlightId ? 'mob-appt-card--highlight' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                style={swipeState?.id === appt.id ? { transform: `translateX(${swipeState.dx}px)`, transition: 'none' } : undefined}
-                onClick={(e) => handleCardClick(appt, e)}
-                onTouchStart={(e) => handleCardTouchStart(appt.id, e)}
-                onTouchMove={(e) => handleCardTouchMove(appt.id, appt.status, e)}
-                onTouchEnd={() => handleCardTouchEnd(appt.id, appt)}
-              >
-              <div className="mob-appt-top">
-                {/* Date dropped (redesign) — start time + duration only, one
-                    line, time bold/duration regular. */}
-                <span className="mob-appt-datetime">
-                  <span className="mob-appt-time">{appt.start_time.slice(0, 5)}</span>{' '}
-                  <span className="mob-appt-duration">({formatDuration(appt.start_time, appt.end_time)})</span>
-                </span>
-                <StatusDropdown
-                  appointmentId={appt.id}
-                  currentStatus={appt.status}
-                  appointmentDate={appt.appointment_date}
-                  startTime={appt.start_time}
-                  canWrite={canWrite}
-                  onSuccess={onDataChanged}
-                />
-              </div>
-
-              {/* Client name (no caption) + phone as an icon-only tel: link
-                  (redesign — digits/label dropped, same click behavior). */}
-              <div className="mob-appt-row mob-appt-client-row">
-                <span className="mob-appt-client-name">{appt.client_name || '—'}</span>
-                {appt.client_phone && (
-                  <a
-                    className="mob-appt-phone-btn"
-                    href={telHref(appt.client_phone)}
-                    title={formatPhone(appt.client_phone)}
-                    aria-label={`Zadzwoń: ${formatPhone(appt.client_phone)}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Icon name="call" />
-                  </a>
-                )}
-              </div>
-
-              {/* Employee row dropped entirely (redesign). Service — bare
-                  name, no "Usługa:" caption. */}
-              <span className="mob-appt-service">{appt.service_name || '—'}</span>
-
-              {/* Minimal "this is tappable" hint (TASK3). */}
-              <Icon name="chevron_right" className="mob-appt-tap-hint" />
-              </div>
             </div>
-            );
-          })
+          </>
         )}
       </div>
 

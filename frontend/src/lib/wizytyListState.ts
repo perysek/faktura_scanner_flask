@@ -21,8 +21,11 @@
 const KEY = 'wizyty-list-view-state';
 
 export interface WizytyListViewState {
-  /** The selected day, YYYY-MM-DD (the strip's active day). */
+  /** The selected day, YYYY-MM-DD (the strip's active day). Always chain[0]. */
   date: string;
+  /** The selected day plus every day appended below it by "Pokaż kolejny dzień",
+   * in order. Restored so a round trip to a visit doesn't collapse the list. */
+  chain: string[];
   /** The employee selector's value; null = nobody picked / "all". */
   employeeId: number | null;
 }
@@ -45,7 +48,11 @@ export function readWizytyListState(): WizytyListViewState | null {
     if (typeof value.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)) return null;
     if (value.employeeId !== null && typeof value.employeeId !== 'number') return null;
     if (value.savedOn !== localIsoToday()) return null;
-    return { date: value.date, employeeId: value.employeeId };
+    // `chain` arrived after the first version of this state: older saves only
+    // have `date`, which is a chain of one.
+    const isIso = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+    const chain = Array.isArray(value.chain) && value.chain.length > 0 && value.chain.every(isIso) && value.chain[0] === value.date ? value.chain : [value.date];
+    return { date: value.date, chain, employeeId: value.employeeId };
   } catch {
     return null;
   }

@@ -54,6 +54,10 @@ function stars(score: number | null): string {
   return '★'.repeat(score) + '☆'.repeat(5 - score);
 }
 
+/** How many months ahead "Pokaż kolejny dzień" scans for the next day with visits
+ * before giving up (same horizon the old "go to next visit" button used). */
+const NEXT_DAY_SCAN_MONTHS = 6;
+
 /**
  * Wizyty — lista. Szósty moduł Fazy 2, ported z templates/appointments/list.html.
  * Domyślnie pokazuje jeden tydzień (pon–nd, jak w oryginale); po kliknięciu dnia
@@ -94,11 +98,21 @@ export function WizytyListPage() {
   // chainDates[0]); starting there also makes the mobile view skip its
   // select-today-on-mount effect.
   const [mode, setMode] = useState<'week' | 'chain'>(restored ? 'chain' : 'week');
-  const [chainDates, setChainDates] = useState<string[]>(restored ? [restored.date] : []);
+  const [chainDates, setChainDates] = useState<string[]>(restored ? restored.chain : []);
   const [monthCache, setMonthCache] = useState<{ key: string; byDate: Map<string, AppointmentListItem[]> } | null>(null);
   // Restored: the month for that day is fetched in the effect below; show the
   // loading state until then instead of a false "Brak wizyt tego dnia".
   const [chainLoading, setChainLoading] = useState(restored !== null);
+  // Phone "Pokaż kolejny dzień": days appended BELOW the selected day
+  // (chainDates[0]). Their visits live here, not in monthCache, because the
+  // next day with visits can be in another month and monthCache only ever holds
+  // one. monthFetchRef is a plain fetch cache for scanning forward month by
+  // month WITHOUT repointing monthCache (that would blank the strip's dots and
+  // the selected day's own data).
+  const [extraDayData, setExtraDayData] = useState<Record<string, AppointmentListItem[]>>({});
+  const [nextDayLoading, setNextDayLoading] = useState(false);
+  const [noMoreDays, setNoMoreDays] = useState(false);
+  const monthFetchRef = useRef(new Map<string, Map<string, AppointmentListItem[]>>());
 
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeeId, setEmployeeId] = useState<number | null>(restored ? restored.employeeId : null);
@@ -152,9 +166,17 @@ export function WizytyListPage() {
   // tapped day is empty, and a remembered day has to come back exactly as left.
   useEffect(() => {
     if (!restored) return;
-    ensureMonthLoaded(restored.date)
-      .catch(() => {})
-      .finally(() => setChainLoading(false));
+    (async () => {
+      try {
+        await ensureMonthLoaded(restored.date);
+        // Days that were appended below it (other months possible), also back.
+        if (restored.chain.length > 1) setExtraDayData(await fetchDays(restored.chain.slice(1)));
+      } catch {
+        /* the list just shows what it could load */
+      } finally {
+        setChainLoading(false);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -164,7 +186,7 @@ export function WizytyListPage() {
   // employee can never overwrite a remembered one.
   useEffect(() => {
     if (!isMobile || auth.isLoading || mode !== 'chain' || chainDates.length === 0) return;
-    writeWizytyListState({ date: chainDates[0], employeeId });
+    writeWizytyListState({ date: chainDates[0], chain: chainDates, employeeId });
   }, [isMobile, auth.isLoading, mode, chainDates, employeeId]);
 
   // A remembered employee can be gone by the time we're back (deactivated). Check
@@ -197,9 +219,15 @@ export function WizytyListPage() {
     setReloadToken((t) => t + 1);
   }
 
+  function resetChainExtras() {
+    setExtraDayData({});
+    setNoMoreDays(false);
+  }
+
   function exitChainMode() {
     setMode('week');
     setChainDates([]);
+    resetChainExtras();
   }
 
   async function ensureMonthLoaded(dateStr: string): Promise<Map<string, AppointmentListItem[]>> {
@@ -209,13 +237,83 @@ export function WizytyListPage() {
     const start = `${key}-01`;
     const end = iso(new Date(y, m, 0));
     const res = await appointmentsApi.list({ start_date: start, end_date: end });
+    const byDate = groupByDate(res.appointments);
+    setMonthCache({ key, byDate });
+    return byDate;
+  }
+
+  function groupByDate(list: AppointmentListItem[]): Map<string, AppointmentListItem[]> {
     const byDate = new Map<string, AppointmentListItem[]>();
-    for (const a of res.appointments) {
+    for (const a of list) {
       if (!byDate.has(a.appointment_date)) byDate.set(a.appointment_date, []);
       byDate.get(a.appointment_date)!.push(a);
     }
-    setMonthCache({ key, byDate });
     return byDate;
+  }
+
+  /** One month's visits by day, fetched without touching monthCache and cached
+   * in monthFetchRef until the next data change clears it. */
+  async function fetchMonthByDate(key: string): Promise<Map<string, AppointmentListItem[]>> {
+    const cached = monthFetchRef.current.get(key);
+    if (cached) return cached;
+    const [y, m] = key.split('-').map(Number);
+    const res = await appointmentsApi.list({ start_date: `${key}-01`, end_date: iso(new Date(y, m, 0)) });
+    const byDate = groupByDate(res.appointments);
+    monthFetchRef.current.set(key, byDate);
+    return byDate;
+  }
+
+  async function fetchDays(dates: string[]): Promise<Record<string, AppointmentListItem[]>> {
+    const out: Record<string, AppointmentListItem[]> = {};
+    for (const key of new Set(dates.map((d) => d.slice(0, 7)))) {
+      const byDate = await fetchMonthByDate(key);
+      for (const d of dates) if (d.startsWith(key)) out[d] = byDate.get(d) ?? [];
+    }
+    return out;
+  }
+
+  /** A day "has visits" for the phone's next-day search when at least one
+   * non-cancelled/no-show/rescheduled visit belongs to the selected employee
+   * (any employee while none is selected), same notion of "real" as the strip
+   * dots and handleSidebarDayClick. */
+  function dayHasVisitsFor(items: AppointmentListItem[]): boolean {
+    return items.some((a) => a.status !== 'cancelled' && a.status !== 'no_show' && a.status !== 'rescheduled' && (employeeId === null || a.employee_id === employeeId));
+  }
+
+  /** "Pokaż kolejny dzień": append the next day (after the last one shown) that has
+   * visits for the selected employee, scanning forward month by month. */
+  async function loadNextVisitDay() {
+    if (nextDayLoading || chainDates.length === 0) return;
+    const last = chainDates[chainDates.length - 1];
+    setNextDayLoading(true);
+    try {
+      const [ly, lm] = last.split('-').map(Number);
+      let cursor = new Date(ly, lm - 1, 1);
+      for (let i = 0; i < NEXT_DAY_SCAN_MONTHS; i++) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        const byDate = await fetchMonthByDate(key);
+        const next = [...byDate.keys()].filter((d) => d > last && dayHasVisitsFor(byDate.get(d) ?? [])).sort()[0];
+        if (next) {
+          setExtraDayData((prev) => ({ ...prev, [next]: byDate.get(next) ?? [] }));
+          setChainDates((prev) => [...prev, next]);
+          return;
+        }
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+      }
+      setNoMoreDays(true);
+    } catch (err) {
+      console.error('Nie udało się wczytać kolejnego dnia', err);
+    } finally {
+      setNextDayLoading(false);
+    }
+  }
+
+  /** Phone employee picker: the days appended below were chosen for the PREVIOUS
+   * employee's visits, so a new employee starts again from the selected day. */
+  function selectEmployee(id: number | null) {
+    setEmployeeId(id);
+    setChainDates((prev) => prev.slice(0, 1));
+    resetChainExtras();
   }
 
   function hasReal(byDate: Map<string, AppointmentListItem[]>, dateStr: string): boolean {
@@ -237,6 +335,7 @@ export function WizytyListPage() {
       }
       setMode('chain');
       setChainDates(target ? [target] : [dateStr]);
+      resetChainExtras();
     } finally {
       setChainLoading(false);
     }
@@ -257,11 +356,13 @@ export function WizytyListPage() {
   }, [mode, monthCache, chainDates]);
 
   const rawAppointments = useMemo(() => {
-    if (mode === 'chain' && monthCache) {
-      return chainDates.flatMap((d) => monthCache.byDate.get(d) ?? []).sort((a, b) => (a.appointment_date + a.start_time).localeCompare(b.appointment_date + b.start_time));
+    if (mode === 'chain' && (monthCache || Object.keys(extraDayData).length > 0)) {
+      // Days appended on the phone come from extraDayData (they may be in another
+      // month than monthCache); everything else, from monthCache, as before.
+      return chainDates.flatMap((d) => extraDayData[d] ?? monthCache?.byDate.get(d) ?? []).sort((a, b) => (a.appointment_date + a.start_time).localeCompare(b.appointment_date + b.start_time));
     }
     return weekAppointments;
-  }, [mode, monthCache, chainDates, weekAppointments]);
+  }, [mode, monthCache, chainDates, extraDayData, weekAppointments]);
 
   const filtered = useMemo(() => {
     let list = rawAppointments;
@@ -317,6 +418,20 @@ export function WizytyListPage() {
   }
 
   async function handleStatusUpdated() {
+    if (isMobile && mode === 'chain' && chainDates.length > 0) {
+      // Phone: swap fresh data in WITHOUT blanking the list. The blanking path
+      // below would collapse a multi-day list to "Ładowanie…" and throw away
+      // the scroll position after every status change or reschedule.
+      monthFetchRef.current.clear();
+      try {
+        const key = chainDates[0].slice(0, 7);
+        setMonthCache({ key, byDate: await fetchMonthByDate(key) });
+        if (chainDates.length > 1) setExtraDayData(await fetchDays(chainDates.slice(1)));
+      } catch {
+        /* keep what's on screen; the next interaction retries */
+      }
+      return;
+    }
     if (mode === 'chain' && chainDates.length > 0) {
       // Invalidate + immediately re-fetch (not just null it out) — `mode`
       // stays 'chain' so `rawAppointments` still expects `monthCache` to be
@@ -439,9 +554,13 @@ export function WizytyListPage() {
             onRowClick={handleRowClick}
             employees={employees}
             employeeId={employeeId}
-            onSelectEmployee={setEmployeeId}
+            onSelectEmployee={selectEmployee}
             canWrite={canWrite}
             onDataChanged={handleStatusUpdated}
+            loadedDays={mode === 'chain' && chainDates.length > 0 ? chainDates : []}
+            onLoadNextDay={loadNextVisitDay}
+            nextDayLoading={nextDayLoading}
+            noMoreDays={noMoreDays}
           />
         ) : (
         <div className="table-container stack-cards-wrap">
