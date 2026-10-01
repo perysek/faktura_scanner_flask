@@ -172,3 +172,17 @@
   .appt-detail-page .appt-mobile-action-bar > a { flex: 1 1 auto; min-width: 0; min-height: 2.75rem; justify-content: center; }
   .appt-detail-page .appt-mobile-action-bar--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom))); }
 }
+
+/* Same deterministic page gutter + overflow guard as the Pracownicy pages
+   (see the long note at the end of employees/EmployeesListPage.css):
+   `.refined-page` is declared twice with different padding, so the bars'
+   1.25rem bleed above is only correct while this two-class rule pins the
+   gutter to match. */
+@media (max-width: 640px) {
+  .refined-page.appt-detail-page {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    padding-bottom: 1.25rem;
+    overflow-x: clip;
+  }
+}

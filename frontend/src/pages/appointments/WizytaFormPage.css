@@ -162,3 +162,17 @@
   .appt-timing-footer { flex-direction: column-reverse; align-items: stretch; }
   .appt-timing-footer > button { width: 100%; min-height: 2.75rem; white-space: normal; }
 }
+
+/* Same deterministic page gutter + overflow guard as the Pracownicy pages
+   (see the long note at the end of employees/EmployeesListPage.css):
+   `.refined-page` is declared twice with different padding, so the bars'
+   1.25rem bleed above is only correct while this two-class rule pins the
+   gutter to match. */
+@media (max-width: 640px) {
+  .refined-page.appt-form-page {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    padding-bottom: 1.25rem;
+    overflow-x: clip;
+  }
+}

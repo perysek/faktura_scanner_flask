@@ -434,8 +434,8 @@ tr:hover .action-icon-btn.danger-reveal,
 .employees-mobile-cta {
   position: sticky; bottom: 0; z-index: 15;
   display: flex; flex-direction: column; gap: 0.5rem;
-  margin: 1rem -1.5rem -1rem;
-  padding: 0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  margin: 1rem calc(-1 * var(--page-gutter, 1.25rem)) calc(-1 * var(--page-gutter, 1.25rem));
+  padding: 0.75rem var(--page-gutter, 1.25rem) calc(0.75rem + env(safe-area-inset-bottom, 0px));
   background: var(--color-surface-elevated);
   border-top: 1px solid var(--color-border);
   box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
@@ -522,10 +522,10 @@ tr:hover .action-icon-btn.danger-reveal,
      `.rbac-mobile-cta` (RbacPages.css), which has never needed one either. */
   .employee-detail-page .employee-mobile-action-bar {
     position: sticky; bottom: 0; z-index: 15;
-    margin: 1rem -1.5rem -1rem;
+    margin: 1rem calc(-1 * var(--page-gutter, 1.25rem)) calc(-1 * var(--page-gutter, 1.25rem));
     background: var(--color-surface); border-top: 1px solid var(--color-border);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-    padding: 0.625rem 1.5rem calc(0.625rem + env(safe-area-inset-bottom));
+    padding: 0.625rem var(--page-gutter, 1.25rem) calc(0.625rem + env(safe-area-inset-bottom));
     transition: transform 0.25s ease;
   }
   .employee-detail-page .employee-mobile-action-bar > a { display: flex; justify-content: center; width: 100%; min-width: 0; }
@@ -624,4 +624,32 @@ tr:hover .action-icon-btn.danger-reveal,
      wrap is enough — the capped input already fits, only the button needs
      somewhere to fall back to instead of forcing extra width. */
   .employee-form-page .chip-add-row { flex-wrap: wrap; }
+}
+
+/* ── Mobile page gutter + horizontal-overflow guard (Pracownicy pages) ──
+   Root cause of the "page slides a few px sideways" bug: the sticky bottom
+   bars (.employees-mobile-cta, .employee-mobile-action-bar) bled out by a
+   hardcoded 1.5rem to reach the screen edges, but the page root's real
+   gutter is 1.25rem — `.refined-page` is declared TWICE with different
+   padding (components.css: 1rem 1.5rem; Appointments.css, module-global
+   once bundled: 1rem 1.25rem 1.25rem) and whichever the bundler emits last
+   wins, so the 1.5rem guess overshot the scroll area by 4px per side and
+   <main id="main-content"> became horizontally scrollable by exactly that.
+   Fix: the gutter is declared here, on a TWO-class selector that beats
+   either `.refined-page` rule regardless of bundle order, as a variable the
+   bars read for their bleed — they can no longer disagree with the page.
+   `overflow-x: clip` (not hidden: it creates no scroll container, so the
+   sticky bars/header keep anchoring to main) is the backstop: whatever
+   else ever pokes out by a few px is clipped instead of becoming a sideways
+   scroll. Not applied to the form page: its bar bleeds only to the card's
+   own edge (inside .form-card), and it was verified clean on devices. */
+@media (max-width: 640px) {
+  .refined-page.employees-page,
+  .refined-page.employee-detail-page {
+    --page-gutter: 1.25rem;
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+    padding-bottom: var(--page-gutter);
+    overflow-x: clip;
+  }
 }
