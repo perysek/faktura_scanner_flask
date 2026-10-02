@@ -519,17 +519,21 @@ class TestClientsListIntegration:
         env.app.client_repo.get_clients_with_stats.return_value = [_client_row(5), _client_row(6)]
         env.app.client_repo.row_to_client = ClientRepository().row_to_client
         env.notes.recent_for_clients.return_value = [
-            {'client_id': 5, 'note_text': 'Nowsza', 'updated_at': datetime(2026, 10, 1, 6, 15)},
-            {'client_id': 5, 'note_text': 'Starsza', 'updated_at': datetime(2026, 9, 1, 8, 0)},
+            {'client_id': 5, 'note_text': 'Nowsza', 'updated_at': datetime(2026, 10, 1, 6, 15),
+             'service_name': 'Manicure hybrydowy'},
+            {'client_id': 5, 'note_text': 'Starsza', 'updated_at': datetime(2026, 9, 1, 8, 0),
+             'service_name': None},
         ]
+        env.app.client_repo.last_service_ids.return_value = {5: 11}
 
     def test_attaches_two_newest_per_client_in_one_query(self, env):
         with _as(_user(), FULL):
             body = env.c.get('/api/clients?include_notes=1', headers=XHR).get_json()
         by_id = {c['id']: c for c in body['clients']}
+        # each note names the service of ITS visit (None when the visit has no service rows)
         assert by_id[5]['recent_notes'] == [
-            {'text': 'Nowsza', 'at': '2026-10-01T08:15:00'},
-            {'text': 'Starsza', 'at': '2026-09-01T10:00:00'},
+            {'text': 'Nowsza', 'at': '2026-10-01T08:15:00', 'service_name': 'Manicure hybrydowy'},
+            {'text': 'Starsza', 'at': '2026-09-01T10:00:00', 'service_name': None},
         ]
         assert by_id[6]['recent_notes'] == []
         assert env.notes.recent_for_clients.call_count == 1
@@ -552,6 +556,21 @@ class TestClientsListIntegration:
         with _as(_user(), OWN_DATA, own_employee_id=7):
             env.c.get('/api/clients?include_notes=1', headers=XHR)
         assert env.notes.recent_for_clients.call_args.args[1] == 7
+
+    def test_last_service_id_is_opt_in_and_batched(self, env):
+        with _as(_user(), FULL):
+            body = env.c.get('/api/clients?include_last_service=1', headers=XHR).get_json()
+        by_id = {c['id']: c for c in body['clients']}
+        assert by_id[5]['last_service_id'] == 11
+        assert by_id[6]['last_service_id'] is None  # a client with no usable visit
+        assert env.app.client_repo.last_service_ids.call_count == 1
+        assert env.app.client_repo.last_service_ids.call_args.args == ([5, 6],)
+
+    def test_last_service_id_absent_and_unqueried_without_the_flag(self, env):
+        with _as(_user(), FULL):
+            body = env.c.get('/api/clients', headers=XHR).get_json()
+        assert all('last_service_id' not in c for c in body['clients'])
+        env.app.client_repo.last_service_ids.assert_not_called()
 
 
 # ─── ISC-18 · visits list: latest_note (1) ───────────────────────────────────
@@ -576,6 +595,8 @@ class TestAppointmentsListIntegration:
     def test_attaches_the_clients_single_latest_note(self, env):
         with _as(_user(), FULL):
             appts = {a['id']: a for a in self._get(env, '&include_notes=1').get_json()['appointments']}
+        # exact shape on purpose: the service name is opt-in for the clients list only,
+        # so the visits list payload must stay {text, at}
         assert appts[1]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
         assert appts[3]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}  # same client
         assert appts[2]['latest_note'] is None

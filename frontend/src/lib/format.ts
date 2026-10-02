@@ -96,3 +96,15 @@ export function formatPhone(raw: string | null | undefined): string {
   }
   return `48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
 }
+
+/**
+ * `tel:` link for a stored phone number, so a tap opens the device's dialer. A bare
+ * 9-digit Polish number gets the +48 country code (some dialers reject a national
+ * number without one); an 11-digit number that already starts with 48 gets just the `+`.
+ */
+export function telHref(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 9) return `tel:+48${digits}`;
+  if (digits.length === 11 && digits.startsWith('48')) return `tel:+${digits}`;
+  return `tel:${digits}`;
+}

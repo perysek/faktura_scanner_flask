@@ -190,31 +190,82 @@
 
   /* Card list */
   .clients-page .client-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
-  .clients-page .client-card {
-    display: flex;
-    align-items: stretch;
+  /* The <li> is the framed, clipped shell: it carries the border/shadow and hides the swipe
+     reveal layers; the .client-card inside is the opaque surface that slides over them. */
+  .clients-page .client-card-wrap {
+    position: relative;
+    overflow: hidden;
     background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
   }
-  .clients-page .client-card--skeleton { align-items: center; gap: 0.75rem; padding: 0.875rem; }
-  .clients-page .client-card-main {
-    flex: 1;
-    min-width: 0;
-    min-height: 4rem;
+  .clients-page .client-card {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
+    min-height: 4rem;
     padding: 0.875rem 0.25rem 0.875rem 0.875rem;
-    color: inherit;
-    text-decoration: none;
-    border-radius: var(--radius-md);
+    background: var(--color-surface-elevated);
+    cursor: pointer;
+    /* Vertical panning stays native; horizontal moves are handed to the swipe handlers. */
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s ease, background-color 0.15s ease;
   }
-  .clients-page .client-card-main:active { background: var(--color-surface); }
+  .clients-page .client-card:active { background: var(--color-surface); }
+  /* Past the trigger distance: tint the card (over a solid base, so the reveal never shows through). */
+  .clients-page .client-card.is-armed-left { background: linear-gradient(rgba(30, 96, 145, 0.06), rgba(30, 96, 145, 0.06)), var(--color-surface-elevated); }
+  .clients-page .client-card.is-armed-right { background: linear-gradient(rgba(45, 106, 79, 0.06), rgba(45, 106, 79, 0.06)), var(--color-surface-elevated); }
+  /* Loading placeholder: a standalone card, not wrapped. */
+  .clients-page .client-card--skeleton {
+    align-items: center;
+    padding: 0.875rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    cursor: default;
+  }
+
+  /* Swipe reveal layers (same look as the employees list): left drag shows "Zobacz" on the right
+     edge, right drag shows "Nowa wizyta" on the left edge. */
+  .clients-page .client-swipe-reveal { position: absolute; inset: 0; z-index: 0; }
+  .clients-page .client-swipe-reveal--left { background: var(--color-info-bg, #eff6ff); }
+  .clients-page .client-swipe-reveal--left.is-armed { box-shadow: inset 0 0 0 1px var(--color-info, #1e6091); }
+  .clients-page .client-swipe-reveal--right { background: rgba(45, 106, 79, 0.08); }
+  .clients-page .client-swipe-reveal--right.is-armed { box-shadow: inset 0 0 0 1px var(--color-success); }
+  .clients-page .client-swipe-content { position: absolute; top: 0; bottom: 0; width: 7.5rem; display: flex; align-items: center; gap: 0.375rem; padding: 0 0.625rem; }
+  .clients-page .client-swipe-content .icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+  .clients-page .client-swipe-content--left { right: -7.5rem; color: var(--color-info-text-dark, #1e3a8a); }
+  .clients-page .client-swipe-content--right { left: -7.5rem; color: var(--color-success); }
+  .clients-page .client-swipe-label { width: 4.25rem; font-size: 0.9375rem; line-height: 1.15; text-align: center; }
+
   .clients-page .client-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-  .clients-page .client-card-name { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
-  .clients-page .client-card-sub { font-size: 0.8125rem; color: var(--color-ink-muted); }
+  .clients-page .client-card-name { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); text-decoration: none; overflow-wrap: anywhere; }
+
+  /* Phone: a tap on the round icon opens the device's dialer (tel:). The glyph is 2rem, the
+     tappable area 2.75rem via the pseudo-element — so the row stays compact but the target
+     reaches the touch minimum. The number itself is plain text: tapping it opens the client. */
+  .clients-page .client-card-phone-row { display: flex; align-items: center; gap: 0.5rem; margin: -0.125rem 0; }
+  .clients-page .client-card-phone { font-size: 0.8125rem; color: var(--color-ink-muted); }
+  .clients-page .client-phone-btn {
+    position: relative;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.0625rem;
+    color: var(--color-success);
+    background: rgba(45, 106, 79, 0.08);
+    border-radius: 50%;
+    text-decoration: none;
+  }
+  .clients-page .client-phone-btn::after { content: ''; position: absolute; inset: -0.375rem; }
+  .clients-page .client-phone-btn:active { background: rgba(45, 106, 79, 0.2); }
 
   .clients-page .client-card-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.125rem 0.75rem; margin-top: 0.125rem; }
   .clients-page .client-fact { display: flex; flex-direction: column; min-width: 0; font-size: 0.8125rem; color: var(--color-ink); }
@@ -238,7 +289,23 @@
   .clients-page .client-pill--danger strong { color: var(--color-error); }
   .clients-page .client-pill--muted { color: var(--color-ink-subtle); }
 
-  .clients-page .client-card-notes { margin-top: 0.25rem; padding-top: 0.5rem; border-top: 1px solid var(--color-border-subtle); font-size: 0.75rem; line-height: 1.4; color: var(--color-ink-muted); }
+  /* Latest post-visit note + the service it was about. The note is cut in JS (truncateNote), so
+     the "(service)" that follows can't be clipped; the line clamp is only a backstop. */
+  .clients-page .client-card-note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+    overflow: hidden;
+    margin: 0.25rem 0 0;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-border-subtle);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--color-ink-muted);
+    overflow-wrap: anywhere;
+  }
+  .clients-page .client-note-service { color: var(--color-ink-subtle); }
 
   .clients-page .client-card-more {
     flex-shrink: 0;
@@ -248,7 +315,8 @@
     align-self: flex-start;
     width: 3rem;
     min-height: 3rem;
-    margin: 0.25rem 0.25rem 0 0;
+    /* The card's own top padding is 0.875rem; pull the button back up to where it sat before. */
+    margin: -0.625rem 0 0 0;
     font-size: 1.5rem;
     color: var(--color-ink-muted);
     background: transparent;

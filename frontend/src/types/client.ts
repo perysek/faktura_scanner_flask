@@ -34,6 +34,9 @@ export interface Client {
   // Only on GET /api/clients?include_notes=1, and only for a caller with
   // `appointments` access: the 2 newest visit notes, newest first.
   recent_notes?: RecentNote[];
+  // Only on GET /api/clients?include_last_service=1: the main service of the client's latest
+  // completed visit (null when there is none) — the new-visit form preselects it.
+  last_service_id?: number | null;
 }
 
 export interface DuplicateMatch {

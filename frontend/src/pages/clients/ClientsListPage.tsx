@@ -70,7 +70,11 @@ export function ClientsListPage() {
   // "Aktualne uwagi i zalecenia" shows visit notes, so it follows the `appointments`
   // module (the server drops `recent_notes` for anyone without it).
   const showNotes = auth.hasModuleAccess('appointments');
+  // Phone cards' "Umów wizytę" (swipe right / ⋯ sheet) needs the right to create visits; the
+  // list then also asks the server for each client's last service, to prefill the new visit with.
+  const canSchedule = auth.hasModuleWrite('appointments');
   const isMobile = useIsMobile(640);
+  const wantLastService = isMobile && canSchedule;
 
   const initial = useMemo(loadSessionState, []);
   const [searchInput, setSearchInput] = useState(initial.searchInput ?? '');
@@ -101,8 +105,8 @@ export function ClientsListPage() {
   // Always fetch inactive too — the chips filter client-side and need
   // accurate counts for all three states (Aktywni / VIP / Nieaktywni).
   const clientsState = useApiData(
-    () => clientsApi.list({ search: debouncedSearch, includeInactive: true, includeNotes: showNotes }),
-    [debouncedSearch, showNotes],
+    () => clientsApi.list({ search: debouncedSearch, includeInactive: true, includeNotes: showNotes, includeLastService: wantLastService }),
+    [debouncedSearch, showNotes, wantLastService],
   );
   const trendsState = useApiData(() => clientsApi.visitTrends(), []);
   const statsState = useApiData(() => clientsApi.statistics(), []);
@@ -221,6 +225,8 @@ export function ClientsListPage() {
         sort={sort}
         onSelectSort={handleSelectSort}
         canWrite={canWrite}
+        canSchedule={canSchedule}
+        linkedEmployeeId={auth.linkedEmployeeId}
         showNotes={showNotes}
         onDeactivate={handleDeactivate}
         onBulkUpdatePreferences={handleBulkUpdatePreferences}

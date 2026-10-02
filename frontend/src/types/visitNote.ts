@@ -40,4 +40,7 @@ export interface RecentNote {
   text: string;
   /** Warsaw-local ISO without a designator. */
   at: string | null;
+  /** First service of the note's visit — present on the clients list only (the visits list
+   * payload stays `{text, at}`); null when that visit has no service rows. */
+  service_name?: string | null;
 }

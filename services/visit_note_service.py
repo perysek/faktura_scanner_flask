@@ -119,14 +119,22 @@ class VisitNoteService:
         } for r in rows]
 
     def recent_by_client(self, client_ids: List[int], scope: VisitNoteScope,
-                         per_client: int) -> Dict[int, List[Dict[str, Optional[str]]]]:
-        """``{client_id: [{text, at}, ...]}`` newest first, at most ``per_client`` each."""
+                         per_client: int,
+                         with_service: bool = False) -> Dict[int, List[Dict[str, Optional[str]]]]:
+        """``{client_id: [{text, at}, ...]}`` newest first, at most ``per_client`` each.
+
+        ``with_service`` adds ``service_name`` (the note's visit's first service) to each
+        entry. Opt-in because the visits list shares this method and its payload must not
+        change: only the clients list's phone cards show which service a note is about.
+        """
         if not scope.has_access or not client_ids:
             return {}
         grouped: Dict[int, List[Dict[str, Optional[str]]]] = {}
         for row in self.notes.recent_for_clients(list(client_ids), scope.own_employee_id, per_client):
-            grouped.setdefault(row['client_id'], []).append(
-                {'text': row['note_text'], 'at': iso_local(row['updated_at'])})
+            entry = {'text': row['note_text'], 'at': iso_local(row['updated_at'])}
+            if with_service:
+                entry['service_name'] = row.get('service_name')
+            grouped.setdefault(row['client_id'], []).append(entry)
         return grouped
 
     # ── writes ───────────────────────────────────────────────────────────────

@@ -166,6 +166,24 @@ class TestRecentForClients:
         assert 'a.employee_id NOT IN' in sql and 'a.employee_id = %s' in sql
         assert params == [[5, 6, 7], 9, 8, 2]  # ids, hidden, own, per-client cap
 
+    def test_carries_the_notes_visit_first_service_looked_up_after_ranking(self, app):
+        calls = []
+
+        def fake(self, sql, params=()):
+            calls.append(sql)
+            return []
+
+        with app.app_context(), _hidden(()), patch(f'{REPO}._fetch_all', fake):
+            _repo().recent_for_clients([5], None, 2)
+        sql = calls[0]
+        assert 'fs.service_name' in sql
+        # the lateral join hangs off the RANKED rows (outer query), so it only runs for the
+        # rows actually returned — not once per note of every listed client
+        assert 'aps.appointment_id = ranked.appointment_id' in sql
+        assert sql.index(') ranked') < sql.index('LEFT JOIN LATERAL')
+        assert 'ORDER BY aps.is_addon ASC, aps.id ASC' in sql  # main service before add-on
+        assert 'WHERE ranked.rn <= %s' in sql
+
     def test_empty_id_list_short_circuits_without_a_query(self, app):
         with app.app_context(), patch(f'{REPO}._fetch_all') as fetch:
             assert _repo().recent_for_clients([], None, 2) == []

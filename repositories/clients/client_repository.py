@@ -156,6 +156,37 @@ class ClientRepository(BaseRepository):
         """
         return self._fetch_all(query)
 
+    def last_service_ids(self, client_ids: List[int]) -> dict:
+        """``{client_id: service_id}`` — the main service of each client's latest completed visit.
+
+        Backs "Umów wizytę" on the phone client cards (the new-visit form preselects it).
+        ONE batched query however many clients are listed (DISTINCT ON, never N+1). A
+        completed visit with no service rows is skipped in favour of the one before it, and a
+        client with no usable visit is simply absent from the result. Carries the same
+        "Widok administratora" exclusion as the visit stats above, so the owner's hidden
+        visits can't leak into what a client's last service looks like.
+        """
+        if not client_ids:
+            return {}
+        query = f"""
+            SELECT DISTINCT ON (a.client_id) a.client_id, fs.service_id
+            FROM appointments a
+            JOIN LATERAL (
+                SELECT aps.service_id
+                FROM appointment_services aps
+                WHERE aps.appointment_id = a.id
+                ORDER BY aps.is_addon ASC, aps.id ASC
+                LIMIT 1
+            ) fs ON TRUE
+            WHERE a.client_id = ANY(%s)
+              AND a.status = 'completed'
+              AND a.is_deleted = FALSE
+              {emp_exclusion_sql_inline('a.employee_id')}
+            ORDER BY a.client_id, a.appointment_date DESC, a.start_time DESC, a.id DESC
+        """
+        rows = self._fetch_all(query, (list(client_ids),))
+        return {row['client_id']: row['service_id'] for row in rows}
+
     def get_clients_with_stats(self, search_query: str = '',
                                include_inactive: bool = False) -> List[Any]:
         """Pobierz klientów ze statystykami wizyt (zakończone, no-show, anulowane).

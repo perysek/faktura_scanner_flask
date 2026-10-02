@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
-import { formatPhone } from '../../lib/format';
+import { formatPhone, telHref } from '../../lib/format';
 import { Modal } from '../../components/ui/Modal';
 import type { BalanceSummaryEntry, EmployeeListRow } from '../../types/employee';
 
@@ -17,13 +17,6 @@ const SWIPE_TRIGGER_PX = -84;
 const SWIPE_MAX_PX = -120;
 const SWIPE_TRIGGER_PX_RIGHT = 84;
 const SWIPE_MAX_PX_RIGHT = 120;
-
-function telHref(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length === 9) return `tel:+48${digits}`;
-  if (digits.length === 11 && digits.startsWith('48')) return `tel:+${digits}`;
-  return `tel:${digits}`;
-}
 
 function statusBadge(emp: EmployeeListRow) {
   if (!emp.is_active) return { cls: 'inactive', label: 'Nieaktywny' };

@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent, TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
-import { NotesDigest } from '../../components/visitNotes/NotesDigest';
 import { isVipClient } from '../../components/clients/TrendSparkline';
 import { Icon } from '../../lib/icons/Icon';
-import { formatDate, formatNextVisitLine1, formatPhone } from '../../lib/format';
-import { DEFAULT_SORT_DIR, clientInitials, clientRingStyle } from './clientsListShared';
+import { formatDate, formatNextVisitLine1, formatPhone, telHref } from '../../lib/format';
+import { DEFAULT_SORT_DIR, clientInitials, clientRingStyle, newVisitHref, truncateNote } from './clientsListShared';
 import type { FilterKey, SortField, SortState } from './clientsListShared';
 import type { Client } from '../../types/client';
 
@@ -31,6 +31,13 @@ const SORT_LABEL: Record<SortField, string> = {
   is_active: 'Status',
 };
 
+/** Same mechanics (and thresholds) as the employees list's card swipe, itself ported from the visits
+ * list — hand-rolled, no gesture library in this project's deps. A horizontal drag must dominate the
+ * vertical one by 1.5x before it counts as a swipe at all, so an ordinary list scroll that starts on
+ * a card is never hijacked. Swipe LEFT → the client's page; swipe RIGHT → a new visit for them. */
+const SWIPE_TRIGGER_PX = 84;
+const SWIPE_MAX_PX = 120;
+
 export interface ClientsMobileViewProps {
   /** Already filtered + sorted. */
   clients: Client[];
@@ -46,6 +53,10 @@ export interface ClientsMobileViewProps {
   sort: SortState;
   onSelectSort: (field: SortField) => void;
   canWrite: boolean;
+  /** May create visits (`appointments` write) — gates swipe-right and the sheet's "Umów wizytę". */
+  canSchedule: boolean;
+  /** The logged-in user's own employee, if their account is linked to one — prefilled in the new visit. */
+  linkedEmployeeId: number | null;
   showNotes: boolean;
   onDeactivate: (client: Client) => void;
   onBulkUpdatePreferences: () => void;
@@ -73,6 +84,8 @@ export function ClientsMobileView({
   sort,
   onSelectSort,
   canWrite,
+  canSchedule,
+  linkedEmployeeId,
   showNotes,
   onDeactivate,
   onBulkUpdatePreferences,
@@ -186,7 +199,14 @@ export function ClientsMobileView({
       ) : (
         <ul className="client-cards">
           {clients.map((client) => (
-            <ClientCard key={client.id} client={client} showNotes={showNotes} onOpenSheet={setSheetClient} />
+            <ClientCard
+              key={client.id}
+              client={client}
+              showNotes={showNotes}
+              canSchedule={canSchedule}
+              linkedEmployeeId={linkedEmployeeId}
+              onOpenSheet={setSheetClient}
+            />
           ))}
         </ul>
       )}
@@ -224,6 +244,13 @@ export function ClientsMobileView({
                 <Icon name="visibility" /> Zobacz klienta
               </Link>
             </li>
+            {canSchedule && (
+              <li>
+                <Link className="action-sheet-item" to={newVisitHref(sheet, linkedEmployeeId)}>
+                  <Icon name="edit_calendar" /> Umów wizytę
+                </Link>
+              </li>
+            )}
             {canWrite && (
               <li>
                 <Link className="action-sheet-item" to={`/klienci/${sheet.id}/edytuj`}>
@@ -268,25 +295,120 @@ export function ClientsMobileView({
 interface ClientCardProps {
   client: Client;
   showNotes: boolean;
+  canSchedule: boolean;
+  linkedEmployeeId: number | null;
   onOpenSheet: (client: Client) => void;
 }
 
-function ClientCard({ client, showNotes, onOpenSheet }: ClientCardProps) {
+/** Per-card drag state. `dx` is signed: negative = dragging left, positive = dragging right. */
+function useCardSwipe(allowRight: boolean, onLeft: () => void, onRight: () => void) {
+  const [dx, setDx] = useState(0);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  // A triggered swipe can be followed by a synthetic click on the card; swallow exactly that one.
+  const suppressClickRef = useRef(false);
+
+  function onTouchStart(e: TouchEvent) {
+    const t = e.touches[0];
+    startRef.current = { x: t.clientX, y: t.clientY };
+    suppressClickRef.current = false;
+  }
+  function onTouchMove(e: TouchEvent) {
+    const start = startRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const moveX = t.clientX - start.x;
+    const moveY = t.clientY - start.y;
+    if (Math.abs(moveX) <= Math.abs(moveY) * 1.5) return;
+    if (moveX < 0) setDx(Math.max(moveX, -SWIPE_MAX_PX));
+    else if (allowRight) setDx(Math.min(moveX, SWIPE_MAX_PX));
+  }
+  function onTouchEnd() {
+    startRef.current = null;
+    const final = dx;
+    setDx(0);
+    if (final <= -SWIPE_TRIGGER_PX) {
+      suppressClickRef.current = true;
+      onLeft();
+    } else if (allowRight && final >= SWIPE_TRIGGER_PX) {
+      suppressClickRef.current = true;
+      onRight();
+    }
+  }
+  function onTouchCancel() {
+    startRef.current = null;
+    setDx(0);
+  }
+  /** True when the click that just fired belongs to a swipe and must be ignored. */
+  function consumeSuppressedClick(): boolean {
+    const was = suppressClickRef.current;
+    suppressClickRef.current = false;
+    return was;
+  }
+
+  return { dx, handlers: { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel }, consumeSuppressedClick };
+}
+
+const stopPropagation = (e: MouseEvent) => e.stopPropagation();
+
+function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId, onOpenSheet }: ClientCardProps) {
+  const navigate = useNavigate();
   const noShows = client.no_show_count ?? 0;
-  const hasNotes = showNotes && !!client.recent_notes && client.recent_notes.length > 0;
+  const viewHref = `/klienci/${client.id}`;
+  const visitHref = newVisitHref(client, linkedEmployeeId);
+  const swipe = useCardSwipe(
+    canSchedule,
+    () => navigate(viewHref),
+    () => navigate(visitHref),
+  );
+  const note = showNotes ? client.recent_notes?.[0] : undefined;
+  const armedLeft = swipe.dx <= -SWIPE_TRIGGER_PX;
+  const armedRight = swipe.dx >= SWIPE_TRIGGER_PX;
 
   return (
-    <li className="client-card">
-      <Link to={`/klienci/${client.id}`} className="client-card-main">
+    <li className="client-card-wrap">
+      {swipe.dx < 0 && (
+        <div className={`client-swipe-reveal client-swipe-reveal--left${armedLeft ? ' is-armed' : ''}`} aria-hidden="true">
+          <div className="client-swipe-content client-swipe-content--left" style={{ transform: `translateX(${swipe.dx}px)` }}>
+            <Icon name="visibility" />
+            <span className="client-swipe-label">Zobacz</span>
+          </div>
+        </div>
+      )}
+      {canSchedule && swipe.dx > 0 && (
+        <div className={`client-swipe-reveal client-swipe-reveal--right${armedRight ? ' is-armed' : ''}`} aria-hidden="true">
+          <div className="client-swipe-content client-swipe-content--right" style={{ transform: `translateX(${swipe.dx}px)` }}>
+            <span className="client-swipe-label">Nowa wizyta</span>
+            <Icon name="edit_calendar" />
+          </div>
+        </div>
+      )}
+      <div
+        className={`client-card${armedLeft ? ' is-armed-left' : ''}${armedRight ? ' is-armed-right' : ''}`}
+        style={swipe.dx !== 0 ? { transform: `translateX(${swipe.dx}px)`, transition: 'none' } : undefined}
+        onClick={() => {
+          if (swipe.consumeSuppressedClick()) return;
+          navigate(viewHref);
+        }}
+        {...swipe.handlers}
+      >
         <span className="client-avatar" style={clientRingStyle(client)}>
           {clientInitials(client)}
         </span>
-        <span className="client-card-text">
-          <span className="client-card-name">
+        <div className="client-card-text">
+          {/* The card is a div (it has to host a tel: link, and anchors can't nest); the name is the
+              focusable link that keeps keyboard and screen-reader access to the client's page. */}
+          <Link to={viewHref} className="client-card-name" onClick={stopPropagation}>
             {client.full_name}
             {isVipClient(client) && <span className="vip-tag">★ VIP</span>}
-          </span>
-          {client.phone && <span className="client-card-sub">{formatPhone(client.phone)}</span>}
+          </Link>
+          {client.phone && (
+            <span className="client-card-phone-row">
+              <a className="client-phone-btn" href={telHref(client.phone)} aria-label={`Zadzwoń: ${formatPhone(client.phone)}`} onClick={stopPropagation}>
+                <Icon name="call" />
+              </a>
+              <span className="client-card-phone">{formatPhone(client.phone)}</span>
+            </span>
+          )}
           <span className="client-card-facts">
             <span className="client-fact">
               <span className="client-fact-label">Ostatnia</span>
@@ -308,16 +430,25 @@ function ClientCard({ client, showNotes, onOpenSheet }: ClientCardProps) {
             )}
             {!client.is_active && <span className="client-pill client-pill--muted">Nieaktywny</span>}
           </span>
-          {hasNotes && (
-            <span className="client-card-notes">
-              <NotesDigest notes={client.recent_notes} />
-            </span>
+          {note && (
+            <p className="client-card-note">
+              {truncateNote(note.text)}
+              {note.service_name && <span className="client-note-service"> ({note.service_name})</span>}
+            </p>
           )}
-        </span>
-      </Link>
-      <button type="button" className="client-card-more" aria-label={`Akcje: ${client.full_name}`} onClick={() => onOpenSheet(client)}>
-        <Icon name="more_horiz" />
-      </button>
+        </div>
+        <button
+          type="button"
+          className="client-card-more"
+          aria-label={`Akcje: ${client.full_name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenSheet(client);
+          }}
+        >
+          <Icon name="more_horiz" />
+        </button>
+      </div>
     </li>
   );
 }

@@ -2661,9 +2661,16 @@ def get_clients():
             scope = visit_note_scope(current_user)
             if scope.has_access:
                 recent = VisitNoteService().recent_by_client(
-                    [c['id'] for c in clients_data], scope, 2)
+                    [c['id'] for c in clients_data], scope, 2, with_service=True)
                 for client_dict in clients_data:
                     client_dict['recent_notes'] = recent.get(client_dict['id'], [])
+
+        # Opt-in (phone cards' "Umów wizytę"): the main service of each client's latest
+        # completed visit, so the new-visit form can preselect it. One batched query.
+        if request.args.get('include_last_service') == '1':
+            last_service = current_app.client_repo.last_service_ids([c['id'] for c in clients_data])
+            for client_dict in clients_data:
+                client_dict['last_service_id'] = last_service.get(client_dict['id'])
 
         return jsonify({
             'success': True,

@@ -13,17 +13,26 @@ from repositories.base_repository import BaseRepository
 # Naive UTC — the house convention for server-stamped columns (see the migration).
 _UTC_NOW = "(NOW() AT TIME ZONE 'UTC')"
 
-# The visit's "first service": a main service before any add-on, then insertion order.
-_FIRST_SERVICE = """
+def _first_service_join(appointment_id_expr: str) -> str:
+    """The visit's "first service": a main service before any add-on, then insertion order.
+
+    Takes the SQL expression holding the visit id so the same join serves both a plain
+    ``appointments a`` row and the outer query of a ranked subselect (where the visit id
+    is a column of the subselect, not ``a.id``). The argument is always a literal from
+    this module — never user input."""
+    return f"""
     LEFT JOIN LATERAL (
         SELECT s.name AS service_name
         FROM appointment_services aps
         JOIN services s ON s.id = aps.service_id
-        WHERE aps.appointment_id = a.id
+        WHERE aps.appointment_id = {appointment_id_expr}
         ORDER BY aps.is_addon ASC, aps.id ASC
         LIMIT 1
     ) fs ON TRUE
 """
+
+
+_FIRST_SERVICE = _first_service_join('a.id')
 
 
 class VisitNoteRepository(BaseRepository):
@@ -120,23 +129,27 @@ class VisitNoteRepository(BaseRepository):
         """The ``per_client`` newest notes of each listed client — ONE query.
 
         Backs the list columns; a window function keeps it a single round trip
-        however many clients are on screen (never N+1).
+        however many clients are on screen (never N+1). Each row also carries
+        ``service_name`` (the note's visit's first service) — looked up AFTER the
+        ranking, so the lateral join only runs for the rows actually returned,
+        not for every note of every listed client.
         """
         if not client_ids:
             return []
         scope_sql, scope_params = self._scope(own_employee_id)
         query = f"""
-            SELECT client_id, note_text, updated_at
+            SELECT ranked.client_id, ranked.note_text, ranked.updated_at, fs.service_name
             FROM (
-                SELECT a.client_id, n.note_text, n.updated_at,
+                SELECT a.client_id, a.id AS appointment_id, n.note_text, n.updated_at,
                        ROW_NUMBER() OVER (PARTITION BY a.client_id
                                           ORDER BY n.updated_at DESC, n.id DESC) AS rn
                 FROM visit_notes n
                 JOIN appointments a ON a.id = n.appointment_id AND a.is_deleted = FALSE
                 WHERE n.is_deleted = FALSE AND a.client_id = ANY(%s) {scope_sql}
             ) ranked
-            WHERE rn <= %s
-            ORDER BY client_id, rn
+            {_first_service_join('ranked.appointment_id')}
+            WHERE ranked.rn <= %s
+            ORDER BY ranked.client_id, ranked.rn
         """
         return self._fetch_all(query, tuple([list(client_ids)] + scope_params + [per_client]))
 

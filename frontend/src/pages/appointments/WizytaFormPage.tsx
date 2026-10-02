@@ -97,6 +97,11 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
     appointmentsApi.employees().then(setEmployees).catch(() => {});
   }, []);
 
+  // One-shot `?service_id=` prefill (the clients list's "Umów wizytę" swipe). Consumed by the
+  // first services load: preselected only if that employee really offers it, dropped otherwise,
+  // so a later employee change never pops a stale service back in.
+  const pendingServiceRef = useRef<number | null>(Number(searchParams.get('service_id')) || null);
+
   // Create-mode: services for the selected employee (main only — addons are
   // added post-creation from the detail page, same as the original).
   useEffect(() => {
@@ -108,7 +113,13 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
     }
     appointmentsApi
       .employeeServices(Number(employeeId))
-      .then((services) => setEmployeeServices(services.filter((s) => s.service_type === 'main')))
+      .then((services) => {
+        const main = services.filter((s) => s.service_type === 'main');
+        setEmployeeServices(main);
+        const wanted = pendingServiceRef.current;
+        pendingServiceRef.current = null;
+        if (wanted !== null && main.some((s) => s.service_id === wanted)) setSelectedServiceIds(new Set([wanted]));
+      })
       .catch(() => setEmployeeServices([]));
   }, [mode, employeeId]);
 
@@ -249,6 +260,8 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
     if (searchParams.get('employee_id')) params.set('employee_id', searchParams.get('employee_id')!);
     const qs = params.toString() ? `?${params}` : '';
     if (mode === 'edit' && appointmentId) return `/wizyty/${appointmentId}${qs}`;
+    // Opened from a client's card ("Umów wizytę"): cancelling goes back to the clients list.
+    if (from === 'klienci') return '/klienci';
     if (from === 'calendar') return `/wizyty/kalendarz${qs}`;
     if (from === 'week') return `/wizyty/kalendarz/tydzien${qs}`;
     if (from === 'month') return `/wizyty/kalendarz/miesiac${qs}`;

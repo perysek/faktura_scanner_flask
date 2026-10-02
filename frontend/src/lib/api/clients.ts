@@ -60,13 +60,15 @@ export interface ClientFormValues {
 /** Client-side wrapper over routes/api_routes.py's client endpoints
  * (phase-01-pilot-clients.md §1.1) — 1:1, no new backend needed. */
 export const clientsApi = {
-  list: (params: { search?: string; includeInactive?: boolean; includeNotes?: boolean } = {}) =>
+  list: (params: { search?: string; includeInactive?: boolean; includeNotes?: boolean; includeLastService?: boolean } = {}) =>
     api
       .get<ClientsListResponse>('/api/clients', {
         search: params.search,
         include_inactive: params.includeInactive,
         // Opt-in: adds `recent_notes` (the "Aktualne uwagi i zalecenia" column).
         include_notes: params.includeNotes ? 1 : undefined,
+        // Opt-in: adds `last_service_id` (phone cards' "Umów wizytę" prefill).
+        include_last_service: params.includeLastService ? 1 : undefined,
       })
       .then((r) => r.clients),
 
