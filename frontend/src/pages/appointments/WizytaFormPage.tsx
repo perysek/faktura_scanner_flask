@@ -479,14 +479,20 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
                   <p className="svc-empty">Brak przypisanych usług dla tego pracownika.</p>
                 ) : (
                   <div className="svc-picker">
-                    {employeeServices.map((s) => (
-                      <label key={s.service_id} className="svc-option">
-                        <input type="checkbox" checked={selectedServiceIds.has(s.service_id)} onChange={() => toggleCreateService(s.service_id)} />
-                        <span className="svc-name">{s.service_name}</span>
-                        <span className="svc-dur">{s.effective_duration} min</span>
-                        <span className="svc-price">{formatPLN(s.effective_price)}</span>
-                      </label>
-                    ))}
+                    {employeeServices.map((s) => {
+                      const selected = selectedServiceIds.has(s.service_id);
+                      return (
+                        // On a phone the whole row is the control: the checkbox and the duration are not
+                        // drawn, and a selected row is filled instead (--selected). Both stay in the markup —
+                        // desktop shows them, and the checkbox is what a screen reader announces.
+                        <label key={s.service_id} className={`svc-option${selected ? ' svc-option--selected' : ''}`}>
+                          <input type="checkbox" checked={selected} onChange={() => toggleCreateService(s.service_id)} />
+                          <span className="svc-name">{s.service_name}</span>
+                          <span className="svc-dur">{s.effective_duration} min</span>
+                          <span className="svc-price">{formatPLN(s.effective_price)}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </div>

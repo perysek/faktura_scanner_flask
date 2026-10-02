@@ -120,16 +120,34 @@
   .appt-form-page .slot-grid { grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
   .appt-form-page .slot-btn { min-height: 2.75rem; padding: 0.5rem; font-size: 0.9375rem; }
 
-  /* name over duration, price pinned right — the old single row squeezed
-     long names ("Manicure french/babyboomer 1") into broken mid-word wraps. */
+  /* Services picker (phone): one fixed-height row per service — name left, price right — and the
+     whole row is the control. Tap it and it fills with the selection colour (the ink fill the time
+     slots and calendar days use), tap again and it goes back to plain. No checkbox, no duration (the
+     totals already carry the duration). 2.5rem is the smallest height that never cuts a name: the
+     longest service name is 43 characters, which wraps to two lines — never three — in the name
+     column, and two lines of 0.8125rem text are ~30px. It is a full-width row, so the tap target is
+     long even though it is a hair under the 44px guideline tall. */
   .appt-form-page .svc-option {
-    display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "chk name price" "chk dur price";
-    column-gap: 0.75rem; row-gap: 0.125rem; align-items: center; min-height: 3.25rem;
+    position: relative;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 0.75rem;
+    box-sizing: border-box; height: 2.5rem; padding: 0 0.75rem;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    transition: background-color 0.12s ease;
   }
-  .appt-form-page .svc-option input[type="checkbox"] { grid-area: chk; width: 1.25rem; height: 1.25rem; }
-  .appt-form-page .svc-option .svc-name { grid-area: name; min-width: 0; font-size: 0.875rem; overflow-wrap: break-word; }
-  .appt-form-page .svc-option .svc-dur { grid-area: dur; font-size: 0.75rem; white-space: nowrap; }
-  .appt-form-page .svc-option .svc-price { grid-area: price; font-size: 0.875rem; white-space: nowrap; }
+  /* The checkbox is what the label toggles and what a screen reader announces — it just isn't drawn. */
+  .appt-form-page .svc-option input[type="checkbox"] { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+  .appt-form-page .svc-option .svc-name { min-width: 0; font-size: 0.8125rem; line-height: 1.15; overflow-wrap: break-word; }
+  .appt-form-page .svc-option .svc-dur { display: none; }
+  .appt-form-page .svc-option .svc-price { font-size: 0.8125rem; white-space: nowrap; }
+  /* A tap leaves :hover stuck on a touch screen — without this a just-deselected row would stay tinted
+     instead of going back to plain. */
+  .appt-form-page .svc-option:not(.svc-option--selected):hover { background: transparent; }
+  .appt-form-page .svc-option--selected,
+  .appt-form-page .svc-option--selected:hover { background: var(--color-ink); }
+  .appt-form-page .svc-option--selected .svc-name,
+  .appt-form-page .svc-option--selected .svc-price { color: var(--color-on-ink); }
+  /* The hidden checkbox still takes keyboard focus; show it on the row. */
+  .appt-form-page .svc-option:focus-within { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; }
   .appt-form-page .svc-empty { font-size: 0.8125rem; }
 
   .appt-form-page .service-item { align-items: flex-start; }
