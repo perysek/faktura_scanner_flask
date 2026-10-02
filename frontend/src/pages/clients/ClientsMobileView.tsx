@@ -101,6 +101,10 @@ export function ClientsMobileView({
   const listRef = useRef<HTMLUListElement>(null);
   const [alphaBounds, setAlphaBounds] = useState<{ top: number; bottom: number } | null>(null);
   const letters = useMemo(() => alphabetLetters(clients), [clients]);
+  // A jump-to-letter index only makes sense in an alphabetical list, so it slides in for "name A→Z"
+  // and out for every other order. It also steps aside while the search box has focus (the keyboard
+  // is up and the index is viewport-fixed). The cards use the same flag to give up / reclaim its width.
+  const alphaVisible = sort.field === 'full_name' && sort.dir === 'asc' && !searchFocused;
 
   // The shell's top bar has a slot for page-level actions (the visits page parks
   // "Rozlicz przeszłe wizyty" there) — the bulk preferences refresh lives in it, since
@@ -162,6 +166,11 @@ export function ClientsMobileView({
     scroller.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
   }
 
+  // The arrow above "A": all the way up, so the first card (and the count / sort row above it) shows.
+  function jumpToTop() {
+    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
   return (
     <div className="refined-page clients-page clients-page--mobile animate-fade-up">
       {/* The shell's top bar already names the page — keep the h1 for screen readers only. */}
@@ -177,8 +186,6 @@ export function ClientsMobileView({
             aria-label="Szukaj klientów"
             enterKeyHint="search"
             value={searchInput}
-            // The index steps aside while the keyboard is up: it is viewport-fixed and would float
-            // over the shrunken viewport.
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -236,15 +243,16 @@ export function ClientsMobileView({
           <p>Nie znaleziono klientów</p>
         </div>
       ) : (
-        <ul className={`client-cards${alphaBounds && !searchFocused ? ' has-alpha' : ''}`} ref={listRef}>
+        <ul className={`client-cards${alphaBounds && alphaVisible ? ' has-alpha' : ''}`} ref={listRef}>
           {clients.map((client) => (
             <ClientCard key={client.id} client={client} showNotes={showNotes} canSchedule={canSchedule} linkedEmployeeId={linkedEmployeeId} />
           ))}
         </ul>
       )}
 
-      {alphaBounds && !searchFocused && !loading && !error && (
-        <ClientsAlphabetIndex letters={letters} onSelect={jumpToLetter} top={alphaBounds.top} bottom={alphaBounds.bottom} />
+      {/* Mounted whenever it could be shown (not just when visible), so sliding out can animate. */}
+      {alphaBounds && !loading && !error && (
+        <ClientsAlphabetIndex letters={letters} onSelect={jumpToLetter} onTop={jumpToTop} visible={alphaVisible} top={alphaBounds.top} bottom={alphaBounds.bottom} />
       )}
 
       {canWrite && (

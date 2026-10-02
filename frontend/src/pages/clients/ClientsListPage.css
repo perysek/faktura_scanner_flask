@@ -211,7 +211,17 @@
   .clients-page .clients-state .refined-btn-secondary { margin-top: 1rem; }
 
   /* Card list */
-  .clients-page .client-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
+  /* margin-right is animated: when the A–Z index slides out the cards widen into its space on the
+     same curve and duration (see .clients-alpha). */
+  .clients-page .client-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    transition: margin-right 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
   /* The <li> is the clipped shell (it hides a card that slides past its edge) and carries the shadow.
      The border is NOT here: the card and the swipe reveal layers each draw the same 1px border on
      all four sides, so the edge where the card meets the revealed area is bordered too. */
@@ -389,10 +399,12 @@
   .clients-page .clients-mobile-cta--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
   .clients-page .clients-mobile-cta > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
 
-  /* Right-edge A–Z index (ClientsAlphabetIndex). Viewport-fixed: top/bottom come inline from the
-     measured scroll region, z-index sits above the sticky bars and below the sidebar and modals.
-     `touch-action: none` — dragging along it must never scroll the page. Width = the page gutter
-     (1rem) + the 0.75rem the cards give up (.client-cards.has-alpha). */
+  /* Right-edge index (ClientsAlphabetIndex): a bold arrow, then A–Z. Viewport-fixed: top/bottom come
+     inline from the measured scroll region, z-index sits above the sticky bars and below the sidebar
+     and modals. `touch-action: none` — dragging along it must never scroll the page. Width = the page
+     gutter (1rem) + the 0.75rem the cards give up (.client-cards.has-alpha). It is only shown when the
+     list is sorted by name A→Z: otherwise it slides out to the right while the cards widen into its
+     space (same 0.28s curve), and it slides back in when that sort returns. */
   .clients-page .clients-alpha {
     position: fixed;
     right: 0;
@@ -404,6 +416,21 @@
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, visibility 0s linear 0s;
+  }
+  /* Hidden = fully out of the way: off-screen, transparent, not tappable, not focusable. `visibility`
+     flips only after the slide has finished, so the exit stays visible. */
+  .clients-page .clients-alpha.is-hidden {
+    transform: translateX(100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, visibility 0s linear 0.28s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .clients-page .client-cards,
+    .clients-page .clients-alpha,
+    .clients-page .clients-alpha.is-hidden { transition: none; }
   }
   .clients-page .clients-alpha-letter {
     flex: 1 1 0;
@@ -413,10 +440,16 @@
     justify-content: center;
     padding: 0;
     font: inherit;
-    font-size: 0.6875rem;
+    font-size: 0.75625rem; /* 0.6875rem + 10% */
     font-weight: 600;
     line-height: 1;
-    color: var(--color-ink-muted);
+    /* Gold — but not the raw accent: #c9a227 is 2.1:1 on the page background and even the deep accent
+       is only 3.4:1, both under the 4.5:1 AA asks of text this small. The deep accent darkened by 25%
+       (#785e14 in the gold theme) measures 5.4:1 on the page and 6.0:1 on a card, and the same
+       derivation clears 9:1 in the blue, green and graphite themes. The hex is the fallback for a
+       browser without color-mix(). */
+    color: #785e14;
+    color: color-mix(in srgb, var(--color-accent-deep) 75%, black);
     background: none;
     border: none;
     cursor: pointer;
@@ -433,11 +466,21 @@
     transform-origin: right center;
     will-change: transform;
     /* Lifting the finger: the letters spring back with a slight overshoot. */
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, color 0.15s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, color 0.15s ease, width 0.12s ease, height 0.12s ease, font-size 0.12s ease;
   }
   /* Finger down: the pointer is the animation — only a hair of smoothing between samples. */
-  .clients-page .clients-alpha.is-active .clients-alpha-glyph { transition: transform 0.06s linear, background-color 0.1s ease, color 0.1s ease; }
-  .clients-page .clients-alpha-letter.is-current .clients-alpha-glyph { background: var(--color-ink); color: var(--color-on-ink); }
+  .clients-page .clients-alpha.is-active .clients-alpha-glyph { transition: transform 0.06s linear, background-color 0.1s ease, color 0.1s ease, width 0.08s ease, height 0.08s ease, font-size 0.08s ease; }
+  /* The letter under the finger: an ink pill, 15% larger in radius and in type than the resting letters. */
+  .clients-page .clients-alpha-letter.is-current .clients-alpha-glyph {
+    width: 1.29375rem; /* 1.125rem + 15% */
+    height: 1.29375rem;
+    font-size: calc(0.75625rem * 1.15);
+    background: var(--color-ink);
+    color: var(--color-on-ink);
+  }
+  /* The arrow above "A": the same gold, a heavy stroke, a touch larger than the letters. */
+  .clients-page .clients-alpha-top .clients-alpha-glyph { font-size: 1.0625rem; }
+  .clients-page .clients-alpha-top.is-current .clients-alpha-glyph { font-size: 0.9375rem; }
 
   /* Bottom action sheets (Modal variant="sheet") — rendered inside .clients-page */
   .clients-page .action-sheet { list-style: none; margin: 0; padding: 0; }
