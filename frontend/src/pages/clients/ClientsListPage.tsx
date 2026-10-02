@@ -12,7 +12,6 @@ import { Button, ButtonLink } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { TrendSparkline, isVipClient } from '../../components/clients/TrendSparkline';
 import { NotesDigest } from '../../components/visitNotes/NotesDigest';
-import { ScrollTopButton } from '../../components/ui/ScrollTopButton';
 import { formatDate, formatNextVisitLine1, formatPhone, parseDateForSort } from '../../lib/format';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
 import { ClientsMobileView } from './ClientsMobileView';
@@ -228,7 +227,6 @@ export function ClientsListPage() {
         canSchedule={canSchedule}
         linkedEmployeeId={auth.linkedEmployeeId}
         showNotes={showNotes}
-        onDeactivate={handleDeactivate}
         onBulkUpdatePreferences={handleBulkUpdatePreferences}
         isUpdatingPrefs={isUpdatingPrefs}
       />
@@ -417,8 +415,6 @@ export function ClientsListPage() {
           </tbody>
         </table>
       </div>
-
-      <ScrollTopButton />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent, TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -8,8 +8,9 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { isVipClient } from '../../components/clients/TrendSparkline';
 import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatNextVisitLine1, formatPhone, telHref } from '../../lib/format';
-import { DEFAULT_SORT_DIR, clientInitials, clientRingStyle, newVisitHref, truncateNote } from './clientsListShared';
+import { DEFAULT_SORT_DIR, alphabetLetters, clientInitials, clientLetter, clientRingStyle, newVisitHref } from './clientsListShared';
 import type { FilterKey, SortField, SortState } from './clientsListShared';
+import { ClientsAlphabetIndex } from './ClientsAlphabetIndex';
 import type { Client } from '../../types/client';
 
 const SORT_OPTIONS: Array<{ field: SortField; label: string; hints: Record<SortState['dir'], string> }> = [
@@ -53,22 +54,22 @@ export interface ClientsMobileViewProps {
   sort: SortState;
   onSelectSort: (field: SortField) => void;
   canWrite: boolean;
-  /** May create visits (`appointments` write) — gates swipe-right and the sheet's "Umów wizytę". */
+  /** May create visits (`appointments` write) — gates swipe-right ("Umów wizytę"). */
   canSchedule: boolean;
   /** The logged-in user's own employee, if their account is linked to one — prefilled in the new visit. */
   linkedEmployeeId: number | null;
   showNotes: boolean;
-  onDeactivate: (client: Client) => void;
   onBulkUpdatePreferences: () => void;
   isUpdatingPrefs: boolean;
 }
 
 /**
  * Klienci — phone rendering (≤640px). Same shape as Użytkownicy: a sticky search +
- * filter bar, a card list (tap opens the client, ⋯ opens a bottom action sheet with
- * what the desktop row's icons do), and the page's primary action pinned to the thumb
- * zone. What the table's sortable headers did lives in a sort sheet — the headers
- * are hidden on a phone, so without it there would be no way to sort at all.
+ * filter bar, a card list (tap opens the client, swipe left opens it, swipe right books
+ * a visit), and the page's primary action pinned to the thumb zone. A right-edge A–Z
+ * index jumps through long lists. What the table's sortable headers did lives in a sort
+ * sheet — the headers are hidden on a phone, so without it there would be no sorting.
+ * Editing and deactivating a client live on the client's own page.
  */
 export function ClientsMobileView({
   clients,
@@ -87,14 +88,18 @@ export function ClientsMobileView({
   canSchedule,
   linkedEmployeeId,
   showNotes,
-  onDeactivate,
   onBulkUpdatePreferences,
   isUpdatingPrefs,
 }: ClientsMobileViewProps) {
   const confirm = useConfirm();
-  const [sheetClient, setSheetClient] = useState<Client | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [alphaBounds, setAlphaBounds] = useState<{ top: number; bottom: number } | null>(null);
+  const letters = useMemo(() => alphabetLetters(clients), [clients]);
 
   // The shell's top bar has a slot for page-level actions (the visits page parks
   // "Rozlicz przeszłe wizyty" there) — the bulk preferences refresh lives in it, since
@@ -117,20 +122,51 @@ export function ClientsMobileView({
     setSortOpen(false);
   }
 
-  function handleSheetDeactivate(client: Client) {
-    setSheetClient(null);
-    onDeactivate(client);
+  // The index is viewport-fixed, so it must know where the scroll region really starts and ends:
+  // below the sticky toolbar, above the bottom action bar. Measured (not guessed in CSS) because
+  // the shell's header and footer heights aren't ours; re-measured when the box or list resizes.
+  // It is only offered when the page actually scrolls — on a short list there is nothing to jump to.
+  useLayoutEffect(() => {
+    const scroller = document.getElementById('main-content');
+    const toolbar = toolbarRef.current;
+    if (!scroller || !toolbar || letters.length < 2) {
+      setAlphaBounds(null);
+      return;
+    }
+    function measure() {
+      if (!scroller || !toolbar) return;
+      const box = scroller.getBoundingClientRect();
+      const scrolls = scroller.scrollHeight > scroller.clientHeight + 1;
+      setAlphaBounds(scrolls ? { top: box.top + toolbar.offsetHeight + 8, bottom: window.innerHeight - box.bottom + (ctaRef.current?.offsetHeight ?? 0) + 8 } : null);
+    }
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    if (listRef.current) observer.observe(listRef.current);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [letters.length, loading]);
+
+  // Scrolls the first card filed under `letter` (in the list's current order) to just below the
+  // sticky toolbar. Instant, not smooth: while dragging along the index it must keep up with the finger.
+  function jumpToLetter(letter: string) {
+    const scroller = document.getElementById('main-content');
+    const target = listRef.current?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
+    if (!scroller || !target) return;
+    const toolbarH = toolbarRef.current?.offsetHeight ?? 0;
+    const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - toolbarH - 8;
+    scroller.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
   }
 
-  const sheet = sheetClient;
-  const sheetRisk = sheet ? (sheet.no_show_count ?? 0) > 2 : false;
-
   return (
-    <div className={`refined-page clients-page clients-page--mobile${canWrite ? ' clients-page--cta' : ''} animate-fade-up`}>
+    <div className="refined-page clients-page clients-page--mobile animate-fade-up">
       {/* The shell's top bar already names the page — keep the h1 for screen readers only. */}
       <h1 className="clients-sr-only">Klienci</h1>
 
-      <div className="clients-toolbar">
+      <div className="clients-toolbar" ref={toolbarRef}>
         <div className="clients-search">
           <Icon name="search" />
           <input
@@ -140,6 +176,10 @@ export function ClientsMobileView({
             aria-label="Szukaj klientów"
             enterKeyHint="search"
             value={searchInput}
+            // The index steps aside while the keyboard is up: it is viewport-fixed and would float
+            // over the shrunken viewport.
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -197,22 +237,19 @@ export function ClientsMobileView({
           <p>Nie znaleziono klientów</p>
         </div>
       ) : (
-        <ul className="client-cards">
+        <ul className={`client-cards${alphaBounds && !searchFocused ? ' has-alpha' : ''}`} ref={listRef}>
           {clients.map((client) => (
-            <ClientCard
-              key={client.id}
-              client={client}
-              showNotes={showNotes}
-              canSchedule={canSchedule}
-              linkedEmployeeId={linkedEmployeeId}
-              onOpenSheet={setSheetClient}
-            />
+            <ClientCard key={client.id} client={client} showNotes={showNotes} canSchedule={canSchedule} linkedEmployeeId={linkedEmployeeId} />
           ))}
         </ul>
       )}
 
+      {alphaBounds && !searchFocused && !loading && !error && (
+        <ClientsAlphabetIndex letters={letters} onSelect={jumpToLetter} top={alphaBounds.top} bottom={alphaBounds.bottom} />
+      )}
+
       {canWrite && (
-        <div className="clients-mobile-cta">
+        <div className="clients-mobile-cta" ref={ctaRef}>
           <ButtonLink to="/klienci/nowy" variant="primary" icon="add">
             Dodaj klienta
           </ButtonLink>
@@ -235,39 +272,6 @@ export function ClientsMobileView({
           </button>,
           headerSlot,
         )}
-
-      <Modal isOpen={sheet !== null} onClose={() => setSheetClient(null)} title={sheet?.full_name ?? ''} variant="sheet">
-        {sheet && (
-          <ul className="action-sheet">
-            <li>
-              <Link className="action-sheet-item" to={`/klienci/${sheet.id}`}>
-                <Icon name="visibility" /> Zobacz klienta
-              </Link>
-            </li>
-            {canSchedule && (
-              <li>
-                <Link className="action-sheet-item" to={newVisitHref(sheet, linkedEmployeeId)}>
-                  <Icon name="edit_calendar" /> Umów wizytę
-                </Link>
-              </li>
-            )}
-            {canWrite && (
-              <li>
-                <Link className="action-sheet-item" to={`/klienci/${sheet.id}/edytuj`}>
-                  <Icon name="edit" /> Edytuj dane
-                </Link>
-              </li>
-            )}
-            {canWrite && sheet.is_active && sheetRisk && (
-              <li className="action-sheet-danger">
-                <button type="button" className="action-sheet-item" onClick={() => handleSheetDeactivate(sheet)}>
-                  <Icon name="person_off" /> Dezaktywuj klienta
-                </button>
-              </li>
-            )}
-          </ul>
-        )}
-      </Modal>
 
       <Modal isOpen={sortOpen} onClose={() => setSortOpen(false)} title="Sortuj klientów" variant="sheet">
         <ul className="action-sheet">
@@ -297,7 +301,6 @@ interface ClientCardProps {
   showNotes: boolean;
   canSchedule: boolean;
   linkedEmployeeId: number | null;
-  onOpenSheet: (client: Client) => void;
 }
 
 /** Per-card drag state. `dx` is signed: negative = dragging left, positive = dragging right. */
@@ -350,9 +353,10 @@ function useCardSwipe(allowRight: boolean, onLeft: () => void, onRight: () => vo
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
-function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId, onOpenSheet }: ClientCardProps) {
+function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId }: ClientCardProps) {
   const navigate = useNavigate();
   const noShows = client.no_show_count ?? 0;
+  const hasMeta = noShows > 0 || !client.is_active;
   const viewHref = `/klienci/${client.id}`;
   const visitHref = newVisitHref(client, linkedEmployeeId);
   const swipe = useCardSwipe(
@@ -365,7 +369,7 @@ function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId, onOpenSh
   const armedRight = swipe.dx >= SWIPE_TRIGGER_PX;
 
   return (
-    <li className="client-card-wrap">
+    <li className="client-card-wrap" data-letter={clientLetter(client)}>
       {swipe.dx < 0 && (
         <div className={`client-swipe-reveal client-swipe-reveal--left${armedLeft ? ' is-armed' : ''}`} aria-hidden="true">
           <div className="client-swipe-content client-swipe-content--left" style={{ transform: `translateX(${swipe.dx}px)` }}>
@@ -383,7 +387,7 @@ function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId, onOpenSh
         </div>
       )}
       <div
-        className={`client-card${armedLeft ? ' is-armed-left' : ''}${armedRight ? ' is-armed-right' : ''}`}
+        className={`client-card${client.phone ? '' : ' client-card--no-phone'}${armedLeft ? ' is-armed-left' : ''}${armedRight ? ' is-armed-right' : ''}`}
         style={swipe.dx !== 0 ? { transform: `translateX(${swipe.dx}px)`, transition: 'none' } : undefined}
         onClick={() => {
           if (swipe.consumeSuppressedClick()) return;
@@ -391,63 +395,56 @@ function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId, onOpenSh
         }}
         {...swipe.handlers}
       >
+        {/* Top row: avatar · name · call. The rows below span the full card width. */}
         <span className="client-avatar" style={clientRingStyle(client)}>
           {clientInitials(client)}
         </span>
-        <div className="client-card-text">
-          {/* The card is a div (it has to host a tel: link, and anchors can't nest); the name is the
-              focusable link that keeps keyboard and screen-reader access to the client's page. */}
-          <Link to={viewHref} className="client-card-name" onClick={stopPropagation}>
-            {client.full_name}
-            {isVipClient(client) && <span className="vip-tag">★ VIP</span>}
-          </Link>
-          {client.phone && (
-            <span className="client-card-phone-row">
-              <a className="client-phone-btn" href={telHref(client.phone)} aria-label={`Zadzwoń: ${formatPhone(client.phone)}`} onClick={stopPropagation}>
-                <Icon name="call" />
-              </a>
-              <span className="client-card-phone">{formatPhone(client.phone)}</span>
-            </span>
-          )}
-          <span className="client-card-facts">
-            <span className="client-fact">
-              <span className="client-fact-label">Ostatnia</span>
-              {formatDate(client.last_visit_date)}
-            </span>
-            <span className="client-fact">
-              <span className="client-fact-label">Następna</span>
-              {client.next_visit_date ? formatNextVisitLine1(client.next_visit_date, client.next_visit_time) : '—'}
-            </span>
+        {/* The card is a div (it has to host a tel: link, and anchors can't nest); the name is the
+            focusable link that keeps keyboard and screen-reader access to the client's page. */}
+        <Link to={viewHref} className="client-card-name" onClick={stopPropagation}>
+          {client.full_name}
+          {isVipClient(client) && <span className="vip-tag">★ VIP</span>}
+        </Link>
+        {client.phone && (
+          <span className="client-card-phone-row">
+            <a className="client-phone-btn" href={telHref(client.phone)} aria-label={`Zadzwoń: ${formatPhone(client.phone)}`} onClick={stopPropagation}>
+              <Icon name="call" />
+            </a>
+            <span className="client-card-phone">{formatPhone(client.phone)}</span>
           </span>
-          <span className="client-card-meta">
-            <span className="client-pill">
-              Wizyt <strong>{client.completed_visits ?? 0}</strong>
-            </span>
+        )}
+
+        <div className="client-card-facts">
+          <span className="client-pill client-visits">
+            Wizyt <strong>{client.completed_visits ?? 0}</strong>
+          </span>
+          <span className="client-fact">
+            <span className="client-fact-label">Ostatnia</span>
+            {formatDate(client.last_visit_date)}
+          </span>
+          <span className="client-fact">
+            <span className="client-fact-label">Następna</span>
+            {client.next_visit_date ? formatNextVisitLine1(client.next_visit_date, client.next_visit_time) : '—'}
+          </span>
+        </div>
+
+        {hasMeta && (
+          <div className="client-card-meta">
             {noShows > 0 && (
               <span className={`client-pill${noShows > 2 ? ' client-pill--danger' : ''}`}>
                 No-show <strong>{noShows}</strong>
               </span>
             )}
             {!client.is_active && <span className="client-pill client-pill--muted">Nieaktywny</span>}
-          </span>
-          {note && (
-            <p className="client-card-note">
-              {truncateNote(note.text)}
-              {note.service_name && <span className="client-note-service"> ({note.service_name})</span>}
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          className="client-card-more"
-          aria-label={`Akcje: ${client.full_name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenSheet(client);
-          }}
-        >
-          <Icon name="more_horiz" />
-        </button>
+          </div>
+        )}
+
+        {note && (
+          <p className="client-card-note">
+            <span className="client-note-text">{note.text}</span>
+            {note.service_name && <span className="client-note-service">({note.service_name})</span>}
+          </p>
+        )}
       </div>
     </li>
   );

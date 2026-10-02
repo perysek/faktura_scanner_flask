@@ -44,14 +44,25 @@ export function newVisitHref(client: Client, linkedEmployeeId: number | null): s
   return `/wizyty/nowa?${params}`;
 }
 
-/** A note flattened to one paragraph and cut at a word boundary, so the card stays compact and the
- * service name that follows it can never be clipped away by a very long note. */
-export function truncateNote(text: string, max = 120): string {
-  const flat = text.replace(/\s+/g, ' ').trim();
-  if (flat.length <= max) return flat;
-  const cut = flat.slice(0, max);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+/** Index bucket for non-letters (a name starting with a digit or symbol). */
+export const OTHER_LETTER = '#';
+
+/** The alphabet-index letter a client files under: the first letter of the name shown on the card
+ * (upper-cased in Polish, so ł → Ł; Polish letters with diacritics are letters of their own). */
+export function clientLetter(client: Client): string {
+  const first = client.full_name.trim().charAt(0).toLocaleUpperCase('pl');
+  return /\p{L}/u.test(first) ? first : OTHER_LETTER;
+}
+
+/** The letters present in the list, in Polish alphabetical order (A, Ą, B, … Ż), "#" last — only
+ * letters that have a client, so the index never offers a dead tap. */
+export function alphabetLetters(clients: Client[]): string[] {
+  const collator = new Intl.Collator('pl');
+  return [...new Set(clients.map(clientLetter))].sort((a, b) => {
+    if (a === OTHER_LETTER) return 1;
+    if (b === OTHER_LETTER) return -1;
+    return collator.compare(a, b);
+  });
 }
 
 export function clientInitials(client: Client): string {
