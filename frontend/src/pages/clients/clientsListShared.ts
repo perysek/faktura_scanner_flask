@@ -44,6 +44,33 @@ export function newVisitHref(client: Client, linkedEmployeeId: number | null): s
   return `/wizyty/nowa?${params}`;
 }
 
+const NAME_COLLATOR = new Intl.Collator('pl', { sensitivity: 'base' });
+
+/**
+ * Name order for the list, in Polish: A, Ą, B … L, Ł, M … S, Ś … Z, Ź, Ż, case-blind. A plain `<` on
+ * lower-cased strings would put every Ł, Ś, Ź and Ż name after Z — and then "Ł" in the A–Z index
+ * (which files it after L) would send you to the bottom of the list.
+ */
+export function compareNames(a: string, b: string): number {
+  return NAME_COLLATOR.compare(a, b);
+}
+
+/** The index letters' size before they were made 20% bigger: 0.75625rem. */
+const LETTER_BASE_REM = 0.75625;
+/** Share of a slot's height the letter's em-box may take; 0.82 makes a 17.7px slot (27 slots on a
+ * ~480px column, a typical phone) land on exactly base + 20%. */
+const LETTER_FILL = 0.82;
+
+/**
+ * Resting font size (px) for the A–Z index letters: base + 20% when the column's slots hold it,
+ * nudged by up to ±10% so the stack fills the available height — down to base + 10% when slots are
+ * tight (a short screen, a full alphabet), up to base + 30% when there is room to spare.
+ */
+export function fitLetterFont(slotPx: number, rootPx = 16): number {
+  const base = LETTER_BASE_REM * rootPx;
+  return Math.min(base * 1.3, Math.max(base * 1.1, slotPx * LETTER_FILL));
+}
+
 /** Index bucket for non-letters (a name starting with a digit or symbol). */
 export const OTHER_LETTER = '#';
 

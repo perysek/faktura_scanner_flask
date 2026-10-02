@@ -15,11 +15,14 @@ import { NotesDigest } from '../../components/visitNotes/NotesDigest';
 import { formatDate, formatNextVisitLine1, formatPhone, parseDateForSort } from '../../lib/format';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
 import { ClientsMobileView } from './ClientsMobileView';
-import { DEFAULT_SORT_DIR, clientInitials, clientRingStyle } from './clientsListShared';
+import { DEFAULT_SORT_DIR, clientInitials, clientRingStyle, compareNames } from './clientsListShared';
 import type { FilterKey, SortField, SortState } from './clientsListShared';
 import type { Client } from '../../types/client';
 
-const SESSION_KEY = 'filterState:clients';
+// v2: the default order changed from "last visit, newest first" to "name A→Z". The tab's saved state
+// (sessionStorage outlives a reload) would otherwise keep the old order alive in any tab that already
+// held it, so the new default would look like it hadn't shipped. Saved state under the old key is just ignored.
+const SESSION_KEY = 'filterState:clients:v2';
 
 interface SessionState {
   searchInput?: string;
@@ -80,8 +83,10 @@ export function ClientsListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState(initial.searchInput ?? '');
   const [activeFilter, setActiveFilter] = useState<FilterKey>(initial._filter ?? 'active');
   const [sort, setSort] = useState<SortState>({
-    field: initial._sortField ?? 'last_visit_date',
-    dir: initial._sortDir ?? 'desc',
+    // Default: name A→Z (what the phone's A–Z index is for). A sort the user picks is still remembered
+    // for the tab's session, as before.
+    field: initial._sortField ?? 'full_name',
+    dir: initial._sortDir ?? 'asc',
   });
   const [isUpdatingPrefs, setIsUpdatingPrefs] = useState(false);
 
@@ -151,8 +156,9 @@ export function ClientsListPage() {
         av = a[field] ?? 0;
         bv = b[field] ?? 0;
       } else {
-        av = (a[field] ?? '').toLowerCase();
-        bv = (b[field] ?? '').toLowerCase();
+        // full_name — the only text column; Polish collation, so the list agrees with the A–Z index.
+        const byName = compareNames(a.full_name ?? '', b.full_name ?? '');
+        return dir === 'asc' ? byName : -byName;
       }
       if (av < bv) return dir === 'asc' ? -1 : 1;
       if (av > bv) return dir === 'asc' ? 1 : -1;

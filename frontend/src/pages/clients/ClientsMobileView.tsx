@@ -99,7 +99,9 @@ export function ClientsMobileView({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const [alphaBounds, setAlphaBounds] = useState<{ top: number; bottom: number } | null>(null);
+  // `top` / `bottom` = the viewport px the index keeps clear (sticky toolbar above; below, only the
+  // screen edge); `cta` = the height of the bottom action bar, reserved only while that bar shows.
+  const [alphaBounds, setAlphaBounds] = useState<{ top: number; bottom: number; cta: number } | null>(null);
   const letters = useMemo(() => alphabetLetters(clients), [clients]);
   // A jump-to-letter index only makes sense in an alphabetical list, so it slides in for "name A→Z"
   // and out for every other order. It also steps aside while the search box has focus (the keyboard
@@ -142,7 +144,7 @@ export function ClientsMobileView({
       if (!scroller || !toolbar) return;
       const box = scroller.getBoundingClientRect();
       const scrolls = scroller.scrollHeight > scroller.clientHeight + 1;
-      setAlphaBounds(scrolls ? { top: box.top + toolbar.offsetHeight + 8, bottom: window.innerHeight - box.bottom + (ctaRef.current?.offsetHeight ?? 0) + 8 } : null);
+      setAlphaBounds(scrolls ? { top: box.top + toolbar.offsetHeight + 4, bottom: window.innerHeight - box.bottom + 4, cta: ctaRef.current?.offsetHeight ?? 0 } : null);
     }
     measure();
     const observer = new ResizeObserver(measure);
@@ -252,7 +254,16 @@ export function ClientsMobileView({
 
       {/* Mounted whenever it could be shown (not just when visible), so sliding out can animate. */}
       {alphaBounds && !loading && !error && (
-        <ClientsAlphabetIndex letters={letters} onSelect={jumpToLetter} onTop={jumpToTop} visible={alphaVisible} top={alphaBounds.top} bottom={alphaBounds.bottom} />
+        <ClientsAlphabetIndex
+          letters={letters}
+          onSelect={jumpToLetter}
+          onTop={jumpToTop}
+          visible={alphaVisible}
+          top={alphaBounds.top}
+          // It fills the viewport from the toolbar down: above the action bar while that shows, and all
+          // the way to the bottom edge (clear of the home-indicator inset) once it has slid away.
+          bottom={canWrite && !ctaHidden ? `${alphaBounds.bottom + alphaBounds.cta}px` : `calc(${alphaBounds.bottom}px + env(safe-area-inset-bottom, 0px))`}
+        />
       )}
 
       {canWrite && (

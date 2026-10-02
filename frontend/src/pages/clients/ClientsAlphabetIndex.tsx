@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
-import type { PointerEvent } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent } from 'react';
+import { fitLetterFont } from './clientsListShared';
 
 /** The bell the finger draws over the slots: the one under it slides out to the left (so the thumb
  * doesn't hide it) and grows; its neighbours follow with a smooth fall-off. All in slot heights, so
@@ -31,9 +32,10 @@ export interface ClientsAlphabetIndexProps {
   onTop: () => void;
   /** Slid in (true) or slid out of the way (false). Stays mounted either way so it can animate. */
   visible: boolean;
-  /** Viewport px the bar keeps clear above / below (sticky toolbar, bottom action bar). */
+  /** Where the bar starts / stops: `top` in viewport px, `bottom` any CSS length (the host reserves the
+   * bottom action bar's height while it shows and the home-indicator inset when it doesn't). */
   top: number;
-  bottom: number;
+  bottom: string;
 }
 
 /**
@@ -51,6 +53,22 @@ export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, top, b
 
   // Slot 0 is the arrow; letters follow.
   const keys = [TOP, ...letters];
+
+  // The column fills its available height, so a slot's height depends on the screen and on how many
+  // letters the list has; the letters are sized from it (fitLetterFont) instead of a fixed number.
+  // Re-measured whenever the box resizes (the bottom bar sliding away makes it taller).
+  const [fontPx, setFontPx] = useState<number | null>(null);
+  const slotCount = keys.length;
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const fit = () => setFontPx(Math.round(fitLetterFont(bar.clientHeight / slotCount, rootPx) * 4) / 4);
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [slotCount]);
 
   function select(key: string) {
     if (key === TOP) onTop();
@@ -88,7 +106,7 @@ export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, top, b
     <div
       ref={barRef}
       className={`clients-alpha${finger ? ' is-active' : ''}${visible ? '' : ' is-hidden'}`}
-      style={{ top, bottom }}
+      style={{ top, bottom, ...(fontPx ? ({ '--alpha-font': `${fontPx}px` } as CSSProperties) : null) }}
       role="group"
       aria-label="Skocz do litery"
       aria-hidden={!visible}
