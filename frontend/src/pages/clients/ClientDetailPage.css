@@ -251,6 +251,10 @@
     background: var(--color-surface-elevated);
     border-top: 1px solid var(--color-border);
     box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
+    transition: transform 0.25s ease;
   }
+  /* Slides out of the way while the page scrolls down, back on scroll up (useHideOnScroll) —
+     same as the Wizyta and Pracownik detail bars. */
+  .client-detail-page .client-mobile-bar--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
   .client-detail-page .client-mobile-bar > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
 }

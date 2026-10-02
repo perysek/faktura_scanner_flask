@@ -122,11 +122,15 @@ export function ClientsListPage() {
     [allClients],
   );
 
+  // The phone list has no VIP chip — VIP clients just sit among the rest, tagged "★ VIP" — so a
+  // 'vip' filter restored from a desktop session must not silently narrow it with nothing to undo it.
+  const listFilter: FilterKey = isMobile && activeFilter === 'vip' ? 'active' : activeFilter;
+
   const filtered = useMemo(() => {
-    if (activeFilter === 'vip') return allClients.filter(isVipClient);
-    if (activeFilter === 'inactive') return allClients.filter((c) => !c.is_active);
+    if (listFilter === 'vip') return allClients.filter(isVipClient);
+    if (listFilter === 'inactive') return allClients.filter((c) => !c.is_active);
     return allClients.filter((c) => c.is_active);
-  }, [allClients, activeFilter]);
+  }, [allClients, listFilter]);
 
   const sorted = useMemo(() => {
     const { field, dir } = sort;
@@ -218,9 +222,8 @@ export function ClientsListPage() {
         searchInput={searchInput}
         onSearchChange={setSearchInput}
         onSearchSubmit={() => setDebouncedSearch(searchInput)}
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        filterCounts={filterCounts}
+        showInactive={listFilter === 'inactive'}
+        onShowInactiveChange={(show) => setActiveFilter(show ? 'inactive' : 'active')}
         sort={sort}
         onSelectSort={handleSelectSort}
         canWrite={canWrite}

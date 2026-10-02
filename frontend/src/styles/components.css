@@ -1332,6 +1332,12 @@ table.stack-cards td.cell-hide-lg { display: none; }
   color: var(--color-ink-subtle);
   flex-shrink: 0;
 }
+/* Phone: no brand footer. It is ~2.5rem of viewport that every phone page needs for its own
+   content and bottom bars (sticky bars now sit flush with the bottom edge, and carry their own
+   safe-area padding). Tablet and desktop keep it. */
+@media (max-width: 640px) {
+  .app-shell-footer { display: none; }
+}
 .mobile-menu-btn {
   display: none;
   padding: 0.5rem;

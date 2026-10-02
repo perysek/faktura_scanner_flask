@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent, TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -8,8 +8,9 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { isVipClient } from '../../components/clients/TrendSparkline';
 import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatNextVisitLine1, formatPhone, telHref } from '../../lib/format';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { DEFAULT_SORT_DIR, alphabetLetters, clientInitials, clientLetter, clientRingStyle, newVisitHref } from './clientsListShared';
-import type { FilterKey, SortField, SortState } from './clientsListShared';
+import type { SortField, SortState } from './clientsListShared';
 import { ClientsAlphabetIndex } from './ClientsAlphabetIndex';
 import type { Client } from '../../types/client';
 
@@ -48,9 +49,9 @@ export interface ClientsMobileViewProps {
   searchInput: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
-  activeFilter: FilterKey;
-  onFilterChange: (filter: FilterKey) => void;
-  filterCounts: Record<FilterKey, number>;
+  /** True = the inactive clients are listed (instead of the active ones, VIP and not). */
+  showInactive: boolean;
+  onShowInactiveChange: (show: boolean) => void;
   sort: SortState;
   onSelectSort: (field: SortField) => void;
   canWrite: boolean;
@@ -64,8 +65,8 @@ export interface ClientsMobileViewProps {
 }
 
 /**
- * Klienci — phone rendering (≤640px). Same shape as Użytkownicy: a sticky search +
- * filter bar, a card list (tap opens the client, swipe left opens it, swipe right books
+ * Klienci — phone rendering (≤640px). Same shape as Użytkownicy: a sticky search bar
+ * (with a "Nieaktywni" toggle — VIP clients just sit in the list, tagged), a card list (tap opens the client, swipe left opens it, swipe right books
  * a visit), and the page's primary action pinned to the thumb zone. A right-edge A–Z
  * index jumps through long lists. What the table's sortable headers did lives in a sort
  * sheet — the headers are hidden on a phone, so without it there would be no sorting.
@@ -79,9 +80,8 @@ export function ClientsMobileView({
   searchInput,
   onSearchChange,
   onSearchSubmit,
-  activeFilter,
-  onFilterChange,
-  filterCounts,
+  showInactive,
+  onShowInactiveChange,
   sort,
   onSelectSort,
   canWrite,
@@ -95,6 +95,7 @@ export function ClientsMobileView({
   const [sortOpen, setSortOpen] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const ctaHidden = useHideOnScroll();
   const toolbarRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -189,17 +190,15 @@ export function ClientsMobileView({
             }}
           />
         </div>
-        <div className="filter-chips" role="group" aria-label="Filtruj klientów">
-          <button type="button" className={`filter-chip${activeFilter === 'active' ? ' active' : ''}`} aria-pressed={activeFilter === 'active'} onClick={() => onFilterChange('active')}>
-            Aktywni <span className="chip-count">{filterCounts.active}</span>
-          </button>
-          <button type="button" className={`filter-chip${activeFilter === 'vip' ? ' active' : ''}`} aria-pressed={activeFilter === 'vip'} onClick={() => onFilterChange('vip')}>
-            VIP <span className="chip-count">{filterCounts.vip}</span>
-          </button>
-          <button type="button" className={`filter-chip${activeFilter === 'inactive' ? ' active' : ''}`} aria-pressed={activeFilter === 'inactive'} onClick={() => onFilterChange('inactive')}>
-            Nieaktywni <span className="chip-count">{filterCounts.inactive}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          className={`clients-inactive-btn${showInactive ? ' active' : ''}`}
+          aria-pressed={showInactive}
+          title="Pokaż nieaktywnych klientów"
+          onClick={() => onShowInactiveChange(!showInactive)}
+        >
+          Nieaktywni
+        </button>
       </div>
 
       <div className="clients-listbar">
@@ -249,7 +248,7 @@ export function ClientsMobileView({
       )}
 
       {canWrite && (
-        <div className="clients-mobile-cta" ref={ctaRef}>
+        <div className={`clients-mobile-cta${ctaHidden ? ' clients-mobile-cta--hidden' : ''}`} ref={ctaRef}>
           <ButtonLink to="/klienci/nowy" variant="primary" icon="add">
             Dodaj klienta
           </ButtonLink>
@@ -353,7 +352,9 @@ function useCardSwipe(allowRight: boolean, onLeft: () => void, onRight: () => vo
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
-function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId }: ClientCardProps) {
+// Memoised: the list re-renders whenever the bottom bar slides in or out on scroll, and with a few
+// hundred clients that must not mean re-rendering every card (its props are all stable between those).
+const ClientCard = memo(function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId }: ClientCardProps) {
   const navigate = useNavigate();
   const noShows = client.no_show_count ?? 0;
   const hasMeta = noShows > 0 || !client.is_active;
@@ -448,4 +449,4 @@ function ClientCard({ client, showNotes, canSchedule, linkedEmployeeId }: Client
       </div>
     </li>
   );
-}
+});

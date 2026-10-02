@@ -15,6 +15,7 @@ import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection
 import { formatDate, formatPhone } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 
 /** Phone history list: this many newest visits, then a "Pokaż wszystkie" button. */
 const MOBILE_HISTORY_PREVIEW = 5;
@@ -79,6 +80,7 @@ export function ClientDetailPage() {
   // History rows open the visit page, which sits behind the `appointments` module.
   const canOpenVisits = auth.hasModuleAccess('appointments');
   const isMobile = useIsMobile(640);
+  const mobileBarHidden = useHideOnScroll();
   useEscapeBack('/klienci');
 
   const clientState = useApiData(() => clientsApi.get(clientId), [clientId]);
@@ -546,7 +548,7 @@ export function ClientDetailPage() {
               </Button>
             </div>
           )}
-          <div className="client-mobile-bar">
+          <div className={`client-mobile-bar${mobileBarHidden ? ' client-mobile-bar--hidden' : ''}`}>
             <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
               Powrót
             </ButtonLink>
