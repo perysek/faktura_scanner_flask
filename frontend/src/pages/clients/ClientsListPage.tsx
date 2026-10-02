@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './ClientsListPage.css';
 import { useApiData } from '../../lib/useApiData';
@@ -14,15 +14,11 @@ import { TrendSparkline, isVipClient } from '../../components/clients/TrendSpark
 import { NotesDigest } from '../../components/visitNotes/NotesDigest';
 import { ScrollTopButton } from '../../components/ui/ScrollTopButton';
 import { formatDate, formatNextVisitLine1, formatPhone, parseDateForSort } from '../../lib/format';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+import { ClientsMobileView } from './ClientsMobileView';
+import { DEFAULT_SORT_DIR, clientInitials, clientRingStyle } from './clientsListShared';
+import type { FilterKey, SortField, SortState } from './clientsListShared';
 import type { Client } from '../../types/client';
-
-type FilterKey = 'active' | 'vip' | 'inactive';
-type SortField = 'full_name' | 'last_visit_date' | 'next_visit_date' | 'completed_visits' | 'no_show_count' | 'is_active';
-
-interface SortState {
-  field: SortField;
-  dir: 'asc' | 'desc';
-}
 
 const SESSION_KEY = 'filterState:clients';
 
@@ -74,6 +70,7 @@ export function ClientsListPage() {
   // "Aktualne uwagi i zalecenia" shows visit notes, so it follows the `appointments`
   // module (the server drops `recent_notes` for anyone without it).
   const showNotes = auth.hasModuleAccess('appointments');
+  const isMobile = useIsMobile(640);
 
   const initial = useMemo(loadSessionState, []);
   const [searchInput, setSearchInput] = useState(initial.searchInput ?? '');
@@ -137,6 +134,9 @@ export function ClientsListPage() {
       if (field === 'last_visit_date' || field === 'next_visit_date') {
         av = parseDateForSort(a[field] ?? null);
         bv = parseDateForSort(b[field] ?? null);
+        // No date (parses to 0) carries no signal — it sinks to the bottom whichever way
+        // the list is sorted, instead of leading an ascending "Następna wizyta".
+        if (!av || !bv) return !av && !bv ? 0 : !av ? 1 : -1;
       } else if (field === 'is_active') {
         av = a.is_active ? 1 : 0;
         bv = b.is_active ? 1 : 0;
@@ -156,6 +156,12 @@ export function ClientsListPage() {
 
   function handleSort(field: SortField) {
     setSort((current) => (current.field === field ? { field, dir: current.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' }));
+  }
+
+  // Phone sort sheet: picking a new field starts in the direction people expect for it
+  // (DEFAULT_SORT_DIR); picking the active one flips it.
+  function handleSelectSort(field: SortField) {
+    setSort((current) => (current.field === field ? { field, dir: current.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: DEFAULT_SORT_DIR[field] }));
   }
 
   function sortIndicator(field: SortField): { ariaSort: 'none' | 'ascending' | 'descending'; glyph: string; active: boolean } {
@@ -197,6 +203,30 @@ export function ClientsListPage() {
   function handleRowClick(client: Client, event: MouseEvent<HTMLTableRowElement>) {
     if ((event.target as HTMLElement).closest('.action-icons')) return;
     navigate(`/klienci/${client.id}`);
+  }
+
+  if (isMobile) {
+    return (
+      <ClientsMobileView
+        clients={sorted}
+        loading={clientsState.loading}
+        error={clientsState.error}
+        onRetry={clientsState.reload}
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        onSearchSubmit={() => setDebouncedSearch(searchInput)}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+        filterCounts={filterCounts}
+        sort={sort}
+        onSelectSort={handleSelectSort}
+        canWrite={canWrite}
+        showNotes={showNotes}
+        onDeactivate={handleDeactivate}
+        onBulkUpdatePreferences={handleBulkUpdatePreferences}
+        isUpdatingPrefs={isUpdatingPrefs}
+      />
+    );
   }
 
   const isActiveSort = sortIndicator('is_active');
@@ -397,14 +427,10 @@ interface ClientRowProps {
 }
 
 function ClientRow({ client, trend, canWrite, showNotes, onDeactivate, onRowClick }: ClientRowProps) {
-  const initials = `${client.first_name.charAt(0)}${(client.last_name || '').charAt(0)}`.toUpperCase();
+  const initials = clientInitials(client);
   const noShows = client.no_show_count ?? 0;
   const isVip = isVipClient(client);
-  const isRisk = noShows > 2;
-  const ringColor = isRisk ? 'var(--color-error)' : isVip ? 'var(--color-accent)' : null;
-  const ringStyle: CSSProperties | undefined = ringColor
-    ? { boxShadow: `0 0 0 2px #fff, 0 0 0 3.5px ${ringColor}` }
-    : undefined;
+  const ringStyle = clientRingStyle(client);
 
   return (
     <tr className="row-clickable" data-client-id={client.id} onClick={(e) => onRowClick(client, e)}>

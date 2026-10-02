@@ -97,8 +97,11 @@
 .add-pref-form { margin-top: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .pref-form-row { display: grid; grid-template-columns: 2fr 2fr auto; gap: 0.75rem; align-items: end; margin-bottom: 0.75rem; }
 .pref-form-row.full { grid-template-columns: 1fr; }
+/* Lines the button up with the inputs (they carry a label above them) in the 3-column row. */
+.pref-submit { margin-top: 1.25rem; }
 @media (max-width: 768px) {
   .pref-form-row { grid-template-columns: 1fr; }
+  .pref-submit { margin-top: 0; }
 }
 
 .appt-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
@@ -125,23 +128,129 @@
 .appt-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--color-border-subtle); }
 .appt-status-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.5rem; font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 1px; }
 
-/* On mobile the three top cards merge into one "Dane podstawowe" section. */
+/* ═══ Phone (≤640px) ═══════════════════════════════════════════════════════
+   Same shape as the Użytkownik / Wizyta detail pages: the header becomes a hero card, cards
+   stack with real gaps and 1rem padding (the desktop 2rem eats a third of a 360px screen),
+   targets reach 44px, and the desktop action bar is swapped (in JS, ClientDetailPage's
+   `isMobile`) for a sticky thumb-zone bar + a "Strefa ryzyka" card. The three top cards
+   still merge into one "Dane podstawowe" section. Everything is scoped under
+   `.client-detail-page` — this file is global once bundled. */
 @media (max-width: 640px) {
-  .basic-info-group {
+  /* Two-class selector: `.refined-page` is declared in two stylesheets with different
+     padding, so a single class would be at the mercy of bundle order. */
+  .refined-page.client-detail-page--mobile { padding: 0.75rem 1rem; overflow-x: clip; }
+
+  .client-detail-page .page-header {
+    margin-bottom: 0.75rem;
+    padding: 1rem;
     background: var(--color-surface-elevated);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
-    margin-bottom: 1.5rem;
   }
-  .basic-info-group .detail-card { border: none; box-shadow: none; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
-  .basic-info-group .detail-card:first-child { padding-top: 1.5rem; }
-  .basic-info-group .detail-card:last-child { padding-bottom: 1.5rem; }
-  .basic-info-group .detail-card:not(:first-child) .detail-section-title { display: none; }
-  .basic-info-group .detail-card + .detail-card .field-grid { margin-top: 1.25rem; }
+  .client-detail-page .page-header > div {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "avatar name" "avatar sub";
+    column-gap: 0.875rem;
+    row-gap: 0.25rem;
+    align-items: center;
+  }
+  .client-detail-page .client-avatar-large { grid-area: avatar; width: 3.5rem; height: 3.5rem; margin: 0; font-size: 1.25rem; }
+  .client-detail-page .page-header .page-title { grid-area: name; margin: 0; font-size: 1.25rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .client-detail-page .page-header .page-subtitle { grid-area: sub; display: flex; align-items: center; flex-wrap: wrap; gap: 0.375rem; }
+  /* The shared pill has a fixed wide width from another page's stylesheet; let it hug its text. */
+  .client-detail-page .page-subtitle .status-badge { width: auto; }
 
-  .pref-table th:nth-child(3), .pref-table td:nth-child(3),
-  .pref-table th:nth-child(4), .pref-table td:nth-child(4) { display: none; }
-  .add-pref-btn { display: none; }
-  .history-visits-card { display: none; }
+  .client-detail-page .detail-card { padding: 1rem; margin-bottom: 0.75rem; }
+  .client-detail-page .detail-section-title { margin-bottom: 1rem; padding-bottom: 0.625rem; font-size: 0.9375rem; }
+  .client-detail-page .detail-section-header { gap: 0.5rem; margin-bottom: 1rem; padding-bottom: 0.625rem; }
+  .client-detail-page .detail-section-title--danger { color: var(--color-error); }
+
+  .client-detail-page .field-grid { gap: 1rem 0.75rem; }
+  .client-detail-page .field-grid-pair { grid-template-columns: 1fr 1fr; }
+  .client-detail-page .field-wide { grid-column: 1 / -1; }
+  .client-detail-page .field-label { margin-bottom: 0.25rem; }
+  .client-detail-page .field-value { overflow-wrap: anywhere; }
+
+  .basic-info-group {
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+  .basic-info-group .detail-card { margin: 0; padding: 0; border: none; box-shadow: none; }
+  .basic-info-group .detail-card + .detail-card { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border-subtle); }
+  .basic-info-group .detail-card:not(:first-child) .detail-section-title { display: none; }
+
+  /* Preferences */
+  .client-detail-page .add-pref-btn { min-height: 2.75rem; }
+  .client-detail-page .add-pref-form { padding: 0.75rem; }
+  .client-detail-page .pref-submit { width: 100%; min-height: 2.75rem; }
+  .client-detail-page .pref-cards { list-style: none; margin: 0; padding: 0; }
+  .client-detail-page .pref-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border-subtle); }
+  .client-detail-page .pref-card:first-child { padding-top: 0; }
+  .client-detail-page .pref-card:last-child { padding-bottom: 0; border-bottom: none; }
+  .client-detail-page .pref-card-text { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+  .client-detail-page .pref-card-title { font-size: 0.875rem; font-weight: 500; color: var(--color-ink); overflow-wrap: anywhere; }
+  .client-detail-page .pref-card-sub { font-size: 0.8125rem; color: var(--color-ink-muted); }
+  .client-detail-page .pref-card-notes { margin-top: 0.125rem; font-size: 0.8125rem; font-style: italic; color: var(--color-ink-subtle); overflow-wrap: anywhere; }
+  .client-detail-page .pref-card-remove {
+    flex-shrink: 0;
+    min-height: 2.75rem;
+    margin: -0.375rem -0.5rem -0.375rem 0;
+    padding: 0 0.75rem;
+    font: inherit;
+    font-size: 0.8125rem;
+    color: var(--color-ink-muted);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .client-detail-page .pref-card-remove:active { background: var(--color-status-cancelled-bg); color: var(--color-error); }
+
+  /* Visit history */
+  .client-detail-page .hist-cards { list-style: none; margin: 0; padding: 0; }
+  .client-detail-page .hist-card + .hist-card { border-top: 1px solid var(--color-border-subtle); }
+  .client-detail-page .hist-card-link {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "when status" "what what";
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    min-height: 3.5rem;
+    margin: 0 -0.5rem;
+    padding: 0.625rem 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  .client-detail-page a.hist-card-link:active { background: var(--color-surface); }
+  .client-detail-page .hist-card-when { grid-area: when; font-size: 0.8125rem; color: var(--color-ink-muted); }
+  .client-detail-page .hist-card-when strong { color: var(--color-ink); font-weight: 500; }
+  .client-detail-page .hist-card-status { grid-area: status; }
+  .client-detail-page .hist-card-what { grid-area: what; font-size: 0.8125rem; color: var(--color-ink-muted); overflow-wrap: anywhere; }
+  .client-detail-page .hist-more { width: 100%; min-height: 2.75rem; margin-top: 0.5rem; }
+
+  /* Risk zone + sticky bar (sticky, not fixed: <main id="main-content"> is the only scroll
+     region, and the shell footer sits below it). */
+  .client-detail-page .client-danger-zone .field-value { margin-bottom: 0.75rem; font-size: 0.8125rem; color: var(--color-ink-muted); }
+  .client-detail-page .client-danger-zone .refined-btn-danger { width: 100%; min-height: 2.75rem; }
+  .client-detail-page .client-mobile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+    display: flex;
+    gap: 0.75rem;
+    margin: 1rem -1rem -0.75rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface-elevated);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
+  }
+  .client-detail-page .client-mobile-bar > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
 }

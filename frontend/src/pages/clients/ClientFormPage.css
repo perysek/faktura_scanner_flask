@@ -32,3 +32,38 @@
 .dup-hint li:first-child { margin-top: 0; }
 .dup-hint a { color: inherit; font-weight: 600; text-decoration: underline; white-space: nowrap; }
 .dup-hint .dh-icon { flex-shrink: 0; }
+
+/* ═══ Phone (≤640px) ═══════════════════════════════════════════════════════
+   Same shape as Nowy/Edytuj użytkownika (RbacPages.css): compact header, tighter card
+   rhythm, ≥48px targets, and the save/cancel row pinned to the thumb zone. `sticky`, not
+   fixed — <main id="main-content"> is the only scroll region and the shell footer sits
+   below it. The bar bleeds by exactly the form card's padding (1rem 1.125rem); scoped
+   under `.client-form-page` because this file is global once bundled. */
+@media (max-width: 640px) {
+  /* Two-class selector: `.refined-page` is declared in two stylesheets with different
+     padding, so a single class would be at the mercy of bundle order. */
+  .refined-page.client-form-page { padding: 0.75rem 1rem; overflow-x: clip; }
+  .client-form-page .page-header { margin-bottom: 0.75rem; gap: 0.25rem; }
+  .client-form-page .page-header .page-title { margin-bottom: 0.125rem; font-size: 1.25rem; }
+
+  .client-form-page .form-fieldset + .form-fieldset { margin-top: 1.25rem; padding-top: 1.25rem; }
+  .client-form-page .form-fieldset > legend { margin-bottom: 1rem; }
+  .client-form-page .form-grid { gap: 1rem; }
+
+  .client-form-page .checkbox-wrapper { min-height: 3rem; }
+  .client-form-page .refined-checkbox { width: 1.375rem; height: 1.375rem; }
+  .client-form-page .checkbox-label { font-size: 0.9375rem; }
+
+  .client-form-page .form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+    gap: 0.75rem;
+    margin: 1.5rem -1.125rem -1rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface-elevated);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
+  }
+  .client-form-page .form-actions > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import './ClientDetailPage.css';
 import { useApiData } from '../../lib/useApiData';
 import { clientsApi } from '../../lib/api/clients';
@@ -14,6 +14,10 @@ import { Icon } from '../../lib/icons/Icon';
 import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { formatDate, formatPhone } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
+import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
+
+/** Phone history list: this many newest visits, then a "Pokaż wszystkie" button. */
+const MOBILE_HISTORY_PREVIEW = 5;
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'Zaplanowana',
@@ -72,6 +76,9 @@ export function ClientDetailPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = auth.hasModuleWrite('clients');
+  // History rows open the visit page, which sits behind the `appointments` module.
+  const canOpenVisits = auth.hasModuleAccess('appointments');
+  const isMobile = useIsMobile(640);
   useEscapeBack('/klienci');
 
   const clientState = useApiData(() => clientsApi.get(clientId), [clientId]);
@@ -81,6 +88,7 @@ export function ClientDetailPage() {
   const servicesState = useApiData(() => lookupsApi.services(), []);
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [prefNotes, setPrefNotes] = useState('');
@@ -221,8 +229,11 @@ export function ClientDetailPage() {
   const employeeOptions =
     filteredEmployees ?? (employeesState.data ?? []).map((e) => ({ value: String(e.id), label: `${e.first_name} ${e.last_name}` }));
 
+  const history = appointmentsState.data ?? [];
+  const shownHistory = isMobile && !showAllHistory ? history.slice(0, MOBILE_HISTORY_PREVIEW) : history;
+
   return (
-    <div className="refined-page client-detail-page animate-fade-up">
+    <div className={`refined-page client-detail-page${isMobile ? ' client-detail-page--mobile' : ''} animate-fade-up`}>
       <header className="page-header">
         <div>
           <div className="client-avatar-large">{initials}</div>
@@ -233,7 +244,8 @@ export function ClientDetailPage() {
             <span className={`status-badge ${client.is_active ? 'active' : 'inactive'}`}>{client.is_active ? 'Aktywny' : 'Nieaktywny'}</span>
           </p>
         </div>
-        {canWrite && (
+        {/* Phone: "Edytuj" lives in the sticky bottom bar instead. */}
+        {canWrite && !isMobile && (
           <ButtonLink variant="primary" small icon="edit" to={`/klienci/${client.id}/edytuj`}>
             Edytuj
           </ButtonLink>
@@ -243,7 +255,7 @@ export function ClientDetailPage() {
       <div className="basic-info-group">
         <div className="detail-card">
           <h2 className="detail-section-title">Dane podstawowe</h2>
-          <div className="field-grid field-grid-2">
+          <div className="field-grid field-grid-2 field-grid-pair">
             <div>
               <label className="field-label">Imię</label>
               <p className="field-value">{client.first_name}</p>
@@ -271,7 +283,7 @@ export function ClientDetailPage() {
 
         <div className="detail-card">
           <h2 className="detail-section-title">Informacje dodatkowe</h2>
-          <div className="field-grid">
+          <div className="field-grid field-grid-pair">
             <div>
               <label className="field-label">Data urodzenia</label>
               <p className={`field-value${client.date_of_birth ? '' : ' empty'}`}>
@@ -294,7 +306,7 @@ export function ClientDetailPage() {
               <label className="field-label">Zmienione wizyty</label>
               <p className="field-value">{client.rescheduled_count ?? 0}</p>
             </div>
-            <div>
+            <div className="field-wide">
               <label className="field-label">Notatki</label>
               <p className={`field-value${client.notes ? '' : ' empty'}`}>{client.notes ?? 'Brak notatek'}</p>
             </div>
@@ -332,7 +344,7 @@ export function ClientDetailPage() {
                 onChange={handleEmployeeFilterChange}
                 error={prefError?.field === 'employee' ? prefError.message : undefined}
               />
-              <Button variant="primary" small onClick={handleAddPreference} style={{ marginTop: '1.25rem' }}>
+              <Button variant="primary" small className="pref-submit" onClick={handleAddPreference}>
                 Dodaj
               </Button>
             </div>
@@ -348,6 +360,28 @@ export function ClientDetailPage() {
         )}
 
         {preferencesState.data && preferencesState.data.length > 0 ? (
+          isMobile ? (
+            // Phone: the table would have to hide its notes + "Usuń" columns, which made
+            // preferences impossible to remove — a card per preference keeps all of it.
+            <ul className="pref-cards">
+              {preferencesState.data.map((pref) => (
+                <li key={pref.id} className="pref-card">
+                  <div className="pref-card-text">
+                    <span className="pref-card-title">
+                      {pref.service_name ? `Usługa: ${pref.service_name}` : pref.service_category ? `Kategoria: ${pref.service_category}` : 'Ogólna preferencja'}
+                    </span>
+                    <span className="pref-card-sub">{pref.employee_name ?? 'Nieznany'}</span>
+                    {pref.notes && <span className="pref-card-notes">{pref.notes}</span>}
+                  </div>
+                  {canWrite && (
+                    <button type="button" className="pref-card-remove" aria-label="Usuń preferencję" onClick={() => handleRemovePreference(pref.id)}>
+                      Usuń
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
           <div className="scroll-thin" style={{ maxHeight: '320px' }}>
           <table className="pref-table">
             <thead>
@@ -384,6 +418,7 @@ export function ClientDetailPage() {
             </tbody>
           </table>
           </div>
+          )
         ) : (
           <div className="empty-preferences">
             <Icon name="person_search" size="2rem" />
@@ -409,6 +444,45 @@ export function ClientDetailPage() {
             <Icon name="event_busy" size="2rem" />
             <p style={{ color: 'var(--color-ink-subtle)', fontSize: '0.8125rem', marginTop: '0.5rem' }}>Brak historii wizyt</p>
           </div>
+        ) : isMobile ? (
+          <>
+            <ul className="hist-cards">
+              {shownHistory.map((a) => {
+                const body = (
+                  <>
+                    <span className="hist-card-when">
+                      <strong>{formatAppointmentDate(a.appointment_date)}</strong> · {a.start_time?.slice(0, 5)}–{a.end_time?.slice(0, 5)}
+                    </span>
+                    <span
+                      className="appt-status-pill hist-card-status"
+                      style={{ background: STATUS_BG_VAR[a.status] ?? 'rgba(0,0,0,0.05)', color: STATUS_COLOR_VAR[a.status] ?? 'var(--color-ink-muted)' }}
+                    >
+                      {STATUS_LABELS[a.status] ?? a.status}
+                    </span>
+                    <span className="hist-card-what">
+                      {a.employee_name ?? '—'} · {formatPrice(a.total_price)}
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={a.id} className="hist-card">
+                    {canOpenVisits ? (
+                      <Link to={`/wizyty/${a.id}`} className="hist-card-link">
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="hist-card-link hist-card-link--static">{body}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {!showAllHistory && history.length > MOBILE_HISTORY_PREVIEW && (
+              <Button variant="secondary" className="hist-more" onClick={() => setShowAllHistory(true)}>
+                Pokaż wszystkie ({history.length})
+              </Button>
+            )}
+          </>
         ) : (
           <div className="scroll-thin" style={{ maxHeight: '420px' }}>
             <table className="appt-table">
@@ -424,13 +498,12 @@ export function ClientDetailPage() {
               </thead>
               <tbody>
                 {appointmentsState.data.map((a) => (
-                  // "Szczegóły" is a plain <a href> — Wizyty is still a Jinja
-                  // page, not an SPA route (router.tsx) — row-click mirrors it
-                  // via window.location, same as clicking the icon would.
-                  <tr key={a.id} className="row-clickable" onClick={(e) => {
+                  // Wizyty is an SPA route (`wizyty/:id`) — row-click mirrors the
+                  // "Szczegóły" link; it's only wired up when the caller may open visits.
+                  <tr key={a.id} className={canOpenVisits ? 'row-clickable' : undefined} onClick={canOpenVisits ? (e) => {
                     if ((e.target as HTMLElement).closest('a')) return;
-                    window.location.href = `/appointment/${a.id}`;
-                  }}>
+                    navigate(`/wizyty/${a.id}`);
+                  } : undefined}>
                     <td style={{ fontWeight: 500 }}>{formatAppointmentDate(a.appointment_date)}</td>
                     <td style={{ color: 'var(--color-ink-muted)' }}>
                       {a.start_time?.slice(0, 5)}–{a.end_time?.slice(0, 5)}
@@ -446,9 +519,11 @@ export function ClientDetailPage() {
                     </td>
                     <td style={{ textAlign: 'right', color: 'var(--color-ink-muted)' }}>{formatPrice(a.total_price)}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <a href={`/appointment/${a.id}`} title="Szczegóły" aria-label="Szczegóły" style={{ color: 'var(--color-status-scheduled)' }}>
-                        <Icon name="open_in_new" />
-                      </a>
+                      {canOpenVisits && (
+                        <Link to={`/wizyty/${a.id}`} title="Szczegóły" aria-label="Szczegóły" style={{ color: 'var(--color-status-scheduled)' }}>
+                          <Icon name="open_in_new" />
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -460,23 +535,47 @@ export function ClientDetailPage() {
 
       {auth.hasModuleAccess('appointments') && <VisitNotesSection variant="detail" clientId={clientId} />}
 
-      <div className="detail-card">
-        <div className="action-bar">
+      {isMobile ? (
+        <>
           {canWrite && (
-            <ButtonLink variant="primary" icon="edit" to={`/klienci/${client.id}/edytuj`}>
-              Edytuj klienta
+            <div className="detail-card client-danger-zone">
+              <h2 className="detail-section-title detail-section-title--danger">Strefa ryzyka</h2>
+              {client.is_active && <p className="field-value">Klient trafi na listę nieaktywnych.</p>}
+              <Button variant="danger" icon="delete" onClick={handleDeleteOrDeactivate}>
+                {client.is_active ? 'Dezaktywuj klienta' : 'Usuń klienta'}
+              </Button>
+            </div>
+          )}
+          <div className="client-mobile-bar">
+            <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
+              Powrót
             </ButtonLink>
-          )}
-          <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
-            Powrót do listy
-          </ButtonLink>
-          {canWrite && (
-            <Button variant="danger" icon="delete" onClick={handleDeleteOrDeactivate}>
-              {client.is_active ? 'Dezaktywuj' : 'Usuń'}
-            </Button>
-          )}
+            {canWrite && (
+              <ButtonLink variant="primary" icon="edit" to={`/klienci/${client.id}/edytuj`}>
+                Edytuj
+              </ButtonLink>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="detail-card">
+          <div className="action-bar">
+            {canWrite && (
+              <ButtonLink variant="primary" icon="edit" to={`/klienci/${client.id}/edytuj`}>
+                Edytuj klienta
+              </ButtonLink>
+            )}
+            <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
+              Powrót do listy
+            </ButtonLink>
+            {canWrite && (
+              <Button variant="danger" icon="delete" onClick={handleDeleteOrDeactivate}>
+                {client.is_active ? 'Dezaktywuj' : 'Usuń'}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
