@@ -95,7 +95,13 @@ export function ClientsMobileView({
   const [sortOpen, setSortOpen] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
-  const ctaHidden = useHideOnScroll();
+  // The bottom bar slides away on scroll-down. While a finger is held on the A–Z index the PAGE is being
+  // scrolled by the index, not by the user — jumping up and down under the finger — so the hook is paused
+  // (it would flip the bar every ~120ms) and the bar stays hidden for the whole hold; lifting the finger
+  // shows it again. `scrollHidden` is the hook's own state, `ctaHidden` what the bar actually does.
+  const [indexHeld, setIndexHeld] = useState(false);
+  const scrollHidden = useHideOnScroll(120, 80, indexHeld);
+  const ctaHidden = scrollHidden || indexHeld;
   const toolbarRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -259,10 +265,13 @@ export function ClientsMobileView({
           onSelect={jumpToLetter}
           onTop={jumpToTop}
           visible={alphaVisible}
+          onHold={setIndexHeld}
           top={alphaBounds.top}
           // It fills the viewport from the toolbar down: above the action bar while that shows, and all
-          // the way to the bottom edge (clear of the home-indicator inset) once it has slid away.
-          bottom={canWrite && !ctaHidden ? `${alphaBounds.bottom + alphaBounds.cta}px` : `calc(${alphaBounds.bottom}px + env(safe-area-inset-bottom, 0px))`}
+          // the way to the bottom edge (clear of the home-indicator inset) once it has slid away. Its
+          // bottom follows `scrollHidden`, NOT `ctaHidden`: pressing the index hides the bar, and the
+          // index must not resize under the finger that is choosing a letter on it.
+          bottom={canWrite && !scrollHidden ? `${alphaBounds.bottom + alphaBounds.cta}px` : `calc(${alphaBounds.bottom}px + env(safe-area-inset-bottom, 0px))`}
         />
       )}
 

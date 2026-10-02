@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent } from 'react';
 import { fitLetterFont } from './clientsListShared';
 
@@ -32,6 +32,10 @@ export interface ClientsAlphabetIndexProps {
   onTop: () => void;
   /** Slid in (true) or slid out of the way (false). Stays mounted either way so it can animate. */
   visible: boolean;
+  /** true while a finger is down on the index, false when it lifts (or the index goes away). The host
+   * uses it to keep the bottom action bar still: the list jumps up and down under the finger, and that
+   * must not be read as the page scrolling. */
+  onHold?: (holding: boolean) => void;
   /** Where the bar starts / stops: `top` in viewport px, `bottom` any CSS length (the host reserves the
    * bottom action bar's height while it shows and the home-indicator inset when it doesn't). */
   top: number;
@@ -45,11 +49,17 @@ export interface ClientsAlphabetIndexProps {
  * lifts. Pointer events + `touch-action: none`, so dragging the bar never scrolls the page itself;
  * the slots are real buttons too, for keyboard users.
  */
-export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, top, bottom }: ClientsAlphabetIndexProps) {
+export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, onHold, top, bottom }: ClientsAlphabetIndexProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [finger, setFinger] = useState<Finger | null>(null);
   const [current, setCurrent] = useState<string | null>(null);
   const lastRef = useRef<string | null>(null);
+
+  // Always call the latest onHold, and — if the index disappears with a finger still down (the list
+  // reloads, the sort changes) — tell the host the hold is over, or its bar would stay hidden for good.
+  const onHoldRef = useRef(onHold);
+  onHoldRef.current = onHold;
+  useEffect(() => () => onHoldRef.current?.(false), []);
 
   // Slot 0 is the arrow; letters follow.
   const keys = [TOP, ...letters];
@@ -94,6 +104,7 @@ export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, top, b
     lastRef.current = null;
     setFinger(null);
     setCurrent(null);
+    onHoldRef.current?.(false);
   }
 
   function slotStyle(i: number) {
@@ -113,6 +124,7 @@ export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, top, b
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         lastRef.current = null;
+        onHoldRef.current?.(true);
         track(e);
       }}
       onPointerMove={(e) => {
@@ -120,6 +132,8 @@ export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, top, b
       }}
       onPointerUp={release}
       onPointerCancel={release}
+      // Capture can also be lost without an up/cancel (the browser takes over the touch): still a release.
+      onLostPointerCapture={release}
     >
       {keys.map((key, i) => (
         <button
