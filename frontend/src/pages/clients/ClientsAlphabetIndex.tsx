@@ -36,6 +36,9 @@ export interface ClientsAlphabetIndexProps {
    * uses it to keep the bottom action bar still: the list jumps up and down under the finger, and that
    * must not be read as the page scrolling. */
   onHold?: (holding: boolean) => void;
+  /** The letter the cards at the top of the list start with — shown in its own colour, so the index
+   * always says where in the alphabet the list currently is (not only while a finger is on it). */
+  activeLetter?: string | null;
   /** Where the bar starts / stops: `top` in viewport px, `bottom` any CSS length (the host reserves the
    * bottom action bar's height while it shows and the home-indicator inset when it doesn't). */
   top: number;
@@ -49,7 +52,7 @@ export interface ClientsAlphabetIndexProps {
  * lifts. Pointer events + `touch-action: none`, so dragging the bar never scrolls the page itself;
  * the slots are real buttons too, for keyboard users.
  */
-export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, onHold, top, bottom }: ClientsAlphabetIndexProps) {
+export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, onHold, activeLetter, top, bottom }: ClientsAlphabetIndexProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [finger, setFinger] = useState<Finger | null>(null);
   const [current, setCurrent] = useState<string | null>(null);
@@ -139,8 +142,9 @@ export function ClientsAlphabetIndex({ letters, onSelect, onTop, visible, onHold
         <button
           key={key}
           type="button"
-          className={`clients-alpha-letter${key === TOP ? ' clients-alpha-top' : ''}${current === key ? ' is-current' : ''}`}
+          className={`clients-alpha-letter${key === TOP ? ' clients-alpha-top' : ''}${current === key ? ' is-current' : ''}${key === activeLetter ? ' is-reading' : ''}`}
           aria-label={key === TOP ? 'Na początek listy' : `Litera ${key}`}
+          aria-current={key === activeLetter ? 'true' : undefined}
           // A real pointer press is handled on the bar above; this only runs for keyboard activation.
           onClick={(e) => {
             if (e.detail === 0) select(key);

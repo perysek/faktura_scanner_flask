@@ -376,6 +376,25 @@
     color: var(--color-ink-subtle);
   }
 
+  /* Arrival (playArrive in ClientsMobileView): when an index glide settles, the first cards on screen ease
+     in, staggered, from the direction you came — below after travelling down the list, above after
+     travelling up — so the motion itself says which way you went. transform + opacity only, ease-out,
+     200ms (mobile-short) and 40ms apart over at most 6 cards, so the last one is done by 400ms.
+     Under prefers-reduced-motion the cards simply stay put. */
+  @keyframes client-arrive {
+    from { opacity: 0.45; transform: translateY(var(--arrive-from, 10px)); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .clients-page .client-card-wrap.is-arriving-down,
+    .clients-page .client-card-wrap.is-arriving-up {
+      animation: client-arrive 0.2s cubic-bezier(0, 0, 0.2, 1) both;
+      animation-delay: calc(var(--arrive-i, 0) * 40ms);
+    }
+    .clients-page .client-card-wrap.is-arriving-down { --arrive-from: 10px; }
+    .clients-page .client-card-wrap.is-arriving-up { --arrive-from: -10px; }
+  }
+
   /* A-Z index: cards give up its width so it never covers them. */
   .clients-page .client-cards.has-alpha { margin-right: 0.75rem; }
 
@@ -457,7 +476,11 @@
     border: none;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease;
   }
+  /* The letter the cards on screen start with (scroll-spy): ink and heavier, against the gold of the rest —
+     near-black on the page background is 15:1, and it differs from the resting gold in weight as well as hue. */
+  .clients-page .clients-alpha-letter.is-reading { color: var(--color-ink); font-weight: 800; }
   .clients-page .clients-alpha-letter.is-current { position: relative; z-index: 1; }
   .clients-page .clients-alpha-glyph {
     display: grid;

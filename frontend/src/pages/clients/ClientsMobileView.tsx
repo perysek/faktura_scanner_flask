@@ -12,6 +12,7 @@ import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { DEFAULT_SORT_DIR, alphabetLetters, clientInitials, clientLetter, clientRingStyle, newVisitHref } from './clientsListShared';
 import type { SortField, SortState } from './clientsListShared';
 import { ClientsAlphabetIndex } from './ClientsAlphabetIndex';
+import { createGlide } from './glideScroll';
 import type { Client } from '../../types/client';
 
 const SORT_OPTIONS: Array<{ field: SortField; label: string; hints: Record<SortState['dir'], string> }> = [
@@ -39,6 +40,44 @@ const SORT_LABEL: Record<SortField, string> = {
  * a card is never hijacked. Swipe LEFT → the client's page; swipe RIGHT → a new visit for them. */
 const SWIPE_TRIGGER_PX = 84;
 const SWIPE_MAX_PX = 120;
+
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** The card at the top of the list's visible area (just under the sticky toolbar), found by hit-testing
+ * a point there — one cheap call however long the list is. The second probe clears the gap between cards. */
+function cardAtTop(toolbar: HTMLElement): HTMLElement | null {
+  const x = Math.round(window.innerWidth / 2);
+  const bottom = toolbar.getBoundingClientRect().bottom;
+  for (const dy of [14, 34]) {
+    const card = document.elementFromPoint(x, bottom + dy)?.closest<HTMLElement>('[data-letter]');
+    if (card) return card;
+  }
+  return null;
+}
+
+/** How many cards play the arrival motion, and the classes that carry it (see ClientsListPage.css). */
+const ARRIVE_MAX = 6;
+const ARRIVE_CLASSES = ['is-arriving-down', 'is-arriving-up'];
+
+/**
+ * The motion that says "you have arrived here": when a glide settles, the cards now on screen (the first
+ * few, staggered) ease in — rising from below if you travelled DOWN the list, dropping in from above if
+ * you travelled UP — so the movement itself tells you which way you came. Skipped for a nudge, and for
+ * anyone who asked for reduced motion.
+ */
+function playArrive(list: HTMLElement, toolbar: HTMLElement, travelled: number) {
+  if (Math.abs(travelled) < 24 || prefersReducedMotion()) return;
+  list.querySelectorAll('.is-arriving-down, .is-arriving-up').forEach((el) => el.classList.remove(...ARRIVE_CLASSES));
+  void list.offsetWidth; // flush, so a repeat arrival restarts the animation instead of being swallowed
+  const cls = travelled > 0 ? 'is-arriving-down' : 'is-arriving-up';
+  let card = cardAtTop(toolbar) ?? (list.firstElementChild as HTMLElement | null);
+  for (let i = 0; i < ARRIVE_MAX && card; i++) {
+    if (card.getBoundingClientRect().top >= window.innerHeight) break;
+    card.style.setProperty('--arrive-i', String(i));
+    card.classList.add(cls);
+    card = card.nextElementSibling as HTMLElement | null;
+  }
+}
 
 export interface ClientsMobileViewProps {
   /** Already filtered + sorted. */
@@ -95,13 +134,19 @@ export function ClientsMobileView({
   const [sortOpen, setSortOpen] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
-  // The bottom bar slides away on scroll-down. While a finger is held on the A–Z index the PAGE is being
-  // scrolled by the index, not by the user — jumping up and down under the finger — so the hook is paused
-  // (it would flip the bar every ~120ms) and the bar stays hidden for the whole hold; lifting the finger
-  // shows it again. `scrollHidden` is the hook's own state, `ctaHidden` what the bar actually does.
+  // The bottom bar slides away on scroll-down. While a finger is held on the A–Z index — and while the
+  // glide it started is still settling — the PAGE is being scrolled by the index, not by the user, so the
+  // hook is paused (it would flip the bar every ~120ms). The bar stays hidden for the whole hold, comes
+  // back the moment the finger lifts, and the hook resumes once the glide has settled.
+  // `scrollHidden` is the hook's own state, `ctaHidden` what the bar actually does.
   const [indexHeld, setIndexHeld] = useState(false);
-  const scrollHidden = useHideOnScroll(120, 80, indexHeld);
-  const ctaHidden = scrollHidden || indexHeld;
+  const [gliding, setGliding] = useState(false);
+  const scrollHidden = useHideOnScroll(120, 80, indexHeld || gliding);
+  const ctaHidden = indexHeld || (!gliding && scrollHidden);
+  // The letter of the card at the top of the visible list: the index highlights it, so it always shows
+  // which start letter the cards on screen belong to.
+  const [readingLetter, setReadingLetter] = useState<string | null>(null);
+  const glideRef = useRef<ReturnType<typeof createGlide> | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -163,20 +208,86 @@ export function ClientsMobileView({
     };
   }, [letters.length, loading]);
 
-  // Scrolls the first card filed under `letter` (in the list's current order) to just below the
-  // sticky toolbar. Instant, not smooth: while dragging along the index it must keep up with the finger.
+  // The scroll glide (glideScroll.ts) the index drives instead of jumping: it chases whichever letter the
+  // finger is on, so dragging along the index is one continuous, decelerating motion rather than a
+  // series of teleports. When it settles, the cards now on screen play their arrival (playArrive).
+  useEffect(() => {
+    const scroller = document.getElementById('main-content');
+    if (!scroller) return;
+    const glide = createGlide(
+      {
+        getTop: () => scroller.scrollTop,
+        setTop: (y) => {
+          scroller.scrollTop = y;
+        },
+        maxTop: () => scroller.scrollHeight - scroller.clientHeight,
+        viewport: () => scroller.clientHeight,
+      },
+      {
+        reduced: prefersReducedMotion,
+        onStart: () => setGliding(true),
+        onEnd: ({ from, to, interrupted }) => {
+          setGliding(false);
+          if (!interrupted && listRef.current && toolbarRef.current) playArrive(listRef.current, toolbarRef.current, to - from);
+        },
+      },
+    );
+    glideRef.current = glide;
+    // Grabbing the list (touch or wheel) takes over from the glide — except a touch on the index itself,
+    // which sits inside the scroll container in the DOM and would otherwise cancel the glide it just started.
+    const takeOver = (e: Event) => {
+      if (!(e.target instanceof Element && e.target.closest('.clients-alpha'))) glide.stop();
+    };
+    scroller.addEventListener('touchstart', takeOver, { passive: true });
+    scroller.addEventListener('wheel', takeOver, { passive: true });
+    return () => {
+      scroller.removeEventListener('touchstart', takeOver);
+      scroller.removeEventListener('wheel', takeOver);
+      glide.stop();
+      glideRef.current = null;
+    };
+  }, []);
+
+  // Scroll-spy for the index: which start letter do the cards on screen belong to? Re-read on every
+  // scroll frame (hit-test, one call) and whenever the list changes; only a CHANGE re-renders.
+  const alphaOn = alphaBounds !== null;
+  useEffect(() => {
+    const scroller = document.getElementById('main-content');
+    if (!scroller || !alphaOn || !alphaVisible || loading) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const list = listRef.current;
+      const toolbar = toolbarRef.current;
+      if (!list || !toolbar) return;
+      const letter = (cardAtTop(toolbar) ?? (list.firstElementChild as HTMLElement | null))?.dataset.letter ?? null;
+      setReadingLetter((prev) => (prev === letter ? prev : letter));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    update();
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [alphaOn, alphaVisible, loading, clients]);
+
+  // Glides the first card filed under `letter` (in the list's current order) to just below the sticky
+  // toolbar. The target is an absolute scroll offset, so it stays right while a glide is already moving.
   function jumpToLetter(letter: string) {
     const scroller = document.getElementById('main-content');
     const target = listRef.current?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
     if (!scroller || !target) return;
     const toolbarH = toolbarRef.current?.offsetHeight ?? 0;
     const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - toolbarH - 8;
-    scroller.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+    glideRef.current?.to(Math.max(0, top));
   }
 
   // The arrow above "A": all the way up, so the first card (and the count / sort row above it) shows.
   function jumpToTop() {
-    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'auto' });
+    glideRef.current?.to(0);
   }
 
   return (
@@ -251,7 +362,15 @@ export function ClientsMobileView({
           <p>Nie znaleziono klientów</p>
         </div>
       ) : (
-        <ul className={`client-cards${alphaBounds && alphaVisible ? ' has-alpha' : ''}`} ref={listRef}>
+        <ul
+          className={`client-cards${alphaBounds && alphaVisible ? ' has-alpha' : ''}`}
+          ref={listRef}
+          // An arrival animation (playArrive) is done: drop its class, so the card goes back to plain CSS.
+          onAnimationEnd={(e) => {
+            const el = e.target as HTMLElement;
+            if (el.classList.contains('client-card-wrap')) el.classList.remove(...ARRIVE_CLASSES);
+          }}
+        >
           {clients.map((client) => (
             <ClientCard key={client.id} client={client} showNotes={showNotes} canSchedule={canSchedule} linkedEmployeeId={linkedEmployeeId} />
           ))}
@@ -266,12 +385,18 @@ export function ClientsMobileView({
           onTop={jumpToTop}
           visible={alphaVisible}
           onHold={setIndexHeld}
+          activeLetter={readingLetter}
           top={alphaBounds.top}
           // It fills the viewport from the toolbar down: above the action bar while that shows, and all
-          // the way to the bottom edge (clear of the home-indicator inset) once it has slid away. Its
-          // bottom follows `scrollHidden`, NOT `ctaHidden`: pressing the index hides the bar, and the
-          // index must not resize under the finger that is choosing a letter on it.
-          bottom={canWrite && !scrollHidden ? `${alphaBounds.bottom + alphaBounds.cta}px` : `calc(${alphaBounds.bottom}px + env(safe-area-inset-bottom, 0px))`}
+          // the way to the bottom edge (clear of the home-indicator inset) once it has slid away. While a
+          // finger is on it the bottom edge follows `scrollHidden` (the state from BEFORE the press), not
+          // the bar: pressing hides the bar, and the index must not resize under the finger that is
+          // choosing a letter on it. Once the finger lifts it follows the bar again.
+          bottom={
+            canWrite && (indexHeld ? !scrollHidden : !ctaHidden)
+              ? `${alphaBounds.bottom + alphaBounds.cta}px`
+              : `calc(${alphaBounds.bottom}px + env(safe-area-inset-bottom, 0px))`
+          }
         />
       )}
 
