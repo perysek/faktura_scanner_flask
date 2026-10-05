@@ -2755,6 +2755,27 @@ def clients_duplicate_check():
         raise AppError('Wystapil blad serwera')
 
 
+# Column limits of the clients table (alembic ee7039bc78b2). The Polish label is
+# what ClientFormPage.tsx's assignFieldError() matches on to put the message
+# under the right input, so keep the field name in it.
+_CLIENT_FIELD_LIMITS = (
+    ('first_name', 'Imię', 100),
+    ('last_name', 'Nazwisko', 100),
+    ('phone', 'Telefon', 20),
+    ('email', 'Email', 255),
+)
+
+
+def _validate_client_lengths(client):
+    """Reject over-long values with a 400 before the INSERT/UPDATE. Postgres
+    would raise StringDataRightTruncation and the caller would only see a
+    generic 500."""
+    for attr, label, limit in _CLIENT_FIELD_LIMITS:
+        value = getattr(client, attr, None)
+        if value and len(value) > limit:
+            raise ValidationError(f'{label} może mieć maksymalnie {limit} znaków')
+
+
 @api_bp.route('/clients', methods=['POST'])
 @login_required
 @module_permission_required('clients')
@@ -2794,6 +2815,8 @@ def create_client_endpoint():
                 'success': False,
                 'error': 'Imię i nazwisko są wymagane'
             }), 400
+
+        _validate_client_lengths(client)
 
         # Save to database
         client_id = current_app.client_repo.create(client)
@@ -2859,6 +2882,8 @@ def update_client(client_id):
         client.notes = data.get('notes', client.notes)
         client.preferences = data.get('preferences', client.preferences)
         client.is_active = data.get('is_active', client.is_active)
+
+        _validate_client_lengths(client)
 
         # Update in database
         success = current_app.client_repo.update(client_id, client)
