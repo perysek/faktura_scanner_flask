@@ -124,26 +124,26 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
         const swipeDx = swipeState?.id === emp.id ? swipeState.dx : 0;
         const balance = balances[String(emp.id)];
         return (
-          <div key={emp.id} className="mob-emp-card-wrap">
+          <div key={emp.id} className="mob-emp-card-wrap mw-swipe">
             {swipeDx < 0 && (
-              <div className={['mob-emp-swipe-reveal', 'mob-emp-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-emp-swipe-reveal--armed' : ''].filter(Boolean).join(' ')} aria-hidden="true">
-                <div className="mob-emp-swipe-content mob-emp-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
+              <div className={`mw-swipe__reveal mw-swipe__reveal--info${swipeDx <= SWIPE_TRIGGER_PX ? ' is-armed' : ''}`} aria-hidden="true">
+                <div className="mw-swipe__content mw-swipe__content--right-edge mw-swipe__content--info" style={{ transform: `translateX(${swipeDx}px)` }}>
                   <Icon name="badge" />
-                  <span className="mob-emp-swipe-label">Zobacz</span>
+                  <span className="mw-swipe__label">Zobacz</span>
                 </div>
               </div>
             )}
             {canWrite && swipeDx > 0 && (
-              <div className={['mob-emp-swipe-reveal', 'mob-emp-swipe-reveal--right', swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-emp-swipe-reveal--armed' : ''].filter(Boolean).join(' ')} aria-hidden="true">
-                <div className="mob-emp-swipe-content mob-emp-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
-                  <span className="mob-emp-swipe-label">Edytuj</span>
+              <div className={`mw-swipe__reveal mw-swipe__reveal--success${swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? ' is-armed' : ''}`} aria-hidden="true">
+                <div className="mw-swipe__content mw-swipe__content--left-edge mw-swipe__content--success" style={{ transform: `translateX(${swipeDx}px)` }}>
+                  <span className="mw-swipe__label">Edytuj</span>
                   <Icon name="edit" />
                 </div>
               </div>
             )}
             <div
               className={[
-                'mob-emp-card',
+                'mob-emp-card mw-card',
                 !emp.is_active ? 'mob-emp-card--muted' : '',
                 swipeState?.id === emp.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-emp-card--swipe-armed' : '',
                 swipeState?.id === emp.id && swipeState.dx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-emp-card--swipe-armed-right' : '',
@@ -207,11 +207,11 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
 
       <Modal isOpen={sheetTarget !== null} onClose={() => setSheetTarget(null)} title={sheetTarget?.full_name ?? ''} variant="sheet">
         {sheetTarget && (
-          <ul className="action-sheet">
+          <ul className="mw-actionlist">
             <li>
               <button
                 type="button"
-                className="action-sheet-item"
+                className="mw-actionitem"
                 onClick={() => {
                   const id = sheetTarget.id;
                   setSheetTarget(null);
@@ -225,7 +225,7 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
               <li>
                 <button
                   type="button"
-                  className="action-sheet-item"
+                  className="mw-actionitem"
                   onClick={() => {
                     const id = sheetTarget.id;
                     setSheetTarget(null);

@@ -312,7 +312,7 @@ export function UserFormPage({ mode }: Props) {
             </>
           )}
 
-          <FormActions submitLabel={mode === 'create' ? 'Utwórz użytkownika' : 'Zapisz zmiany'} isLoading={saving || loading} cancelHref={backTo} />
+          <FormActions className="mw-bar mw-bar--incard" submitLabel={mode === 'create' ? 'Utwórz użytkownika' : 'Zapisz zmiany'} isLoading={saving || loading} cancelHref={backTo} />
         </FormCard>
       </form>
 
@@ -328,7 +328,7 @@ export function UserFormPage({ mode }: Props) {
               <TextField label="Nowe hasło" type="password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" helper="Minimum 8 znaków" />
               <TextField label="Potwierdź nowe hasło" type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} autoComplete="new-password" />
             </FormFieldset>
-            <FormActions submitLabel="Zmień hasło" isLoading={pwSaving} />
+            <FormActions className="mw-bar mw-bar--incard" submitLabel="Zmień hasło" isLoading={pwSaving} />
           </FormCard>
         </form>
       )}

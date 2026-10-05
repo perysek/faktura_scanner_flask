@@ -193,7 +193,19 @@ export function ClientDetailPage() {
     if (!ok) return;
     try {
       await clientsApi.delete(clientId);
-      toast.success(isActive ? 'Klient został dezaktywowany' : 'Klient został usunięty');
+      // The delete is soft on the backend (it answers with a restore_url), so offer an undo.
+      toast.success(isActive ? 'Klient został dezaktywowany' : 'Klient został usunięty', undefined, {
+        label: 'Cofnij',
+        onClick: async () => {
+          try {
+            await clientsApi.restore(clientId);
+            toast.success('Klient został przywrócony');
+            navigate(`/klienci/${clientId}`);
+          } catch (err) {
+            toast.error(err instanceof ApiError ? err.message : 'Nie udało się przywrócić klienta');
+          }
+        },
+      });
       navigate('/klienci');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Nie udało się połączyć z serwerem');
@@ -548,7 +560,7 @@ export function ClientDetailPage() {
               </Button>
             </div>
           )}
-          <div className={`client-mobile-bar${mobileBarHidden ? ' client-mobile-bar--hidden' : ''}`}>
+          <div className={`mw-bar${mobileBarHidden ? ' mw-bar--hidden' : ''}`}>
             <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
               Powrót
             </ButtonLink>

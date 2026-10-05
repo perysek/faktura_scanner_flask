@@ -131,6 +131,22 @@
      to target) — 'none' on all four themes is the conservative no-regression
      choice; see implementation-log.md D10. */
   --sidebar-logo-filter: none;
+
+  /* ── Phone layer (≤640px, mobile.css) — values lifted from the existing
+       ≤640px page rules, named so they stop being magic numbers. Constant
+       across every theme. ──────────────────────────────────────────────── */
+  --m-gutter: 1rem;          /* Klienci, Użytkownicy, Role, Klient */
+  --m-gutter-wide: 1.25rem;  /* Wizyty, Nieobecności, Pracownicy */
+  --m-touch: 2.75rem;        /* 44px — minimum target */
+  --m-touch-lg: 3rem;        /* 48px — CTA, inputs, bar buttons */
+  --m-row: 3.5rem;           /* 56px — sheet row, permission row */
+  --m-tabbar-h: 3.5rem;      /* bottom tab bar row, without the safe area */
+  --shadow-bar: 0 -4px 12px rgba(26, 20, 12, 0.06);
+  --z-toolbar: 10;
+  --z-bar: 15;
+  --z-tabbar: 30;
+  --z-drawer: 40;
+  --z-toast: 9997;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,255 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHONE LAYER (≤640px) — the shared pieces of the mobile design system
+   ("Mobile Design System", Claude Design handoff 2026-10-05).
+
+   Before this file every phone page re-declared the same bottom bar (×6),
+   action sheet rows (×4), swipe reveal (×3) and card surface (×6) under its
+   own page class. The values below are the majority values of those copies;
+   pages keep only what is genuinely theirs (card grid, page-specific bleed).
+
+   Tokens (--m-*, --shadow-bar, --z-*) live in tokens.css.
+
+   Page gutter contract: a phone page root sets `--page-gutter` (side
+   padding) and, when its bottom padding differs from 0.75rem,
+   `--page-bottom`. `.mw-bar` and `.mw-group` bleed by exactly those values,
+   so a page can never again scroll sideways because a bar's bleed and the
+   page padding disagree (see the note at the end of EmployeesListPage.css).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Card surface ─────────────────────────────────────────────────────────
+   Klient, Pracownik, Wizyta, Użytkownik, Rola and Nieobecność cards. The
+   page class keeps the inner layout; this owns the surface. */
+.mw-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Swipe reveal (Klienci, Pracownicy, Wizyty) ───────────────────────────
+   The wrap is the clipped shell and carries the shadow; the card slides
+   inside it over two reveal layers. Each reveal draws the same 1px border
+   and radius as the card, so the two read as one frame whichever part is
+   showing. Thresholds stay in each page's JS (trigger ±84px, max ±120px).
+   Tones map per page: Klienci/Pracownicy left→info, right→success;
+   Wizyty left→danger, right→info. */
+.mw-swipe { position: relative; overflow: hidden; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.mw-swipe > .mw-card { position: relative; z-index: 1; box-shadow: none; }
+.mw-swipe__reveal { position: absolute; inset: 0; z-index: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.mw-swipe__reveal--info { background: var(--color-info-bg); }
+.mw-swipe__reveal--info.is-armed { border-color: var(--color-info); }
+.mw-swipe__reveal--success { background: rgba(45, 106, 79, 0.08); }
+.mw-swipe__reveal--success.is-armed { border-color: var(--color-success); }
+.mw-swipe__reveal--danger { background: var(--color-status-cancelled-bg); }
+.mw-swipe__reveal--danger.is-armed { border-color: var(--color-status-cancelled); }
+/* The icon+label unit rests off-canvas past the edge the card slides away
+   from and gets the card's own translateX, so the icon stays glued to the
+   card's trailing edge from the first pixel of drag. */
+.mw-swipe__content { position: absolute; top: 0; bottom: 0; width: 7.5rem; display: flex; align-items: center; gap: 0.375rem; padding: 0 0.625rem; }
+.mw-swipe__content .icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.mw-swipe__content--right-edge { right: -7.5rem; }
+.mw-swipe__content--left-edge { left: -7.5rem; }
+.mw-swipe__content--info { color: var(--color-info-text-dark); }
+.mw-swipe__content--success { color: var(--color-success); }
+.mw-swipe__content--danger { color: var(--color-status-cancelled-dark); }
+/* Two lines, centred: the fixed width forces the break between the words. */
+.mw-swipe__label { width: 4.25rem; font-size: 0.9375rem; font-weight: 400; line-height: 1.15; text-align: center; white-space: normal; }
+
+/* ── Action sheet rows (Modal variant="sheet") ────────────────────────────
+   Klienci (sort), Pracownicy, Użytkownicy, Role, Zarządzanie nieobecnościami. */
+.mw-actionlist { list-style: none; margin: 0; padding: 0; }
+.mw-actionlist li + li { border-top: 1px solid var(--color-border-subtle); }
+.mw-actionitem {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: var(--m-row);
+  padding: 0 0.25rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--color-ink);
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.mw-actionitem .icon { font-size: 1.25rem; color: var(--color-ink-muted); }
+.mw-actionitem:active { background: var(--color-surface); }
+.mw-actionitem:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Two-line row: label + hint (Klienci sort sheet). */
+.mw-actionitem__text { flex: 1; display: flex; flex-direction: column; gap: 0.125rem; }
+.mw-actionitem__text small { font-size: 0.75rem; color: var(--color-ink-subtle); }
+.mw-actionitem.is-on .mw-actionitem__text > span { font-weight: 600; }
+.mw-actionitem.is-on .mw-actionitem__text small { color: var(--color-ink-muted); }
+.mw-actionitem .mw-actionitem__check { color: var(--color-ink); }
+/* Destructive rows sit last, set off by a full-strength rule. */
+.mw-actionlist .mw-danger { margin-top: 0.5rem; border-top: 1px solid var(--color-border); }
+.mw-actionlist .mw-danger:first-child { margin-top: 0; border-top: none; }
+.mw-actionlist .mw-danger .mw-actionitem,
+.mw-actionlist .mw-danger .mw-actionitem .icon { color: var(--color-error); }
+/* Why a row is disabled, or how the sheet works. */
+.mw-reason { font-size: 0.75rem; color: var(--color-ink-subtle); margin: 0.5rem 0.25rem 0; }
+
+@media (max-width: 640px) {
+  /* ── Sticky bottom bar ────────────────────────────────────────────────
+     `sticky`, not fixed: <main id="main-content"> is the only scroll
+     region, so the bar sits at its bottom edge — and above the tab bar
+     when there is one, with no page-level padding to compensate. */
+  .mw-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-bar);
+    display: flex;
+    gap: 0.75rem;
+    margin: 1rem calc(-1 * var(--page-gutter, var(--m-gutter))) calc(-1 * var(--page-bottom, 0.75rem));
+    padding: 0.75rem var(--page-gutter, var(--m-gutter)) calc(0.75rem + var(--m-safe-bottom, env(safe-area-inset-bottom, 0px)));
+    background: var(--color-surface-elevated);
+    border-top: 1px solid var(--color-border);
+    box-shadow: var(--shadow-bar);
+    transition: transform 0.25s ease;
+  }
+  .mw-bar > * { flex: 1; min-height: var(--m-touch-lg); font-size: 0.9375rem; }
+  /* Slides out while the page scrolls down, back on scroll up (useHideOnScroll). */
+  .mw-bar--hidden { transform: translateY(calc(100% + var(--m-safe-bottom, env(safe-area-inset-bottom, 0px)))); }
+  /* One full-width action per row: long nowrap `.refined-btn-*` labels can't overflow an even split. */
+  .mw-bar--stack { flex-direction: column; gap: 0.5rem; }
+  .mw-bar--stack > * { width: 100%; }
+  /* Inside a `.form-card` (Klient, Użytkownik, Rola forms): bleeds to the card's edge, not the page's. */
+  .mw-bar--incard { margin: 1.5rem -1.125rem -1rem; }
+  /* Detail pages: content-sized buttons that wrap as a fallback. */
+  .mw-bar--wrap { flex-wrap: wrap; gap: 0.5rem; }
+  .mw-bar--wrap > * { flex: 1 1 auto; min-width: 0; min-height: var(--m-touch); justify-content: center; }
+
+  /* ── P4 · Sticky group header (Klienci, sorted by name) ───────────────
+     Tells you which letter you're reading once the A–Z index has dropped
+     you there. Sticks under the page's own sticky toolbar (`--group-top`). */
+  .mw-group {
+    position: sticky;
+    top: var(--group-top, 0px);
+    z-index: 5;
+    margin: 0 calc(-1 * var(--page-gutter, var(--m-gutter)));
+    padding: 0.375rem var(--page-gutter, var(--m-gutter));
+    list-style: none;
+    background: var(--color-surface-warm);
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.5;
+    color: var(--color-accent-deep);
+  }
+
+  /* ── P2 · Bottom tab bar ──────────────────────────────────────────────
+     In flow under <main> (AppShell), so every sticky bar lands above it.
+     The tab bar owns the bottom safe area; pages under it stop adding
+     their own (--m-safe-bottom). Active = the drawer's idiom: ink label +
+     a 2px accent rail. */
+  .mw-tabbar {
+    position: relative;
+    z-index: var(--z-tabbar);
+    flex-shrink: 0;
+    display: grid;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--color-surface-elevated);
+    border-top: 1px solid var(--color-border);
+    box-shadow: var(--shadow-bar);
+  }
+  .mw-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: var(--m-tabbar-h);
+    padding: 0 0.25rem;
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mw-tab svg { width: 1.25rem; height: 1.25rem; }
+  .mw-tab::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 25%;
+    right: 25%;
+    height: 2px;
+    background: transparent;
+  }
+  .mw-tab.is-on { font-weight: 600; color: var(--color-ink); }
+  .mw-tab.is-on::before { background: var(--color-accent); }
+  .mw-tab:active { background: var(--color-surface); }
+  .mw-tab__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-shell--tabbar { --m-safe-bottom: 0px; }
+  /* Viewport-fixed floating buttons clear the tab bar. */
+  .app-shell--tabbar .scroll-top-btn { bottom: calc(1.25rem + var(--m-tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  /* The toast stack lives outside the shell (ToastProvider), so it learns about the tab bar here. */
+  :root:has(.mw-tabbar) { --m-tabbar-offset: var(--m-tabbar-h); }
+
+  /* ── P1 · Docked snackbar ─────────────────────────────────────────────
+     The toast stack was bottom-right at 1rem, so on any page with a sticky
+     bar it landed on the bar's buttons. On phones it docks full-width one
+     bar-height above the bottom (and above the tab bar), ink on light, with
+     a 44px action for undo. Gold on ink is 7.2:1 in the default theme. */
+  .toast-stack {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(var(--m-touch-lg) + 1.5rem + 0.5rem + var(--m-tabbar-offset, 0px) + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
+  }
+  .toast-success, .toast-error, .toast-warning, .toast-info {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    padding: 0.75rem 0.5rem 0.75rem 1rem;
+    color: var(--color-on-ink);
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+  }
+  .toast-stack .toast-message { color: var(--color-on-ink); }
+  /* Status hue survives as the icon, lifted so it reads on ink. */
+  .toast-success .icon { color: color-mix(in srgb, var(--color-success) 45%, white); }
+  .toast-error .icon { color: color-mix(in srgb, var(--color-error) 40%, white); }
+  .toast-warning .icon { color: color-mix(in srgb, var(--color-warning) 45%, white); }
+  .toast-info .icon { color: color-mix(in srgb, var(--color-info) 40%, white); }
+  .toast-stack .toast-close { align-items: center; justify-content: center; min-width: var(--m-touch); min-height: var(--m-touch); margin: -0.5rem 0; color: var(--color-on-ink); opacity: 0.7; }
+}
+
+@media (min-width: 641px) {
+  .mw-tabbar { display: none; }
+}
+
+/* The undo action itself is visible at every width; only its colour changes on the phone's ink snackbar. */
+.toast-action {
+  flex-shrink: 0;
+  min-height: var(--m-touch);
+  padding: 0 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent-deep);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.toast-action:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 640px) {
+  .toast-action { color: var(--color-accent); margin: -0.5rem 0; }
+}

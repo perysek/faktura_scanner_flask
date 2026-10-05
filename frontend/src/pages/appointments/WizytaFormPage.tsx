@@ -558,7 +558,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
           </FormSection>
 
           {mode === 'edit' && (
-            <div className="appt-form-actions-wrap">
+            <div className="appt-form-actions-wrap mw-bar">
               <FormActions submitLabel="Zapisz zmiany" isLoading={isSubmitting} cancelHref={backUrl()} />
             </div>
           )}
@@ -604,7 +604,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
       </div>
 
       {isMobile && mode === 'create' && (
-        <div className="appt-form-bar">
+        <div className="appt-form-bar mw-bar mw-bar--stack">
           <div className="appt-form-bar-total">
             <span>{createTotals.duration ? `${createTotals.duration} min` : '—'}</span>
             <strong>{formatPLN(createTotals.price)}</strong>

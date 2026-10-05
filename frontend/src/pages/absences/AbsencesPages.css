@@ -64,16 +64,7 @@
   color: #c2410c;
 }
 
-.ab-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-radius: 1px;
-}
+/* `.ab-status` shares the `.status-badge` base (components.css); only the absence colours live here. */
 .ab-status--pending { background: rgba(251, 191, 36, 0.12); color: #92400e; }
 .ab-status--approved { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
 .ab-status--rejected { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
@@ -225,13 +216,14 @@
    creates no scroll container, so the sticky bar still anchors to <main>. */
 @media (max-width: 640px) {
   .refined-page.ab-phone-page {
-    --page-gutter: 1.25rem;
+    --page-gutter: var(--m-gutter-wide);
+    --page-bottom: var(--page-gutter);
     padding-left: var(--page-gutter);
     padding-right: var(--page-gutter);
-    padding-bottom: var(--page-gutter);
+    padding-bottom: var(--page-bottom);
     overflow-x: clip;
     /* Fill the scroll area so the sticky action bar can sit at the bottom even
-       when the list is short (margin-top: auto on .ab-mobile-cta). A sticky bar
+       when the list is short (margin-top: auto on its .mw-bar). A sticky bar
        only pins once content overflows; with two cards it floated mid-screen. */
     display: flex;
     flex-direction: column;
@@ -273,10 +265,6 @@
     flex-direction: column;
     gap: 0.25rem;
     padding: 0.875rem;
-    background: var(--color-surface-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
   }
   .ab-phone-page .ab-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
   .ab-phone-page .ab-card-title { min-width: 0; font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
@@ -310,22 +298,10 @@
   }
   .ab-phone-page .ab-card-cancel:active { background: rgba(194, 65, 12, 0.08); }
 
-  /* Sticky bottom bar — same shape as .employees-mobile-cta. */
-  .ab-phone-page .ab-mobile-cta {
-    position: sticky;
-    bottom: 0;
-    z-index: 15;
-    margin: auto calc(-1 * var(--page-gutter)) calc(-1 * var(--page-gutter));
-    padding: 0.75rem var(--page-gutter) calc(0.75rem + env(safe-area-inset-bottom, 0px));
-    background: var(--color-surface-elevated);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
-    transition: transform 0.25s ease;
-  }
-  /* The bar's own margin-top is now `auto`, so the gap above it lives on the list. */
+  /* Sticky bottom bar: the shared `.mw-bar` (mobile.css), pushed to the bottom of a short list. */
+  .ab-phone-page .mw-bar { margin-top: auto; }
+  /* The bar's own margin-top is `auto`, so the gap above it lives on the list. */
   .ab-phone-page .ab-cards { margin-bottom: 1rem; }
-  .ab-phone-page .ab-mobile-cta > * { width: 100%; min-height: 3rem; font-size: 0.9375rem; }
-  .ab-phone-page .ab-mobile-cta--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
 
   /* Request form inside the sheet: date/time pairs share a row, the layout
      spacer that only exists to hold the desktop grid is dropped, submit is a
@@ -438,30 +414,7 @@
   .ab-phone-page .ab-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }
   .ab-phone-page .ab-card-actions > * { width: 100%; min-height: 3rem; font-size: 0.9375rem; }
 
-  /* Bottom action sheet (⋯) — same look as the Users/Employees sheets, kept
-     local to this page family (each module owns one stylesheet). */
-  .ab-phone-page .ab-action-sheet { list-style: none; margin: 0; padding: 0; }
-  .ab-phone-page .ab-action-sheet li + li { border-top: 1px solid var(--color-border-subtle); }
-  .ab-phone-page .ab-action-sheet-item {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    width: 100%;
-    min-height: 3.5rem;
-    padding: 0 0.25rem;
-    font-family: var(--font-body);
-    font-size: 1rem;
-    color: var(--color-ink);
-    text-align: left;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-  .ab-phone-page .ab-action-sheet-item .icon { font-size: 1.25rem; color: var(--color-ink-muted); }
-  .ab-phone-page .ab-action-sheet-item:active { background: var(--color-surface); }
-  .ab-phone-page .ab-action-sheet-danger .ab-action-sheet-item,
-  .ab-phone-page .ab-action-sheet-danger .ab-action-sheet-item .icon { color: var(--color-error); }
+  /* Bottom action sheet (⋯): the shared `.mw-actionlist` rows (mobile.css). */
 
   /* Reject-reason sheet: buttons stack full width with the deciding action LAST,
      i.e. at the bottom in the thumb zone (column-reverse flips the DOM order).

@@ -139,7 +139,7 @@ export function RolesListPage() {
 
           <ul className="role-cards rbac-mobile-only">
             {roles.map((r) => (
-              <li key={r.id} className="role-card">
+              <li key={r.id} className="role-card mw-card">
                 <Link to={`/poziomy-dostepu/${r.id}/edytuj`} className="role-card-main">
                   <span className="role-card-head">
                     <span className="role-card-name">{r.display_name}</span>
@@ -159,7 +159,7 @@ export function RolesListPage() {
         </>
       )}
 
-      <div className="rbac-mobile-cta rbac-mobile-only">
+      <div className="mw-bar rbac-mobile-only">
         <ButtonLink to="/poziomy-dostepu/nowa" variant="primary" icon="add">
           Nowa rola
         </ButtonLink>
@@ -167,18 +167,18 @@ export function RolesListPage() {
 
       <Modal isOpen={sheetRole !== null} onClose={() => setSheetRole(null)} title={sheetRole?.display_name ?? ''} variant="sheet">
         {sheetRole && (
-          <ul className="action-sheet">
+          <ul className="mw-actionlist">
             <li>
-              <Link className="action-sheet-item" to={`/poziomy-dostepu/${sheetRole.id}/edytuj`}>
+              <Link className="mw-actionitem" to={`/poziomy-dostepu/${sheetRole.id}/edytuj`}>
                 <Icon name="edit" /> Edytuj uprawnienia
               </Link>
             </li>
             {!sheetRole.is_protected && (
-              <li className="action-sheet-danger">
-                <button type="button" className="action-sheet-item" disabled={!!sheetBlocker} onClick={() => handleDelete(sheetRole)}>
+              <li className="mw-danger">
+                <button type="button" className="mw-actionitem" disabled={!!sheetBlocker} onClick={() => handleDelete(sheetRole)}>
                   <Icon name="delete" /> Usuń rolę
                 </button>
-                {sheetBlocker && <p className="action-sheet-reason">{sheetBlocker}</p>}
+                {sheetBlocker && <p className="mw-reason rbac-sheet-reason">{sheetBlocker}</p>}
               </li>
             )}
           </ul>

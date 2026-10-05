@@ -1,5 +1,5 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent, TouchEvent } from 'react';
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, MouseEvent, TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, ButtonLink } from '../../components/ui/Button';
@@ -44,11 +44,12 @@ const SWIPE_MAX_PX = 120;
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** The card at the top of the list's visible area (just under the sticky toolbar), found by hit-testing
- * a point there — one cheap call however long the list is. The second probe clears the gap between cards. */
+ * a point there — one cheap call however long the list is. The later probes clear the gap between cards
+ * and, in a name-sorted list, the sticky letter header that sits on top of the first visible card. */
 function cardAtTop(toolbar: HTMLElement): HTMLElement | null {
   const x = Math.round(window.innerWidth / 2);
   const bottom = toolbar.getBoundingClientRect().bottom;
-  for (const dy of [14, 34]) {
+  for (const dy of [14, 34, 54]) {
     const card = document.elementFromPoint(x, bottom + dy)?.closest<HTMLElement>('[data-letter]');
     if (card) return card;
   }
@@ -70,11 +71,15 @@ function playArrive(list: HTMLElement, toolbar: HTMLElement, travelled: number) 
   list.querySelectorAll('.is-arriving-down, .is-arriving-up').forEach((el) => el.classList.remove(...ARRIVE_CLASSES));
   void list.offsetWidth; // flush, so a repeat arrival restarts the animation instead of being swallowed
   const cls = travelled > 0 ? 'is-arriving-down' : 'is-arriving-up';
-  let card = cardAtTop(toolbar) ?? (list.firstElementChild as HTMLElement | null);
-  for (let i = 0; i < ARRIVE_MAX && card; i++) {
+  let card = cardAtTop(toolbar) ?? list.querySelector<HTMLElement>('[data-letter]');
+  for (let i = 0; i < ARRIVE_MAX && card; ) {
     if (card.getBoundingClientRect().top >= window.innerHeight) break;
-    card.style.setProperty('--arrive-i', String(i));
-    card.classList.add(cls);
+    // Letter headers (`.mw-group`) are sticky — they don't travel, so they don't arrive either.
+    if (card.dataset.letter) {
+      card.style.setProperty('--arrive-i', String(i));
+      card.classList.add(cls);
+      i++;
+    }
     card = card.nextElementSibling as HTMLElement | null;
   }
 }
@@ -157,7 +162,18 @@ export function ClientsMobileView({
   // A jump-to-letter index only makes sense in an alphabetical list, so it slides in for "name A→Z"
   // and out for every other order. It also steps aside while the search box has focus (the keyboard
   // is up and the index is viewport-fixed). The cards use the same flag to give up / reclaim its width.
-  const alphaVisible = sort.field === 'full_name' && sort.dir === 'asc' && !searchFocused;
+  const nameAsc = sort.field === 'full_name' && sort.dir === 'asc';
+  const alphaVisible = nameAsc && !searchFocused;
+  // Sticky letter headers (P4) sit right under the sticky toolbar, so they need its live height.
+  const [toolbarH, setToolbarH] = useState(0);
+  useLayoutEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+    const observer = new ResizeObserver(() => setToolbarH(toolbar.offsetHeight));
+    observer.observe(toolbar);
+    setToolbarH(toolbar.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
 
   // The shell's top bar has a slot for page-level actions (the visits page parks
   // "Rozlicz przeszłe wizyty" there) — the bulk preferences refresh lives in it, since
@@ -260,7 +276,7 @@ export function ClientsMobileView({
       const list = listRef.current;
       const toolbar = toolbarRef.current;
       if (!list || !toolbar) return;
-      const letter = (cardAtTop(toolbar) ?? (list.firstElementChild as HTMLElement | null))?.dataset.letter ?? null;
+      const letter = (cardAtTop(toolbar) ?? list.querySelector<HTMLElement>('[data-letter]'))?.dataset.letter ?? null;
       setReadingLetter((prev) => (prev === letter ? prev : letter));
     };
     const onScroll = () => {
@@ -275,10 +291,12 @@ export function ClientsMobileView({
   }, [alphaOn, alphaVisible, loading, clients]);
 
   // Glides the first card filed under `letter` (in the list's current order) to just below the sticky
-  // toolbar. The target is an absolute scroll offset, so it stays right while a glide is already moving.
+  // toolbar — or, in a name-sorted list, that letter's header, so the header doesn't land on the card.
+  // The target is an absolute scroll offset, so it stays right while a glide is already moving.
   function jumpToLetter(letter: string) {
     const scroller = document.getElementById('main-content');
-    const target = listRef.current?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
+    const list = listRef.current;
+    const target = list?.querySelector<HTMLElement>(`[data-group="${letter}"]`) ?? list?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
     if (!scroller || !target) return;
     const toolbarH = toolbarRef.current?.offsetHeight ?? 0;
     const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - toolbarH - 8;
@@ -340,7 +358,7 @@ export function ClientsMobileView({
       {loading ? (
         <ul className="client-cards" aria-label="Ładowanie klientów">
           {Array.from({ length: 6 }).map((_, i) => (
-            <li key={i} className="client-card client-card--skeleton">
+            <li key={i} className="client-card client-card--skeleton mw-card">
               <div className="skeleton" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div className="skeleton" style={{ height: '0.9375rem', width: '55%', marginBottom: '0.5rem' }} />
@@ -365,15 +383,27 @@ export function ClientsMobileView({
         <ul
           className={`client-cards${alphaBounds && alphaVisible ? ' has-alpha' : ''}`}
           ref={listRef}
+          style={{ '--group-top': `${toolbarH}px` } as CSSProperties}
           // An arrival animation (playArrive) is done: drop its class, so the card goes back to plain CSS.
           onAnimationEnd={(e) => {
             const el = e.target as HTMLElement;
             if (el.classList.contains('client-card-wrap')) el.classList.remove(...ARRIVE_CLASSES);
           }}
         >
-          {clients.map((client) => (
-            <ClientCard key={client.id} client={client} showNotes={showNotes} canSchedule={canSchedule} linkedEmployeeId={linkedEmployeeId} />
-          ))}
+          {clients.map((client, i) => {
+            const letter = clientLetter(client);
+            const card = <ClientCard key={client.id} client={client} showNotes={showNotes} canSchedule={canSchedule} linkedEmployeeId={linkedEmployeeId} />;
+            // P4 · a sticky letter header opens each letter's run, only while the list is sorted A→Z.
+            if (!nameAsc || (i > 0 && clientLetter(clients[i - 1]) === letter)) return card;
+            return (
+              <Fragment key={client.id}>
+                <li className="mw-group" data-group={letter} aria-hidden="true">
+                  {letter}
+                </li>
+                {card}
+              </Fragment>
+            );
+          })}
         </ul>
       )}
 
@@ -401,7 +431,7 @@ export function ClientsMobileView({
       )}
 
       {canWrite && (
-        <div className={`clients-mobile-cta${ctaHidden ? ' clients-mobile-cta--hidden' : ''}`} ref={ctaRef}>
+        <div className={`mw-bar${ctaHidden ? ' mw-bar--hidden' : ''}`} ref={ctaRef}>
           <ButtonLink to="/klienci/nowy" variant="primary" icon="add">
             Dodaj klienta
           </ButtonLink>
@@ -426,23 +456,23 @@ export function ClientsMobileView({
         )}
 
       <Modal isOpen={sortOpen} onClose={() => setSortOpen(false)} title="Sortuj klientów" variant="sheet">
-        <ul className="action-sheet">
+        <ul className="mw-actionlist">
           {SORT_OPTIONS.map((opt) => {
             const active = sort.field === opt.field;
             return (
               <li key={opt.field}>
-                <button type="button" className={`action-sheet-item${active ? ' is-active' : ''}`} aria-pressed={active} onClick={() => handleSortPick(opt.field)}>
-                  <span className="sort-item-text">
-                    <span className="sort-item-label">{opt.label}</span>
-                    <span className="sort-item-hint">{opt.hints[active ? sort.dir : DEFAULT_SORT_DIR[opt.field]]}</span>
+                <button type="button" className={`mw-actionitem${active ? ' is-on' : ''}`} aria-pressed={active} onClick={() => handleSortPick(opt.field)}>
+                  <span className="mw-actionitem__text">
+                    <span>{opt.label}</span>
+                    <small>{opt.hints[active ? sort.dir : DEFAULT_SORT_DIR[opt.field]]}</small>
                   </span>
-                  {active && <Icon name={sort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} className="sort-item-check" />}
+                  {active && <Icon name={sort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} className="mw-actionitem__check" />}
                 </button>
               </li>
             );
           })}
         </ul>
-        <p className="action-sheet-reason">Dotknij aktywnego pola ponownie, aby odwrócić kolejność.</p>
+        <p className="mw-reason">Dotknij aktywnego pola ponownie, aby odwrócić kolejność.</p>
       </Modal>
     </div>
   );
@@ -523,25 +553,25 @@ const ClientCard = memo(function ClientCard({ client, showNotes, canSchedule, li
   const armedRight = swipe.dx >= SWIPE_TRIGGER_PX;
 
   return (
-    <li className="client-card-wrap" data-letter={clientLetter(client)}>
+    <li className="client-card-wrap mw-swipe" data-letter={clientLetter(client)}>
       {swipe.dx < 0 && (
-        <div className={`client-swipe-reveal client-swipe-reveal--left${armedLeft ? ' is-armed' : ''}`} aria-hidden="true">
-          <div className="client-swipe-content client-swipe-content--left" style={{ transform: `translateX(${swipe.dx}px)` }}>
+        <div className={`mw-swipe__reveal mw-swipe__reveal--info${armedLeft ? ' is-armed' : ''}`} aria-hidden="true">
+          <div className="mw-swipe__content mw-swipe__content--right-edge mw-swipe__content--info" style={{ transform: `translateX(${swipe.dx}px)` }}>
             <Icon name="visibility" />
-            <span className="client-swipe-label">Zobacz</span>
+            <span className="mw-swipe__label">Zobacz</span>
           </div>
         </div>
       )}
       {canSchedule && swipe.dx > 0 && (
-        <div className={`client-swipe-reveal client-swipe-reveal--right${armedRight ? ' is-armed' : ''}`} aria-hidden="true">
-          <div className="client-swipe-content client-swipe-content--right" style={{ transform: `translateX(${swipe.dx}px)` }}>
-            <span className="client-swipe-label">Nowa wizyta</span>
+        <div className={`mw-swipe__reveal mw-swipe__reveal--success${armedRight ? ' is-armed' : ''}`} aria-hidden="true">
+          <div className="mw-swipe__content mw-swipe__content--left-edge mw-swipe__content--success" style={{ transform: `translateX(${swipe.dx}px)` }}>
+            <span className="mw-swipe__label">Nowa wizyta</span>
             <Icon name="edit_calendar" />
           </div>
         </div>
       )}
       <div
-        className={`client-card${client.phone ? '' : ' client-card--no-phone'}${armedLeft ? ' is-armed-left' : ''}${armedRight ? ' is-armed-right' : ''}`}
+        className={`client-card mw-card${client.phone ? '' : ' client-card--no-phone'}${armedLeft ? ' is-armed-left' : ''}${armedRight ? ' is-armed-right' : ''}`}
         style={swipe.dx !== 0 ? { transform: `translateX(${swipe.dx}px)`, transition: 'none' } : undefined}
         onClick={() => {
           if (swipe.consumeSuppressedClick()) return;

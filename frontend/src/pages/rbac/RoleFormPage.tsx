@@ -135,7 +135,7 @@ export function RoleFormPage({ mode }: Props) {
             </div>
           </FormFieldset>
 
-          <FormActions submitLabel={mode === 'create' ? 'Utwórz rolę' : 'Zapisz uprawnienia'} isLoading={saving || loading} cancelHref="/poziomy-dostepu" />
+          <FormActions className="mw-bar mw-bar--incard" submitLabel={mode === 'create' ? 'Utwórz rolę' : 'Zapisz uprawnienia'} isLoading={saving || loading} cancelHref="/poziomy-dostepu" />
         </FormCard>
       </form>
     </div>

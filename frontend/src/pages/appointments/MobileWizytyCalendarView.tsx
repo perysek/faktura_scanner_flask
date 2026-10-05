@@ -20,7 +20,7 @@ import type { AppointmentListItem, EmployeeOption } from '../../types/appointmen
  * horizontal movement must also clearly dominate vertical (1.5x) so an
  * ordinary vertical scroll gesture starting on a card never gets mistaken
  * for a swipe. Widened from the original -64/-96 so the icon+label reveal
- * (.mob-appt-swipe-content, 7.5rem/120px wide) has room to clear the card
+ * (.mw-swipe__content, 7.5rem/120px wide) has room to clear the card
  * before arming — the label CANNOT be readable at a max reveal narrower
  * than its own box, that's a hard clip, not a style knob. Narrower than an
  * earlier version of this (-112/-160): wrapping the label to 2 centered
@@ -621,7 +621,7 @@ export function MobileWizytyCalendarView({
     return (
       <div
         key={appt.id}
-        className="mob-appt-card-wrap"
+        className="mob-appt-card-wrap mw-swipe"
         ref={(el) => {
           if (el) cardRefs.current.set(appt.id, el);
           else cardRefs.current.delete(appt.id);
@@ -629,7 +629,7 @@ export function MobileWizytyCalendarView({
       >
         {isReschedulable(appt.status) && swipeDx < 0 && (
           <div
-            className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--left', swipeDx <= SWIPE_TRIGGER_PX ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
+            className={`mw-swipe__reveal mw-swipe__reveal--danger${swipeDx <= SWIPE_TRIGGER_PX ? ' is-armed' : ''}`}
             aria-hidden="true"
           >
             {/* The whole icon+label unit translates by the SAME dx as
@@ -641,26 +641,26 @@ export function MobileWizytyCalendarView({
                 fade (removed) — a fast real-world flick covers the
                 whole drag range in under 150ms, so any drag-progress
                 -based fade was already over before it was perceptible. */}
-            <div className="mob-appt-swipe-content mob-appt-swipe-content--left" style={{ transform: `translateX(${swipeDx}px)` }}>
+            <div className="mw-swipe__content mw-swipe__content--right-edge mw-swipe__content--danger" style={{ transform: `translateX(${swipeDx}px)` }}>
               <Icon name="calendar_month" />
-              <span className="mob-appt-swipe-label">Zmień termin</span>
+              <span className="mw-swipe__label">Zmień termin</span>
             </div>
           </div>
         )}
         {swipeDx > 0 && (
           <div
-            className={['mob-appt-swipe-reveal', 'mob-appt-swipe-reveal--right', swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-swipe-reveal--armed' : ''].filter(Boolean).join(' ')}
+            className={`mw-swipe__reveal mw-swipe__reveal--info${swipeDx >= SWIPE_TRIGGER_PX_RIGHT ? ' is-armed' : ''}`}
             aria-hidden="true"
           >
-            <div className="mob-appt-swipe-content mob-appt-swipe-content--right" style={{ transform: `translateX(${swipeDx}px)` }}>
-              <span className="mob-appt-swipe-label">Zobacz więcej</span>
+            <div className="mw-swipe__content mw-swipe__content--left-edge mw-swipe__content--info" style={{ transform: `translateX(${swipeDx}px)` }}>
+              <span className="mw-swipe__label">Zobacz więcej</span>
               <Icon name="chevron_right" />
             </div>
           </div>
         )}
         <div
           className={[
-            'mob-appt-card',
+            'mob-appt-card mw-card',
             appt.status === 'cancelled' || appt.status === 'no_show' || appt.status === 'rescheduled' ? 'mob-appt-card--muted' : '',
             swipeState?.id === appt.id && swipeState.dx <= SWIPE_TRIGGER_PX ? 'mob-appt-card--swipe-armed' : '',
             swipeState?.id === appt.id && swipeState.dx >= SWIPE_TRIGGER_PX_RIGHT ? 'mob-appt-card--swipe-armed-right' : '',

@@ -232,6 +232,9 @@ export interface FormActionsProps {
    * line, unaligned with — and with no gap from — the row above: exactly
    * what happened here before this prop existed). */
   middleActions?: ReactNode;
+  /** Extra classes on the row — e.g. `mw-bar mw-bar--incard` to pin it to
+   * the thumb zone on phones (mobile.css). */
+  className?: string;
 }
 
 /** Submit + optional cancel button row. Submit shows a "Zapisywanie…"-style
@@ -248,12 +251,13 @@ export function FormActions({
   onCancel,
   cancelLabel = 'Anuluj',
   middleActions,
+  className,
 }: FormActionsProps) {
   const navigate = useNavigate();
   const handleCancel = cancelHref ? () => navigate(cancelHref) : onCancel;
   useEscapeAction(handleCancel ?? (() => {}), !!handleCancel);
   return (
-    <div className="form-actions">
+    <div className={`form-actions${className ? ` ${className}` : ''}`}>
       <Button type="submit" variant="primary" icon="save" isLoading={isLoading} loadingText={savingLabel}>
         {submitLabel}
       </Button>

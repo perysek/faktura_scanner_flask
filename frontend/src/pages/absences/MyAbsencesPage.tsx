@@ -311,7 +311,7 @@ export function MyAbsencesPage() {
                 const status = STATUS_LABEL[a.status];
                 const canCancel = a.status === 'pending' || a.status === 'approved';
                 return (
-                  <li key={a.id} className="ab-card">
+                  <li key={a.id} className="ab-card mw-card">
                     <div className="ab-card-top">
                       <span className="ab-card-title">{a.category_name}</span>
                       <span className={`ab-status ${status.className}`}>{status.label}</span>
@@ -332,7 +332,7 @@ export function MyAbsencesPage() {
           )}
 
           {!loading && !cannotFile && (
-            <div className={`ab-mobile-cta${ctaHidden ? ' ab-mobile-cta--hidden' : ''}`}>
+            <div className={`mw-bar${ctaHidden ? ' mw-bar--hidden' : ''}`}>
               <Button variant="primary" icon="add" onClick={() => setSheetOpen(true)}>
                 Nowy wniosek
               </Button>

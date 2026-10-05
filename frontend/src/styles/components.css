@@ -800,7 +800,11 @@
   border-radius: var(--radius-sm);
 }
 
-.status-badge {
+/* One record-status badge for every page: employment status, visit status
+   (below) and absence status (`.ab-status--*`, AbsencesPages.css) share these
+   metrics. Account/role attributes are tags, not badges (`.rbac-badge`). */
+.status-badge,
+.ab-status {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.625rem;
@@ -814,6 +818,13 @@
 .status-badge.on-leave { background: var(--color-orange-bg); color: var(--color-orange); }
 .status-badge.terminated { background: rgba(155, 44, 44, 0.08); color: var(--color-error); }
 .status-badge.inactive { background: rgba(107, 114, 128, 0.08); color: var(--color-ink-muted); }
+.status-badge.scheduled { background: rgba(59,130,246,0.1); color: #1d4ed8; }
+.status-badge.confirmed { background: rgba(16,185,129,0.1); color: #047857; }
+.status-badge.in_progress { background: rgba(245,158,11,0.1); color: #92400e; }
+.status-badge.completed { background: rgba(45,106,79,0.08); color: #2d6a4f; }
+.status-badge.cancelled { background: rgba(239,68,68,0.08); color: #991b1b; }
+.status-badge.no_show { background: rgba(107,114,128,0.1); color: #374151; }
+.status-badge.rescheduled { background: var(--color-status-rescheduled-bg); color: var(--color-status-rescheduled); }
 
 .action-icons {
   display: flex;
@@ -1042,6 +1053,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .toast-error .icon { color: var(--color-error); }
 .toast-warning .icon { color: var(--color-warning); }
 .toast-info .icon { color: var(--color-info); }
+.toast-message { margin: 0; font-size: 0.875rem; font-weight: 500; color: var(--color-ink); }
 .toast-close {
   color: var(--color-ink-subtle);
   background: transparent;

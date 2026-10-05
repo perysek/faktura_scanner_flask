@@ -215,7 +215,7 @@ export function UsersListPage() {
                 </>
               );
               return (
-                <li key={u.id} className="user-card">
+                <li key={u.id} className="user-card mw-card">
                   {manageable ? (
                     <Link to={`/uzytkownicy/${u.id}`} className="user-card-main">
                       {body}
@@ -235,7 +235,7 @@ export function UsersListPage() {
         </>
       )}
 
-      <div className="rbac-mobile-cta rbac-mobile-only">
+      <div className="mw-bar rbac-mobile-only">
         <ButtonLink to="/uzytkownicy/nowy" variant="primary" icon="add">
           Nowy użytkownik
         </ButtonLink>
@@ -243,34 +243,34 @@ export function UsersListPage() {
 
       <Modal isOpen={sheet !== null} onClose={() => setSheetTarget(null)} title={sheet?.full_name ?? ''} variant="sheet">
         {sheet && (
-          <ul className="action-sheet">
+          <ul className="mw-actionlist">
             <li>
-              <Link className="action-sheet-item" to={`/uzytkownicy/${sheet.id}`}>
+              <Link className="mw-actionitem" to={`/uzytkownicy/${sheet.id}`}>
                 <Icon name="visibility" /> Zobacz szczegóły
               </Link>
             </li>
             <li>
-              <Link className="action-sheet-item" to={`/uzytkownicy/${sheet.id}/edytuj`}>
+              <Link className="mw-actionitem" to={`/uzytkownicy/${sheet.id}/edytuj`}>
                 <Icon name="edit" /> Edytuj dane
               </Link>
             </li>
             {canResetPassword(actor, sheet) && (
               <li>
-                <button type="button" className="action-sheet-item" onClick={() => openReset(sheet)}>
+                <button type="button" className="mw-actionitem" onClick={() => openReset(sheet)}>
                   <Icon name="refresh" /> Resetuj hasło
                 </button>
               </li>
             )}
             {canRemoveUser(actor, sheet) && (
               <li>
-                <button type="button" className="action-sheet-item" onClick={() => handleToggleActive(sheet)}>
+                <button type="button" className="mw-actionitem" onClick={() => handleToggleActive(sheet)}>
                   <Icon name={sheet.is_active ? 'person_off' : 'person'} /> {sheet.is_active ? 'Dezaktywuj konto' : 'Aktywuj konto'}
                 </button>
               </li>
             )}
             {canRemoveUser(actor, sheet) && (
-              <li className="action-sheet-danger">
-                <button type="button" className="action-sheet-item" onClick={() => handleDelete(sheet)}>
+              <li className="mw-danger">
+                <button type="button" className="mw-actionitem" onClick={() => handleDelete(sheet)}>
                   <Icon name="delete" /> Usuń konto
                 </button>
               </li>

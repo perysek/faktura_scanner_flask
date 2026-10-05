@@ -144,7 +144,7 @@
 @media (max-width: 640px) {
   /* Two-class selector: `.refined-page` is declared in two stylesheets with different
      padding, so a single class would be at the mercy of bundle order. */
-  .refined-page.clients-page--mobile { padding: 0.75rem 1rem; overflow-x: clip; }
+  .refined-page.clients-page--mobile { --page-gutter: var(--m-gutter); padding: 0.75rem var(--page-gutter); overflow-x: clip; }
 
   .clients-page .clients-toolbar {
     position: sticky;
@@ -222,18 +222,10 @@
     gap: 0.625rem;
     transition: margin-right 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  /* The <li> is the clipped shell (it hides a card that slides past its edge) and carries the shadow.
-     The border is NOT here: the card and the swipe reveal layers each draw the same 1px border on
-     all four sides, so the edge where the card meets the revealed area is bordered too. */
-  .clients-page .client-card-wrap {
-    position: relative;
-    overflow: hidden;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-  }
+  /* Sticky letter header (P4, `.mw-group`): sits closer to its own cards than the list gap. */
+  .clients-page .client-cards > .mw-group { margin-bottom: -0.25rem; }
+  /* The <li> is the swipe shell (`.mw-swipe`, mobile.css) and the card its `.mw-card`. */
   .clients-page .client-card {
-    position: relative;
-    z-index: 1;
     /* Top row = avatar · name · call; every row below spans the full card width. There are no
        explicit template rows, so only rows that exist take space — a card without meta pills or a
        note stays short. */
@@ -242,9 +234,6 @@
     align-items: center;
     gap: 0.5rem 0.75rem;
     padding: 0.75rem 0.875rem;
-    background: var(--color-surface-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
     cursor: pointer;
     /* Vertical panning stays native; horizontal moves are handed to the swipe handlers. */
     touch-action: pan-y;
@@ -262,31 +251,11 @@
     display: flex;
     align-items: center;
     padding: 0.875rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
     cursor: default;
   }
 
-  /* Swipe reveal layers (same look as the employees list): left drag shows "Zobacz" on the right
-     edge, right drag shows "Nowa wizyta" on the left edge. */
-  /* Same 1px border and radius as the card, so both read as one frame whichever part is showing. */
-  .clients-page .client-swipe-reveal {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-  }
-  .clients-page .client-swipe-reveal--left { background: var(--color-info-bg, #eff6ff); }
-  .clients-page .client-swipe-reveal--left.is-armed { border-color: var(--color-info, #1e6091); }
-  .clients-page .client-swipe-reveal--right { background: rgba(45, 106, 79, 0.08); }
-  .clients-page .client-swipe-reveal--right.is-armed { border-color: var(--color-success); }
-  .clients-page .client-swipe-content { position: absolute; top: 0; bottom: 0; width: 7.5rem; display: flex; align-items: center; gap: 0.375rem; padding: 0 0.625rem; }
-  .clients-page .client-swipe-content .icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
-  .clients-page .client-swipe-content--left { right: -7.5rem; color: var(--color-info-text-dark, #1e3a8a); }
-  .clients-page .client-swipe-content--right { left: -7.5rem; color: var(--color-success); }
-  .clients-page .client-swipe-label { width: 4.25rem; font-size: 0.9375rem; line-height: 1.15; text-align: center; }
+  /* Swipe reveal layers: `.mw-swipe__*` (mobile.css). Left drag shows "Zobacz" (info) on the right
+     edge, right drag shows "Nowa wizyta" (success) on the left edge. */
 
   /* Top row placement. */
   .clients-page .client-card > .client-avatar { grid-column: 1; grid-row: 1; }
@@ -398,25 +367,7 @@
   /* A-Z index: cards give up its width so it never covers them. */
   .clients-page .client-cards.has-alpha { margin-right: 0.75rem; }
 
-  /* Primary action in the thumb zone. `sticky`, not fixed: <main id="main-content"> is the
-     only scroll region and the shell footer sits below it. */
-  .clients-page .clients-mobile-cta {
-    position: sticky;
-    bottom: 0;
-    z-index: 15;
-    display: flex;
-    gap: 0.75rem;
-    margin: 1rem -1rem -0.75rem;
-    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
-    background: var(--color-surface-elevated);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
-    transition: transform 0.25s ease;
-  }
-  /* Slides out of the way while the list scrolls down, back the moment it scrolls up (useHideOnScroll)
-     — the same behaviour as the Wizyta and Pracownik bars. */
-  .clients-page .clients-mobile-cta--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
-  .clients-page .clients-mobile-cta > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
+  /* Primary action in the thumb zone: the shared `.mw-bar` (mobile.css), hidden on scroll-down. */
 
   /* Right-edge index (ClientsAlphabetIndex): a bold arrow, then A–Z. Viewport-fixed: top/bottom come
      inline from the measured scroll region, z-index sits above the sticky bars and below the sidebar
@@ -510,37 +461,5 @@
   .clients-page .clients-alpha-top .clients-alpha-glyph svg { width: 1.3em; height: 1.3em; }
   .clients-page .clients-alpha-top.is-current .clients-alpha-glyph svg { width: 1.05em; height: 1.05em; }
 
-  /* Bottom action sheets (Modal variant="sheet") — rendered inside .clients-page */
-  .clients-page .action-sheet { list-style: none; margin: 0; padding: 0; }
-  .clients-page .action-sheet-item {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    width: 100%;
-    min-height: 3.5rem;
-    padding: 0 0.25rem;
-    font-family: var(--font-body);
-    font-size: 1rem;
-    color: var(--color-ink);
-    text-align: left;
-    text-decoration: none;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-  .clients-page .action-sheet-item .icon { font-size: 1.25rem; color: var(--color-ink-muted); }
-  .clients-page .action-sheet-item:active { background: var(--color-surface); }
-  .clients-page .action-sheet li + li { border-top: 1px solid var(--color-border-subtle); }
-  .clients-page .action-sheet-danger { margin-top: 0.5rem; border-top: 1px solid var(--color-border); }
-  .clients-page .action-sheet-danger .action-sheet-item,
-  .clients-page .action-sheet-danger .action-sheet-item .icon { color: var(--color-error); }
-  .clients-page .action-sheet-reason { font-size: 0.75rem; color: var(--color-ink-subtle); margin: 0.5rem 0.25rem 0; }
-
-  .clients-page .sort-item-text { flex: 1; display: flex; flex-direction: column; gap: 0.125rem; }
-  .clients-page .sort-item-label { font-size: 1rem; }
-  .clients-page .sort-item-hint { font-size: 0.75rem; color: var(--color-ink-subtle); }
-  .clients-page .action-sheet-item.is-active .sort-item-label { font-weight: 600; }
-  .clients-page .action-sheet-item.is-active .sort-item-hint { color: var(--color-ink-muted); }
-  .clients-page .action-sheet-item .sort-item-check { color: var(--color-ink); }
+  /* The sort sheet uses the shared `.mw-actionlist` rows (mobile.css). */
 }
