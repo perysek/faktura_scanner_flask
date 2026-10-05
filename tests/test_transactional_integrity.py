@@ -176,14 +176,18 @@ class TestTransitionStatusTransaction:
         """in_progress -> completed via transition_status() must create income
         dated to the appointment's own date."""
         from services.appointment_service import AppointmentBusinessService
-        from datetime import datetime, timedelta
+        from datetime import timedelta
+        from utils.timezone import now_local
 
         with app.app_context():
             mock_conn = Mock()
             with patch('config.database.DatabaseConnection.get_connection', return_value=mock_conn):
                 svc = AppointmentBusinessService()
 
-                now = datetime.now()
+                # Warsaw wall-clock, same source the service's 30-min completion
+                # window uses. A bare datetime.now() is naive-UTC on CI runners
+                # and production, which lands the "planned end" 1-2h in the past.
+                now = now_local()
                 appt_date = now.date()
                 svc.appt_repo.get_by_id.return_value = {
                     'status': 'in_progress',
