@@ -222,7 +222,7 @@ export function UserDetailPage() {
             </Button>
           </FormCard>
         )}
-        <div className="rbac-mobile-cta">
+        <div className="mw-bar">
           <ButtonLink to="/uzytkownicy" variant="secondary" icon="arrow_back">
             Powrót
           </ButtonLink>

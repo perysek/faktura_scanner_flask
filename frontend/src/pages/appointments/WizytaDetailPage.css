@@ -104,7 +104,7 @@
    an in-content "Strefa ryzyka" card for the destructive action.
    `position: sticky`, not fixed, for the bar — `<main id="main-content">`
    is this app's only scroll region (see the long note on
-   `.employee-mobile-action-bar`); `.refined-btn-*` hardcodes
+   `.mw-bar--wrap`); `.refined-btn-*` hardcodes
    `white-space: nowrap`, so the bar's buttons size to their own content
    first (`flex: 1 1 auto`) and wrap as the fallback instead of forcing an
    even split. Everything is scoped under `.appt-detail-page` — this file
@@ -165,29 +165,21 @@
   .appt-detail-page .card-title--danger { color: var(--color-error); }
   .appt-detail-page .appt-danger-zone .refined-btn-danger { width: 100%; min-height: 2.75rem; font-size: 0.875rem; }
 
-  .appt-detail-page .appt-mobile-action-bar {
-    position: sticky; bottom: 0; z-index: 15;
-    display: flex; flex-wrap: wrap; gap: 0.5rem;
-    margin: 1rem -1.25rem -1.25rem;
-    padding: 0.625rem 1.25rem calc(0.625rem + env(safe-area-inset-bottom));
-    background: var(--color-surface); border-top: 1px solid var(--color-border);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-    transition: transform 0.25s ease;
-  }
-  .appt-detail-page .appt-mobile-action-bar > a { flex: 1 1 auto; min-width: 0; min-height: 2.75rem; justify-content: center; }
-  .appt-detail-page .appt-mobile-action-bar--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom))); }
+  /* Powrót + Edytuj: `.mw-bar.mw-bar--wrap` (mobile.css). */
 }
 
 /* Same deterministic page gutter + overflow guard as the Pracownicy pages
    (see the long note at the end of employees/EmployeesListPage.css):
-   `.refined-page` is declared twice with different padding, so the bars'
-   1.25rem bleed above is only correct while this two-class rule pins the
-   gutter to match. */
+   `.refined-page` is declared twice with different padding, so this
+   two-class rule pins the gutter and hands it to `.mw-bar` as
+   --page-gutter / --page-bottom, the bleed the bar reads. */
 @media (max-width: 640px) {
   .refined-page.appt-detail-page {
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
-    padding-bottom: 1.25rem;
+    --page-gutter: var(--m-gutter-wide);
+    --page-bottom: var(--page-gutter);
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+    padding-bottom: var(--page-bottom);
     overflow-x: clip;
   }
 }

@@ -319,7 +319,7 @@ export function WizytaDetailPage() {
       )}
 
       {isMobile && (
-        <div className={`appt-mobile-action-bar${mobileBarHidden ? ' appt-mobile-action-bar--hidden' : ''}`}>
+        <div className={`mw-bar mw-bar--wrap${mobileBarHidden ? ' mw-bar--hidden' : ''}`}>
           <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
             Powrót
           </ButtonLink>

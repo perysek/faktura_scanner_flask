@@ -647,7 +647,7 @@ export function EmployeeDetailPage() {
       )}
 
       {isMobile && (
-        <div className={`employee-mobile-action-bar${mobileBarHidden ? ' employee-mobile-action-bar--hidden' : ''}`}>
+        <div className={`mw-bar mw-bar--wrap${mobileBarHidden ? ' mw-bar--hidden' : ''}`}>
           <ButtonLink variant="secondary" icon="arrow_back" to="/pracownicy">
             Powrót
           </ButtonLink>

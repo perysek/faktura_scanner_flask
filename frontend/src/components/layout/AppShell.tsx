@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { pageTitleFor } from '../../config/pageTitles';
 import { Sidebar } from './Sidebar';
+import { BottomTabBar, showsTabBar } from './BottomTabBar';
 
 /**
  * App shell — DESIGN.md §12. Fixed-height viewport frame (`.app-shell`);
@@ -39,9 +40,10 @@ export function AppShell() {
   // now purely manual via the Sidebar's own switches — no page auto-applies
   // a default for them.
   const title = pageTitleFor(location.pathname);
+  const tabBar = showsTabBar(location.pathname);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${tabBar ? ' app-shell--tabbar' : ''}`}>
       <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} />
       <div className="app-shell-main">
         <header className="app-shell-header">
@@ -73,6 +75,8 @@ export function AppShell() {
         <main id="main-content" className="app-shell-content" tabIndex={-1} ref={mainRef}>
           <Outlet />
         </main>
+
+        {tabBar && <BottomTabBar isMenuOpen={isMobileOpen} onMenu={() => setIsMobileOpen((open) => !open)} />}
 
         <footer className="app-shell-footer">
           &copy; {new Date().getFullYear()} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.

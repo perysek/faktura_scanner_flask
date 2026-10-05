@@ -204,7 +204,7 @@
 .pvp-state-text { margin: 0 0 0.75rem; font-size: 0.9375rem; color: var(--color-ink-muted); }
 .pvp-loading { margin: 2rem 0; text-align: center; }
 
-/* ── Pinned bulk/save bar — same shape as .ab-mobile-cta. Deliberately NOT wired
+/* ── Pinned bulk/save bar — same shape as the shared `.mw-bar` (mobile.css). Deliberately NOT wired
    to useHideOnScroll: the Save button + count are what the whole page is for. ── */
 .pvp-bar {
   position: sticky;

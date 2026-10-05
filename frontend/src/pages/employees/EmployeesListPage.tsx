@@ -401,7 +401,7 @@ export function EmployeesListPage() {
       )}
 
       {isMobile && (
-        <div className={`employees-mobile-cta${mobileCtaHidden ? ' employees-mobile-cta--hidden' : ''}`}>
+        <div className={`mw-bar mw-bar--stack${mobileCtaHidden ? ' mw-bar--hidden' : ''}`}>
           <Button variant="secondary" icon="sync" isLoading={bulkUpdating} loadingText="Aktualizowanie…" onClick={handleBulkUpdate}>
             Aktualizuj preferencje
           </Button>

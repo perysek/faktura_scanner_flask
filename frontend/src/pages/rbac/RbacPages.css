@@ -180,7 +180,9 @@
 @media (max-width: 640px) {
   .rbac-page .rbac-desktop-only { display: none !important; }
   .rbac-page .rbac-mobile-only { display: block; }
-  .rbac-page { padding: 0.75rem 1rem; }
+  /* The list CTA is a `.mw-bar` (mobile.css): it needs its flex back from the line above. */
+  .rbac-page .rbac-mobile-only.mw-bar { display: flex; }
+  .rbac-page { --page-gutter: var(--m-gutter); padding: 0.75rem var(--page-gutter); }
   .rbac-page > .rbac-page-header { margin-bottom: 0.75rem; gap: 0.5rem; }
   .rbac-page .rbac-detail-heading .page-title { font-size: 1.25rem; }
 
@@ -205,14 +207,11 @@
   /* Card lists */
   .rbac-page .user-cards,
   .rbac-page .role-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
+  /* Surface: `.mw-card` (mobile.css). */
   .rbac-page .user-card,
   .rbac-page .role-card {
     display: flex;
     align-items: stretch;
-    background: var(--color-surface-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
   }
   .rbac-page .user-card-main,
   .rbac-page .role-card-main {
@@ -256,23 +255,7 @@
   }
   .rbac-page .user-card-more:active { background: var(--color-surface); }
 
-  /* Sticky bottom bars: page CTA (lists, detail) and form action rows */
-  .rbac-page .rbac-mobile-cta,
-  .rbac-page.rbac-form-page .form-actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 15;
-    display: flex;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
-    background: var(--color-surface-elevated);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
-  }
-  .rbac-page .rbac-mobile-cta { margin: 1rem -1rem -0.75rem; }
-  .rbac-page.rbac-form-page .form-actions { margin: 1.5rem -1.125rem -1rem; }
-  .rbac-page .rbac-mobile-cta > *,
-  .rbac-page.rbac-form-page .form-actions > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
+  /* Sticky bottom bars: page CTA (lists, detail) = `.mw-bar`; form action rows = `.mw-bar.mw-bar--incard` (mobile.css). */
 
   /* In-page full-width actions */
   .rbac-page .rbac-mobile-only .form-card { margin-top: 1rem; }
@@ -285,33 +268,9 @@
   .rbac-page .profile-security > .refined-btn-secondary { min-height: 3rem; width: 100%; }
   .rbac-page.rbac-form-page .form-card { padding-bottom: 1rem; }
 
-  /* Bottom action sheet (Modal variant="sheet") */
-  .rbac-page .action-sheet { list-style: none; margin: 0; padding: 0; }
-  .rbac-page .action-sheet-item {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    width: 100%;
-    min-height: 3.5rem;
-    padding: 0 0.25rem;
-    font-family: var(--font-body);
-    font-size: 1rem;
-    color: var(--color-ink);
-    text-align: left;
-    text-decoration: none;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-  .rbac-page .action-sheet-item .icon { font-size: 1.25rem; color: var(--color-ink-muted); }
-  .rbac-page .action-sheet-item:active { background: var(--color-surface); }
-  .rbac-page .action-sheet-item:disabled { opacity: 0.45; cursor: not-allowed; }
-  .rbac-page .action-sheet li + li { border-top: 1px solid var(--color-border-subtle); }
-  .rbac-page .action-sheet-danger { margin-top: 0.5rem; border-top: 1px solid var(--color-border); }
-  .rbac-page .action-sheet-danger .action-sheet-item,
-  .rbac-page .action-sheet-danger .action-sheet-item .icon { color: var(--color-error); }
-  .rbac-page .action-sheet-reason { font-size: 0.75rem; color: var(--color-ink-subtle); margin: -0.25rem 0.25rem 0.75rem; }
+  /* Bottom action sheet: shared `.mw-actionlist` rows (mobile.css). The delete row's "why not"
+     note sits under the button, inside the danger group. */
+  .rbac-page .rbac-sheet-reason { margin: -0.25rem 0.25rem 0.75rem; }
 
   /* Permission grid: each row is one full-width ≥48px tap target */
   .rbac-page .perm-row { padding: 0.75rem 0.875rem; }

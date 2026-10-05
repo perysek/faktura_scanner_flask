@@ -336,6 +336,7 @@ export function ClientFormPage({ mode }: ClientFormPageProps) {
             submitLabel={mode === 'create' ? 'Zapisz klienta' : 'Zapisz zmiany'}
             isLoading={isSubmitting}
             cancelHref={cancelHref}
+            className="mw-bar mw-bar--incard"
           />
         </form>
       </FormCard>

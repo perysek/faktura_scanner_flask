@@ -138,7 +138,7 @@
 @media (max-width: 640px) {
   /* Two-class selector: `.refined-page` is declared in two stylesheets with different
      padding, so a single class would be at the mercy of bundle order. */
-  .refined-page.client-detail-page--mobile { padding: 0.75rem 1rem; overflow-x: clip; }
+  .refined-page.client-detail-page--mobile { --page-gutter: var(--m-gutter); padding: 0.75rem var(--page-gutter); overflow-x: clip; }
 
   .client-detail-page .page-header {
     margin-bottom: 0.75rem;
@@ -240,21 +240,5 @@
      region, and the shell footer sits below it). */
   .client-detail-page .client-danger-zone .field-value { margin-bottom: 0.75rem; font-size: 0.8125rem; color: var(--color-ink-muted); }
   .client-detail-page .client-danger-zone .refined-btn-danger { width: 100%; min-height: 2.75rem; }
-  .client-detail-page .client-mobile-bar {
-    position: sticky;
-    bottom: 0;
-    z-index: 15;
-    display: flex;
-    gap: 0.75rem;
-    margin: 1rem -1rem -0.75rem;
-    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
-    background: var(--color-surface-elevated);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -4px 12px rgba(26, 20, 12, 0.06);
-    transition: transform 0.25s ease;
-  }
-  /* Slides out of the way while the page scrolls down, back on scroll up (useHideOnScroll) —
-     same as the Wizyta and Pracownik detail bars. */
-  .client-detail-page .client-mobile-bar--hidden { transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px))); }
-  .client-detail-page .client-mobile-bar > * { flex: 1; min-height: 3rem; font-size: 0.9375rem; }
+  /* Powrót + Edytuj: the shared `.mw-bar` (mobile.css), hidden on scroll-down. */
 }

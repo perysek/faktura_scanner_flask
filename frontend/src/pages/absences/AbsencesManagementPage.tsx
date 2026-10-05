@@ -552,7 +552,7 @@ function RequestsPhone({ requests, loading, isSuperuser, busyId, balanceSummary,
           {visible.map((a) => {
             const status = STATUS_LABEL[a.status];
             return (
-              <li key={a.id} className="ab-card">
+              <li key={a.id} className="ab-card mw-card">
                 <div className="ab-card-top">
                   <span className="ab-card-title">
                     {a.employee_name}
@@ -600,11 +600,11 @@ function RequestsPhone({ requests, loading, isSuperuser, busyId, balanceSummary,
 
       <Modal isOpen={sheetTarget !== null} onClose={() => setSheetTarget(null)} title={sheetTarget?.employee_name ?? 'Wniosek'} variant="sheet">
         {sheetTarget && (
-          <ul className="ab-action-sheet">
-            <li className="ab-action-sheet-danger">
+          <ul className="mw-actionlist">
+            <li className="mw-danger">
               <button
                 type="button"
-                className="ab-action-sheet-item"
+                className="mw-actionitem"
                 onClick={() => {
                   const target = sheetTarget;
                   setSheetTarget(null);
@@ -667,7 +667,7 @@ function CategoriesTab({ categories, loading, isSuperuser, onNew, onEdit, onDele
         ) : (
           <ul className="ab-cards">
             {categories.map((c) => (
-              <li key={c.id} className={`ab-card${c.is_deleted ? ' ab-card--deleted' : ''}`}>
+              <li key={c.id} className={`ab-card mw-card${c.is_deleted ? ' ab-card--deleted' : ''}`}>
                 <div className="ab-card-top">
                   <span className="ab-card-title">{c.name}</span>
                   {c.is_deleted ? <span className="ab-status ab-status--cancelled">Usunięta</span> : <span className="ab-status ab-status--approved">Aktywna</span>}
@@ -700,7 +700,7 @@ function CategoriesTab({ categories, loading, isSuperuser, onNew, onEdit, onDele
           </ul>
         )}
 
-        <div className={`ab-mobile-cta${ctaHidden ? ' ab-mobile-cta--hidden' : ''}`}>
+        <div className={`mw-bar${ctaHidden ? ' mw-bar--hidden' : ''}`}>
           <Button variant="primary" icon="add" onClick={onNew}>
             Nowa kategoria
           </Button>
@@ -1003,7 +1003,7 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
         ) : (
           <ul className="ab-cards">
             {manualList.map((a) => (
-              <li key={a.id} className="ab-card">
+              <li key={a.id} className="ab-card mw-card">
                 <div className="ab-card-top">
                   <span className="ab-card-title">
                     {a.employee_name}
@@ -1023,7 +1023,7 @@ function ManualTab({ categories, employees, manualList, loading, balanceSummary,
           </ul>
         )}
 
-        <div className={`ab-mobile-cta${ctaHidden ? ' ab-mobile-cta--hidden' : ''}`}>
+        <div className={`mw-bar${ctaHidden ? ' mw-bar--hidden' : ''}`}>
           <Button variant="primary" icon="add" onClick={() => setSheetOpen(true)}>
             Nowy wpis
           </Button>
