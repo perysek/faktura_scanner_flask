@@ -293,13 +293,23 @@ export function ClientsMobileView({
   // Glides the first card filed under `letter` (in the list's current order) to just below the sticky
   // toolbar — or, in a name-sorted list, that letter's header, so the header doesn't land on the card.
   // The target is an absolute scroll offset, so it stays right while a glide is already moving.
+  //
+  // The header itself must not be measured: `.mw-group` is sticky, and once the list has scrolled past
+  // it, it is parked under the toolbar — its rect says where it is NOW, not where it belongs. Measuring
+  // it made every jump UP to a letter already passed come out as "scroll up 8px" (the list crawled
+  // while the finger flew), yet worked on a fresh page, where nothing is stuck yet. The first card
+  // isn't sticky, so measure that and back up by what sits between the header's top and the card's.
   function jumpToLetter(letter: string) {
     const scroller = document.getElementById('main-content');
     const list = listRef.current;
-    const target = list?.querySelector<HTMLElement>(`[data-group="${letter}"]`) ?? list?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
-    if (!scroller || !target) return;
+    const card = list?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
+    if (!scroller || !list || !card) return;
+    const header = list.querySelector<HTMLElement>(`[data-group="${letter}"]`);
+    const aboveCard = header
+      ? header.offsetHeight + (parseFloat(getComputedStyle(list).rowGap) || 0) + (parseFloat(getComputedStyle(header).marginBottom) || 0)
+      : 0;
     const toolbarH = toolbarRef.current?.offsetHeight ?? 0;
-    const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - toolbarH - 8;
+    const top = card.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - toolbarH - aboveCard - 8;
     glideRef.current?.to(Math.max(0, top));
   }
 
