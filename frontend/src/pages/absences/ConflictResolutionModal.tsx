@@ -9,7 +9,7 @@ import { Icon } from '../../lib/icons/Icon';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
 import { formatPeriodPhone } from './absenceFormat';
 import type { AppointmentConflict, ConflictResolution } from '../../types/absence';
-import type { AvailableSlot, ReassignmentCandidate } from '../../types/appointment';
+import type { AvailableSlot, ReassignmentCandidate, SmsAvailability } from '../../types/appointment';
 
 interface Props {
   isOpen: boolean;
@@ -88,8 +88,11 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
   const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null);
   const [reassignBulk, setReassignBulk] = useState(false);
 
-  // No-candidates step
-  const [cancelSendSms, setCancelSendSms] = useState(true);
+  // No-candidates step. `smsStatus` is the server's answer to "can this client SMS actually go
+  // out?" — the box is only offered (and only ticked by default) when it can; otherwise staff
+  // would tick it and believe the client was told while the disabled SMS type sent nothing.
+  const [cancelSendSms, setCancelSendSms] = useState(false);
+  const [smsStatus, setSmsStatus] = useState<SmsAvailability>({ available: false, reason: '' });
   const [cancelBulk, setCancelBulk] = useState(false);
 
   // Reschedule step
@@ -183,18 +186,20 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
     setSelectedCandidate(null);
     setReassignBulk(false);
     try {
-      const list = await appointmentsApi.reassignmentCandidates(conflict.appointment_id);
+      const { candidates: list, sms } = await appointmentsApi.reassignmentCandidates(conflict.appointment_id);
       if (requestToken.current !== token) return;
       setCandidates(list);
+      setSmsStatus(sms);
       if (list.length === 0) {
-        setCancelSendSms(true);
+        setCancelSendSms(sms.available);
         setCancelBulk(false);
         setStep('no-candidates');
       }
     } catch {
       if (requestToken.current !== token) return;
       setCandidates([]);
-      setCancelSendSms(true);
+      setSmsStatus({ available: false, reason: 'Nie udało się sprawdzić ustawień SMS.' });
+      setCancelSendSms(false);
       setCancelBulk(false);
       setStep('no-candidates');
     }
@@ -233,14 +238,20 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
       const res = await appointmentsApi.cancelForAbsence(activeConflict.appointment_id, {
         absence_id: absenceId!,
         cancellation_reason: 'Brak dostępnego zastępstwa — nieobecność pracownika',
-        send_sms: cancelSendSms,
+        send_sms: cancelSendSms && smsStatus.available,
         bulk: cancelBulk,
       });
       if (!res.success) {
         toast.error(res.error);
         return;
       }
-      toast.success(cancelBulk ? `Anulowano ${res.applied.length} wizyt` : 'Wizyta anulowana');
+      if (res.sms.requested && res.sms.failed > 0) {
+        // The cancellation itself succeeded — but the person who ticked "Wyślij SMS" must know
+        // the client was NOT told, so they can phone them.
+        toast.error(`${cancelBulk ? `Anulowano ${res.applied.length} wizyt` : 'Wizyta anulowana'}, ale SMS do klienta nie został wysłany (${res.sms.failed}): ${res.sms.error}`);
+      } else {
+        toast.success(cancelBulk ? `Anulowano ${res.applied.length} wizyt` : 'Wizyta anulowana');
+      }
       await refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Błąd anulowania wizyty');
@@ -499,10 +510,16 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
             <p style={{ fontSize: '0.8125rem', color: 'var(--color-ink-subtle)', marginBottom: '1rem' }}>
               Żaden pracownik nie jest dostępny jako zastępstwo dla tej wizyty. Możesz ją anulować.
             </p>
-            <label className="crm-checkbox-row">
-              <input type="checkbox" checked={cancelSendSms} onChange={(e) => setCancelSendSms(e.target.checked)} />
-              Wyślij SMS do klienta (informacja o odwołaniu + link do rezerwacji)
-            </label>
+            {smsStatus.available ? (
+              <label className="crm-checkbox-row">
+                <input type="checkbox" checked={cancelSendSms} onChange={(e) => setCancelSendSms(e.target.checked)} />
+                Wyślij SMS do klienta (informacja o odwołaniu + link do rezerwacji)
+              </label>
+            ) : (
+              <p role="status" style={{ fontSize: '0.8125rem', color: 'var(--color-ink-subtle)', marginBottom: '0.75rem' }}>
+                Klient nie dostanie SMS-a o odwołaniu. {smsStatus.reason} Poinformuj go telefonicznie.
+              </p>
+            )}
             <label className="crm-checkbox-row">
               <input type="checkbox" checked={cancelBulk} onChange={(e) => setCancelBulk(e.target.checked)} />
               Anuluj też wszystkie pozostałe skonfliktowane wizyty tego pracownika

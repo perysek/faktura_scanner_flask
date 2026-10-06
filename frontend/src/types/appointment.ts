@@ -329,9 +329,18 @@ export interface RescheduleForAbsenceResult {
   appointment_id: number;
 }
 
+/** Can the optional client SMS of the cancel step actually go out? (`SmsService.type_status`).
+ * `reason` is Polish and ready to show when `available` is false. */
+export interface SmsAvailability {
+  available: boolean;
+  reason: string;
+}
+
 export interface CancelForAbsenceResult {
   success: true;
   applied: number[];
+  /** What happened to the client SMS the person asked for — a failed send is reported, not swallowed. */
+  sms: { requested: boolean; sent: number; failed: number; error: string };
 }
 
 /** GET /api/appointments/available-slots — reschedule step's date picker.
@@ -361,6 +370,12 @@ export interface AvailableSlotsResponse {
 export interface StatusChangeEvent {
   client_name: string | null;
   new_status: AppointmentStatus;
+  /**
+   * Who flipped the status: 'employee_mobile' (stylist's phone), 'client_sms' (client used
+   * the SMS link — cancel or "Odwołuję wizytę"), or absent on older rows. Optional on
+   * purpose: the poller must keep working against rows written before this field was read.
+   */
+  triggered_by?: string | null;
 }
 
 export interface StatusEventsResponse {

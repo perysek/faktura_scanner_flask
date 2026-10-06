@@ -7,9 +7,21 @@ import { ApiError } from '../../lib/api/client';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button } from '../../components/ui/Button';
-import type { SmsMessageType, SmsSettings } from '../../types/settings';
+import type { SmsMessageType, SmsSettings, TriggerMode } from '../../types/settings';
 
 const EMPTY_CREDS: SmsSettings = { account_sid: '', auth_token: '', from_number: '', messaging_service_sid: '', is_active: false };
+
+/** Exhaustive on purpose: adding a TriggerMode without a label fails the build. */
+const TRIGGER_MODE_LABELS: Record<TriggerMode, string> = {
+  before_visit: 'Przed wizytą',
+  on_status: 'Po zmianie statusu',
+  manual: 'Ręcznie / przez system',
+};
+
+/** Older servers don't send trigger_mode; the legacy flag tells the two time-ish modes apart. */
+function triggerModeOf(mt: SmsMessageType): TriggerMode {
+  return mt.trigger_mode ?? (mt.is_event_triggered ? 'on_status' : 'before_visit');
+}
 
 function percent(numerator: number, denominator: number) {
   return denominator ? Math.round((numerator / denominator) * 100) : 0;
@@ -90,15 +102,21 @@ function MessageTypeCard({ mt, onSaved, onDeleted }: { mt: SmsMessageType; onSav
 
   const charCount = values.template_text.length;
   const segments = Math.ceil(charCount / 160) || 1;
+  const mode = triggerModeOf(mt);
+  const timing =
+    mode === 'on_status'
+      ? `${mt.send_delay_minutes ?? 0}min po zmianie statusu`
+      : mode === 'before_visit'
+        ? `${mt.send_hours_before}h przed wizytą`
+        : TRIGGER_MODE_LABELS.manual;
 
   return (
     <details className="form-card sms-type-card" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary className="sms-type-summary">
         <span className="sms-type-name">{mt.name}</span>
         <span className={`badge-pill ${mt.is_enabled ? 'badge-green' : 'badge-gray'}`}>{mt.is_enabled ? 'Aktywny' : 'Nieaktywny'}</span>
-        {mt.is_enabled && (
-          <span className="sms-type-timing">{mt.is_event_triggered ? `${mt.send_delay_minutes ?? 0}min po zmianie statusu` : `${mt.send_hours_before}h przed wizytą`}</span>
-        )}
+        <span className="badge-pill badge-gray" title="Kiedy ta wiadomość jest wysyłana">{TRIGGER_MODE_LABELS[mode]}</span>
+        {mt.is_enabled && <span className="sms-type-timing">{timing}</span>}
         {mt.is_custom && (
           <button type="button" className="sms-delete-type" title="Usuń typ wiadomości" aria-label="Usuń typ wiadomości" onClick={handleDelete}>
             ✕
@@ -116,7 +134,15 @@ function MessageTypeCard({ mt, onSaved, onDeleted }: { mt: SmsMessageType; onSav
         />
       </div>
 
-      {mt.is_event_triggered ? (
+      {mode === 'manual' ? (
+        <div className="form-field">
+          <p className="form-helper-text">
+            Ten SMS nie jest wysyłany o stałej porze przed wizytą. Wysyła go system w konkretnej sytuacji (np. tuż po rezerwacji online
+            albo przy odwołaniu wizyty z powodu nieobecności pracownika) lub recepcja ręcznie — dlatego nie ma tu ustawienia „ile godzin przed”.
+            Przełącznik poniżej decyduje, czy ten typ w ogóle może być użyty.
+          </p>
+        </div>
+      ) : mode === 'on_status' ? (
         <div className="form-field">
           <label className="form-label">Opóźnienie wysyłki (minuty)</label>
           <input
@@ -192,7 +218,7 @@ function MessageTypeCard({ mt, onSaved, onDeleted }: { mt: SmsMessageType; onSav
             onChange={(e) => setValues((v) => ({ ...v, is_enabled: e.target.checked }))}
           />
           <label className="checkbox-label" htmlFor={`en-${mt.id}`}>
-            Włącz automatyczne wysyłanie
+            {mode === 'manual' ? 'Włącz ten typ (dostępny dla systemu i do wysyłki ręcznej)' : 'Włącz automatyczne wysyłanie'}
           </label>
         </div>
         <div className="checkbox-wrapper">

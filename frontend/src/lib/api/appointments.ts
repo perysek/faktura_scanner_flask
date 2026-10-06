@@ -18,6 +18,7 @@ import type {
   RescheduleAppointmentPayload,
   RescheduleAppointmentResult,
   RescheduleForAbsenceResult,
+  SmsAvailability,
   StatusEventsResponse,
   StatusHistoryResponse,
 } from '../../types/appointment';
@@ -154,8 +155,10 @@ export const appointmentsApi = {
   // "Zmień stylistę" / "Zmień termin" / "Anuluj wizytę" actions in the
   // live legacy admin panel have likely never worked — not ported here.
 
+  /** Eligible replacements + whether the "no replacement → cancel" step may offer a client SMS. */
   reassignmentCandidates: (appointmentId: number) =>
-    api.get<{ success: true; candidates: ReassignmentCandidate[] }>(`/api/appointments/${appointmentId}/reassignment-candidates`).then((r) => r.candidates),
+    api.get<{ success: true; candidates: ReassignmentCandidate[]; sms: SmsAvailability }>(`/api/appointments/${appointmentId}/reassignment-candidates`)
+      .then((r) => ({ candidates: r.candidates, sms: r.sms })),
 
   reassignForAbsence: (appointmentId: number, payload: { absence_id: number; new_employee_id: number; bulk: boolean }) =>
     api.post<ReassignForAbsenceResult | { success: false; error: string }>(`/api/appointments/${appointmentId}/reassign-for-absence`, payload),

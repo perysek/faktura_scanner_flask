@@ -50,8 +50,15 @@ export function StatusEventsPoller() {
         // A status changed somewhere else — refresh whatever on screen is derived from visits.
         if (data.events.length > 0) notifyAppointmentsChanged();
         data.events.forEach((evt) => {
+          const client = evt.client_name ?? '—';
+          // A cancellation the CLIENT made through their SMS link frees a slot the desk may
+          // want to re-sell — say who did it instead of a bare status change.
+          if (evt.triggered_by === 'client_sms' && evt.new_status === 'cancelled') {
+            toast.info(`Klient odwołał wizytę przez SMS — ${client}`);
+            return;
+          }
           const label = STATUS_LABELS[evt.new_status] ?? evt.new_status;
-          toast.info(`Wizyta — ${evt.client_name ?? '—'}: status → "${label}"`);
+          toast.info(`Wizyta — ${client}: status → "${label}"`);
         });
       } catch {
         /* non-critical — silence network errors, same as the legacy poller */

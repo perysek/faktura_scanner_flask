@@ -19,12 +19,25 @@ export interface SmsSettings {
   is_active: boolean;
 }
 
+/**
+ * How a message type gets sent (server: sms_message_types.trigger_mode).
+ * - before_visit: the 15-min scheduler sends it N hours before the visit
+ * - on_status:    queued when a visit changes status (rating text after completion)
+ * - manual:       never sent by the clock — a code path or a person sends it
+ *                 (booking confirmation, absence cancellation, staff "Wyślij SMS")
+ * Only before_visit types may be fed to the time-based loop; confusing the two is
+ * what texted clients a rating request before their visit (SMS review P0-2).
+ */
+export type TriggerMode = 'before_visit' | 'on_status' | 'manual';
+
 export interface SmsMessageType {
   id: number;
   type_key: string;
   name: string;
   is_enabled: boolean;
   is_custom: boolean;
+  /** Absent on payloads from a server that predates the trigger_mode migration. */
+  trigger_mode?: TriggerMode;
   is_event_triggered: boolean;
   trigger_on_status: string | null;
   send_hours_before: number;
