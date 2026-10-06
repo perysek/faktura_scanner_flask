@@ -500,14 +500,28 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
   padding: 0.625rem 0.875rem calc(0.625rem + env(safe-area-inset-bottom));
   max-height: 70vh; overflow-y: auto;
+  transition: transform 0.25s ease;
 }
 
+/* Both rows slide away while the cards are scrolled and return when it stops
+   (useHideWhileScrolling). At rest there must be NO transform on this element — not even
+   translateY(0): the employee sheet inside is `position: fixed`, and any transform on an
+   ancestor re-bases a fixed descendant onto that ancestor. The hook is paused while the
+   sheet (or the month grid) is open, so it is never in this state with the sheet up.
+   16px clears the bar's own top shadow. */
+.mob-fixed-nav--hidden { transform: translateY(calc(100% + 16px)); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .mob-fixed-nav { transition: none; } }
+
 /* Under the bottom tab bar (P2, mobile.css) the strip stacks on top of it;
-   the tab bar owns the home-indicator inset then. */
+   the tab bar owns the home-indicator inset then. Hidden, it has to clear the tab bar
+   as well to leave the screen. */
 @media (max-width: 640px) {
   .app-shell--tabbar .mob-fixed-nav {
     bottom: calc(var(--m-tabbar-h) + env(safe-area-inset-bottom, 0px));
     padding-bottom: 0.625rem;
+  }
+  .app-shell--tabbar .mob-fixed-nav--hidden {
+    transform: translateY(calc(100% + 16px + var(--m-tabbar-h) + env(safe-area-inset-bottom, 0px)));
   }
 }
 

@@ -6,6 +6,7 @@ import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { useKeyboardInset } from '../../lib/useKeyboardInset';
+import { useHideWhileScrolling } from '../../lib/useHideWhileScrolling';
 import { filterByLabel, SEARCH_DEBOUNCE_MS } from '../../lib/searchOptions';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentsApi } from '../../lib/api/appointments';
@@ -301,6 +302,10 @@ export function MobileWizytyCalendarView({
   // animation gets to play before the sheet disappears.
   const [employeePopupMounted, setEmployeePopupMounted] = useState(false);
   const [employeePopupOpen, setEmployeePopupOpen] = useState(false);
+  // Both bottom bars (week strip + actions row, one fixed container) slide away while the cards are
+  // being scrolled and come back a moment after it stops. Held open while the month grid or the
+  // employee sheet is up: the user is working in it, not reading cards.
+  const navHidden = useHideWhileScrolling(monthExpanded || employeePopupMounted);
   function openEmployeePopup() {
     // While "Dane własne" is on, the server ignores any employee_id filter
     // client-side anyway (it hard-scopes every query to the superuser's own
@@ -790,7 +795,7 @@ export function MobileWizytyCalendarView({
           hidden under this bar, and the bar itself adds
           `env(safe-area-inset-bottom)` (`safe-area-awareness`) so it clears
           the iOS home-indicator instead of sitting under it. */}
-      <div className="mob-fixed-nav">
+      <div className={`mob-fixed-nav${navHidden ? ' mob-fixed-nav--hidden' : ''}`}>
         {monthExpanded && (
           <div className="mob-cal-grid-wrap">
             <div className="mob-cal-topbar">
