@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent, TouchEvent } from 'react';
+import type { CSSProperties, MouseEvent, TouchEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone } from '../../lib/format';
@@ -297,7 +297,7 @@ export function MobileWizytyCalendarView({
   // presence in the DOM; `employeePopupOpen` drives the open/closed CSS
   // class, kept as a separate tick (rAF on open) so the transform
   // transition actually has a "from" state to animate away from, and
-  // separate from unmount (setTimeout on close) so the 0.2s collapse
+  // separate from unmount (setTimeout on close) so the 0.3s collapse
   // animation gets to play before the sheet disappears.
   const [employeePopupMounted, setEmployeePopupMounted] = useState(false);
   const [employeePopupOpen, setEmployeePopupOpen] = useState(false);
@@ -313,7 +313,8 @@ export function MobileWizytyCalendarView({
   }
   function closeEmployeePopup() {
     setEmployeePopupOpen(false);
-    setTimeout(() => setEmployeePopupMounted(false), 200);
+    // Must match `.mob-emp-popup-sheet`'s transform transition (var(--dur-snap) = 300ms).
+    setTimeout(() => setEmployeePopupMounted(false), 300);
   }
   const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? (employeeId === null && auth.isSuperuser && !auth.isLoading && !auth.ownDataActive ? 'Wszyscy' : '—');
 
@@ -472,7 +473,9 @@ export function MobileWizytyCalendarView({
     if (target && targetEl) {
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHighlightId(target.id);
-      const timer = setTimeout(() => setHighlightId(null), 600);
+      // Must outlast the pulse (Appointments.css: 0.5s × 2 = 1s) or the class
+      // comes off mid-animation and cuts it short.
+      const timer = setTimeout(() => setHighlightId(null), 1000);
       return () => clearTimeout(timer);
     }
     listRef.current?.closest('.app-shell-content')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -616,12 +619,13 @@ export function MobileWizytyCalendarView({
   // behind) every touchmove update too, instead of tracking the finger 1:1.
   // Dropping the inline style entirely on release (swipeState → null) lets that
   // CSS transition take back over for the snap.
-  function renderCard(appt: AppointmentListItem) {
+  function renderCard(appt: AppointmentListItem, index: number) {
     const swipeDx = swipeState?.id === appt.id ? swipeState.dx : 0;
     return (
       <div
         key={appt.id}
         className="mob-appt-card-wrap mw-swipe"
+        style={{ '--i': index } as CSSProperties}
         ref={(el) => {
           if (el) cardRefs.current.set(appt.id, el);
           else cardRefs.current.delete(appt.id);

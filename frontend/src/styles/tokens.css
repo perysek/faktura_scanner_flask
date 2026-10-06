@@ -115,6 +115,12 @@
   /* ── Motion (§2.12) ─────────────────────────────────────────────────── */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  /* Phone motion scale — long enough to be *seen* on a 6" screen (the old
+     0.15-0.2s transitions and 10px/0.4s page rise read as "no motion"). */
+  --dur-enter: 380ms;   /* page / sub-form entrance */
+  --dur-card: 340ms;    /* list-card entrance */
+  --dur-snap: 300ms;    /* swipe release, sheet slide */
+  --stagger-step: 45ms; /* delay between successive list cards */
 
   /* ── Sidebar (§2.13) — default/light theme ──────────────────────────── */
   --sidebar-bg: #dedad3;

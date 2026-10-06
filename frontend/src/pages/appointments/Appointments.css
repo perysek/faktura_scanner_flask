@@ -598,7 +598,7 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   background: var(--color-surface-elevated); border-top: 1px solid var(--color-border); border-radius: 3px 3px 0 0;
   box-shadow: var(--shadow-lg);
   transform: translateY(100%);
-  transition: transform 0.2s ease;
+  transition: transform var(--dur-snap) var(--ease-out-expo);
 }
 .mob-emp-popup-sheet--open { transform: translateY(0); }
 .mob-emp-popup-item {
@@ -707,7 +707,7 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
      `transform: translateX()` set while actively dragging removes this same
      `transition` implicitly (React sets it via the style attribute, not a
      class), so it only applies on release, when the inline style clears. */
-  transition: transform 0.2s ease, background 0.15s ease;
+  transition: transform var(--dur-snap) var(--ease-out-expo), background 0.15s ease;
 }
 .mob-appt-card:active { background: var(--color-surface); }
 .mob-appt-card--muted { opacity: 0.6; }
@@ -719,15 +719,17 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .mob-appt-card--swipe-armed-right { background: rgba(30, 96, 145, 0.06); border-color: var(--color-info, #1e6091); }
 
 /* "Here's what's next" attention pulse — fired once by the list's
-   scroll-to-upcoming effect after every appointments update. 3 iterations
-   at 0.2s each (0.6s total), then the class comes off and the card is back
-   to its normal resting style; `animation-fill-mode` deliberately left at
-   its default (none) so nothing lingers after the last iteration. */
+   scroll-to-upcoming effect after every appointments update. 2 iterations
+   at 0.5s each (1s total — the old 3 × 0.2s was too quick to read as a
+   pulse), then the class comes off (MobileWizytyCalendarView.tsx clears it
+   after 1000ms — keep the two in sync) and the card is back to its normal
+   resting style; `animation-fill-mode` deliberately left at its default
+   (none) so nothing lingers after the last iteration. */
 @keyframes mob-appt-highlight-pulse {
   0%, 100% { transform: translateY(0); box-shadow: none; }
   50% { transform: translateY(-4px); box-shadow: 0 10px 18px -6px var(--color-accent), 0 0 0 2px var(--color-accent); }
 }
-.mob-appt-card--highlight { animation: mob-appt-highlight-pulse 0.2s ease-in-out 3; }
+.mob-appt-card--highlight { animation: mob-appt-highlight-pulse 0.5s ease-in-out 2; }
 
 /* Small chevron, bottom-right corner, muted — a minimal "this opens"
    affordance rather than a full "tap to view" label (TASK3). */

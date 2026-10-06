@@ -11,7 +11,7 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { formyZatrudnieniaApi } from '../../lib/api/formyZatrudnienia';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { FormActions, FormCard, SearchableSelectField, SelectField, TextareaField, TextField } from '../../components/ui/form';
+import { FormActions, FormCard, SelectField, TextareaField, TextField } from '../../components/ui/form';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import type { EmploymentStatus, MobilePinStatus } from '../../types/employee';
 
@@ -296,6 +296,12 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     return names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2} więcej` : '');
   }
 
+  // Read-only display of the linked login account. The options list only holds
+  // *active* users, so a linked-but-deactivated account falls through to the
+  // generic text instead of showing a blank.
+  const linkedUser = userId ? (userOptionsState.data ?? []).find((u) => String(u.id) === userId) : undefined;
+  const linkedAccountLabel = !userId ? 'Brak konta' : linkedUser ? `${linkedUser.full_name} (${linkedUser.email})` : userOptionsState.loading ? 'Ładowanie…' : 'Konto powiązane (nieaktywne)';
+
   const cancelHref = mode === 'edit' && employeeId ? `/pracownicy/${employeeId}` : '/pracownicy';
 
   return (
@@ -343,16 +349,15 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                 onChange={(e) => setFormaId(e.target.value)}
                 options={(formyState.data ?? []).map((f) => ({ value: String(f.id), label: f.nazwa }))}
               />
-              <SearchableSelectField
-                label="Konto użytkownika"
-                id="user_id"
-                placeholder="— brak konta —"
-                searchPlaceholder="Szukaj konta…"
-                helper="Opcjonalne powiązanie z kontem logowania"
-                value={userId}
-                onChange={setUserId}
-                options={(userOptionsState.data ?? []).map((u) => ({ value: String(u.id), label: `${u.full_name} (${u.email})` }))}
-              />
+              {/* Info label only — the account link is managed from the Users form
+                  ("Pracownik" select there). `userId` is still hydrated and sent
+                  unchanged in handleSubmit: PUT /api/employees is a full-row UPDATE,
+                  so omitting it would silently unlink the account on every save. */}
+              <div>
+                <label className="form-label">Konto użytkownika</label>
+                <p className={`pin-status-value${userId ? '' : ' empty'}`}>{linkedAccountLabel}</p>
+                <p className="form-helper-text">Powiązanie z kontem logowania ustawia się w module Użytkownicy</p>
+              </div>
               <TextField label="Ścieżka do zdjęcia" id="photo_path" placeholder="np. /static/photos/anna.jpg" value={photoPath} onChange={(e) => setPhotoPath(e.target.value)} helper="Opcjonalna ścieżka do zdjęcia profilowego" />
             </div>
           </section>

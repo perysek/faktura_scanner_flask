@@ -968,6 +968,37 @@ table.stack-cards td.cell-hide-lg { display: none; }
    any animation whose last keyframe sets a transform on a container. */
 .animate-fade-up { animation: fade-up 0.4s ease-out backwards; }
 
+/* PHONE MOTION LAYER (≤640px) — page/sub-form entrance + list-card arrival.
+   Same `backwards` rule as above (never `forwards` on a transform: it makes the
+   element the containing block for `position: fixed` sheets). Reduced-motion is
+   covered twice: base.css collapses every duration to 0.001ms, and the block
+   below this one removes the page-level classes outright. */
+@keyframes page-enter-phone {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 640px) {
+  /* `.fade-in` pages (Wizyty list, Wizyta detail) were opacity-only — no
+     movement at all, so list → detail looked like a hard cut. */
+  .animate-fade-up,
+  .refined-page.fade-in {
+    animation: page-enter-phone var(--dur-enter) var(--ease-out-expo) backwards;
+  }
+  /* Cards arrive when the API answers — AFTER the page root has already
+     finished animating over its loading placeholder — so without this they
+     just popped in. `--i` is the card's index, set inline by each list. */
+  .mob-emp-card-wrap,
+  .user-cards > .user-card,
+  .mob-appt-card-wrap {
+    animation: card-rise var(--dur-card) var(--ease-out-expo) backwards;
+    animation-delay: calc(60ms + min(var(--i, 0), 7) * var(--stagger-step));
+  }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1009,6 +1040,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up, .animate-fade-in, .fade-in, .animate-scale-in,
+  .refined-page.fade-in, .mob-emp-card-wrap, .user-cards > .user-card, .mob-appt-card-wrap,
   .stagger-item, .hover-lift, .skeleton {
     animation: none !important;
     transition: none !important;

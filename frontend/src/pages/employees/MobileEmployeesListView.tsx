@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { TouchEvent } from 'react';
+import type { CSSProperties, TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone, telHref } from '../../lib/format';
@@ -118,13 +118,13 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
 
   return (
     <div className="mob-emp-list">
-      {employees.map((emp) => {
+      {employees.map((emp, index) => {
         const badge = statusBadge(emp);
         const initials = (emp.first_name.charAt(0) + emp.last_name.charAt(0)).toUpperCase();
         const swipeDx = swipeState?.id === emp.id ? swipeState.dx : 0;
         const balance = balances[String(emp.id)];
         return (
-          <div key={emp.id} className="mob-emp-card-wrap mw-swipe">
+          <div key={emp.id} className="mob-emp-card-wrap mw-swipe" style={{ '--i': index } as CSSProperties}>
             {swipeDx < 0 && (
               <div className={`mw-swipe__reveal mw-swipe__reveal--info${swipeDx <= SWIPE_TRIGGER_PX ? ' is-armed' : ''}`} aria-hidden="true">
                 <div className="mw-swipe__content mw-swipe__content--right-edge mw-swipe__content--info" style={{ transform: `translateX(${swipeDx}px)` }}>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { MouseEvent } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './RbacPages.css';
 import { useApiData } from '../../lib/useApiData';
@@ -197,7 +197,7 @@ export function UsersListPage() {
           </div>
 
           <ul className="user-cards rbac-mobile-only">
-            {filtered.map((u) => {
+            {filtered.map((u, index) => {
               const manageable = canManageUser(actor, u);
               const body = (
                 <>
@@ -215,7 +215,7 @@ export function UsersListPage() {
                 </>
               );
               return (
-                <li key={u.id} className="user-card mw-card">
+                <li key={u.id} className="user-card mw-card" style={{ '--i': index } as CSSProperties}>
                   {manageable ? (
                     <Link to={`/uzytkownicy/${u.id}`} className="user-card-main">
                       {body}
