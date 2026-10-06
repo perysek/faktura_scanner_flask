@@ -400,16 +400,13 @@ export function EmployeesListPage() {
       </div>
       )}
 
-      {isMobile && (
+      {/* Only the add action lives here on a phone ("Aktualizuj preferencje" is desktop-only, in the page
+          header) — and with no add permission there is nothing for the bar to hold, so no empty bar. */}
+      {isMobile && auth.hasModuleWrite('employees') && (
         <div className={`mw-bar mw-bar--stack${mobileCtaHidden ? ' mw-bar--hidden' : ''}`}>
-          <Button variant="secondary" icon="sync" isLoading={bulkUpdating} loadingText="Aktualizowanie…" onClick={handleBulkUpdate}>
-            Aktualizuj preferencje
-          </Button>
-          {auth.hasModuleWrite('employees') && (
-            <ButtonLink variant="primary" icon="add" to="/pracownicy/nowy">
-              Dodaj pracownika
-            </ButtonLink>
-          )}
+          <ButtonLink variant="primary" icon="add" to="/pracownicy/nowy">
+            Dodaj pracownika
+          </ButtonLink>
         </div>
       )}
 

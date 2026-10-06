@@ -3,7 +3,6 @@ import type { CSSProperties, TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPhone, telHref } from '../../lib/format';
-import { Modal } from '../../components/ui/Modal';
 import type { BalanceSummaryEntry, EmployeeListRow } from '../../types/employee';
 
 /** Same mechanics as MobileWizytyCalendarView's card swipe (TASK5/TASK3 there)
@@ -46,7 +45,6 @@ export interface MobileEmployeesListViewProps {
 export function MobileEmployeesListView({ employees, loading, error, balances, canWrite }: MobileEmployeesListViewProps) {
   const navigate = useNavigate();
   const [swipeState, setSwipeState] = useState<{ id: number; dx: number } | null>(null);
-  const [sheetTarget, setSheetTarget] = useState<EmployeeListRow | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
   const suppressClickRef = useRef<number | null>(null);
 
@@ -181,19 +179,6 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
               </div>
 
               <div className="mob-emp-actions">
-                {canWrite && (
-                  <button
-                    type="button"
-                    className="mob-emp-more"
-                    aria-label={`Akcje: ${emp.full_name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSheetTarget(emp);
-                    }}
-                  >
-                    <Icon name="more_horiz" />
-                  </button>
-                )}
                 {emp.phone && (
                   <a className="mob-emp-phone-btn" href={telHref(emp.phone)} title={formatPhone(emp.phone)} aria-label={`Zadzwoń: ${formatPhone(emp.phone)}`} onClick={(e) => e.stopPropagation()}>
                     <Icon name="call" />
@@ -204,41 +189,6 @@ export function MobileEmployeesListView({ employees, loading, error, balances, c
           </div>
         );
       })}
-
-      <Modal isOpen={sheetTarget !== null} onClose={() => setSheetTarget(null)} title={sheetTarget?.full_name ?? ''} variant="sheet">
-        {sheetTarget && (
-          <ul className="mw-actionlist">
-            <li>
-              <button
-                type="button"
-                className="mw-actionitem"
-                onClick={() => {
-                  const id = sheetTarget.id;
-                  setSheetTarget(null);
-                  navigate(`/pracownicy/${id}`);
-                }}
-              >
-                <Icon name="badge" /> Zobacz szczegóły
-              </button>
-            </li>
-            {canWrite && (
-              <li>
-                <button
-                  type="button"
-                  className="mw-actionitem"
-                  onClick={() => {
-                    const id = sheetTarget.id;
-                    setSheetTarget(null);
-                    navigate(`/pracownicy/${id}/edytuj`);
-                  }}
-                >
-                  <Icon name="edit" /> Edytuj pracownika
-                </button>
-              </li>
-            )}
-          </ul>
-        )}
-      </Modal>
     </div>
   );
 }

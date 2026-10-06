@@ -383,9 +383,8 @@ tr:hover .action-icon-btn.danger-reveal,
    `.mob-emp-meta` directly under the name — the same "meta chips under
    the name" placement `.user-card-meta` uses. The old `.mob-emp-tap-hint`
    chevron is gone: it was there to hint the card was tappable when the
-   only way to reach Edytuj was an undiscoverable swipe; the explicit "⋯"
-   button below already signals that now, same as users-list-page never
-   needed a chevron either. */
+   only way to reach Edytuj was an undiscoverable swipe; the card is a plain
+   tap target now, same as users-list-page never needed a chevron either. */
 .mob-emp-card {
   display: flex; align-items: stretch; gap: 0.5rem;
   padding: 0.875rem 0.5rem 0.875rem 0.875rem; cursor: pointer;
@@ -403,12 +402,10 @@ tr:hover .action-icon-btn.danger-reveal,
 .mob-emp-position { font-size: 0.8125rem; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mob-emp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.125rem; font-size: 0.8125rem; }
 
-/* Phone-call + "⋯" actions, stacked in a column on the card's right edge —
-   the two-action equivalent of `.user-card-more` sitting alone there.
-   The trigger is also the swipe-right→Edytuj gesture's non-gesture
-   equivalent — users-list-page's own more-button never made you discover
-   a swipe to reach it, and this card shouldn't require one either
-   (Guidelines §Gestures: "Always provide non-gesture alternatives"). */
+/* Phone-call action on the card's right edge. The "⋯" button and its action sheet
+   are gone: tapping the card opens the employee, swipe-left does the same and
+   swipe-right opens the editor — the edit form is also one tap away on the
+   employee's own page. */
 .mob-emp-actions { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin: -0.5rem -0.5rem -0.5rem 0; }
 .mob-emp-phone-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -417,20 +414,11 @@ tr:hover .action-icon-btn.danger-reveal,
 }
 .mob-emp-phone-btn .icon { width: 1.125rem; height: 1.125rem; }
 .mob-emp-phone-btn:active { background: var(--color-surface); color: var(--color-ink); }
-.mob-emp-more {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 3rem; min-height: 3rem; flex-shrink: 0;
-  font-size: 1.25rem; color: var(--color-ink-muted);
-  background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer;
-}
-.mob-emp-more:active { background: var(--color-surface); }
 
 /* List-page sticky bottom bar (EmployeesListPage.tsx, isMobile branch) —
-   "Aktualizuj preferencje" + "Dodaj pracownika" in the thumb zone:
-   `.mw-bar.mw-bar--stack` (mobile.css). Stacked, one full-width button per
-   row: every `.refined-btn-*` is `white-space: nowrap`, so an even 50/50
-   split let the longer label spill past its button once the half-share got
-   narrower than the text. The "⋯" sheet uses the shared `.mw-actionlist`. */
+   just "Dodaj pracownika" in the thumb zone (shown only to users who may add
+   employees): `.mw-bar.mw-bar--stack` (mobile.css). "Aktualizuj preferencje"
+   is desktop-only (page header). */
 
 /* ── Mobile Pracownik detail (EmployeeDetailPage.tsx) ──────────────────
    Bespoke mobile chrome: centered profile-style header, tighter card
