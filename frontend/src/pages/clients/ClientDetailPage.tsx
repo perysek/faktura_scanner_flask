@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
-import { SearchableSelectField, SelectField, TextareaField } from '../../components/ui/form';
+import { SearchableSelectField, TextareaField } from '../../components/ui/form';
 import { Icon } from '../../lib/icons/Icon';
 import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { formatDate, formatPhone } from '../../lib/format';
@@ -341,12 +341,13 @@ export function ClientDetailPage() {
         {showAddForm && (
           <div className="add-pref-form">
             <div className="pref-form-row">
-              <SelectField
+              <SearchableSelectField
                 label="Usługa"
                 placeholder="Wybierz usługę..."
+                searchPlaceholder="Szukaj usługi…"
                 options={serviceOptions}
                 value={selectedServiceId}
-                onChange={(e) => handleServiceFilterChange(e.target.value)}
+                onChange={handleServiceFilterChange}
                 error={prefError?.field === 'service' ? prefError.message : undefined}
               />
               <SearchableSelectField

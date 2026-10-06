@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
-import { SelectField } from '../../components/ui/form';
+import { SearchableSelectField } from '../../components/ui/form';
 import { PriceHistorySparkline } from './PriceHistorySparkline';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useEscapeClose } from '../../lib/a11y/useEscapeClose';
@@ -325,13 +325,14 @@ export function ServiceDetailPage() {
             ) : (
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '220px' }}>
-                  <SelectField
+                  <SearchableSelectField
                     label="Wybierz mikrousługę"
                     id="addon-select"
                     placeholder={allAddons.length === 0 ? 'Wszystkie mikrousługi już przypisane' : '-- Wybierz --'}
+                    searchPlaceholder="Szukaj mikrousługi…"
                     options={allAddons.map((a) => ({ value: String(a.id), label: `${a.name} (${a.formatted_price || `${a.price} zł`})` }))}
                     value={selectedAddonId}
-                    onChange={(e) => setSelectedAddonId(e.target.value)}
+                    onChange={setSelectedAddonId}
                   />
                 </div>
                 <Button variant="primary" onClick={addCompatibleAddon}>

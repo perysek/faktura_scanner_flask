@@ -10,6 +10,7 @@ import { ApiError } from '../../lib/api/client';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
+import { SearchableSelectField } from '../../components/ui/form';
 import { Icon } from '../../lib/icons/Icon';
 import { formatDate, formatPLN } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
@@ -491,17 +492,14 @@ export function EmployeeDetailPage() {
         {showAddForm && (
           <div className="add-service-form">
             <div className="assign-form-row">
-              <div>
-                <label>Usługa</label>
-                <select className="form-select" value={newServiceId} onChange={(e) => setNewServiceId(e.target.value)}>
-                  <option value="">{availableServices.length === 0 ? 'Wszystkie usługi już przypisane' : 'Wybierz usługę...'}</option>
-                  {availableServices.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.formatted_price}, {s.formatted_duration})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelectField
+                label="Usługa"
+                placeholder={availableServices.length === 0 ? 'Wszystkie usługi już przypisane' : 'Wybierz usługę...'}
+                searchPlaceholder="Szukaj usługi…"
+                options={availableServices.map((s) => ({ value: String(s.id), label: `${s.name} (${s.formatted_price}, ${s.formatted_duration})` }))}
+                value={newServiceId}
+                onChange={setNewServiceId}
+              />
               <div>
                 <label>Cena indyw. (PLN)</label>
                 <input className="form-input" type="number" step="0.01" min={0} placeholder="domyślna" value={newCustomPrice} onChange={(e) => setNewCustomPrice(e.target.value)} />
