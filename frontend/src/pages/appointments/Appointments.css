@@ -231,7 +231,10 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    up clears the shell footer. From 1024px the page is viewport-bounded and the list's own
    box scrolls, so the pair is anchored to the bottom-right of .cal-main instead, over the
    list and clear of the month sidebar; the extra right inset clears that box's scrollbar. */
-.scroll-jump { position: fixed; right: 1.25rem; bottom: 4.5rem; z-index: 30; display: flex; gap: 0.5rem; pointer-events: none; }
+.scroll-jump { position: fixed; right: 1.25rem; bottom: 4.5rem; z-index: 30; display: flex; gap: 0.5rem; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s; }
+/* Phone: the whole pair leaves with the bottom bars while the cards scroll (same 0.25s as `.mob-fixed-nav`).
+   `visibility` also takes the buttons out of the tab order. */
+.scroll-jump--hidden { opacity: 0; visibility: hidden; transform: translateY(1.5rem); }
 .scroll-jump-btn {
   pointer-events: auto;
   display: flex; align-items: center; justify-content: center;
@@ -245,7 +248,7 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .scroll-jump-btn:hover { border-color: var(--color-ink-muted); }
 /* Hidden = still occupies its slot, so the other button never shifts sideways. */
 .scroll-jump-btn--hidden { opacity: 0; visibility: hidden; transform: translateY(0.5rem); pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .scroll-jump-btn { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .scroll-jump, .scroll-jump-btn { transition: none; } }
 @media (min-width: 1024px) { .scroll-jump { position: absolute; right: 1.75rem; bottom: 1rem; } }
 /* Phone: 44px tap targets, above the fixed bottom nav (same 150px reserve .mob-appt-list keeps). */
 @media (max-width: 640px) {
@@ -714,12 +717,13 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .action-icon-btn--reschedule:hover { background: var(--color-status-rescheduled-bg, #fef3c7) !important; }
 
 .mob-appt-card {
-  /* Extra right padding reserves room for `.mob-appt-tap-hint` (TASK3)
-     without it overlapping the client/service text. Padding and gap bumped
-     from 0.625rem/0.375rem (redesign) — dropping the caption labels and the
-     employee row freed enough vertical room to afford both a bit more
-     breathing room AND the larger type scale below. */
-  padding: 0.75rem 1.375rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; cursor: pointer;
+  /* Padding and gap bumped from 0.625rem/0.375rem (redesign) — dropping the caption labels and the
+     employee row freed enough vertical room to afford both a bit more breathing room AND the larger
+     type scale below. The right side no longer reserves room for a tap chevron (removed): the whole
+     card is the tap target. `--appt-gap` is the space between the card's rows; the service line
+     cancels it (below) to sit tight under the client name. */
+  --appt-gap: 0.5rem;
+  padding: 0.75rem; display: flex; flex-direction: column; gap: var(--appt-gap); cursor: pointer;
   /* Snap-back transition for the swipe gesture (TASK5) — the inline
      `transform: translateX()` set while actively dragging removes this same
      `transition` implicitly (React sets it via the style attribute, not a
@@ -748,10 +752,6 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 }
 .mob-appt-card--highlight { animation: mob-appt-highlight-pulse 0.5s ease-in-out 2; }
 
-/* Small chevron, bottom-right corner, muted — a minimal "this opens"
-   affordance rather than a full "tap to view" label (TASK3). */
-.mob-appt-tap-hint { position: absolute; right: 0.375rem; bottom: 0.5rem; width: 0.875rem; height: 0.875rem; color: var(--color-ink-subtle); opacity: 0.6; }
-
 .mob-appt-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
 /* Redesign — date dropped entirely; one line, bold time + regular duration
    (previously two stacked lines with the date prefixed to the time). Sizes
@@ -769,11 +769,16 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .mob-appt-client-row { justify-content: space-between; gap: 0.5rem; flex-wrap: nowrap; }
 .mob-appt-client-name {
   font-size: 1.0625rem; font-weight: 600; color: var(--color-ink);
+  line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* The 2rem tap target stays, but the negative block margin stops it from setting the row's height:
+   the row hugs the name's own line, so the service line can sit right under it. The button simply
+   overhangs 0.375rem above and below (`position`/`z-index` so it still wins the tap over the badge). */
 .mob-appt-phone-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 2rem; height: 2rem; flex-shrink: 0; border-radius: var(--radius-sm);
+  margin-block: -0.375rem; position: relative; z-index: 1;
   color: var(--color-ink-subtle); text-decoration: none;
 }
 .mob-appt-phone-btn .icon { width: 1.125rem; height: 1.125rem; }
@@ -781,7 +786,19 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 
 /* Service (redesign) — bare name, no "Usługa:" caption; the whole Pracownik
    (employee) row is dropped entirely, not just its caption. */
-.mob-appt-service { font-size: 1rem; color: var(--color-ink-muted); }
+.mob-appt-service-row {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 0.5rem;
+  margin-top: calc(-1 * var(--appt-gap)); /* cancels the card's row gap: as close under the name as it gets */
+}
+.mob-appt-service { min-width: 0; font-size: 1rem; line-height: 1.25; color: var(--color-ink-muted); }
+/* Stylist badge — only with "Wszyscy" selected. A flat rectangle (2px radius, design system), no taller
+   than the service line so it never adds to the card's height. */
+.mob-appt-stylist {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.75rem; height: 1.25rem; padding: 0 0.375rem;
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1;
+  color: var(--color-ink-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px;
+}
 
 /* Post-visit note — a hairline-separated block under the service. The type size
    (0.75rem) comes from `.vn-digest` in VisitNotes.css so the card and the desktop

@@ -14,6 +14,7 @@ import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { NotesDigest } from '../../components/visitNotes/NotesDigest';
 import { MobileIncomeCard } from './MobileIncomeCard';
 import { RescheduleSheet } from './RescheduleSheet';
+import { ScrollJumpButtons } from './ScrollJumpButtons';
 import { StatusDropdown } from './StatusDropdown';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
@@ -91,6 +92,15 @@ function formatDuration(startTime: string, endTime: string): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+/** Stylist badge text: first letter of the first and of the last word of the name ("Anna Maria
+ * Nowak" → "AN"); a one-word name gives one letter, no name a dash. */
+function employeeInitials(name: string | null): string {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '—';
+  const first = words[0].charAt(0);
+  const last = words.length > 1 ? words[words.length - 1].charAt(0) : '';
+  return (first + last).toLocaleUpperCase('pl-PL');
 }
 /** mod #4: direct-dial `tel:` href instead of clipboard-copy — raw digits,
  * `+48` prefix assumed for bare 9-digit national numbers (same assumption
@@ -321,7 +331,10 @@ export function MobileWizytyCalendarView({
     // Must match `.mob-emp-popup-sheet`'s transform transition (var(--dur-snap) = 300ms).
     setTimeout(() => setEmployeePopupMounted(false), 300);
   }
-  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? (employeeId === null && auth.isSuperuser && !auth.isLoading && !auth.ownDataActive ? 'Wszyscy' : '—');
+  // "Wszyscy" is selected: everyone's visits are listed at once. The one place that decides it, so the
+  // selector's label and the stylist badge on each card can never disagree.
+  const showAllEmployees = employeeId === null && auth.isSuperuser && !auth.isLoading && !auth.ownDataActive;
+  const selectedEmployeeName = employees.find((e) => e.id === employeeId)?.full_name ?? (showAllEmployees ? 'Wszyscy' : '—');
 
   // "Dane własne" long-press (superuser-only) — the mobile employee
   // selector's long-press replaces the old sidebar switch entirely.
@@ -717,9 +730,17 @@ export function MobileWizytyCalendarView({
           )}
         </div>
 
-        {/* Employee row dropped entirely (redesign). Service — bare
-            name, no "Usługa:" caption. */}
-        <span className="mob-appt-service">{appt.service_name || '—'}</span>
+        {/* Employee row dropped entirely (redesign). Service — bare name, no "Usługa:" caption — sits
+            tight under the client name. With "Wszyscy" selected the visits of every stylist are mixed
+            in one list, so a rectangle with the stylist's initials closes the line at the right edge. */}
+        <div className="mob-appt-service-row">
+          <span className="mob-appt-service">{appt.service_name || '—'}</span>
+          {showAllEmployees && (
+            <span className="mob-appt-stylist" title={appt.employee_name ?? undefined} aria-label={appt.employee_name ? `Pracownik: ${appt.employee_name}` : 'Brak pracownika'}>
+              {employeeInitials(appt.employee_name)}
+            </span>
+          )}
+        </div>
 
         {/* Post-visit note — same digest the desktop "Aktualne uwagi i
             zalecenia" column shows (client's newest note, small type, never
@@ -729,9 +750,6 @@ export function MobileWizytyCalendarView({
             <NotesDigest notes={[appt.latest_note]} />
           </div>
         )}
-
-        {/* Minimal "this is tappable" hint (TASK3). */}
-        <Icon name="chevron_right" className="mob-appt-tap-hint" />
         </div>
       </div>
     );
@@ -955,6 +973,9 @@ export function MobileWizytyCalendarView({
           </div>
         </div>
       </div>
+
+      {/* The floating up/down pair rides above the bars: it leaves and returns with them. */}
+      <ScrollJumpButtons hidden={navHidden} />
 
       <RescheduleSheet
         appointment={rescheduleAppt}

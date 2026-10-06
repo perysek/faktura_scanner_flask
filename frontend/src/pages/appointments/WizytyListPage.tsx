@@ -736,7 +736,8 @@ export function WizytyListPage() {
           </div>
         </div>
         )}
-        <ScrollJumpButtons innerScrollerRef={tableContainerRef} />
+        {/* The phone view renders its own pair (MobileWizytyCalendarView) — it hides with the bottom bars. */}
+        {!isMobile && <ScrollJumpButtons innerScrollerRef={tableContainerRef} />}
       </div>
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />

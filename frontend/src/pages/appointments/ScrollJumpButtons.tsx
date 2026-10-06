@@ -11,6 +11,9 @@ interface ScrollJumpButtonsProps {
    * the buttons drive AppShell's `<main class="app-shell-content">` instead — the real
    * page scroller everywhere else, the phone included. */
   innerScrollerRef?: RefObject<HTMLElement>;
+  /** Slide the whole pair away (and make it unreachable) — the phone view ties this to its bottom
+   * bars, so the pair leaves and returns with them. */
+  hidden?: boolean;
 }
 
 /** Floating "scroll to start" / "scroll to end" pair for long lists. Each button shows
@@ -18,7 +21,7 @@ interface ScrollJumpButtonsProps {
  * end — so both are visible mid-list. Both keep their slot (hidden via `visibility`) so
  * the pair sits side by side at one height and never shifts when one of them toggles.
  * Placement (fixed vs. anchored inside `.cal-main`) is CSS only — see Appointments.css. */
-export function ScrollJumpButtons({ innerScrollerRef }: ScrollJumpButtonsProps) {
+export function ScrollJumpButtons({ innerScrollerRef, hidden = false }: ScrollJumpButtonsProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [canUp, setCanUp] = useState(false);
   const [canDown, setCanDown] = useState(false);
@@ -71,7 +74,7 @@ export function ScrollJumpButtons({ innerScrollerRef }: ScrollJumpButtonsProps) 
   }
 
   return (
-    <div className="scroll-jump" ref={rootRef}>
+    <div className={`scroll-jump${hidden ? ' scroll-jump--hidden' : ''}`} ref={rootRef}>
       <button
         type="button"
         className={`scroll-jump-btn${canUp ? '' : ' scroll-jump-btn--hidden'}`}
