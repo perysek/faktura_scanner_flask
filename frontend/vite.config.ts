@@ -8,6 +8,14 @@ import react from '@vitejs/plugin-react'
 // colliding with an unrelated local project that hardcodes 5001).
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:5002'
 
+// Pages rendered by FLASK, not by the SPA — the links in client/employee SMS and the online
+// booking page (+ the /static assets those standalone pages load, and the employee PWA).
+// Without this, the SPA's catch-all route answers them with its own "Nie znaleziono" shell:
+// every confirm/cancel/rate/visit link and /booking is dead on the React host (SMS review P0-5).
+// KEEP IN SYNC with deploy/nginx/public-links.conf — tests/test_public_link_routing.py compares
+// the two lists, so a change on one side only fails the build.
+const flaskPublicPaths = ['confirm', 'cancel', 'rate', 'visit', 'booking', 'pracownik', 'static']
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -28,6 +36,9 @@ export default defineConfig({
       '/system': { target: apiProxyTarget, changeOrigin: true },
       '/absences': { target: apiProxyTarget, changeOrigin: true },
       '/settings': { target: apiProxyTarget, changeOrigin: true },
+      // One regex key (a leading ^ makes Vite treat it as a RegExp): whole path segments only,
+      // so a future SPA route such as /confirmation would not be swallowed.
+      [`^/(${flaskPublicPaths.join('|')})(/|$)`]: { target: apiProxyTarget, changeOrigin: true },
     },
   },
 })
