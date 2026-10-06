@@ -3,45 +3,87 @@ Public routes — no authentication required.
 Client-facing pages accessed via SMS confirmation links.
 """
 import logging
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, current_app
 from config.appointment_statuses import AppointmentStatus
 from config.database import managed_transaction
 from repositories.appointments.appointment_repository import AppointmentRepository
-from repositories.clients.client_repository import ClientRepository
 from repositories.audit_repository import AuditRepository
+from services import client_cancellation_service as client_cancel
 from services.appointment_service import AppointmentBusinessService
 
 public_bp = Blueprint('public', __name__)
 
 
 @public_bp.route('/wizyty', methods=['GET'])
+@public_bp.route('/pracownik', methods=['GET'])
 def mobile_web_app():
     """Employee picker/PIN/today-list/detail app — PWA-style web page against
     the /api/mobile/* backend. Staff "Add to Home Screen" in their phone's
     browser (Safari on iOS, Chrome on Android) for a full-screen, app-like
     experience with no install/app-store step on either platform.
+
+    Two paths, one page. `/wizyty` is the original; on the React host `/wizyty` is the
+    SPA's own staff appointment list, so the PWA needs a name that cannot collide —
+    `/pracownik`. (SMS review P0-5.) At cutover employees re-add the home-screen
+    shortcut from /pracownik; nothing else in the page depends on its own path.
     """
     return render_template('public/mobile_app.html')
 
 
+def _public_ctx() -> dict:
+    """Context every client-facing page needs: the salon's phone (optional) and the cut-off."""
+    return {
+        'salon_phone': current_app.config.get('SALON_PHONE', ''),
+        'cutoff_hours': client_cancel.cutoff_hours(),
+    }
+
+
+def _render_confirm(view, appt, token, **extra):
+    return render_template('public/appointment_confirm.html', view=view, appointment=appt,
+                           token=token, just_submitted=extra.pop('just_submitted', False),
+                           **_public_ctx(), **extra)
+
+
+def _render_cancel(view, appt, token, **extra):
+    return render_template('public/appointment_cancel.html', view=view, appointment=appt,
+                           token=token, just_submitted=extra.pop('just_submitted', False),
+                           **_public_ctx(), **extra)
+
+
+_OUTCOME_VIEW = {
+    client_cancel.CANCELLED: 'cancelled',
+    client_cancel.ALREADY_CANCELLED: 'cancelled',
+    client_cancel.NOT_CANCELABLE: 'not_active',
+    client_cancel.TOO_LATE: 'too_late',
+}
+
+
+def _confirm_view(appt: dict) -> str:
+    """Which state of /confirm does this visit call for? (read-only — GET never writes)"""
+    if appt.get('status') == 'cancelled':
+        return 'cancelled'
+    if appt.get('status') not in client_cancel.CANCELABLE_STATUSES:
+        return 'not_active'
+    confirmation = appt.get('confirmation_status')
+    if confirmation == 'confirmed':
+        return 'confirmed'
+    if confirmation == 'declined':
+        # Declined before declines really cancelled: the slot is still held, so go
+        # straight to the "are you sure?" step instead of showing a dead end.
+        return 'confirm_decline'
+    return 'ask'
+
+
 @public_bp.route('/confirm/<token>', methods=['GET'])
 def appointment_confirm_view(token):
-    repo = AppointmentRepository()
-    appt = repo.get_by_confirmation_token(token)
+    appt = AppointmentRepository().get_by_confirmation_token(token)
     if not appt:
         return render_template('public/confirm_invalid.html'), 404
 
     appt = dict(appt)
-    client = ClientRepository().get_by_id(appt['client_id'])
-    return render_template(
-        'public/appointment_confirm.html',
-        appointment=appt,
-        client=client,
-        token=token,
-        already_responded=(appt.get('confirmation_status') is not None),
-        confirmation_status=appt.get('confirmation_status'),
-        just_submitted=False,
-    )
+    view = _confirm_view(appt)
+    return _render_confirm(view, appt, token,
+                           decline_allowed=not client_cancel.is_inside_cutoff(appt))
 
 
 @public_bp.route('/confirm/<token>', methods=['POST'])
@@ -52,132 +94,80 @@ def appointment_confirm_submit(token):
         return render_template('public/confirm_invalid.html'), 404
 
     appt = dict(appt)
-
-    if appt.get('confirmation_status'):
-        return render_template(
-            'public/appointment_confirm.html',
-            appointment=appt, client=None, token=token,
-            already_responded=True,
-            confirmation_status=appt['confirmation_status'],
-            just_submitted=False,
-        )
-
     action = request.form.get('action')
     if action not in ('confirmed', 'declined'):
-        return render_template(
-            'public/appointment_confirm.html',
-            appointment=appt, client=None, token=token,
-            error='Nieprawidłowa akcja', already_responded=False,
-            confirmation_status=None, just_submitted=False,
-        )
+        return _render_confirm('ask', appt, token, error='Nieprawidłowa akcja',
+                               decline_allowed=not client_cancel.is_inside_cutoff(appt)), 400
 
-    repo.update_confirmation_status(appt['id'], action)
+    # A visit that is already over/cancelled/moved takes no answer, whatever was clicked.
+    if appt.get('status') == 'cancelled':
+        return _render_confirm('cancelled', appt, token)
+    if appt.get('status') not in client_cancel.CANCELABLE_STATUSES:
+        return _render_confirm('not_active', appt, token)
 
+    if action == 'declined':
+        # Two steps: the first click only shows "are you sure?", nothing is written.
+        if request.form.get('confirm_decline') != '1':
+            return _render_confirm('confirm_decline', appt, token)
+        outcome = client_cancel.cancel_by_client(
+            appt, reason='Klient odwołał wizytę przez SMS (link potwierdzenia)', declined=True)
+        return _render_confirm(_OUTCOME_VIEW[outcome], appt, token,
+                               just_submitted=(outcome == client_cancel.CANCELLED))
+
+    # action == 'confirmed'
+    if appt.get('confirmation_status') == 'confirmed':
+        return _render_confirm('confirmed', appt, token)          # idempotent double-tap
     old_status = appt.get('status')
-    if action == 'confirmed' and old_status in ('scheduled', 'pending'):
-        repo.update_status(appt['id'], 'confirmed')
+    flip_status = old_status in ('scheduled', 'pending')
+    with managed_transaction():
+        repo.update_confirmation_status(appt['id'], 'confirmed')
+        if flip_status:
+            repo.update_status(appt['id'], 'confirmed')
+        repo.release_sms_hold(appt['id'])        # the client proved the number is theirs
 
     try:
         audit = AuditRepository()
+        label = f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}"
         audit.log_event(
-            entity_type='appointment', action='CLIENT_CONFIRMATION',
-            entity_id=appt['id'],
-            entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
-            field_name='confirmation_status',
-            old_value=None, new_value=action,
-            user_id=None, user_name='Klient (SMS)',
+            entity_type='appointment', action='CLIENT_CONFIRMATION', entity_id=appt['id'],
+            entity_label=label, field_name='confirmation_status',
+            old_value=appt.get('confirmation_status'), new_value='confirmed',
+            user_id=None, user_name=client_cancel.AUDIT_ACTOR,
         )
-        if action == 'confirmed' and old_status in ('scheduled', 'pending'):
+        if flip_status:
             audit.log_event(
-                entity_type='appointment', action='STATUS_CHANGED',
-                entity_id=appt['id'],
-                entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
-                field_name='status',
-                old_value=old_status, new_value='confirmed',
-                user_id=None, user_name='Klient (SMS)',
+                entity_type='appointment', action='STATUS_CHANGED', entity_id=appt['id'],
+                entity_label=label, field_name='status', old_value=old_status,
+                new_value='confirmed', user_id=None, user_name=client_cancel.AUDIT_ACTOR,
             )
     except Exception:
         logging.exception("Audit log failed for confirmation token=%s", token)
 
-    return render_template(
-        'public/appointment_confirm.html',
-        appointment=appt, client=None, token=token,
-        just_submitted=True, already_responded=True,
-        confirmation_status=action,
-    )
-
-
-_CANCELABLE_STATUSES = {'scheduled', 'confirmed', 'pending'}
+    return _render_confirm('confirmed', appt, token, just_submitted=True)
 
 
 @public_bp.route('/cancel/<token>', methods=['GET'])
 def appointment_cancel_view(token):
-    repo = AppointmentRepository()
-    appt = repo.get_by_confirmation_token(token)
+    appt = AppointmentRepository().get_by_confirmation_token(token)
     if not appt:
         return render_template('public/confirm_invalid.html'), 404
 
     appt = dict(appt)
-    client = ClientRepository().get_by_id(appt['client_id'])
-    already_cancelled = appt.get('status') == 'cancelled'
-    can_cancel = appt.get('status') in _CANCELABLE_STATUSES
-
-    return render_template(
-        'public/appointment_cancel.html',
-        appointment=appt,
-        client=client,
-        token=token,
-        already_cancelled=already_cancelled,
-        can_cancel=can_cancel,
-        just_submitted=False,
-    )
+    outcome = client_cancel.classify(appt)
+    view = 'ask' if outcome == client_cancel.CANCELLED else _OUTCOME_VIEW[outcome]
+    return _render_cancel(view, appt, token)
 
 
 @public_bp.route('/cancel/<token>', methods=['POST'])
 def appointment_cancel_submit(token):
-    repo = AppointmentRepository()
-    appt = repo.get_by_confirmation_token(token)
+    appt = AppointmentRepository().get_by_confirmation_token(token)
     if not appt:
         return render_template('public/confirm_invalid.html'), 404
 
     appt = dict(appt)
-
-    if appt.get('status') == 'cancelled':
-        return render_template(
-            'public/appointment_cancel.html',
-            appointment=appt, client=None, token=token,
-            already_cancelled=True, can_cancel=False, just_submitted=False,
-        )
-
-    if appt.get('status') not in _CANCELABLE_STATUSES:
-        return render_template(
-            'public/appointment_cancel.html',
-            appointment=appt, client=None, token=token,
-            already_cancelled=False, can_cancel=False, just_submitted=False,
-        )
-
-    old_status = appt.get('status')
-    with managed_transaction():
-        repo.update_status(appt['id'], 'cancelled')
-        AppointmentBusinessService().apply_status_change_side_effects(appt['id'], old_status, 'cancelled')
-
-    try:
-        AuditRepository().log_event(
-            entity_type='appointment', action='STATUS_CHANGED',
-            entity_id=appt['id'],
-            entity_label=f"{appt.get('appointment_date')} {str(appt.get('start_time',''))[:5]}",
-            field_name='status',
-            old_value=old_status, new_value='cancelled',
-            user_id=None, user_name='Klient (SMS)',
-        )
-    except Exception:
-        logging.exception("Audit log failed for cancel token=%s", token)
-
-    return render_template(
-        'public/appointment_cancel.html',
-        appointment=appt, client=None, token=token,
-        already_cancelled=True, can_cancel=False, just_submitted=True,
-    )
+    outcome = client_cancel.cancel_by_client(appt, reason='Klient anulował wizytę przez SMS')
+    return _render_cancel(_OUTCOME_VIEW[outcome], appt, token,
+                          just_submitted=(outcome == client_cancel.CANCELLED))
 
 
 # ---------------------------------------------------------------------------

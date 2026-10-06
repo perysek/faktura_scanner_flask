@@ -3,7 +3,6 @@ Twilio SMS service — outbound only.
 Requires: pip install twilio
 """
 import logging
-import re
 import uuid
 from datetime import datetime
 from typing import Optional, Tuple, List
@@ -16,6 +15,8 @@ from repositories.clients.client_repository import ClientRepository
 from repositories.sms.sms_repository import (
     SmsSettingsRepository, SmsMessageTypeRepository, SmsReminderRepository
 )
+from utils.phone import normalize_phone
+from utils.timezone import now_local, WARSAW_TZ
 
 
 class SmsError(Exception):
@@ -82,6 +83,28 @@ class SmsService:
         except Exception as e:
             return False, str(e)
 
+    def type_status(self, type_key: str) -> dict:
+        """Can a text of this type actually go out right now? -> {'available': bool, 'reason': str}.
+
+        For UIs offering an optional "send SMS" action. `send()` refuses a switched-off type,
+        so a checkbox that does not check this would let staff believe they notified a client
+        while nothing was sent (the absence-conflict modal ships with its box ticked and its
+        type disabled). `reason` is Polish, ready to show.
+        """
+        settings = self.get_settings()
+        configured = bool(settings.get('account_sid') and settings.get('auth_token')
+                          and (settings.get('messaging_service_sid') or settings.get('from_number')))
+        if not settings.get('is_active') or not configured:
+            return {'available': False,
+                    'reason': 'Wysyłanie SMS jest wyłączone lub nieskonfigurowane (Ustawienia SMS).'}
+        msg_type = self._type_repo.get_by_key(type_key)
+        if not msg_type:
+            return {'available': False, 'reason': f'Nieznany typ SMS: {type_key}.'}
+        if not msg_type.get('is_enabled'):
+            return {'available': False,
+                    'reason': f'Typ SMS „{msg_type.get("name") or type_key}” jest wyłączony w Ustawieniach SMS.'}
+        return {'available': True, 'reason': ''}
+
     # ------------------------------------------------------------------
     # Core: send one message type for one appointment
     # ------------------------------------------------------------------
@@ -93,11 +116,19 @@ class SmsService:
         sender_user_id: Optional[int] = None,
         sender_name: Optional[str] = None,
         base_url: str = None,
+        auto: bool = False,
     ) -> dict:
         """
         Build and send a specific SMS type for appointment_id.
         Returns: {success, reminder_id, twilio_sid, message_body, error}
-        Raises SmsError on config problems.
+        Raises SmsError on config problems — including a type that is switched off
+        (`is_enabled` is the "this text may be used" switch for scheduler AND manual
+        sends alike; before, only the scheduler's own query honoured it).
+
+        `auto=True` marks scheduler/event-queue sends: those are idempotent per
+        (appointment, type) — a second attempt returns `{'success': False,
+        'skipped': True}` instead of texting the client again (a rating request must
+        arrive exactly once). Manual sends by staff are deliberate and stay repeatable.
         """
         settings = self.get_settings()
         if not settings.get('account_sid') or not settings.get('auth_token'):
@@ -110,6 +141,12 @@ class SmsService:
         msg_type = self._type_repo.get_by_key(message_type_key)
         if not msg_type:
             raise SmsError(f"Nieznany typ SMS: {message_type_key}")
+        if not msg_type.get('is_enabled'):
+            raise SmsError(f"Typ SMS „{msg_type.get('name') or message_type_key}” jest wyłączony w ustawieniach")
+
+        if auto and self._reminder_repo.exists_active(appointment_id, message_type_key):
+            return {'success': False, 'skipped': True,
+                    'error': f"SMS „{message_type_key}” dla wizyty {appointment_id} już wysłany"}
 
         appt = self._appt_repo.get_by_id(appointment_id)
         if not appt:
@@ -221,17 +258,24 @@ class SmsService:
                                     appointment_dt) -> Optional[int]:
         """Schedule employee_visit_reminder SMS 20 min before appointment start.
         Cancels any existing pending reminder first (handles reschedules).
-        Returns sms_events.id or None if SMS disabled / window already passed."""
-        from datetime import datetime, timedelta
+        Returns sms_events.id or None if SMS disabled / window already passed.
+
+        `appointment_dt` is naive *Warsaw* wall-clock (how appointments are stored).
+        It must be compared with Warsaw "now" and handed to the TIMESTAMPTZ column
+        as an aware datetime — a naive value would be read in the DB session
+        timezone (UTC on the server), landing the reminder 1-2h after the visit
+        had already started."""
+        from datetime import timedelta
         from repositories.sms.sms_event_repository import SmsEventRepository
 
         settings = self.get_settings()
         if not settings.get('is_active'):
             return None
 
-        scheduled_at = appointment_dt - timedelta(minutes=20)
-        if scheduled_at <= datetime.now():
+        scheduled_local = appointment_dt - timedelta(minutes=20)
+        if scheduled_local <= now_local():
             return None
+        scheduled_at = scheduled_local.replace(tzinfo=WARSAW_TZ)
 
         repo = SmsEventRepository()
         repo.cancel_type_for_appointment(appointment_id, 'employee_visit_reminder')
@@ -258,7 +302,8 @@ class SmsService:
         try:
             from twilio.rest import Client as TwilioClient
             twilio = TwilioClient(settings['account_sid'], settings['auth_token'])
-            send_kwargs = {'body': body, 'to': employee_phone}
+            # Twilio only accepts E.164; employees' phones are free text like "500 100 200".
+            send_kwargs = {'body': body, 'to': self._normalize_phone(employee_phone)}
             if settings.get('messaging_service_sid'):
                 send_kwargs['messaging_service_sid'] = settings['messaging_service_sid']
             else:
@@ -325,8 +370,13 @@ class SmsService:
                         appointment_id=event['appointment_id'],
                         message_type_key=event['event_type'],
                         base_url=base_url,
+                        auto=True,
                     )
-                    if result.get('success'):
+                    if result.get('skipped'):
+                        # Already texted (e.g. the event was queued twice): close it quietly.
+                        event_repo.mark_skipped(event['id'], result.get('error', ''))
+                        skipped += 1
+                    elif result.get('success'):
                         event_repo.mark_sent(event['id'], result.get('reminder_id'))
                         if event['event_type'] == 'post_visit_message':
                             self._appt_repo.update_rating_status(
@@ -364,7 +414,10 @@ class SmsService:
         return count
 
     def send_due_reminders(self, base_url: str) -> dict:
-        enabled_types = self._type_repo.get_enabled()
+        # Only "N hours before the visit" types. Event-only/manual types (rating text,
+        # absence cancellation, booking confirmation) have their own triggers — feeding
+        # them to this loop texted clients at the visit's start (P0-2).
+        enabled_types = self._type_repo.get_enabled_before_visit()
         sent = skipped = failed = 0
 
         for msg_type in enabled_types:
@@ -381,8 +434,11 @@ class SmsService:
                         sender_user_id=None,
                         sender_name='System (auto)',
                         base_url=base_url,
+                        auto=True,
                     )
-                    if result['success']:
+                    if result.get('skipped'):
+                        skipped += 1
+                    elif result['success']:
                         sent += 1
                     else:
                         failed += 1
@@ -394,21 +450,58 @@ class SmsService:
 
         return {'sent': sent, 'skipped': skipped, 'failed': failed}
 
+    def send_booking_confirmation(self, appointment_id: int, *, hold: bool) -> dict:
+        """The ONE text an online booking triggers: "reservation received" + confirm/cancel links.
+
+        `hold=True` is for a phone number we have never verified: the visit's automatic
+        client reminders are held until the client clicks the confirm link, so a stranger
+        typing someone else's number can cause at most this single text — not a stream.
+        The hold is set BEFORE sending (closing the race with the 15-minute loop) and lifted
+        again if the text did not actually go out; otherwise the client would never receive
+        the link that releases it and would silently get no reminders at all.
+
+        Never raises — a failed SMS must not undo a successful booking.
+        Returns {'status': 'sent' | 'skipped' | 'failed', 'hold': bool, 'error'?: str}.
+        'skipped' = SMS switched off or the type is disabled (the go-live switch); no hold then.
+        """
+        settings = self.get_settings()
+        msg_type = self._type_repo.get_by_key('booking_confirmed')
+        if not settings.get('is_active') or not msg_type or not msg_type.get('is_enabled'):
+            return {'status': 'skipped', 'hold': False}
+
+        held = False
+        try:
+            if hold:
+                self._appt_repo.set_sms_hold(appointment_id, True)
+                held = True
+            result = self.send(appointment_id, 'booking_confirmed',
+                               sender_name='Rezerwacja online', auto=True)
+        except SmsError as exc:
+            result = {'success': False, 'error': str(exc)}
+        except Exception as exc:
+            logging.exception("Booking confirmation SMS crashed appt=%s", appointment_id)
+            result = {'success': False, 'error': str(exc)}
+
+        if result.get('success'):
+            return {'status': 'sent', 'hold': held}
+        if held:
+            try:
+                self._appt_repo.set_sms_hold(appointment_id, False)
+            except Exception:
+                logging.exception("Could not lift sms_hold appt=%s after a failed send", appointment_id)
+        return {'status': 'failed', 'hold': False, 'error': result.get('error', '')}
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
     def _normalize_phone(self, phone: str) -> str:
-        phone = re.sub(r'[\s\-\(\)]', '', phone.strip())
-        if phone.startswith('+'):
-            return phone
-        if phone.startswith('48') and len(phone) == 11:
-            return '+' + phone
-        if phone.startswith('0') and len(phone) == 10:
-            return '+48' + phone[1:]
-        if len(phone) == 9:
-            return '+48' + phone
-        return phone
+        """E.164 or SmsError. The old lenient version returned anything it couldn't parse and
+        Twilio then rejected it (or, for a long string, the VARCHAR(20) column did first)."""
+        normalized = normalize_phone(phone)
+        if not normalized:
+            raise SmsError(f"Nieprawidłowy numer telefonu: {str(phone)[:30]!r}")
+        return normalized
 
     def _fmt_date(self, date_str: str) -> str:
         try:
@@ -430,7 +523,7 @@ class SmsService:
 
         try:
             appt_dt = datetime.strptime(f"{appt['appointment_date']} {start_time}", '%Y-%m-%d %H:%M')
-            delta = appt_dt - datetime.now()
+            delta = appt_dt - now_local()   # Warsaw-vs-Warsaw; bare now() is naive-UTC on the server
             hours_before = max(0, int(delta.total_seconds() / 3600))
         except Exception:
             hours_before = msg_type['send_hours_before']

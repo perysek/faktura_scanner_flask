@@ -58,6 +58,16 @@ class SmsEventRepository(BaseRepository):
         cursor = self._execute(sql, (sms_reminder_id, event_id))
         return cursor.rowcount > 0
 
+    def mark_skipped(self, event_id: int, reason: str) -> bool:
+        """Close an event that must not send (e.g. the text already went out).
+        Stored as 'cancelled' so it leaves the due-queue without counting as a failure."""
+        sql = """
+            UPDATE sms_events SET status = 'cancelled', error_message = %s
+            WHERE id = %s
+        """
+        cursor = self._execute(sql, (reason, event_id))
+        return cursor.rowcount > 0
+
     def mark_failed(self, event_id: int, error_message: str) -> bool:
         """Mark an event as failed and increment retry_count."""
         sql = """

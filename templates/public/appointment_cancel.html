@@ -1,156 +1,28 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anulowanie wizyty — MyWay Beauty Salon</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f5f5f0;
-            min-height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            padding: 1.5rem 1rem;
-        }
-        .card {
-            background: var(--color-surface-elevated); border-radius: 8px;
-            padding: 2.25rem 1.75rem; max-width: 420px; width: 100%;
-            border: 1px solid rgba(0,0,0,.04);
-            box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.09);
-        }
-        .salon-name {
-            font-size: 0.75rem; font-weight: 500; letter-spacing: 0.12em;
-            text-transform: uppercase; color: #888; margin-bottom: 1.75rem;
-        }
-        .status-view { text-align: center; }
-        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; line-height: 1.35; margin-bottom: 0.5rem; }
-        .subheading { font-size: 0.875rem; color: #666; margin-bottom: 1.75rem; line-height: 1.55; }
-        .details-block {
-            background: #f9f9f7; border-radius: 6px;
-            padding: 0.25rem 1.125rem; margin-bottom: 1.75rem;
-        }
-        .detail-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0.625rem 0; font-size: 0.875rem;
-        }
-        .detail-row + .detail-row { border-top: 1px solid rgba(0,0,0,.05); }
-        .detail-label { color: #888; }
-        .detail-value { font-weight: 500; color: #1a1a1a; }
-        .warning-box {
-            background: #fff7ed; border: 1px solid #fed7aa;
-            border-radius: 6px; padding: 1rem 1.125rem;
-            margin-bottom: 1.75rem; font-size: 0.8125rem; color: #92400e;
-            line-height: 1.55;
-        }
-        .btn-cancel {
-            display: block; width: 100%; padding: 1rem;
-            background: #dc2626; color: white; border: none; border-radius: 6px;
-            font-family: inherit; font-size: 0.9375rem; font-weight: 500; letter-spacing: 0.01em;
-            cursor: pointer; margin-bottom: 0.75rem;
-            transition: background 0.15s ease;
-        }
-        .btn-cancel:active { background: #b91c1c; }
-        .btn-back {
-            display: block; width: 100%; padding: 1rem;
-            background: var(--color-surface-elevated); color: #666; border: 1px solid #ddd; border-radius: 6px;
-            font-family: inherit; font-size: 0.875rem; cursor: pointer;
-            text-align: center; text-decoration: none;
-            transition: border-color 0.15s ease, color 0.15s ease;
-        }
-        .btn-back:active { border-color: #666; color: #1a1a1a; }
-        .status-icon { font-size: 2.5rem; margin-bottom: 0.875rem; }
-        .status-message { font-size: 0.875rem; color: #666; margin-top: 0.5rem; line-height: 1.55;
-                           max-width: 300px; margin-left: auto; margin-right: auto; }
-        .contact-hint {
-            margin-top: 1.75rem; padding-top: 1.125rem;
-            border-top: 1px solid #f0f0f0;
-            font-size: 0.75rem; color: #aaa; text-align: center;
-        }
-        .toast {
-            position: fixed; bottom: 1.5rem; left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a1a; color: white;
-            padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 0.875rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,.18);
-            animation: slideup 0.3s ease; white-space: nowrap;
-        }
-        @keyframes slideup {
-            from { transform: translateX(-50%) translateY(16px); opacity: 0; }
-            to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
-        }
-    </style>
-</head>
-<body>
-<div class="card">
-    <p class="salon-name">MyWay Beauty Salon</p>
+{% extends 'public/_card_base.html' %}
+{% from 'public/_client_states.html' import details, state_cancelled, state_too_late, state_not_active %}
+{% block title %}Anulowanie wizyty — MyWay Beauty Salon{% endblock %}
 
-    {% if already_cancelled %}
-        <div class="status-view">
-        {% if just_submitted %}
-            <div class="status-icon">✅</div>
-            <h1 class="heading">Wizyta anulowana</h1>
-            <p class="status-message">Twoja wizyta została pomyślnie anulowana. Skontaktuj się z nami, jeśli chcesz umówić się ponownie.</p>
-            <script>
-                window.addEventListener('load', () => {
-                    const t = document.createElement('div');
-                    t.className = 'toast';
-                    t.textContent = 'Wizyta anulowana.';
-                    document.body.appendChild(t);
-                    setTimeout(() => t.remove(), 3500);
-                });
-            </script>
-        {% else %}
-            <div class="status-icon">❌</div>
-            <h1 class="heading">Wizyta już anulowana</h1>
-            <p class="status-message">Ta wizyta została wcześniej anulowana. Skontaktuj się z nami, jeśli chcesz umówić się ponownie.</p>
-        {% endif %}
-        <p class="contact-hint">Masz pytania? Zadzwoń do nas.</p>
-        </div>
+{#- view: ask | cancelled | too_late | not_active  (same states and same wording as /confirm) -#}
+{% block card %}
+{% if view == 'cancelled' %}
+    {{ state_cancelled(appointment, just_submitted, salon_phone) }}
 
-    {% elif not can_cancel %}
-        <div class="status-view">
-        <div class="status-icon">⚠️</div>
-        <h1 class="heading">Nie można anulować</h1>
-        <p class="status-message">
-            Ta wizyta jest w trakcie realizacji lub już została zakończona — nie można jej teraz anulować.
-            Skontaktuj się bezpośrednio z salonem.
-        </p>
-        <p class="contact-hint">Masz pytania? Zadzwoń do nas.</p>
-        </div>
+{% elif view == 'too_late' %}
+    {{ state_too_late(cutoff_hours, salon_phone) }}
 
-    {% else %}
-        <h1 class="heading">Anulowanie wizyty</h1>
-        <p class="subheading">Czy na pewno chcesz anulować tę wizytę?</p>
+{% elif view == 'not_active' %}
+    {{ state_not_active(salon_phone) }}
 
-        <div class="details-block">
-            <div class="detail-row">
-                <span class="detail-label">Data</span>
-                <span class="detail-value">{{ appointment.appointment_date }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Godzina</span>
-                <span class="detail-value">{{ appointment.start_time|string|truncate(5, True, '') }}</span>
-            </div>
-            {% if appointment.employee_name %}
-            <div class="detail-row">
-                <span class="detail-label">Specjalista</span>
-                <span class="detail-value">{{ appointment.employee_name }}</span>
-            </div>
-            {% endif %}
-        </div>
-
-        <div class="warning-box">
-            Po anulowaniu wizyty skontaktujemy się z Tobą w razie potrzeby.
-            Aby umówić się ponownie, zadzwoń do salonu.
-        </div>
-
-        <form method="POST" action="/cancel/{{ token }}">
-            <button type="submit" class="btn-cancel">Tak, anuluję wizytę</button>
-        </form>
-        <a href="javascript:history.back()" class="btn-back">Wróć — nie anuluj</a>
-    {% endif %}
-</div>
-</body>
-</html>
+{% else %}
+    <h1 class="heading">Anulowanie wizyty</h1>
+    <p class="subheading">Czy na pewno chcesz anulować tę wizytę?</p>
+    {{ details(appointment) }}
+    <div class="warning-box">
+        Po anulowaniu termin zostanie zwolniony. Nowy termin umówisz online w kilka chwil.
+    </div>
+    <form method="POST" action="/cancel/{{ token }}">
+        <button type="submit" class="btn btn-danger">Tak, anuluję wizytę</button>
+    </form>
+    <a href="javascript:history.back()" class="btn btn-secondary">Wróć — nie anuluj</a>
+{% endif %}
+{% endblock %}

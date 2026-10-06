@@ -145,6 +145,15 @@ def create_app():
     # Public, token-authenticated blueprints are exempted after registration.
     csrf = CSRFProtect(app)
 
+    # Rate limiting for the unauthenticated, SMS-triggering endpoints (public booking).
+    # In-memory storage is correct for the single gunicorn worker production runs; point
+    # RATELIMIT_STORAGE_URI at Redis before ever adding workers. RATELIMIT_ENABLED=0 is
+    # for the test suite (tests that exercise the limits switch it back on).
+    from utils.rate_limit import limiter
+    app.config['RATELIMIT_STORAGE_URI'] = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+    app.config['RATELIMIT_ENABLED'] = os.environ.get('RATELIMIT_ENABLED', '1') != '0'
+    limiter.init_app(app)
+
     # Flask-Login initialization
     login_manager = LoginManager()
     login_manager.init_app(app)
@@ -326,6 +335,14 @@ def create_app():
             return jsonify({'success': False, 'error': str(e)}), e.status_code
         return render_template('errors/500.html'), e.status_code
 
+    @app.errorhandler(429)
+    def rate_limited(error):
+        """Flask-Limiter's RateLimitExceeded — a friendly Polish message, JSON for fetch() callers."""
+        message = 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie albo zadzwoń do salonu.'
+        if _wants_json_error():
+            return jsonify({'success': False, 'error': message}), 429
+        return message, 429
+
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('errors/404.html'), 404
@@ -462,11 +479,37 @@ def create_app():
     # SMS auto-send background scheduler
     app.config['BASE_URL'] = os.environ.get('BASE_URL', 'http://localhost:5000')
 
+    # Client self-service (public SMS links). Decision D3: a client may cancel online until
+    # this many hours before the start; later the page asks them to phone the salon.
+    app.config['CLIENT_CANCEL_CUTOFF_HOURS'] = int(os.environ.get('CLIENT_CANCEL_CUTOFF_HOURS', '12'))
+    # Shown on those pages as "zadzwoń do salonu" when set; generic copy otherwise.
+    app.config['SALON_PHONE'] = os.environ.get('SALON_PHONE', '').strip()
+
+    # Cloudflare Turnstile on the public booking page. The SITE key is public (rendered into
+    # the page); the SECRET key never leaves the server env. Unset secret = check skipped
+    # (see services/turnstile_service.py for why that is deliberately not fail-closed).
+    app.config['TURNSTILE_SITE_KEY'] = os.environ.get('TURNSTILE_SITE_KEY', '').strip()
+    app.config['TURNSTILE_SECRET_KEY'] = os.environ.get('TURNSTILE_SECRET_KEY', '').strip()
+    if app.config['TURNSTILE_SECRET_KEY'] and not app.config['TURNSTILE_SITE_KEY']:
+        logging.error("TURNSTILE_SECRET_KEY is set but TURNSTILE_SITE_KEY is not: the booking page "
+                      "shows no widget, so EVERY online booking would be refused. Set both or neither.")
+    elif not app.config['TURNSTILE_SECRET_KEY'] and os.environ.get('FLASK_ENV') == 'production':
+        logging.warning("TURNSTILE_SECRET_KEY is not set: public online booking is not bot-protected.")
+
     # The advisory-lock guard in scheduler.py only checks once at startup and
     # can be silently orphaned (lock-holding connection dies without the
     # process crashing), so a second, non-production instance pointed at the
     # same DB (e.g. a preview deployment) must opt out explicitly rather than
     # rely on the lock alone.
+    # Decision D5: never run the scheduler against a BASE_URL that would put localhost / raw-IP /
+    # plain-http links into real client texts. Raises (outside the try below) on purpose.
+    from utils.base_url import enforce_sms_base_url
+    enforce_sms_base_url(
+        app.config['BASE_URL'],
+        scheduler_enabled=os.environ.get('ENABLE_SMS_SCHEDULER', '1') != '0',
+        production=os.environ.get('FLASK_ENV') == 'production',
+    )
+
     if os.environ.get('ENABLE_SMS_SCHEDULER', '1') != '0':
         try:
             from scheduler import start_scheduler, stop_scheduler

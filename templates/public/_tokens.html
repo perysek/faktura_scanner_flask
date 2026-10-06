@@ -1,0 +1,8 @@
+{#- Design tokens for the standalone public pages (/confirm /cancel /rate /visit …).
+    These pages deliberately do not load the app's input.css, so any `var(--token)` they
+    use must be defined here — an undefined custom property silently computes to its
+    initial value (the card background was transparent). Keep in sync with the
+    `--color-surface-elevated` value in static/css/input.css :root. -#}
+<style>
+    :root { --color-surface-elevated: #ffffff; }
+</style>

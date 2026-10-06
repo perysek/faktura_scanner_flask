@@ -836,6 +836,10 @@
             margin-bottom: 1.25rem;
         }
     </style>
+{% if turnstile_site_key %}
+    {#- Cloudflare Turnstile. Explicit rendering: the widget is drawn when step 4 opens (below), not at page load. -#}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+{% endif %}
 </head>
 <body>
 
@@ -995,7 +999,7 @@
         <h2 class="bk-step-title">Twoje dane kontaktowe</h2>
         <p class="bk-step-sub">Podaj dane, abyśmy mogli potwierdzić rezerwację</p>
 
-        <div id="booking-error" class="bk-error-banner" id="booking-error"></div>
+        <div id="booking-error" class="bk-error-banner" role="alert"></div>
 
         <div class="bk-row-2col">
             <div>
@@ -1028,6 +1032,13 @@
                       placeholder="Dodatkowe informacje np. alergie, preferencje..."
                       style="resize:vertical; min-height:80px;"></textarea>
         </div>
+
+        {% if turnstile_site_key %}
+        <div style="margin-top:1rem;">
+            <div id="ts-widget"></div>
+            <div class="bk-field-error" id="err-turnstile" role="alert">Potwierdź, że nie jesteś robotem</div>
+        </div>
+        {% endif %}
 
         <div class="bk-nav">
             <button class="bk-btn bk-btn-ghost" onclick="goToStep(3)">← Wstecz</button>
@@ -1069,6 +1080,8 @@
                 </div>
             </div>
 
+            <p class="bk-confirm-note" id="conf-sms-note" style="display:none; font-weight:600;"></p>
+
             <p class="bk-confirm-note">
                 W razie konieczności zmiany lub odwołania rezerwacji prosimy o kontakt telefoniczny.
             </p>
@@ -1109,6 +1122,42 @@ function servicesLabel() {
 
 let currentStep = 1;
 
+// ── Cloudflare Turnstile (bot check) ──────────────────────────────────────
+// Empty site key = feature not switched on: no widget, no token, the server skips the check.
+const TURNSTILE_SITE_KEY = {{ turnstile_site_key|tojson }};
+const TURNSTILE_ACTION = {{ turnstile_action|tojson }};
+let tsWidgetId = null;
+
+function showTurnstileError(text) {
+    const el = document.getElementById('err-turnstile');
+    el.textContent = text;
+    el.style.display = 'block';          // role="alert" → announced to screen readers
+}
+
+// api.js is loaded async/defer, so it may not be ready when step 4 opens. Retry briefly,
+// then say so — an ad-blocker or flaky network must not leave a silent empty gap.
+function renderTurnstile(attempt = 0) {
+    if (!TURNSTILE_SITE_KEY || tsWidgetId !== null) return;
+    if (!window.turnstile) {
+        if (attempt < 40) { setTimeout(() => renderTurnstile(attempt + 1), 250); return; }   // ~10 s
+        showTurnstileError('Nie udało się wczytać weryfikacji anty-botowej. Sprawdź połączenie lub wyłącz blokadę reklam i odśwież stronę.');
+        return;
+    }
+    tsWidgetId = window.turnstile.render('#ts-widget', {
+        sitekey: TURNSTILE_SITE_KEY,
+        action: TURNSTILE_ACTION,       // the server rejects a token solved for any other action
+        size: 'flexible',               // fills the column — no overflow on a 360px phone
+        language: 'pl',
+        callback: () => { document.getElementById('err-turnstile').style.display = 'none'; },
+        'error-callback': () => showTurnstileError('Weryfikacja anty-botowa nie powiodła się. Odśwież stronę i spróbuj ponownie.'),
+    });
+}
+
+// A token is single-use: after ANY failed attempt the widget must be re-solved.
+function resetTurnstile() {
+    if (tsWidgetId !== null && window.turnstile) window.turnstile.reset(tsWidgetId);
+}
+
 // ── Navigation ────────────────────────────────────────────────────────────
 function goToStep(n) {
     // Validation before advancing
@@ -1136,6 +1185,7 @@ function goToStep(n) {
     }
 
     currentStep = n;
+    if (n === 4) renderTurnstile();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Load data when entering a step
@@ -1645,6 +1695,12 @@ async function submitBooking() {
         valid = false;
     } else clearFieldError('err-phone', 'f-phone');
 
+    let tsToken = null;
+    if (TURNSTILE_SITE_KEY) {
+        tsToken = (tsWidgetId !== null && window.turnstile) ? window.turnstile.getResponse(tsWidgetId) : '';
+        if (!tsToken) { showTurnstileError('Potwierdź, że nie jesteś robotem'); valid = false; }
+    }
+
     if (!valid) return;
 
     const btn = document.getElementById('btn-submit');
@@ -1665,6 +1721,7 @@ async function submitBooking() {
                 phone:       phone,
                 email:       email || null,
                 notes:       notes || null,
+                turnstile_token: tsToken,
             })
         });
 
@@ -1681,6 +1738,15 @@ async function submitBooking() {
         document.getElementById('conf-duration').textContent = `${data.total_duration} min`;
         document.getElementById('conf-price').textContent    = `${data.total_price.toFixed(2)} zł`;
 
+        // One SMS with confirm/cancel links goes out when the salon has that text switched on.
+        const smsNote = document.getElementById('conf-sms-note');
+        if (data.confirmation_sms === 'sent') {
+            smsNote.textContent = data.confirmation_required
+                ? 'Wysłaliśmy SMS z linkiem — potwierdź wizytę jednym kliknięciem. Przypomnienia o wizycie zaczną przychodzić po potwierdzeniu.'
+                : 'Wysłaliśmy SMS z potwierdzeniem rezerwacji i linkiem do jej odwołania.';
+            smsNote.style.display = 'block';
+        }
+
         // Show confirmation step
         document.getElementById('panel-4').classList.remove('active');
         document.getElementById('panel-5').classList.add('active');
@@ -1691,6 +1757,7 @@ async function submitBooking() {
     } catch (e) {
         errorBanner.textContent = e.message || 'Nie udało się dokonać rezerwacji. Spróbuj ponownie.';
         errorBanner.style.display = 'block';
+        resetTurnstile();           // the token was spent (or the attempt failed) — solve a fresh one
         btn.disabled = false;
         btn.textContent = 'Zarezerwuj wizytę';
     }

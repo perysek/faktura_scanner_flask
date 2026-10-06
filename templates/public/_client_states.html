@@ -1,0 +1,85 @@
+{#- Building blocks shared by /confirm and /cancel so the two pages can never drift apart
+    (they once disagreed about what "declined" meant — see SMS review P0-3). -#}
+
+{% macro details(appointment) %}
+{%- set d = appointment.appointment_date -%}
+<div class="details-block">
+    <div class="detail-row">
+        <span class="detail-label">Data</span>
+        <span class="detail-value">{{ d.strftime('%d.%m.%Y') if d.strftime is defined else d }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Godzina</span>
+        <span class="detail-value">{{ appointment.start_time|string|truncate(5, True, '') }}</span>
+    </div>
+    {% if appointment.employee_name %}
+    <div class="detail-row">
+        <span class="detail-label">Specjalista</span>
+        <span class="detail-value">{{ appointment.employee_name }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro rebook_button() %}
+<a href="/booking" class="btn btn-primary">Umów nowy termin</a>
+{% endmacro %}
+
+{% macro toast(text) %}
+<script>
+    window.addEventListener('load', () => {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.textContent = {{ text|tojson }};
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
+    });
+</script>
+{% endmacro %}
+
+{% macro salon_contact(salon_phone) %}
+<p class="contact-hint">
+    {% if salon_phone %}Masz pytania? Zadzwoń: <a href="tel:{{ salon_phone|replace(' ', '') }}">{{ salon_phone }}</a>
+    {% else %}Masz pytania? Zadzwoń do salonu.{% endif %}
+</p>
+{% endmacro %}
+
+{% macro state_cancelled(appointment, just_submitted, salon_phone) %}
+<div class="status-view">
+    <div class="status-icon">{{ '✅' if just_submitted else '❌' }}</div>
+    <h1 class="heading">{{ 'Wizyta odwołana' if just_submitted else 'Wizyta jest już odwołana' }}</h1>
+    <p class="status-message">
+        {% if just_submitted %}Termin został zwolniony. Dziękujemy za informację.
+        {% else %}Ta wizyta została wcześniej odwołana.{% endif %}
+        Jeśli chcesz, umów od razu nowy termin.
+    </p>
+    {{ rebook_button() }}
+    {{ salon_contact(salon_phone) }}
+</div>
+{% if just_submitted %}{{ toast('Wizyta odwołana.') }}{% endif %}
+{% endmacro %}
+
+{% macro state_too_late(cutoff_hours, salon_phone) %}
+<div class="status-view">
+    <div class="status-icon">⚠️</div>
+    <h1 class="heading">Do wizyty zostało już niewiele czasu</h1>
+    <p class="status-message">
+        Wizytę można odwołać online najpóźniej {{ cutoff_hours }} godz. przed jej rozpoczęciem.
+        Aby ją odwołać lub przełożyć, zadzwoń do salonu.
+    </p>
+    {% if salon_phone %}
+    <a href="tel:{{ salon_phone|replace(' ', '') }}" class="btn btn-primary">Zadzwoń: {{ salon_phone }}</a>
+    {% endif %}
+    {{ salon_contact(none) if not salon_phone else '' }}
+</div>
+{% endmacro %}
+
+{% macro state_not_active(salon_phone) %}
+<div class="status-view">
+    <div class="status-icon">ℹ️</div>
+    <h1 class="heading">Ta wizyta nie wymaga już odpowiedzi</h1>
+    <p class="status-message">Wizyta jest w trakcie, została zakończona albo przełożona na inny termin.</p>
+    {{ rebook_button() }}
+    {{ salon_contact(salon_phone) }}
+</div>
+{% endmacro %}

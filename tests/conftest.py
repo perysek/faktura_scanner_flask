@@ -22,6 +22,9 @@ def app():
     # entropy at boot (improvement #5). A short/placeholder key is rejected.
     os.environ['SECRET_KEY'] = 'b1946ac92492d2347c6235b4d2611184b1946ac92492d2347c6235b4d2611184'
     os.environ.setdefault('DATABASE_URL', 'postgresql://test:test@localhost/test')
+    # NB: the public-booking rate limiter stays ON under test. Each test builds a fresh app
+    # and Limiter.init_app gives every app fresh in-memory counters, so tests cannot leak
+    # budget into each other — and the limits are exercised exactly as in production.
 
     # Patch pool + DB initialization before importing app to prevent real
     # connections. Also stub the SMS scheduler so the app factory never opens a

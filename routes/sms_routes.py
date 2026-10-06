@@ -323,7 +323,9 @@ def send_sms():
         return jsonify({'success': False,
                         'message': 'Wymagane: appointment_id i message_type_key'}), 400
 
-    base_url = request.host_url.rstrip('/')
+    # No base_url: send() uses the configured BASE_URL — the same canonical origin the scheduler
+    # uses. `request.host_url` is whatever host the staff member's browser happened to be on
+    # (staging, a raw IP…), which would put THAT host into a text sent to a client.
     svc = SmsService()
     try:
         result = svc.send(
@@ -331,7 +333,6 @@ def send_sms():
             message_type_key=message_type_key,
             sender_user_id=current_user.id,
             sender_name=current_user.full_name,
-            base_url=base_url,
         )
         if result['success']:
             return jsonify({'success': True,
@@ -361,8 +362,7 @@ def bulk_send():
         return jsonify({'success': False,
                         'message': 'Wymagane: appointment_ids i message_type_key'}), 400
 
-    base_url = request.host_url.rstrip('/')
-    svc = SmsService()
+    svc = SmsService()                      # links come from the configured BASE_URL (see send_sms)
     results = []
     for appt_id in ids:
         try:
@@ -371,7 +371,6 @@ def bulk_send():
                 message_type_key=message_type_key,
                 sender_user_id=current_user.id,
                 sender_name=current_user.full_name,
-                base_url=base_url,
             )
             results.append({'appointment_id': appt_id, **res})
         except SmsError as e:

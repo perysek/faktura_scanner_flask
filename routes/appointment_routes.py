@@ -8,7 +8,7 @@ from decimal import Decimal
 import json
 import time as _time
 
-from flask import Blueprint, jsonify, request, Response, stream_with_context
+from flask import Blueprint, jsonify, request, Response, stream_with_context, current_app
 from flask_login import login_required, current_user
 
 from config.appointment_statuses import AppointmentStatus
@@ -20,7 +20,7 @@ from repositories.appointments.appointment_repository import AppointmentReposito
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
 from repositories.appointments.income_repository import IncomeRepository
 from repositories.audit_repository import AuditRepository
-from utils.timezone import to_local
+from utils.timezone import to_local, now_local
 
 
 def _schedule_post_visit_sms(appointment_id: int) -> None:
@@ -193,10 +193,11 @@ def _do_reschedule(appointment_id: int, absence_id: int,
 
 
 def _do_cancel(appointment_id: int, absence_id: int,
-              cancellation_reason: str, send_sms: bool) -> int:
+              cancellation_reason: str, send_sms: bool, sms_results: list = None) -> int:
     """Cancel one appointment (keeps the reason, per AppointmentBusinessService.
     cancel_appointment — not the hard-delete route), write a resolution row, and
-    optionally notify the client by SMS."""
+    optionally notify the client by SMS. The SMS outcome is appended to `sms_results`
+    (when given) so the endpoint can report it instead of swallowing it."""
     row = AppointmentRepository().get_by_id(appointment_id)
     if not row:
         raise NotFoundError('Wizyta nie istnieje')
@@ -215,7 +216,9 @@ def _do_cancel(appointment_id: int, absence_id: int,
 
     if send_sms:
         from routes.absence_routes import _send_absence_cancellation_sms
-        _send_absence_cancellation_sms(appointment_id)
+        outcome = _send_absence_cancellation_sms(appointment_id)
+        if sms_results is not None:
+            sms_results.append(outcome)
 
     return appointment_id
 
@@ -1192,7 +1195,15 @@ def reassignment_candidates(appointment_id):
     try:
         service = AppointmentBusinessService()
         candidates = service.get_reassignment_candidates(appointment_id)
-        return jsonify({'success': True, 'candidates': candidates})
+        # The modal's "no replacement → cancel" step offers an optional client SMS. Say whether
+        # it can actually go out, so the box is not offered (ticked!) when the type is off.
+        try:
+            from services.sms_service import SmsService
+            sms = SmsService().type_status('absence_cancellation')
+        except Exception:
+            logging.exception('type_status(absence_cancellation) failed')
+            sms = {'available': False, 'reason': 'Nie udało się sprawdzić ustawień SMS.'}
+        return jsonify({'success': True, 'candidates': candidates, 'sms': sms})
     except AppError:
         raise
     except Exception:
@@ -1285,20 +1296,32 @@ def cancel_for_absence(appointment_id):
         send_sms = bool(data.get('send_sms', False))
         bulk = bool(data.get('bulk', False))
 
-        applied = [_do_cancel(appointment_id, absence_id, cancellation_reason, send_sms)]
+        sms_results = []
+        applied = [_do_cancel(appointment_id, absence_id, cancellation_reason, send_sms, sms_results)]
 
         if bulk:
             from services.absence_service import AbsenceService
             for conflict in AbsenceService().get_live_conflicts(absence_id):
                 try:
                     applied.append(
-                        _do_cancel(conflict['appointment_id'], absence_id, cancellation_reason, send_sms)
+                        _do_cancel(conflict['appointment_id'], absence_id, cancellation_reason,
+                                   send_sms, sms_results)
                     )
                 except AppError:
                     logging.warning('cancel_for_absence bulk: failed to cancel appt_id=%s',
                                     conflict['appointment_id'])
 
-        return jsonify({'success': True, 'applied': applied})
+        failures = [r for r in sms_results if r.get('status') != 'sent']
+        return jsonify({
+            'success': True, 'applied': applied,
+            # What happened to the client SMS the person asked for — never silent (P2-7).
+            'sms': {
+                'requested': send_sms,
+                'sent': len(sms_results) - len(failures),
+                'failed': len(failures),
+                'error': failures[0].get('error', '') if failures else '',
+            },
+        })
     except AppError:
         raise
     except Exception:
@@ -1615,11 +1638,12 @@ def update_past_appointment_status(appointment_id):
         if not row:
             raise NotFoundError('Wizyta nie istnieje')
 
-        # Walidacja: czy wizyta jest przeszła
+        # Walidacja: czy wizyta jest przeszła (czas warszawski — datetime.now()
+        # na serwerze to naiwny UTC, co spóźniało "przeszłość" o 1-2 h)
         from datetime import datetime
         appointment_datetime_str = f"{row['appointment_date']} {row['end_time']}"
         appointment_datetime = datetime.strptime(appointment_datetime_str, '%Y-%m-%d %H:%M:%S')
-        now = datetime.now()
+        now = now_local()
 
         if appointment_datetime >= now:
             raise ValidationError('Mozna aktualizowac tylko wizyty ktore sie juz zakonczyly')
@@ -1773,7 +1797,7 @@ def get_visit_link(appointment_id: int):
             h, m = str(start_time)[:5].split(':')
             appt_dt = datetime.combine(appt['appointment_date'],
                                        datetime.min.time().replace(hour=int(h), minute=int(m)))
-            minutes_until = (appt_dt - datetime.now()).total_seconds() / 60
+            minutes_until = (appt_dt - now_local()).total_seconds() / 60
         except Exception:
             minutes_until = 9999
 

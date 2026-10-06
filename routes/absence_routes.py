@@ -123,19 +123,28 @@ def _notify_reassigned_employee(appointment_id: int, new_employee_id: int) -> No
                          appointment_id, new_employee_id)
 
 
-def _send_absence_cancellation_sms(appointment_id: int) -> None:
+def _send_absence_cancellation_sms(appointment_id: int) -> dict:
     """Client-facing cancellation notice, sent through the ordinary SMS type
     machinery (type_key='absence_cancellation', seeded in Faza 0 — admin opts in
-    from the SMS settings page like any other custom type). Mirrors
-    _send_confirmation_request_sms's error-swallowing convention: a failed
-    notice must never fail the cancellation itself."""
+    from the SMS settings page like any other custom type). Never raises: a failed
+    notice must never fail the cancellation itself — but it no longer fails
+    SILENTLY. Returns {'status': 'sent' | 'failed', 'error'?: str} so the caller can
+    tell the person who ticked "Wyślij SMS" that nothing went out (SMS review P2-7;
+    `send()` now refuses a switched-off type, and this type ships switched off)."""
     try:
-        from services.sms_service import SmsService
+        from services.sms_service import SmsService, SmsError
         from flask import current_app
         base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
-        SmsService().send(appointment_id, 'absence_cancellation', base_url=base_url)
-    except Exception:
+        try:
+            result = SmsService().send(appointment_id, 'absence_cancellation', base_url=base_url)
+        except SmsError as exc:
+            return {'status': 'failed', 'error': str(exc)}
+        if result.get('success'):
+            return {'status': 'sent'}
+        return {'status': 'failed', 'error': result.get('error', 'Nie udało się wysłać SMS-a')}
+    except Exception as exc:
         logger.exception('_send_absence_cancellation_sms failed appt_id=%s', appointment_id)
+        return {'status': 'failed', 'error': str(exc)}
 
 
 # ── employee self-service ─────────────────────────────────────────────────────

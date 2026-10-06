@@ -40,6 +40,26 @@ class SmsMessageTypeRepository(BaseRepository):
         )
         return [dict(r) for r in rows]
 
+    def get_enabled_before_visit(self) -> List[dict]:
+        """Types the 15-minute scheduler may fire as "N hours before the visit".
+
+        `get_enabled()` is NOT safe for that loop: event-only types (post_visit_message,
+        absence_cancellation, booking_confirmed) carry send_hours_before = 0, which the
+        loop read as "at the visit's start" — texting clients a rating request before
+        the visit happened and a false cancellation notice. Only `trigger_mode =
+        'before_visit'` with a positive lead time belongs here.
+        """
+        rows = self._fetch_all(
+            """
+            SELECT * FROM sms_message_types
+            WHERE is_enabled = TRUE
+              AND trigger_mode = 'before_visit'
+              AND send_hours_before > 0
+            ORDER BY sort_order, id
+            """, ()
+        )
+        return [dict(r) for r in rows]
+
     def get_by_key(self, type_key: str) -> Optional[dict]:
         row = self._fetch_one(
             "SELECT * FROM sms_message_types WHERE type_key = %s", (type_key,)
@@ -65,21 +85,31 @@ class SmsMessageTypeRepository(BaseRepository):
                       template_text: str, include_confirm_link: bool,
                       include_cancel_link: bool = False,
                       include_booking_link: bool = False) -> int:
-        count_row = self._fetch_one(
-            "SELECT COUNT(*) AS c FROM sms_message_types WHERE is_custom = TRUE", ()
+        # Next suffix = highest existing custom_NNN + 1. Counting rows (the old way)
+        # collides on `type_key` (UNIQUE) as soon as a non-last custom type is deleted:
+        # custom_001, custom_002 → delete 001 → count says 1 → next key custom_002 again.
+        max_row = self._fetch_one(
+            """
+            SELECT COALESCE(MAX(CAST(SUBSTRING(type_key FROM 8) AS INTEGER)), 0) AS m
+            FROM sms_message_types WHERE type_key ~ '^custom_[0-9]+$'
+            """, ()
         )
-        n = (count_row['c'] if count_row else 0) + 1
+        n = (max_row['m'] if max_row else 0) + 1
         type_key = f"custom_{n:03d}"
+        # A custom type with no lead time can only ever be sent by hand; making that
+        # explicit keeps it out of the scheduler loop (see get_enabled_before_visit).
+        trigger_mode = 'before_visit' if send_hours_before > 0 else 'manual'
         query = """
             INSERT INTO sms_message_types
                 (type_key, name, is_enabled, send_hours_before, template_text,
                  include_confirm_link, include_cancel_link, include_booking_link,
-                 is_custom, sort_order)
-            VALUES (%s, %s, FALSE, %s, %s, %s, %s, %s, TRUE, 99)
+                 is_custom, sort_order, trigger_mode)
+            VALUES (%s, %s, FALSE, %s, %s, %s, %s, %s, TRUE, 99, %s)
         """
         return self._execute_insert(query, (
             type_key, name, send_hours_before,
-            template_text, include_confirm_link, include_cancel_link, include_booking_link
+            template_text, include_confirm_link, include_cancel_link, include_booking_link,
+            trigger_mode,
         ))
 
     def get_event_triggered_by_status(self, trigger_on_status: str) -> List[dict]:
@@ -137,6 +167,20 @@ class SmsReminderRepository(BaseRepository):
         """
         cursor = self._execute(query, (status, twilio_sid, error_message, reminder_id))
         return cursor.rowcount > 0
+
+    def exists_active(self, appointment_id: int, message_type_key: str) -> bool:
+        """True when this (appointment, type) already has a text that went out or is in
+        flight — `failed` rows don't count, so a failed send may be retried. The guard
+        for automatic sends: a rating request must reach a client exactly once."""
+        row = self._fetch_one(
+            """
+            SELECT 1 AS present FROM sms_reminders
+            WHERE appointment_id = %s AND message_type_key = %s
+              AND status IN ('pending', 'sent', 'delivered')
+            LIMIT 1
+            """, (appointment_id, message_type_key)
+        )
+        return row is not None
 
     def get_for_appointment(self, appointment_id: int) -> List[dict]:
         query = """

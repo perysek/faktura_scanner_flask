@@ -29,7 +29,8 @@ class TestCountPastPendingAppointments:
             result = AppointmentRepository().count_past_pending_appointments()
         assert result == 4
         sql = cur.execute.call_args.args[0]
-        assert '(a.appointment_date + a.end_time) < NOW()' in sql
+        # Warsaw-frame comparison: a bare `< NOW()` reads naive Warsaw times as UTC.
+        assert "(a.appointment_date + a.end_time) < (NOW() AT TIME ZONE 'Europe/Warsaw')" in sql
         assert "a.status NOT IN ('completed', 'cancelled', 'no_show', 'rescheduled')" in sql
         assert 'a.is_deleted = FALSE' in sql
 

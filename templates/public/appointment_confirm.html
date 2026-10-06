@@ -1,137 +1,55 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potwierdzenie wizyty — MyWay Beauty Salon</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f5f5f0;
-            min-height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            padding: 1.5rem 1rem;
-        }
-        .card {
-            background: var(--color-surface-elevated); border-radius: 8px;
-            padding: 2.25rem 1.75rem; max-width: 420px; width: 100%;
-            border: 1px solid rgba(0,0,0,.04);
-            box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.09);
-        }
-        .salon-name { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.12em;
-                      text-transform: uppercase; color: #888; margin-bottom: 1.75rem; }
-        .status-view { text-align: center; }
-        .heading { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; line-height: 1.35; margin-bottom: 0.5rem; }
-        .subheading { font-size: 0.875rem; color: #666; line-height: 1.55; margin-bottom: 1.75rem; }
-        .details-block { background: #f9f9f7; border-radius: 6px;
-                         padding: 0.25rem 1.125rem; margin-bottom: 1.75rem; }
-        .detail-row { display: flex; justify-content: space-between; align-items: center;
-                      padding: 0.625rem 0; font-size: 0.875rem; }
-        .detail-row + .detail-row { border-top: 1px solid rgba(0,0,0,.05); }
-        .detail-label { color: #888; }
-        .detail-value { font-weight: 500; color: #1a1a1a; }
-        .btn-confirm {
-            display: block; width: 100%; padding: 1rem;
-            background: #1a1a1a; color: white; border: none; border-radius: 6px;
-            font-family: inherit; font-size: 0.9375rem; font-weight: 500; letter-spacing: 0.01em;
-            cursor: pointer; margin-bottom: 0.75rem;
-            transition: background 0.15s ease;
-        }
-        .btn-confirm:active { background: #333; }
-        .btn-decline {
-            display: block; width: 100%; padding: 1rem;
-            background: var(--color-surface-elevated); color: #666; border: 1px solid #ddd; border-radius: 6px;
-            font-family: inherit; font-size: 0.875rem; cursor: pointer;
-            transition: border-color 0.15s ease, color 0.15s ease;
-        }
-        .btn-decline:active { border-color: #666; color: #1a1a1a; }
-        .status-icon { font-size: 2.5rem; margin-bottom: 0.875rem; }
-        .status-message { font-size: 0.875rem; color: #666; line-height: 1.55; margin-top: 0.5rem;
-                           max-width: 300px; margin-left: auto; margin-right: auto; }
-        .error-msg { color: #dc2626; font-size: 0.875rem; margin-bottom: 1.25rem; }
-        .toast {
-            position: fixed; bottom: 1.5rem; left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a1a; color: white;
-            padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 0.875rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,.18);
-            animation: slideup 0.3s ease;
-        }
-        @keyframes slideup {
-            from { transform: translateX(-50%) translateY(16px); opacity: 0; }
-            to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
-        }
-    </style>
-</head>
-<body>
-<div class="card">
-    <p class="salon-name">MyWay Beauty Salon</p>
+{% extends 'public/_card_base.html' %}
+{% from 'public/_client_states.html' import details, toast, state_cancelled, state_too_late, state_not_active %}
+{% block title %}Potwierdzenie wizyty — MyWay Beauty Salon{% endblock %}
 
-    {% if already_responded %}
-        <div class="status-view">
-        {% if confirmation_status == 'confirmed' %}
-            <div class="status-icon">✅</div>
-            <h1 class="heading">Wizyta potwierdzona</h1>
-            <p class="status-message">Dziękujemy za potwierdzenie. Do zobaczenia!</p>
-        {% elif confirmation_status == 'declined' %}
-            <div class="status-icon">❌</div>
-            <h1 class="heading">Wizyta odrzucona</h1>
-            <p class="status-message">Otrzymaliśmy Twoją odpowiedź. Skontaktujemy się w razie potrzeby.</p>
-        {% else %}
-            <div class="status-icon">✅</div>
-            <h1 class="heading">Odpowiedź zapisana</h1>
-            <p class="status-message">Dziękujemy za odpowiedź.</p>
+{#- view: ask | confirm_decline | confirmed | cancelled | too_late | not_active
+    "declined" used to be a dead end that left the slot blocked; it is now a real
+    cancellation, so the decline button leads to an explicit "are you sure?" step. -#}
+{% block card %}
+{% if view == 'confirmed' %}
+    <div class="status-view">
+        <div class="status-icon">✅</div>
+        <h1 class="heading">Wizyta potwierdzona</h1>
+        <p class="status-message">Dziękujemy za potwierdzenie. Do zobaczenia!</p>
+    </div>
+    {% if just_submitted %}{{ toast('Wizyta potwierdzona!') }}{% endif %}
+
+{% elif view == 'cancelled' %}
+    {{ state_cancelled(appointment, just_submitted, salon_phone) }}
+
+{% elif view == 'too_late' %}
+    {{ state_too_late(cutoff_hours, salon_phone) }}
+
+{% elif view == 'not_active' %}
+    {{ state_not_active(salon_phone) }}
+
+{% elif view == 'confirm_decline' %}
+    <h1 class="heading">Odwołać wizytę?</h1>
+    <p class="subheading">Po odwołaniu termin zostanie zwolniony. Zawsze możesz od razu umówić nowy.</p>
+    {{ details(appointment) }}
+    <form method="POST" action="/confirm/{{ token }}">
+        <input type="hidden" name="action" value="declined">
+        <input type="hidden" name="confirm_decline" value="1">
+        <button type="submit" class="btn btn-danger">Tak, odwołuję wizytę</button>
+    </form>
+    <a href="/confirm/{{ token }}" class="btn btn-secondary">Wróć — zostawiam wizytę</a>
+
+{% else %}
+    <h1 class="heading">Potwierdzenie wizyty</h1>
+    <p class="subheading">Prosimy o potwierdzenie lub odwołanie wizyty.</p>
+    {{ details(appointment) }}
+    {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+    <form method="POST" action="/confirm/{{ token }}">
+        <button type="submit" name="action" value="confirmed" class="btn btn-primary">Potwierdzam wizytę</button>
+        {% if decline_allowed %}
+        <button type="submit" name="action" value="declined" class="btn btn-secondary">Odwołuję wizytę</button>
         {% endif %}
-        </div>
-
-        {% if just_submitted %}
-        <script>
-            window.addEventListener('load', () => {
-                const t = document.createElement('div');
-                t.className = 'toast';
-                t.textContent = '{% if confirmation_status == "confirmed" %}Wizyta potwierdzona!{% else %}Odpowiedź zapisana.{% endif %}';
-                document.body.appendChild(t);
-                setTimeout(() => t.remove(), 3500);
-            });
-        </script>
-        {% endif %}
-
-    {% else %}
-        <h1 class="heading">Potwierdzenie wizyty</h1>
-        <p class="subheading">Prosimy o potwierdzenie lub anulowanie wizyty.</p>
-
-        <div class="details-block">
-            <div class="detail-row">
-                <span class="detail-label">Data</span>
-                <span class="detail-value">{{ appointment.appointment_date }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Godzina</span>
-                <span class="detail-value">{{ appointment.start_time|string|truncate(5, True, '') }}</span>
-            </div>
-            {% if appointment.employee_name %}
-            <div class="detail-row">
-                <span class="detail-label">Specjalista</span>
-                <span class="detail-value">{{ appointment.employee_name }}</span>
-            </div>
-            {% endif %}
-        </div>
-
-        {% if error %}
-        <p class="error-msg">{{ error }}</p>
-        {% endif %}
-
-        <form method="POST" action="/confirm/{{ token }}">
-            <button type="submit" name="action" value="confirmed" class="btn-confirm">
-                Potwierdzam wizytę
-            </button>
-            <button type="submit" name="action" value="declined" class="btn-decline">
-                Odwołuję wizytę
-            </button>
-        </form>
+    </form>
+    {% if not decline_allowed %}
+    <p class="contact-hint">
+        Do wizyty zostało mniej niż {{ cutoff_hours }} godz. — aby ją odwołać, zadzwoń do salonu{% if salon_phone %}:
+        <a href="tel:{{ salon_phone|replace(' ', '') }}">{{ salon_phone }}</a>{% else %}.{% endif %}
+    </p>
     {% endif %}
-</div>
-</body>
-</html>
+{% endif %}
+{% endblock %}

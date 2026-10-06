@@ -139,6 +139,39 @@ class ClientRepository(BaseRepository):
         search_pattern = f'%{phone}%'
         return self._fetch_all(query, (search_pattern,))
 
+    def find_by_phone_keys(self, keys: List[str]) -> List[Any]:
+        """Clients whose stored phone IS this subscriber — exact, never a substring.
+
+        `keys` are the digits-only spellings from utils.phone.phone_match_keys; the stored
+        value is reduced to digits in SQL (backed by ix_clients_phone_digits), so
+        "+48 600 123 456", "600123456" and "0600123456" all match each other while
+        "600" matches nobody. (The old search_by_phone used ILIKE '%…%'.)
+        """
+        query = f"""
+            SELECT {self._columns} FROM clients
+            WHERE is_deleted = FALSE
+              AND regexp_replace(phone, '[^0-9]', '', 'g') = ANY(%s)
+            ORDER BY is_active DESC, id
+        """
+        return self._fetch_all(query, (list(keys),))
+
+    def has_verified_history(self, client_id: int) -> bool:
+        """Has this client ever answered one of our texts or actually been served?
+
+        Used to decide whether an online booking is the first time we meet this phone
+        number (→ one text + hold the reminder stream until they confirm) or a returning
+        client (→ reminders as usual).
+        """
+        row = self._fetch_one(
+            """
+            SELECT 1 AS present FROM appointments
+            WHERE client_id = %s AND is_deleted IS NOT TRUE
+              AND (confirmation_status = 'confirmed' OR status = 'completed')
+            LIMIT 1
+            """, (client_id,)
+        )
+        return row is not None
+
     def find_by_email(self, email: str) -> Optional[Any]:
         """Znajdź klienta po dokładnym adresie email"""
         query = f"SELECT {self._columns} FROM clients WHERE email = %s AND is_deleted = FALSE"

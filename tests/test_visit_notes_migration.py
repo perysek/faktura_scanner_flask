@@ -13,6 +13,9 @@ from alembic.script import ScriptDirectory
 
 _ROOT = Path(__file__).resolve().parents[1]
 _PREVIOUS_HEAD = 'f4a8b2c9d1e7'
+# The revision under test, addressed by ID. (It used to be "whatever the current head is" —
+# which broke this whole class the moment any later migration was added.)
+_VISIT_NOTES_REVISION = 'b7d3e9a1c4f2'
 
 
 def _script():
@@ -20,8 +23,7 @@ def _script():
 
 
 def _head_revision():
-    script = _script()
-    return script.get_revision(script.get_current_head())
+    return _script().get_revision(_VISIT_NOTES_REVISION)
 
 
 def _source():

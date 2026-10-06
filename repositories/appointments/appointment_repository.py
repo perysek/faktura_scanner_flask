@@ -868,18 +868,43 @@ class AppointmentRepository:
             safe_commit(conn)
             return cursor.rowcount > 0
 
+    def set_sms_hold(self, appointment_id: int, hold: bool) -> bool:
+        """Hold (True) / release (False) the automatic client reminders for a visit.
+
+        Held: an online booking from a phone number nobody has verified yet — the client
+        got one text with a confirm link and the reminder stream starts only once they
+        click it. See get_appointments_due_for_type.
+        """
+        query = "UPDATE appointments SET sms_hold = %s WHERE id = %s"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (hold, appointment_id))
+            safe_commit(conn)
+            return cursor.rowcount > 0
+
+    def release_sms_hold(self, appointment_id: int) -> bool:
+        return self.set_sms_hold(appointment_id, False)
+
     def get_appointments_due_for_type(self, hours_before: int,
                                        message_type_key: str) -> List[Any]:
+        # appointment_date/start_time are naive *Warsaw* wall-clock values while
+        # NOW() is timestamptz and the server session runs on UTC — comparing them
+        # directly makes Postgres read "14:00 Warsaw" as "14:00 UTC", i.e. every
+        # reminder fires 1-2h off. `NOW() AT TIME ZONE 'Europe/Warsaw'` is a naive
+        # Warsaw timestamp, so the comparison is naive-to-naive and independent
+        # of the session TimeZone. (sms_hold: online bookings from an unverified
+        # phone get no reminders until the client confirms via the SMS link.)
         query = """
             SELECT a.*, c.phone, c.first_name AS client_first_name
             FROM appointments a
             JOIN clients c ON c.id = a.client_id
             WHERE a.status IN ('scheduled', 'confirmed')
               AND a.is_deleted IS NOT TRUE
+              AND a.sms_hold IS NOT TRUE
               AND c.phone IS NOT NULL AND c.phone != ''
               AND (a.appointment_date::timestamp + a.start_time::interval)
-                  BETWEEN NOW() + INTERVAL '1 minute' * (%s * 60 - 15)
-                      AND NOW() + INTERVAL '1 minute' * (%s * 60 + 15)
+                  BETWEEN (NOW() AT TIME ZONE 'Europe/Warsaw') + INTERVAL '1 minute' * (%s * 60 - 15)
+                      AND (NOW() AT TIME ZONE 'Europe/Warsaw') + INTERVAL '1 minute' * (%s * 60 + 15)
               AND a.id NOT IN (
                   SELECT DISTINCT appointment_id
                   FROM sms_reminders
@@ -897,7 +922,8 @@ class AppointmentRepository:
         Pobierz przeszłe wizyty które nie mają jeszcze finalnego statusu.
 
         Kryteria:
-        - Data i godzina zakończenia wizyty < NOW()
+        - Data i godzina zakończenia wizyty < teraz (czas warszawski — patrz
+          get_appointments_due_for_type: porównanie naiwne z naiwnym)
         - Status nie należy do: 'completed', 'cancelled', 'no_show'
 
         Returns:
@@ -924,7 +950,7 @@ class AppointmentRepository:
             LEFT JOIN appointment_services aps ON aps.appointment_id = a.id
             LEFT JOIN services s ON s.id = aps.service_id
             WHERE
-                (a.appointment_date + a.end_time) < NOW()
+                (a.appointment_date + a.end_time) < (NOW() AT TIME ZONE 'Europe/Warsaw')
                 AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
                 AND a.is_deleted = FALSE {excl_sql}
             GROUP BY a.id, a.client_id, a.employee_id, a.status, a.appointment_date,
@@ -946,7 +972,7 @@ class AppointmentRepository:
             SELECT COUNT(*) AS cnt
             FROM appointments a
             WHERE
-                (a.appointment_date + a.end_time) < NOW()
+                (a.appointment_date + a.end_time) < (NOW() AT TIME ZONE 'Europe/Warsaw')
                 AND a.status NOT IN ('{AppointmentStatus.COMPLETED}', '{AppointmentStatus.CANCELLED}', '{AppointmentStatus.NO_SHOW}', '{AppointmentStatus.RESCHEDULED}')
                 AND a.is_deleted = FALSE {excl_sql}
         """
