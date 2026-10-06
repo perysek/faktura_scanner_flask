@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import './VisitNotes.css';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { SelectField, TextareaField } from '../ui/form';
+import { SearchableSelectField, TextareaField } from '../ui/form';
 import { useToast } from '../feedback/ToastProvider';
 import { visitNotesApi } from '../../lib/api/visitNotes';
 import { ApiError } from '../../lib/api/client';
@@ -138,11 +138,12 @@ export function VisitNoteModal({ isOpen, onClose, note, appointmentId, clientId,
         ) : visits.length === 0 ? (
           <p className="vn-modal-error">Brak zakończonych wizyt, do których można dodać uwagę.</p>
         ) : (
-          <SelectField
+          <SearchableSelectField
             label="Wizyta"
+            searchPlaceholder="Szukaj wizyty…"
             options={visits.map((v) => ({ value: String(v.appointment_id), label: visitOptionLabel(v) }))}
             value={pickedVisit}
-            onChange={(e) => setPickedVisit(e.target.value)}
+            onChange={setPickedVisit}
             fullWidth
           />
         )
