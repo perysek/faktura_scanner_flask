@@ -292,6 +292,13 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         visible: () => true,
       },
       {
+        label: 'Instrukcja obsługi (smartfon)',
+        to: '/instrukcja-smartfon',
+        // Phone icon (same glyph as Ustawienia SMS) — the phone edition of the manual.
+        iconPath: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
+        visible: () => true,
+      },
+      {
         label: 'Profil',
         to: '/profil',
         iconPath: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',

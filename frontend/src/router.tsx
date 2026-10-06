@@ -38,6 +38,7 @@ import { UsersListPage } from './pages/rbac/UsersListPage';
 import { UserFormPage } from './pages/rbac/UserFormPage';
 import { UserDetailPage } from './pages/rbac/UserDetailPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { ManualPage } from './pages/manual/ManualPage';
 import { RolesListPage } from './pages/rbac/RolesListPage';
 import { RoleFormPage } from './pages/rbac/RoleFormPage';
 import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
@@ -76,7 +77,15 @@ export const router = createBrowserRouter([
           // No module gate on the backend (@login_required only) — any
           // authenticated user (D14 point 5). Faza 2, moduł Dashboard/Pulpit.
           { path: 'dashboard', element: <DashboardPage /> },
-          { path: 'instrukcja', element: <ComingSoonPage title="Instrukcja obsługi" /> },
+          // Instrukcja obsługi — static HTML manuals (public/manual/), any authenticated user.
+          {
+            path: 'instrukcja',
+            element: <ManualPage src="/manual/instrukcja.html" title="Instrukcja obsługi" other={{ to: '/instrukcja-smartfon', label: '📱 Wersja na smartfon' }} />,
+          },
+          {
+            path: 'instrukcja-smartfon',
+            element: <ManualPage src="/manual/instrukcja-smartfon.html" title="Instrukcja obsługi (smartfon)" other={{ to: '/instrukcja', label: '🖥 Wersja na komputer' }} />,
+          },
           { path: 'profil', element: <ProfilePage /> },
 
           // requireModule="invoices" — includes historia/ustawienia/email,
