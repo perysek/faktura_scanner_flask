@@ -4,6 +4,17 @@ from typing import List, Optional
 
 from repositories.base_repository import BaseRepository
 
+# What counts as a PENDING event: still scheduled, and its visit still exists. ONE definition shared by
+# get_due() (what the scheduler sends) and get_scheduled_for_queue() (what the "Oczekujące" page lists), so
+# the page can never list something the scheduler will not send, nor hide something it will.
+#
+# The visit clause matters: deleting a visit used to leave its queued events behind, and an
+# `employee_visit_reminder` carries no check of its own, so the employee would still have been texted about a
+# visit that no longer exists (found on the live site, 2026-10-07: the principal's own deleted test visit had
+# one queued for his own phone). delete_appointment now cancels them too; this filter is the safety net for
+# every other way a visit can be soft-deleted, and for orphans created before that.
+PENDING_EVENT_FILTER = "e.status = 'scheduled' AND a.is_deleted IS NOT TRUE"
+
 
 class SmsEventRepository(BaseRepository):
     """Manages the sms_events queue for event-triggered outbound SMS."""
@@ -21,8 +32,8 @@ class SmsEventRepository(BaseRepository):
         return self._execute_insert(sql, (appointment_id, event_type, scheduled_at))
 
     def get_due(self) -> List[dict]:
-        """Return all events where scheduled_at <= NOW() and status = 'scheduled'."""
-        sql = """
+        """Return the pending events (see PENDING_EVENT_FILTER) whose scheduled_at has come."""
+        sql = f"""
             SELECT e.*, a.rating_token, a.client_id,
                    a.appointment_date, a.start_time, a.employee_token,
                    emp.phone      AS employee_phone,
@@ -34,7 +45,7 @@ class SmsEventRepository(BaseRepository):
             LEFT JOIN employees emp ON emp.id = a.employee_id
             LEFT JOIN clients   c   ON c.id  = a.client_id
             WHERE e.scheduled_at <= NOW()
-              AND e.status = 'scheduled'
+              AND {PENDING_EVENT_FILTER}
             ORDER BY e.scheduled_at
         """
         return [dict(r) for r in self._fetch_all(sql, ())]
@@ -42,20 +53,15 @@ class SmsEventRepository(BaseRepository):
     def get_scheduled_for_queue(self, appointment_id: Optional[int] = None) -> List[dict]:
         """Queued events the scheduler will still send, with who receives them.
 
-        Same population as get_due() (status = 'scheduled') but WITHOUT the `scheduled_at <= NOW()`
-        cut, so it lists what is still to come — read-only, backs the "Oczekujące" views.
-        `employee_visit_reminder` goes to the employee, every other event type to the client.
-
-        Deliberately NOT filtered on `a.is_deleted`: get_due() is not either, and deleting a visit
-        does not cancel its queued events, so the scheduler still picks those up. The queue must show
-        what the scheduler will do, so the flag is returned (`visit_deleted`) and the service says what
-        will actually come of such an event.
+        Same population as get_due() (PENDING_EVENT_FILTER, shared on purpose) but WITHOUT the
+        `scheduled_at <= NOW()` cut, so it lists what is still to come — read-only, backs the "Oczekujące"
+        views. `employee_visit_reminder` goes to the employee, every other event type to the client.
         """
         # visit_status / type_* / already_sent are what SmsService.send() weighs before texting a client for
         # an event (an employee reminder skips all of them), so the queue can say which rows would be refused.
-        sql = """
+        sql = f"""
             SELECT e.id, e.appointment_id, e.event_type, e.scheduled_at,
-                   a.appointment_date, a.start_time, a.is_deleted IS TRUE AS visit_deleted,
+                   a.appointment_date, a.start_time,
                    a.status                             AS visit_status,
                    c.first_name || ' ' || c.last_name   AS client_name,
                    c.phone                              AS client_phone,
@@ -72,7 +78,7 @@ class SmsEventRepository(BaseRepository):
             LEFT JOIN clients   c   ON c.id  = a.client_id
             LEFT JOIN employees emp ON emp.id = a.employee_id
             LEFT JOIN sms_message_types mt ON mt.type_key = e.event_type
-            WHERE e.status = 'scheduled'
+            WHERE {PENDING_EVENT_FILTER}
         """
         params: tuple = ()
         if appointment_id is not None:

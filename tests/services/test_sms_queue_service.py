@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from services.sms_queue_service import (
-    NOTE_ALREADY_SENT, NOTE_BAD_PHONE, NOTE_DELETED_REFUSED, NOTE_NEEDS_CONFIRMED, NOTE_NO_PHONE, NOTE_TYPE_OFF,
+    NOTE_ALREADY_SENT, NOTE_BAD_PHONE, NOTE_NEEDS_CONFIRMED, NOTE_NO_PHONE, NOTE_TYPE_OFF,
     SmsQueueService, estimate_tick, first_tick_at_or_after, format_sent_row,
 )
 
@@ -184,7 +184,7 @@ class TestQueuedEvents:
                 'client_name': 'Anna Nowak', 'client_phone': '+48500100200',
                 'employee_name': 'Daria Andreas', 'employee_phone': '+48600200300', 'type_name': None,
                 # what SmsService.send() weighs for a client-facing event (an employee reminder ignores all of it)
-                'visit_deleted': False, 'visit_status': 'scheduled', 'type_enabled': True,
+                'visit_status': 'scheduled', 'type_enabled': True,
                 'type_only_confirmed': False, 'already_sent': False}
         base.update(kw)
         return base
@@ -213,27 +213,9 @@ class TestQueuedEvents:
         row = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
         assert 'Brak numeru telefonu' in row['note'] and row['deliverable'] is False
 
-    # Found on the live site: delete_appointment never cancels a visit's queued events and get_due()
-    # does not look at the visit, so the scheduler still picks these up. The page must say what comes of them.
-
-    def test_an_employee_reminder_of_a_deleted_visit_still_goes_out_and_says_so(self):
-        svc, _, _ = _service(events=[self._event(visit_deleted=True)])
-        row = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
-        assert row['deliverable'] is True                       # _send_employee_reminder_direct ignores the visit
-        assert 'usunięta' in row['note'] and 'i tak' in row['note']
-
-    def test_an_employee_reminder_of_a_deleted_visit_without_a_phone_goes_nowhere(self):
-        svc, _, _ = _service(events=[self._event(visit_deleted=True, employee_phone=None)])
-        row = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
-        assert row['deliverable'] is False and 'Brak numeru telefonu' in row['note'] and 'usunięta' in row['note']
-
-    def test_a_client_event_of_a_deleted_visit_is_refused_by_send_so_it_is_flagged(self):
-        svc, _, _ = _service(events=[self._event(event_type='post_visit_message', type_name='Prośba o ocenę',
-                                                 visit_deleted=True)])
-        out = svc.pending(now=NOW, next_run=NEXT_RUN)
-        row = out['rows'][0]
-        assert row['deliverable'] is False and row['note'] == NOTE_DELETED_REFUSED
-        assert out['undeliverable'] == 1
+    # Events of a DELETED visit are not this layer's business: SmsEventRepository.PENDING_EVENT_FILTER keeps them
+    # out of get_scheduled_for_queue() exactly as it keeps them out of get_due()
+    # (tests/repositories/test_sms_event_repository_queries.py).
 
     # A client-facing event goes through SmsService.send(); its refusals decide whether the row is a promise.
 
@@ -263,13 +245,14 @@ class TestQueuedEvents:
         assert self._row(self._client_event(type_only_confirmed=True, visit_status='confirmed'))['deliverable'] is True
 
     def test_the_refusals_are_weighed_in_sends_own_order(self):
-        # type off beats everything; then already-texted; then a deleted visit; then the phone
-        everything = dict(type_enabled=False, already_sent=True, visit_deleted=True, client_phone='123456')
+        # type off beats everything; then already-texted; then the phone; then the only-confirmed rule
+        everything = dict(type_enabled=False, already_sent=True, client_phone='123456',
+                          type_only_confirmed=True, visit_status='scheduled')
         assert self._row(self._client_event(**everything))['note'] == NOTE_TYPE_OFF
         assert self._row(self._client_event(**{**everything, 'type_enabled': True}))['note'] == NOTE_ALREADY_SENT
-        assert self._row(self._client_event(**{**everything, 'type_enabled': True, 'already_sent': False}))['note'] == NOTE_DELETED_REFUSED
+        assert self._row(self._client_event(**{**everything, 'type_enabled': True, 'already_sent': False}))['note'] == NOTE_BAD_PHONE
         assert self._row(self._client_event(**{**everything, 'type_enabled': True, 'already_sent': False,
-                                               'visit_deleted': False}))['note'] == NOTE_BAD_PHONE
+                                               'client_phone': '500 100 200'}))['note'] == NOTE_NEEDS_CONFIRMED
 
     def test_an_employee_reminder_ignores_the_type_switch_the_visit_status_and_earlier_texts(self):
         row = self._row(self._event(type_enabled=None, already_sent=True, visit_status='cancelled'))

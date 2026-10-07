@@ -7,9 +7,10 @@ text is never queued anywhere — every 15 minutes the scheduler asks which visi
 looking ahead instead of at the current tick. Nothing here sends, reserves or writes anything.
 
 It also mirrors what the SENDER does once a row is due, because the scheduler's query only finds
-candidates: SmsService.send() refuses a phone it cannot parse, a disabled type, a deleted visit, an
-"only confirmed" type on an unconfirmed visit — and then nothing goes out (a "N hours before" text is
-skipped silently, a queued event is marked failed). Such rows are still listed, so staff can fix the
+candidates: SmsService.send() refuses a phone it cannot parse, a disabled type, an "only confirmed"
+type on an unconfirmed visit — and then nothing goes out (a "N hours before" text is skipped silently,
+a queued event is marked failed). Deleted visits never get this far: neither the scheduler's queries nor
+this module's see them (delete cancels the visit's queued events, and PENDING_EVENT_FILTER is the net). Such rows are still listed, so staff can fix the
 cause, but flagged `deliverable: False` with a reason; they never carry a promise. (Checked against the
 real sender, tick by tick, on a scratch database — see the ISA's parity runs.)
 
@@ -42,8 +43,6 @@ EMPLOYEE_REMINDER_NAME = 'Przypomnienie dla pracownika'
 # What the page tells staff about a row the scheduler will not (or only oddly) deliver.
 NOTE_NO_PHONE = 'Brak numeru telefonu — SMS nie zostanie wysłany'
 NOTE_BAD_PHONE = 'Nieprawidłowy numer telefonu — SMS nie zostanie wysłany'
-NOTE_DELETED_REFUSED = 'Wizyta usunięta — SMS nie zostanie wysłany'
-NOTE_DELETED_STILL_SENT = 'Wizyta usunięta, ale SMS do pracownika i tak zostanie wysłany'
 NOTE_TYPE_OFF = 'Ten typ SMS jest wyłączony w ustawieniach — SMS nie zostanie wysłany'
 NOTE_ALREADY_SENT = 'Ten SMS został już wysłany do tej wizyty — zostanie pominięty'
 NOTE_NEEDS_CONFIRMED = 'Wymaga statusu „Potwierdzona” — SMS nie zostanie wysłany'
@@ -184,11 +183,9 @@ class SmsQueueService:
             shown, problem = phone_for_display(e['employee_phone'] if employee else e['client_phone'])
             if employee:
                 # _send_employee_reminder_direct looks at the employee's phone and nothing else: not at the
-                # visit (deleted or not) and not at the message-type switch.
-                deliverable = problem is None
-                note = problem
-                if e.get('visit_deleted'):
-                    note = NOTE_DELETED_STILL_SENT if deliverable else f'{problem} (wizyta usunięta)'
+                # visit's status and not at the message-type switch. (A DELETED visit's events never get here:
+                # PENDING_EVENT_FILTER leaves them out of both the scheduler's query and this one.)
+                deliverable, note = problem is None, problem
             else:
                 # Every other event goes through SmsService.send(); this is its refusal order. A refusal makes
                 # the scheduler mark the event failed (or skipped, for "already texted") and text nobody.
@@ -216,13 +213,12 @@ class SmsQueueService:
     @staticmethod
     def _client_event_refusal(e: Dict[str, Any], phone_problem: Optional[str]) -> Optional[str]:
         """Why SmsService.send() would refuse this queued client-facing event (None = it goes out).
-        Same order as send(): type unknown/disabled, already texted, visit gone, phone, only-confirmed."""
+        Same order as send(): type unknown/disabled, already texted, phone, only-confirmed. (send() also refuses a
+        deleted visit; those events are excluded upstream, see PENDING_EVENT_FILTER.)"""
         if not e.get('type_enabled'):                       # no sms_message_types row at all, or switched off
             return NOTE_TYPE_OFF
         if e.get('already_sent'):
             return NOTE_ALREADY_SENT
-        if e.get('visit_deleted'):                          # send() resolves the visit via get_by_id: deleted = gone
-            return NOTE_DELETED_REFUSED
         if phone_problem:
             return phone_problem
         if e.get('type_only_confirmed') and e.get('visit_status') != 'confirmed':

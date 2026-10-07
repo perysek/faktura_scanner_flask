@@ -65,6 +65,20 @@ def _schedule_employee_reminder_sms(appointment_id: int,
         logging.error('_schedule_employee_reminder_sms failed appt_id=%s: %s', appointment_id, exc)
 
 
+def _restore_employee_reminder_sms(repo, appointment_id: int) -> None:
+    """After a visit is restored, schedule its employee reminder again — delete cancelled the old one.
+
+    Only for a visit that is live (scheduled/confirmed): a restored cancelled/completed/no-show visit must not
+    start texting an employee. Whether the reminder moment is still ahead (and whether SMS is on) is decided
+    by SmsService.schedule_employee_reminder, exactly as for create and edit. Swallows errors like its siblings."""
+    try:
+        row = repo.get_by_id(appointment_id)      # after restore(): get_by_id hides deleted rows
+        if row and row['status'] in (AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED):
+            _schedule_employee_reminder_sms(appointment_id, row['appointment_date'], row['start_time'])
+    except Exception as exc:
+        logging.error('_restore_employee_reminder_sms failed appt_id=%s: %s', appointment_id, exc)
+
+
 def _send_confirmation_request_sms(appointment_id: int) -> None:
     """Send a confirmation-request SMS immediately. Used when the salon reschedules
     a previously client-confirmed visit, so the client can re-confirm the new time.
@@ -1119,6 +1133,10 @@ def delete_appointment(appointment_id):
         # reports stop counting it; restore_appointment below brings it back.
         IncomeRepository().soft_delete_by_appointment(appointment_id)
 
+        # A deleted visit is a dead slot (same rule as reschedule and cancel): kill the SMS still queued
+        # against it. Before this, the employee reminder stayed queued and would still have been texted.
+        _cancel_event_sms(appointment_id)
+
         return jsonify({
             'success': True,
             'restore_url': f'/appointments/{appointment_id}/restore'
@@ -1142,6 +1160,9 @@ def restore_appointment(appointment_id):
             raise NotFoundError('Wizyta nie jest usunieta lub nie istnieje')
 
         IncomeRepository().restore_by_appointment(appointment_id)
+
+        # Delete cancelled the visit's queued SMS, so bring the employee reminder back with the visit.
+        _restore_employee_reminder_sms(repo, appointment_id)
 
         return jsonify({'success': True, 'message': 'Wizyta zostala przywrocona'})
     except AppError:
