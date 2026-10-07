@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from services.sms_queue_service import (
+    NOTE_ALREADY_SENT, NOTE_BAD_PHONE, NOTE_DELETED_REFUSED, NOTE_NEEDS_CONFIRMED, NOTE_NO_PHONE, NOTE_TYPE_OFF,
     SmsQueueService, estimate_tick, first_tick_at_or_after, format_sent_row,
 )
 
@@ -181,7 +182,10 @@ class TestQueuedEvents:
                 'scheduled_at': datetime(2026, 10, 8, 7, 40, tzinfo=timezone.utc),   # 09:40 Warsaw
                 'appointment_date': datetime(2026, 10, 8).date(), 'start_time': datetime(2026, 10, 8, 10).time(),
                 'client_name': 'Anna Nowak', 'client_phone': '+48500100200',
-                'employee_name': 'Daria Andreas', 'employee_phone': '+48600200300', 'type_name': None}
+                'employee_name': 'Daria Andreas', 'employee_phone': '+48600200300', 'type_name': None,
+                # what SmsService.send() weighs for a client-facing event (an employee reminder ignores all of it)
+                'visit_deleted': False, 'visit_status': 'scheduled', 'type_enabled': True,
+                'type_only_confirmed': False, 'already_sent': False}
         base.update(kw)
         return base
 
@@ -206,7 +210,106 @@ class TestQueuedEvents:
 
     def test_a_missing_phone_is_flagged_not_hidden(self):
         svc, _, _ = _service(events=[self._event(employee_phone=None)])
-        assert 'Brak numeru telefonu' in svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]['note']
+        row = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
+        assert 'Brak numeru telefonu' in row['note'] and row['deliverable'] is False
+
+    # Found on the live site: delete_appointment never cancels a visit's queued events and get_due()
+    # does not look at the visit, so the scheduler still picks these up. The page must say what comes of them.
+
+    def test_an_employee_reminder_of_a_deleted_visit_still_goes_out_and_says_so(self):
+        svc, _, _ = _service(events=[self._event(visit_deleted=True)])
+        row = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
+        assert row['deliverable'] is True                       # _send_employee_reminder_direct ignores the visit
+        assert 'usunięta' in row['note'] and 'i tak' in row['note']
+
+    def test_an_employee_reminder_of_a_deleted_visit_without_a_phone_goes_nowhere(self):
+        svc, _, _ = _service(events=[self._event(visit_deleted=True, employee_phone=None)])
+        row = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
+        assert row['deliverable'] is False and 'Brak numeru telefonu' in row['note'] and 'usunięta' in row['note']
+
+    def test_a_client_event_of_a_deleted_visit_is_refused_by_send_so_it_is_flagged(self):
+        svc, _, _ = _service(events=[self._event(event_type='post_visit_message', type_name='Prośba o ocenę',
+                                                 visit_deleted=True)])
+        out = svc.pending(now=NOW, next_run=NEXT_RUN)
+        row = out['rows'][0]
+        assert row['deliverable'] is False and row['note'] == NOTE_DELETED_REFUSED
+        assert out['undeliverable'] == 1
+
+    # A client-facing event goes through SmsService.send(); its refusals decide whether the row is a promise.
+
+    def _client_event(self, **kw):
+        return self._event(event_type='post_visit_message', type_name='Prośba o ocenę', **kw)
+
+    def _row(self, event):
+        return _service(events=[event])[0].pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
+
+    def test_a_healthy_client_event_is_deliverable(self):
+        row = self._row(self._client_event())
+        assert row['deliverable'] is True and row['note'] is None
+
+    @pytest.mark.parametrize('overrides, note', [
+        ({'type_enabled': False}, NOTE_TYPE_OFF),                    # switched off in the settings
+        ({'type_enabled': None}, NOTE_TYPE_OFF),                     # no sms_message_types row at all
+        ({'already_sent': True}, NOTE_ALREADY_SENT),                 # idempotent: the event is closed as skipped
+        ({'client_phone': '123456'}, NOTE_BAD_PHONE),
+        ({'client_phone': ''}, NOTE_NO_PHONE),
+        ({'type_only_confirmed': True, 'visit_status': 'scheduled'}, NOTE_NEEDS_CONFIRMED),
+    ])
+    def test_every_refusal_of_send_makes_a_client_event_undeliverable(self, overrides, note):
+        row = self._row(self._client_event(**overrides))
+        assert row['deliverable'] is False and row['note'] == note
+
+    def test_an_only_confirmed_event_type_is_fine_once_the_visit_is_confirmed(self):
+        assert self._row(self._client_event(type_only_confirmed=True, visit_status='confirmed'))['deliverable'] is True
+
+    def test_the_refusals_are_weighed_in_sends_own_order(self):
+        # type off beats everything; then already-texted; then a deleted visit; then the phone
+        everything = dict(type_enabled=False, already_sent=True, visit_deleted=True, client_phone='123456')
+        assert self._row(self._client_event(**everything))['note'] == NOTE_TYPE_OFF
+        assert self._row(self._client_event(**{**everything, 'type_enabled': True}))['note'] == NOTE_ALREADY_SENT
+        assert self._row(self._client_event(**{**everything, 'type_enabled': True, 'already_sent': False}))['note'] == NOTE_DELETED_REFUSED
+        assert self._row(self._client_event(**{**everything, 'type_enabled': True, 'already_sent': False,
+                                               'visit_deleted': False}))['note'] == NOTE_BAD_PHONE
+
+    def test_an_employee_reminder_ignores_the_type_switch_the_visit_status_and_earlier_texts(self):
+        row = self._row(self._event(type_enabled=None, already_sent=True, visit_status='cancelled'))
+        assert row['deliverable'] is True and row['note'] is None
+
+
+class TestWhatTheSenderWillAndWillNotDeliver:
+    """Found on the live site: 2 of 434 pending visits had 6-digit phone numbers. SmsService.send() raises
+    SmsError for them, send_due_reminders counts that as 'skipped' and writes nothing, so the visit is never
+    texted — yet the page promised it a time. Rows like that are still listed (staff can fix the number) but
+    must not promise anything."""
+
+    def _svc(self, *phones):
+        visits = []
+        for i, phone in enumerate(phones, start=1):
+            v = _visit(i, NOW + timedelta(hours=24, minutes=i))
+            v['phone'] = phone
+            visits.append(v)
+        return _service(types=[_type()], candidates={'confirmation_request': visits})[0]
+
+    def test_the_number_shown_is_the_one_twilio_receives(self):
+        row = self._svc('48515472247').pending(now=NOW, next_run=NEXT_RUN)['rows'][0]   # how clients.phone stores it
+        assert row['phone_number'] == '+48515472247'
+        assert row['deliverable'] is True and row['note'] is None
+
+    @pytest.mark.parametrize('phone', ['123456', '500 100', 'abc', '+48 0123', '12345'])
+    def test_a_number_the_sender_refuses_is_listed_but_flagged_undeliverable(self, phone):
+        out = self._svc(phone).pending(now=NOW, next_run=NEXT_RUN)
+        row = out['rows'][0]
+        assert row['deliverable'] is False and row['note'] == NOTE_BAD_PHONE
+        assert row['phone_number'] == phone                      # shown as stored: staff must be able to find and fix it
+        assert out['total'] == 1 and out['undeliverable'] == 1
+
+    def test_only_the_undeliverable_rows_are_counted_as_such(self):
+        out = self._svc('500 100 200', '123456', '+48 600 700 800').pending(now=NOW, next_run=NEXT_RUN)
+        assert out['total'] == 3 and out['undeliverable'] == 1
+        assert [r['deliverable'] for r in out['rows']] == [True, False, True]
+
+    def test_nothing_queued_means_nothing_undeliverable(self):
+        assert _service(types=[_type()])[0].pending(now=NOW, next_run=NEXT_RUN)['undeliverable'] == 0
 
 
 class TestManualSendOptions:
@@ -237,6 +340,16 @@ class TestManualSendOptions:
         svc, _ = self._svc()
         got = self._options(svc, '')
         assert all(not t['available'] and 'numeru telefonu' in t['reason'] for t in got.values())
+
+    def test_a_number_the_sender_cannot_parse_greys_every_type_out_and_says_so(self):
+        # send() raises SmsError("Nieprawidłowy numer telefonu") for it, so the click would fail
+        svc, _ = self._svc()
+        got = self._options(svc, '12345')
+        assert all(not t['available'] and 'Nieprawidłowy numer' in t['reason'] for t in got.values())
+
+    def test_a_number_stored_without_a_plus_is_fine(self):
+        svc, _ = self._svc()
+        assert self._options(svc, '48515472247')['confirmation_request']['available'] is True
 
     def test_sms_switched_off_makes_every_type_unavailable(self):
         svc, phone = self._svc(active=False)

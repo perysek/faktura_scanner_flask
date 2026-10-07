@@ -45,22 +45,34 @@ class SmsEventRepository(BaseRepository):
         Same population as get_due() (status = 'scheduled') but WITHOUT the `scheduled_at <= NOW()`
         cut, so it lists what is still to come — read-only, backs the "Oczekujące" views.
         `employee_visit_reminder` goes to the employee, every other event type to the client.
+
+        Deliberately NOT filtered on `a.is_deleted`: get_due() is not either, and deleting a visit
+        does not cancel its queued events, so the scheduler still picks those up. The queue must show
+        what the scheduler will do, so the flag is returned (`visit_deleted`) and the service says what
+        will actually come of such an event.
         """
+        # visit_status / type_* / already_sent are what SmsService.send() weighs before texting a client for
+        # an event (an employee reminder skips all of them), so the queue can say which rows would be refused.
         sql = """
             SELECT e.id, e.appointment_id, e.event_type, e.scheduled_at,
-                   a.appointment_date, a.start_time,
+                   a.appointment_date, a.start_time, a.is_deleted IS TRUE AS visit_deleted,
+                   a.status                             AS visit_status,
                    c.first_name || ' ' || c.last_name   AS client_name,
                    c.phone                              AS client_phone,
                    emp.first_name || ' ' || emp.last_name AS employee_name,
                    emp.phone                            AS employee_phone,
-                   mt.name                              AS type_name
+                   mt.name                              AS type_name,
+                   mt.is_enabled                        AS type_enabled,
+                   mt.send_only_if_confirmed            AS type_only_confirmed,
+                   EXISTS (SELECT 1 FROM sms_reminders r
+                           WHERE r.appointment_id = e.appointment_id AND r.message_type_key = e.event_type
+                             AND r.status IN ('pending', 'sent', 'delivered')) AS already_sent
             FROM sms_events e
             JOIN appointments a ON a.id = e.appointment_id
             LEFT JOIN clients   c   ON c.id  = a.client_id
             LEFT JOIN employees emp ON emp.id = a.employee_id
             LEFT JOIN sms_message_types mt ON mt.type_key = e.event_type
             WHERE e.status = 'scheduled'
-              AND a.is_deleted IS NOT TRUE
         """
         params: tuple = ()
         if appointment_id is not None:

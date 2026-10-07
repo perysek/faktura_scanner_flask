@@ -6,6 +6,13 @@ text is never queued anywhere — every 15 minutes the scheduler asks which visi
 ±15 minutes of now + N hours — so this module lists the same visits through the same gates, only
 looking ahead instead of at the current tick. Nothing here sends, reserves or writes anything.
 
+It also mirrors what the SENDER does once a row is due, because the scheduler's query only finds
+candidates: SmsService.send() refuses a phone it cannot parse, a disabled type, a deleted visit, an
+"only confirmed" type on an unconfirmed visit — and then nothing goes out (a "N hours before" text is
+skipped silently, a queued event is marked failed). Such rows are still listed, so staff can fix the
+cause, but flagged `deliverable: False` with a reason; they never carry a promise. (Checked against the
+real sender, tick by tick, on a scratch database — see the ISA's parity runs.)
+
 "Will be sent at" is the TICK, not the nominal due moment. A before-visit message goes out on the
 first tick that falls inside its 30-minute window, and ticks run on a fixed 15-minute grid anchored
 at the scheduler's start, so the time shown is `next_run + k × 15 min`. When the serving process is
@@ -14,7 +21,7 @@ quarter hour and flagged `estimated`.
 """
 import math
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.sms.sms_event_repository import SmsEventRepository
@@ -22,6 +29,7 @@ from repositories.sms.sms_repository import (
     SmsMessageTypeRepository, SmsReminderRepository, SmsSettingsRepository,
 )
 from scheduler import TICK_MINUTES
+from utils.phone import normalize_phone
 from utils.timezone import now_local, to_local_any
 
 TICK = timedelta(minutes=TICK_MINUTES)
@@ -30,6 +38,36 @@ WINDOW = timedelta(minutes=15)
 
 EMPLOYEE_REMINDER = 'employee_visit_reminder'
 EMPLOYEE_REMINDER_NAME = 'Przypomnienie dla pracownika'
+
+# What the page tells staff about a row the scheduler will not (or only oddly) deliver.
+NOTE_NO_PHONE = 'Brak numeru telefonu — SMS nie zostanie wysłany'
+NOTE_BAD_PHONE = 'Nieprawidłowy numer telefonu — SMS nie zostanie wysłany'
+NOTE_DELETED_REFUSED = 'Wizyta usunięta — SMS nie zostanie wysłany'
+NOTE_DELETED_STILL_SENT = 'Wizyta usunięta, ale SMS do pracownika i tak zostanie wysłany'
+NOTE_TYPE_OFF = 'Ten typ SMS jest wyłączony w ustawieniach — SMS nie zostanie wysłany'
+NOTE_ALREADY_SENT = 'Ten SMS został już wysłany do tej wizyty — zostanie pominięty'
+NOTE_NEEDS_CONFIRMED = 'Wymaga statusu „Potwierdzona” — SMS nie zostanie wysłany'
+REASON_CLIENT_NO_PHONE = 'Klient nie ma numeru telefonu'
+REASON_CLIENT_BAD_PHONE = 'Nieprawidłowy numer telefonu klienta'
+
+
+def phone_for_display(raw: Any) -> Tuple[Optional[str], Optional[str]]:
+    """(number to show, problem note or None).
+
+    The sender normalises with utils.phone.normalize_phone and REFUSES what it cannot parse
+    (SmsService._normalize_phone -> SmsError). For a "N hours before" text send_due_reminders then
+    counts the visit as skipped and writes nothing, so a visit with such a number stays "due" on every
+    tick and is never texted; for a queued event the event is marked failed. Either way nothing goes
+    out, so the page must not promise a time: show what Twilio would receive, or the stored text and
+    say it will not be sent.
+    """
+    text = str(raw).strip() if raw is not None else ''
+    if not text:
+        return None, NOTE_NO_PHONE
+    normalized = normalize_phone(text)
+    if normalized:
+        return normalized, None
+    return text, NOTE_BAD_PHONE
 
 
 def first_tick_at_or_after(moment: datetime, next_run: datetime, tick: timedelta = TICK) -> datetime:
@@ -94,6 +132,8 @@ class SmsQueueService:
         return {
             'rows': rows[offset:offset + limit],
             'total': len(rows),
+            # Rows listed above that the scheduler will not actually deliver (see phone_for_display).
+            'undeliverable': sum(1 for r in rows if not r['deliverable']),
             'sms_active': active,
             'next_tick_at': next_run.isoformat(timespec='seconds') if next_run else None,
             'estimated': next_run is None,
@@ -117,6 +157,7 @@ class SmsQueueService:
             tick = self._tick_for(max(window_open, now), next_run)
             if tick > window_close:
                 continue      # no tick lands inside the window: the scheduler would miss this one
+            shown, problem = phone_for_display(r['phone'])
             out.append({
                 'key': f"w{r['appointment_id']}:{msg_type['type_key']}",
                 'kind': 'before_visit',
@@ -124,13 +165,14 @@ class SmsQueueService:
                 'type_name': msg_type['name'],
                 'will_be_sent_at': tick.isoformat(timespec='seconds'),
                 'estimated': next_run is None,
+                'deliverable': problem is None,
                 'recipient_kind': 'client',
                 'recipient_name': r['client_name'],
-                'phone_number': r['phone'],
+                'phone_number': shown,
                 'appointment_id': r['appointment_id'],
                 'appointment_date': str(r['appointment_date']),
                 'start_time': str(r['start_time']),
-                'note': None,
+                'note': problem,
             })
         return out
 
@@ -139,7 +181,19 @@ class SmsQueueService:
         out = []
         for e in self._event_repo.get_scheduled_for_queue(appointment_id):
             employee = e['event_type'] == EMPLOYEE_REMINDER
-            phone = e['employee_phone'] if employee else e['client_phone']
+            shown, problem = phone_for_display(e['employee_phone'] if employee else e['client_phone'])
+            if employee:
+                # _send_employee_reminder_direct looks at the employee's phone and nothing else: not at the
+                # visit (deleted or not) and not at the message-type switch.
+                deliverable = problem is None
+                note = problem
+                if e.get('visit_deleted'):
+                    note = NOTE_DELETED_STILL_SENT if deliverable else f'{problem} (wizyta usunięta)'
+            else:
+                # Every other event goes through SmsService.send(); this is its refusal order. A refusal makes
+                # the scheduler mark the event failed (or skipped, for "already texted") and text nobody.
+                refusal = self._client_event_refusal(e, problem)
+                deliverable, note = refusal is None, refusal
             tick = self._tick_for(max(to_local_any(e['scheduled_at']), now), next_run)
             out.append({
                 'key': f"e{e['id']}",
@@ -148,15 +202,32 @@ class SmsQueueService:
                 'type_name': e.get('type_name') or (EMPLOYEE_REMINDER_NAME if employee else e['event_type']),
                 'will_be_sent_at': tick.isoformat(timespec='seconds'),
                 'estimated': next_run is None,
+                'deliverable': deliverable,
                 'recipient_kind': 'employee' if employee else 'client',
                 'recipient_name': (e['employee_name'] if employee else e['client_name']) or '',
-                'phone_number': phone,
+                'phone_number': shown,
                 'appointment_id': e['appointment_id'],
                 'appointment_date': str(e['appointment_date']),
                 'start_time': str(e['start_time']),
-                'note': None if phone else 'Brak numeru telefonu — wysyłka się nie powiedzie',
+                'note': note,
             })
         return out
+
+    @staticmethod
+    def _client_event_refusal(e: Dict[str, Any], phone_problem: Optional[str]) -> Optional[str]:
+        """Why SmsService.send() would refuse this queued client-facing event (None = it goes out).
+        Same order as send(): type unknown/disabled, already texted, visit gone, phone, only-confirmed."""
+        if not e.get('type_enabled'):                       # no sms_message_types row at all, or switched off
+            return NOTE_TYPE_OFF
+        if e.get('already_sent'):
+            return NOTE_ALREADY_SENT
+        if e.get('visit_deleted'):                          # send() resolves the visit via get_by_id: deleted = gone
+            return NOTE_DELETED_REFUSED
+        if phone_problem:
+            return phone_problem
+        if e.get('type_only_confirmed') and e.get('visit_status') != 'confirmed':
+            return NOTE_NEEDS_CONFIRMED
+        return None
 
     # ------------------------------------------------------------ manual sending
 
@@ -164,8 +235,9 @@ class SmsQueueService:
         """What the visit page's "Wyślij SMS" dropdown may offer for this visit, and why not.
 
         Mirrors SmsService.send()'s refusals so the UI explains a greyed-out entry instead of
-        letting the click fail: SMS off, no phone, or an "only confirmed" type on an unconfirmed
-        visit. Disabled types are not offered at all (send() refuses them too).
+        letting the click fail: SMS off, no phone, a phone the sender cannot parse, or an "only
+        confirmed" type on an unconfirmed visit. Disabled types are not offered at all (send()
+        refuses them too).
         """
         from repositories.clients.client_repository import ClientRepository
         settings = self._settings_repo.get_settings() or {}
@@ -174,15 +246,15 @@ class SmsQueueService:
         if not appt:
             return {'sms_active': sms_active, 'types': []}
         client = ClientRepository().get_by_id(appt['client_id'])
-        has_phone = bool(client and client['phone'])
+        _, phone_problem = phone_for_display(client['phone'] if client else None)
 
         types = []
         for t in self._type_repo.get_enabled():
             reason = None
             if not sms_active:
                 reason = 'Wysyłanie SMS jest wyłączone w ustawieniach'
-            elif not has_phone:
-                reason = 'Klient nie ma numeru telefonu'
+            elif phone_problem:
+                reason = REASON_CLIENT_NO_PHONE if phone_problem == NOTE_NO_PHONE else REASON_CLIENT_BAD_PHONE
             elif t.get('send_only_if_confirmed') and appt['status'] != 'confirmed':
                 reason = 'Wymaga statusu „Potwierdzona”'
             types.append({
