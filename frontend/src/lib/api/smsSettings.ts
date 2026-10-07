@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { SmsLogEntry, SmsMessageType, SmsSettings, SmsSettingsBundle } from '../../types/settings';
+import type { SmsPendingResponse } from '../../types/sms';
 
 export interface MessageTypeSaveValues {
   name: string;
@@ -42,6 +43,9 @@ export const smsSettingsApi = {
   deleteMessageType: (id: number) => api.del<{ success: boolean; message?: string }>(`/api/sms/message-types/${id}`),
 
   log: (offset = 0, limit = 100) => api.get<{ success: true; rows: SmsLogEntry[]; offset: number; limit: number }>('/api/sms/log', { offset, limit }),
+
+  /** Historia SMS, tab "Oczekujące": what the scheduler will still send and on which tick. */
+  pending: (offset = 0, limit = 100) => api.get<SmsPendingResponse>('/api/sms/pending', { offset, limit }),
 };
 
 export type { SmsMessageType };

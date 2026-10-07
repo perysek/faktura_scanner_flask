@@ -9,12 +9,14 @@
  * `@absence_management_required`) i globalne toasty statusu (status-events
  * polling) DOBUDOWANE — patrz `ReassignmentCandidate`/`AvailableSlot`/
  * `StatusChangeEvent` niżej, `pages/absences/ConflictResolutionModal.tsx` i
- * `components/feedback/StatusEventsPoller.tsx`. Wciąż poza zakresem: wysyłka/
- * log SMS na widoku szczegółów (własny moduł Ustawienia SMS), superadmin
- * power-editor (już poza zakresem — osobny moduł `data_correction`),
+ * `components/feedback/StatusEventsPoller.tsx`. **2026-10-07:** SMS na widoku
+ * szczegółów DOBUDOWANE (karta "Wiadomości SMS": wysłane / do wysłania + ręczna
+ * wysyłka, `VisitSmsCard.tsx`; wpisy SMS w "Historii zmian statusu"). Wciąż poza
+ * zakresem: superadmin power-editor (już poza zakresem — osobny moduł `data_correction`),
  * `/my-visits` (mobilny widok pracownika, bez bramki modułowej — nie ten
  * frontend). */
 
+import type { SmsSentEntry } from './sms';
 import type { RecentNote } from './visitNote';
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled';
@@ -167,6 +169,9 @@ export interface StatusHistoryEntry {
   /** Only set on the `-> rescheduled` entry — the appointment this visit
    * became. Render that line as a link when present. */
   linked_appointment_id: number | null;
+  /** The suffix the audit value carried: a cancellation reason, or "zmiana
+   * terminu przez salon". `new_status` is always the bare status. */
+  detail?: string | null;
 }
 
 export interface StatusHistorySkeleton {
@@ -190,6 +195,8 @@ export interface StatusDurationComparison {
 export interface StatusHistoryResponse {
   success: true;
   history: StatusHistoryEntry[];
+  /** The visit's SMS sends, oldest first — shown among the status changes. */
+  sms?: SmsSentEntry[];
   skeleton: StatusHistorySkeleton;
   duration: StatusDurationComparison;
 }

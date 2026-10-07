@@ -15,6 +15,7 @@ import { empColor } from '../../lib/appointments/employeeColor';
 import { StatusDropdown } from './StatusDropdown';
 import { CompleteVisitModal } from './CompleteVisitModal';
 import { StatusHistorySection } from './StatusHistorySection';
+import { VisitSmsCard } from './VisitSmsCard';
 import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
@@ -32,9 +33,10 @@ function fmtDate(dateStr: string): string {
 
 /**
  * Wizyta — widok szczegółów. Ported z templates/appointments/view.html.
- * Świadomie pominięte: rozwijana lista "Wyślij SMS" + log SMS (własny moduł
- * Ustawienia SMS, patrz implementation-log.md), `visit-link`/token pracownika
- * (mobilny self-service, `/my-visits`, nie ten frontend).
+ * SMS (2026-10-07): karta "Wiadomości SMS" (wysłane / do wysłania + ręczna
+ * wysyłka, `VisitSmsCard`) i wpisy SMS w "Historii zmian statusu". Świadomie
+ * pominięte: `visit-link`/token pracownika (mobilny self-service,
+ * `/my-visits`, nie ten frontend).
  */
 export function WizytaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +55,8 @@ export function WizytaDetailPage() {
   const [addons, setAddons] = useState<AppointmentFormService[] | null>(null);
   const [selectedScore, setSelectedScore] = useState<number | null>(null);
   const [savingScore, setSavingScore] = useState(false);
+  // Bumped after a manual SMS send so the status timeline (which lists SMS sends) refetches.
+  const [smsRefresh, setSmsRefresh] = useState(0);
 
   const appt = detailState.data?.appointment;
 
@@ -307,7 +311,14 @@ export function WizytaDetailPage() {
         />
       )}
 
-      <StatusHistorySection appointmentId={appointmentId} appointmentStatus={appt.status} />
+      <VisitSmsCard
+        appointmentId={appointmentId}
+        appointmentStatus={appt.status}
+        clientName={appt.client_name}
+        onSent={() => setSmsRefresh((k) => k + 1)}
+      />
+
+      <StatusHistorySection appointmentId={appointmentId} appointmentStatus={appt.status} refreshKey={smsRefresh} />
 
       {isMobile && canWrite && (
         <div className="form-card appt-danger-zone">
