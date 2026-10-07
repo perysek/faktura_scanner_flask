@@ -917,6 +917,48 @@ class AppointmentRepository:
             cursor.execute(query, (hours_before, hours_before, message_type_key))
             return cursor.fetchall()
 
+    def get_sms_queue_candidates(self, hours_before: int, message_type_key: str, *,
+                                 only_confirmed: bool = False,
+                                 appointment_id: Optional[int] = None,
+                                 limit: int = 2000) -> List[Any]:
+        """Visits a "N hours before" SMS type WILL still text.
+
+        Same gates as get_appointments_due_for_type (status, not deleted, no sms_hold, client has a
+        phone, no earlier text for this type), but over every visit whose window has not CLOSED yet
+        (visit start - N h + 15 min >= now) rather than only the one open at this tick. That is what
+        the "Oczekujące" views list. Read-only; nothing here sends or reserves anything.
+        `only_confirmed` mirrors `send_only_if_confirmed`: SmsService.send() refuses any other status.
+        """
+        statuses = ['confirmed'] if only_confirmed else ['scheduled', 'confirmed']
+        query = """
+            SELECT a.id AS appointment_id, a.appointment_date, a.start_time, a.status,
+                   c.first_name || ' ' || c.last_name AS client_name, c.phone,
+                   (a.appointment_date::timestamp + a.start_time::interval) AS visit_at
+            FROM appointments a
+            JOIN clients c ON c.id = a.client_id
+            WHERE a.status = ANY(%s)
+              AND a.is_deleted IS NOT TRUE
+              AND a.sms_hold IS NOT TRUE
+              AND c.phone IS NOT NULL AND c.phone != ''
+              AND (a.appointment_date::timestamp + a.start_time::interval)
+                  + INTERVAL '15 minutes' - INTERVAL '1 minute' * (%s * 60)
+                  >= (NOW() AT TIME ZONE 'Europe/Warsaw')
+              AND NOT EXISTS (
+                  SELECT 1 FROM sms_reminders r
+                  WHERE r.appointment_id = a.id AND r.message_type_key = %s
+                    AND r.status IN ('sent', 'delivered', 'pending'))
+        """
+        params: list = [statuses, hours_before, message_type_key]
+        if appointment_id is not None:
+            query += " AND a.id = %s"
+            params.append(appointment_id)
+        query += " ORDER BY visit_at LIMIT %s"
+        params.append(limit)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return cursor.fetchall()
+
     def get_past_pending_appointments(self) -> List[Any]:
         """
         Pobierz przeszłe wizyty które nie mają jeszcze finalnego statusu.

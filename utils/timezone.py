@@ -26,3 +26,14 @@ def to_local(dt: datetime) -> datetime:
     for display. Diffing two such columns needs no conversion (same
     reference frame); only showing a clock time to a person does."""
     return dt.replace(tzinfo=timezone.utc).astimezone(WARSAW_TZ).replace(tzinfo=None)
+
+
+def to_local_any(dt: datetime) -> datetime:
+    """Naive Warsaw wall-clock for EITHER kind of database timestamp.
+
+    `audit_log.changed_at` is a naive-UTC TIMESTAMP (`to_local`), but `sms_reminders.sent_at`,
+    `sms_events.scheduled_at` and friends are TIMESTAMPTZ and arrive timezone-aware — feeding
+    those to `to_local` would silently relabel their offset as UTC. This accepts both."""
+    if dt.tzinfo is None:
+        return to_local(dt)
+    return dt.astimezone(WARSAW_TZ).replace(tzinfo=None)

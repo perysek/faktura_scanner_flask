@@ -39,6 +39,36 @@ class SmsEventRepository(BaseRepository):
         """
         return [dict(r) for r in self._fetch_all(sql, ())]
 
+    def get_scheduled_for_queue(self, appointment_id: Optional[int] = None) -> List[dict]:
+        """Queued events the scheduler will still send, with who receives them.
+
+        Same population as get_due() (status = 'scheduled') but WITHOUT the `scheduled_at <= NOW()`
+        cut, so it lists what is still to come — read-only, backs the "Oczekujące" views.
+        `employee_visit_reminder` goes to the employee, every other event type to the client.
+        """
+        sql = """
+            SELECT e.id, e.appointment_id, e.event_type, e.scheduled_at,
+                   a.appointment_date, a.start_time,
+                   c.first_name || ' ' || c.last_name   AS client_name,
+                   c.phone                              AS client_phone,
+                   emp.first_name || ' ' || emp.last_name AS employee_name,
+                   emp.phone                            AS employee_phone,
+                   mt.name                              AS type_name
+            FROM sms_events e
+            JOIN appointments a ON a.id = e.appointment_id
+            LEFT JOIN clients   c   ON c.id  = a.client_id
+            LEFT JOIN employees emp ON emp.id = a.employee_id
+            LEFT JOIN sms_message_types mt ON mt.type_key = e.event_type
+            WHERE e.status = 'scheduled'
+              AND a.is_deleted IS NOT TRUE
+        """
+        params: tuple = ()
+        if appointment_id is not None:
+            sql += " AND e.appointment_id = %s"
+            params = (appointment_id,)
+        sql += " ORDER BY e.scheduled_at, e.id"
+        return [dict(r) for r in self._fetch_all(sql, params)]
+
     def cancel_type_for_appointment(self, appointment_id: int, event_type: str) -> int:
         """Cancel pending events of a specific type for this appointment."""
         sql = """

@@ -6,8 +6,11 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from config.auth_config import module_permission_required, can_send_appointment_sms
 from services.sms_service import SmsService, SmsError
+from services.sms_queue_service import SmsQueueService, format_sent_row
 from repositories.sms.sms_repository import SmsReminderRepository, SmsMessageTypeRepository
+import scheduler
 from utils.audit import audit_event
+from utils.timezone import to_local_any
 
 sms_bp = Blueprint('sms', __name__)
 
@@ -297,12 +300,30 @@ def api_sms_log():
     rows = repo.get_log(limit=limit, offset=offset)
     for r in rows:
         if r.get('sent_at'):
-            r['sent_at'] = str(r['sent_at'])
+            # sent_at is TIMESTAMPTZ: showing it raw printed UTC (two hours behind the salon's
+            # clock in summer). Same Warsaw wall-clock as the "Oczekujące" tab beside it.
+            r['sent_at'] = to_local_any(r['sent_at']).isoformat(timespec='seconds')
         if r.get('appointment_date'):
             r['appointment_date'] = str(r['appointment_date'])
         if r.get('start_time'):
             r['start_time'] = str(r['start_time'])
     return jsonify({'success': True, 'rows': rows, 'offset': offset, 'limit': limit})
+
+
+@sms_bp.route('/api/sms/pending', methods=['GET'])
+@login_required
+@module_permission_required('settings')
+def api_sms_pending():
+    """Historia SMS, tab "Oczekujące": every message the scheduler will still send, soonest first,
+    each with the tick that will carry it (`will_be_sent_at`, Warsaw wall-clock)."""
+    offset = max(0, request.args.get('offset', 0, type=int))
+    limit = min(500, max(1, request.args.get('limit', 100, type=int)))
+    try:
+        data = SmsQueueService().pending(offset=offset, limit=limit, next_run=scheduler.next_tick_local())
+    except Exception:
+        logging.exception('Error in api_sms_pending')
+        return jsonify({'success': False, 'message': 'Błąd serwera'}), 500
+    return jsonify({'success': True, 'offset': offset, 'limit': limit, **data})
 
 
 # -----------------------------------------------------------------------
@@ -378,6 +399,32 @@ def bulk_send():
 
     sent = sum(1 for r in results if r.get('success'))
     return jsonify({'success': True, 'sent': sent, 'total': len(ids), 'details': results})
+
+
+@sms_bp.route('/api/sms/appointment/<int:appointment_id>/overview', methods=['GET'])
+@login_required
+@module_permission_required('appointments')
+def appointment_sms_overview(appointment_id):
+    """The visit page's "Wiadomości SMS" card in one call: what was sent, what is still queued
+    (with the tick that will carry it), and what the "Wyślij SMS" dropdown may offer right now."""
+    try:
+        queue = SmsQueueService()
+        pending = queue.pending(appointment_id=appointment_id, limit=100,
+                                next_run=scheduler.next_tick_local())
+        options = queue.manual_send_options(appointment_id)
+        sent = [format_sent_row(r) for r in SmsReminderRepository().get_for_appointment(appointment_id)]
+    except Exception:
+        logging.exception('Error in appointment_sms_overview')
+        return jsonify({'success': False, 'message': 'Błąd serwera'}), 500
+    return jsonify({
+        'success': True,
+        'sent': sent,
+        'pending': pending['rows'],
+        'pending_estimated': pending['estimated'],
+        'sms_active': pending['sms_active'],
+        'can_send': can_send_appointment_sms(current_user.role),
+        'send_types': options['types'],
+    })
 
 
 @sms_bp.route('/api/sms/appointment/<int:appointment_id>/log', methods=['GET'])

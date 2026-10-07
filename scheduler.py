@@ -17,6 +17,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from config.database import get_database_url
+from utils.timezone import WARSAW_TZ
 
 _scheduler = None
 
@@ -25,6 +26,10 @@ _lock_conn = None
 
 # Arbitrary, app-unique 32-bit key identifying the SMS-scheduler advisory lock.
 _SCHEDULER_LOCK_KEY = 728193
+
+# How often the auto-send job fires. The "Oczekujące" SMS views derive "will be sent at" from this
+# cadence (services/sms_queue_service.py), so there is exactly one place that says 15.
+TICK_MINUTES = 15
 
 
 def _acquire_scheduler_lock() -> bool:
@@ -94,14 +99,27 @@ def start_scheduler(app):
     _scheduler.add_job(
         func=_run_auto_reminders,
         args=[app],
-        trigger=IntervalTrigger(minutes=15),
+        trigger=IntervalTrigger(minutes=TICK_MINUTES),
         id='sms_auto_send',
         replace_existing=True,
         max_instances=1,
         coalesce=True,
     )
     _scheduler.start()
-    logging.info("SMS auto-send scheduler started (interval=15min, advisory-locked)")
+    logging.info("SMS auto-send scheduler started (interval=%dmin, advisory-locked)", TICK_MINUTES)
+
+
+def next_tick_local():
+    """The scheduler's next tick as naive Warsaw wall-clock, or None when THIS process is not the
+    one running the scheduler (disabled, lock held elsewhere, not started). The queue views use it
+    as the anchor of the 15-minute grid; without it they can only estimate."""
+    if _scheduler is None or not getattr(_scheduler, 'running', False):
+        return None
+    job = _scheduler.get_job('sms_auto_send')
+    next_run = getattr(job, 'next_run_time', None) if job else None
+    if next_run is None:
+        return None
+    return next_run.astimezone(WARSAW_TZ).replace(tzinfo=None)
 
 
 def stop_scheduler():
