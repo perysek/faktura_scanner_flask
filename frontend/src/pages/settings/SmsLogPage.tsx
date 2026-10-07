@@ -48,6 +48,9 @@ export function SmsLogPage() {
   const pendingState = useApiData(() => smsSettingsApi.pending(pendingOffset, PAGE_SIZE), [pendingOffset]);
   const rows = logState.data?.rows ?? [];
   const pending = pendingState.data;
+  // What will actually go out: rows the scheduler refuses (bad phone, deleted visit...) stay listed but do not count.
+  const undeliverable = pending?.undeliverable ?? 0;       // `?? 0`: an older backend during a rolling deploy sends no such field
+  const awaiting = pending ? pending.total - undeliverable : null;
 
   function changeTab(next: Tab) {
     setTab(next);
@@ -66,7 +69,7 @@ export function SmsLogPage() {
       <details className="form-card sms-type-card sms-history-card" open>
         <summary className="sms-type-summary">
           Wysyłki SMS
-          <span className="sms-history-meta">{pending ? `Oczekujące: ${pending.total}` : ''}</span>
+          <span className="sms-history-meta">{awaiting != null ? `Oczekujące: ${awaiting}` : ''}</span>
         </summary>
 
         <SmsTabs<Tab>
@@ -76,7 +79,7 @@ export function SmsLogPage() {
           onChange={changeTab}
           tabs={[
             { key: 'sent', label: 'Wysłane' },
-            { key: 'pending', label: 'Oczekujące', count: pending ? pending.total : null },
+            { key: 'pending', label: 'Oczekujące', count: awaiting },
           ]}
         />
 
@@ -165,6 +168,11 @@ export function SmsLogPage() {
                 : pending?.next_tick_at
                   ? `Harmonogram wysyła co 15 minut. Najbliższy cykl: ${fmtWhen(pending.next_tick_at)}. „Zostanie wysłany” to cykl, który faktycznie zabierze wiadomość.`
                   : 'Wiadomości, które harmonogram jeszcze wyśle, najwcześniejsze na górze.'}
+            </p>
+          )}
+          {pending && pending.sms_active && undeliverable > 0 && (
+            <p className="sms-hint sms-hint--warn">
+              {undeliverable} z {pending.total} pozycji (przekreślone) nie zostanie wysłanych: powód jest w kolumnie „Uwagi”, np. błędny numer telefonu klienta, który warto poprawić.
             </p>
           )}
           <SmsPendingTable rows={pending?.rows ?? []} loading={pendingState.loading && !pending} variant="history" />

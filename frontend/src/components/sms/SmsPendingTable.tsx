@@ -3,6 +3,9 @@ import type { SmsPendingEntry } from '../../types/sms';
 import { fmtVisit, fmtWhen, fmtWhenExact } from './smsFormat';
 import './sms.css';
 
+/** Strict `=== false`: a response without the flag (an older backend during a rolling deploy) means "deliverable". */
+const isRefused = (r: SmsPendingEntry) => r.deliverable === false;
+
 export interface SmsPendingTableProps {
   rows: SmsPendingEntry[];
   loading?: boolean;
@@ -12,7 +15,8 @@ export interface SmsPendingTableProps {
 }
 
 /** Messages the scheduler will still send, with the exact tick that will carry each one.
- * `~` + a tooltip mark an ESTIMATED time (the serving process has no scheduler anchor). */
+ * `~` + a tooltip mark an ESTIMATED time (the serving process has no scheduler anchor); a struck-through
+ * time marks a row the scheduler will refuse (`deliverable: false`), explained in "Uwagi". */
 export function SmsPendingTable({ rows, loading, variant, emptyText = 'Brak oczekujących wiadomości SMS' }: SmsPendingTableProps) {
   const history = variant === 'history';
   const columns = history ? 6 : 4;
@@ -47,10 +51,19 @@ export function SmsPendingTable({ rows, loading, variant, emptyText = 'Brak ocze
             rows.map((r) => (
               <tr key={r.key}>
                 <td className="cell-name sms-when" data-label="Zostanie wysłany">
-                  <span title={r.estimated ? 'Szacunek: ten serwer nie uruchamia harmonogramu, czas zaokrąglony do kwadransa' : fmtWhenExact(r.will_be_sent_at)}>
-                    {r.estimated && '~'}
-                    {fmtWhen(r.will_be_sent_at)}
-                  </span>
+                  {!isRefused(r) ? (
+                    <span title={r.estimated ? 'Szacunek: ten serwer nie uruchamia harmonogramu, czas zaokrąglony do kwadransa' : fmtWhenExact(r.will_be_sent_at)}>
+                      {r.estimated && '~'}
+                      {fmtWhen(r.will_be_sent_at)}
+                    </span>
+                  ) : (
+                    // Not a promise: the scheduler reaches this row on that tick and refuses it. Struck through for
+                    // sighted users, spelled out for screen readers; the reason is in "Uwagi".
+                    <span className="sms-skipped">
+                      <span className="sr-only">Nie zostanie wysłany: </span>
+                      <s>{fmtWhen(r.will_be_sent_at)}</s>
+                    </span>
+                  )}
                 </td>
                 <td data-label="Typ SMS">{r.type_name}</td>
                 <td data-label="Odbiorca">
@@ -73,7 +86,7 @@ export function SmsPendingTable({ rows, loading, variant, emptyText = 'Brak ocze
                     )}
                   </td>
                 )}
-                <td className="sms-note" data-label="Uwagi">
+                <td className={`sms-note${isRefused(r) ? ' sms-note--warn' : ''}`} data-label="Uwagi">
                   {r.note || '—'}
                 </td>
               </tr>

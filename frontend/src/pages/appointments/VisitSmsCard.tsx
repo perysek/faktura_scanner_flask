@@ -21,7 +21,8 @@ const ITEM = '[role="menuitem"]';
 interface SendMenuProps {
   types: SmsSendType[];
   busy: boolean;
-  onPick: (type: SmsSendType) => void;
+  /** May return a promise: focus goes back to the trigger when it settles. */
+  onPick: (type: SmsSendType) => void | Promise<void>;
 }
 
 /**
@@ -42,13 +43,21 @@ function SendMenu({ types, busy, onPick }: SendMenuProps) {
     };
     document.addEventListener('pointerdown', onPointerDown);
     const menu = menuRef.current;
-    (menu?.querySelector<HTMLElement>(`${ITEM}:not([aria-disabled="true"])`) ?? menu?.querySelector<HTMLElement>(ITEM))?.focus();
+    const first = menu?.querySelector<HTMLElement>(`${ITEM}:not([aria-disabled="true"])`) ?? menu?.querySelector<HTMLElement>(ITEM);
+    first?.focus({ preventScroll: true });
+    // Opened near the bottom of the viewport the list would hang below the fold (seen on the live site):
+    // scroll just enough to show all of it. `scroll-margin` in sms.css keeps it clear of the phone's bottom bar.
+    menu?.scrollIntoView({ block: 'nearest' });
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
+  function focusTrigger() {
+    rootRef.current?.querySelector<HTMLElement>('button[aria-haspopup]')?.focus();
+  }
+
   function closeAndRefocus() {
     setOpen(false);
-    rootRef.current?.querySelector<HTMLElement>('button[aria-haspopup]')?.focus();
+    focusTrigger();
   }
 
   function onMenuKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -107,7 +116,10 @@ function SendMenu({ types, busy, onPick }: SendMenuProps) {
                 onClick={() => {
                   if (!t.available) return;
                   setOpen(false);
-                  onPick(t);
+                  // The item that held focus is about to unmount, which would drop focus on <body>. When the
+                  // confirm dialog and any send are over, hand it back to the trigger — a frame later, so React
+                  // has re-enabled the button after its busy state.
+                  Promise.resolve(onPick(t)).finally(() => requestAnimationFrame(focusTrigger));
                 }}
               >
                 <span>
@@ -191,6 +203,9 @@ export function VisitSmsCard({ appointmentId, appointmentStatus, clientName, onS
   }
 
   const pendingEmpty = !data.sms_active ? 'Wysyłanie SMS jest wyłączone' : 'Brak oczekujących wiadomości SMS dla tej wizyty';
+  // Rows the scheduler will refuse (bad phone, deleted visit...) stay listed, struck through, but do not count.
+  const awaiting = data.pending.filter((p) => p.deliverable !== false).length;   // strict: see SmsPendingTable
+  const refused = data.pending.length - awaiting;
 
   return (
     <div className="form-card" aria-busy={state.loading || undefined}>
@@ -210,7 +225,7 @@ export function VisitSmsCard({ appointmentId, appointmentStatus, clientName, onS
         onChange={setTab}
         tabs={[
           { key: 'sent', label: 'Wysłane', count: data.sent.length },
-          { key: 'pending', label: 'Do wysłania', count: data.pending.length },
+          { key: 'pending', label: 'Do wysłania', count: awaiting },
         ]}
       />
 
@@ -224,6 +239,11 @@ export function VisitSmsCard({ appointmentId, appointmentStatus, clientName, onS
             {data.pending_estimated
               ? 'Czasy szacunkowe (~): ten serwer nie uruchamia harmonogramu, więc zaokrąglono je do pełnego kwadransa.'
               : 'Harmonogram wysyła co 15 minut. „Zostanie wysłany” to cykl, który faktycznie zabierze wiadomość.'}
+          </p>
+        )}
+        {data.sms_active && refused > 0 && (
+          <p className="sms-hint sms-hint--warn">
+            {refused === 1 ? 'Jedna pozycja (przekreślona) nie zostanie wysłana' : `${refused} pozycji (przekreślone) nie zostanie wysłanych`}: powód jest w kolumnie „Uwagi”.
           </p>
         )}
         <SmsPendingTable rows={data.pending} variant="visit" emptyText={pendingEmpty} />

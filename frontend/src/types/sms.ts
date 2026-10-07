@@ -15,8 +15,13 @@ export interface SmsPendingEntry {
   will_be_sent_at: string;
   /** True when the serving process has no scheduler anchor, so the time is rounded to a quarter hour. */
   estimated: boolean;
+  /** False when the scheduler will NOT actually deliver this one (a phone number the sender refuses, a
+   * disabled type, a deleted visit...). Such a row is still listed so staff can fix the cause, but its
+   * time is not a promise and `note` says why. */
+  deliverable: boolean;
   recipient_kind: 'client' | 'employee';
   recipient_name: string;
+  /** The number the sender uses (E.164), or what is stored when it cannot be parsed. */
   phone_number: string | null;
   appointment_id: number | null;
   appointment_date: string | null;
@@ -28,7 +33,10 @@ export interface SmsPendingEntry {
 export interface SmsPendingResponse {
   success: true;
   rows: SmsPendingEntry[];
+  /** Every queued row, deliverable or not (paging is over this). */
   total: number;
+  /** How many of `total` the scheduler will not deliver (`deliverable: false`). */
+  undeliverable: number;
   offset: number;
   limit: number;
   /** False -> SMS are switched off, the scheduler's job returns at once and nothing is queued. */
