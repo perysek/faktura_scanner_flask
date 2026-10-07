@@ -15,11 +15,14 @@ from config.appointment_statuses import AppointmentStatus
 from config.auth_config import module_permission_required, role_required, absence_management_required, own_data_employee_id
 from exceptions import AppError, ValidationError, NotFoundError, ConflictError
 from services.appointment_service import AppointmentBusinessService, AppointmentError
+from services.sms_queue_service import format_sent_row
+from services.status_timeline import parse_status_value, standing_checkpoints
 from services.visit_note_service import VisitNoteService, visit_note_scope
 from repositories.appointments.appointment_repository import AppointmentRepository
 from repositories.appointments.appointment_service_repository import AppointmentServiceRepository
 from repositories.appointments.income_repository import IncomeRepository
 from repositories.audit_repository import AuditRepository
+from repositories.sms.sms_repository import SmsReminderRepository
 from utils.timezone import to_local, now_local
 
 
@@ -584,17 +587,18 @@ def get_appointment_status_history(appointment_id):
 
         entries = AuditRepository().get_by_entity('appointment', appointment_id, field_name='status')
 
-        def _first_at(status: str):
-            for e in entries:
-                if e['new_value'] == status:
-                    return e['timestamp']
-            return None
-
         def _iso(dt):
             return to_local(dt).isoformat() if dt else None
 
-        in_progress_at = _first_at(AppointmentStatus.IN_PROGRESS)
-        completed_at = _first_at(AppointmentStatus.COMPLETED)
+        # Replay the log instead of remembering the first time each status appeared: the edit page
+        # can move a visit BACKWARDS (the status endpoint cannot), and a checkpoint the visit is no
+        # longer at must stop being "done". See services/status_timeline.py.
+        standing = standing_checkpoints(
+            entries, row['status'],
+            fallbacks={AppointmentStatus.CONFIRMED: row.get('confirmation_updated_at'),
+                       AppointmentStatus.CANCELLED: row.get('cancelled_at')})
+        in_progress_at = standing.get(AppointmentStatus.IN_PROGRESS)
+        completed_at = standing.get(AppointmentStatus.COMPLETED)
 
         scheduled_minutes = row['total_duration']
         actual_minutes = None
@@ -604,24 +608,44 @@ def get_appointment_status_history(appointment_id):
             if scheduled_minutes:
                 ratio_pct = round(actual_minutes / scheduled_minutes * 100)
 
-        return jsonify({
-            'success': True,
-            'history': [{
-                'old_status': e['old_value'],
-                'new_status': e['new_value'],
+        history = []
+        for e in entries:
+            # Audit values may carry a suffix ("cancelled (powód)"): bare status + detail.
+            new_status, detail = parse_status_value(e['new_value'])
+            old_status, _ = parse_status_value(e['old_value'])
+            history.append({
+                'old_status': old_status or None,
+                'new_status': new_status,
+                'detail': detail,
                 'user_name': e['user_name'],
                 'changed_at': _iso(e['timestamp']),
                 # The one transition that routes to another appointment
                 # (§6b chain link) — 'rescheduled' is otherwise terminal, so
                 # this is the only entry type that ever needs it.
                 'linked_appointment_id': (row['rescheduled_to_appointment_id']
-                                           if e['new_value'] == AppointmentStatus.RESCHEDULED else None),
-            } for e in entries],
+                                           if new_status == AppointmentStatus.RESCHEDULED else None),
+            })
+
+        # The visit's SMS sends ride along so the timeline can show them in time order next to the
+        # status changes. Isolated: a problem reading SMS rows must never take the history down.
+        sms = []
+        try:
+            # sent_at is second-precision once formatted and the repository returns newest-first, so two
+            # sends in the same second would come out reversed; `id` grows with creation time and breaks the tie.
+            sms = sorted((format_sent_row(r) for r in SmsReminderRepository().get_for_appointment(appointment_id)),
+                         key=lambda s: (s['sent_at'] or '', s['id']))
+        except Exception:
+            logging.exception('status-history: SMS sends unavailable for appointment %s', appointment_id)
+
+        return jsonify({
+            'success': True,
+            'history': history,
+            'sms': sms,
             'skeleton': {
                 'scheduled_at': _iso(row['created_at']),
-                'confirmed_at': _iso(_first_at(AppointmentStatus.CONFIRMED)),
-                'cancelled_at': _iso(_first_at(AppointmentStatus.CANCELLED)),
-                'no_show_at': _iso(_first_at(AppointmentStatus.NO_SHOW)),
+                'confirmed_at': _iso(standing.get(AppointmentStatus.CONFIRMED)),
+                'cancelled_at': _iso(standing.get(AppointmentStatus.CANCELLED)),
+                'no_show_at': _iso(standing.get(AppointmentStatus.NO_SHOW)),
                 'started_at': _iso(in_progress_at),
                 'finished_at': _iso(completed_at),
             },
