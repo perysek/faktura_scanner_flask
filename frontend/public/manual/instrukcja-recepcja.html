@@ -109,7 +109,7 @@ h4{font-size:1.02rem;margin:1.8em 0 .3em;color:var(--ink)}
 .task-ic{width:44px;height:44px;display:grid;place-items:center;background:var(--accent-m);color:var(--accent-d);border-radius:2px}
 .task-ic .ic{width:24px;height:24px}
 .task b{display:block;font-size:1.02em;line-height:1.3}
-.task span{display:block;font-size:.88em;color:var(--ink2);line-height:1.4;margin-top:2px}
+.task b+span{display:block;font-size:.88em;color:var(--ink2);line-height:1.4;margin-top:2px}
 .task>.ic{color:var(--ink3)}
 
 /* day timeline */
@@ -123,7 +123,7 @@ dl.day dd{max-width:none}
 ol.steps{list-style:none;counter-reset:st;padding:0;margin:1.2em 0;max-width:72ch}
 ol.steps>li{counter-increment:st;position:relative;padding:3px 0 12px 50px;margin:0;min-height:36px}
 ol.steps>li::before{content:counter(st);position:absolute;left:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;font:700 16px/34px var(--font);text-align:center}
-.ui{display:inline;padding:.04em .45em;border:1px solid var(--side-bd);background:var(--paper);border-radius:2px;font-weight:650;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.ui{display:inline-block;max-width:100%;padding:.04em .45em;border:1px solid var(--side-bd);background:var(--paper);border-radius:2px;font-weight:650;line-height:1.45;vertical-align:baseline}
 .msg{display:inline;padding:.04em .4em;background:var(--warm);border:1px solid var(--border);border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 .pill{display:inline-block;font:700 12.5px/1 var(--font);letter-spacing:.04em;text-transform:uppercase;padding:6px 10px;border-radius:2px;white-space:nowrap;vertical-align:.08em}
 .st-scheduled{background:var(--st-scheduled-bg);color:var(--st-scheduled)}.st-confirmed{background:var(--st-confirmed-bg);color:var(--st-confirmed)}
@@ -177,13 +177,16 @@ figcaption{font-size:.92em;color:var(--ink2);padding:11px 4px 3px;max-width:80ch
 .small-shot{max-width:640px}
 
 /* schemas */
-.eq{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin:1.6em 0;max-width:980px}
-.eq-i{flex:1 1 150px;min-width:140px;border:1px solid var(--border);background:var(--paper);border-radius:3px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.eq-c{container-type:inline-size;margin:1.6em 0;max-width:980px}
+.eq{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:34px}
+.eq-i{position:relative;border:1px solid var(--border);background:var(--paper);border-radius:3px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.eq-i:not(:last-child)::after{content:"+";position:absolute;right:-26px;top:50%;transform:translateY(-50%);width:18px;text-align:center;font-size:1.7rem;font-weight:600;color:var(--ink3);line-height:1}
+.eq-i:nth-last-child(2)::after{content:"="}
+@container (max-width:800px){.eq{grid-template-columns:minmax(0,1fr)}.eq-i:not(:last-child)::after{right:auto;left:50%;top:auto;bottom:-30px;transform:translateX(-50%)}}
 .eq-i b{font-size:1.08em}
 .eq-i span.d{font-size:.9em;color:var(--ink2);line-height:1.45}
 .eq-ic{width:38px;height:38px;display:grid;place-items:center;background:var(--accent-m);color:var(--accent-d);border-radius:2px}
 .eq-ic .ic{width:22px;height:22px}
-.eq-op{align-self:center;font-size:1.8rem;font-weight:600;color:var(--ink3);padding:0 2px}
 .eq-res{border:2px solid var(--ink);background:var(--paper)}
 .road{margin:1.6em 0 .6em;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));counter-reset:rd}
 .station{position:relative;padding:0 26px 0 0}
@@ -193,8 +196,9 @@ figcaption{font-size:.92em;color:var(--ink2);padding:11px 4px 3px;max-width:80ch
 .exits{list-style:none;margin:.2em 0 0;padding:0;font-size:.9em}
 .exits li{margin:.35em 0;padding:0}
 .exits .lbl{display:block;font-size:.88em;color:var(--ink3);font-weight:650;margin-bottom:2px}
-.ba{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1.25fr);gap:10px;align-items:center;margin:1.6em 0;max-width:940px}
-.ba-arrow{display:grid;place-items:center;color:var(--ink3)}.ba-arrow .ic{width:30px;height:30px}
+.exits .sm{display:block;font-size:.88em;color:var(--ink2);line-height:1.4;margin-top:3px}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1.25fr);gap:10px;align-items:start;margin:1.6em 0;max-width:940px}
+.ba-arrow{display:grid;place-items:center;align-self:center;color:var(--ink3)}.ba-arrow .ic{width:30px;height:30px}
 .ba-col{display:grid;gap:10px}
 .ba-col>.ba-h{font-weight:700;font-size:.95em;color:var(--ink2);margin:0 0 -2px}
 .vcard{border:1px solid var(--border);background:var(--paper);border-radius:3px;padding:12px 14px;font-size:.94em;line-height:1.5}
@@ -250,9 +254,11 @@ dialog#lb::backdrop{background:rgba(15,12,8,.88)}
   .ba{grid-template-columns:minmax(0,1fr)}
   .ba-arrow{transform:rotate(90deg);height:34px}
   .flow .opt{margin-left:0;grid-template-columns:minmax(0,1fr);gap:6px}
-  .eq-op{width:100%;text-align:center}
   ol.steps>li{padding-left:44px}
   .t tbody th{width:auto}
+  table.t{font-size:.9em}
+  .t th,.t td,.t tbody th{padding:10px 9px}
+  .t .pill{font-size:11px;padding:5px 7px}
 }
 @media print{
   .toc,.up,#lb,.skip,.hero-cta,.toc-btn{display:none!important}
@@ -314,10 +320,10 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <a class="l s" href="#edycja-klienta">Zmiana danych klienta</a>
 <a class="l s" href="#karta-klienta">Karta klienta</a>
 <div class="grp">Zespół</div>
-<a class="l" href="#zespol">Pracownice, usługi i godziny</a>
+<a class="l" href="#zespol">Pracownicy, usługi i godziny</a>
 <a class="l s" href="#pracownice-uslugi">Kto robi jakie usługi</a>
 <a class="l s" href="#grafik">Godziny pracy</a>
-<a class="l s" href="#nieobecnosc-pracownika">Pracownica nieobecna</a>
+<a class="l s" href="#nieobecnosc-pracownika">Pracownik nieobecny</a>
 <a class="l s" href="#konflikty">Konflikt z nieobecnością</a>
 <div class="grp">Na co dzień</div>
 <a class="l" href="#sytuacje">Codzienne sytuacje</a>
@@ -332,7 +338,7 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <div>
 <h1>Instrukcja dla recepcji</h1>
 <p class="lead">Jak umówić klienta, poprowadzić wizytę od początku do końca i poradzić sobie, gdy coś pójdzie inaczej.</p>
-<div class="hero-cta"><a class="btn btn-p" href="#start">Wybierz swoją sytuację</a><button type="button" class="btn btn-s" id="print-btn">Drukuj tę instrukcję</button></div>
+<div class="hero-cta"><a class="btn btn-p" href="#start">Wybierz swoją sytuację</a><button type="button" class="btn btn-s" id="print-btn" aria-label="Drukuj tę instrukcję">Drukuj</button></div>
 </div>
 <figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Tak wygląda kalendarz dnia. Każda kolumna to jeden pracownik, każdy kolorowy blok to jedna wizyta."><img src="img/d/cal-day.webp" width="1500" height="850" alt="Widok Dzień w aplikacji: siedem kolumn z imionami pracowników, w nich kolorowe bloki wizyt rozłożone na osi godzin od 7:00 do 22:00." fetchpriority="high" decoding="async"></button><figcaption>Tak wygląda kalendarz dnia. Każda kolumna to jeden pracownik, każdy kolorowy blok to jedna wizyta.</figcaption></figure>
 </header>
@@ -381,17 +387,13 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <section class="sub" id="z-czego-wizyta" aria-labelledby="h-z-czego">
 <h3 id="h-z-czego">Z czego składa się wizyta</h3>
 <p>Wizyta to spotkanie: konkretny klient, u konkretnego pracownika, na konkretną usługę, w konkretnym dniu i o konkretnej godzinie. Gdy brakuje któregoś z tych elementów, wizyta się nie zapisze.</p>
-<div class="eq" role="group" aria-label="Wizyta to klient plus pracownik plus usługa plus termin">
+<div class="eq-c"><div class="eq" role="group" aria-label="Wizyta to klient plus pracownik plus usługa plus termin">
 <div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-person"/></svg></span><b>Klient</b><span class="d">Kto przychodzi. Musi już być na liście klientów.</span></div>
-<span class="eq-op" aria-hidden="true">+</span>
 <div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-content_cut"/></svg></span><b>Pracownik</b><span class="d">Kto obsługuje. Robi tę usługę i tego dnia pracuje.</span></div>
-<span class="eq-op" aria-hidden="true">+</span>
 <div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-spa"/></svg></span><b>Usługa</b><span class="d">Co będzie robione. Jedna albo kilka, każda z ceną i czasem.</span></div>
-<span class="eq-op" aria-hidden="true">+</span>
 <div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-schedule"/></svg></span><b>Termin</b><span class="d">Dzień i godzina. Koniec wynika z czasu usług.</span></div>
-<span class="eq-op" aria-hidden="true">=</span>
 <div class="eq-i eq-res"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-calendar_month"/></svg></span><b>Wizyta</b><span class="d">Wpis w kalendarzu pracownika, z ceną i etapem.</span></div>
-</div>
+</div></div>
 <ul>
 <li><b>Czas wizyty liczy się sam.</b> Dwie usługi po 30 minut dają wizytę na 60 minut.</li>
 <li><b>Cena też liczy się sama.</b> Ten sam zabieg może kosztować inaczej u różnych pracowników, bo każdy może mieć własną cenę i własny czas. Te wartości ustawia właścicielka, a Ty widzisz je w formularzu.</li>
@@ -417,13 +419,13 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <p>Każda wizyta ma swój etap, widoczny jako kolorowa plakietka (w aplikacji nazywa się to „status”). Wizyta idzie zawsze w jedną stronę, od lewej do prawej. Zawrócić jej się nie da, dlatego warto wiedzieć, dokąd prowadzi każde kliknięcie.</p>
 <div class="road" role="group" aria-label="Droga wizyty: Zaplanowana, Potwierdzona, W trakcie, Zakończona">
 <div class="station"><span class="pill st-scheduled">Zaplanowana</span><p>Umówiona, klient jeszcze nie potwierdził.</p>
-<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-cancelled">Anulowana</span></li><li><span class="pill st-in_progress">W trakcie</span> gdy klient przyszedł bez potwierdzenia</li><li>Przełożyć wizytę</li></ul></div>
+<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-cancelled">Anulowana</span></li><li><span class="pill st-in_progress">W trakcie</span><span class="sm">gdy klient przyszedł bez potwierdzenia</span></li><li><b class="ui">Przełóż wizytę</b></li></ul></div>
 <div class="station"><span class="pill st-confirmed">Potwierdzona</span><p>Klient potwierdził, SMS-em albo przez telefon.</p>
-<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-no_show">Nieobecność</span></li><li><span class="pill st-cancelled">Anulowana</span></li><li>Przełożyć wizytę</li></ul></div>
+<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-no_show">Nieobecność</span></li><li><span class="pill st-cancelled">Anulowana</span></li><li><b class="ui">Przełóż wizytę</b></li></ul></div>
 <div class="station"><span class="pill st-in_progress">W trakcie</span><p>Klient jest na fotelu. Można dopisać dodatki.</p>
 <ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-cancelled">Anulowana</span></li></ul></div>
 <div class="station"><span class="pill st-completed">Zakończona</span><p>Usługa wykonana, pieniądze zapisane. To koniec drogi.</p>
-<ul class="exits"><li><span class="lbl">Jeszcze możesz:</span></li><li>Dodać ocenę i uwagi po wizycie</li></ul></div>
+<ul class="exits"><li><span class="lbl">Jeszcze możesz:</span></li><li>Dodać ocenę klienta i uwagi po wizycie</li></ul></div>
 </div>
 <p>Etapy <span class="pill st-cancelled">Anulowana</span>, <span class="pill st-no_show">Nieobecność</span> i <span class="pill st-rescheduled">Zmieniona</span> także kończą drogę wizyty. Wszystkie trzy zwalniają termin w kalendarzu, więc ktoś inny może go zająć.</p>
 
@@ -448,7 +450,7 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <tr><td><span class="pill st-confirmed">Potwierdzona</span></td><td>W każdej chwili.</td></tr>
 <tr><td><span class="pill st-in_progress">W trakcie</span></td><td>Najwcześniej 30 minut przed umówioną godziną rozpoczęcia.</td></tr>
 <tr><td><span class="pill st-no_show">Nieobecność</span></td><td>Najwcześniej 30 minut przed umówioną godziną rozpoczęcia, i tylko wtedy, gdy wizyta jest już Potwierdzona.</td></tr>
-<tr><td><span class="pill st-completed">Zakończona</span></td><td>Tylko z etapu W trakcie. Na stronie wizyty, w oknie Zamknij wizytę, w każdej chwili po rozpoczęciu wizyty. Z listy albo z kalendarza od 30 minut przed do 30 minut po umówionym końcu.</td></tr>
+<tr><td><span class="pill st-completed">Zakończona</span></td><td>Tylko z etapu W trakcie. Na stronie wizyty, w oknie Zamknij wizytę, w każdej chwili po umówionej godzinie rozpoczęcia. Z listy albo z kalendarza od 30 minut przed do 30 minut po umówionym końcu.</td></tr>
 <tr><td><span class="pill st-cancelled">Anulowana</span></td><td>W każdej chwili.</td></tr>
 <tr><td><span class="pill st-rescheduled">Zmieniona</span></td><td>Tego etapu nie wybierasz sam. Powstaje, gdy przekładasz wizytę.</td></tr>
 </tbody></table></div>
@@ -467,7 +469,7 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <td>Przychodzi i siada na fotelu.</td>
 <td>Płaci. Może ocenić wizytę gwiazdkami (od 1 do 5) z linku w SMS-ie.</td></tr>
 <tr><th scope="row">Ty</th>
-<td>Wpisujesz <b class="ui">Nowa wizyta</b>. Wizyty z internetu pojawiają się same, a Ty je sprawdzasz.</td>
+<td>Wpisujesz <b class="ui">Nowa wizyta</b>. Wizyty zarezerwowane przez internet pojawiają się w kalendarzu bez Twojego udziału, a Ty je sprawdzasz.</td>
 <td>Dzwonisz do niepotwierdzonych. Przekładasz i odwołujesz na prośbę klienta.</td>
 <td>Ustawiasz etap W trakcie. Dopisujesz dodatki, jeśli klient o nie poprosi.</td>
 <td>Zamykasz wizytę: płatność i rabat. Dopisujesz uwagi i zalecenia.</td></tr>
@@ -734,7 +736,7 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co aplikacja zapisuje przy zamknięciu</b></div><div class="note-b"><p>Przychód z tej wizyty: kwotę usług, rabat i sposób płatności. Jako datę płatności przyjmuje dzień wizyty, a nie dzień kliknięcia. Przychód zapisze się tylko raz, nawet jeśli klikniesz dwa razy.</p></div></aside>
 <aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Zamykaj wizyty na ich stronie</b></div><div class="note-b"><p>Zamknięcie z listy albo z kalendarza przez menu pod plakietką też działa, ale wtedy aplikacja nie pyta o sposób płatności i zostaje on pusty. Dlatego zamykaj wizyty na ich stronie, w oknie <b class="ui">Zamknij wizytę</b>.</p></div></aside>
 <div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt><span class="msg">„Zakończenie wizyty możliwe tylko w ciągu 30 min od planowanego końca (10:45). Aktualna godzina: 07:02.”</span></dt>
-<dd>Ten komunikat pojawia się, gdy zamykasz wizytę z listy albo z kalendarza: tam obowiązuje okno od 30 minut przed do 30 minut po umówionym końcu. <b>Wejdź na stronę wizyty i zamknij ją tam</b>, w oknie <b class="ui">Zamknij wizytę</b>. Na stronie wizyty to ograniczenie nie działa, wystarczy, że wizyta ma etap W trakcie i już się rozpoczęła. Jeśli wizyta nie ma etapu W trakcie, a dawno się skończyła, użyj przycisku <b class="ui">Rozlicz przeszłe wizyty</b> (część <a href="#rozlicz">Rozliczanie zaległych wizyt</a>).</dd>
+<dd>Ten komunikat pojawia się, gdy zamykasz wizytę z listy albo z kalendarza: tam obowiązuje okno od 30 minut przed do 30 minut po umówionym końcu. <b>Wejdź na stronę wizyty i zamknij ją tam</b>, w oknie <b class="ui">Zamknij wizytę</b>. Na stronie wizyty to ograniczenie nie działa, wystarczy, że wizyta ma etap W trakcie, a jej umówiona godzina rozpoczęcia już minęła. Jeśli wizyta nie ma etapu W trakcie, a dawno się skończyła, użyj przycisku <b class="ui">Rozlicz przeszłe wizyty</b> (część <a href="#rozlicz">Rozliczanie zaległych wizyt</a>).</dd>
 <dt>Wizyta trwała dłużej niż planowano</dt>
 <dd>Nic się nie dzieje. Gdy klient skończy, otwórz stronę wizyty i zamknij ją w oknie <b class="ui">Zamknij wizytę</b>, także po upływie umówionego czasu.</dd>
 <dt>W oknie nie ma pola Metoda płatności</dt>
