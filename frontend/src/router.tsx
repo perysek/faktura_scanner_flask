@@ -83,6 +83,10 @@ export const router = createBrowserRouter([
             element: <ManualPage src="/manual/instrukcja.html" title="Instrukcja obsługi" other={{ to: '/instrukcja-smartfon', label: '📱 Wersja na smartfon' }} />,
           },
           {
+            path: 'instrukcja-recepcja',
+            element: <ManualPage src="/manual/instrukcja-recepcja.html" title="Instrukcja dla recepcji" other={{ to: '/instrukcja', label: 'Pełna instrukcja obsługi' }} />,
+          },
+          {
             path: 'instrukcja-smartfon',
             element: <ManualPage src="/manual/instrukcja-smartfon.html" title="Instrukcja obsługi (smartfon)" other={{ to: '/instrukcja', label: '🖥 Wersja na komputer' }} />,
           },

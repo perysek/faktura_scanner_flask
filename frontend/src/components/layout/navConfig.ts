@@ -292,6 +292,15 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         visible: () => true,
       },
       {
+        label: 'Instrukcja dla recepcji',
+        to: '/instrukcja-recepcja',
+        // Plain-language onboarding guide for the front desk (public/manual/instrukcja-recepcja.html).
+        // Like the other two manuals it documents the app for everyone, so no role or module gate.
+        iconPath:
+          'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+        visible: () => true,
+      },
+      {
         label: 'Instrukcja obsługi (smartfon)',
         to: '/instrukcja-smartfon',
         // Phone icon (same glyph as Ustawienia SMS) — the phone edition of the manual.

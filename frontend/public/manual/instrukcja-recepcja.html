@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Instrukcja dla recepcji - MyWay Nails &amp; Beauty</title>
+<meta name="description" content="Prosta instrukcja dla recepcji: jak umówić klientkę, poprowadzić wizytę od początku do końca i poradzić sobie z typowymi sytuacjami w ciągu dnia.">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light">
+<link rel="preload" href="fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/geist-latin-ext-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Geist: the same typeface as the app, self-hosted (SIL Open Font License, see fonts/Geist-OFL.txt) */
+@font-face{font-family:"Geist Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(fonts/geist-latin-ext-wght-normal.woff2) format("woff2-variations");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Geist Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(fonts/geist-latin-wght-normal.woff2) format("woff2-variations");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+/* Tokens: identical to the app's four themes (the page follows the theme chosen in the app) */
+:root{
+  --ink:#1a1a1a;--ink2:#4d4d4d;--ink3:#626262;
+  --bg:#f0eeea;--paper:#fdfcfa;--warm:#f2f0ea;--border:#e0ddd6;--border2:#ebe8e2;
+  --accent:#c9a227;--accent-m:rgba(201,162,39,.16);--accent-d:#7d6210;
+  --side:#dedad3;--side-text:#3f3f3f;--side-head:#595959;--side-hover:#e6e2db;--side-bd:#ccc7be;
+  --link:#1e40af;
+  --info:#1e40af;--info-bg:#eff6ff;--info-bd:#bfdbfe;
+  --ok:#1f5a40;--ok-bg:#ecfdf5;--ok-bd:#a7e3c4;--warnc:#8a5a00;--warn-bg:#fffbeb;--warn-bd:#f3d88a;--err:#9b2c2c;--err-bg:#fef2f2;--err-bd:#fecaca;
+  --st-scheduled:#1d4ed8;--st-scheduled-bg:#eff6ff;--st-confirmed:#047857;--st-confirmed-bg:#ecfdf5;
+  --st-in_progress:#b45309;--st-in_progress-bg:#fffbeb;--st-completed:#2d6a4f;--st-completed-bg:#f0fdf4;
+  --st-cancelled:#b91c1c;--st-cancelled-bg:#fef2f2;--st-no_show:#4b5563;--st-no_show-bg:#f3f4f6;
+  --st-rescheduled:#92400e;--st-rescheduled-bg:#fef3c7;
+  --callout:#d12e2e;
+  --font:"Geist Variable",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+[data-theme=blue]{--ink:#1a2233;--ink2:#455064;--ink3:#566178;--bg:#f0f5fb;--paper:#fff;--warm:#eef3fa;--border:#d2dfee;--border2:#e6edf6;
+  --accent:#3b6ea5;--accent-m:rgba(59,110,165,.13);--accent-d:#2c5480;--side:#dde7f4;--side-text:#3d4859;--side-head:#566178;--side-hover:#e5edf7;--side-bd:#c3d3e8}
+[data-theme=green]{--ink:#1a2419;--ink2:#46583f;--ink3:#566b50;--bg:#f0f6ee;--paper:#fff;--warm:#eef5eb;--border:#d3e3cc;--border2:#e7f0e3;
+  --accent:#4a7a4e;--accent-m:rgba(74,122,78,.13);--accent-d:#396138;--side:#dbe9d6;--side-text:#3f5039;--side-head:#566b50;--side-hover:#e3efdf;--side-bd:#c5dabd}
+[data-theme=graphite]{--ink:#24262b;--ink2:#52555d;--ink3:#62656d;--bg:#f1f1f3;--paper:#fff;--warm:#eeeef0;--border:#d8d8dd;--border2:#e7e7ea;
+  --accent:#6b4c6f;--accent-m:rgba(107,76,111,.13);--accent-d:#533a56;--side:#e2e2e6;--side-text:#4a4d55;--side-head:#62656d;--side-hover:#e8e8eb;--side-bd:#d2d2d7}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:20px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 var(--font);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+:focus-visible{outline:3px solid var(--link);outline-offset:2px;border-radius:2px}
+a{color:var(--link);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+h1,h2,h3,h4{line-height:1.2;margin:0;color:var(--ink);letter-spacing:-.015em;text-wrap:balance}
+p{margin:.7em 0;max-width:72ch}
+ul,ol{margin:.7em 0;padding-left:1.4em;max-width:72ch}
+li{margin:.35em 0}
+b,strong{font-weight:650}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em}
+kbd{background:var(--paper);border:1px solid var(--side-bd);border-bottom-width:2px;border-radius:3px;padding:.05em .45em;white-space:nowrap}
+.ic{width:1.15em;height:1.15em;fill:currentColor;vertical-align:-.22em;flex:none}
+.skip{position:absolute;left:-9999px;top:8px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:3px;z-index:100;text-decoration:none}
+.skip:focus{left:8px}
+
+/* layout */
+.wrap{display:grid;grid-template-columns:304px minmax(0,1fr);max-width:1480px;margin:0 auto;min-height:100vh}
+.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:26px 18px 40px;background:var(--side);border-right:1px solid var(--side-bd);scrollbar-width:thin}
+.toc .brand{font:700 16px/1.25 var(--font);margin:0 6px 2px}
+.toc .brand small{display:block;font-weight:500;font-size:13px;color:var(--side-head);margin-top:3px}
+.toc-btn{display:none}
+.srch{margin:16px 0 8px;position:relative}
+.srch input{width:100%;padding:11px 12px 11px 38px;border:1px solid var(--side-bd);border-radius:3px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px}
+.srch .ic{position:absolute;left:12px;top:13px;width:17px;height:17px;color:var(--ink3)}
+#hits{display:none;margin:6px 0 10px;background:var(--paper);border:1px solid var(--side-bd);border-radius:3px;max-height:50vh;overflow:auto}
+#hits a{display:block;padding:10px 12px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--ink);font-size:14.5px}
+#hits a:last-child{border-bottom:0}#hits a:hover{background:var(--warm)}
+#hits b{display:block}#hits span{color:var(--ink2);font-size:13.5px;display:block;margin-top:2px}
+.toc .grp{font:700 13px/1.2 var(--font);color:var(--side-head);margin:22px 6px 6px;letter-spacing:.02em}
+.toc a.l{display:block;padding:6px 10px;border-left:3px solid transparent;color:var(--side-text);text-decoration:none;font-size:15px;line-height:1.4;border-radius:0 2px 2px 0}
+.toc a.l:hover{background:var(--side-hover);color:var(--ink)}
+.toc a.l.on{border-left-color:var(--accent);background:var(--accent-m);color:var(--ink);font-weight:650}
+.toc a.l.s{padding-left:24px;font-size:14px}
+.toc .foot{margin:26px 6px 0;font-size:14px;color:var(--side-head);line-height:1.5}
+.toc .foot a{color:var(--ink)}
+main{padding:44px 56px 120px;min-width:0;max-width:1060px}
+main:focus{outline:0}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:44px;align-items:center;padding:4px 0 44px}
+.hero h1{font-size:clamp(2.1rem,4.4vw,3.15rem);line-height:1.04;letter-spacing:-.03em}
+.lead{font-size:1.12em;color:var(--ink2);max-width:58ch}
+.hero .lead{margin:18px 0 26px}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:3px;font:650 16px/1.2 var(--font);text-decoration:none;border:1px solid var(--ink);cursor:pointer;white-space:nowrap}
+.btn-p{background:var(--ink);color:#fff}
+.btn-p:hover{background:#000;color:#fff}
+.btn-s{background:var(--paper);color:var(--ink)}
+.btn-s:hover{background:var(--warm)}
+.btn:active{transform:translateY(1px)}
+.hero figure{margin:0}
+
+/* chapters */
+.ch{margin:0;padding-top:3em;margin-top:3em;border-top:1px solid var(--border)}
+.ch.first{border-top:0;margin-top:0;padding-top:0}
+h2{font-size:clamp(1.7rem,3vw,2.15rem);letter-spacing:-.02em}
+h2::after{content:"";display:block;width:48px;height:3px;background:var(--accent);margin-top:14px}
+h3{font-size:1.45rem;margin:0}
+.sub{margin-top:3em;scroll-margin-top:16px}
+.sub:first-of-type{margin-top:1.6em}
+h4{font-size:1.02rem;margin:1.8em 0 .3em;color:var(--ink)}
+
+/* task finder */
+.tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:1.6em 0 0}
+.task{display:grid;grid-template-columns:44px minmax(0,1fr) 20px;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--border);background:var(--paper);border-radius:3px;color:var(--ink);text-decoration:none;transition:border-color .15s}
+.task:hover{border-color:var(--accent-d)}
+.task-ic{width:44px;height:44px;display:grid;place-items:center;background:var(--accent-m);color:var(--accent-d);border-radius:2px}
+.task-ic .ic{width:24px;height:24px}
+.task b{display:block;font-size:1.02em;line-height:1.3}
+.task span{display:block;font-size:.88em;color:var(--ink2);line-height:1.4;margin-top:2px}
+.task>.ic{color:var(--ink3)}
+
+/* day timeline */
+dl.day{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);margin:1.4em 0 0;border:1px solid var(--border);background:var(--paper);border-radius:3px}
+dl.day dt,dl.day dd{margin:0;padding:15px 18px;border-top:1px solid var(--border2)}
+dl.day dt:first-of-type,dl.day dt:first-of-type+dd{border-top:0}
+dl.day dt{font-weight:650;background:var(--warm)}
+dl.day dd{max-width:none}
+
+/* steps */
+ol.steps{list-style:none;counter-reset:st;padding:0;margin:1.2em 0;max-width:72ch}
+ol.steps>li{counter-increment:st;position:relative;padding:3px 0 12px 50px;margin:0;min-height:36px}
+ol.steps>li::before{content:counter(st);position:absolute;left:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;font:700 16px/34px var(--font);text-align:center}
+.ui{display:inline;padding:.04em .45em;border:1px solid var(--side-bd);background:var(--paper);border-radius:2px;font-weight:650;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.msg{display:inline;padding:.04em .4em;background:var(--warm);border:1px solid var(--border);border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.pill{display:inline-block;font:700 12.5px/1 var(--font);letter-spacing:.04em;text-transform:uppercase;padding:6px 10px;border-radius:2px;white-space:nowrap;vertical-align:.08em}
+.st-scheduled{background:var(--st-scheduled-bg);color:var(--st-scheduled)}.st-confirmed{background:var(--st-confirmed-bg);color:var(--st-confirmed)}
+.st-in_progress{background:var(--st-in_progress-bg);color:var(--st-in_progress)}.st-completed{background:var(--st-completed-bg);color:var(--st-completed)}
+.st-cancelled{background:var(--st-cancelled-bg);color:var(--st-cancelled)}.st-no_show{background:var(--st-no_show-bg);color:var(--st-no_show)}
+.st-rescheduled{background:var(--st-rescheduled-bg);color:var(--st-rescheduled)}
+
+/* notes */
+.note{margin:1.4em 0;border:1px solid var(--border);border-left-width:5px;border-radius:3px;background:var(--paper);max-width:860px}
+.note-h{padding:11px 16px 0;display:flex;align-items:center;gap:8px;font-size:1rem}
+.note-h .ic{width:1.3em;height:1.3em}
+.note-b{padding:2px 16px 13px;max-width:78ch}
+.note-b>:first-child{margin-top:.4em}.note-b>:last-child{margin-bottom:0}
+.note-tip{border-left-color:var(--ok);background:var(--ok-bg);border-color:var(--ok-bd);border-left-color:var(--ok)}.note-tip .note-h{color:var(--ok)}
+.note-warn{border-left-color:var(--st-in_progress);background:var(--warn-bg);border-color:var(--warn-bd);border-left-color:var(--st-in_progress)}.note-warn .note-h{color:var(--warnc)}
+.note-auto{border-left-color:var(--info);background:var(--info-bg);border-color:var(--info-bd);border-left-color:var(--info)}.note-auto .note-h{color:var(--info)}
+.note-stop{border-left-color:#b91c1c;background:var(--err-bg);border-color:var(--err-bd);border-left-color:#b91c1c}.note-stop .note-h{color:var(--err)}
+
+/* troubleshooting block */
+.trouble{margin:1.6em 0;border:1px solid var(--border);border-radius:3px;background:var(--paper);overflow:hidden}
+.trouble-h{margin:0;padding:11px 16px;background:var(--warm);font-weight:700;display:flex;align-items:center;gap:8px;max-width:none;border-bottom:1px solid var(--border)}
+.trouble dl{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);margin:0}
+.trouble dt,.trouble dd{margin:0;padding:13px 16px;border-top:1px solid var(--border2)}
+.trouble dt:first-child,.trouble dt:first-child+dd{border-top:0}
+.trouble dt{font-weight:650}
+.trouble dd p:first-child{margin-top:0}.trouble dd p:last-child{margin-bottom:0}
+
+/* tables */
+.tw{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:3px;background:var(--paper)}
+table.t{border-collapse:collapse;width:100%;font-size:.95em}
+.t th{background:var(--warm);text-align:left;font-size:.88em;font-weight:700;color:var(--ink);padding:11px 14px;border-bottom:1px solid var(--border)}
+.t td,.t tbody th{padding:12px 14px;border-bottom:1px solid var(--border2);vertical-align:top;text-align:left}
+.t tr:last-child td,.t tr:last-child th{border-bottom:0}
+.t tbody th{background:var(--warm);font-size:.95em;width:150px}
+.t td p{margin:.3em 0}
+.t.sit tbody th{width:28%;font-weight:650}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* screenshots */
+figure.shot{margin:1.6em 0;background:var(--paper);border:1px solid var(--border);border-radius:3px;padding:10px;max-width:960px}
+figure.shot .zoom{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in}
+figure.shot img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:2px}
+figcaption{font-size:.92em;color:var(--ink2);padding:11px 4px 3px;max-width:80ch}
+.legend{list-style:none;counter-reset:lg;margin:.5em 0 .2em;padding:0 4px;columns:2;column-gap:32px;font-size:.95em;max-width:none}
+.legend li{counter-increment:lg;position:relative;padding-left:34px;margin:.4em 0;break-inside:avoid;color:var(--ink2)}
+.legend li::before{content:counter(lg);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--callout);color:#fff;font:700 13px/24px var(--font);text-align:center}
+.legend b{color:var(--ink)}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;max-width:1000px}
+.pair figure.shot{margin:1.2em 0}
+.pair .legend{columns:1}
+.small-shot{max-width:640px}
+
+/* schemas */
+.eq{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin:1.6em 0;max-width:980px}
+.eq-i{flex:1 1 150px;min-width:140px;border:1px solid var(--border);background:var(--paper);border-radius:3px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.eq-i b{font-size:1.08em}
+.eq-i span.d{font-size:.9em;color:var(--ink2);line-height:1.45}
+.eq-ic{width:38px;height:38px;display:grid;place-items:center;background:var(--accent-m);color:var(--accent-d);border-radius:2px}
+.eq-ic .ic{width:22px;height:22px}
+.eq-op{align-self:center;font-size:1.8rem;font-weight:600;color:var(--ink3);padding:0 2px}
+.eq-res{border:2px solid var(--ink);background:var(--paper)}
+.road{margin:1.6em 0 .6em;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));counter-reset:rd}
+.station{position:relative;padding:0 26px 0 0}
+.station:not(:last-child)::after{content:"";position:absolute;top:13px;right:6px;width:11px;height:11px;border-top:3px solid var(--ink3);border-right:3px solid var(--ink3);transform:rotate(45deg)}
+.station .pill{font-size:13px;padding:8px 12px}
+.station p{font-size:.93em;color:var(--ink2);margin:.7em 0 .4em;line-height:1.5}
+.exits{list-style:none;margin:.2em 0 0;padding:0;font-size:.9em}
+.exits li{margin:.35em 0;padding:0}
+.exits .lbl{display:block;font-size:.88em;color:var(--ink3);font-weight:650;margin-bottom:2px}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1.25fr);gap:10px;align-items:center;margin:1.6em 0;max-width:940px}
+.ba-arrow{display:grid;place-items:center;color:var(--ink3)}.ba-arrow .ic{width:30px;height:30px}
+.ba-col{display:grid;gap:10px}
+.ba-col>.ba-h{font-weight:700;font-size:.95em;color:var(--ink2);margin:0 0 -2px}
+.vcard{border:1px solid var(--border);background:var(--paper);border-radius:3px;padding:12px 14px;font-size:.94em;line-height:1.5}
+.vcard .pill{margin-bottom:6px}
+.vcard.ghost{opacity:.82;background:var(--warm);border-style:dashed}
+.flow{display:grid;gap:12px;margin:1.6em 0;max-width:820px}
+.flow .q{border:2px solid var(--ink);background:var(--paper);padding:13px 18px;border-radius:3px;font-weight:650}
+.flow .opt{display:grid;grid-template-columns:70px minmax(0,1fr);gap:14px;align-items:start;margin-left:26px}
+.flow .opt .a{padding-top:1px}
+.yn{display:inline-block;padding:5px 0;width:60px;text-align:center;border-radius:2px;font:700 13px/1 var(--font);letter-spacing:.05em}
+.yn.y{background:var(--st-completed-bg);color:var(--ok);border:1px solid var(--ok-bd)}
+.yn.n{background:var(--err-bg);color:var(--err);border:1px solid var(--err-bd)}
+dl.gl{margin:1em 0;max-width:80ch}dl.gl dt{font-weight:700;margin-top:1em}dl.gl dd{margin:.15em 0 0}
+.status-key{display:flex;flex-wrap:wrap;gap:10px 18px;margin:1em 0;padding:0;list-style:none;max-width:none}
+.status-key li{margin:0;display:flex;align-items:center;gap:8px;font-size:.95em}
+.endnote{margin-top:4em;padding-top:1.4em;border-top:1px solid var(--border);color:var(--ink2);font-size:.95em;max-width:80ch}
+.up{position:fixed;right:20px;bottom:20px;width:46px;height:46px;border-radius:50%;border:1px solid var(--side-bd);background:var(--paper);color:var(--ink);cursor:pointer;display:none;align-items:center;justify-content:center}
+.up.on{display:flex}.up .ic{width:22px;height:22px}
+
+/* lightbox (native dialog) */
+dialog#lb{border:0;padding:0;background:transparent;max-width:min(1600px,96vw);max-height:96vh;overflow:auto;color:#fff}
+dialog#lb::backdrop{background:rgba(15,12,8,.88)}
+#lb img{display:block;width:100%;height:auto;border-radius:3px;background:var(--paper)}
+#lb form{position:sticky;top:0;display:flex;justify-content:flex-end;padding:0 0 8px}
+#lb .lb-x{background:var(--paper);color:var(--ink);border:1px solid var(--ink);border-radius:3px;padding:10px 18px;font:650 16px/1 var(--font);cursor:pointer}
+
+@media (max-width:1180px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:28px}
+  .road{grid-template-columns:minmax(0,1fr);gap:22px}
+  .station{padding:0 0 0 0}
+  .station:not(:last-child)::after{top:auto;bottom:-17px;right:auto;left:18px;transform:rotate(135deg)}
+}
+@media (max-width:1000px){
+  .wrap{display:block}
+  .toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--side-bd);padding:16px 16px 14px}
+  html.js .toc-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px 14px;border:1px solid var(--side-bd);border-radius:3px;background:var(--paper);color:var(--ink);font:650 16px/1.2 var(--font);cursor:pointer}
+  html.js .toc-list{display:none}
+  html.js .toc.open .toc-list{display:block}
+  main{padding:28px 18px 90px}
+  .legend{columns:1}
+}
+@media (max-width:760px){
+  body{font-size:16.5px}
+  .tasks{grid-template-columns:minmax(0,1fr)}
+  .pair{grid-template-columns:minmax(0,1fr)}
+  dl.day{grid-template-columns:minmax(0,1fr)}
+  dl.day dt{border-top:1px solid var(--border2)}
+  dl.day dt:first-of-type{border-top:0}
+  dl.day dd{border-top:0;padding-top:4px}
+  dl.day dd:not(:last-child){border-bottom:0}
+  .trouble dl{grid-template-columns:minmax(0,1fr)}
+  .trouble dd{border-top:0;padding-top:0}
+  .ba{grid-template-columns:minmax(0,1fr)}
+  .ba-arrow{transform:rotate(90deg);height:34px}
+  .flow .opt{margin-left:0;grid-template-columns:minmax(0,1fr);gap:6px}
+  .eq-op{width:100%;text-align:center}
+  ol.steps>li{padding-left:44px}
+  .t tbody th{width:auto}
+}
+@media print{
+  .toc,.up,#lb,.skip,.hero-cta,.toc-btn{display:none!important}
+  .wrap{display:block}main{max-width:none;padding:0}body{background:#fff;font-size:11.5pt}
+  .ch{break-before:auto}figure.shot,.note,.tw,.trouble,.eq,.road,.ba,.flow{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+  .hero{grid-template-columns:1fr}
+}
+</style>
+<script>
+(function(){document.documentElement.classList.add('js');try{var t=null;try{t=window.parent&&window.parent!==window?window.parent.document.documentElement.getAttribute('data-theme'):null}catch(e){}
+if(!t){try{t=localStorage.getItem('theme')}catch(e){}}if(t)document.documentElement.setAttribute('data-theme',t);
+window.addEventListener('storage',function(e){if(e.key==='theme'){if(e.newValue)document.documentElement.setAttribute('data-theme',e.newValue);else document.documentElement.removeAttribute('data-theme')}});
+try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=p.document.documentElement.getAttribute('data-theme');if(v)document.documentElement.setAttribute('data-theme',v);else document.documentElement.removeAttribute('data-theme')}).observe(p.document.documentElement,{attributes:true,attributeFilter:['data-theme']})}}catch(e){}}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Przejdź do treści</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-add_circle_outline" viewBox="0 -960 960 960"><path d="M453-280h60v-166h167v-60H513v-174h-60v174H280v60h173v166Zm27.27 200q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></symbol><symbol id="i-arrow_forward" viewBox="0 -960 960 960"><path d="M686-450H160v-60h526L438-758l42-42 320 320-320 320-42-42 248-248Z"/></symbol><symbol id="i-arrow_upward" viewBox="0 -960 960 960"><path d="M510-686L510-160L450-160L450-686L202-438L160-480L480-800L800-480L758-438Z"/></symbol><symbol id="i-auto_fix_high" viewBox="0 -960 960 960"><path d="m800-680-38-82-82-38 82-38 38-82 38 82 82 38-82 38-38 82Zm-460 0-38-82-82-38 82-38 38-82 38 82 82 38-82 38-38 82Zm460 460-38-82-82-38 82-38 38-82 38 82 82 38-82 38-38 82ZM204-92 92-204q-12-12-12-29t12-29l446-446q12-12 29-12t29 12l112 112q12 12 12 29t-12 29L262-92q-12 12-29 12t-29-12Zm30-84 286-288-56-56-288 286 58 58Z"/></symbol><symbol id="i-calendar_month" viewBox="0 -960 960 960"><path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-188.5-11.5Q280-423 280-440t11.5-28.5Q303-480 320-480t28.5 11.5Q360-457 360-440t-11.5 28.5Q337-400 320-400t-28.5-11.5ZM640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-188.5-11.5Q280-263 280-280t11.5-28.5Q303-320 320-320t28.5 11.5Q360-297 360-280t-11.5 28.5Q337-240 320-240t-28.5-11.5ZM640-240q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z"/></symbol><symbol id="i-call" viewBox="0 -960 960 960"><path d="M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5-71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12ZM241-600l66-66-17-94h-89q5 41 14 81t26 79Zm358 358q39 17 79.5 27t81.5 13v-88l-94-19-67 67ZM241-600Zm358 358Z"/></symbol><symbol id="i-cancel" viewBox="0 -960 960 960"><path d="m330-288 150-150 150 150 42-42-150-150 150-150-42-42-150 150-150-150-42 42 150 150-150 150 42 42ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-156t86-127Q252-817 325-848.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 82-31.5 155T763-197.5q-54 54.5-127 86T480-80Zm0-60q142 0 241-99.5T820-480q0-142-99-241t-241-99q-141 0-240.5 99T140-480q0 141 99.5 240.5T480-140Zm0-340Z"/></symbol><symbol id="i-content_cut" viewBox="0 -960 960 960"><path d="M782-114 481-415 364-298q11 17 13.5 33t2.5 35q0 64-43 107T230-80q-64 0-107-43T80-230q0-64 43-107t107-43q18 0 35.5 5t36.5 15l116-116-118-118q-17 8-34.5 11t-35.5 3q-64 0-107-43T80-730q0-64 43-107t107-43q64 0 107 43t43 107q0 19-2.5 36T367-662l514 514v34h-99ZM599-527l-66-66 249-249h99v33L599-527ZM294-666q26-26 26-64t-26-64q-26-26-64-26t-64 26q-26 26-26 64t26 64q26 26 64 26t64-26Zm202.5 203.5Q502-468 502-476t-5.5-13.5Q491-495 483-495t-13.5 5.5Q464-484 464-476t5.5 13.5Q475-457 483-457t13.5-5.5ZM294-166q26-26 26-64t-26-64q-26-26-64-26t-64 26q-26 26-26 64t26 64q26 26 64 26t64-26Z"/></symbol><symbol id="i-edit" viewBox="0 -960 960 960"><path d="M180-180h44l472-471-44-44-472 471v44Zm-60 60v-128l575-574q8-8 19-12.5t23-4.5q11 0 22 4.5t20 12.5l44 44q9 9 13 20t4 22q0 11-4.5 22.5T823-694L248-120H120Zm659-617-41-41 41 41Zm-105 64-22-22 44 44-22-22Z"/></symbol><symbol id="i-edit_calendar" viewBox="0 -960 960 960"><path d="M180-80q-24 0-42-18t-18-42v-620q0-24 18-42t42-18h65v-60h65v60h340v-60h65v60h65q24 0 42 18t18 42v260h-60v-70H180v430h320v60H180Zm0-550h600v-130H180v130Zm0 0v-130 130ZM560-80v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T902.09-300L683-80H560Zm300-263-37-37 37 37ZM620-140h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z"/></symbol><symbol id="i-error_outline" viewBox="0 -960 960 960"><path d="M503.5-289.48q9.5-9.48 9.5-23.5t-9.48-23.52q-9.48-9.5-23.5-9.5t-23.52 9.48q-9.5 9.48-9.5 23.5t9.48 23.52q9.48 9.5 23.5 9.5t23.52-9.48ZM453-433h60v-253h-60v253Zm27.27 353q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></symbol><symbol id="i-event_busy" viewBox="0 -960 960 960"><path d="m381-218-43-43 100-99-100-99 43-43 99 100 99-100 43 43-100 99 100 99-43 43-99-100-99 100ZM180-80q-24 0-42-18t-18-42v-620q0-24 18-42t42-18h65v-60h65v60h340v-60h65v60h65q24 0 42 18t18 42v620q0 24-18 42t-42 18H180Zm0-60h600v-430H180v430Zm0-490h600v-130H180v130Zm0 0v-130 130Z"/></symbol><symbol id="i-expand_more" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></symbol><symbol id="i-info" viewBox="0 -960 960 960"><path d="M453-280h60v-240h-60v240Zm50.5-323.2q9.5-9.2 9.5-22.8 0-14.45-9.48-24.22-9.48-9.78-23.5-9.78t-23.52 9.78Q447-640.45 447-626q0 13.6 9.48 22.8 9.48 9.2 23.5 9.2t23.52-9.2ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></symbol><symbol id="i-payments" viewBox="0 -960 960 960"><path d="M540-420q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM220-280q-24.75 0-42.37-17.63Q160-315.25 160-340v-400q0-24.75 17.63-42.38Q195.25-800 220-800h640q24.75 0 42.38 17.62Q920-764.75 920-740v400q0 24.75-17.62 42.37Q884.75-280 860-280H220Zm100-60h440q0-42 29-71t71-29v-200q-42 0-71-29t-29-71H320q0 42-29 71t-71 29v200q42 0 71 29t29 71Zm480 180H100q-24.75 0-42.37-17.63Q40-195.25 40-220v-460h60v460h700v60ZM220-340v-400 400Z"/></symbol><symbol id="i-people" viewBox="0 -960 960 960"><path d="M38-160v-94q0-35 18-63.5t50-42.5q73-32 131.5-46T358-420q62 0 120 14t131 46q32 14 50.5 42.5T678-254v94H38Zm700 0v-94q0-63-32-103.5T622-423q69 8 130 23.5t99 35.5q33 19 52 47t19 63v94H738ZM250-523q-42-42-42-108t42-108q42-42 108-42t108 42q42 42 42 108t-42 108q-42 42-108 42t-108-42Zm426 0q-42 42-108 42-11 0-24.5-1.5T519-488q24-25 36.5-61.5T568-631q0-45-12.5-79.5T519-774q11-3 24.5-5t24.5-2q66 0 108 42t42 108q0 66-42 108ZM98-220h520v-34q0-16-9.5-31T585-306q-72-32-121-43t-106-11q-57 0-106.5 11T130-306q-14 6-23 21t-9 31v34Zm324.5-346.5Q448-592 448-631t-25.5-64.5Q397-721 358-721t-64.5 25.5Q268-670 268-631t25.5 64.5Q319-541 358-541t64.5-25.5ZM358-220Zm0-411Z"/></symbol><symbol id="i-person" viewBox="0 -960 960 960"><path d="M367-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q560-607 560-640t-23.5-56.5Q513-720 480-720t-56.5 23.5Q400-673 400-640t23.5 56.5Q447-560 480-560t56.5-23.5ZM480-640Zm0 400Z"/></symbol><symbol id="i-person_off" viewBox="0 -960 960 960"><path d="m813-61-99-99H160v-94q0-38 19-65t49-41q60-27 115.5-42T455-419L61-813l43-43 752 752-43 43ZM220-220h434L515-359q-8-1-17-1h-18q-57 0-111 11.5T252-306q-14 7-23 21.5t-9 30.5v34Zm511-140q31 14 50 41t19 65v8L657-389q18 6 36.5 13.5T731-360ZM550-496l-48-48q30-7 49-31t19-56q0-38-26-64t-64-26q-32 0-56 19t-31 49l-48-48q19-38 55.5-59t79.5-21q63 0 106.5 43.5T630-631q0 43-21 79.5T550-496Zm104 276H220h434ZM448-599Z"/></symbol><symbol id="i-schedule" viewBox="0 -960 960 960"><path d="M612-292 460-444v-236h60v212l172 172-40 40ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-60q142 0 241-99.5T820-480q0-142-99-241t-241-99q-141 0-240.5 99T140-480q0 141 99.5 240.5T480-140Zm0-340Z"/></symbol><symbol id="i-search" viewBox="0 -960 960 960"><path d="M796-121 533-384q-30 26-70 40.5T378-329q-108 0-183-75t-75-181q0-106 75-181t182-75q106 0 180.5 75T632-585q0 43-14 83t-42 75l264 262-44 44ZM377-389q81 0 138-57.5T572-585q0-81-57-138.5T377-781q-82 0-139.5 57.5T180-585q0 81 57.5 138.5T377-389Z"/></symbol><symbol id="i-spa" viewBox="0 -960 960 960"><path d="M480-80q-72-8-143.5-41.5t-128.5-93q-57-59.5-92.5-147T80-564.98V-603h38q53 0 113 20.5T337-530q8-90 48-185.5T480-879q55 68 95 163.5T623-530q46-30 106-51.5T842-603h38v38.02Q880-449 844.5-361.5 809-274 752-214.5t-128.5 93Q552-88 480-80Zm8-61q-11-186-107.39-282.18Q284.21-519.37 141-542q13 193 112.5 288T488-141Zm-9-245q14-26 38.5-56t47.5-50q5-68-20-138t-65-145q-40 75-65 145t-20 138q23 20 46.5 50t37.5 56Zm69 228q47-17 93.5-45t84-73q37.5-45 63-110.5T819-542q-106 17-187 75.5T513-322q12 38 21 76.5t14 87.5Zm-69-228Zm69 228Zm-60 17Zm25-181ZM480-80Z"/></symbol><symbol id="i-warning_amber" viewBox="0 -960 960 960"><path d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm330.5-51.5Q520-263 520-280t-11.5-28.5Q497-320 480-320t-28.5 11.5Q440-297 440-280t11.5 28.5Q463-240 480-240t28.5-11.5ZM440-360h80v-200h-80v200Zm40-100Z"/></symbol></svg>
+<div class="wrap">
+<nav class="toc" id="toc" aria-label="Spis treści">
+<div class="brand">MyWay Nails &amp; Beauty<small>Instrukcja dla recepcji</small></div>
+<div class="srch" role="search"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Szukaj, np. nie przyszła" autocomplete="off" aria-label="Szukaj w instrukcji"></div>
+<div id="hits" role="listbox" aria-label="Wyniki wyszukiwania"></div>
+<button type="button" class="toc-btn" id="toc-btn" aria-expanded="false" aria-controls="toc-list"><span>Spis treści</span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-expand_more"/></svg></button>
+<div class="toc-list" id="toc-list">
+<div class="grp">Na start</div>
+<a class="l" href="#start">Co chcesz teraz zrobić?</a>
+<a class="l" href="#dzien">Twój dzień w skrócie</a>
+<div class="grp">Jak to działa</div>
+<a class="l" href="#jak-dziala">Jak działa salon w aplikacji</a>
+<a class="l s" href="#z-czego-wizyta">Z czego składa się wizyta</a>
+<a class="l s" href="#pilnuje">Czego pilnuje aplikacja</a>
+<a class="l s" href="#droga">Droga wizyty</a>
+<a class="l s" href="#kto-co">Kto co robi na każdym etapie</a>
+<a class="l s" href="#kto-ustawia">Kto co ustawia</a>
+<div class="grp">Wizyty</div>
+<a class="l" href="#kalendarz">Kalendarz i wolne terminy</a>
+<a class="l s" href="#widoki">Cztery widoki</a>
+<a class="l s" href="#kolory">Kolory i znaki</a>
+<a class="l s" href="#wolny-termin">Jak znaleźć wolny termin</a>
+<a class="l" href="#nowa-wizyta">Nowa wizyta</a>
+<a class="l" href="#etapy">Wizyta krok po kroku</a>
+<a class="l s" href="#zmiana-etapu">Jak zmienić etap wizyty</a>
+<a class="l s" href="#potwierdzenie">Potwierdzenie</a>
+<a class="l s" href="#klient-w-salonie">Klient jest w salonie</a>
+<a class="l s" href="#w-trakcie">Wizyta trwa: dodatki</a>
+<a class="l s" href="#zakonczenie">Koniec wizyty i płatność</a>
+<a class="l s" href="#odwolanie">Odwołanie wizyty</a>
+<a class="l s" href="#nieobecnosc-klienta">Klient się nie pojawił</a>
+<a class="l s" href="#zmiana-terminu">Zmiana terminu</a>
+<a class="l s" href="#poprawianie">Poprawianie wizyty</a>
+<a class="l s" href="#rozlicz">Rozliczanie zaległych wizyt</a>
+<a class="l s" href="#usuwanie">Usuwanie wizyty</a>
+<div class="grp">Klienci</div>
+<a class="l" href="#klienci">Klienci w aplikacji</a>
+<a class="l s" href="#klienci-lista">Lista i szukanie</a>
+<a class="l s" href="#nowy-klient">Nowy klient</a>
+<a class="l s" href="#edycja-klienta">Zmiana danych klienta</a>
+<a class="l s" href="#karta-klienta">Karta klienta</a>
+<div class="grp">Zespół</div>
+<a class="l" href="#zespol">Pracownice, usługi i godziny</a>
+<a class="l s" href="#pracownice-uslugi">Kto robi jakie usługi</a>
+<a class="l s" href="#grafik">Godziny pracy</a>
+<a class="l s" href="#nieobecnosc-pracownika">Pracownica nieobecna</a>
+<a class="l s" href="#konflikty">Konflikt z nieobecnością</a>
+<div class="grp">Na co dzień</div>
+<a class="l" href="#sytuacje">Codzienne sytuacje</a>
+<a class="l" href="#problemy">Gdy coś nie działa</a>
+<a class="l" href="#nie-do-cofniecia">Czerwone przyciski</a>
+<a class="l" href="#slowniczek">Słowniczek</a>
+<div class="foot">Dłuższa wersja z wszystkimi modułami, dla właścicielki: <a href="/instrukcja" target="_top">Instrukcja obsługi</a>.</div>
+</div>
+</nav>
+<main id="main" tabindex="-1">
+<header class="hero" id="top">
+<div>
+<h1>Instrukcja dla recepcji</h1>
+<p class="lead">Jak umówić klienta, poprowadzić wizytę od początku do końca i poradzić sobie, gdy coś pójdzie inaczej.</p>
+<div class="hero-cta"><a class="btn btn-p" href="#start">Wybierz swoją sytuację</a><button type="button" class="btn btn-s" id="print-btn">Drukuj tę instrukcję</button></div>
+</div>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Tak wygląda kalendarz dnia. Każda kolumna to jeden pracownik, każdy kolorowy blok to jedna wizyta."><img src="img/d/cal-day.webp" width="1500" height="850" alt="Widok Dzień w aplikacji: siedem kolumn z imionami pracowników, w nich kolorowe bloki wizyt rozłożone na osi godzin od 7:00 do 22:00." fetchpriority="high" decoding="async"></button><figcaption>Tak wygląda kalendarz dnia. Każda kolumna to jeden pracownik, każdy kolorowy blok to jedna wizyta.</figcaption></figure>
+</header>
+
+<section class="ch" id="start" aria-labelledby="h-start">
+<h2 id="h-start">Co chcesz teraz zrobić?</h2>
+<p class="lead">Kliknij swoją sytuację, a trafisz prosto do opisu. Instrukcja nie wymaga znajomości komputerów: mówi o tym, co widzisz na ekranie i co klikasz.</p>
+<div class="tasks">
+<a class="task" href="#nowa-wizyta"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-call"/></svg></span><span><b>Klient dzwoni i chce się umówić</b><span>Nowa wizyta krok po kroku</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#klient-w-salonie"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-person"/></svg></span><span><b>Klient jest już w salonie</b><span>Jak rozpocząć wizytę</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#zakonczenie"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-payments"/></svg></span><span><b>Wizyta się skończyła, czas zapłacić</b><span>Zamykanie wizyty, płatność, rabat</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#zmiana-terminu"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit_calendar"/></svg></span><span><b>Klient prosi o inny termin</b><span>Przekładanie wizyty</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#odwolanie"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-event_busy"/></svg></span><span><b>Klient odwołuje wizytę</b><span>Anulowanie, także z powodem</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#nieobecnosc-klienta"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-person_off"/></svg></span><span><b>Klient się nie pojawił</b><span>Oznaczanie nieobecności</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#nowy-klient"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-add_circle_outline"/></svg></span><span><b>Nowy klient w salonie</b><span>Zakładanie karty klienta</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#edycja-klienta"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></span><span><b>Zmieniły się dane klienta</b><span>Telefon, nazwisko, notatki</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#nieobecnosc-pracownika"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-people"/></svg></span><span><b>Pracownik zachorował albo ma urlop</b><span>Co zrobić z jego wizytami</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+<a class="task" href="#problemy"><span class="task-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg></span><span><b>Coś nie działa albo przycisk jest szary</b><span>Najczęstsze kłopoty i ich rozwiązania</span></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></a>
+</div>
+
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Jak czytać tę instrukcję</b></div><div class="note-b"><p>Nazwy przycisków i pól są pogrubione w ramce, tak jak <b class="ui">Nowa wizyta</b>. Szukaj ich na ekranie dokładnie pod tą nazwą.</p>
+<p>Czerwone kółka z cyframi na zrzutach ekranu pokazują miejsca, o których mówi opis pod zdjęciem. Każde zdjęcie możesz kliknąć, żeby je powiększyć.</p></div></aside>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Twoje menu może być krótsze niż na zdjęciach</b></div><div class="note-b"><p>Zrzuty ekranu pochodzą z konta właścicielki, więc widać na nich więcej pozycji w menu, niż możesz mieć Ty. Jeśli na Twoim ekranie brakuje jakiegoś przycisku albo strony, to nie awaria. Właścicielka po prostu nie dała temu kontu uprawnień. Jeśli potrzebujesz dostępu, poproś ją o niego.</p></div></aside>
+
+<section class="sub" id="dzien" aria-labelledby="h-dzien">
+<h3 id="h-dzien">Twój dzień w skrócie</h3>
+<p>Pięć momentów, które powtarzają się każdego dnia. Szczegóły każdego z nich znajdziesz niżej.</p>
+<dl class="day">
+<dt>Rano, przed otwarciem</dt>
+<dd>Wejdź w <b class="ui">Wizyty</b> i wybierz widok <b class="ui">Dzień</b>. Sprawdź, kto dziś pracuje (szare bloki to nieobecności) i które wizyty są jeszcze niebieskie, czyli niepotwierdzone. Do takich klientów możesz zadzwonić.</dd>
+<dt>Gdy dzwoni telefon</dt>
+<dd>Najpierw spójrz w kalendarz, potem wpisuj. Nowa wizyta, zmiana terminu albo odwołanie: każda z tych spraw ma swój opis niżej.</dd>
+<dt>Gdy klient wchodzi</dt>
+<dd>Znajdź jego wizytę i kliknij kolorową plakietkę z nazwą etapu. Wybierz <b class="ui">W trakcie</b>. Da się to zrobić najwcześniej 30 minut przed umówioną godziną.</dd>
+<dt>Gdy klient wychodzi</dt>
+<dd>Otwórz wizytę i wybierz <b class="ui">Zakończona</b>. Aplikacja zapyta o sposób płatności i ewentualny rabat.</dd>
+<dt>Pod koniec dnia</dt>
+<dd>Jeśli na przycisku <b class="ui">Rozlicz przeszłe wizyty</b> widać liczbę, kliknij go i uporządkuj wizyty, których nikt nie zamknął.</dd>
+</dl>
+</section>
+</section>
+<section class="ch" id="jak-dziala" aria-labelledby="h-jak">
+<h2 id="h-jak">Jak działa salon w aplikacji</h2>
+<p class="lead">Zanim zaczniesz klikać, warto poznać kilka prostych zasad. Wtedy aplikacja przestaje zaskakiwać, a komunikaty o błędach stają się zrozumiałe.</p>
+
+<section class="sub" id="z-czego-wizyta" aria-labelledby="h-z-czego">
+<h3 id="h-z-czego">Z czego składa się wizyta</h3>
+<p>Wizyta to spotkanie: konkretny klient, u konkretnego pracownika, na konkretną usługę, w konkretnym dniu i o konkretnej godzinie. Gdy brakuje któregoś z tych elementów, wizyta się nie zapisze.</p>
+<div class="eq" role="group" aria-label="Wizyta to klient plus pracownik plus usługa plus termin">
+<div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-person"/></svg></span><b>Klient</b><span class="d">Kto przychodzi. Musi już być na liście klientów.</span></div>
+<span class="eq-op" aria-hidden="true">+</span>
+<div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-content_cut"/></svg></span><b>Pracownik</b><span class="d">Kto obsługuje. Robi tę usługę i tego dnia pracuje.</span></div>
+<span class="eq-op" aria-hidden="true">+</span>
+<div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-spa"/></svg></span><b>Usługa</b><span class="d">Co będzie robione. Jedna albo kilka, każda z ceną i czasem.</span></div>
+<span class="eq-op" aria-hidden="true">+</span>
+<div class="eq-i"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-schedule"/></svg></span><b>Termin</b><span class="d">Dzień i godzina. Koniec wynika z czasu usług.</span></div>
+<span class="eq-op" aria-hidden="true">=</span>
+<div class="eq-i eq-res"><span class="eq-ic"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-calendar_month"/></svg></span><b>Wizyta</b><span class="d">Wpis w kalendarzu pracownika, z ceną i etapem.</span></div>
+</div>
+<ul>
+<li><b>Czas wizyty liczy się sam.</b> Dwie usługi po 30 minut dają wizytę na 60 minut.</li>
+<li><b>Cena też liczy się sama.</b> Ten sam zabieg może kosztować inaczej u różnych pracowników, bo każdy może mieć własną cenę i własny czas. Te wartości ustawia właścicielka, a Ty widzisz je w formularzu.</li>
+</ul>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Cena zostaje taka, jaka była przy rezerwacji</b></div><div class="note-b"><p>Wizyta zapamiętuje cenę z dnia, w którym ją wpisano. Gdy właścicielka zmieni cennik, wizyty już umówione zostają po starej cenie.</p></div></aside>
+</section>
+
+<section class="sub" id="pilnuje" aria-labelledby="h-pilnuje">
+<h3 id="h-pilnuje">Czego pilnuje aplikacja, zanim zapisze wizytę</h3>
+<p>Przy każdej rezerwacji aplikacja sprawdza pięć rzeczy, po kolei. Pierwsza, która się nie zgadza, zatrzymuje zapis i pokazuje komunikat, co jest nie tak. To nie jest awaria, tylko pomoc.</p>
+<ol class="steps">
+<li><b>Czy ten pracownik robi wszystkie wybrane usługi?</b> Jeśli usługi nie ma na jego liście, nie zobaczysz jej w formularzu.</li>
+<li><b>Czy pracownik pracuje tego dnia i o tej porze?</b> Cała wizyta, razem z końcem, musi mieścić się w jego godzinach pracy. <span class="msg">„Pracownik nie pracuje w wybranym dniu (środa)”</span> albo <span class="msg">„Wizyta poza godzinami pracy pracownika (9:00-18:00)”</span>.</li>
+<li><b>Czy pracownik nie ma już innej wizyty w tym czasie?</b> Wizyty mogą się stykać (jedna kończy się o 12:00, druga zaczyna o 12:00), ale nie mogą na siebie nachodzić.</li>
+<li><b>Czy klient nie ma już innej wizyty w tym czasie?</b> Liczy się wizyta u kogokolwiek w salonie. <span class="msg">„Konflikt czasowy - klient ma już wizytę o 11:00-11:45 z …”</span></li>
+<li><b>Czy pracownik nie ma urlopu albo zwolnienia?</b> Termin blokuje też wniosek, który jeszcze czeka na zatwierdzenie. <span class="msg">„Wniosek o nieobecność pracownika oczekuje na akceptację w tym terminie”</span></li>
+</ol>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Dobra rada</b></div><div class="note-b"><p>Godzina przekreślona w formularzu oznacza, że nie zgadza się punkt 2 albo 3. Punkty 4 i 5 formularz sprawdza dopiero po kliknięciu <b class="ui">Zarezerwuj wizytę</b>, więc o nich dowiesz się z komunikatu.</p></div></aside>
+</section>
+
+<section class="sub" id="droga" aria-labelledby="h-droga">
+<h3 id="h-droga">Droga wizyty: etapy i wyjścia</h3>
+<p>Każda wizyta ma swój etap, widoczny jako kolorowa plakietka (w aplikacji nazywa się to „status”). Wizyta idzie zawsze w jedną stronę, od lewej do prawej. Zawrócić jej się nie da, dlatego warto wiedzieć, dokąd prowadzi każde kliknięcie.</p>
+<div class="road" role="group" aria-label="Droga wizyty: Zaplanowana, Potwierdzona, W trakcie, Zakończona">
+<div class="station"><span class="pill st-scheduled">Zaplanowana</span><p>Umówiona, klient jeszcze nie potwierdził.</p>
+<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-cancelled">Anulowana</span></li><li><span class="pill st-in_progress">W trakcie</span> gdy klient przyszedł bez potwierdzenia</li><li>Przełożyć wizytę</li></ul></div>
+<div class="station"><span class="pill st-confirmed">Potwierdzona</span><p>Klient potwierdził, SMS-em albo przez telefon.</p>
+<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-no_show">Nieobecność</span></li><li><span class="pill st-cancelled">Anulowana</span></li><li>Przełożyć wizytę</li></ul></div>
+<div class="station"><span class="pill st-in_progress">W trakcie</span><p>Klient jest na fotelu. Można dopisać dodatki.</p>
+<ul class="exits"><li><span class="lbl">Stąd możesz też:</span></li><li><span class="pill st-cancelled">Anulowana</span></li></ul></div>
+<div class="station"><span class="pill st-completed">Zakończona</span><p>Usługa wykonana, pieniądze zapisane. To koniec drogi.</p>
+<ul class="exits"><li><span class="lbl">Jeszcze możesz:</span></li><li>Dodać ocenę i uwagi po wizycie</li></ul></div>
+</div>
+<p>Etapy <span class="pill st-cancelled">Anulowana</span>, <span class="pill st-no_show">Nieobecność</span> i <span class="pill st-rescheduled">Zmieniona</span> także kończą drogę wizyty. Wszystkie trzy zwalniają termin w kalendarzu, więc ktoś inny może go zająć.</p>
+
+<h4>Co oznacza każdy etap</h4>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col">Etap</th><th scope="col">Co to znaczy</th><th scope="col">Czy zajmuje termin w kalendarzu</th></tr></thead>
+<tbody>
+<tr><td><span class="pill st-scheduled">Zaplanowana</span></td><td>Wizyta jest wpisana, klient jeszcze nie potwierdził.</td><td>Tak</td></tr>
+<tr><td><span class="pill st-confirmed">Potwierdzona</span></td><td>Klient potwierdził (SMS albo telefon).</td><td>Tak</td></tr>
+<tr><td><span class="pill st-in_progress">W trakcie</span></td><td>Klient jest już obsługiwany.</td><td>Tak</td></tr>
+<tr><td><span class="pill st-completed">Zakończona</span></td><td>Wizyta się odbyła i jest rozliczona.</td><td>Tak, zostaje w historii</td></tr>
+<tr><td><span class="pill st-cancelled">Anulowana</span></td><td>Wizyta odwołana, z powodem albo bez.</td><td>Nie, termin jest wolny</td></tr>
+<tr><td><span class="pill st-no_show">Nieobecność</span></td><td>Klient nie przyszedł.</td><td>Nie, termin jest wolny</td></tr>
+<tr><td><span class="pill st-rescheduled">Zmieniona</span></td><td>Stara wizyta po przełożeniu. Zostaje szara, a obok powstaje nowa.</td><td>Nie, termin jest wolny</td></tr>
+</tbody></table></div>
+
+<h4>Kiedy co wolno</h4>
+<p>Aplikacja pilnuje zegara. Dzięki temu nikt przez pomyłkę nie zamknie wizyty, która jeszcze się nie zaczęła.</p>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col">Etap, który chcesz ustawić</th><th scope="col">Kiedy to możliwe</th></tr></thead>
+<tbody>
+<tr><td><span class="pill st-confirmed">Potwierdzona</span></td><td>W każdej chwili.</td></tr>
+<tr><td><span class="pill st-in_progress">W trakcie</span></td><td>Najwcześniej 30 minut przed umówioną godziną rozpoczęcia.</td></tr>
+<tr><td><span class="pill st-no_show">Nieobecność</span></td><td>Najwcześniej 30 minut przed umówioną godziną rozpoczęcia, i tylko wtedy, gdy wizyta jest już Potwierdzona.</td></tr>
+<tr><td><span class="pill st-completed">Zakończona</span></td><td>Tylko z etapu W trakcie. Na stronie wizyty, w oknie Zamknij wizytę, w każdej chwili po rozpoczęciu wizyty. Z listy albo z kalendarza od 30 minut przed do 30 minut po umówionym końcu.</td></tr>
+<tr><td><span class="pill st-cancelled">Anulowana</span></td><td>W każdej chwili.</td></tr>
+<tr><td><span class="pill st-rescheduled">Zmieniona</span></td><td>Tego etapu nie wybierasz sam. Powstaje, gdy przekładasz wizytę.</td></tr>
+</tbody></table></div>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Wizyta, która dawno się skończyła</b></div><div class="note-b"><p>Wizyty z minionych dni, które nadal mają etap Zaplanowana, Potwierdzona albo W trakcie, zamykasz zbiorczo przyciskiem <b class="ui">Rozlicz przeszłe wizyty</b>. Zasady czasowe z tabeli go nie dotyczą. Opis jest w części <a href="#rozlicz">Rozliczanie zaległych wizyt</a>.</p></div></aside>
+</section>
+
+<section class="sub" id="kto-co" aria-labelledby="h-kto-co">
+<h3 id="h-kto-co">Kto co robi na każdym etapie</h3>
+<p>W wizycie biorą udział trzy strony: klient, Ty i sama aplikacja. Poniższa tabela pokazuje, kto za co odpowiada, od umówienia do zapłaty.</p>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col"><span class="sr">Kto</span></th><th scope="col">Umawianie</th><th scope="col">Przed wizytą</th><th scope="col">W salonie</th><th scope="col">Po wizycie</th></tr></thead>
+<tbody>
+<tr><th scope="row">Klient</th>
+<td>Dzwoni do salonu albo rezerwuje sam przez internet (do trzech usług).</td>
+<td>Odpowiada na SMS: potwierdza albo odwołuje. Z linku może odwołać wizytę najpóźniej 12 godzin przed jej początkiem.</td>
+<td>Przychodzi i siada na fotelu.</td>
+<td>Płaci. Może ocenić wizytę gwiazdkami (od 1 do 5) z linku w SMS-ie.</td></tr>
+<tr><th scope="row">Ty</th>
+<td>Wpisujesz <b class="ui">Nowa wizyta</b>. Wizyty z internetu pojawiają się same, a Ty je sprawdzasz.</td>
+<td>Dzwonisz do niepotwierdzonych. Przekładasz i odwołujesz na prośbę klienta.</td>
+<td>Ustawiasz etap W trakcie. Dopisujesz dodatki, jeśli klient o nie poprosi.</td>
+<td>Zamykasz wizytę: płatność i rabat. Dopisujesz uwagi i zalecenia.</td></tr>
+<tr><th scope="row">Aplikacja sama</th>
+<td>Pilnuje pięciu zasad. Wysyła SMS z prośbą o potwierdzenie, o ile właścicielka włączyła SMS-y.</td>
+<td>Wysyła przypomnienia. Zapisuje odpowiedź klienta. Przypomina pracownikowi na 20 minut przed wizytą.</td>
+<td>Zapamiętuje rzeczywistą godzinę rozpoczęcia i zakończenia, żeby porównać ją z planem.</td>
+<td>Zapisuje przychód z datą wizyty. Zwiększa liczniki klienta: nieobecności, odwołania, zmiany terminu.</td></tr>
+</tbody></table></div>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Prośba o ocenę nie wychodzi zawsze</b></div><div class="note-b"><p>SMS z prośbą o ocenę wysyła się tylko w dwóch sytuacjach: po rozliczeniu zaległych wizyt i gdy pracownik zakończy wizytę z linku w swoim SMS-ie. Gdy sam zamykasz wizytę w kalendarzu, ta wiadomość nie wychodzi. Nie obiecuj więc klientowi, że dostanie prośbę o ocenę.</p></div></aside>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Gdy klienci nie dostają SMS-ów</b></div><div class="note-b"><p>Czy i kiedy wiadomości wychodzą, ustawia właścicielka w Ustawieniach SMS. Jeśli klient mówi, że nic nie dostał, to pytanie do niej, a nie do Ciebie.</p></div></aside>
+</section>
+
+<section class="sub" id="kto-ustawia" aria-labelledby="h-kto-ustawia">
+<h3 id="h-kto-ustawia">Kto co ustawia, a kto z tego korzysta</h3>
+<p>Aplikacja ma dwie strony. Pierwsza to codzienna praca: klienci i wizyty. To Twoja strona. Druga to ustawienia salonu, które zwykle zmienia właścicielka. Ty widzisz ich skutki.</p>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col">Co</th><th scope="col">Gdzie to jest</th><th scope="col">Kto zwykle zmienia</th><th scope="col">Co to zmienia dla Ciebie</th></tr></thead>
+<tbody>
+<tr><td>Klienci i ich dane</td><td>Klienci</td><td>Ty</td><td>Wybierasz ich w formularzu wizyty.</td></tr>
+<tr><td>Wizyty i ich etapy</td><td>Wizyty</td><td>Ty</td><td>To jest Twoja codzienna praca.</td></tr>
+<tr><td>Godziny pracy pracownika</td><td>Karta pracownika, Harmonogram pracy</td><td>Właścicielka</td><td>Poza tymi godzinami nie zapiszesz wizyty.</td></tr>
+<tr><td>Usługi pracownika, ich ceny i czasy</td><td>Karta pracownika, Przypisane usługi</td><td>Właścicielka</td><td>W formularzu są tylko usługi, które robi wybrany pracownik.</td></tr>
+<tr><td>Urlopy i zwolnienia</td><td>Nieobecności</td><td>Pracownik składa wniosek, przełożony zatwierdza, właścicielka wpisuje zwolnienia lekarskie</td><td>Na kalendarzu pojawia się szary blok, a termin jest zajęty.</td></tr>
+<tr><td>SMS-y do klientów</td><td>Ustawienia SMS</td><td>Właścicielka</td><td>Od tego zależy, czy klient dostanie prośbę o potwierdzenie i przypomnienia.</td></tr>
+</tbody></table></div>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Dobra rada</b></div><div class="note-b"><p>Jeśli czegoś z tej tabeli nie możesz zmienić, to normalne. Wiesz za to, do kogo z tym iść.</p></div></aside>
+</section>
+</section>
+<section class="ch" id="kalendarz" aria-labelledby="h-kalendarz">
+<h2 id="h-kalendarz">Kalendarz i wolne terminy</h2>
+<p class="lead">Wszystkie wizyty oglądasz w jednym miejscu: w menu <b class="ui">Salon</b>, pozycja <b class="ui">Wizyty</b>. To książka wizyt pokazana na cztery sposoby.</p>
+
+<section class="sub" id="widoki" aria-labelledby="h-widoki">
+<h3 id="h-widoki">Cztery widoki tej samej książki</h3>
+<p>Przełączasz je przyciskami <b class="ui">Dzień</b>, <b class="ui">Tydzień</b>, <b class="ui">Miesiąc</b> i <b class="ui">Lista</b> w prawym górnym rogu. Aplikacja zapamiętuje wybrany dzień i pracownika, więc przejście z jednego widoku na drugi nie wraca do dzisiejszej daty.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Widok Lista: wizyty jednego tygodnia, jedna pod drugą."><img src="img/d/wizyty-list.webp" width="1500" height="850" alt="Strona Wizyty w widoku Lista: tabela z datą, godziną, klientem, usługą, pracownikiem, kwotą i kolorową plakietką etapu, a po prawej panel z trzema miesiącami." loading="lazy" decoding="async"></button><figcaption>Widok Lista: wizyty jednego tygodnia, jedna pod drugą.</figcaption><ol class="legend"><li><b>Nowa wizyta:</b> tu zaczynasz każdą rezerwację.</li>
+<li><b>Przełącznik widoku:</b> Dzień, Tydzień, Miesiąc, Lista.</li>
+<li><b>Rozlicz przeszłe wizyty</b> z liczbą wizyt do uporządkowania. Przycisk znika, gdy nie ma czego rozliczać.</li>
+<li><b>Data i strzałki:</b> Poprzedni, Dziś, Następny. Strzałki przesuwają o tydzień.</li>
+<li><b>Pracownik:</b> wszyscy albo jedna osoba.</li>
+<li><b>Suma przychodu:</b> pieniądze za zakończone wizyty i razem z jeszcze zaplanowanymi. Możesz jej nie widzieć, bo pokazuje się właścicielce.</li>
+<li><b>Szukaj:</b> wpisz kawałek nazwiska klienta albo nazwę usługi.</li>
+<li><b>Kolorowa plakietka:</b> kliknięcie otwiera menu zmiany etapu wizyty.</li>
+<li><b>Ikony w wierszu:</b> notatka po wizycie (tylko przy zakończonych), strzałki w kółko do przełożenia (tylko przy zaplanowanych i potwierdzonych) oraz ołówek do edycji.</li>
+<li><b>Panel miesięcy:</b> kliknięcie dnia pokazuje wizyty tylko z tego dnia.</li></ol></figure>
+<p>Kliknięcie dowolnego miejsca w wierszu, poza plakietką i ikonami, otwiera <b>stronę wizyty</b>. Kolumny możesz sortować, klikając ich nagłówki.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Widok Dzień: wszyscy pracownicy obok siebie, oś godzin od 7:00 do 22:00."><img src="img/d/cal-day.webp" width="1500" height="850" alt="Widok Dzień: kolumny z imionami siedmiu pracowników, a w nich kolorowe bloki wizyt na osi godzin, po prawej panel z trzema miesiącami." loading="lazy" decoding="async"></button><figcaption>Widok Dzień: wszyscy pracownicy obok siebie, oś godzin od 7:00 do 22:00.</figcaption><ol class="legend"><li><b>Przełącznik widoku</b> (teraz aktywny: Dzień).</li>
+<li><b>Data i strzałki:</b> Poprzedni, Dziś, Następny.</li>
+<li><b>Suma przychodu</b> dnia. Możesz jej nie widzieć.</li>
+<li><b>Nagłówki kolumn:</b> jedna kolumna na pracownika, każdy w swoim kolorze. Na stronie mieści się osiem osób, dalej są strzałki z numerem strony.</li>
+<li><b>Blok wizyty:</b> kolor to etap wizyty, kliknięcie otwiera jej stronę. Po najechaniu myszą widać krótką podpowiedź z klientem i usługą.</li>
+<li><b>Stopka:</b> przychód z podziałem na pracowników. Możesz jej nie widzieć.</li>
+<li><b>Panel miesięcy:</b> kliknięcie dnia zmienia dzień w widoku.</li></ol></figure>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Widok Tydzień: zawsze jeden pracownik, wybierany w polu Pracownik. Szare bloki to jego nieobecności."><img src="img/d/cal-week.webp" width="1500" height="850" alt="Widok Tydzień: siedem kolumn z dniami od poniedziałku do niedzieli i kolorowe bloki wizyt jednego pracownika, w niektórych kolumnach szare bloki nieobecności." loading="lazy" decoding="async"></button><figcaption>Widok Tydzień: zawsze jeden pracownik, wybierany w polu Pracownik. Szare bloki to jego nieobecności.</figcaption></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Widok Miesiąc: kilka wizyt w każdym dniu i napis „+N więcej”. Kliknięcie dnia otwiera go w widoku Dzień."><img src="img/d/cal-month.webp" width="1500" height="850" alt="Widok Miesiąc: siatka z dniami miesiąca, w każdym dniu kilka krótkich wpisów wizyt i napis z liczbą pozostałych." loading="lazy" decoding="async"></button><figcaption>Widok Miesiąc: kilka wizyt w każdym dniu i napis „+N więcej”. Kliknięcie dnia otwiera go w widoku Dzień.</figcaption></figure>
+</div>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col">Widok</th><th scope="col">Najlepszy, gdy</th><th scope="col">Pracownicy</th></tr></thead>
+<tbody>
+<tr><td>Dzień</td><td>klient dzwoni i chcesz zobaczyć wolne miejsca u wszystkich naraz</td><td>Wszyscy obok siebie</td></tr>
+<tr><td>Tydzień</td><td>klient chce konkretnego pracownika i pasuje mu dowolny dzień tygodnia</td><td>Jeden</td></tr>
+<tr><td>Miesiąc</td><td>klient pyta o termin za kilka tygodni</td><td>Wszyscy albo jeden</td></tr>
+<tr><td>Lista</td><td>szukasz konkretnej wizyty albo chcesz coś w niej zmienić z poziomu wiersza</td><td>Wszyscy albo jeden</td></tr>
+</tbody></table></div>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Bloków nie przeciągasz myszą</b></div><div class="note-b"><p>W kalendarzu nie da się przesunąć wizyty przez przeciągnięcie. Termin zmieniasz przyciskiem <b class="ui">Przełóż wizytę</b> albo w edycji wizyty. Opis jest w części <a href="#zmiana-terminu">Zmiana terminu</a>.</p></div></aside>
+</section>
+
+<section class="sub" id="kolory" aria-labelledby="h-kolory">
+<h3 id="h-kolory">Kolory i znaki w kalendarzu</h3>
+<p>Kolor wizyty zawsze oznacza jej etap:</p>
+<ul class="status-key">
+<li><span class="pill st-scheduled">Zaplanowana</span> umówiona</li>
+<li><span class="pill st-confirmed">Potwierdzona</span> klient potwierdził</li>
+<li><span class="pill st-in_progress">W trakcie</span> trwa teraz</li>
+<li><span class="pill st-completed">Zakończona</span> zrobiona</li>
+<li><span class="pill st-cancelled">Anulowana</span> odwołana</li>
+<li><span class="pill st-no_show">Nieobecność</span> klient nie przyszedł</li>
+<li><span class="pill st-rescheduled">Zmieniona</span> stara wizyta po przełożeniu</li>
+</ul>
+<ul>
+<li><b>Szare bloki w kolumnie pracownika to jego nieobecności.</b> Zatwierdzone są szare, a te, które czekają na zatwierdzenie, bursztynowe. Jedne i drugie blokują termin.</li>
+<li><b>Wizyty odwołane, nieobecne i przełożone</b> są w kalendarzu przekreślone albo przyciemnione, bo nie zajmują terminu.</li>
+<li><b>W panelu miesięcy</b> dni z wizytami są pogrubione, dzisiejszy dzień ma obwódkę, a wybrany dzień ciemne tło.</li>
+</ul>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy w kalendarzu czegoś brakuje</p><dl><dt>Wizyta zniknęła z kalendarza</dt>
+<dd>Najczęściej jest odwołana, nieobecna albo przełożona, a takie wizyty nie zajmują terminu. Poszukaj jej w widoku <b class="ui">Lista</b> przez pole <b class="ui">Szukaj</b>. Jeśli jej tam nie ma, ktoś mógł ją usunąć. Właścicielka znajdzie ślad w Historii zmian.</dd>
+<dt>W widoku Dzień nie widzę wszystkich pracowników</dt>
+<dd>Na jednej stronie mieści się osiem kolumn. Użyj strzałek z numerem strony nad kolumnami.</dd>
+<dt>W widoku Tydzień jest tylko jeden pracownik</dt>
+<dd>Tak ma być. Inną osobę wybierasz w polu <b class="ui">Pracownik</b>.</dd>
+<dt>W widoku Miesiąc widzę napis „+3 więcej”</dt>
+<dd>Kliknij ten dzień. Otworzy się widok Dzień ze wszystkimi wizytami.</dd></dl></div>
+</section>
+
+<section class="sub" id="wolny-termin" aria-labelledby="h-wolny">
+<h3 id="h-wolny">Jak znaleźć wolny termin</h3>
+<ol class="steps">
+<li>Otwórz <b class="ui">Wizyty</b> i wybierz widok <b class="ui">Dzień</b>. Przejdź do dnia, o który pyta klient: wpisz datę w polu dat albo kliknij dzień w panelu miesięcy po prawej.</li>
+<li>Poszukaj pustego miejsca w kolumnie pracownika. Wolne musi być tyle czasu, ile trwa cała usługa, a nie tylko godzina początku.</li>
+<li>Jeśli klient chce konkretnej osoby, przejdź na widok <b class="ui">Tydzień</b> i wybierz ją w polu <b class="ui">Pracownik</b>. Zobaczysz jej siedem dni naraz.</li>
+<li>Gdy znajdziesz miejsce, kliknij <b class="ui">Nowa wizyta</b>. Dalszy ciąg jest w następnej części.</li>
+</ol>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Panel miesięcy po prawej: kliknięcie dnia przełącza listę na widok tego dnia."><img src="img/d/wizyty-chain.webp" width="1440" height="900" alt="Strona Wizyty po kliknięciu dnia w panelu miesięcy: lista pokazuje wizyty tylko z wybranego dnia, a pod nią jest przycisk dokładający następny dzień." loading="lazy" decoding="async"></button><figcaption>Panel miesięcy po prawej: kliknięcie dnia przełącza listę na widok tego dnia.</figcaption><ol class="legend"><li>Podtytuł strony zmienia się na „Widok dnia z bocznego paska”.</li>
+<li>Wybrany dzień na panelu miesięcy.</li>
+<li><b>Pokaż następny dzień</b> dokłada pod spodem kolejny dzień z wizytami.</li></ol></figure>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Kliknięcie pustego dnia przeskakuje dalej</b></div><div class="note-b"><p>Gdy klikniesz w panelu dzień bez żadnych wizyt, aplikacja nie pokaże pustej listy, tylko przeskoczy do najbliższego dnia, w którym wizyty są. Żeby obejrzeć całkiem pusty dzień, użyj widoku <b class="ui">Dzień</b> i pola z datą.</p></div></aside>
+</section>
+</section>
+<section class="ch" id="nowa-wizyta" aria-labelledby="h-nowa">
+<h2 id="h-nowa">Nowa wizyta</h2>
+<p class="lead">To najczęstsza czynność w ciągu dnia. Rezerwacja zajmuje minutę, jeśli od razu zapytasz klienta o cztery rzeczy.</p>
+<ul>
+<li><b>Kim jest?</b> Jeśli to nowy klient, najpierw załóż jego kartę (część <a href="#nowy-klient">Nowy klient</a>).</li>
+<li><b>Na co przychodzi?</b> Jedna usługa albo kilka.</li>
+<li><b>Do kogo?</b> Ma swojego pracownika czy to obojętne?</li>
+<li><b>Kiedy?</b> Dzień i mniej więcej pora. Najpierw sprawdź kalendarz (część <a href="#wolny-termin">Jak znaleźć wolny termin</a>).</li>
+</ul>
+
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Formularz Nowa wizyta, wypełniony."><img src="img/d/wizyta-nowa-filled.webp" width="1440" height="1000" alt="Formularz Nowa wizyta: pola Klient i Pracownik, data, siatka godzin co pół godziny z częścią godzin przekreślonych, lista usług z cenami i czasami oraz po prawej Podsumowanie z przyciskiem Zarezerwuj wizytę." loading="lazy" decoding="async"></button><figcaption>Formularz Nowa wizyta, wypełniony.</figcaption><ol class="legend"><li><b>Klient:</b> lista z wyszukiwarką. Pisz fragment imienia albo nazwiska.</li>
+<li><b>Pracownik:</b> imię, nazwisko i stanowisko.</li>
+<li><b>Data wizyty:</b> domyślnie dzisiejsza.</li>
+<li><b>Wybrana godzina</b> rozpoczęcia (ciemne pole).</li>
+<li><b>Godzina przekreślona</b> jest niedostępna: zajęta albo poza godzinami pracy pracownika.</li>
+<li><b>Usługi</b> wybranego pracownika, z czasem i ceną dla niego.</li>
+<li><b>Podsumowanie</b> i przycisk <b class="ui">Zarezerwuj wizytę</b>.</li></ol></figure>
+
+<ol class="steps">
+<li>Na stronie <b class="ui">Wizyty</b> kliknij <b class="ui">Nowa wizyta</b>, w prawym górnym rogu.</li>
+<li>W polu <b class="ui">Klient</b> zacznij pisać nazwisko i wybierz osobę z listy.</li>
+<li>W polu <b class="ui">Pracownik</b> wybierz, kto ma obsłużyć klienta. Dopiero wtedy pojawi się lista usług tej osoby.</li>
+<li>Sprawdź <b class="ui">Datę wizyty</b>. Domyślnie jest dzisiejsza.</li>
+<li>Zaznacz usługę albo kilka. Czas i cena sumują się po prawej, w Podsumowaniu. <b>Rób to przed wyborem godziny</b>, bo siatka godzin dopasuje się do długości usług.</li>
+<li>Kliknij wolną godzinę w siatce. Godziny są co pół godziny.</li>
+<li>Na dole, w polu <b class="ui">Uwagi</b>, możesz wpisać rzecz ważną dla pracownika, na przykład alergię albo prośbę klienta. To pole nie jest obowiązkowe.</li>
+<li>Kliknij <b class="ui">Zarezerwuj wizytę</b>. Otworzy się strona nowej wizyty.</li>
+</ol>
+
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co aplikacja zrobi po zapisie</b></div><div class="note-b"><p>Wizyta od razu pojawi się w kalendarzu pracownika. Jeśli właścicielka włączyła SMS-y, aplikacja sama zaplanuje wiadomości: prośbę o potwierdzenie i przypomnienia dla klienta oraz przypomnienie dla pracownika na 20 minut przed wizytą. Nic nie musisz wysyłać ręcznie.</p></div></aside>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Dodatki dopisujesz później</b></div><div class="note-b"><p>W formularzu rezerwacji są tylko usługi główne. Drobne dodatki, jak maska czy zdobienie, dopisujesz dopiero wtedy, gdy wizyta ma etap <b>W trakcie</b>. Opis jest w części <a href="#w-trakcie">Wizyta trwa: dodatki</a>.</p></div></aside>
+
+<h4>Gdy rezerwacja jest trochę inna</h4>
+<dl class="gl">
+<dt>Klient chce dwie usługi w jednej wizycie</dt>
+<dd>Zaznacz obie. Czas się zsumuje, więc wolne miejsce musi być na całość. Jeśli się nie mieści, aplikacja przekreśli takie godziny.</dd>
+<dt>Klient chce konkretnego pracownika</dt>
+<dd>Wybierz go w polu <b class="ui">Pracownik</b>. Jeśli nie ma wolnych terminów, sprawdź innych pracowników w widoku Dzień: wiele usług robi więcej niż jedna osoba. Preferencje klienta widać na jego karcie (część <a href="#karta-klienta">Karta klienta</a>).</dd>
+<dt>Klient chce przyjść „na teraz”</dt>
+<dd>Wybierz dzisiejszą datę i najbliższą godzinę, którą aplikacja pokazuje jako dostępną. Gdy klient już siedzi na fotelu, możesz od razu ustawić etap W trakcie (część <a href="#klient-w-salonie">Klient jest w salonie</a>).</dd>
+<dt>Klient rezerwuje sam przez internet</dt>
+<dd>Taka wizyta jest zwykłą wizytą z dopiskiem „Rezerwacja online” w uwagach. Klient może wybrać do trzech usług, a aplikacja sprawdza te same zasady co przy Twojej rezerwacji. Jeśli czekasz na nią, a jej nie widać, odśwież stronę klawiszem <kbd>F5</kbd>. Więcej: <a href="#sytuacje">Codzienne sytuacje</a>.</dd>
+</dl>
+
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy rezerwacja się nie udaje</p><dl><dt>Przycisk Zarezerwuj wizytę jest szary</dt>
+<dd>Aplikacja czeka na komplet: klienta, pracownika, usługę, datę i godzinę. Siatka godzin też jest nieaktywna, dopóki nie wybierzesz pracownika, daty i przynajmniej jednej usługi.</dd>
+<dt>Nie ma klienta na liście</dt>
+<dd>Nie ma jeszcze jego karty. Załóż ją w części Klienci (<a href="#nowy-klient">Nowy klient</a>). Spróbuj też wpisać samo nazwisko albo jego początek.</dd>
+<dt>Pracownika nie ma na liście albo nie da się go wybrać</dt>
+<dd>Może być wyłączony albo nie mieć przypisanych usług, albo jego godziny pracy na ten dzień to zero. To ustawienia właścicielki. Do czasu zmiany wybierz innego pracownika.</dd>
+<dt>Nie ma usługi, której szukam</dt>
+<dd>Wybrany pracownik jej nie wykonuje albo usługa jest wyłączona z oferty. Wybierz innego pracownika albo zgłoś to właścicielce.</dd>
+<dt>Wszystkie godziny są przekreślone</dt>
+<dd>Pracownik tego dnia nie pracuje albo ma cały dzień zajęty. Zmień dzień albo pracownika.</dd>
+<dt><span class="msg">„Pracownik nie pracuje w wybranym dniu (środa)”</span></dt>
+<dd>Wybierz inny dzień. Dni pracy ustawia właścicielka.</dd>
+<dt><span class="msg">„Konflikt czasowy - klient ma już wizytę o 11:00-11:45 z …”</span></dt>
+<dd>Ten klient ma już wizytę w tym czasie, u tego samego albo innego pracownika. Zapytaj, czy to ta sama wizyta (wtedy nie wpisuj drugiej), albo wybierz inną godzinę.</dd>
+<dt><span class="msg">„Wniosek o nieobecność pracownika oczekuje na akceptację …”</span></dt>
+<dd>Pracownik złożył w tym terminie wniosek urlopowy, którego jeszcze nikt nie zatwierdził. Termin jest zablokowany do czasu decyzji. Wybierz inny termin albo zapytaj właścicielkę.</dd>
+<dt><span class="msg">„Konflikt z nieobecnością pracownika: Urlop wypoczynkowy”</span></dt>
+<dd>Pracownik ma w tym terminie zatwierdzony urlop albo zwolnienie. Wybierz inny dzień albo innego pracownika.</dd></dl></div>
+</section>
+<section class="ch" id="etapy" aria-labelledby="h-etapy">
+<h2 id="h-etapy">Wizyta krok po kroku</h2>
+<p class="lead">Od umówienia do zapłaty wizyta przechodzi kilka etapów. Tu znajdziesz, jak przejść każdy z nich i co zrobić, gdy coś wygląda inaczej niż zwykle.</p>
+
+<section class="sub" id="zmiana-etapu" aria-labelledby="h-zmiana-etapu">
+<h3 id="h-zmiana-etapu">Jak zmienić etap wizyty</h3>
+<p>Kolorowa plakietka z nazwą etapu jest przyciskiem. Kliknij ją, a pod nią otworzy się małe menu z etapami, które wolno wybrać z obecnego. Jeśli menu się nie otwiera, plakietka jest zwykłym znacznikiem: wizyta jest już na ostatnim etapie albo konto ma tylko podgląd.</p>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Menu pod plakietką Zaplanowana na liście wizyt: Potwierdzona, W trakcie, Anulowana."><img src="img/d/status-menu.webp" width="640" height="260" alt="Fragment listy wizyt, pod niebieską plakietką Zaplanowana otwarte małe menu z trzema pozycjami: Potwierdzona, W trakcie, Anulowana." loading="lazy" decoding="async"></button><figcaption>Menu pod plakietką Zaplanowana na liście wizyt: Potwierdzona, W trakcie, Anulowana.</figcaption></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: To samo menu na stronie wizyty."><img src="img/d/guard-too-early.webp" width="1440" height="520" alt="Strona wizyty z niebieską plakietką Zaplanowana i otwartym pod nią menu z pozycjami Potwierdzona, W trakcie, Anulowana." loading="lazy" decoding="async"></button><figcaption>To samo menu na stronie wizyty.</figcaption></figure>
+</div>
+<ol class="steps">
+<li>Znajdź wizytę: wiersz na liście albo blok w kalendarzu (kliknięcie bloku otwiera stronę wizyty).</li>
+<li>Kliknij kolorową plakietkę z nazwą etapu.</li>
+<li>Wybierz nowy etap z menu. Jeśli aplikacja o coś zapyta (powód, płatność), odpowiedz.</li>
+<li>Plakietka zmieni kolor na kolor nowego etapu.</li>
+</ol>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Menu obsłużysz też klawiaturą</b></div><div class="note-b"><p>Po otwarciu menu strzałki w górę i w dół przesuwają zaznaczenie, <kbd>Enter</kbd> wybiera, a <kbd>Esc</kbd> zamyka menu.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy plakietka nie reaguje albo czegoś brakuje w menu</p><dl><dt>Plakietka nie otwiera menu</dt>
+<dd>Wizyta jest na ostatnim etapie (Zakończona, Anulowana, Nieobecność albo Zmieniona), z którego nie ma dalszych zmian. Możliwe też, że konto ma tylko podgląd.</dd>
+<dt>W menu nie ma etapu Nieobecność</dt>
+<dd>Ten etap jest dostępny tylko dla wizyty Potwierdzonej i najwcześniej 30 minut przed jej początkiem. Wcześniej nie ma go w menu. Opis jest w części <a href="#nieobecnosc-klienta">Klient się nie pojawił</a>.</dd>
+<dt>W menu nie ma etapu Zakończona</dt>
+<dd>Zakończyć można tylko wizytę, która ma etap W trakcie. Najpierw ustaw W trakcie.</dd></dl></div>
+</section>
+
+<section class="sub" id="potwierdzenie" aria-labelledby="h-potwierdzenie">
+<h3 id="h-potwierdzenie">Potwierdzenie wizyty</h3>
+<p>Potwierdzona wizyta to taka, co do której klient zapewnił, że przyjdzie. Ten etap ustawia się na dwa sposoby:</p>
+<ul>
+<li><b>Sam klient</b> klika <b class="ui">Potwierdzam</b> na stronie otwieranej z linku w SMS-ie. Etap zmienia się wtedy sam, a na stronie wizyty pojawia się zielony znacznik „Klient potwierdził przez SMS”.</li>
+<li><b>Ty</b>, gdy klient potwierdzi przez telefon: kliknij plakietkę Zaplanowana i wybierz <b class="ui">Potwierdzona</b>.</li>
+</ul>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Dobry poranny zwyczaj</b></div><div class="note-b"><p>Niepotwierdzone wizyty to niebieskie bloki. Rano zadzwoń do klientów z niebieskimi wizytami na ten dzień. Jedna rozmowa oszczędza pusty fotel.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Klient mówi, że potwierdził, a wizyta nadal jest niebieska</dt>
+<dd>Odśwież stronę klawiszem <kbd>F5</kbd>. Jeśli nic się nie zmieniło, klient mógł otworzyć link, ale nie kliknąć przycisku na otwartej stronie. Zadzwoń i ustaw Potwierdzona ręcznie.</dd>
+<dt>Klient potwierdził, ale prosi o zmianę godziny</dt>
+<dd>Przełóż wizytę (część <a href="#zmiana-terminu">Zmiana terminu</a>). Aplikacja zapyta, kto poprosił o zmianę.</dd></dl></div>
+</section>
+
+<section class="sub" id="klient-w-salonie" aria-labelledby="h-klient-w-salonie">
+<h3 id="h-klient-w-salonie">Klient jest w salonie</h3>
+<p>Gdy klient przychodzi i siada na fotelu, ustaw wizycie etap <b>W trakcie</b>. Aplikacja wie wtedy, że usługa trwa, i pozwala dopisywać dodatki.</p>
+<ol class="steps">
+<li>Znajdź wizytę w kalendarzu dnia albo na liście.</li>
+<li>Kliknij kolorową plakietkę.</li>
+<li>Wybierz <b class="ui">W trakcie</b>. Etap Zaplanowana nie wymaga wcześniejszego potwierdzenia: można przejść od razu.</li>
+</ol>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Za wcześnie na rozpoczęcie</b></div><div class="note-b"><p>Etap W trakcie można ustawić najwcześniej 30 minut przed umówioną godziną. Jeśli klient przyszedł wcześniej, aplikacja nie zmieni etapu i pokaże w rogu ekranu komunikat z godziną, od której to jest możliwe:</p>
+<p><span class="msg">„Za wcześnie na rozpoczęcie wizyty - start za 45 min. Zmiana statusu możliwa od 10:23.”</span></p>
+<p>Możesz poczekać do tej godziny. Jeśli pracownik jest wolny wcześniej, przełóż wizytę na wcześniejszą godzinę (część <a href="#zmiana-terminu">Zmiana terminu</a>).</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Klient przyszedł bez rezerwacji</dt>
+<dd>Wpisz nową wizytę na najbliższą wolną godzinę (część <a href="#nowa-wizyta">Nowa wizyta</a>), a potem ustaw etap W trakcie.</dd>
+<dt>Klient się spóźnia</dt>
+<dd>Aplikacja nie ma przycisku „spóźnienie”. Wizyta zostaje na swoim miejscu. Jeśli spóźnienie zachodzi na następnego klienta tego pracownika, przełóż jedną z wizyt albo ustal z pracownikiem, jak ją skrócić.</dd>
+<dt>Klient przyszedł do innego pracownika niż w wizycie</dt>
+<dd>Zmień pracownika w edycji wizyty (część <a href="#poprawianie">Poprawianie wizyty</a>), a potem ustaw W trakcie.</dd>
+<dt>Klient chce inną usługę niż umówiona</dt>
+<dd>Zmień usługę w edycji wizyty przed jej rozpoczęciem albo dopisz dodatek już w trakcie wizyty.</dd></dl></div>
+</section>
+
+<section class="sub" id="w-trakcie" aria-labelledby="h-w-trakcie">
+<h3 id="h-w-trakcie">Wizyta trwa: dodatki</h3>
+<p>Gdy klient w trakcie wizyty prosi o coś ekstra, na przykład maskę albo zdobienie, dopisz to jako dodatek. W aplikacji nazywa się to „mikrousługą”. Dodatek można dopisać tylko do wizyty, która ma etap W trakcie.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Strona wizyty o etapie W trakcie: pojawia się sekcja Dodaj mikrousługę."><img src="img/d/wizyta-inprogress.webp" width="1440" height="1000" alt="Strona wizyty z pomarańczową plakietką W trakcie i sekcją Dodaj mikrousługę pod listą usług, w podsumowaniu widać sumę wizyty." loading="lazy" decoding="async"></button><figcaption>Strona wizyty o etapie W trakcie: pojawia się sekcja Dodaj mikrousługę.</figcaption><ol class="legend"><li><b>Plakietka W trakcie:</b> stąd można przejść do Zakończona albo Anulowana.</li>
+<li><b>Dodaj mikrousługę:</b> lista dodatków pasujących do tej wizyty.</li>
+<li><b>Podsumowanie</b> rośnie o cenę dodatku. Linię Prowizja widzi tylko właścicielka, Ty jej nie zobaczysz.</li></ol></figure>
+<ol class="steps">
+<li>Otwórz stronę wizyty (kliknij jej wiersz na liście albo blok w kalendarzu).</li>
+<li>W sekcji <b class="ui">Dodaj mikrousługę</b> wybierz dodatek z listy.</li>
+<li>Sprawdź w podsumowaniu, że cena wzrosła o cenę dodatku.</li>
+</ol>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Brakuje dodatku na liście?</b></div><div class="note-b"><p>Na liście są tylko dodatki, które pasują do usługi głównej z tej wizyty, które pracownik potrafi wykonać i których jeszcze nie dopisano. Jeśli potrzebnego dodatku nie ma, to ustawienie usług. Zgłoś to właścicielce.</p></div></aside>
+</section>
+
+<section class="sub" id="zakonczenie" aria-labelledby="h-zakonczenie">
+<h3 id="h-zakonczenie">Koniec wizyty i płatność</h3>
+<p>Gdy usługa jest skończona, zamknij wizytę. Aplikacja zapisze przychód i zrobi resztę.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Okno Zamknij wizytę: sposób płatności i rabat."><img src="img/d/complete-modal.webp" width="1440" height="1000" alt="Okno Zamknij wizytę z polem Metoda płatności (wybrana gotówka), polem Rabat w złotych oraz przyciskami Anuluj i Zamknij wizytę." loading="lazy" decoding="async"></button><figcaption>Okno Zamknij wizytę: sposób płatności i rabat.</figcaption></figure>
+<ol class="steps">
+<li>Otwórz stronę wizyty (kliknij jej wiersz albo blok w kalendarzu).</li>
+<li>Kliknij plakietkę W trakcie i wybierz <b class="ui">Zakończona</b>.</li>
+<li>W oknie <b class="ui">Zamknij wizytę</b> wybierz <b class="ui">Metodę płatności</b>, na przykład gotówkę albo kartę.</li>
+<li>Jeśli klient dostaje zniżkę, wpisz jej kwotę w złotych w polu <b class="ui">Rabat</b>. Pole jest opcjonalne.</li>
+<li>Kliknij <b class="ui">Zamknij wizytę</b>.</li>
+</ol>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Strona wizyty po zamknięciu: etap Zakończona i miejsce na ocenę klienta."><img src="img/d/wizyta-completed.webp" width="1440" height="1000" alt="Strona zakończonej wizyty z zieloną plakietką Zakończona, komunikatem o zapisanym przychodzie i sekcją oceny satysfakcji w gwiazdkach." loading="lazy" decoding="async"></button><figcaption>Strona wizyty po zamknięciu: etap Zakończona i miejsce na ocenę klienta.</figcaption><ol class="legend"><li><b>Plakietka Zakończona:</b> to ostatni etap, dalej nie ma zmian.</li>
+<li><b>Ocena satysfakcji:</b> gwiazdki od 1 do 5, zapis przyciskiem <b class="ui">Zapisz ocenę</b>.</li>
+<li><b>Niżej na stronie:</b> sekcja uwag i zaleceń po zakończonej wizycie. W rogu ekranu widać krótki komunikat o zamknięciu wizyty.</li></ol></figure>
+<p>Po zamknięciu możesz od razu zapisać ocenę, jeśli klient ją podał. Uwagi i zalecenia po wizycie, na przykład „farba słabo trzyma, następnym razem krócej”, dopisujesz ikoną notatki w wierszu listy albo w sekcji uwag na stronie wizyty. Najnowsza notatka klienta widnieje w kolumnie <b class="ui">Aktualne uwagi i zalecenia</b>, więc następna osoba zobaczy ją, zanim klient usiądzie na fotelu.</p>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co aplikacja zapisuje przy zamknięciu</b></div><div class="note-b"><p>Przychód z tej wizyty: kwotę usług, rabat i sposób płatności. Jako datę płatności przyjmuje dzień wizyty, a nie dzień kliknięcia. Przychód zapisze się tylko raz, nawet jeśli klikniesz dwa razy.</p></div></aside>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Zamykaj wizyty na ich stronie</b></div><div class="note-b"><p>Zamknięcie z listy albo z kalendarza przez menu pod plakietką też działa, ale wtedy aplikacja nie pyta o sposób płatności i zostaje on pusty. Dlatego zamykaj wizyty na ich stronie, w oknie <b class="ui">Zamknij wizytę</b>.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt><span class="msg">„Zakończenie wizyty możliwe tylko w ciągu 30 min od planowanego końca (10:45). Aktualna godzina: 07:02.”</span></dt>
+<dd>Ten komunikat pojawia się, gdy zamykasz wizytę z listy albo z kalendarza: tam obowiązuje okno od 30 minut przed do 30 minut po umówionym końcu. <b>Wejdź na stronę wizyty i zamknij ją tam</b>, w oknie <b class="ui">Zamknij wizytę</b>. Na stronie wizyty to ograniczenie nie działa, wystarczy, że wizyta ma etap W trakcie i już się rozpoczęła. Jeśli wizyta nie ma etapu W trakcie, a dawno się skończyła, użyj przycisku <b class="ui">Rozlicz przeszłe wizyty</b> (część <a href="#rozlicz">Rozliczanie zaległych wizyt</a>).</dd>
+<dt>Wizyta trwała dłużej niż planowano</dt>
+<dd>Nic się nie dzieje. Gdy klient skończy, otwórz stronę wizyty i zamknij ją w oknie <b class="ui">Zamknij wizytę</b>, także po upływie umówionego czasu.</dd>
+<dt>W oknie nie ma pola Metoda płatności</dt>
+<dd>Zamykasz wizytę z listy albo z kalendarza, a nie z jej strony. Wejdź na stronę wizyty i zamknij ją tam.</dd>
+<dt>Pomyłka w płatności albo rabacie po zamknięciu</dt>
+<dd>Zakończonych wizyt nie poprawiasz samodzielnie: przy takiej wizycie nie ma przycisku <b class="ui">Edytuj</b>. Powiedz właścicielce, podając nazwisko klienta, dzień i godzinę wizyty.</dd></dl></div>
+</section>
+
+<section class="sub" id="odwolanie" aria-labelledby="h-odwolanie">
+<h3 id="h-odwolanie">Odwołanie wizyty</h3>
+<p>Gdy klient odwołuje wizytę telefonem, zmień jej etap na <b>Anulowana</b>. Termin od razu się zwalnia i można go zaproponować komuś innemu.</p>
+<figure class="shot small-shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Wybór Anulowana otwiera małe okienko z miejscem na powód."><img src="img/d/status-cancel-reason.webp" width="640" height="300" alt="Menu zmiany etapu zamienione w okienko Powód anulowania z polem tekstowym oraz przyciskami Wstecz i Anuluj wizytę." loading="lazy" decoding="async"></button><figcaption>Wybór Anulowana otwiera małe okienko z miejscem na powód.</figcaption></figure>
+<ol class="steps">
+<li>Znajdź wizytę i kliknij jej plakietkę.</li>
+<li>Wybierz <b class="ui">Anulowana</b>.</li>
+<li>W okienku wpisz powód, na przykład „choroba klienta”. Pole nie jest obowiązkowe, ale ułatwia późniejsze zrozumienie sprawy.</li>
+<li>Kliknij <b class="ui">Anuluj wizytę</b>. Przycisk <b class="ui">Wstecz</b> cofa się bez zmian.</li>
+</ol>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co dzieje się samo</b></div><div class="note-b"><p>Wizyta zostaje w historii klienta jako odwołana, jego licznik odwołań rośnie o jeden, a termin jest wolny. Odwołać można wizytę na każdym etapie przed zakończeniem i o każdej porze. Aplikacja nie wysyła klientowi wiadomości o odwołaniu, bo to on o nie poprosił. Gdy to salon odwołuje wizytę, zadzwoń do klienta.</p></div></aside>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Gdy klient odwoła wizytę sam, z linku w SMS-ie</b></div><div class="note-b"><p>Zwykle może to zrobić najpóźniej 12 godzin przed początkiem wizyty. W rogu Twojego ekranu pojawi się krótki komunikat „Klient odwołał wizytę przez SMS” z jego nazwiskiem, a wizyta zmieni etap na Anulowana i zwolni termin. Gdy do wizyty zostało mniej czasu, link prosi klienta o telefon do salonu. Wtedy odwołanie wpisujesz Ty.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Wizyta odwołana przez pomyłkę</dt>
+<dd>Odwołanej wizyty nie przywrócisz przyciskiem. Jeśli termin jest jeszcze wolny, wpisz nową wizytę w tym samym miejscu (część <a href="#nowa-wizyta">Nowa wizyta</a>). Licznik odwołań klienta zostaje, ale to tylko statystyka.</dd>
+<dt>Chcę usunąć wizytę, bo klient nie przyjdzie</dt>
+<dd>Nie usuwaj, tylko odwołuj. Odwołana wizyta zostaje w historii, a usunięta znika z kalendarza i list. Więcej w części <a href="#usuwanie">Usuwanie wizyty</a>.</dd></dl></div>
+</section>
+
+<section class="sub" id="nieobecnosc-klienta" aria-labelledby="h-nieobecnosc-klienta">
+<h3 id="h-nieobecnosc-klienta">Klient się nie pojawił</h3>
+<p>Gdy klient nie przyszedł, ustaw etap <b>Nieobecność</b>. Dzięki temu w jego karcie rośnie licznik nieobecności, a właścicielka widzi, którzy klienci często nie przychodzą.</p>
+<ol class="steps">
+<li>Znajdź wizytę. Musi mieć etap <b>Potwierdzona</b>.</li>
+<li>Kliknij jej plakietkę i wybierz <b class="ui">Nieobecność</b>.</li>
+</ol>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Nieobecność działa tylko z etapu Potwierdzona</b></div><div class="note-b"><p>Jeśli wizyta jest nadal Zaplanowana, pozycji Nieobecność nie ma w menu. Wtedy po zakończeniu dnia użyj przycisku <b class="ui">Rozlicz przeszłe wizyty</b> i wybierz Nieobecność tam (część <a href="#rozlicz">Rozliczanie zaległych wizyt</a>).</p></div></aside>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co dzieje się samo</b></div><div class="note-b"><p>Licznik nieobecności klienta rośnie o jeden, a termin w kalendarzu zostaje wolny.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Klient się spóźnia, ale mówi, że przyjdzie</dt>
+<dd>Nie oznaczaj nieobecności. Zostaw wizytę, a gdy klient dotrze, ustaw W trakcie.</dd>
+<dt>Nieobecność oznaczona przez pomyłkę, a klient jednak przyszedł</dt>
+<dd>Tego etapu nie cofniesz. Wpisz nową wizytę na teraz (część <a href="#nowa-wizyta">Nowa wizyta</a>) i powiedz o tym właścicielce, bo licznik nieobecności klienta już wzrósł.</dd></dl></div>
+</section>
+
+<section class="sub" id="zmiana-terminu" aria-labelledby="h-zmiana-terminu">
+<h3 id="h-zmiana-terminu">Zmiana terminu</h3>
+<p>Klient prosi o inny dzień albo inną godzinę. Aplikacja nie przesuwa starej wizyty. Robi to w dwóch krokach: stara wizyta zostaje zamrożona, a obok powstaje nowa, w nowym terminie.</p>
+<div class="ba" role="group" aria-label="Przed i po przełożeniu wizyty">
+<div class="ba-col"><p class="ba-h">Przed</p>
+<div class="vcard"><span class="pill st-scheduled">Zaplanowana</span><br><b>Wtorek, 14:00</b><br>Anna Pawłowska, strzyżenie damskie, Olga Majewska</div></div>
+<div class="ba-arrow" aria-hidden="true"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_forward"/></svg></div>
+<div class="ba-col"><p class="ba-h">Po przełożeniu na czwartek</p>
+<div class="vcard ghost"><span class="pill st-rescheduled">Zmieniona</span><br><b>Wtorek, 14:00</b><br>Stara wizyta. Zostaje szara i nie zajmuje już terminu.</div>
+<div class="vcard"><span class="pill st-scheduled">Zaplanowana</span><br><b>Czwartek, 11:30</b><br>Ta sama osoba i te same usługi. Cena i czas przepisane ze starej wizyty.</div></div>
+</div>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Okno Przepisz wizytę, otwierane ikoną strzałek w kółko w wierszu listy."><img src="img/d/reschedule-sheet.webp" width="1440" height="900" alt="Okno Przepisz wizytę nad rozmytą listą wizyt: informacja o obecnym terminie, pole Nowa data oraz przyciski Zostaw i Przepisz." loading="lazy" decoding="async"></button><figcaption>Okno Przepisz wizytę, otwierane ikoną strzałek w kółko w wierszu listy.</figcaption></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Pytanie przy zmianie terminu potwierdzonej wizyty: kto poprosił o zmianę."><img src="img/d/timing-modal.webp" width="1440" height="1000" alt="Okno Zmiana terminu potwierdzonej wizyty z pytaniem Kto zażądał zmiany terminu i dwoma przyciskami: Zmianę zgłosił klient oraz Salon zmienił termin (wyślij SMS)." loading="lazy" decoding="async"></button><figcaption>Pytanie przy zmianie terminu potwierdzonej wizyty: kto poprosił o zmianę.</figcaption></figure>
+</div>
+<ol class="steps">
+<li>W widoku <b class="ui">Lista</b> znajdź wizytę i kliknij w jej wierszu ikonę <b class="ui">Przełóż wizytę</b> (strzałki w kółko). Ikona jest tylko przy wizytach Zaplanowanych i Potwierdzonych.</li>
+<li>W oknie <b class="ui">Przepisz wizytę</b> wybierz nową datę, a potem godzinę i pracownika, jeśli aplikacja o nie pyta.</li>
+<li>Kliknij <b class="ui">Przepisz</b>. Przycisk <b class="ui">Zostaw</b> zamyka okno bez zmian.</li>
+</ol>
+<p>Tę samą zmianę zrobisz inaczej: otwórz wizytę, kliknij <b class="ui">Edytuj</b>, zmień datę albo godzinę i zapisz. Efekt jest taki sam.</p>
+<p>Jeśli klient wcześniej potwierdził wizytę, aplikacja zapyta, kto poprosił o zmianę. <b class="ui">Zmianę zgłosił klient</b> zostawia potwierdzenie bez zmian. <b class="ui">Salon zmienił termin (wyślij SMS)</b> wysyła klientowi nową prośbę o potwierdzenie. Wybierz tę drugą odpowiedź, gdy to Ty z jakiegoś powodu zmieniasz termin.</p>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co aplikacja robi przy przełożeniu</b></div><div class="note-b"><p>Stara wizyta dostaje etap Zmieniona i przestaje blokować kalendarz. Nowa wizyta ma tę samą osobę i te same usługi, a cena, czas i prowizja są przepisane ze starej. Licznik zmian terminu klienta rośnie o jeden. Jeśli stara wizyta była Potwierdzona, a zmianę zgłosił klient, nowa jest od razu Potwierdzona. W innym wypadku zaczyna jako Zaplanowana.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Przy wizycie nie ma ikony przełożenia</dt>
+<dd>Przełożyć można tylko wizyty Zaplanowane i Potwierdzone. Wizyty W trakcie, zakończone i odwołane nie mają tej ikony.</dd>
+<dt>Aplikacja pokazuje komunikat o konflikcie albo godzinach pracy</dt>
+<dd>Nowy termin musi spełniać te same pięć zasad co nowa wizyta (część <a href="#pilnuje">Czego pilnuje aplikacja</a>). Wybierz inny termin.</dd>
+<dt>Gdzie jest stara wizyta?</dt>
+<dd>Została jako szara, z etapem Zmieniona. Na jej stronie jest link <b class="ui">Nowy termin</b>, a na nowej wizycie link <b class="ui">Pierwszy termin</b>. To normalne. Nie usuwaj jej.</dd></dl></div>
+</section>
+
+<section class="sub" id="poprawianie" aria-labelledby="h-poprawianie">
+<h3 id="h-poprawianie">Poprawianie wizyty</h3>
+<p>Przycisk <b class="ui">Edytuj</b> służy do poprawek: dodania albo usunięcia usługi, zmiany godziny lub pracownika. Do zmiany etapu służy plakietka, nie ta strona.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Strona edycji wizyty."><img src="img/d/wizyta-edit.webp" width="1440" height="1000" alt="Formularz edycji wizyty: pole etapu, data, godzina rozpoczęcia, lista usług wizyty z przyciskami usuwania, przycisk dodawania usługi i podsumowanie czasu oraz ceny." loading="lazy" decoding="async"></button><figcaption>Strona edycji wizyty.</figcaption><ol class="legend"><li><b>Etap wizyty.</b> Lepiej zmieniaj go plakietką, bo ta lista pomija zabezpieczenia czasowe.</li>
+<li><b>Data wizyty.</b></li>
+<li><b>Godzina rozpoczęcia</b>, co 15 minut.</li>
+<li><b>Usuń</b> usługę z wizyty. Musi zostać przynajmniej jedna.</li>
+<li><b>Dodaj usługę lub dodatek:</b> każda usługa tego pracownika.</li>
+<li><b>Czas trwania</b> i suma.</li></ol></figure>
+<figure class="shot small-shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Po kliknięciu Dodaj usługę lub dodatek: lista usług, których jeszcze nie ma w wizycie."><img src="img/d/wizyta-edit-picker.webp" width="900" height="600" alt="Okno z listą usług, które można jeszcze dodać do edytowanej wizyty, z czasem i ceną przy każdej." loading="lazy" decoding="async"></button><figcaption>Po kliknięciu Dodaj usługę lub dodatek: lista usług, których jeszcze nie ma w wizycie.</figcaption></figure>
+<ul>
+<li>Zmiana <b>daty albo godziny</b> wizyty Zaplanowanej lub Potwierdzonej działa jak przełożenie: powstaje nowa wizyta (część <a href="#zmiana-terminu">Zmiana terminu</a>).</li>
+<li>Wizyt <b>zakończonych, odwołanych i przełożonych</b> nie edytujesz. Przycisk Edytuj w ogóle się przy nich nie pokazuje.</li>
+<li>Każda zmiana zapisuje się w Historii zmian razem z imieniem osoby, która ją zrobiła.</li>
+</ul>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Nie ma przycisku Edytuj</dt>
+<dd>Wizyta jest zakończona, odwołana albo przełożona. Takich wizyt się nie edytuje. Jeśli jest w nich błąd, powiedz o tym właścicielce.</dd>
+<dt>Po zapisie aplikacja pyta, kto zażądał zmiany terminu</dt>
+<dd>To normalne przy wizycie, którą klient wcześniej potwierdził. Odpowiedz zgodnie z prawdą (część <a href="#zmiana-terminu">Zmiana terminu</a>).</dd>
+<dt>Aplikacja pokazuje konflikt terminu i nie zapisuje zmiany</dt>
+<dd>Nowa godzina koliduje z inną wizytą, z godzinami pracy albo z nieobecnością. Wybierz inną godzinę.</dd></dl></div>
+</section>
+
+<section class="sub" id="rozlicz" aria-labelledby="h-rozlicz">
+<h3 id="h-rozlicz">Rozliczanie zaległych wizyt</h3>
+<p>Czasem wizyta się odbyła, a nikt nie ustawił jej ostatniego etapu. Taka wizyta czeka na rozliczenie. Ich liczbę widać na przycisku <b class="ui">Rozlicz przeszłe wizyty</b> w prawym górnym rogu strony Wizyty. Gdy nic nie czeka, przycisk znika.</p>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Okno z listą zaległych wizyt."><img src="img/d/scanner-modal.webp" width="1440" height="1000" alt="Okno Przeszłe wizyty do rozliczenia: tabela z klientem, pracownikiem, datą, usługą i kolorowym przyciskiem etapu w każdym wierszu, pod nią przyciski Wszystkie na zakończone i Zapisz zmiany." loading="lazy" decoding="async"></button><figcaption>Okno z listą zaległych wizyt.</figcaption></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Przycisk etapu w wierszu zmienia się po kolei: bez zmian, Zakończona, Anulowana, Nieobecność."><img src="img/d/scanner-modal-cycled.webp" width="1440" height="1000" alt="To samo okno po kliknięciu przycisków etapu: część wierszy ma już wybrany etap Zakończona, Anulowana albo Nieobecność." loading="lazy" decoding="async"></button><figcaption>Przycisk etapu w wierszu zmienia się po kolei: bez zmian, Zakończona, Anulowana, Nieobecność.</figcaption></figure>
+</div>
+<ol class="steps">
+<li>Kliknij <b class="ui">Rozlicz przeszłe wizyty</b>. Otworzy się lista wizyt do uporządkowania.</li>
+<li>Przy każdej wizycie klikaj przycisk z jej etapem, aż pokaże właściwy: Zakończona, Anulowana albo Nieobecność.</li>
+<li>Jeśli prawie wszystkie wizyty się odbyły, kliknij <b class="ui">Wszystkie na zakończone</b>. Nie zmieni to wizyt, którym etap wybrano już ręcznie.</li>
+<li>Kliknij <b class="ui">Zapisz zmiany</b>. Wizyty zapisują się po kolei. Te, których nie udało się zapisać, zostają na liście z komunikatem.</li>
+</ol>
+<aside class="note note-stop"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cancel"/></svg><b>To jest droga w jedną stronę</b></div><div class="note-b"><p>Wizyt rozliczonych tym oknem nie zmienisz stamtąd z powrotem. Przed zapisem sprawdź każdy wiersz. Dozwolone są tylko trzy etapy końcowe: Zakończona, Anulowana i Nieobecność.</p></div></aside>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Co dzieje się samo</b></div><div class="note-b"><p>Zakończona zapisuje przychód z datą wizyty, a nie z dzisiejszą, więc trafia do właściwego miesiąca. Jeśli SMS-y są włączone, planuje też wiadomość z prośbą o ocenę. Nieobecność zwiększa licznik nieobecności klienta, a Anulowana licznik odwołań. Zasady czasowe z części <a href="#droga">Droga wizyty</a> tu nie obowiązują, bo wizyty już się odbyły.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Przycisku Rozlicz przeszłe wizyty nie ma</dt>
+<dd>Nic nie czeka na rozliczenie. To dobra wiadomość.</dd>
+<dt>Zapis jednej wizyty się nie udał</dt>
+<dd>Zostaje na liście z komunikatem. Przeczytaj go i spróbuj ponownie albo otwórz wizytę i popraw ją na jej stronie.</dd>
+<dt>Nie wiem, czy klient przyszedł</dt>
+<dd>Zapytaj pracownika, który miał go obsłużyć. Etapu końcowego nie da się potem zmienić z tego okna, więc lepiej ustalić fakty niż zgadywać.</dd></dl></div>
+</section>
+
+<section class="sub" id="usuwanie" aria-labelledby="h-usuwanie">
+<h3 id="h-usuwanie">Usuwanie wizyty</h3>
+<aside class="note note-stop"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cancel"/></svg><b>Prawie nigdy nie usuwaj wizyty</b></div><div class="note-b"><p>Na stronie wizyty jest przycisk <b class="ui">Usuń</b>. Wizyta znika wtedy z kalendarza i list, a jej przychód znika z raportów. W aplikacji nie ma przycisku, który ją przywraca: może to zrobić tylko administrator systemu.</p>
+<p>Zamiast usuwać, użyj etapu <b>Anulowana</b> (wizyta odwołana) albo <b>Nieobecność</b> (klient nie przyszedł). Wtedy w historii i statystykach zostaje ślad.</p></div></aside>
+<p>Usunąć ma sens tylko wizytę wpisaną przez pomyłkę, na przykład dwa razy. W razie wątpliwości zapytaj właścicielkę.</p>
+</section>
+</section>
+<section class="ch" id="klienci" aria-labelledby="h-klienci">
+<h2 id="h-klienci">Klienci w aplikacji</h2>
+<p class="lead">Każdy klient ma w aplikacji swoją kartę: dane, historię wizyt, preferencje i uwagi. Dobrze prowadzona baza to mniej pytań przy rezerwacji i mniej pomyłek.</p>
+
+<section class="sub" id="klienci-lista" aria-labelledby="h-klienci-lista">
+<h3 id="h-klienci-lista">Lista i szukanie</h3>
+<p>Klientów znajdziesz w menu <b class="ui">Salon</b>, pozycja <b class="ui">Klienci</b>.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Strona Klienci: lista, filtry i wyszukiwarka."><img src="img/d/klienci-list.webp" width="1440" height="1000" alt="Strona Klienci: u góry przyciski Aktualizuj preferencje i Dodaj klienta oraz cztery liczniki, niżej filtry Aktywni, VIP i Nieaktywni, wyszukiwarka i tabela klientów z telefonem, ostatnią wizytą, liczbą wizyt i trendem." loading="lazy" decoding="async"></button><figcaption>Strona Klienci: lista, filtry i wyszukiwarka.</figcaption><ol class="legend"><li><b>Aktualizuj preferencje:</b> operacja zbiorcza, patrz ostrzeżenie niżej. Nie klikaj, jeśli właścicielka o to nie prosiła.</li>
+<li><b>Dodaj klienta:</b> zakładanie nowej karty.</li>
+<li>Filtr <b>Aktywni</b>. Liczby w przyciskach to zawsze pełne stany.</li>
+<li>Filtr <b>VIP:</b> klienci z co najmniej trzema wizytami w ostatnich ośmiu tygodniach.</li>
+<li><b>Wyszukiwarka:</b> imię, nazwisko, telefon albo e-mail. Potwierdź klawiszem <kbd>Enter</kbd>.</li>
+<li>Znacznik <b>VIP</b> i złota obwódka przy inicjałach.</li>
+<li><b>Trend:</b> mały wykres liczby zakończonych wizyt z ostatnich sześciu miesięcy.</li>
+<li><b>Sortowanie:</b> kliknij nagłówek kolumny, na przykład Ostatnia wizyta.</li>
+<li><b>Akcje:</b> oko otwiera kartę klienta, ikona kartki z ołówkiem otwiera edycję.</li></ol></figure>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col">Kolumna</th><th scope="col">Co w niej widać</th></tr></thead>
+<tbody>
+<tr><td>Klient</td><td>Imię, nazwisko i telefon.</td></tr>
+<tr><td>Ostatnia wizyta</td><td>Kiedy klient był ostatnio w salonie.</td></tr>
+<tr><td>Następna wizyta</td><td>Najbliższa wizyta, która jeszcze się nie odbyła i nie jest odwołana, z imieniem pracownika. Myślnik oznacza, że nic nie jest zaplanowane.</td></tr>
+<tr><td>Wizyt</td><td>Ile wizyt klient ma w historii.</td></tr>
+<tr><td>No-show</td><td>Ile razy klient się nie pojawił (etap Nieobecność).</td></tr>
+<tr><td>Trend</td><td>Czy klient przychodzi coraz częściej, czy rzadziej.</td></tr>
+<tr><td>Aktualne uwagi i zalecenia</td><td>Najnowsza notatka po wizycie tego klienta.</td></tr>
+</tbody></table></div>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Przycisk Aktualizuj preferencje</b></div><div class="note-b"><p>Przelicza preferowanych pracowników wszystkich klientów naraz i kasuje poprzednie preferencje wyliczone automatycznie (ręcznie dodane zostają). Tego nie robi się z ciekawości.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy nie możesz znaleźć klienta</p><dl><dt>Szukam klienta, a lista go nie pokazuje</dt>
+<dd>Sprawdź, który filtr jest włączony nad listą: Aktywni, VIP albo Nieaktywni. Spróbuj samego nazwiska albo numeru telefonu i potwierdź klawiszem <kbd>Enter</kbd>.</dd>
+<dt>Wpisuję nazwisko i są dwie podobne osoby</dt>
+<dd>Porównaj telefon pod nazwiskiem, a potem otwórz kartę i sprawdź datę urodzenia oraz ostatnią wizytę. Gdy to ta sama osoba w dwóch kartach, powiedz właścicielce, żeby je połączyła.</dd></dl></div>
+</section>
+
+<section class="sub" id="nowy-klient" aria-labelledby="h-nowy-klient">
+<h3 id="h-nowy-klient">Nowy klient</h3>
+<p>Klient musi mieć kartę, zanim wpiszesz mu pierwszą wizytę. Zajmuje to pół minuty.</p>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Formularz Nowy klient. Imię i nazwisko są obowiązkowe."><img src="img/d/klient-form.webp" width="1440" height="1000" alt="Formularz Nowy klient: pola Imię, Nazwisko, Telefon, Email, Data urodzenia i Notatki oraz przyciski Zapisz klienta i Anuluj. Pod polem Telefon widać ostrzeżenie, że numer ma już inny klient." loading="lazy" decoding="async"></button><figcaption>Formularz Nowy klient. Imię i nazwisko są obowiązkowe.</figcaption><ol class="legend"><li><b>Imię</b> (obowiązkowe, nazwisko też).</li>
+<li><b>Telefon:</b> wpisz w dowolnym formacie, na przykład 500 100 012. Jeśli numer ma już ktoś inny, pod polem pojawi się ostrzeżenie.</li>
+<li><b>Zapisz klienta:</b> przycisk tuż pod ramką.</li>
+<li><b>Anuluj:</b> przycisk obok, wraca bez zapisywania.</li></ol></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Okno Możliwy duplikat klienta."><img src="img/d/klient-duplicate-confirm.webp" width="1440" height="1000" alt="Okno Możliwy duplikat klienta z informacją, że wykryto możliwych klientów o takich danych, i przyciskami Wróć i popraw oraz Zapisz mimo to." loading="lazy" decoding="async"></button><figcaption>Okno Możliwy duplikat klienta.</figcaption></figure>
+</div>
+<ol class="steps">
+<li>Kliknij w menu <b class="ui">Salon</b> pozycję <b class="ui">Klienci</b>, a potem <b class="ui">Dodaj klienta</b>.</li>
+<li>Wpisz <b class="ui">Imię</b> i <b class="ui">Nazwisko</b>. Te dwa pola są obowiązkowe (mają gwiazdkę).</li>
+<li>Wpisz <b class="ui">Telefon</b>. Numer jest potrzebny, jeśli klient ma dostawać SMS-y.</li>
+<li>Jeśli klient poda, wpisz <b class="ui">Email</b> i <b class="ui">Datę urodzenia</b>. Notatki są dla informacji, które pomogą następnej osobie.</li>
+<li>Kliknij <b class="ui">Zapisz klienta</b>.</li>
+</ol>
+<aside class="note note-auto"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-auto_fix_high"/></svg><b>Aplikacja pilnuje duplikatów</b></div><div class="note-b"><p>Gdy wpiszesz imię, nazwisko i telefon, aplikacja po chwili sprawdza, czy taki klient już nie istnieje. Przy zapisie może pokazać okno <b>Możliwy duplikat klienta</b> z przyciskami <b class="ui">Wróć i popraw</b> oraz <b class="ui">Zapisz mimo to</b>. Dwie karty tej samej osoby rozbijają jej historię wizyt, więc zanim klikniesz Zapisz mimo to, upewnij się, że to naprawdę inna osoba.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt><span class="msg">„Ten numer telefonu ma już klient Aleksandra Sikora. Sprawdź poprawność danych …”</span></dt>
+<dd>Ktoś z tym numerem już jest w bazie. Kliknij link <b class="ui">Zobacz</b>, żeby sprawdzić. Jeśli to ta sama osoba, nie zakładaj drugiej karty, tylko użyj istniejącej. Rodziny czasem mają jeden wspólny numer: wtedy wybierz <b class="ui">Zapisz mimo to</b>.</dd>
+<dt>Nie da się zapisać karty</dt>
+<dd>Sprawdź, czy wpisano imię i nazwisko. Pola z gwiazdką są obowiązkowe.</dd>
+<dt>Klient nie chce podać telefonu</dt>
+<dd>Kartę można zapisać bez numeru. Taki klient nie dostanie SMS-ów z potwierdzeniem i przypomnieniem, więc wizyty trzeba mu potwierdzać telefonicznie albo osobiście.</dd></dl></div>
+</section>
+
+<section class="sub" id="edycja-klienta" aria-labelledby="h-edycja-klienta">
+<h3 id="h-edycja-klienta">Zmiana danych klienta</h3>
+<ol class="steps">
+<li>W menu <b class="ui">Salon</b> wejdź w <b class="ui">Klienci</b> i znajdź klienta.</li>
+<li>Kliknij ikonę kartki z ołówkiem w jego wierszu. Możesz też otworzyć kartę klienta i kliknąć <b class="ui">Edytuj</b>.</li>
+<li>Popraw dane i kliknij <b class="ui">Zapisz klienta</b>.</li>
+</ol>
+<p>W formularzu zmian jest jedna dodatkowa opcja: <b class="ui">Klient aktywny</b>. Odznacz ją, gdy klient przestał przychodzić i nie chcesz go widzieć na codziennej liście. Klient przejdzie do filtra <b class="ui">Nieaktywni</b>, a po zaznaczeniu opcji z powrotem wróci do listy.</p>
+<aside class="note note-stop"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cancel"/></svg><b>Czerwonych przycisków na karcie klienta nie używaj</b></div><div class="note-b"><p>Przycisk <b class="ui">Dezaktywuj</b> na dole karty klienta w praktyce usuwa klienta z list. Wizyty i historia zostają, ale cofnąć to można tylko przyciskiem <b class="ui">Cofnij</b>, który pokazuje się na chwilę tuż po kliknięciu. Jeśli go przegapisz, przywrócenie wymaga administratora. Gdy chcesz tylko wyłączyć klienta, odznacz <b class="ui">Klient aktywny</b> w edycji.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś nie działa</p><dl><dt>Klient zniknął z listy</dt>
+<dd>Najpewniej jest nieaktywny. Kliknij filtr <b class="ui">Nieaktywni</b> nad listą. Jeśli go tam nie ma, mógł zostać usunięty: powiedz o tym właścicielce.</dd>
+<dt>Klient zmienił nazwisko</dt>
+<dd>Edytuj jego kartę. Nie zakładaj nowej, bo historia wizyt zostaje przy starej.</dd>
+<dt>Klient zmienił numer telefonu</dt>
+<dd>Edytuj kartę i wpisz nowy numer jak najszybciej, bo SMS-y wychodzą na numer zapisany w karcie.</dd></dl></div>
+</section>
+
+<section class="sub" id="karta-klienta" aria-labelledby="h-karta-klienta">
+<h3 id="h-karta-klienta">Karta klienta</h3>
+<p>Kartę otwierasz, klikając wiersz klienta na liście albo ikonę oka. Znajdziesz na niej wszystko, co przydaje się przy rozmowie: kiedy klient był ostatnio, do kogo chodzi i jakie ma zalecenia.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Karta klienta: dane podstawowe, kontaktowe i dodatkowe."><img src="img/d/klient-detail.webp" width="1440" height="1000" alt="Karta klienta z imieniem i nazwiskiem, przyciskiem Edytuj, danymi kontaktowymi oraz sekcją informacji dodatkowych." loading="lazy" decoding="async"></button><figcaption>Karta klienta: dane podstawowe, kontaktowe i dodatkowe.</figcaption><ol class="legend"><li><b>Edytuj:</b> formularz zmian.</li>
+<li><b>Dane kontaktowe:</b> telefon i e-mail.</li>
+<li><b>Informacje dodatkowe:</b> data urodzenia z wiekiem, pierwsza i ostatnia wizyta, licznik Zmienione wizyty i notatki.</li></ol></figure>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Dalej na karcie: preferencje klienta i historia wizyt."><img src="img/d/klient-detail-2.webp" width="1440" height="1000" alt="Dolna część karty klienta: tabela Preferencje klienta z przyciskiem Dodaj preferencję oraz tabela Historia wizyt z datą, godzinami, pracownikiem, etapem i kwotą." loading="lazy" decoding="async"></button><figcaption>Dalej na karcie: preferencje klienta i historia wizyt.</figcaption><ol class="legend"><li><b>Preferencje klienta:</b> kogo klient woli, na konkretną usługę albo kategorię.</li>
+<li><b>Dodaj preferencję:</b> wpis ręczny. Aplikacja nigdy go nie skasuje.</li>
+<li><b>Historia wizyt:</b> data, godziny, pracownik, etap i kwota.</li></ol></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Na dole: uwagi z wizyt i czerwone przyciski."><img src="img/d/klient-detail-3.webp" width="1440" height="1000" alt="Najniższa część karty klienta: sekcja Uwagi i zalecenia z wizyt z przyciskiem Dodaj uwagę oraz przyciski Dezaktywuj i Usuń na dole." loading="lazy" decoding="async"></button><figcaption>Na dole: uwagi z wizyt i czerwone przyciski.</figcaption><ol class="legend"><li><b>Uwagi i zalecenia z wizyt:</b> wszystkie notatki z jego wizyt.</li>
+<li><b>Dodaj uwagę:</b> dopisanie nowej notatki.</li>
+<li><b>Dezaktywuj i Usuń:</b> czerwone przyciski, patrz ostrzeżenie wyżej. Nie używaj ich.</li></ol></figure>
+</div>
+<ul>
+<li><b>Preferencje</b> pokazują, do kogo klient woli chodzić. Wpisy z dopiskiem „auto” aplikacja wyliczyła sama z historii wizyt.</li>
+<li><b>Historia wizyt</b> pozwala od razu odpowiedzieć, kiedy klient był ostatnio i do kogo chodził. Ikona przy wierszu otwiera wizytę.</li>
+<li><b>Uwagi i zalecenia</b> warto przeczytać, zanim klient usiądzie na fotelu.</li>
+</ul>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Preferencje przydają się przy awariach grafiku</b></div><div class="note-b"><p>Gdy pracownik jest nieobecny i trzeba komuś przepisać jego wizyty, aplikacja oznacza trójkątem osoby, których klient nie ma na liście preferowanych. Dlatego warto dbać o aktualność preferencji.</p></div></aside>
+</section>
+</section>
+<section class="ch" id="zespol" aria-labelledby="h-zespol">
+<h2 id="h-zespol">Pracownicy, usługi i godziny pracy</h2>
+<p class="lead">Tego zwykle nie zmieniasz, ale warto wiedzieć, jak to działa. Dzięki temu rozumiesz, dlaczego aplikacja czasem nie pozwala wybrać pracownika, usługi albo godziny.</p>
+
+<section class="sub" id="pracownice-uslugi" aria-labelledby="h-pracownice-uslugi">
+<h3 id="h-pracownice-uslugi">Kto robi jakie usługi</h3>
+<p>Każdy pracownik ma w aplikacji swoją kartę. Dla rezerwacji ważne są na niej dwie rzeczy: <b>jakie usługi wykonuje</b> i <b>w jakich godzinach pracuje</b>.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Karta pracownika: bilanse nieobecności, harmonogram pracy i początek listy przypisanych usług."><img src="img/d/pracownik-grafik.webp" width="1440" height="872" alt="Środkowa część karty pracownika: paski wykorzystania urlopów, siedem pól z godzinami pracy na każdy dzień tygodnia (poniedziałek do piątku 9-18, sobota 9-14, niedziela 0) i początek sekcji Przypisane usługi z przyciskiem Dodaj usługę." loading="lazy" decoding="async"></button><figcaption>Karta pracownika: bilanse nieobecności, harmonogram pracy i początek listy przypisanych usług.</figcaption><ol class="legend"><li><b>Bilanse nieobecności:</b> ile dni urlopu pracownik wykorzystał, a ile mu zostało.</li>
+<li><b>Harmonogram pracy:</b> godziny na każdy dzień tygodnia. „9-18” to praca od 9:00 do 18:00, a „0” to dzień wolny.</li>
+<li><b>Przypisane usługi:</b> poniżej jest tabela usług, które ten pracownik robi, z jego ceną i czasem. Przycisk <b class="ui">Dodaj usługę</b> przypisuje kolejną.</li></ol></figure>
+<ul>
+<li>Pracownik pojawia się w formularzu wizyty razem z usługami, które ma przypisane. <b>Bez przypisanych usług nie da się go wybrać.</b></li>
+<li><b>Ta sama usługa może mieć inną cenę i inny czas u różnych pracowników.</b> Aplikacja bierze najpierw cenę (i czas) przypisane pracownikowi, a jeśli ich nie ma, cenę z cennika salonu.</li>
+<li>Usługi są dwojakie: <b>główne</b>, które rezerwuje się samodzielnie, i <b>dodatkowe</b>, czyli dodatki (w aplikacji „mikrousługi”). Dodatki dopisujesz dopiero w trakcie wizyty i muszą pasować do usługi głównej.</li>
+<li>Usługa wyłączona z oferty znika z rezerwacji, ale stare wizyty zachowują ją razem z ceną.</li>
+</ul>
+<h4>Dlaczego nie mogę wybrać pracownika, usługi albo dodatku?</h4>
+<div class="tw"><table class="t">
+<thead><tr><th scope="col">Co widzisz</th><th scope="col">Najczęstsza przyczyna</th><th scope="col">Kto to poprawia</th></tr></thead>
+<tbody>
+<tr><td>Pracownika nie ma na liście</td><td>Jest wyłączony (nieaktywny).</td><td>Właścicielka</td></tr>
+<tr><td>Pracownik jest, ale nie ma jego usługi</td><td>Usługa nie jest do niego przypisana albo jest wyłączona z oferty.</td><td>Właścicielka</td></tr>
+<tr><td>Pracownik jest, ale nie da się go wybrać</td><td>Nie ma przypisanych usług albo ten dzień jest w harmonogramie dniem wolnym.</td><td>Właścicielka</td></tr>
+<tr><td>Cena jest inna niż w cenniku</td><td>Pracownik ma własną cenę tej usługi. To nie błąd.</td><td>Nie trzeba nic robić</td></tr>
+<tr><td>Brakuje dodatku w trakcie wizyty</td><td>Dodatek nie pasuje do usługi głównej z wizyty albo pracownik go nie robi.</td><td>Właścicielka</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sub" id="grafik" aria-labelledby="h-grafik">
+<h3 id="h-grafik">Godziny pracy</h3>
+<p>Godziny pracy są twardą granicą rezerwacji. Wizytę zapiszesz tylko w godzinach pracownika i tylko w dni, które nie są dniem wolnym. Cała wizyta, razem z jej końcem, musi mieścić się przed zamknięciem.</p>
+<ul>
+<li>Zapis „9-18” znaczy od 9:00 do 18:00, a „9:30-18:30” od 9:30 do 18:30. Cyfra „0” oznacza dzień wolny.</li>
+<li>Pracownik <b>bez wpisanych godzin</b> jest traktowany tak, jakby pracował codziennie od 9:00 do 18:00.</li>
+</ul>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Dobra rada</b></div><div class="note-b"><p>Jeśli aplikacja pozwala zapisać wizytę w dzień, w którym pracownik na pewno nie pracuje, zgłoś to właścicielce. Najpewniej ma on pusty harmonogram.</p></div></aside>
+</section>
+
+<section class="sub" id="nieobecnosc-pracownika" aria-labelledby="h-nieobecnosc-pracownika">
+<h3 id="h-nieobecnosc-pracownika">Gdy pracownik jest nieobecny</h3>
+<p>Urlop, zwolnienie lekarskie albo wyjście prywatne zajmują termin pracownika w kalendarzu i blokują nowe rezerwacje.</p>
+<ul>
+<li>W kalendarzu nieobecność to szary blok w kolumnie pracownika. Zatwierdzone są szare, a czekające na decyzję bursztynowe. Jedne i drugie blokują termin.</li>
+<li>Wniosek o urlop składa sam pracownik, a zatwierdza wskazany przełożony. Zwolnienia lekarskie (L4) wpisuje ręcznie właścicielka albo administrator.</li>
+</ul>
+<h4>Pracownik zachorował dziś rano</h4>
+<ol class="steps">
+<li>Powiedz o tym właścicielce albo administratorowi. To oni wpisują zwolnienie i rozwiązują wizyty z tego dnia (część <a href="#konflikty">Konflikt wizyty z nieobecnością</a>).</li>
+<li>Do czasu decyzji nie wpisuj temu pracownikowi nowych wizyt na ten dzień.</li>
+<li>Gdy konflikty są rozwiązane, zadzwoń do klientów, których wizyty zmieniono. Aplikacja nie zawsze sama ich powiadamia.</li>
+</ol>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Gdy nie ma kogo zapytać</b></div><div class="note-b"><p>Jeśli nie możesz skontaktować się z właścicielką, zadzwoń do klientów z wizytami tego pracownika i zaproponuj innego pracownika albo inny termin. Następnie przełóż wizytę (część <a href="#zmiana-terminu">Zmiana terminu</a>), zmień pracownika w edycji albo ją odwołaj (część <a href="#odwolanie">Odwołanie wizyty</a>).</p></div></aside>
+</section>
+
+<section class="sub" id="konflikty" aria-labelledby="h-konflikty">
+<h3 id="h-konflikty">Konflikt wizyty z nieobecnością</h3>
+<p>Gdy zatwierdzana nieobecność wypada w dniu, w którym pracownik ma już umówionych klientów, aplikacja nie zatwierdza jej po cichu. Pokazuje listę kolidujących wizyt i prosi o rozwiązanie każdej z nich. Zwykle robi to właścicielka albo przełożony, ale warto wiedzieć, jak to wygląda, bo to Ty potem dzwonisz do klientów.</p>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Okno Konflikty z wizytami klientów: lista wizyt, które trzeba rozwiązać."><img src="img/d/abs-conflict-list.webp" width="1440" height="1000" alt="Okno Konflikty z wizytami klientów z tabelą siedmiu wizyt (data, godzina, klient, usługa) i dwiema ikonami akcji w każdym wierszu oraz przyciskami Zatwierdź, Zatwierdź mimo to, Odrzuć i Anuluj na dole." loading="lazy" decoding="async"></button><figcaption>Okno Konflikty z wizytami klientów: lista wizyt, które trzeba rozwiązać.</figcaption></figure>
+<p>W każdym wierszu są dwie ikony: <b>Zmień stylistę</b> (osoba z lupą) i <b>Zmień termin</b> (kalendarz z ołówkiem). Jak wybrać właściwe rozwiązanie, pokazuje poniższy schemat.</p>
+<div class="flow" role="group" aria-label="Schemat rozwiązywania konfliktu wizyty z nieobecnością">
+<div class="q">Czy jest ktoś, kto robi wszystkie usługi z tej wizyty i ma w tym czasie wolne?</div>
+<div class="opt"><span class="yn y">TAK</span><div class="a"><b>Zmień stylistę.</b> Aplikacja pokazuje tylko takie osoby. Trójkąt przy nazwisku oznacza, że klient nie ma jej na liście preferowanych. Nowy pracownik dostaje SMS.</div></div>
+<div class="opt"><span class="yn n">NIE</span><div class="a">Przejdź do następnego pytania.</div></div>
+<div class="q">Czy klient może przyjść w innym terminie?</div>
+<div class="opt"><span class="yn y">TAK</span><div class="a"><b>Zmień termin.</b> Ten sam pracownik, nowy dzień i godzina z podanych wolnych miejsc. Tu nie ma wyboru zbiorczego, bo każda wizyta ma inną godzinę.</div></div>
+<div class="opt"><span class="yn n">NIE</span><div class="a"><b>Anuluj wizytę.</b> Powód wpisuje się sam: „Nieobecność pracownika”. Pole <b class="ui">Wyślij SMS do klienta</b> jest domyślnie zaznaczone i wysyła informację o odwołaniu z linkiem do ponownej rezerwacji.</div></div>
+</div>
+<div class="pair">
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Zmień stylistę: osoby, które mogą zastąpić. Trójkąt oznacza brak na liście preferowanych przez klienta."><img src="img/d/abs-conflict-reassign.webp" width="1440" height="1000" alt="Okno Zmień stylistę z tabelą dwóch pracowników i trójkątami ostrzegawczymi, polem wyboru zastosowania wyboru do pozostałych konfliktów oraz przyciskami Wróć i Potwierdź zastępstwo." loading="lazy" decoding="async"></button><figcaption>Zmień stylistę: osoby, które mogą zastąpić. Trójkąt oznacza brak na liście preferowanych przez klienta.</figcaption></figure>
+<figure class="shot"><button type="button" class="zoom" aria-label="Powiększ zrzut ekranu: Zmień termin: ten sam pracownik, nowa data i wolne godziny."><img src="img/d/abs-conflict-reschedule.webp" width="1440" height="1000" alt="Okno Zmień termin z polem Nowa data i sześcioma przyciskami wolnych godzin oraz przyciskami Wróć i Potwierdź zmianę terminu." loading="lazy" decoding="async"></button><figcaption>Zmień termin: ten sam pracownik, nowa data i wolne godziny.</figcaption></figure>
+</div>
+<ul>
+<li>Przycisk <b class="ui">Zatwierdź</b> jest szary, dopóki każda wizyta z listy nie zostanie rozwiązana.</li>
+<li>Czerwony przycisk <b class="ui">Zatwierdź mimo to</b> zatwierdza nieobecność bez rozwiązania konfliktów. Wizyty zostają wtedy w kalendarzu nieobecnego pracownika. Używa się go tylko świadomie.</li>
+<li>Każde rozstrzygnięcie zapisuje się w rejestrze, dostępnym przez link <b class="ui">Historia rozwiązań</b> w oknie.</li>
+</ul>
+<aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Po rozwiązaniu konfliktów zadzwoń do klientów</b></div><div class="note-b"><p>Przy zmianie pracownika albo terminu aplikacja nie wysyła klientowi własnej wiadomości. SMS dostaje nowy pracownik, a klient tylko wtedy, gdy wizyta jest odwoływana. Klient może więc nie wiedzieć o zmianie, dopóki do niego nie zadzwonisz.</p></div></aside>
+<div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś się nie zgadza w nieobecnościach</p><dl><dt>Nie mogę zatwierdzić albo odrzucić wniosku</dt>
+<dd>Wnioski zatwierdza wskazany przełożony pracownika. Jeśli to nie Ty, pozycja jest dla Ciebie nieaktywna albo jej nie ma. To normalne.</dd>
+<dt>Aplikacja nie pozwala zapisać wizyty w terminie z wnioskiem, którego jeszcze nikt nie zatwierdził</dt>
+<dd>Wniosek czekający na decyzję blokuje termin „na wszelki wypadek”. Zapytaj przełożonego o decyzję albo wybierz inny termin.</dd>
+<dt>Pracownik wrócił wcześniej z urlopu, a kalendarz nadal jest zablokowany</dt>
+<dd>Powiedz o tym właścicielce. Zatwierdzoną nieobecność anuluje właścicielka albo sam pracownik, a wtedy termin się zwalnia.</dd></dl></div>
+</section>
+</section>
+<section class="ch" id="sytuacje" aria-labelledby="h-sytuacje">
+<h2 id="h-sytuacje">Codzienne sytuacje</h2>
+<p class="lead">Najczęstsze zdarzenia z życia recepcji, każde z gotową odpowiedzią: co robisz Ty i co robi aplikacja sama. W trzeciej kolumnie są wbudowane funkcje, na których możesz polegać.</p>
+
+<section class="sub" id="sytuacje-telefon" aria-labelledby="h-sytuacje-telefon">
+<h3 id="h-sytuacje-telefon">Klient dzwoni</h3>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Sytuacja</th><th scope="col">Co robisz</th><th scope="col">Co aplikacja robi sama</th></tr></thead>
+<tbody>
+<tr><th scope="row">Chce się umówić</th>
+<td>Sprawdź kalendarz w widoku Dzień, potem <b class="ui">Nowa wizyta</b>. Opis: <a href="#nowa-wizyta">Nowa wizyta</a>.</td>
+<td>Pilnuje pięciu zasad i nie pozwala zapisać wizyty, która się nie zmieści. Planuje SMS-y, jeśli są włączone.</td></tr>
+<tr><th scope="row">Chce umówić się na „to samo co zwykle”</th>
+<td>Otwórz kartę klienta: <b class="ui">Historia wizyt</b> pokazuje, kiedy i do kogo chodził, a <b class="ui">Preferencje</b> jego ulubionych pracowników. Potem wpisz <b class="ui">Nowa wizyta</b>.</td>
+<td>Preferencje wylicza z historii wizyt (wpisy z dopiskiem „auto”).</td></tr>
+<tr><th scope="row">Chce odwołać wizytę</th>
+<td>Zmień etap na <b class="ui">Anulowana</b>, wpisz powód, jeśli go podał. Opis: <a href="#odwolanie">Odwołanie wizyty</a>.</td>
+<td>Zwalnia termin i zwiększa licznik odwołań klienta.</td></tr>
+<tr><th scope="row">Prosi o inny dzień albo godzinę</th>
+<td>Sprawdź wolny termin, potem <b class="ui">Przełóż wizytę</b>. Gdy klient wcześniej potwierdził, odpowiedz na pytanie, kto prosi o zmianę. Opis: <a href="#zmiana-terminu">Zmiana terminu</a>.</td>
+<td>Zamraża starą wizytę i tworzy nową z tymi samymi usługami i ceną. Licznik zmian terminu rośnie.</td></tr>
+<tr><th scope="row">Chce dopisać usługę do umówionej wizyty</th>
+<td>Otwórz wizytę, kliknij <b class="ui">Edytuj</b>, potem <b class="ui">+ Dodaj usługę lub dodatek</b>. Sprawdź, czy dłuższa wizyta mieści się przed następną.</td>
+<td>Sumuje czas i cenę. Przy zapisie sprawdza konflikt z następną wizytą pracownika.</td></tr>
+<tr><th scope="row">Pyta, kiedy ma wizytę</th>
+<td>W menu Klienci wyszukaj go i spójrz na kolumnę <b class="ui">Następna wizyta</b> albo otwórz kartę.</td>
+<td>Pokazuje najbliższą nieodwołaną wizytę z imieniem pracownika.</td></tr>
+<tr><th scope="row">Zmienił numer telefonu albo nazwisko</th>
+<td>Edytuj kartę klienta. Opis: <a href="#edycja-klienta">Zmiana danych klienta</a>.</td>
+<td>Historia wizyt zostaje przy tej samej karcie.</td></tr>
+<tr><th scope="row">Chcą przyjść dwie osoby naraz</th>
+<td>Wpisz dwie osobne wizyty w tym samym czasie, u różnych pracowników. Każda osoba musi mieć własną kartę klienta.</td>
+<td>Nie pozwala jednej osobie mieć dwóch wizyt w tym samym czasie.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sub" id="sytuacje-sms" aria-labelledby="h-sytuacje-sms">
+<h3 id="h-sytuacje-sms">Klient odpowiada na SMS</h3>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Sytuacja</th><th scope="col">Co robisz</th><th scope="col">Co aplikacja robi sama</th></tr></thead>
+<tbody>
+<tr><th scope="row">Klient klika Potwierdzam</th>
+<td>Nic. Na stronie wizyty zobaczysz zielony znacznik „Klient potwierdził przez SMS”.</td>
+<td>Zmienia etap na Potwierdzona i zapisuje w historii, że zrobił to „Klient (SMS)”.</td></tr>
+<tr><th scope="row">Klient odwołuje wizytę z linku w SMS-ie</th>
+<td>W rogu ekranu pojawi się komunikat „Klient odwołał wizytę przez SMS” z jego nazwiskiem. Możesz zadzwonić i zaproponować inny termin.</td>
+<td>Zmienia etap na Anulowana, zwalnia termin, zwiększa licznik odwołań i kasuje zaplanowane SMS-y tej wizyty.</td></tr>
+<tr><th scope="row">Klient chce odwołać z linku, ale do wizyty zostało mało czasu</th>
+<td>Link prosi go o telefon do salonu (próg to zwykle 12 godzin przed wizytą). Gdy zadzwoni, odwołujesz wizytę Ty.</td>
+<td>Nie odwołuje wizyty. Pokazuje klientowi numer salonu.</td></tr>
+<tr><th scope="row">Klient w ogóle nie odpowiada na SMS</th>
+<td>Wizyta zostaje niebieska (Zaplanowana). Zadzwoń i, jeśli klient potwierdzi, ustaw Potwierdzona. Opis: <a href="#potwierdzenie">Potwierdzenie wizyty</a>.</td>
+<td>Niczego nie odwołuje i nie zmienia: niepotwierdzona wizyta nadal zajmuje termin.</td></tr>
+<tr><th scope="row">Klient mówi, że nie dostał SMS-a</th>
+<td>Sprawdź numer telefonu na karcie klienta. Jeśli numer jest dobry, zgłoś to właścicielce: to ustawienia SMS.</td>
+<td>Wysyła wiadomości tylko wtedy, gdy SMS-y są włączone, a numer jest poprawny.</td></tr>
+<tr><th scope="row">W rogu ekranu pojawił się komunikat o zmianie etapu wizyty</th>
+<td>Nic nie musisz robić. To informacja, że ktoś inny (pracownik ze swojego linku, klient albo inny użytkownik) zmienił etap.</td>
+<td>Co kilka sekund sprawdza zmiany i odświeża dane na ekranie. Pokazuje najwyżej trzy komunikaty naraz.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sub" id="sytuacje-salon" aria-labelledby="h-sytuacje-salon">
+<h3 id="h-sytuacje-salon">Klient jest w salonie</h3>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Sytuacja</th><th scope="col">Co robisz</th><th scope="col">Co aplikacja robi sama</th></tr></thead>
+<tbody>
+<tr><th scope="row">Przyszedł wcześniej</th>
+<td>Od 30 minut przed umówioną godziną ustaw <b class="ui">W trakcie</b>. Wcześniej poczekaj albo przełóż wizytę na wcześniejszą godzinę.</td>
+<td>Gdy jest za wcześnie, pokazuje komunikat z godziną, od której zmiana jest możliwa.</td></tr>
+<tr><th scope="row">Spóźnia się</th>
+<td>Zostaw wizytę bez zmian. Gdy zachodzi na następnego klienta pracownika, przełóż jedną z wizyt. Nie oznaczaj nieobecności.</td>
+<td>Nie ma osobnej funkcji spóźnienia. Wizyta czeka na swoim miejscu.</td></tr>
+<tr><th scope="row">Przyszedł bez rezerwacji</th>
+<td>Wpisz <b class="ui">Nowa wizyta</b> na najbliższą wolną godzinę, a potem ustaw <b class="ui">W trakcie</b>.</td>
+<td>Sprawdza, czy pracownik jest wolny i czy pracuje o tej porze.</td></tr>
+<tr><th scope="row">Chce innego pracownika niż w wizycie</th>
+<td>Otwórz wizytę, <b class="ui">Edytuj</b>, zmień pole <b class="ui">Pracownik</b>. Opis: <a href="#poprawianie">Poprawianie wizyty</a>.</td>
+<td>Sprawdza godziny pracy i wolne miejsce nowego pracownika.</td></tr>
+<tr><th scope="row">Chce dodatkową usługę w trakcie wizyty</th>
+<td>Na stronie wizyty (etap W trakcie) wybierz dodatek w sekcji <b class="ui">Dodaj mikrousługę</b>. Opis: <a href="#w-trakcie">Wizyta trwa: dodatki</a>.</td>
+<td>Dolicza cenę dodatku do wizyty.</td></tr>
+<tr><th scope="row">Wizyta trwa dłużej niż planowano</th>
+<td>Zostaw etap W trakcie. Gdy klient skończy, zamknij wizytę na jej stronie.</td>
+<td>Okno <b class="ui">Zamknij wizytę</b> nie ma ograniczenia czasu po umówionym końcu.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sub" id="sytuacje-po" aria-labelledby="h-sytuacje-po">
+<h3 id="h-sytuacje-po">Po wizycie</h3>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Sytuacja</th><th scope="col">Co robisz</th><th scope="col">Co aplikacja robi sama</th></tr></thead>
+<tbody>
+<tr><th scope="row">Klient płaci</th>
+<td>Zamknij wizytę na jej stronie i wybierz metodę płatności. Opis: <a href="#zakonczenie">Koniec wizyty i płatność</a>.</td>
+<td>Zapisuje przychód z datą wizyty, tylko raz.</td></tr>
+<tr><th scope="row">Klient dostaje rabat</th>
+<td>W oknie <b class="ui">Zamknij wizytę</b> wpisz kwotę rabatu w złotych (nie w procentach). O tym, kto może udzielać rabatów, zdecyduje właścicielka.</td>
+<td>Liczy przychód jako kwotę usług minus rabat.</td></tr>
+<tr><th scope="row">Klient chce ocenić wizytę albo ją pochwalić czy skrytykować</th>
+<td>Zapisz gwiazdki od 1 do 5 na stronie wizyty (<b class="ui">Zapisz ocenę</b>). Treść uwagi dopisz w uwagach i zaleceniach po wizycie.</td>
+<td>Średnia ocen trafia do statystyk pracownika. Klient może też ocenić sam z linku w SMS-ie, tylko raz.</td></tr>
+<tr><th scope="row">Pracownik zostawił zalecenia dla klienta</th>
+<td>Dopisz je ikoną notatki w wierszu listy wizyt albo w sekcji uwag na stronie wizyty.</td>
+<td>Najnowsza notatka widnieje w kolumnie <b class="ui">Aktualne uwagi i zalecenia</b> na liście wizyt i klientów.</td></tr>
+<tr><th scope="row">Na koniec dnia zostały wizyty bez etapu końcowego</th>
+<td>Kliknij <b class="ui">Rozlicz przeszłe wizyty</b> i uporządkuj je. Opis: <a href="#rozlicz">Rozliczanie zaległych wizyt</a>.</td>
+<td>Zapisuje przychód z datą wizyty, nie z dzisiejszą.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sub" id="sytuacje-internet" aria-labelledby="h-sytuacje-internet">
+<h3 id="h-sytuacje-internet">Klient rezerwuje przez internet</h3>
+<p>Klient może sam umówić wizytę na stronie rezerwacji salonu. Wybiera do trzech usług, pracownika, dzień i godzinę. Aplikacja stosuje wtedy te same pięć zasad co przy Twojej rezerwacji.</p>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Sytuacja</th><th scope="col">Co robisz</th><th scope="col">Co aplikacja robi sama</th></tr></thead>
+<tbody>
+<tr><th scope="row">Na liście jest wizyta z dopiskiem „Rezerwacja online”</th>
+<td>Sprawdź, czy dane klienta i usługi mają sens. Nie musisz jej zatwierdzać, bo jest już zapisana.</td>
+<td>Szuka istniejącej karty po numerze telefonu i nazwisku, a gdy nie znajdzie, zakłada nową. Wysyła jeden SMS z prośbą o potwierdzenie.</td></tr>
+<tr><th scope="row">Karta klienta z internetu ma notatkę „do weryfikacji”</th>
+<td>Numer telefonu albo e-mail pasował do kogoś o innym nazwisku. Sprawdź, czy to nie ta sama osoba po zmianie nazwiska albo ktoś z rodziny. W razie wątpliwości powiedz właścicielce.</td>
+<td>Niczego nie zgaduje: zakłada nową kartę z notatką, zamiast dopisać wizytę do cudzej karty.</td></tr>
+<tr><th scope="row">Nowy klient z internetu nie dostaje przypomnień</th>
+<td>Jeśli wizyta jest blisko, zadzwoń i potwierdź ją sam.</td>
+<td>Wstrzymuje przypomnienia, dopóki klient nie kliknie linku z pierwszego SMS-a, bo numer nie jest jeszcze potwierdzony.</td></tr>
+<tr><th scope="row">Klient mówi, że zarezerwował, a wizyty nie widać</th>
+<td>Odśwież stronę klawiszem <kbd>F5</kbd>, sprawdź właściwy dzień i pracownika w filtrach. Poszukaj klienta w widoku Lista po nazwisku.</td>
+<td>Rezerwacja online trafia do tego samego kalendarza co Twoje wizyty.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sub" id="sytuacje-pracownik" aria-labelledby="h-sytuacje-pracownik">
+<h3 id="h-sytuacje-pracownik">Po stronie pracownika</h3>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Sytuacja</th><th scope="col">Co robisz</th><th scope="col">Co aplikacja robi sama</th></tr></thead>
+<tbody>
+<tr><th scope="row">Pracownik zachorował albo ma nagły wypadek</th>
+<td>Powiedz właścicielce. Do czasu decyzji nie wpisuj temu pracownikowi wizyt. Opis: <a href="#nieobecnosc-pracownika">Gdy pracownik jest nieobecny</a>.</td>
+<td>Blokuje termin pracownika i przy zatwierdzeniu nieobecności pokazuje listę wizyt do rozwiązania.</td></tr>
+<tr><th scope="row">Pracownik spóźni się do pracy</th>
+<td>Zadzwoń do klientów z pierwszymi wizytami i zaproponuj inną godzinę albo innego pracownika. Przełóż wizytę albo zmień pracownika w edycji.</td>
+<td>Nie ma osobnej funkcji. Każda zmiana zapisuje się w Historii zmian.</td></tr>
+<tr><th scope="row">Pracownik zaczyna i kończy wizytę ze swojego telefonu</th>
+<td>Nic nie robisz. Na 20 minut przed wizytą pracownik dostaje SMS z linkiem, w którym może rozpocząć i zakończyć wizytę. Zobaczysz komunikat o zmianie etapu.</td>
+<td>Zmienia etap tak samo, jakbyś zrobił to Ty, i zapisuje przychód. Po zakończeniu z linku planuje SMS z prośbą o ocenę.</td></tr>
+</tbody></table></div>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Nie ma tu Twojej sytuacji?</b></div><div class="note-b"><p>Skorzystaj z wyszukiwarki w spisie treści i wpisz jedno słowo, na przykład „spóźnia” albo „rabat”. Jeśli to nie pomoże, zajrzyj do części <a href="#problemy">Gdy coś nie działa</a>. A jeśli i tam nie ma odpowiedzi, powiedz o tym właścicielce: być może trzeba dopisać nową sytuację do instrukcji.</p></div></aside>
+</section>
+</section>
+<section class="ch" id="problemy" aria-labelledby="h-problemy">
+<h2 id="h-problemy">Gdy coś nie działa</h2>
+<p class="lead">Większość kłopotów ma prostą przyczynę: albo aplikacja pilnuje jakiejś zasady, albo Twoje konto nie ma uprawnień. Poniżej najczęstsze objawy i co z nimi zrobić.</p>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Co widzisz</th><th scope="col">Najczęstsza przyczyna</th><th scope="col">Co zrobić</th></tr></thead>
+<tbody>
+<tr><th scope="row">Przycisk jest szary i nie da się go kliknąć</th><td>Brakuje wymaganych pól albo konto nie ma uprawnień do tej czynności.</td><td>Uzupełnij pola z gwiazdką. Jeśli przycisk jest szary mimo kompletu danych, poproś właścicielkę o dostęp.</td></tr>
+<tr><th scope="row">W menu nie ma pozycji, o której czytasz (Pracownicy, Usługi, Nieobecności)</th><td>Konto nie ma do niej uprawnień.</td><td>To normalne. Jeśli taka pozycja jest Ci potrzebna do pracy, poproś właścicielkę o dostęp.</td></tr>
+<tr><th scope="row"><span class="msg">„Za wcześnie na rozpoczęcie wizyty”</span></th><td>Do umówionej godziny zostało ponad 30 minut.</td><td>Poczekaj do godziny z komunikatu albo przełóż wizytę na wcześniej. Część: <a href="#klient-w-salonie">Klient jest w salonie</a>.</td></tr>
+<tr><th scope="row"><span class="msg">„Zakończenie wizyty możliwe tylko w ciągu 30 min od planowanego końca”</span></th><td>Zamykasz wizytę z listy albo z kalendarza.</td><td>Zamknij ją na jej stronie, w oknie Zamknij wizytę. Część: <a href="#zakonczenie">Koniec wizyty i płatność</a>.</td></tr>
+<tr><th scope="row">W menu wizyty nie ma etapu Nieobecność</th><td>Wizyta nie jest Potwierdzona albo do jej startu zostało ponad 30 minut.</td><td>Zaczekaj albo po zakończeniu dnia użyj Rozlicz przeszłe wizyty. Część: <a href="#nieobecnosc-klienta">Klient się nie pojawił</a>.</td></tr>
+<tr><th scope="row">Godzina w formularzu jest przekreślona</th><td>Pracownik ma wtedy inną wizytę albo nie pracuje.</td><td>Wybierz inną godzinę, innego pracownika albo inny dzień. Część: <a href="#pilnuje">Czego pilnuje aplikacja</a>.</td></tr>
+<tr><th scope="row">Komunikat o konflikcie czasowym klienta</th><td>Klient ma już wizytę w tym czasie.</td><td>Zapytaj, czy to ta sama wizyta. Jeśli tak, nie wpisuj drugiej. Jeśli nie, wybierz inną godzinę.</td></tr>
+<tr><th scope="row">Komunikat o nieobecności pracownika</th><td>Pracownik ma urlop, zwolnienie albo wniosek czeka na decyzję.</td><td>Wybierz inny termin albo innego pracownika.</td></tr>
+<tr><th scope="row">Wizyta zniknęła z kalendarza</th><td>Jest odwołana, nieobecna albo przełożona.</td><td>Poszukaj jej w widoku Lista przez pole Szukaj. Część: <a href="#kolory">Kolory i znaki</a>.</td></tr>
+<tr><th scope="row">Ten sam klient jest na liście dwa razy</th><td>Ktoś zapisał drugą kartę mimo ostrzeżenia o duplikacie albo klient zarezerwował przez internet.</td><td>Nie dopisuj wizyt do drugiej karty. Powiedz właścicielce, żeby je połączyła.</td></tr>
+<tr><th scope="row">Cena wizyty jest inna niż w cenniku</th><td>Wizyta pamięta cenę z dnia rezerwacji albo pracownik ma własną cenę usługi.</td><td>To nie błąd. Jeśli cena naprawdę jest zła, powiedz właścicielce.</td></tr>
+<tr><th scope="row">Strona się nie ładuje albo wygląda dziwnie</th><td>Chwilowy kłopot z internetem albo stara wersja strony w przeglądarce.</td><td>Odśwież stronę klawiszem <kbd>F5</kbd>. Jeśli to nie pomoże, sprawdź połączenie z internetem, a potem powiedz właścicielce, co dokładnie widzisz.</td></tr>
+<tr><th scope="row">Nie mogę się zalogować</th><td>Błędne hasło albo zapomniane hasło.</td><td>Na stronie logowania kliknij <b class="ui">Zapomniałem hasła</b> i postępuj zgodnie z wiadomością, którą dostaniesz.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="ch" id="nie-do-cofniecia" aria-labelledby="h-nie-do-cofniecia">
+<h2 id="h-nie-do-cofniecia">Czerwone przyciski</h2>
+<p class="lead">W aplikacji nie ma kosza ani przycisku Cofnij, poza kilkoma wyjątkami. Zanim klikniesz ostatni krok, zatrzymaj się na sekundę i sprawdź, co dokładnie stanie się potem.</p>
+<div class="tw"><table class="t sit">
+<thead><tr><th scope="col">Przycisk</th><th scope="col">Co się stanie</th><th scope="col">Zrób lepiej tak</th></tr></thead>
+<tbody>
+<tr><th scope="row">Usuń na stronie wizyty</th><td>Wizyta znika z kalendarza i list, a jej przychód z raportów. W aplikacji nie ma przywracania.</td><td>Użyj etapu Anulowana albo Nieobecność.</td></tr>
+<tr><th scope="row">Dezaktywuj lub Usuń na dole karty klienta</th><td>Klient znika z list. Cofnąć można tylko przyciskiem Cofnij, który pokazuje się na chwilę po kliknięciu.</td><td>W Edytuj odznacz Klient aktywny.</td></tr>
+<tr><th scope="row">Zapisz zmiany w oknie Rozlicz przeszłe wizyty</th><td>Wizyty dostają etapy końcowe, których stamtąd nie zmienisz.</td><td>Sprawdź każdy wiersz przed zapisem.</td></tr>
+<tr><th scope="row">Etapy Zakończona, Anulowana, Nieobecność</th><td>To ostatnie etapy wizyty. Liczniki klienta rosną na stałe.</td><td>Sprawdź nazwisko i godzinę przed kliknięciem.</td></tr>
+<tr><th scope="row">Aktualizuj preferencje (lista klientów)</th><td>Przelicza i kasuje automatyczne preferencje wszystkich klientów naraz.</td><td>Nie klikaj, jeśli właścicielka o to nie prosiła.</td></tr>
+<tr><th scope="row">Zapisz mimo to (okno duplikatu klienta)</th><td>Powstaje druga karta tej samej osoby.</td><td>Najpierw kliknij Zobacz i sprawdź istniejącego klienta.</td></tr>
+<tr><th scope="row">Zatwierdź mimo to (okno konfliktów nieobecności)</th><td>Nieobecność jest zatwierdzona, a wizyty klientów zostają u nieobecnego pracownika.</td><td>Rozwiąż każdą wizytę z listy.</td></tr>
+</tbody></table></div>
+<aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Gdy zrobisz pomyłkę</b></div><div class="note-b"><p>Powiedz o niej od razu właścicielce i podaj nazwisko klienta, dzień oraz godzinę wizyty. Im szybciej, tym łatwiej to naprawić. Ślad każdej zmiany zostaje w Historii zmian, więc nic nie ginie bez wiedzy właścicielki.</p></div></aside>
+</section>
+
+<section class="ch" id="slowniczek" aria-labelledby="h-slowniczek">
+<h2 id="h-slowniczek">Słowniczek</h2>
+<p class="lead">Słowa, które pojawiają się w aplikacji, w prostym wyjaśnieniu.</p>
+<dl class="gl">
+<dt>Etap wizyty (w aplikacji: status)</dt><dd>To, w którym miejscu drogi jest wizyta: Zaplanowana, Potwierdzona, W trakcie, Zakończona, Anulowana, Nieobecność albo Zmieniona.</dd>
+<dt>Plakietka</dt><dd>Kolorowy znacznik z nazwą etapu. Kliknięcie otwiera menu zmiany etapu.</dd>
+<dt>Klient</dt><dd>Każda osoba, która przychodzi do salonu, kobieta lub mężczyzna. Tak nazywa to aplikacja.</dd>
+<dt>Pracownik, stylista</dt><dd>Osoba, która obsługuje klientów. Ma w aplikacji swoją kartę z usługami i godzinami pracy.</dd>
+<dt>Usługa główna i dodatek</dt><dd>Usługa główna to zabieg, który się rezerwuje. Dodatek (w aplikacji „mikrousługa”) dopisuje się do wizyty w trakcie jej trwania, na przykład maskę.</dd>
+<dt>Harmonogram pracy, grafik</dt><dd>Godziny, w których pracownik przyjmuje klientów, osobno na każdy dzień tygodnia.</dd>
+<dt>Nieobecność pracownika</dt><dd>Urlop, zwolnienie lekarskie albo wyjście prywatne. Blokuje jego termin w kalendarzu.</dd>
+<dt>Nieobecność klienta (no-show)</dt><dd>Klient miał wizytę i nie przyszedł. Aplikacja liczy takie przypadki na jego karcie.</dd>
+<dt>Przełożenie wizyty (okno „Przepisz wizytę”)</dt><dd>Zmiana terminu: stara wizyta zostaje jako Zmieniona, a nowa powstaje w nowym terminie.</dd>
+<dt>Konflikt</dt><dd>Sytuacja, w której dwie rzeczy nie mogą się zdarzyć naraz, na przykład dwie wizyty w tym samym czasie albo wizyta w czasie urlopu pracownika.</dd>
+<dt>Preferencje klienta</dt><dd>Informacja, do kogo klient woli chodzić, na konkretną usługę albo kategorię usług.</dd>
+<dt>VIP</dt><dd>Klient z co najmniej trzema wizytami w ostatnich ośmiu tygodniach.</dd>
+<dt>Rozliczenie wizyty</dt><dd>Nadanie wizycie etapu końcowego, żeby zapisały się pieniądze albo licznik klienta. Zaległe wizyty rozlicza się zbiorczo w oknie Rozlicz przeszłe wizyty.</dd>
+<dt>Suma przychodu</dt><dd>Dwie liczby: pierwsza to pieniądze za wizyty już zakończone, druga to razem z jeszcze zaplanowanymi.</dd>
+<dt>Komunikat w rogu ekranu</dt><dd>Krótka informacja, która pojawia się na chwilę w prawym dolnym rogu i sama znika.</dd>
+<dt>Uprawnienia</dt><dd>To, co Twoje konto może oglądać i zmieniać. Nadaje je właścicielka. Gdy czegoś brakuje w menu albo przycisk jest szary, najczęściej chodzi właśnie o uprawnienia.</dd>
+</dl>
+
+<p class="endnote">Stan instrukcji na 8 października 2026. Zrzuty ekranu przedstawiają fikcyjnych klientów i fikcyjne wizyty. Część pochodzi z konta właścicielki, więc Twoje ekrany mogą mieć mniej przycisków. Aplikacja się rozwija: jeśli coś wygląda inaczej niż w instrukcji, powiedz o tym właścicielce. Wszystkie moduły, także te, do których recepcja zwykle nie ma dostępu, opisuje dłuższa <a href="/instrukcja" target="_top">Instrukcja obsługi</a>.</p>
+</section>
+</main>
+</div>
+<button class="up" type="button" aria-label="Wróć na początek strony"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-arrow_upward"/></svg></button>
+<dialog id="lb" closedby="any" aria-label="Powiększony zrzut ekranu">
+<form method="dialog"><button class="lb-x" value="close">Zamknij</button></form>
+<img alt="">
+</dialog>
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* print */
+  var pb = $('#print-btn');
+  if (pb) pb.addEventListener('click', function () { window.print(); });
+
+  /* lightbox: native <dialog>; Esc and the Zamknij button are built in, the click handler is the fallback for light dismiss */
+  var lb = $('#lb');
+  if (lb && lb.showModal) {
+    document.addEventListener('click', function (e) {
+      var z = e.target.closest && e.target.closest('.zoom');
+      if (!z) return;
+      var im = $('img', z), big = $('img', lb);
+      big.src = im.currentSrc || im.src;
+      big.alt = im.alt;
+      lb.showModal();
+    });
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      lb.addEventListener('click', function (e) {
+        if (e.target !== lb) return;
+        var r = lb.getBoundingClientRect();
+        var inside = r.top <= e.clientY && e.clientY <= r.top + r.height && r.left <= e.clientX && e.clientX <= r.left + r.width;
+        if (!inside) lb.close();
+      });
+    }
+  }
+
+  /* table of contents on small screens */
+  var toc = $('#toc'), tb = $('#toc-btn');
+  if (tb) {
+    tb.addEventListener('click', function () {
+      var open = toc.classList.toggle('open');
+      tb.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    $('#toc-list').addEventListener('click', function (e) {
+      if (e.target.closest('a')) { toc.classList.remove('open'); tb.setAttribute('aria-expanded', 'false'); }
+    });
+  }
+
+  /* search: every section heading plus its text */
+  function norm(s) {
+    return s.toLowerCase().replace(/[ąćęłńóśźż]/g, function (c) { return 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]; });
+  }
+  var idx = [];
+  $$('main section[id]').forEach(function (sec) {
+    var h = $('h2, h3', sec);
+    if (!h) return;
+    var own = sec.cloneNode(true);
+    $$('section.sub', own).forEach(function (n) { if (n !== own) n.remove(); });
+    var raw = (own.textContent || '').replace(/\s+/g, ' ').trim();
+    idx.push({ id: sec.id, title: h.textContent.trim(), raw: raw, n: norm(raw), nt: norm(h.textContent) });
+  });
+  var q = $('#q'), hits = $('#hits');
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  if (q) {
+    q.addEventListener('input', function () {
+      var term = norm(q.value.trim());
+      if (term.length < 2) { hits.style.display = 'none'; hits.innerHTML = ''; return; }
+      var found = [];
+      idx.forEach(function (i) {
+        var inTitle = i.nt.indexOf(term) > -1, p = i.n.indexOf(term);
+        if (inTitle || p > -1) {
+          var start = Math.max(0, p - 50);
+          found.push({ i: i, snip: p > -1 ? i.raw.slice(start, start + 130) : i.raw.slice(0, 130), score: inTitle ? 0 : 1 });
+        }
+      });
+      found.sort(function (a, b) { return a.score - b.score; });
+      found = found.slice(0, 10);
+      hits.innerHTML = found.length
+        ? found.map(function (f) { return '<a href="#' + f.i.id + '" data-hit><b>' + esc(f.i.title) + '</b><span>' + esc(f.snip) + '</span></a>'; }).join('')
+        : '<a><b>Brak wyników</b><span>Spróbuj innego słowa, na przykład „termin”, „odwołać” albo „płatność”.</span></a>';
+      hits.style.display = 'block';
+    });
+    hits.addEventListener('click', function (e) {
+      if (e.target.closest('a[data-hit]')) {
+        hits.style.display = 'none';
+        if (toc) { toc.classList.remove('open'); if (tb) tb.setAttribute('aria-expanded', 'false'); }
+      }
+    });
+  }
+
+  /* highlight the current section in the contents (IntersectionObserver, no scroll listener) */
+  var links = $$('.toc a.l'), map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var ob = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var a = map[e.target.id];
+        if (!a) return;
+        links.forEach(function (l) { l.classList.remove('on'); l.removeAttribute('aria-current'); });
+        a.classList.add('on');
+        a.setAttribute('aria-current', 'true');
+        if (toc && toc.scrollHeight > toc.clientHeight && getComputedStyle(toc).position === 'sticky') {
+          var r = a.getBoundingClientRect(), t = toc.getBoundingClientRect();
+          if (r.top < t.top + 80 || r.bottom > t.bottom - 40) toc.scrollTop += r.top - t.top - t.height / 3;
+        }
+      });
+    }, { rootMargin: '-10% 0px -78% 0px' });
+    $$('main section[id]').forEach(function (s) { if (map[s.id]) ob.observe(s); });
+
+    /* back-to-top button appears once the hero has scrolled out of view */
+    var up = $('.up'), top = $('#top');
+    if (up && top) {
+      new IntersectionObserver(function (es) { up.classList.toggle('on', !es[0].isIntersecting); }).observe(top);
+      up.addEventListener('click', function () { window.scrollTo({ top: 0 }); });
+    }
+  }
+})();
+</script>
+</body>
+</html>

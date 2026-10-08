@@ -34,6 +34,7 @@ export const PAGE_TITLE_ENTRIES: Array<[string, string]> = [
   ['/ustawienia/sms/historia', 'Wysyłki SMS'],
   ['/ustawienia/sms', 'Ustawienia SMS'],
   ['/import-danych', 'Import danych'],
+  ['/instrukcja-recepcja', 'Instrukcja dla recepcji'],
   ['/instrukcja-smartfon', 'Instrukcja (smartfon)'],
   ['/instrukcja', 'Instrukcja obsługi'],
   ['/profil', 'Profil'],
