@@ -30,3 +30,54 @@ export const SMS_STATUS: Record<SmsDeliveryStatus, { label: string; className: s
 export function smsStatus(status: string | null | undefined): { label: string; className: string } {
   return SMS_STATUS[(status ?? 'pending') as SmsDeliveryStatus] ?? SMS_STATUS.pending;
 }
+
+/** "+48500100200" -> "+48 500 100 200": digits in groups of three counted from the right, so whatever is
+ * left over at the front is the country code. Text that is not a number (the sender refused it, staff must be
+ * able to read what is stored) comes back untouched. */
+export function fmtPhone(raw: string | null | undefined): string {
+  const text = (raw ?? '').trim();
+  if (!text) return '—';
+  const compact = text.replace(/[\s()-]/g, '');
+  if (!/^\+?\d+$/.test(compact)) return text;
+  const digits = compact.replace('+', '');
+  const groups: string[] = [];
+  for (let end = digits.length; end > 0; end -= 3) groups.unshift(digits.slice(Math.max(0, end - 3), end));
+  return `${compact.startsWith('+') ? '+' : ''}${groups.join(' ')}`;
+}
+
+// ── Months ("YYYY-MM"): the value of the month picker on Wysyłki SMS and of `?month=` on its endpoints ──────────
+
+/** The server accepts 2000-01 … 2100-12 (utils.timezone.parse_year_month); the picker never leaves that range. */
+export const MIN_MONTH = '2000-01';
+export const MAX_MONTH = '2100-12';
+
+const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+export const MONTH_ABBR = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+
+/** This month on the salon's clock (Warsaw), not the browser's: around midnight they can disagree. */
+export function currentMonthWarsaw(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit' }).formatToParts(now);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}`;
+}
+
+export function clampMonth(ym: string): string {
+  return ym < MIN_MONTH ? MIN_MONTH : ym > MAX_MONTH ? MAX_MONTH : ym;
+}
+
+/** "2026-12" + 1 -> "2027-01", clamped to the supported range. */
+export function shiftMonth(ym: string, delta: number): string {
+  const [year, month] = ym.split('-').map(Number);
+  const index = year * 12 + (month - 1) + delta;
+  return clampMonth(`${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`);
+}
+
+export function monthOf(year: number, monthIndex: number): string {
+  return clampMonth(`${year}-${String(monthIndex + 1).padStart(2, '0')}`);
+}
+
+/** "2026-10" -> "październik 2026". */
+export function fmtMonthYear(ym: string): string {
+  const [year, month] = ym.split('-').map(Number);
+  return `${MONTH_NAMES[month - 1] ?? ''} ${year}`;
+}

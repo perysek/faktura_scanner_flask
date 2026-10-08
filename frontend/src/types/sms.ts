@@ -23,6 +23,8 @@ export interface SmsPendingEntry {
   recipient_name: string;
   /** The number the sender uses (E.164), or what is stored when it cannot be parsed. */
   phone_number: string | null;
+  /** Why the number is unusable: nothing stored, or text the sender cannot parse. Absent from an older backend. */
+  phone_problem?: 'missing' | 'invalid' | null;
   appointment_id: number | null;
   appointment_date: string | null;
   start_time: string | null;

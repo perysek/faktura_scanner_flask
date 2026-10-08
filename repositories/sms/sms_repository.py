@@ -230,24 +230,51 @@ class SmsReminderRepository(BaseRepository):
             })
         return result
 
-    def get_log(self, limit: int = 200, offset: int = 0) -> List[dict]:
-        query = """
+    # Historia SMS, "Wysłane". Both queries share this FROM so the count is exactly the rows the list can reach.
+    _LOG_FROM = """
+            FROM sms_reminders sr
+            JOIN clients c ON c.id = sr.client_id
+            JOIN appointments a ON a.id = sr.appointment_id
+            LEFT JOIN sms_message_types mt ON mt.id = sr.message_type_id
+    """
+
+    def get_log(self, limit: int = 200, offset: int = 0, before=None) -> List[dict]:
+        """Newest first. `before` (timezone-aware, exclusive) keeps only texts sent earlier: "everything up
+        to the end of the month the picker shows".
+
+        `response` is whether the client ANSWERED the link in the text: confirmed / declined (a confirm or
+        cancel link, read off the visit's confirmation status) or rated (a rate link, visit has `rated_on`).
+        Both facts live on the visit, not on the text, so a second reminder of an already-confirmed visit
+        shows as answered too - there is no per-text response record to read instead.
+        """
+        where, params = ('WHERE sr.sent_at < %s', (before,)) if before is not None else ('', ())
+        query = f"""
             SELECT
                 sr.*,
                 mt.name AS type_name,
                 c.first_name || ' ' || c.last_name AS client_name,
                 a.appointment_date,
                 a.start_time,
-                a.confirmation_status AS appt_confirmation_status
-            FROM sms_reminders sr
-            JOIN clients c ON c.id = sr.client_id
-            JOIN appointments a ON a.id = sr.appointment_id
-            LEFT JOIN sms_message_types mt ON mt.id = sr.message_type_id
+                a.confirmation_status AS appt_confirmation_status,
+                CASE
+                    WHEN sr.message_body LIKE '%%/rate/%%' AND a.rated_on IS NOT NULL THEN 'rated'
+                    WHEN (sr.message_body LIKE '%%/confirm/%%' OR sr.message_body LIKE '%%/cancel/%%')
+                         AND a.confirmation_status = 'confirmed' THEN 'confirmed'
+                    WHEN (sr.message_body LIKE '%%/confirm/%%' OR sr.message_body LIKE '%%/cancel/%%')
+                         AND a.confirmation_status = 'declined' THEN 'declined'
+                END AS response
+            {self._LOG_FROM}
+            {where}
             ORDER BY sr.sent_at DESC
             LIMIT %s OFFSET %s
         """
-        rows = self._fetch_all(query, (limit, offset))
+        rows = self._fetch_all(query, params + (limit, offset))
         return [dict(r) for r in rows]
+
+    def count_log(self, before=None) -> int:
+        where, params = ('WHERE sr.sent_at < %s', (before,)) if before is not None else ('', ())
+        row = self._fetch_one(f'SELECT COUNT(*) AS n {self._LOG_FROM} {where}', params)
+        return int(row['n']) if row else 0
 
     def get_stats(self) -> dict:
         query = """

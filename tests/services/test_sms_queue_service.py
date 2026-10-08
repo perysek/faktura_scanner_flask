@@ -363,3 +363,50 @@ class TestFormatSentRow:
                                'error_message': 'boom'})
         assert out['automatic'] is False and out['sent_by'] == 'Ola K.' and out['sent_at'] is None
         assert out['type_name'] == 'x' and out['error_message'] == 'boom'
+
+
+class TestMonthFilterOrderAndPhoneProblem:
+    """Historia SMS: the month picker asks for "everything up to the end of that month", newest first."""
+
+    def _three(self):
+        v = lambda h: NOW + timedelta(hours=h)
+        return _service(types=[_type(hours=24)], candidates={'confirmation_request': [
+            _visit(1, v(25)), _visit(2, v(27)), _visit(3, v(24 * 30))]})[0]       # the last one is a month away
+
+    def test_newest_first_reverses_the_order_without_touching_the_default(self):
+        svc = self._three()
+        assert [r['appointment_id'] for r in svc.pending(now=NOW, next_run=NEXT_RUN)['rows']] == [1, 2, 3]
+        assert [r['appointment_id'] for r in svc.pending(now=NOW, next_run=NEXT_RUN, newest_first=True)['rows']] == [3, 2, 1]
+
+    def test_before_drops_what_is_due_at_or_after_the_cutoff(self):
+        out = self._three().pending(now=NOW, next_run=NEXT_RUN, before=datetime(2026, 11, 1))
+        assert [r['appointment_id'] for r in out['rows']] == [1, 2]
+
+    def test_the_cutoff_is_exclusive(self):
+        svc = self._three()
+        tick = svc.pending(now=NOW, next_run=NEXT_RUN)['rows'][0]['will_be_sent_at']
+        at = datetime.fromisoformat(tick)
+        assert svc.pending(now=NOW, next_run=NEXT_RUN, before=at)['rows'] == []
+        assert len(svc.pending(now=NOW, next_run=NEXT_RUN, before=at + timedelta(seconds=1))['rows']) >= 1
+
+    def test_total_undeliverable_and_paging_describe_the_filtered_list(self):
+        v = lambda h: NOW + timedelta(hours=h)
+        visits = [_visit(1, v(25)), _visit(2, v(26)), _visit(3, v(24 * 30))]
+        visits[1]['phone'] = '123456'                                            # refused by the sender
+        visits[2]['phone'] = '123456'                                            # ... but a month away: filtered out
+        svc = _service(types=[_type(hours=24)], candidates={'confirmation_request': visits})[0]
+        out = svc.pending(now=NOW, next_run=NEXT_RUN, before=datetime(2026, 11, 1), limit=1)
+        assert out['total'] == 2 and out['undeliverable'] == 1 and len(out['rows']) == 1
+
+    def test_a_phone_problem_is_named_so_the_table_can_print_a_short_label(self):
+        visits = [_visit(1, NOW + timedelta(hours=24, minutes=1)), _visit(2, NOW + timedelta(hours=24, minutes=2)),
+                  _visit(3, NOW + timedelta(hours=24, minutes=3))]
+        visits[1]['phone'] = ''
+        visits[2]['phone'] = 'abc'
+        rows = _service(types=[_type()], candidates={'confirmation_request': visits})[0].pending(now=NOW, next_run=NEXT_RUN)['rows']
+        assert [r['phone_problem'] for r in rows] == [None, 'missing', 'invalid']
+
+    def test_queued_events_name_their_phone_problem_too(self):
+        event = TestQueuedEvents()._event(employee_phone=None)
+        row = _service(events=[event])[0].pending(now=NOW, next_run=NEXT_RUN)['rows'][0]
+        assert row['phone_problem'] == 'missing'

@@ -4,20 +4,16 @@ import './SettingsPages.css';
 import { useApiData } from '../../lib/useApiData';
 import { smsSettingsApi } from '../../lib/api/smsSettings';
 import { SmsTabs, panelId, tabId } from '../../components/sms/SmsTabs';
+import { SmsLogTable } from '../../components/sms/SmsLogTable';
 import { SmsPendingTable } from '../../components/sms/SmsPendingTable';
-import { fmtWhen } from '../../components/sms/smsFormat';
+import { MonthYearPicker } from '../../components/sms/MonthYearPicker';
+import { TableScrollTop } from '../../components/sms/TableScrollTop';
+import { currentMonthWarsaw, fmtWhen } from '../../components/sms/smsFormat';
 
 const PAGE_SIZE = 100;
 const ID = 'sms-history';
 
 type Tab = 'sent' | 'pending';
-
-const STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  sent: { label: 'Wysłany', className: 'badge-green' },
-  delivered: { label: 'Dostarczony', className: 'badge-teal' },
-  failed: { label: 'Błąd', className: 'badge-red' },
-  pending: { label: 'Oczekuje', className: 'badge-gray' },
-};
 
 function Pager({ offset, count, onOffset }: { offset: number; count: number; onOffset: (o: number) => void }) {
   return (
@@ -36,16 +32,17 @@ function Pager({ offset, count, onOffset }: { offset: number; count: number; onO
   );
 }
 
-/** Historia wysyłek SMS — ported from templates/settings/sms_log.html, now an expandable card with two
- * tabs: "Wysłane" (the original offset-paged log, 1:1) and "Oczekujące" (what the scheduler will still
- * send, with the exact tick that will carry each message). Both tabs show Warsaw wall-clock. */
+/** Wysyłki SMS (was "Historia wysyłek SMS") — two tabs: "Wysłane" (what went out) and "Oczekujące" (what the
+ * scheduler will still send, with the exact tick that will carry each message). Both show Warsaw wall-clock and
+ * share one month picker: each table starts at the end of the picked month and runs back in time, newest first. */
 export function SmsLogPage() {
   const [tab, setTab] = useState<Tab>('sent');
+  const [month, setMonth] = useState(currentMonthWarsaw);
   const [offset, setOffset] = useState(0);
   const [pendingOffset, setPendingOffset] = useState(0);
-  const logState = useApiData(() => smsSettingsApi.log(offset, PAGE_SIZE), [offset]);
+  const logState = useApiData(() => smsSettingsApi.log(offset, PAGE_SIZE, month), [offset, month]);
   // Fetched on mount too (not only when the tab opens) so the tab can show its count.
-  const pendingState = useApiData(() => smsSettingsApi.pending(pendingOffset, PAGE_SIZE), [pendingOffset]);
+  const pendingState = useApiData(() => smsSettingsApi.pending(pendingOffset, PAGE_SIZE, month, 'desc'), [pendingOffset, month]);
   const rows = logState.data?.rows ?? [];
   const pending = pendingState.data;
   // What will actually go out: rows the scheduler refuses (bad phone, deleted visit...) stay listed but do not count.
@@ -57,102 +54,37 @@ export function SmsLogPage() {
     if (next === 'pending') pendingState.reload(); // the queue moves every tick — never show a stale one
   }
 
+  function changeMonth(next: string) {
+    setMonth(next);
+    setOffset(0);          // one batched render: both lists restart from their first page for the new month
+    setPendingOffset(0);
+  }
+
   return (
-    <div className="refined-page settings-page animate-fade-up">
+    <div className="refined-page settings-page sms-log-page animate-fade-up">
       <header className="page-header sms-log-header">
         <Link to="/ustawienia/sms" className="settings-footer-link">
           ← Ustawienia SMS
         </Link>
-        <h1 className="page-title">Historia wysyłek SMS</h1>
+        <h1 className="page-title">Wysyłki SMS</h1>
       </header>
 
-      <details className="form-card sms-type-card sms-history-card" open>
-        <summary className="sms-type-summary">
-          Wysyłki SMS
-          <span className="sms-history-meta">{awaiting != null ? `Oczekujące: ${awaiting}` : ''}</span>
-        </summary>
-
+      <section className="form-card sms-history-card">
         <SmsTabs<Tab>
           idPrefix={ID}
-          ariaLabel="Historia i kolejka SMS"
+          ariaLabel="Wysłane i oczekujące SMS"
           active={tab}
           onChange={changeTab}
           tabs={[
-            { key: 'sent', label: 'Wysłane' },
+            { key: 'sent', label: 'Wysłane', count: logState.data?.total ?? null },
             { key: 'pending', label: 'Oczekujące', count: awaiting },
           ]}
+          trailing={<MonthYearPicker value={month} onChange={changeMonth} />}
         />
 
         <div role="tabpanel" id={panelId(ID, 'sent')} aria-labelledby={tabId(ID, 'sent')} hidden={tab !== 'sent'}>
-          <div className="table-container stack-cards-wrap">
-            <table className="refined-table stack-cards">
-              <thead>
-                <tr>
-                  <th>Data wysyłki</th>
-                  <th>Typ SMS</th>
-                  <th>Klient</th>
-                  <th>Telefon</th>
-                  <th>Wizyta</th>
-                  <th>Status</th>
-                  <th>Twilio SID</th>
-                  <th>Wysłał</th>
-                  <th>Potwierdzenie</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logState.loading ? (
-                  <tr>
-                    <td colSpan={9} className="empty-state cell-empty">
-                      Ładowanie...
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="empty-state cell-empty">
-                      Brak historii wysyłek SMS
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r) => {
-                    const status = STATUS_LABEL[r.status] ?? STATUS_LABEL.pending;
-                    return (
-                      <tr key={r.id}>
-                        <td className="cell-name" data-label="Data wysyłki">
-                          {fmtWhen(r.sent_at)}
-                        </td>
-                        <td data-label="Typ SMS">{r.type_name || r.message_type_key}</td>
-                        <td data-label="Klient">{r.client_name}</td>
-                        <td className="mono" data-label="Telefon">
-                          {r.phone_number}
-                        </td>
-                        <td data-label="Wizyta">
-                          {r.appointment_date} {r.start_time?.slice(0, 5)}
-                        </td>
-                        <td data-label="Status">
-                          <span className={`badge-pill ${status.className}`} title={r.status === 'failed' ? r.error_message ?? '' : undefined}>
-                            {status.label}
-                          </span>
-                        </td>
-                        <td className="mono" data-label="Twilio SID">
-                          {r.twilio_sid || '—'}
-                        </td>
-                        <td data-label="Wysłał">{r.created_by_name || '—'}</td>
-                        <td data-label="Potwierdzenie">
-                          {r.appt_confirmation_status === 'confirmed' ? (
-                            <span style={{ color: 'var(--color-success)' }}>✓</span>
-                          ) : r.appt_confirmation_status === 'declined' ? (
-                            <span style={{ color: 'var(--color-error)' }}>✗</span>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <SmsLogTable rows={rows} loading={logState.loading && !logState.data} refreshing={logState.loading && !!logState.data} />
+          <TableScrollTop />
           <Pager offset={offset} count={rows.length} onOffset={setOffset} />
         </div>
 
@@ -166,19 +98,25 @@ export function SmsLogPage() {
               {pending?.estimated
                 ? 'Czasy szacunkowe (~): ten serwer nie uruchamia harmonogramu, więc zaokrąglono je do pełnego kwadransa.'
                 : pending?.next_tick_at
-                  ? `Harmonogram wysyła co 15 minut. Najbliższy cykl: ${fmtWhen(pending.next_tick_at)}. „Zostanie wysłany” to cykl, który faktycznie zabierze wiadomość.`
-                  : 'Wiadomości, które harmonogram jeszcze wyśle, najwcześniejsze na górze.'}
+                  ? `Harmonogram wysyła co 15 minut. Najbliższy cykl: ${fmtWhen(pending.next_tick_at)}. „Zaplanowany na” to cykl, który faktycznie zabierze wiadomość. Najnowsze na górze.`
+                  : 'Wiadomości, które harmonogram jeszcze wyśle, najnowsze na górze.'}
             </p>
           )}
           {pending && pending.sms_active && undeliverable > 0 && (
             <p className="sms-hint sms-hint--warn">
-              {undeliverable} z {pending.total} pozycji (przekreślone) nie zostanie wysłanych: powód jest w kolumnie „Uwagi”, np. błędny numer telefonu klienta, który warto poprawić.
+              {undeliverable} z {pending.total} pozycji (przekreślone) nie zostanie wysłanych: powód widać pod numerem telefonu (np. „Nie zapisano”) albo w dymku nad przekreśloną datą. Warto poprawić numer klienta.
             </p>
           )}
-          <SmsPendingTable rows={pending?.rows ?? []} loading={pendingState.loading && !pending} variant="history" />
+          <SmsPendingTable
+            rows={pending?.rows ?? []}
+            loading={pendingState.loading && !pending}
+            refreshing={pendingState.loading && !!pending}
+            variant="history"
+          />
+          <TableScrollTop />
           <Pager offset={pendingOffset} count={pending?.rows.length ?? 0} onOffset={setPendingOffset} />
         </div>
-      </details>
+      </section>
     </div>
   );
 }

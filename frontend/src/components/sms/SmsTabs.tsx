@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import './sms.css';
 
 export interface SmsTabDef<K extends string> {
@@ -15,6 +15,8 @@ export interface SmsTabsProps<K extends string> {
   ariaLabel: string;
   /** Unique per page: ids the tabpanel references (`tabId` / `panelId`). */
   idPrefix: string;
+  /** Controls for the whole strip (e.g. a month picker), pinned to its right end. Not part of the tablist. */
+  trailing?: ReactNode;
 }
 
 export const tabId = (prefix: string, key: string) => `${prefix}-tab-${key}`;
@@ -25,7 +27,7 @@ export const panelId = (prefix: string, key: string) => `${prefix}-panel-${key}`
  * roving tabindex (only the active tab is in the tab order) and Left/Right/Home/End to move.
  * The caller renders the panel: `<div role="tabpanel" id={panelId(...)} aria-labelledby={tabId(...)}>`.
  */
-export function SmsTabs<K extends string>({ tabs, active, onChange, ariaLabel, idPrefix }: SmsTabsProps<K>) {
+export function SmsTabs<K extends string>({ tabs, active, onChange, ariaLabel, idPrefix, trailing }: SmsTabsProps<K>) {
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
     let next = -1;
     if (e.key === 'ArrowRight') next = (index + 1) % tabs.length;
@@ -39,27 +41,31 @@ export function SmsTabs<K extends string>({ tabs, active, onChange, ariaLabel, i
   }
 
   return (
-    <div className="sms-tabs" role="tablist" aria-label={ariaLabel}>
-      {tabs.map((tab, i) => {
-        const isActive = tab.key === active;
-        return (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            id={tabId(idPrefix, tab.key)}
-            aria-selected={isActive}
-            aria-controls={panelId(idPrefix, tab.key)}
-            tabIndex={isActive ? 0 : -1}
-            className={`sms-tab${isActive ? ' active' : ''}`}
-            onClick={() => onChange(tab.key)}
-            onKeyDown={(e) => onKeyDown(e, i)}
-          >
-            {tab.label}
-            {tab.count != null && <span className={`sms-tab-count${tab.count === 0 ? ' zero' : ''}`}>{tab.count}</span>}
-          </button>
-        );
-      })}
+    <div className="sms-tabs">
+      {/* The tablist owns only the tabs; anything in `trailing` sits beside it, outside the ARIA tablist. */}
+      <div className="sms-tablist" role="tablist" aria-label={ariaLabel}>
+        {tabs.map((tab, i) => {
+          const isActive = tab.key === active;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              id={tabId(idPrefix, tab.key)}
+              aria-selected={isActive}
+              aria-controls={panelId(idPrefix, tab.key)}
+              tabIndex={isActive ? 0 : -1}
+              className={`sms-tab${isActive ? ' active' : ''}`}
+              onClick={() => onChange(tab.key)}
+              onKeyDown={(e) => onKeyDown(e, i)}
+            >
+              {tab.label}
+              {tab.count != null && <span className={`sms-tab-count${tab.count === 0 ? ' zero' : ''}`}>{tab.count}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {trailing && <div className="sms-tabs-trailing">{trailing}</div>}
     </div>
   );
 }

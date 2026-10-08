@@ -50,6 +50,10 @@ REASON_CLIENT_NO_PHONE = 'Klient nie ma numeru telefonu'
 REASON_CLIENT_BAD_PHONE = 'Nieprawidłowy numer telefonu klienta'
 
 
+# What the Oczekujące table prints under a number the sender refuses (see phone_for_display).
+PHONE_PROBLEM_KIND = {NOTE_NO_PHONE: 'missing', NOTE_BAD_PHONE: 'invalid'}
+
+
 def phone_for_display(raw: Any) -> Tuple[Optional[str], Optional[str]]:
     """(number to show, problem note or None).
 
@@ -111,10 +115,14 @@ class SmsQueueService:
     # ------------------------------------------------------------------ pending
 
     def pending(self, *, appointment_id: Optional[int] = None, offset: int = 0, limit: int = 100,
-                now: Optional[datetime] = None, next_run: Optional[datetime] = None) -> Dict[str, Any]:
-        """Every message the scheduler will still send, soonest first.
+                now: Optional[datetime] = None, next_run: Optional[datetime] = None,
+                before: Optional[datetime] = None, newest_first: bool = False) -> Dict[str, Any]:
+        """Every message the scheduler will still send, soonest first (or newest first).
 
         `now` / `next_run` are naive Warsaw wall-clock (default: the clock / None = no anchor).
+        `before` (naive Warsaw, exclusive) keeps only rows whose tick falls earlier: the month picker of
+        Historia SMS asks for "everything up to the end of that month". `total`, `undeliverable` and the
+        paging all describe the filtered list, so the tab's count pill matches what the table lists.
         With SMS switched off globally the scheduler's job returns immediately, so nothing is queued.
         """
         now = now or now_local()
@@ -126,7 +134,10 @@ class SmsQueueService:
             for msg_type in self._type_repo.get_enabled_before_visit():
                 rows.extend(self._before_visit_rows(msg_type, appointment_id, now, next_run))
             rows.extend(self._event_rows(appointment_id, now, next_run))
-        rows.sort(key=lambda r: (r['will_be_sent_at'], r['appointment_id'] or 0, r['type_key']))
+        if before is not None:
+            cutoff = before.isoformat(timespec='seconds')       # same fixed-width ISO format: strings compare as times
+            rows = [r for r in rows if r['will_be_sent_at'] < cutoff]
+        rows.sort(key=lambda r: (r['will_be_sent_at'], r['appointment_id'] or 0, r['type_key']), reverse=newest_first)
 
         return {
             'rows': rows[offset:offset + limit],
@@ -168,6 +179,7 @@ class SmsQueueService:
                 'recipient_kind': 'client',
                 'recipient_name': r['client_name'],
                 'phone_number': shown,
+                'phone_problem': PHONE_PROBLEM_KIND.get(problem),
                 'appointment_id': r['appointment_id'],
                 'appointment_date': str(r['appointment_date']),
                 'start_time': str(r['start_time']),
@@ -203,6 +215,7 @@ class SmsQueueService:
                 'recipient_kind': 'employee' if employee else 'client',
                 'recipient_name': (e['employee_name'] if employee else e['client_name']) or '',
                 'phone_number': shown,
+                'phone_problem': PHONE_PROBLEM_KIND.get(problem),
                 'appointment_id': e['appointment_id'],
                 'appointment_date': str(e['appointment_date']),
                 'start_time': str(e['start_time']),

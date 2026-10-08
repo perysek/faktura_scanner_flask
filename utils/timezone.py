@@ -6,7 +6,9 @@ comparing it directly against a naive-Warsaw appointment datetime is off by
 the UTC offset (2h in summer CEST, 1h in winter CET) — exactly the appointment
 status-transition bug (confirmed -> in progress -> completed) this fixes.
 """
+import re
 from datetime import datetime, timezone
+from typing import Optional, Tuple
 from zoneinfo import ZoneInfo
 
 WARSAW_TZ = ZoneInfo('Europe/Warsaw')
@@ -37,3 +39,19 @@ def to_local_any(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return to_local(dt)
     return dt.astimezone(WARSAW_TZ).replace(tzinfo=None)
+
+
+def parse_year_month(value: Optional[str]) -> Optional[Tuple[int, int]]:
+    """'2026-10' -> (2026, 10). Empty/None -> None. Anything else raises ValueError (callers answer 400)."""
+    if not value:
+        return None
+    match = re.fullmatch(r'(\d{4})-(\d{2})', value.strip())
+    if not match or not (2000 <= int(match[1]) <= 2100 and 1 <= int(match[2]) <= 12):
+        raise ValueError(f'expected YYYY-MM, got {value!r}')
+    return int(match[1]), int(match[2])
+
+
+def first_of_next_month(year: int, month: int) -> datetime:
+    """Naive Warsaw midnight that opens the month AFTER (year, month): the exclusive upper bound of
+    "everything up to the end of that month"."""
+    return datetime(year + (month == 12), month % 12 + 1, 1)

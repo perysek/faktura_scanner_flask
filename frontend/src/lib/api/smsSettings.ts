@@ -42,10 +42,14 @@ export const smsSettingsApi = {
 
   deleteMessageType: (id: number) => api.del<{ success: boolean; message?: string }>(`/api/sms/message-types/${id}`),
 
-  log: (offset = 0, limit = 100) => api.get<{ success: true; rows: SmsLogEntry[]; offset: number; limit: number }>('/api/sms/log', { offset, limit }),
+  /** Historia SMS, tab "Wysłane", newest first. `month` ("YYYY-MM") starts the list at the end of that month. */
+  log: (offset = 0, limit = 100, month?: string) =>
+    api.get<{ success: true; rows: SmsLogEntry[]; offset: number; limit: number; total: number }>('/api/sms/log', { offset, limit, month }),
 
-  /** Historia SMS, tab "Oczekujące": what the scheduler will still send and on which tick. */
-  pending: (offset = 0, limit = 100) => api.get<SmsPendingResponse>('/api/sms/pending', { offset, limit }),
+  /** Historia SMS, tab "Oczekujące": what the scheduler will still send and on which tick (`order: 'desc'` = newest
+   * first; `month` keeps what is due up to the end of that month). */
+  pending: (offset = 0, limit = 100, month?: string, order?: 'asc' | 'desc') =>
+    api.get<SmsPendingResponse>('/api/sms/pending', { offset, limit, month, order }),
 };
 
 export type { SmsMessageType };

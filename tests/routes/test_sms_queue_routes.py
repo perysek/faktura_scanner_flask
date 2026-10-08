@@ -5,7 +5,8 @@ beside; overview = `appointments`, like the other per-visit SMS endpoints). The 
 patched at the route's import site — its own logic is covered in tests/services.
 """
 from contextlib import ExitStack
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import pytest
 from unittest.mock import MagicMock, patch
 
 XHR = {'X-Requested-With': 'XMLHttpRequest'}
@@ -110,3 +111,60 @@ class TestOverview:
     def test_needs_appointments_access(self, client):
         resp, _ = self._get(client, modules=('settings',))
         assert resp.status_code == 403
+
+
+class TestMonthPicker:
+    """`?month=YYYY-MM` on both Historia SMS endpoints: everything up to the END of that month, newest first."""
+
+    def _log(self, client, query='', rows=None):
+        reminders = MagicMock()
+        reminders.return_value.get_log.return_value = rows if rows is not None else []
+        reminders.return_value.count_log.return_value = 42
+        with _logged_in(('settings',)), patch('routes.sms_routes.SmsReminderRepository', reminders):
+            resp = client.get('/api/sms/log' + query, headers=XHR)
+        return resp, reminders
+
+    def test_the_log_is_cut_at_the_start_of_the_following_month_warsaw_time(self, client):
+        resp, reminders = self._log(client, '?month=2026-10')
+        assert resp.status_code == 200
+        before = reminders.return_value.get_log.call_args.kwargs['before']
+        assert before.replace(tzinfo=None) == datetime(2026, 11, 1) and before.utcoffset() == timedelta(hours=1)   # CET on 1 Nov
+        assert reminders.return_value.count_log.call_args.kwargs['before'] == before     # the pill counts what the list reaches
+
+    def test_the_log_reports_its_total_and_defaults_to_no_bound(self, client):
+        resp, reminders = self._log(client)
+        assert resp.get_json()['total'] == 42
+        assert reminders.return_value.get_log.call_args.kwargs['before'] is None
+
+    def test_log_rows_keep_the_text_and_the_response_for_the_table(self, client):
+        row = {'id': 1, 'sent_at': datetime(2026, 10, 7, 5, 0, tzinfo=timezone.utc), 'message_body': 'Hej! https://x.pl/rate/abc',
+               'response': 'rated', 'created_by_user_id': None, 'created_by_name': 'System (auto)', 'status': 'sent',
+               'appointment_date': datetime(2026, 10, 8).date(), 'start_time': datetime(2026, 10, 8, 10).time()}
+        resp, _ = self._log(client, rows=[row])
+        out = resp.get_json()['rows'][0]
+        assert out['message_body'] == 'Hej! https://x.pl/rate/abc' and out['response'] == 'rated'
+        assert out['sent_at'] == '2026-10-07T07:00:00'
+
+    def test_the_log_page_size_is_clamped(self, client):
+        _, reminders = self._log(client, '?limit=100000&offset=-3')
+        kwargs = reminders.return_value.get_log.call_args.kwargs
+        assert (kwargs['limit'], kwargs['offset']) == (500, 0)
+
+    @pytest.mark.parametrize('path', ['/api/sms/log', '/api/sms/pending'])
+    @pytest.mark.parametrize('bad', ['2026-13', 'oct', '2026-1', '1999-01'])
+    def test_a_malformed_month_is_a_400_not_a_500(self, client, path, bad):
+        with _logged_in(('settings',)), patch('routes.sms_routes.SmsReminderRepository'), \
+             patch('routes.sms_routes.SmsQueueService'), patch('routes.sms_routes.scheduler.next_tick_local', return_value=None):
+            resp = client.get(f'{path}?month={bad}', headers=XHR)
+        assert resp.status_code == 400 and resp.get_json()['success'] is False
+
+    def test_pending_gets_the_same_cutoff_naive_warsaw_and_the_requested_order(self, client):
+        resp, queue = TestPending()._get(client, '?month=2026-12&order=desc')
+        assert resp.status_code == 200
+        kwargs = queue.return_value.pending.call_args.kwargs
+        assert kwargs['before'] == datetime(2027, 1, 1) and kwargs['newest_first'] is True
+
+    def test_pending_keeps_its_old_behaviour_without_the_new_parameters(self, client):
+        _, queue = TestPending()._get(client)
+        kwargs = queue.return_value.pending.call_args.kwargs
+        assert kwargs['before'] is None and kwargs['newest_first'] is False

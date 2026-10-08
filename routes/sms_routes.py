@@ -10,7 +10,7 @@ from services.sms_queue_service import SmsQueueService, format_sent_row
 from repositories.sms.sms_repository import SmsReminderRepository, SmsMessageTypeRepository
 import scheduler
 from utils.audit import audit_event
-from utils.timezone import to_local_any
+from utils.timezone import WARSAW_TZ, first_of_next_month, parse_year_month, to_local_any
 
 sms_bp = Blueprint('sms', __name__)
 
@@ -290,14 +290,30 @@ def api_sms_message_type_delete(type_id):
         return jsonify({'success': False, 'message': 'Błąd serwera'}), 500
 
 
+def _month_cutoff():
+    """`?month=YYYY-MM` -> naive Warsaw midnight that opens the NEXT month (an exclusive upper bound: "everything
+    up to the end of that month"), or None without the parameter. Raises ValueError on a malformed one."""
+    parsed = parse_year_month(request.args.get('month'))
+    return first_of_next_month(*parsed) if parsed else None
+
+
+_BAD_MONTH = ({'success': False, 'message': 'Nieprawidłowy miesiąc, oczekiwano RRRR-MM'}, 400)
+
+
 @sms_bp.route('/api/sms/log', methods=['GET'])
 @login_required
 @module_permission_required('settings')
 def api_sms_log():
+    """Historia SMS, tab "Wysłane": newest first; `?month=YYYY-MM` starts the list at the end of that month."""
     repo = SmsReminderRepository()
-    offset = request.args.get('offset', 0, type=int)
-    limit = request.args.get('limit', 100, type=int)
-    rows = repo.get_log(limit=limit, offset=offset)
+    offset = max(0, request.args.get('offset', 0, type=int))
+    limit = min(500, max(1, request.args.get('limit', 100, type=int)))
+    try:
+        cutoff = _month_cutoff()
+    except ValueError:
+        return jsonify(_BAD_MONTH[0]), _BAD_MONTH[1]
+    before = cutoff.replace(tzinfo=WARSAW_TZ) if cutoff else None      # sent_at is TIMESTAMPTZ
+    rows = repo.get_log(limit=limit, offset=offset, before=before)
     for r in rows:
         if r.get('sent_at'):
             # sent_at is TIMESTAMPTZ: showing it raw printed UTC (two hours behind the salon's
@@ -307,19 +323,27 @@ def api_sms_log():
             r['appointment_date'] = str(r['appointment_date'])
         if r.get('start_time'):
             r['start_time'] = str(r['start_time'])
-    return jsonify({'success': True, 'rows': rows, 'offset': offset, 'limit': limit})
+    return jsonify({'success': True, 'rows': rows, 'offset': offset, 'limit': limit,
+                    'total': repo.count_log(before=before)})
 
 
 @sms_bp.route('/api/sms/pending', methods=['GET'])
 @login_required
 @module_permission_required('settings')
 def api_sms_pending():
-    """Historia SMS, tab "Oczekujące": every message the scheduler will still send, soonest first,
-    each with the tick that will carry it (`will_be_sent_at`, Warsaw wall-clock)."""
+    """Historia SMS, tab "Oczekujące": every message the scheduler will still send, each with the tick that
+    will carry it (`will_be_sent_at`, Warsaw wall-clock). Soonest first by default; `?order=desc` is newest
+    first and `?month=YYYY-MM` keeps what is due up to the end of that month."""
     offset = max(0, request.args.get('offset', 0, type=int))
     limit = min(500, max(1, request.args.get('limit', 100, type=int)))
     try:
-        data = SmsQueueService().pending(offset=offset, limit=limit, next_run=scheduler.next_tick_local())
+        before = _month_cutoff()
+    except ValueError:
+        return jsonify(_BAD_MONTH[0]), _BAD_MONTH[1]
+    newest_first = request.args.get('order') == 'desc'
+    try:
+        data = SmsQueueService().pending(offset=offset, limit=limit, next_run=scheduler.next_tick_local(),
+                                         before=before, newest_first=newest_first)
     except Exception:
         logging.exception('Error in api_sms_pending')
         return jsonify({'success': False, 'message': 'Błąd serwera'}), 500

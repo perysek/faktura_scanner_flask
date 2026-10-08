@@ -73,6 +73,9 @@ export interface SmsSettingsBundle {
   stats: SmsStats;
 }
 
+/** What the client did with the link in a text: confirmed / declined (confirm or cancel link) or rated (rate link). */
+export type SmsResponse = 'confirmed' | 'declined' | 'rated';
+
 export interface SmsLogEntry {
   id: number;
   sent_at: string | null;
@@ -85,6 +88,12 @@ export interface SmsLogEntry {
   start_time: string;
   appt_confirmation_status: string | null;
   twilio_sid: string | null;
+  /** Null for texts the system sent on its own (scheduler, online booking). */
+  created_by_user_id?: number | null;
   created_by_name: string | null;
   error_message: string | null;
+  /** The text as it went out, links included. */
+  message_body?: string | null;
+  /** Absent from an older backend during a rolling deploy: read as "no answer". */
+  response?: SmsResponse | null;
 }
