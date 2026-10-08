@@ -281,7 +281,7 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <div class="wrap">
 <nav class="toc" id="toc" aria-label="Spis treści">
 <div class="brand">MyWay Nails &amp; Beauty<small>Instrukcja dla recepcji</small></div>
-<div class="srch" role="search"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Szukaj, np. nie przyszła" autocomplete="off" aria-label="Szukaj w instrukcji"></div>
+<div class="srch" role="search"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Szukaj, np. spóźnia się" autocomplete="off" aria-label="Szukaj w instrukcji"></div>
 <div id="hits" role="listbox" aria-label="Wyniki wyszukiwania"></div>
 <button type="button" class="toc-btn" id="toc-btn" aria-expanded="false" aria-controls="toc-list"><span>Spis treści</span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-expand_more"/></svg></button>
 <div class="toc-list" id="toc-list">
@@ -1324,16 +1324,22 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
   var q = $('#q'), hits = $('#hits');
   function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
   if (q) {
+    /* Polish inflects words (przyszła / przyszedł), so each typed word is matched by its stem; filler words are ignored */
+    var skip = { nie: 1, sie: 1, jak: 1, czy: 1, gdy: 1, dla: 1, przy: 1, bez: 1, ale: 1, oraz: 1 };
+    function stems(s) {
+      return norm(s).split(/[^a-z0-9]+/).filter(function (w) { return w.length > 2 && !skip[w]; })
+        .map(function (w) { return w.slice(0, Math.max(4, w.length - 3)); });
+    }
     q.addEventListener('input', function () {
-      var term = norm(q.value.trim());
-      if (term.length < 2) { hits.style.display = 'none'; hits.innerHTML = ''; return; }
+      var words = stems(q.value);
+      if (!words.length) { hits.style.display = 'none'; hits.innerHTML = ''; return; }
       var found = [];
       idx.forEach(function (i) {
-        var inTitle = i.nt.indexOf(term) > -1, p = i.n.indexOf(term);
-        if (inTitle || p > -1) {
-          var start = Math.max(0, p - 50);
-          found.push({ i: i, snip: p > -1 ? i.raw.slice(start, start + 130) : i.raw.slice(0, 130), score: inTitle ? 0 : 1 });
-        }
+        var all = words.every(function (w) { return i.n.indexOf(w) > -1; });
+        if (!all) return;
+        var inTitle = words.every(function (w) { return i.nt.indexOf(w) > -1; });
+        var p = i.n.indexOf(words[0]), start = Math.max(0, p - 50);
+        found.push({ i: i, snip: i.raw.slice(start, start + 130), score: inTitle ? 0 : 1 });
       });
       found.sort(function (a, b) { return a.score - b.score; });
       found = found.slice(0, 10);
