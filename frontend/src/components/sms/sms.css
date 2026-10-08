@@ -89,6 +89,16 @@
 .settings-page.sms-log-page { max-width: 1280px; }
 .sms-table--log th,
 .sms-table--log td { padding: 0.625rem 0.75rem; }
+/* The two date-time columns break at the space ("07.10.2026" / "04:20") and shrink to their widest word: with
+   `width: 1px` the column is exactly its min-content and, having no spare width to want, leaves the surplus to the
+   free-text column (the one whose max-content is huge). Desktop table only — the phone's stacked cards are
+   `display: flex` cells, which a 1px width would crush. */
+.sms-table--log td.sms-when { white-space: normal; }
+@media (min-width: 641px) {
+  .sms-table--log th.sms-col-when { width: 1px; }
+}
+/* The number is never broken across lines (grouped by 3, without the "+"). */
+.sms-table--log .sms-phone { white-space: nowrap; }
 /* A reload (month change, paging) keeps the old rows on screen, dimmed, instead of blanking the table. */
 .sms-refreshing { opacity: 0.55; transition: opacity 0.15s ease; }
 
@@ -101,10 +111,10 @@
 .sms-state--responded { color: var(--color-info); }
 .sms-state--pending { color: var(--color-ink-subtle); }
 
-/* The text as sent: half the size of the table's own text, wrapping at spaces (and, for a link nobody can break,
+/* The text as sent: 0.8 of the size of the table's own text, wrapping at spaces (and, for a link nobody can break,
    anywhere), never cut off with an ellipsis. The column's minimum width is what keeps a long text within ~5 lines. */
 .sms-text-cell { min-width: 16rem; }
-.sms-text { display: block; font-size: 50%; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; color: var(--color-ink-muted); }
+.sms-text { display: block; font-size: 80%; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; color: var(--color-ink-muted); }
 /* Why the number cannot be used, on the line under it. */
 .sms-phone-error { display: block; font-size: 50%; line-height: 1.2; color: var(--color-error); white-space: nowrap; }
 
@@ -173,8 +183,13 @@
   color: var(--color-ink);
   cursor: pointer;
 }
-.sms-month-cell:hover { background: var(--color-surface); }
+.sms-month-cell:hover:not(:disabled) { background: var(--color-surface); }
 .sms-month-cell.selected { background: var(--color-ink); color: var(--color-on-ink); }
+.sms-month-cell:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Month cost (placeholder above each table of Wysyłki SMS; see SmsMonthCost.tsx) ───────────────── */
+.sms-cost { margin: 0 0 0.75rem; font-size: 0.8125rem; color: var(--color-ink-muted); }
+.sms-cost-value { color: var(--color-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* ── Back-to-top: appears once the table header has scrolled away ─────────────────────────────
    The anchor is zero-height and sticky to the bottom of the scroll area, as wide as the table (it is a sibling

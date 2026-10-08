@@ -59,9 +59,9 @@ export function SmsLogTable({ rows, loading, refreshing }: SmsLogTableProps) {
         <thead>
           <tr>
             <th>Utworzony przez</th>
-            <th>Data wysyłki</th>
+            <th className="sms-col-when">Data wysyłki</th>
             <th>Typ SMS</th>
-            <th>Wizyta z dnia</th>
+            <th className="sms-col-when">Wizyta z dnia</th>
             <th>Odbiorca</th>
             <th>Nr telefonu</th>
             <th>Tekst</th>
@@ -101,8 +101,8 @@ export function SmsLogTable({ rows, loading, refreshing }: SmsLogTableProps) {
                       <DeliveryIcon row={r} />
                     </span>
                   </td>
-                  <td data-label="Nr telefonu">
-                    <span className="mono">{fmtPhone(r.phone_number)}</span>
+                  <td className="sms-phone" data-label="Nr telefonu">
+                    <span className="mono">{fmtPhone(r.phone_number, { plus: false })}</span>
                   </td>
                   <td className="sms-text-cell" data-label="Tekst">
                     <span className="sms-text">{r.message_body || '—'}</span>

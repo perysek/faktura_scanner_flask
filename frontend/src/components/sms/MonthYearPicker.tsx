@@ -3,14 +3,15 @@ import { Icon } from '../../lib/icons/Icon';
 import { MAX_MONTH, MIN_MONTH, MONTH_ABBR, fmtMonthYear, monthOf, shiftMonth } from './smsFormat';
 import './sms.css';
 
-const MIN_YEAR = Number(MIN_MONTH.slice(0, 4));
-const MAX_YEAR = Number(MAX_MONTH.slice(0, 4));
-
 export interface MonthYearPickerProps {
   /** "YYYY-MM". */
   value: string;
   onChange: (month: string) => void;
   label?: string;
+  /** Earliest / latest month that can be picked ("YYYY-MM"); default: the range the server accepts. Months outside
+   * are disabled everywhere: the arrows, the year arrows and the month grid. */
+  min?: string;
+  max?: string;
 }
 
 /**
@@ -18,7 +19,9 @@ export interface MonthYearPickerProps {
  * calendar button opens a year + month grid for longer jumps. Native `<input type="month">` is not an option:
  * Firefox desktop still renders it as a plain text box.
  */
-export function MonthYearPicker({ value, onChange, label = 'Pokaż wiadomości od' }: MonthYearPickerProps) {
+export function MonthYearPicker({ value, onChange, label = 'Pokaż wiadomości od', min = MIN_MONTH, max = MAX_MONTH }: MonthYearPickerProps) {
+  const minYear = Number(min.slice(0, 4));
+  const maxYear = Number(max.slice(0, 4));
   const [open, setOpen] = useState(false);
   const [year, setYear] = useState(() => Number(value.slice(0, 4)));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -51,7 +54,7 @@ export function MonthYearPicker({ value, onChange, label = 'Pokaż wiadomości o
     document.addEventListener('keydown', onKeyDown);
     // Keyboard users land on the month in use (or the first one when the grid shows another year).
     const pop = popRef.current;
-    (pop?.querySelector<HTMLButtonElement>('[aria-pressed="true"]') ?? pop?.querySelector<HTMLButtonElement>('.sms-month-cell'))?.focus();
+    (pop?.querySelector<HTMLButtonElement>('[aria-pressed="true"]') ?? pop?.querySelector<HTMLButtonElement>('.sms-month-cell:not(:disabled)'))?.focus();
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
@@ -64,14 +67,14 @@ export function MonthYearPicker({ value, onChange, label = 'Pokaż wiadomości o
         {label}
       </span>
       <div className="sms-month-ctrl" role="group" aria-labelledby={labelId}>
-        <button type="button" className="sms-month-step" aria-label="Poprzedni miesiąc" disabled={value <= MIN_MONTH} onClick={() => onChange(shiftMonth(value, -1))}>
+        <button type="button" className="sms-month-step" aria-label="Poprzedni miesiąc" disabled={value <= min} onClick={() => onChange(shiftMonth(value, -1))}>
           <Icon name="chevron_left" />
         </button>
         <button type="button" ref={triggerRef} className="sms-month-current" aria-haspopup="dialog" aria-expanded={open} onClick={toggle}>
           <Icon name="calendar_month" />
           <span>{fmtMonthYear(value)}</span>
         </button>
-        <button type="button" className="sms-month-step" aria-label="Następny miesiąc" disabled={value >= MAX_MONTH} onClick={() => onChange(shiftMonth(value, 1))}>
+        <button type="button" className="sms-month-step" aria-label="Następny miesiąc" disabled={value >= max} onClick={() => onChange(shiftMonth(value, 1))}>
           <Icon name="chevron_right" />
         </button>
       </div>
@@ -79,11 +82,11 @@ export function MonthYearPicker({ value, onChange, label = 'Pokaż wiadomości o
       {open && (
         <div className="sms-month-pop" role="dialog" aria-label="Wybierz miesiąc i rok" ref={popRef}>
           <div className="sms-month-year">
-            <button type="button" className="sms-month-step" aria-label="Poprzedni rok" disabled={year <= MIN_YEAR} onClick={() => setYear((y) => y - 1)}>
+            <button type="button" className="sms-month-step" aria-label="Poprzedni rok" disabled={year <= minYear} onClick={() => setYear((y) => y - 1)}>
               <Icon name="chevron_left" />
             </button>
             <strong aria-live="polite">{year}</strong>
-            <button type="button" className="sms-month-step" aria-label="Następny rok" disabled={year >= MAX_YEAR} onClick={() => setYear((y) => y + 1)}>
+            <button type="button" className="sms-month-step" aria-label="Następny rok" disabled={year >= maxYear} onClick={() => setYear((y) => y + 1)}>
               <Icon name="chevron_right" />
             </button>
           </div>
@@ -92,7 +95,7 @@ export function MonthYearPicker({ value, onChange, label = 'Pokaż wiadomości o
               const ym = monthOf(year, i);
               const selected = ym === value;
               return (
-                <button key={ym} type="button" className={`sms-month-cell${selected ? ' selected' : ''}`} aria-pressed={selected} aria-label={fmtMonthYear(ym)} onClick={() => pick(i)}>
+                <button key={ym} type="button" className={`sms-month-cell${selected ? ' selected' : ''}`} aria-pressed={selected} aria-label={fmtMonthYear(ym)} disabled={ym < min || ym > max} onClick={() => pick(i)}>
                   {abbr}
                 </button>
               );

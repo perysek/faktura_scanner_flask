@@ -33,8 +33,9 @@ export function smsStatus(status: string | null | undefined): { label: string; c
 
 /** "+48500100200" -> "+48 500 100 200": digits in groups of three counted from the right, so whatever is
  * left over at the front is the country code. Text that is not a number (the sender refused it, staff must be
- * able to read what is stored) comes back untouched. */
-export function fmtPhone(raw: string | null | undefined): string {
+ * able to read what is stored) comes back untouched. `plus: false` drops the leading "+" (the Wysłane table
+ * saves the width: "48 500 100 200"). */
+export function fmtPhone(raw: string | null | undefined, { plus = true }: { plus?: boolean } = {}): string {
   const text = (raw ?? '').trim();
   if (!text) return '—';
   const compact = text.replace(/[\s()-]/g, '');
@@ -42,7 +43,7 @@ export function fmtPhone(raw: string | null | undefined): string {
   const digits = compact.replace('+', '');
   const groups: string[] = [];
   for (let end = digits.length; end > 0; end -= 3) groups.unshift(digits.slice(Math.max(0, end - 3), end));
-  return `${compact.startsWith('+') ? '+' : ''}${groups.join(' ')}`;
+  return `${plus && compact.startsWith('+') ? '+' : ''}${groups.join(' ')}`;
 }
 
 // ── Months ("YYYY-MM"): the value of the month picker on Wysyłki SMS and of `?month=` on its endpoints ──────────
