@@ -58,12 +58,13 @@ export interface SmsStats {
   mtd1_confirm_requests: number;
   mtd1_confirmed: number;
   mtd1_declined: number;
-  mtd3_total: number;
-  mtd3_sent: number;
-  mtd3_failed: number;
-  mtd3_confirm_requests: number;
-  mtd3_confirmed: number;
-  mtd3_declined: number;
+  /** Previous calendar month ("Poprzedni miesiąc"). The API still sends `mtd3_*` for the legacy Jinja page; this SPA no longer reads them. */
+  prev_total: number;
+  prev_sent: number;
+  prev_failed: number;
+  prev_confirm_requests: number;
+  prev_confirmed: number;
+  prev_declined: number;
 }
 
 export interface SmsSettingsBundle {

@@ -259,6 +259,7 @@ class SmsReminderRepository(BaseRepository):
                     a.confirmation_status,
                     DATE_TRUNC('month', sr.sent_at) AS send_month,
                     DATE_TRUNC('month', CURRENT_DATE) AS current_month,
+                    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AS previous_month,
                     DATE_TRUNC('month', CURRENT_DATE - INTERVAL '2 months') AS three_months_ago
                 FROM sms_reminders sr
                 JOIN appointments a ON a.id = sr.appointment_id
@@ -270,6 +271,12 @@ class SmsReminderRepository(BaseRepository):
                 COUNT(*) FILTER (WHERE send_month = current_month AND message_type_key = 'confirmation_request') AS mtd1_confirm_requests,
                 COUNT(*) FILTER (WHERE send_month = current_month AND message_type_key = 'confirmation_request' AND confirmation_status = 'confirmed') AS mtd1_confirmed,
                 COUNT(*) FILTER (WHERE send_month = current_month AND message_type_key = 'confirmation_request' AND confirmation_status = 'declined') AS mtd1_declined,
+                COUNT(*) FILTER (WHERE send_month = previous_month) AS prev_total,
+                COUNT(*) FILTER (WHERE send_month = previous_month AND status IN ('sent', 'delivered')) AS prev_sent,
+                COUNT(*) FILTER (WHERE send_month = previous_month AND status = 'failed') AS prev_failed,
+                COUNT(*) FILTER (WHERE send_month = previous_month AND message_type_key = 'confirmation_request') AS prev_confirm_requests,
+                COUNT(*) FILTER (WHERE send_month = previous_month AND message_type_key = 'confirmation_request' AND confirmation_status = 'confirmed') AS prev_confirmed,
+                COUNT(*) FILTER (WHERE send_month = previous_month AND message_type_key = 'confirmation_request' AND confirmation_status = 'declined') AS prev_declined,
                 COUNT(*) FILTER (WHERE send_month >= three_months_ago) AS mtd3_total,
                 COUNT(*) FILTER (WHERE send_month >= three_months_ago AND status IN ('sent', 'delivered')) AS mtd3_sent,
                 COUNT(*) FILTER (WHERE send_month >= three_months_ago AND status = 'failed') AS mtd3_failed,

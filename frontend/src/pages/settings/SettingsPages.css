@@ -54,6 +54,15 @@
 .info-list code { font-family: monospace; font-size: 0.6875rem; background: rgba(30, 96, 145, 0.08); padding: 0.125rem 0.375rem; border-radius: 2px; }
 .info-list a { color: var(--color-info, #1e6091); }
 
+/* Ustawienia SMS header: "Lista SMS" + "Zapisz", top-right, as tall as the title's text. The h1's line box is
+   pinned (2.625rem = 1.75rem x the inherited 1.5 line-height, so the title itself does not move) and both
+   buttons take that same height from the same variable. The doubled class beats `.page-header`'s phone rule
+   that stacks the header into a column. */
+.page-header.sms-settings-header { --sms-title-h: 2.625rem; flex-direction: row; }
+.sms-settings-header .page-title { line-height: var(--sms-title-h); }
+.sms-header-actions { display: flex; gap: 0.75rem; margin-left: auto; }
+.sms-header-actions .refined-btn-primary { box-sizing: border-box; height: var(--sms-title-h); padding-block: 0; }
+
 /* SMS stats */
 .sms-stats-section { margin-bottom: 1.5rem; }
 .period-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
@@ -97,6 +106,28 @@
   color: var(--color-ink-muted);
 }
 .sms-delete-type:hover { color: var(--color-error); }
+
+/* Message-type accordion panels (SmsSettingsPage). Height is written by lib/accordionMotion.ts, not by CSS —
+   a CSS transition would run on its own clock and drift from the page scroll it has to stay in step with. */
+.sms-acc-head { display: flex; align-items: center; gap: 0.5rem; }
+.sms-acc-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sms-acc-body { overflow: hidden; }
+.sms-acc-inner { padding-top: 1.25rem; }
 
 .sms-test-row { display: flex; gap: 0.75rem; align-items: center; }
 
