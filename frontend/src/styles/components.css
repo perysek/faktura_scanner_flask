@@ -1357,7 +1357,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
    APP SHELL — sidebar (§13), header, footer (§12).
    ═══════════════════════════════════════════════════════════════════════ */
 
-.app-shell { display: flex; height: 100%; }
+.app-shell { --sidebar-width: 17rem; display: flex; height: 100%; }
 .app-shell-main { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .app-shell-header {
   display: flex;
@@ -1367,6 +1367,28 @@ table.stack-cards td.cell-hide-lg { display: none; }
   flex-shrink: 0;
 }
 .app-shell-content { flex: 1; overflow: auto; }
+/* Row between <main> and the footer holding the sidebar show/hide toggle. Desktop only:
+   below 1024px the sidebar is the off-canvas drawer, opened from the header / tab bar. */
+.app-shell-toolbar { display: none; }
+.sidebar-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.5rem;
+  color: var(--color-ink-subtle);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.sidebar-toggle-btn:hover { color: var(--color-ink); }
+@media (min-width: 1024px) {
+  .app-shell-toolbar { display: flex; justify-content: flex-start; flex-shrink: 0; padding: 0.125rem 1rem; }
+}
 .app-shell-footer {
   padding: 0.75rem 1.5rem;
   text-align: center;
@@ -1401,13 +1423,28 @@ table.stack-cards td.cell-hide-lg { display: none; }
 }
 
 .sidebar {
-  width: 17rem;
+  width: var(--sidebar-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   box-shadow: var(--shadow-sidebar);
+}
+/* Desktop collapse: the rail slides out to the left by its own width (negative margin, so
+   <main> reclaims the space), then goes visibility:hidden once the slide has finished so
+   its links drop out of the tab order and the screen-reader tree. Same visibility-delay
+   trick as the mobile drawer below. */
+@media (min-width: 1024px) {
+  .sidebar { transition: margin-left 0.3s var(--ease-out-expo); }
+  .app-shell--sidebar-hidden .sidebar {
+    margin-left: calc(-1 * var(--sidebar-width));
+    visibility: hidden;
+    transition: margin-left 0.3s var(--ease-out-expo), visibility 0s linear 0.3s;
+  }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .sidebar, .app-shell--sidebar-hidden .sidebar { transition: none; }
 }
 .sidebar-logo-block {
   padding: 0.5rem 1rem;
@@ -1490,8 +1527,8 @@ table.stack-cards td.cell-hide-lg { display: none; }
   color: inherit;
   text-decoration: none;
   border-radius: var(--radius-sm);
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
-.sidebar-user-link:hover { background: var(--sidebar-hover-bg); }
 .sidebar-user-link.active { background: var(--sidebar-hover-bg); }
 .sidebar-avatar {
   width: 2.5rem;
@@ -1520,9 +1557,20 @@ table.stack-cards td.cell-hide-lg { display: none; }
   color: var(--sidebar-text);
   background: transparent;
   cursor: pointer;
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, color 200ms ease-out;
 }
-.sidebar-icon-btn:hover { color: var(--sidebar-text-hover); background: var(--sidebar-hover-bg); }
-.sidebar-icon-btn.danger-hover:hover { color: var(--color-error); background: var(--color-status-cancelled-bg); }
+.sidebar-icon-btn:hover { color: var(--sidebar-text-hover); }
+.sidebar-icon-btn.danger-hover:hover { color: var(--color-error); }
+/* Footer user row hover (avatar + name, theme button, logout): lift + shade, no fill — the same
+   elevate idiom as .hover-lift. Pointer devices only, so a tap on a phone doesn't leave the
+   control stuck raised. */
+@media (hover: hover) {
+  .sidebar-user-link:hover,
+  .sidebar-icon-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-user-link, .sidebar-icon-btn, .sidebar-toggle-btn { transition: none; }
+}
 
 /* Mobile drawer — stays mounted at all times (§13.4), slid off-canvas. */
 @media (max-width: 1023px) {

@@ -29,7 +29,7 @@ export interface NavSectionConfig {
   links: NavLinkConfig[];
   /** Section-wide gate, ANDed with every link's own `visible` (Sidebar.tsx) —
    * for a section that must disappear as a whole regardless of any one
-   * link's individual rule (e.g. Finanse: 'Koszty' is otherwise
+   * link's individual rule (e.g. Finanse: 'Panel danych' is otherwise
    * always-visible, but the whole section still has to vanish when the
    * viewer has no 'invoices' access). Omit for sections with no such
    * whole-section rule — the default is "always visible" (each link's own
@@ -58,9 +58,9 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
     id: 'finanse',
     title: 'Finanse',
     // Whole-section gate: without 'invoices' access, nothing in Finanse is
-    // reachable — including 'Koszty' (dashboard), whose OWN `visible` below
+    // reachable — including 'Panel danych' (dashboard), whose OWN `visible` below
     // is `() => true` (D14 point 5: the real route has no module gate at
-    // all) and 'Analiza biznesowa'/'Wskaźniki biznesowe', whose real routes
+    // all) and 'Analityka biznesowa'/'Wskaźniki biznesowe', whose real routes
     // require 'appointments', not 'invoices' (D14 point 3). Those two facts
     // are unchanged — this is a sidebar-only override, not a route change:
     // a viewer with 'appointments' but not 'invoices' loses the SIDEBAR
@@ -70,7 +70,7 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
     visible: (ctx) => ctx.hasModuleAccess('invoices'),
     links: [
       {
-        label: 'Koszty',
+        label: 'Panel danych',
         to: '/dashboard',
         mobileHide: true,
         // main.dashboard has NO module decorator (@login_required only) —
@@ -80,13 +80,13 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         visible: () => true,
       },
       {
-        label: 'Lista faktur',
+        label: 'Koszty',
         to: '/faktury',
         iconPath: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
         visible: (ctx) => ctx.hasModuleAccess('invoices'),
       },
       {
-        label: 'Lista sprzedawców',
+        label: 'Dostawcy',
         to: '/sprzedawcy',
         mobileHide: true,
         iconPath:
@@ -94,14 +94,7 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         visible: (ctx) => ctx.hasModuleAccess('invoices'),
       },
       {
-        label: 'Import dokumentów',
-        to: '/import-dokumentow',
-        mobileHide: true,
-        iconPath: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
-        visible: (ctx) => ctx.hasModuleAccess('invoices'),
-      },
-      {
-        label: 'Analiza biznesowa',
+        label: 'Analityka biznesowa',
         to: '/analiza-biznesowa',
         mobileHide: true,
         // Sidebar shows this under 'invoices'; the real route
@@ -138,11 +131,35 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
           'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
         visible: (ctx) => ctx.hasModuleAccess('clients'),
       },
+      {
+        label: 'Usługi',
+        to: '/uslugi',
+        mobileHide: true,
+        iconPath: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+        visible: (ctx) => ctx.hasModuleAccess('services'),
+      },
+      {
+        label: 'Kategorie usług',
+        to: '/kategorie-uslug',
+        mobileHide: true,
+        iconPath: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
+        // Every action on this page is a write (create/edit/delete a
+        // category) — there is no legitimate read-only mode for it, so a
+        // read_only 'services' role loses the whole page, not just its
+        // buttons (Usługi itself stays view-only reachable — see above).
+        visible: (ctx) => ctx.hasModuleWrite('services'),
+      },
+      {
+        label: 'Komunikacja SMS',
+        to: '/ustawienia/sms',
+        iconPath: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
+        visible: (ctx) => ctx.hasModuleAccess('settings'),
+      },
     ],
   },
   {
-    id: 'zarzadzanie',
-    title: 'Zarządzanie',
+    id: 'personel',
+    title: 'Personel',
     links: [
       {
         label: 'Pracownicy',
@@ -174,24 +191,6 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         to: '/moje-nieobecnosci',
         iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
         visible: (ctx) => ctx.hasLinkedEmployee,
-      },
-      {
-        label: 'Usługi',
-        to: '/uslugi',
-        mobileHide: true,
-        iconPath: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-        visible: (ctx) => ctx.hasModuleAccess('services'),
-      },
-      {
-        label: 'Kategorie usług',
-        to: '/kategorie-uslug',
-        mobileHide: true,
-        iconPath: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
-        // Every action on this page is a write (create/edit/delete a
-        // category) — there is no legitimate read-only mode for it, so a
-        // read_only 'services' role loses the whole page, not just its
-        // buttons (Usługi itself stays view-only reachable — see below).
-        visible: (ctx) => ctx.hasModuleWrite('services'),
       },
       {
         label: 'Rodzaje zatrudnienia',
@@ -228,8 +227,8 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
     ],
   },
   {
-    id: 'system',
-    title: 'System',
+    id: 'aplikacja',
+    title: 'Aplikacja',
     links: [
       {
         label: 'Historia zmian',
@@ -272,47 +271,34 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         visible: (ctx) => ctx.user?.role === 'superuser',
       },
       {
-        label: 'Ustawienia SMS',
-        to: '/ustawienia/sms',
-        iconPath: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
-        visible: (ctx) => ctx.hasModuleAccess('settings'),
-      },
-      {
-        label: 'Import danych',
-        to: '/import-danych',
-        mobileHide: true,
-        iconPath: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
-        visible: (ctx) => ctx.hasModuleAccess('data_import'),
-      },
-      {
-        label: 'Instrukcja obsługi',
+        // The phone edition (/instrukcja-smartfon) is no longer a nav row: it stays
+        // routable and is linked from inside this manual ("📱 Wersja na smartfon").
+        label: 'Podręcznik aplikacji',
         to: '/instrukcja',
         iconPath:
           'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
         visible: () => true,
       },
-      {
-        label: 'Instrukcja dla recepcji',
-        to: '/instrukcja-recepcja',
-        // Plain-language onboarding guide for the front desk (public/manual/instrukcja-recepcja.html).
-        // Like the other two manuals it documents the app for everyone, so no role or module gate.
-        iconPath:
-          'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
-        visible: () => true,
-      },
-      {
-        label: 'Instrukcja obsługi (smartfon)',
-        to: '/instrukcja-smartfon',
-        // Phone icon (same glyph as Ustawienia SMS) — the phone edition of the manual.
-        iconPath: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
-        visible: () => true,
-      },
-      {
-        label: 'Profil',
-        to: '/profil',
-        iconPath: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-        visible: () => true,
-      },
     ],
+  },
+];
+
+/**
+ * Main-menu links that sit OUTSIDE the accordion sections, above them — always
+ * on screen, never folded away. Same `NavLinkConfig` shape and the same
+ * `visible` filtering as a section link (Sidebar.tsx renders both through one
+ * `SidebarNavLink`). Not part of `NAV_SECTIONS`, so BottomTabBar's tab lookup
+ * is unaffected. 'Profil' has no row of its own: the user widget in the
+ * sidebar footer is its entry point.
+ */
+export const NAV_TOP_LINKS: NavLinkConfig[] = [
+  {
+    label: 'Instrukcja operacyjna',
+    to: '/instrukcja-recepcja',
+    // Plain-language onboarding guide for the front desk (public/manual/instrukcja-recepcja.html).
+    // Like the other manuals it documents the app for everyone, so no role or module gate.
+    iconPath:
+      'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+    visible: () => true,
   },
 ];

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { pageTitleFor } from '../../config/pageTitles';
+import { Icon } from '../../lib/icons/Icon';
 import { Sidebar } from './Sidebar';
 import { BottomTabBar, showsTabBar } from './BottomTabBar';
 
@@ -11,6 +12,10 @@ import { BottomTabBar, showsTabBar } from './BottomTabBar';
 export function AppShell() {
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  // Desktop-only collapse of the sidebar rail (>= 1024px). Independent of
+  // `isMobileOpen`: below that width the sidebar is the off-canvas drawer and
+  // the CSS for `.app-shell--sidebar-hidden` is not applied at all.
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const isFirstMount = useRef(true);
 
@@ -43,7 +48,7 @@ export function AppShell() {
   const tabBar = showsTabBar(location.pathname);
 
   return (
-    <div className={`app-shell${tabBar ? ' app-shell--tabbar' : ''}`}>
+    <div className={`app-shell${tabBar ? ' app-shell--tabbar' : ''}${isSidebarHidden ? ' app-shell--sidebar-hidden' : ''}`}>
       <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} />
       <div className="app-shell-main">
         <header className="app-shell-header">
@@ -77,6 +82,21 @@ export function AppShell() {
         </main>
 
         {tabBar && <BottomTabBar isMenuOpen={isMobileOpen} onMenu={() => setIsMobileOpen((open) => !open)} />}
+
+        {/* Desktop only (CSS hides it < 1024px): slides the sidebar out / back in. */}
+        <div className="app-shell-toolbar">
+          <button
+            type="button"
+            className="sidebar-toggle-btn"
+            aria-controls="sidebar"
+            aria-expanded={!isSidebarHidden}
+            aria-label={isSidebarHidden ? 'Pokaż menu boczne' : 'Ukryj menu boczne'}
+            title={isSidebarHidden ? 'Pokaż menu boczne' : 'Ukryj menu boczne'}
+            onClick={() => setIsSidebarHidden((hidden) => !hidden)}
+          >
+            <Icon name={isSidebarHidden ? 'chevron_right' : 'chevron_left'} />
+          </button>
+        </div>
 
         <footer className="app-shell-footer">
           &copy; {new Date().getFullYear()} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.

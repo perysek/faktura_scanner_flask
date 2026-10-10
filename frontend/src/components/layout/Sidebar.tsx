@@ -3,7 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
-import { NAV_SECTIONS } from './navConfig';
+import { NAV_SECTIONS, NAV_TOP_LINKS } from './navConfig';
+import type { NavLinkConfig } from './navConfig';
 import { NavIcon } from './NavIcon';
 import { SidebarSection } from './SidebarSection';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -19,6 +20,23 @@ const ROLE_LABELS: Record<string, string> = {
 export interface SidebarProps {
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+}
+
+/** One nav row — shared by the accordion sections and the top-level links so
+ * the two can never drift apart in markup or active-state classes. */
+function SidebarNavLink({ link }: { link: NavLinkConfig }) {
+  return (
+    <NavLink
+      to={link.to}
+      end
+      className={({ isActive }) =>
+        `sidebar-link ${isActive ? 'sidebar-link--active' : 'sidebar-link--default'}${link.mobileHide ? ' nav-mobile-hide' : ''}`
+      }
+    >
+      <NavIcon path={link.iconPath} />
+      {link.label}
+    </NavLink>
+  );
 }
 
 /**
@@ -48,7 +66,7 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
   // separate "admin sidebar config" to keep in sync (§13.5). A section's own
   // `visible` (when present) is a whole-section AND gate — it drops every
   // link regardless of each link's individual rule (e.g. Finanse requires
-  // 'invoices' access outright, even for 'Koszty', whose own `visible` is
+  // 'invoices' access outright, even for 'Panel danych', whose own `visible` is
   // otherwise unconditional).
   const visibleSections = useMemo(
     () =>
@@ -60,6 +78,9 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
         .filter((section) => section.links.length > 0),
     [ctx],
   );
+
+  // Top-level links (outside any accordion section) get the same per-link filter.
+  const visibleTopLinks = useMemo(() => NAV_TOP_LINKS.filter((link) => link.visible(ctx)), [ctx]);
 
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
 
@@ -112,6 +133,9 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
         </div>
 
         <nav className="sidebar-nav" aria-label="Menu główne">
+          {visibleTopLinks.map((link) => (
+            <SidebarNavLink key={link.to} link={link} />
+          ))}
           {visibleSections.map((section) => (
             <SidebarSection
               key={section.id}
@@ -121,17 +145,7 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
               onToggle={() => toggleSection(section.id)}
             >
               {section.links.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end
-                  className={({ isActive }) =>
-                    `sidebar-link ${isActive ? 'sidebar-link--active' : 'sidebar-link--default'}${link.mobileHide ? ' nav-mobile-hide' : ''}`
-                  }
-                >
-                  <NavIcon path={link.iconPath} />
-                  {link.label}
-                </NavLink>
+                <SidebarNavLink key={link.to} link={link} />
               ))}
             </SidebarSection>
           ))}
