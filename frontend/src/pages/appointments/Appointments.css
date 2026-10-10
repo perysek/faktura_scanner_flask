@@ -258,6 +258,31 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   .scroll-jump-btn { width: 44px; height: 44px; }
 }
 
+/* "+" Nowa wizyta float button (NewVisitFab.tsx): the same black circle as the SMS back-to-top
+   (.sms-scrolltop). Placement mirrors .scroll-jump: below 1024px the PAGE scrolls, so it is
+   viewport-fixed (4.5rem clears the shell footer); from 1024px the page is viewport-bounded and
+   it is anchored to the bottom-right of its positioned parent (.cal-main on list/day, the page
+   root on week/month). Phones have their own "+" in the bottom nav. */
+.appt-fab {
+  position: fixed; right: 1.25rem; bottom: 4.5rem; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  width: 2.75rem; height: 2.75rem;
+  background: var(--color-ink); color: var(--color-on-ink);
+  border-radius: 50%; box-shadow: var(--shadow-lg);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.appt-fab:hover { transform: translateY(-2px); }
+.appt-fab:focus-visible { outline: none; box-shadow: var(--shadow-focus), var(--shadow-lg); }
+.appt-fab .icon { width: 1.375rem; height: 1.375rem; }
+@media (min-width: 1024px) { .appt-fab { position: absolute; right: 1.75rem; bottom: 1rem; } }
+@media (max-width: 640px) { .appt-fab { display: none; } }
+@media (prefers-reduced-motion: reduce) { .appt-fab { transition: none; } }
+/* The list's up/down pair steps aside to the LEFT of the "+" (2.75rem circle + 0.5rem gap), so the
+   two never overlap. Only when the "+" is actually there (no write access = no shift). */
+.cal-main:has(> .appt-fab) .scroll-jump { right: 4.5rem; }
+@media (min-width: 1024px) { .cal-main:has(> .appt-fab) .scroll-jump { right: 5rem; } }
+
 /* Wizyty lista + Kalendarz dzień — DESIGN.md §20.2 `.page-fills-viewport`
    retrofit (fix #1/#6, implementation-log.md "Zaproponowana kolejność
    napraw" 2026-08-19; header-row relocation per user clarification the same

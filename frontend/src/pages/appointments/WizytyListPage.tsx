@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useAuth } from '../../contexts/AuthContext';
-import { Button, ButtonLink } from '../../components/ui/Button';
+import { Button } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { formatPLN } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
@@ -14,6 +14,7 @@ import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
 import { IncomeBanner } from './IncomeBanner';
 import { ScrollJumpButtons } from './ScrollJumpButtons';
+import { NewVisitFab } from './NewVisitFab';
 import { StatusDropdown } from './StatusDropdown';
 import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
@@ -525,11 +526,6 @@ export function WizytyListPage() {
             <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
           </div>
           <div>
-            {canWrite && (
-              <ButtonLink variant="primary" icon="add" to="/wizyty/nowa">
-                Nowa wizyta
-              </ButtonLink>
-            )}
             <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
             <PastVisitsScanner />
           </div>
@@ -738,6 +734,8 @@ export function WizytyListPage() {
         )}
         {/* The phone view renders its own pair (MobileWizytyCalendarView) — it hides with the bottom bars. */}
         {!isMobile && <ScrollJumpButtons innerScrollerRef={tableContainerRef} />}
+        {/* "Nowa wizyta" lives here now (was a page-header button); the pair above shifts left of it in CSS. */}
+        {!isMobile && <NewVisitFab />}
       </div>
 
       <CalendarMonthSidebar selectedDate={mode === 'chain' ? chainDates[0] ?? iso(weekStart) : iso(weekStart)} onDayClick={handleSidebarDayClick} />

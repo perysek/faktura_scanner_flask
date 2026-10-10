@@ -11,6 +11,7 @@ import { IncomeFooter } from './IncomeFooter';
 import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
+import { NewVisitFab } from './NewVisitFab';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { MultiEmployeeScheduleResponse } from '../../types/appointment';
@@ -261,6 +262,7 @@ export function CalendarDayPage() {
             )}
           </div>
         )}
+        <NewVisitFab />
       </div>
 
       <CalendarMonthSidebar selectedDate={date} onDayClick={handleSidebarDayClick} />

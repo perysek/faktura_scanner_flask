@@ -1544,7 +1544,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .sidebar-footer { padding: 0.75rem 1rem; flex-shrink: 0; border-top: 1px solid var(--sidebar-border); background: var(--sidebar-bg-deep); }
 /* One row, three controls (user widget, theme, logout) 1px apart and the same height: `stretch`
    makes the icon buttons as tall as the widget, whose height the 2.5rem avatar + 3px padding sets. */
-.sidebar-user-row { display: flex; align-items: stretch; gap: 1px; }
+.sidebar-user-row { --sidebar-ctl-radius: var(--radius-sm); display: flex; align-items: stretch; gap: 1px; }
 /* The avatar + name block opens the Profil page (one tap from the drawer on a phone). */
 .sidebar-user-link {
   display: flex;
@@ -1556,7 +1556,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
   padding: 3px;
   color: inherit;
   text-decoration: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--sidebar-ctl-radius);
   transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
 .sidebar-user-link.active { background: var(--sidebar-hover-bg); }
@@ -1586,7 +1586,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
   width: 2.875rem;
   min-height: 2.5rem;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--sidebar-ctl-radius);
   border: 1px solid transparent;
   color: var(--sidebar-text);
   background: transparent;

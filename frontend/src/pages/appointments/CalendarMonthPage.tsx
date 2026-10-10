@@ -8,6 +8,7 @@ import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { IncomeFooter } from './IncomeFooter';
 import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
+import { NewVisitFab } from './NewVisitFab';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
 import { STATUS_LABELS } from '../../types/appointment';
@@ -136,7 +137,7 @@ export function CalendarMonthPage() {
   }
 
   return (
-    <div className="refined-page page-fills-viewport fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="refined-page page-fills-viewport fade-in" style={{ display: 'flex', flexDirection: 'column', position: 'relative' /* anchor of the NewVisitFab */ }}>
       <header className="page-header">
         <div>
           <h1 className="page-title">Wizyty</h1>
@@ -205,6 +206,7 @@ export function CalendarMonthPage() {
           </div>
         </>
       )}
+      <NewVisitFab />
     </div>
   );
 }
