@@ -194,7 +194,7 @@ export function CalendarMonthPage() {
                         className={`month-cell-appt ${a.status}`}
                         title={`${STATUS_LABELS[a.status]} — ${a.start_time.slice(0, 5)} — ${a.client_name ?? 'Bez klienta'} (${stylistFirst})`}
                       >
-                        {a.client_name ?? 'Bez klienta'} ({stylistFirst})
+                        <strong className="month-cell-time">{a.start_time.slice(0, 5)}</strong> {a.client_name ?? 'Bez klienta'} ({stylistFirst})
                       </span>
                     );
                   })}

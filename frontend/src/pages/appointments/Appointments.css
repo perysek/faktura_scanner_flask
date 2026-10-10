@@ -381,7 +381,10 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .month-cell.outside { opacity: 0.4; }
 .month-cell.today .month-cell-num { background: var(--color-ink); color: var(--color-on-ink); border-radius: 50%; }
 .month-cell-num { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; font-size: 0.75rem; font-weight: 600; }
-.month-cell-appt { font-size: 0.625rem; padding: 0.0625rem 0.25rem; border-radius: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Visit chip: 0.84375rem = the former 0.625rem + 35%. The start time (hh:mm) leads it in bold ink — the
+   one part that stays black whatever the status colour of the chip. */
+.month-cell-appt { font-size: 0.84375rem; padding: 0.0625rem 0.25rem; border-radius: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.month-cell-time { font-weight: 700; color: var(--color-ink); }
 /* Status colors — same scheme as `.wk-block`/`.day-block`/`.status-badge`
  * (fix #4 task2, was a single flat blue regardless of status). */
 .month-cell-appt.scheduled { background: rgba(59,130,246,0.15); color: #1d4ed8; }
