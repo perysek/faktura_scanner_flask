@@ -284,14 +284,14 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
 ];
 
 /**
- * Main-menu links that sit OUTSIDE the accordion sections, above them — always
- * on screen, never folded away. Same `NavLinkConfig` shape and the same
- * `visible` filtering as a section link (Sidebar.tsx renders both through one
- * `SidebarNavLink`). Not part of `NAV_SECTIONS`, so BottomTabBar's tab lookup
- * is unaffected. 'Profil' has no row of its own: the user widget in the
- * sidebar footer is its entry point.
+ * Main-menu links that sit OUTSIDE the accordion sections, under the last one
+ * and set off by a divider — always on screen, never folded away. Same
+ * `NavLinkConfig` shape and the same `visible` filtering as a section link
+ * (Sidebar.tsx renders both through one `SidebarNavLink`). Not part of
+ * `NAV_SECTIONS`, so BottomTabBar's tab lookup is unaffected. 'Profil' has no
+ * row of its own: the user widget in the sidebar footer is its entry point.
  */
-export const NAV_TOP_LINKS: NavLinkConfig[] = [
+export const NAV_STANDALONE_LINKS: NavLinkConfig[] = [
   {
     label: 'Instrukcja operacyjna',
     to: '/instrukcja-recepcja',

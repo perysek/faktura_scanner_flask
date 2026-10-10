@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
-import { NAV_SECTIONS, NAV_TOP_LINKS } from './navConfig';
+import { NAV_SECTIONS, NAV_STANDALONE_LINKS } from './navConfig';
 import type { NavLinkConfig } from './navConfig';
 import { NavIcon } from './NavIcon';
 import { SidebarSection } from './SidebarSection';
@@ -79,8 +79,8 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
     [ctx],
   );
 
-  // Top-level links (outside any accordion section) get the same per-link filter.
-  const visibleTopLinks = useMemo(() => NAV_TOP_LINKS.filter((link) => link.visible(ctx)), [ctx]);
+  // Standalone links (outside any accordion section) get the same per-link filter.
+  const visibleStandaloneLinks = useMemo(() => NAV_STANDALONE_LINKS.filter((link) => link.visible(ctx)), [ctx]);
 
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
 
@@ -133,9 +133,6 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
         </div>
 
         <nav className="sidebar-nav" aria-label="Menu główne">
-          {visibleTopLinks.map((link) => (
-            <SidebarNavLink key={link.to} link={link} />
-          ))}
           {visibleSections.map((section) => (
             <SidebarSection
               key={section.id}
@@ -149,6 +146,13 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
               ))}
             </SidebarSection>
           ))}
+          {visibleStandaloneLinks.length > 0 && (
+            <div className="sidebar-nav-standalone">
+              {visibleStandaloneLinks.map((link) => (
+                <SidebarNavLink key={link.to} link={link} />
+              ))}
+            </div>
+          )}
         </nav>
 
         {/* "Widok administratora"/"Dane własne" toggles removed — admin view

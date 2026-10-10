@@ -83,8 +83,9 @@ export function AppShell() {
 
         {tabBar && <BottomTabBar isMenuOpen={isMobileOpen} onMenu={() => setIsMobileOpen((open) => !open)} />}
 
-        {/* Desktop only (CSS hides it < 1024px): slides the sidebar out / back in. */}
-        <div className="app-shell-toolbar">
+        <footer className="app-shell-footer">
+          {/* Desktop only (CSS hides it < 1024px): slides the sidebar out / back in.
+              Pinned to the footer's left edge, so the centered copyright text stays centered. */}
           <button
             type="button"
             className="sidebar-toggle-btn"
@@ -96,9 +97,6 @@ export function AppShell() {
           >
             <Icon name={isSidebarHidden ? 'chevron_right' : 'chevron_left'} />
           </button>
-        </div>
-
-        <footer className="app-shell-footer">
           &copy; {new Date().getFullYear()} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.
         </footer>
       </div>

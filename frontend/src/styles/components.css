@@ -501,6 +501,23 @@
   padding: 1rem 1.5rem;
 }
 
+/* Desktop page chrome, tightened by half (>= 1024px only; phones keep their own spacing):
+     top padding           1rem   -> 0.5rem
+     header -> content     2rem   -> 1rem     (pages already at 0.75rem: -> 0.375rem, never raised)
+     title -> subtitle     0.5rem -> 0.125rem (the smallest gap the app already uses, see RbacPages.css)
+   `.refined-page` is declared in two stylesheets and several pages restyle `.page-header`, so a
+   same-specificity override would be at the mercy of bundle order; the `.app-shell-content` prefix
+   puts these above every page-level rule. Everything but the top padding is left as the page set it. */
+@media (min-width: 1024px) {
+  .app-shell-content .refined-page { padding-top: 0.5rem; }
+  .app-shell-content .page-header { margin-bottom: 1rem; }
+  .app-shell-content .page-header .page-title { margin-bottom: 0.125rem; }
+  .app-shell-content .kpi-header.page-header,
+  .app-shell-content .history-page .page-header { margin-bottom: 0.375rem; }
+  /* Historia already ran a 0 title margin; keep it rather than raise it to 0.125rem. */
+  .app-shell-content .history-page .page-header .page-title { margin-bottom: 0; }
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1367,13 +1384,18 @@ table.stack-cards td.cell-hide-lg { display: none; }
   flex-shrink: 0;
 }
 .app-shell-content { flex: 1; overflow: auto; }
-/* Row between <main> and the footer holding the sidebar show/hide toggle. Desktop only:
-   below 1024px the sidebar is the off-canvas drawer, opened from the header / tab bar. */
-.app-shell-toolbar { display: none; }
+/* Sidebar show/hide toggle, pinned to the footer's left edge (the footer text stays centered).
+   Desktop only: below 1024px the sidebar is the off-canvas drawer, opened from the header /
+   tab bar. 0.25rem is the smallest inset the app uses; the 1.5rem glyph sits centred in its
+   2rem hit area, so the arrow itself lands 0.5rem from the edge. */
 .sidebar-toggle-btn {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
   width: 2rem;
   height: 2rem;
   padding: 0;
@@ -1387,9 +1409,10 @@ table.stack-cards td.cell-hide-lg { display: none; }
 }
 .sidebar-toggle-btn:hover { color: var(--color-ink); }
 @media (min-width: 1024px) {
-  .app-shell-toolbar { display: flex; justify-content: flex-start; flex-shrink: 0; padding: 0.125rem 1rem; }
+  .sidebar-toggle-btn { display: inline-flex; }
 }
 .app-shell-footer {
+  position: relative;
   padding: 0.75rem 1.5rem;
   text-align: center;
   font-size: 0.75rem;
@@ -1457,6 +1480,10 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .sidebar-logo-block img { width: 100%; height: auto; object-fit: contain; filter: var(--sidebar-logo-filter); }
 .sidebar-tagline { font-size: 0.8125rem; letter-spacing: 0.15em; text-transform: uppercase; text-align: center; color: var(--sidebar-text); }
 .sidebar-nav { flex: 1; padding: 0.5rem 1rem; overflow-y: auto; }
+/* Standalone links under the accordion sections (Instrukcja operacyjna). The hairline is the same
+   1px --sidebar-border as the logo block's bottom edge, but it lives inside .sidebar-nav's
+   padding, so it stops 1rem short of the sidebar edges instead of running edge to edge. */
+.sidebar-nav-standalone { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--sidebar-border); }
 .sidebar-section { position: relative; margin-top: 0.25rem; }
 .sidebar-section-header {
   width: 100%;
@@ -1515,7 +1542,9 @@ table.stack-cards td.cell-hide-lg { display: none; }
   margin-left: auto;
 }
 .sidebar-footer { padding: 0.75rem 1rem; flex-shrink: 0; border-top: 1px solid var(--sidebar-border); background: var(--sidebar-bg-deep); }
-.sidebar-user-row { display: flex; align-items: center; gap: 0.5rem; }
+/* One row, three controls (user widget, theme, logout) 1px apart and the same height: `stretch`
+   makes the icon buttons as tall as the widget, whose height the 2.5rem avatar + 3px padding sets. */
+.sidebar-user-row { display: flex; align-items: stretch; gap: 1px; }
 /* The avatar + name block opens the Profil page (one tap from the drawer on a phone). */
 .sidebar-user-link {
   display: flex;
@@ -1524,6 +1553,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
   flex: 1;
   min-width: 0;
   min-height: 2.75rem;
+  padding: 3px;
   color: inherit;
   text-decoration: none;
   border-radius: var(--radius-sm);
@@ -1543,14 +1573,18 @@ table.stack-cards td.cell-hide-lg { display: none; }
   background: linear-gradient(135deg, var(--color-accent), var(--color-accent-deep));
   color: var(--color-on-accent);
 }
-.sidebar-user-name { font-size: 1rem; font-weight: 500; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sidebar-user-role { font-size: 0.8125rem; color: var(--sidebar-text); }
+/* Both labels 20% smaller than before (1rem -> 0.8rem, 0.8125rem -> 0.65rem), a tight line box,
+   and a 2px gap between them. */
+.sidebar-user-name { font-size: 0.8rem; line-height: 1.2; font-weight: 500; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-user-role { margin-top: 2px; font-size: 0.65rem; line-height: 1.2; color: var(--sidebar-text); }
 .sidebar-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  /* Width = the widget's height (2.5rem avatar + 2 x 3px padding), so the buttons are square;
+     no fixed height — the row's `stretch` supplies it. */
+  width: 2.875rem;
+  min-height: 2.5rem;
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;

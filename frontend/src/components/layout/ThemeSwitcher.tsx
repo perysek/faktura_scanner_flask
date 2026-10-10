@@ -95,7 +95,8 @@ export function ThemeSwitcher() {
   }
 
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
+    // display:flex so the trigger stretches to the footer row's height (see .sidebar-user-row).
+    <div style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
       <button
         type="button"
         ref={btnRef}
