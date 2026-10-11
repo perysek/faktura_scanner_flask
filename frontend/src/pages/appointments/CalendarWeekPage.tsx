@@ -9,6 +9,7 @@ import { IncomeFooter } from './IncomeFooter';
 import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
 import { NewVisitFab } from './NewVisitFab';
+import { CalendarVisitBar } from './CalendarVisitBar';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { EmployeeFilter } from './EmployeeFilter';
 import { STATUS_LABELS } from '../../types/appointment';
@@ -211,19 +212,17 @@ export function CalendarWeekPage() {
                       const dur = durationMin(a.start_time, a.end_time);
                       const stylistFirst = a.employee_name?.split(' ')[0] ?? '—';
                       return (
-                        <div
+                        <CalendarVisitBar
                           key={a.id}
-                          className={`wk-block ${a.status}`}
-                          style={{ top: pos.top, height: pos.height }}
-                          onClick={() => navigate(`/wizyty/${a.id}`)}
+                          appt={a}
+                          variant="wk"
+                          top={pos.top}
+                          height={pos.height}
+                          laneHeight={laneHeight}
+                          employeeName={a.employee_name}
                           title={`${STATUS_LABELS[a.status]} — ${a.client_name ?? 'Bez klienta'}${a.service_name ? ` — ${a.service_name}` : ''} — ${stylistFirst} — ${a.start_time.slice(0, 5)} (${dur} min)`}
-                        >
-                          <div className="wk-block-client">{a.client_name ?? 'Bez klienta'}</div>
-                          {a.service_name && <div className="wk-block-service">{a.service_name}</div>}
-                          <div className="wk-block-time">
-                            {stylistFirst} · {a.start_time.slice(0, 5)} · {dur} min
-                          </div>
-                        </div>
+                          onOpen={() => navigate(`/wizyty/${a.id}`)}
+                        />
                       );
                     })}
                   </div>

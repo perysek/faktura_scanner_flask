@@ -12,6 +12,7 @@ import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { NewVisitFab } from './NewVisitFab';
+import { CalendarVisitBar } from './CalendarVisitBar';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { MultiEmployeeScheduleResponse } from '../../types/appointment';
@@ -230,19 +231,17 @@ export function CalendarDayPage() {
                         const dur = durationMin(a.start_time, a.end_time);
                         const stylistFirst = emp.full_name.split(' ')[0];
                         return (
-                          <div
+                          <CalendarVisitBar
                             key={a.id}
-                            className={`day-block ${a.status}`}
-                            style={{ top: pos.top, height: pos.height }}
-                            onClick={() => navigate(`/wizyty/${a.id}`)}
+                            appt={a}
+                            variant="day"
+                            top={pos.top}
+                            height={pos.height}
+                            laneHeight={laneHeight}
+                            employeeName={emp.full_name}
                             title={`${STATUS_LABELS[a.status]} — ${a.client_name ?? 'Bez klienta'}${a.service_name ? ` — ${a.service_name}` : ''} — ${stylistFirst} — ${a.start_time.slice(0, 5)} (${dur} min)`}
-                          >
-                            <div className="day-block-client">{a.client_name ?? 'Bez klienta'}</div>
-                            {a.service_name && <div className="day-block-service">{a.service_name}</div>}
-                            <div className="day-block-time">
-                              {stylistFirst} · {a.start_time.slice(0, 5)} · {dur} min
-                            </div>
-                          </div>
+                            onOpen={() => navigate(`/wizyty/${a.id}`)}
+                          />
                         );
                       })}
                     </div>
