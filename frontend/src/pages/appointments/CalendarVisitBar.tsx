@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import { Icon } from '../../lib/icons/Icon';
+import { clientLabel } from '../../lib/appointments/clientLabel';
 import { initials } from './pastVisitsShared';
 import type { AppointmentListItem } from '../../types/appointment';
 
@@ -15,16 +16,6 @@ const TWO_LINE_MIN_PX = 37;
 function toMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
-}
-
-/** "Anna Maria Kowalska" → "Anna. Maria Kowalska" (first word = first name, the rest = last name);
- * a one-word name stays as is, no client gives "Bez klienta". The list payload only carries the
- * concatenated `client_name`, so the split is positional. */
-function clientLabel(name: string | null): string {
-  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'Bez klienta';
-  if (words.length === 1) return words[0];
-  return `${words[0]}. ${words.slice(1).join(' ')}`;
 }
 
 interface CalendarVisitBarProps {
@@ -48,7 +39,7 @@ interface CalendarVisitBarProps {
  *   line #2  Strzyżenie, Modelowanie · 60 min  ★ 5   (★ only: completed AND rated)
  *
  * A bar that can't show both lines (a 30-min visit is exactly one tick) renders line #1 only,
- * plus a hairline chevron before the badge: press and HOLD it and the bar rolls out one tick
+ * plus an accent-coloured chevron chip before the badge: press and HOLD it and the bar rolls out one tick
  * downward, opaque and above whatever sits there (z-index + a solid backdrop under the status
  * tint); release and it rolls back in. Line #2 is always in the DOM — in the compact form the
  * bar's `overflow: hidden` just clips it, so the roll-out is a plain height transition.
@@ -110,7 +101,7 @@ export function CalendarVisitBar({ appt, variant, top, height, laneHeight, emplo
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
-            <Icon name="chevron_down_thin" />
+            <Icon name="chevron_down_bold" />
           </button>
         )}
         <span className="vb-badge" title={employeeName ?? undefined} aria-label={employeeName ? `Pracownik: ${employeeName}` : 'Brak pracownika'}>

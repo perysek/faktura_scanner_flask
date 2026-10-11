@@ -68,9 +68,9 @@ export const ICON_PATHS: Record<string, string> = {
   event_busy:
     'm381-218-43-43 100-99-100-99 43-43 99 100 99-100 43 43-100 99 100 99-43 43-99-100-99 100ZM180-80q-24 0-42-18t-18-42v-620q0-24 18-42t42-18h65v-60h65v60h340v-60h65v60h65q24 0 42 18t18 42v620q0 24-18 42t-42 18H180Zm0-60h600v-430H180v430Zm0-490h600v-130H180v130Zm0 0v-130 130Z',
   expand_more: 'M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z',
-  /* Hairline down-chevron (stroke ≈ 57 of 960 units vs expand_more's ≈ 79) — the calendar
-     visit-bar roll-out handle, where a full-weight chevron would outshout the bar's text. */
-  chevron_down_thin: 'M480-330 210-600l40-40 230 230 230-230 40 40Z',
+  /* Heavy down-chevron (stroke ≈ 93 of 960 units vs expand_more's ≈ 79) — the calendar
+     visit-bar roll-out handle, which has to stay legible at ~16px on top of a coloured chip. */
+  chevron_down_bold: 'M480-290 190-580l66-66 224 224 224-224 66 66Z',
   extension:
     'M356-120H180q-24 0-42-18t-18-42v-176q44-5 75.5-34.5T227-463q0-43-31.5-72.5T120-570v-176q0-24 18-42t42-18h177q11-40 39.5-67t68.5-27q40 0 68.5 27t39.5 67h173q24 0 42 18t18 42v173q40 11 65.5 41.5T897-461q0 40-25.5 67T806-356v176q0 24-18 42t-42 18H570q-5-48-35.5-77.5T463-227q-41 0-71.5 29.5T356-120Zm-176-60h130q25-61 69.89-84t83-23Q501-287 546-264t70 84h130v-235h45q20 0 33-13t13-33q0-20-13-33t-33-13h-45v-239H511v-48q0-20-13-33t-33-13q-20 0-33 13t-13 33v48H180v130q48.15 17.82 77.58 59.69Q287-514.45 287-462.78 287-412 257.5-370T180-310v130Zm285-281Z',
   filter_alt_off:

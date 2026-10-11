@@ -338,18 +338,22 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1;
   color: var(--color-ink-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 2px;
 }
-/* Hold-to-roll-out handle of one-tick bars. `touch-action: none` + the pointer capture in the
-   component keep a finger-hold from turning into a page scroll or a long-press menu. */
+/* Hold-to-roll-out handle of one-tick bars: a solid chip in the theme accent (`--color-accent-deep`
+   follows the active theme: gold / blue / green / plum, always dark enough for a white glyph) with a
+   heavy chevron, so it reads as a control and not as text. Held or hovered it turns ink-black.
+   `touch-action: none` + the pointer capture in the component keep a finger-hold from turning into a
+   page scroll or a long-press menu. */
 .vb-roll {
   flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-  width: 1.125rem; height: 1.0625rem; padding: 0; margin: 0;
-  background: transparent; border: 0; border-radius: 2px;
-  color: var(--color-ink-muted); opacity: 0.75; cursor: pointer;
+  width: 1.375rem; height: 1.0625rem; padding: 0; margin: 0;
+  background: var(--color-accent-deep); color: var(--color-on-ink);
+  border: 0; border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  cursor: pointer;
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
 }
-.vb-roll .icon { font-size: 1.1em; }
-@media (hover: hover) { .vb-roll:hover { opacity: 1; background: rgba(0,0,0,0.06); } }
-.vb-rolled .vb-roll { opacity: 1; }
+.vb-roll .icon { font-size: 1.2em; }
+@media (hover: hover) { .vb-roll:hover { background: var(--color-ink); } }
+.vb-rolled .vb-roll { background: var(--color-ink); }
 .vb-rolled .vb-roll .icon { transform: rotate(180deg); }
 
 /* Status color scheme — same palette as `.status-badge.*` above, so a visit
