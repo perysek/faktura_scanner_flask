@@ -365,6 +365,11 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   .cal-main--floats-gap > .appt-fab { position: fixed; bottom: auto; top: calc(var(--floats-cy) - 1.375rem); right: calc(var(--floats-right) + 1.75rem); }
   .cal-main--floats-gap > .scroll-jump { position: fixed; bottom: auto; top: calc(var(--floats-cy) - 1.25rem); right: calc(var(--floats-right) + 1.75rem); }
   .cal-main--floats-gap:has(> .appt-fab) > .scroll-jump { right: calc(var(--floats-right) + 5rem); }
+  /* The page root's `.fade-in` fills `forwards`, and a filling opacity animation keeps a stacking
+     context alive forever: the floats' z-index 30 was trapped inside the page root, so the app
+     footer (positioned, later in the DOM) painted over their lower half. `backwards` ends on the
+     natural opacity: 1, the context goes away, and the floats layer above the footer too. */
+  .page-fills-viewport.fade-in:has(.cal-main--floats-gap) { animation-fill-mode: backwards; }
 }
 
 /* Wizyty lista + Kalendarz dzień — DESIGN.md §20.2 `.page-fills-viewport`
