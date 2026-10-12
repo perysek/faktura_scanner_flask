@@ -71,9 +71,11 @@
 .vn-modal-context { margin: 0 0 0.875rem; font-size: 0.8125rem; color: var(--color-ink-muted); }
 .vn-modal-error { margin: 0 0 0.875rem; font-size: 0.8125rem; color: var(--color-error); }
 
-/* ── "Aktualne uwagi i zalecenia" list columns (clients + visits, desktop only) ─ */
+/* ── "Aktualne uwagi i zalecenia" clients-list column, desktop only ───────── */
 /* Small but readable; soft-wraps in the column and is NEVER clipped — no
-   ellipsis, no line clamp. Long unbroken strings break instead of overflowing. */
+   ellipsis, no line clamp. Long unbroken strings break instead of overflowing.
+   (The visits list shows the same digest under the service name, clamped to two
+   lines there — Appointments.css `.cell-service-note`.) */
 .vn-digest {
   display: block;
   font-size: 0.75rem;
@@ -92,20 +94,17 @@
 /* Centered like every other cell in the row (the section table below tops its cells instead). */
 .refined-table td.vn-cell-notes { vertical-align: middle; }
 
-/* Visits list (auto-layout table): the columns size to their content, so with 10 columns
-   the table overflowed its container and pushed the action icons off-screen. A tighter side
-   padding buys back ~160px, and the notes column gets a fixed width — wide enough for about
-   three wrapped lines — instead of whatever is left over. */
+/* Visits list (auto-layout table): the columns size to their content, so the table used to
+   overflow its container and push the action icons off-screen. A tighter side padding buys
+   back ~160px. (Its notes column is gone — the latest note now sits under the service name,
+   and the column widths live in Appointments.css "Visits list column widths".) */
 .refined-table.vn-list-table th,
 .refined-table.vn-list-table td { padding-left: 0.5rem; padding-right: 0.5rem; }
-.refined-table.vn-list-table th.vn-th-notes,
-.refined-table.vn-list-table td.vn-cell-notes { width: 16rem; min-width: 16rem; max-width: 16rem; }
 
 /* The Status pill was 9rem (144px) — a width LEAKED into the global `.status-badge` from the
    absences page's stylesheet (BalancesPage.css; Vite ships one CSS file). The widest status
    label here, "Potwierdzona", needs 109px, so 7rem (112px, -22%) still fits it and frees
-   32px per row; that width went to the notes column above (14rem -> 16rem), so the table
-   is no wider than before. 25% (108px) would clip "Potwierdzona" by 1px. Scoped to this
+   32px per row. 25% (108px) would clip "Potwierdzona" by 1px. Scoped to this
    table: every other status pill keeps its width. Not applied to stacked cards (<=640px). */
 @media (min-width: 641px) {
   .refined-table.vn-list-table .status-badge { width: 7rem; }

@@ -20,6 +20,8 @@ import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { NotesDigest } from '../../components/visitNotes/NotesDigest';
+import { formatNoteStampShort } from '../../lib/visitNotes/noteFormat';
+import { employeeShortLabel } from '../../lib/appointments/clientLabel';
 import { VisitNoteModal } from '../../components/visitNotes/VisitNoteModal';
 import { MobileWizytyCalendarView, useIsMobile, OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY } from './MobileWizytyCalendarView';
 import { readWizytyListState, writeWizytyListState } from '../../lib/wizytyListState';
@@ -55,9 +57,10 @@ function isWeekend(dateStr: string): boolean {
 function isPast(dateStr: string, endTime: string): boolean {
   return new Date(`${dateStr}T${endTime}`) < new Date();
 }
+/** No rating = five empty stars (a 0/5 display), not a dash. */
 function stars(score: number | null): string {
-  if (!score) return '—';
-  return '★'.repeat(score) + '☆'.repeat(5 - score);
+  const filled = score ?? 0;
+  return '★'.repeat(filled) + '☆'.repeat(5 - filled);
 }
 
 /** How many months ahead "Pokaż kolejny dzień" scans for the next day with visits
@@ -489,15 +492,17 @@ export function WizytyListPage() {
   }
 
   const rangeLabel = mode === 'chain' ? `${chainDates.length} dzień/dni z wizytami` : `${formatDateShort(iso(weekStart))} – ${formatDateShort(iso(addDays(weekStart, 6)))}`;
-  const columns: Array<{ column: SortColumn; label: string; align?: 'right' }> = [
-    { column: 'appointment_date', label: 'Data' },
-    { column: 'start_time', label: 'Godzina' },
-    { column: 'client_name', label: 'Klient' },
-    { column: 'service_name', label: 'Usługa' },
-    { column: 'employee_name', label: 'Pracownik' },
-    { column: 'total_price', label: 'Kwota', align: 'right' },
-    { column: 'status', label: 'Status' },
-    { column: 'satisfaction_score', label: 'Ocena' },
+  // `className` sizes the column (Appointments.css "Visits list column widths"): `col-fit`
+  // shrinks to its content, Klient / Usługa share what is left.
+  const columns: Array<{ column: SortColumn; label: string; align?: 'right'; className: string }> = [
+    { column: 'appointment_date', label: 'Data', className: 'col-fit' },
+    { column: 'start_time', label: 'Godzina', className: 'col-fit' },
+    { column: 'client_name', label: 'Klient', className: 'col-client' },
+    { column: 'service_name', label: 'Usługa', className: 'col-service' },
+    { column: 'employee_name', label: 'Pracownik', className: 'col-fit' },
+    { column: 'total_price', label: 'Kwota', align: 'right', className: 'col-fit' },
+    { column: 'status', label: 'Status', className: 'col-fit' },
+    { column: 'satisfaction_score', label: 'Ocena', className: 'col-fit' },
   ];
 
   const loading = mode === 'chain' ? chainLoading : weekLoading;
@@ -599,14 +604,13 @@ export function WizytyListPage() {
             <thead>
               <tr>
                 {columns.map((col) => (
-                  <th key={col.column} className="th-sortable" style={col.align ? { textAlign: col.align } : undefined} aria-sort={mode === 'week' && sort.column === col.column ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <th key={col.column} className={`th-sortable ${col.className}`} style={col.align ? { textAlign: col.align } : undefined} aria-sort={mode === 'week' && sort.column === col.column ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                     <button type="button" className="th-sort-btn" onClick={() => mode === 'week' && handleSort(col.column)} disabled={mode === 'chain'}>
                       {col.label} <span className="th-sort-icon" aria-hidden="true">{mode === 'week' ? sortIndicator(col.column) : ''}</span>
                     </button>
                   </th>
                 ))}
-                <th className="vn-th-notes">Aktualne uwagi i zalecenia</th>
-                <th>
+                <th className="col-fit">
                   <span className="sr-only">Akcje</span>
                 </th>
               </tr>
@@ -614,13 +618,13 @@ export function WizytyListPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     <p className="empty-text">Ładowanie wizyt...</p>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={10} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     <p className="empty-text" style={{ color: 'var(--color-error)' }}>
                       Błąd ładowania wizyt: {error.message}
                     </p>
@@ -631,7 +635,7 @@ export function WizytyListPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     <Icon name="calendar_today" className="empty-icon" />
                     <p className="empty-text">Brak wizyt w tym okresie.</p>
                   </td>
@@ -647,14 +651,21 @@ export function WizytyListPage() {
                       <td className="cell-time" data-label="Godzina">
                         {appt.start_time.slice(0, 5)}–{appt.end_time.slice(0, 5)}
                       </td>
-                      <td data-label="Klient">{appt.client_name || '—'}</td>
+                      <td className="cell-client" data-label="Klient">{appt.client_name || '—'}</td>
                       <td className="cell-service" data-label="Usługa">
                         {appt.service_name || '—'}
+                        {/* Latest visit note under the service (replaces the old "Aktualne uwagi i
+                            zalecenia" column): max 2 lines, the full text on hover. */}
+                        {appt.latest_note && (
+                          <div className="cell-service-note" title={`${appt.latest_note.text} [${formatNoteStampShort(appt.latest_note.at)}]`}>
+                            <NotesDigest notes={[appt.latest_note]} />
+                          </div>
+                        )}
                       </td>
                       <td data-label="Pracownik">
-                        <span className="emp-cell">
+                        <span className="emp-cell" title={appt.employee_name ?? undefined}>
                           <span className="emp-dot" style={{ background: empColor(appt.employee_id) }} />
-                          <span className="emp-name">{appt.employee_name || '—'}</span>
+                          <span className="emp-name">{employeeShortLabel(appt.employee_name)}</span>
                         </span>
                       </td>
                       <td className="cell-price" data-label="Kwota">
@@ -671,10 +682,9 @@ export function WizytyListPage() {
                         />
                       </td>
                       <td data-label="Ocena">
-                        <span className={appt.satisfaction_score ? 'stars-desktop' : 'stars-none'}>{stars(appt.satisfaction_score)}</span>
-                      </td>
-                      <td className="vn-cell-notes" data-label="Aktualne uwagi i zalecenia">
-                        <NotesDigest notes={appt.latest_note ? [appt.latest_note] : null} />
+                        <span className="stars-desktop" aria-label={appt.satisfaction_score ? `Ocena ${appt.satisfaction_score}/5` : 'Brak oceny'}>
+                          {stars(appt.satisfaction_score)}
+                        </span>
                       </td>
                       <td className="cell-actions">
                         <div className="action-icons">

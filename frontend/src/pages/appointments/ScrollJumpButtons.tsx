@@ -8,23 +8,24 @@ const EDGE_PX = 24;
 interface ScrollJumpButtonsProps {
   /** The page's own scroll box, when it has one (the desktop list's `.table-container`,
    * which only scrolls on viewport-bounded layouts). When it isn't actually overflowing
-   * the buttons drive AppShell's `<main class="app-shell-content">` instead — the real
+   * the button drives AppShell's `<main class="app-shell-content">` instead — the real
    * page scroller everywhere else, the phone included. */
   innerScrollerRef?: RefObject<HTMLElement>;
-  /** Slide the whole pair away (and make it unreachable) — the phone view ties this to its bottom
-   * bars, so the pair leaves and returns with them. */
+  /** Slide the button away (and make it unreachable) — the phone view ties this to its bottom
+   * bars, so the button leaves and returns with them. */
   hidden?: boolean;
 }
 
-/** Floating "scroll to start" / "scroll to end" pair for long lists. Each button shows
- * only while its target is somewhere else: up when not at the top, down when not at the
- * end — so both are visible mid-list. Both keep their slot (hidden via `visibility`) so
- * the pair sits side by side at one height and never shifts when one of them toggles.
+/** Single floating scroll button for long lists. It is only there at an edge: at the top it
+ * points down and jumps to the end, at the bottom it points up and jumps to the start.
+ * Anywhere in between (and when nothing overflows) it fades out. While faded it keeps the
+ * last arrow, so the icon never flips mid-fade.
  * Placement (fixed vs. anchored inside `.cal-main`) is CSS only — see Appointments.css. */
 export function ScrollJumpButtons({ innerScrollerRef, hidden = false }: ScrollJumpButtonsProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [canUp, setCanUp] = useState(false);
-  const [canDown, setCanDown] = useState(false);
+  // `dir` is only rewritten when the button becomes visible at an edge (one update, so the
+  // arrow and the fade-in land together); a fade-out keeps the previous arrow.
+  const [{ visible, dir }, setState] = useState<{ visible: boolean; dir: 'down' | 'up' }>({ visible: false, dir: 'down' });
 
   const getScroller = useCallback((): HTMLElement | null => {
     const inner = innerScrollerRef?.current;
@@ -37,13 +38,12 @@ export function ScrollJumpButtons({ innerScrollerRef, hidden = false }: ScrollJu
     const update = () => {
       frame = 0;
       const el = getScroller();
-      if (!el) {
-        setCanUp(false);
-        setCanDown(false);
-        return;
-      }
-      setCanUp(el.scrollTop > EDGE_PX);
-      setCanDown(el.scrollHeight - el.clientHeight - el.scrollTop > EDGE_PX);
+      const overflow = el ? el.scrollHeight - el.clientHeight : 0;
+      const hide = (s: { visible: boolean; dir: 'down' | 'up' }) => (s.visible ? { ...s, visible: false } : s);
+      if (!el || overflow <= 1) setState(hide);
+      else if (el.scrollTop <= EDGE_PX) setState((s) => (s.visible && s.dir === 'down' ? s : { visible: true, dir: 'down' }));
+      else if (overflow - el.scrollTop <= EDGE_PX) setState((s) => (s.visible && s.dir === 'up' ? s : { visible: true, dir: 'up' }));
+      else setState(hide);
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -66,34 +66,25 @@ export function ScrollJumpButtons({ innerScrollerRef, hidden = false }: ScrollJu
     };
   }, [getScroller]);
 
-  function jump(to: 'start' | 'end') {
+  function jump() {
     const el = getScroller();
     if (!el) return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    el.scrollTo({ top: to === 'start' ? 0 : el.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' });
+    el.scrollTo({ top: dir === 'up' ? 0 : el.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
 
   return (
     <div className={`scroll-jump${hidden ? ' scroll-jump--hidden' : ''}`} ref={rootRef}>
       <button
         type="button"
-        className={`scroll-jump-btn${canUp ? '' : ' scroll-jump-btn--hidden'}`}
-        onClick={() => jump('start')}
-        aria-label="Przewiń na początek listy"
-        title="Na początek"
-        tabIndex={canUp ? 0 : -1}
+        className={`scroll-jump-btn${visible ? '' : ' scroll-jump-btn--hidden'}`}
+        onClick={jump}
+        aria-label={dir === 'up' ? 'Przewiń na początek listy' : 'Przewiń na koniec listy'}
+        title={dir === 'up' ? 'Na początek' : 'Na koniec'}
+        aria-hidden={visible ? undefined : true}
+        tabIndex={visible ? 0 : -1}
       >
-        <Icon name="arrow_upward" />
-      </button>
-      <button
-        type="button"
-        className={`scroll-jump-btn${canDown ? '' : ' scroll-jump-btn--hidden'}`}
-        onClick={() => jump('end')}
-        aria-label="Przewiń na koniec listy"
-        title="Na koniec"
-        tabIndex={canDown ? 0 : -1}
-      >
-        <Icon name="arrow_downward" />
+        <Icon name={dir === 'up' ? 'arrow_upward' : 'arrow_downward'} />
       </button>
     </div>
   );
