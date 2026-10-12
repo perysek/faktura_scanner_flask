@@ -14,6 +14,7 @@ import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
 import { IncomeBanner } from './IncomeBanner';
 import { ScrollJumpButtons } from './ScrollJumpButtons';
+import { useFloatsInFooterGap } from './useFloatsInFooterGap';
 import { NewVisitFab } from './NewVisitFab';
 import { StatusDropdown } from './StatusDropdown';
 import { RescheduleSheet } from './RescheduleSheet';
@@ -90,6 +91,9 @@ export function WizytyListPage() {
   const [mobileHeaderSlot, setMobileHeaderSlot] = useState<HTMLElement | null>(null);
   // The desktop list's own scroll box (viewport-bounded layouts) — read by ScrollJumpButtons.
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  // Desktop: the floating row (scroll pair + "+") sits centred on the gap under the list.
+  const calMainRef = useRef<HTMLDivElement>(null);
+  useFloatsInFooterGap(calMainRef, !isMobile);
   useEffect(() => {
     setMobileHeaderSlot(document.getElementById('mobile-header-actions'));
   }, []);
@@ -539,7 +543,7 @@ export function WizytyListPage() {
       {isMobile && mobileHeaderSlot && createPortal(<PastVisitsScanner />, mobileHeaderSlot)}
 
       <div className="cal-grid-page">
-      <div className="cal-main">
+      <div className="cal-main" ref={calMainRef}>
         {/* On mobile, Pracownik filter + search moved into the filter-icon
             modal (MobileWizytyCalendarView, TASK2) — this whole toolbar is
             desktop-only now; the day/week/month navigation is the fixed
@@ -653,7 +657,10 @@ export function WizytyListPage() {
                       </td>
                       <td className="cell-client" data-label="Klient">{appt.client_name || '—'}</td>
                       <td className="cell-service" data-label="Usługa">
-                        {appt.service_name || '—'}
+                        {/* One line (full name on hover), so every row keeps the same height. */}
+                        <span className="cell-service-name" title={appt.service_name ?? undefined}>
+                          {appt.service_name || '—'}
+                        </span>
                         {/* Latest visit note under the service (replaces the old "Aktualne uwagi i
                             zalecenia" column): max 2 lines, the full text on hover. */}
                         {appt.latest_note && (
@@ -682,9 +689,21 @@ export function WizytyListPage() {
                         />
                       </td>
                       <td data-label="Ocena">
-                        <span className="stars-desktop" aria-label={appt.satisfaction_score ? `Ocena ${appt.satisfaction_score}/5` : 'Brak oceny'}>
-                          {stars(appt.satisfaction_score)}
-                        </span>
+                        {appt.satisfaction_score ? (
+                          <span className="stars-desktop" aria-label={`Ocena ${appt.satisfaction_score}/5`}>
+                            {stars(appt.satisfaction_score)}
+                          </span>
+                        ) : appt.status === 'completed' ? (
+                          // Finished but not rated yet: blue, so it can't pass for a gold "0/5".
+                          <span className="stars-desktop stars-unrated" title="Wizyta nieoceniona" aria-label="Wizyta nieoceniona">
+                            {stars(null)}
+                          </span>
+                        ) : (
+                          // Not finished: nothing to rate yet, shown disabled.
+                          <span className="stars-desktop stars-disabled" title="Ocena po zakończeniu wizyty" aria-label="Ocena po zakończeniu wizyty">
+                            {stars(null)}
+                          </span>
+                        )}
                       </td>
                       <td className="cell-actions">
                         <div className="action-icons">

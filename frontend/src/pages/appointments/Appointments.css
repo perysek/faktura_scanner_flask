@@ -104,30 +104,51 @@
 .emp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 /* min-width: 0 (here + .emp-cell) beats flex's default min-width:auto, which otherwise blocks the ellipsis below and overflows the card on long names. */
 .emp-name { font-weight: 300; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-/* Also the 0-rating display (five empty stars): same gold as a rated row's empty stars. */
 .stars-desktop { color: #c9a227; letter-spacing: 0.05em; white-space: nowrap; }
+/* Unrated (five empty stars). Never gold, which would read as a real "0/5": a finished visit
+   still waiting for its rating is blue (info), a not-yet-finished one is greyed out as disabled. */
+.stars-desktop.stars-unrated { color: var(--color-info); }
+.stars-desktop.stars-disabled { color: var(--color-ink-subtle); opacity: 0.45; }
 
-/* Visits list (WizytyListPage): the latest visit note sits under the service name. The gap
-   is 0.5x the service text's size (`em` resolves on this wrapper, which still has the cell's
-   font-size); the note itself is clamped to 2 lines with "…" — full text in its tooltip. */
-.cell-service-note { padding-top: 0.5em; }
+/* ── Visits list table (WizytyListPage, `.vn-list-table`) ───────────────────────────────── */
+/* Compact rows, all one height. Cells get 0.25rem top/bottom (was 0.75rem), and every row is
+   exactly as tall as one carrying a note: service line + hairline + two note lines. A note
+   therefore never makes its row jump taller than its neighbours; the service name is held to
+   one line for the same reason (full name in its tooltip). */
+.vn-list-table { --vl-svc-lh: 1.0625rem; --vl-note-lh: 0.9375rem; }
+.refined-table.vn-list-table td { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.vn-list-table tbody tr { height: calc(0.5rem + var(--vl-svc-lh) + 1px + 0.125rem + 2 * var(--vl-note-lh)); }
+/* width 0 + min-width 100%: the name fills the cell but adds nothing to the column's
+   min-content, so a long service ellipsizes instead of widening the whole table. */
+.cell-service-name {
+  display: block; width: 0; min-width: 100%;
+  line-height: var(--vl-svc-lh);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Latest visit note under the service: no gap, a soft hairline instead, max 2 lines with "…"
+   (full text in its tooltip). Text in a darkened accent: dark gold on the default palette,
+   and it follows the other colour themes. Plain --color-accent-deep is only ~3.9:1 on white,
+   short of WCAG AA's 4.5:1 for 12px text; mixed 78% with black it is ~5.8:1. */
+.cell-service-note { padding-top: 0.125rem; border-top: 1px solid var(--color-border-subtle); }
 .cell-service-note .vn-digest {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+  line-height: var(--vl-note-lh);
   font-weight: 400;
+  color: #7d6214;
+  color: color-mix(in srgb, var(--color-accent-deep) 78%, #000);
 }
 
-/* Visits list column widths. With the notes column gone and the employee shortened to
-   "A.Kozłowska", the content-tight columns shrink to their content (`width: 1%` + nowrap is
-   the auto-layout shrink-to-fit idiom) and the freed width goes to the two text columns:
-   Usługa (service + note) gets the larger share, Klient the rest. min-widths are floors so
-   neither collapses to one word per line on a narrow window (the table scrolls instead). */
+/* Column widths: the content-tight columns shrink to their content (`width: 1%` + nowrap is the
+   auto-layout shrink-to-fit idiom) and the freed width goes to the two text columns, Usługa
+   (service + note) taking ~3/4 of it. min-widths are floors so neither collapses on a narrow
+   window (the table scrolls sideways instead). */
 .vn-list-table th.col-fit { width: 1%; white-space: nowrap; }
-.vn-list-table th.col-client { width: 35%; }
-.vn-list-table th.col-service { width: 65%; }
+.vn-list-table th.col-client { width: 26%; }
+.vn-list-table th.col-service { width: 74%; }
 .vn-list-table td.cell-client { min-width: 8rem; }
 .vn-list-table td.cell-service { min-width: 12rem; }
 .stars-cell { display: inline-flex; gap: 0.05rem; font-size: 0.95rem; line-height: 1; }
@@ -250,11 +271,10 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 .cal-grid-page { display: flex; gap: 1rem; align-items: stretch; flex: 1; min-height: 0; }
 .cal-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; /* anchor of the desktop .scroll-jump pair */ }
 
-/* Floating single scroll button (ScrollJumpButtons.tsx, visits list): ↓ at the top, ↑ at the
-   bottom, faded out in between.
-   Below 1024px the PAGE scrolls (AppShell's <main>), so it is viewport-fixed — 4.5rem
+/* Floating scroll-to-start / scroll-to-end pair (ScrollJumpButtons.tsx, visits list).
+   Below 1024px the PAGE scrolls (AppShell's <main>), so the pair is viewport-fixed — 4.5rem
    up clears the shell footer. From 1024px the page is viewport-bounded and the list's own
-   box scrolls, so it is anchored to the bottom-right of .cal-main instead, over the
+   box scrolls, so the pair is anchored to the bottom-right of .cal-main instead, over the
    list and clear of the month sidebar; the extra right inset clears that box's scrollbar. */
 .scroll-jump { position: fixed; right: 1.25rem; bottom: 4.5rem; z-index: 30; display: flex; gap: 0.5rem; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s; }
 /* Phone: the whole pair leaves with the bottom bars while the cards scroll (same 0.25s as `.mob-fixed-nav`).
@@ -268,10 +288,10 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 2px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   cursor: pointer;
-  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s, border-color 0.15s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s, border-color 0.15s ease;
 }
 .scroll-jump-btn:hover { border-color: var(--color-ink-muted); }
-/* Faded out between the edges (the arrow is kept, so it never flips mid-fade). */
+/* Hidden = still occupies its slot, so the other button never shifts sideways. */
 .scroll-jump-btn--hidden { opacity: 0; visibility: hidden; transform: translateY(0.5rem); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .scroll-jump, .scroll-jump-btn { transition: none; } }
 @media (min-width: 1024px) { .scroll-jump { position: absolute; right: 1.75rem; bottom: 1rem; } }
@@ -303,10 +323,20 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
 @media (min-width: 1024px) { .appt-fab { position: absolute; right: 1.75rem; bottom: 1rem; } }
 @media (max-width: 640px) { .appt-fab { display: none; } }
 @media (prefers-reduced-motion: reduce) { .appt-fab { transition: none; } }
-/* The list's scroll button steps aside to the LEFT of the "+" (2.75rem circle + 0.5rem gap), so the
+/* The list's up/down pair steps aside to the LEFT of the "+" (2.75rem circle + 0.5rem gap), so the
    two never overlap. Only when the "+" is actually there (no write access = no shift). */
 .cal-main:has(> .appt-fab) .scroll-jump { right: 4.5rem; }
 @media (min-width: 1024px) { .cal-main:has(> .appt-fab) .scroll-jump { right: 5rem; } }
+/* Visits list only (useFloatsInFooterGap.ts adds the class + variables): the float row moves off
+   the list's last rows and is centred on the gap between the list's bottom edge and the app
+   footer — both buttons on the same centre line, the gap itself unchanged. Fixed, because the
+   buttons are taller than the gap and an absolute float would be clipped by the page root and
+   <main>; same right insets as above, measured from .cal-main's right edge. */
+@media (min-width: 1024px) {
+  .cal-main--floats-gap > .appt-fab { position: fixed; bottom: auto; top: calc(var(--floats-cy) - 1.375rem); right: calc(var(--floats-right) + 1.75rem); }
+  .cal-main--floats-gap > .scroll-jump { position: fixed; bottom: auto; top: calc(var(--floats-cy) - 1.25rem); right: calc(var(--floats-right) + 1.75rem); }
+  .cal-main--floats-gap:has(> .appt-fab) > .scroll-jump { right: calc(var(--floats-right) + 5rem); }
+}
 
 /* Wizyty lista + Kalendarz dzień — DESIGN.md §20.2 `.page-fills-viewport`
    retrofit (fix #1/#6, implementation-log.md "Zaproponowana kolejność
