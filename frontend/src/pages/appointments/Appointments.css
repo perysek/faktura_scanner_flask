@@ -118,18 +118,24 @@
 .vn-list-table { --vl-svc-lh: 1.0625rem; --vl-note-lh: 0.9375rem; }
 .refined-table.vn-list-table td { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .vn-list-table tbody tr { height: calc(0.5rem + var(--vl-svc-lh) + 1px + 0.125rem + 2 * var(--vl-note-lh)); }
-/* width 0 + min-width 100%: the name fills the cell but adds nothing to the column's
-   min-content, so a long service ellipsizes instead of widening the whole table. */
+/* Head row: width 0 + min-width 100% fills the cell but adds nothing to the column's
+   min-content, so a long service ellipsizes instead of widening the whole table. It is a
+   flex row so the name inside is only as wide as its text (shrinking, with "…", when the
+   cell is narrower). */
+.cell-service-head { display: flex; width: 0; min-width: 100%; }
 .cell-service-name {
-  display: block; width: 0; min-width: 100%;
+  min-width: 0;
   line-height: var(--vl-svc-lh);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Latest visit note under the service: no gap, a soft hairline instead, max 2 lines with "…"
-   (full text in its tooltip). Text in a darkened accent: dark gold on the default palette,
-   and it follows the other colour themes. Plain --color-accent-deep is only ~3.9:1 on white,
-   short of WCAG AA's 4.5:1 for 12px text; mixed 78% with black it is ~5.8:1. */
-.cell-service-note { padding-top: 0.125rem; border-top: 1px solid var(--color-border-subtle); }
+/* With a note under it, the name's underline is the soft separator: exactly as long as the
+   service text on screen. The 1px row-height budget above already counts it. */
+.cell-service-name--with-note { border-bottom: 1px solid var(--color-border-subtle); }
+/* Latest visit note under the service: no gap, max 2 lines with "…". Text in a darkened accent:
+   dark gold on the default palette, and it follows the other colour themes. Plain
+   --color-accent-deep is only ~3.9:1 on white, short of WCAG AA's 4.5:1 for 12px text; mixed
+   78% with black it is ~5.8:1. */
+.cell-service-note { position: relative; padding-top: 0.125rem; }
 .cell-service-note .vn-digest {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -141,6 +147,27 @@
   color: #7d6214;
   color: color-mix(in srgb, var(--color-accent-deep) 78%, #000);
 }
+/* Hover hint = a real link, "Zobacz wszystkie" → the client page at its notes section. A small
+   chip over the note's bottom-right corner, so it never leaves the cell (the table box would
+   clip it) and never changes the row height. Shown while the note is hovered or the link has
+   keyboard focus; opacity (not visibility) keeps it in the tab order. */
+.cell-service-note-link {
+  position: absolute; right: 0; bottom: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem; font-weight: 500; line-height: var(--vl-note-lh); white-space: nowrap;
+  color: var(--color-ink);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border); border-radius: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  text-decoration: underline; text-underline-offset: 0.2em;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.cell-service-note:hover .cell-service-note-link,
+.cell-service-note-link:focus-visible { opacity: 1; pointer-events: auto; }
+.cell-service-note-link:hover { color: var(--color-accent-deep); }
+.cell-service-note-link:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .cell-service-note-link { transition: none; } }
 
 /* Column widths: the content-tight columns shrink to their content (`width: 1%` + nowrap is the
    auto-layout shrink-to-fit idiom) and the freed width goes to the two text columns, Usługa

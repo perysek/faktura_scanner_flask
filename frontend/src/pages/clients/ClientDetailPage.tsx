@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import './ClientDetailPage.css';
 import { useApiData } from '../../lib/useApiData';
 import { clientsApi } from '../../lib/api/clients';
@@ -11,7 +11,7 @@ import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { SearchableSelectField, TextareaField } from '../../components/ui/form';
 import { Icon } from '../../lib/icons/Icon';
-import { VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
+import { CLIENT_NOTES_ANCHOR, VisitNotesSection } from '../../components/visitNotes/VisitNotesSection';
 import { formatDate, formatPhone } from '../../lib/format';
 import { useEscapeBack } from '../../lib/a11y/useEscapeBack';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
@@ -97,6 +97,24 @@ export function ClientDetailPage() {
   const [prefError, setPrefError] = useState<{ field: 'service' | 'employee'; message: string } | null>(null);
   const [filteredServices, setFilteredServices] = useState<Array<{ value: string; label: string }> | null>(null);
   const [filteredEmployees, setFilteredEmployees] = useState<Array<{ value: string; label: string }> | null>(null);
+
+  // `#uwagi-z-wizyt` (the visits list's "Zobacz wszystkie"): bring the notes section's top
+  // edge to the top of the scroll area, as far as the page can scroll. Only once everything
+  // ABOVE it has loaded (client, preferences, visit history), or a late card would push the
+  // section back down. Once per client, so later re-renders never yank the page around.
+  const location = useLocation();
+  const scrolledToNotesFor = useRef<number | null>(null);
+  const contentAboveReady = !clientState.loading && !preferencesState.loading && !appointmentsState.loading;
+  useEffect(() => {
+    if (location.hash !== `#${CLIENT_NOTES_ANCHOR}` || !contentAboveReady || scrolledToNotesFor.current === clientId) return;
+    const frame = requestAnimationFrame(() => {
+      const section = document.getElementById(CLIENT_NOTES_ANCHOR);
+      if (!section) return;
+      scrolledToNotesFor.current = clientId;
+      section.scrollIntoView({ block: 'start', behavior: 'auto' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash, contentAboveReady, clientId]);
 
   async function handleEmployeeFilterChange(value: string) {
     setSelectedEmployeeId(value);
@@ -548,7 +566,7 @@ export function ClientDetailPage() {
         )}
       </div>
 
-      {auth.hasModuleAccess('appointments') && <VisitNotesSection variant="detail" clientId={clientId} />}
+      {auth.hasModuleAccess('appointments') && <VisitNotesSection variant="detail" clientId={clientId} id={CLIENT_NOTES_ANCHOR} />}
 
       {isMobile ? (
         <>

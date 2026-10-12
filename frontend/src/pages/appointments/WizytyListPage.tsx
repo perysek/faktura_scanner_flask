@@ -21,7 +21,7 @@ import { RescheduleSheet } from './RescheduleSheet';
 import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { PastVisitsScanner } from './PastVisitsScanner';
 import { NotesDigest } from '../../components/visitNotes/NotesDigest';
-import { formatNoteStampShort } from '../../lib/visitNotes/noteFormat';
+import { CLIENT_NOTES_ANCHOR } from '../../components/visitNotes/VisitNotesSection';
 import { employeeShortLabel } from '../../lib/appointments/clientLabel';
 import { VisitNoteModal } from '../../components/visitNotes/VisitNoteModal';
 import { MobileWizytyCalendarView, useIsMobile, OWN_DATA_OFF_FALLBACK_EMPLOYEE_KEY } from './MobileWizytyCalendarView';
@@ -657,15 +657,27 @@ export function WizytyListPage() {
                       </td>
                       <td className="cell-client" data-label="Klient">{appt.client_name || '—'}</td>
                       <td className="cell-service" data-label="Usługa">
-                        {/* One line (full name on hover), so every row keeps the same height. */}
-                        <span className="cell-service-name" title={appt.service_name ?? undefined}>
-                          {appt.service_name || '—'}
-                        </span>
-                        {/* Latest visit note under the service (replaces the old "Aktualne uwagi i
-                            zalecenia" column): max 2 lines, the full text on hover. */}
+                        {/* One line (full name on hover), so every row keeps the same height. With a
+                            note, the name's own underline is the separator: exactly as long as the
+                            text shown. */}
+                        <div className="cell-service-head">
+                          <span className={`cell-service-name${appt.latest_note ? ' cell-service-name--with-note' : ''}`} title={appt.service_name ?? undefined}>
+                            {appt.service_name || '—'}
+                          </span>
+                        </div>
+                        {/* The client's latest visit note under the service (replaces the old "Aktualne
+                            uwagi i zalecenia" column): max 2 lines. Hovering (or tabbing to) it shows
+                            "Zobacz wszystkie" → the client page, scrolled to its notes section. */}
                         {appt.latest_note && (
-                          <div className="cell-service-note" title={`${appt.latest_note.text} [${formatNoteStampShort(appt.latest_note.at)}]`}>
+                          <div className="cell-service-note">
                             <NotesDigest notes={[appt.latest_note]} />
+                            <Link
+                              to={{ pathname: `/klienci/${appt.client_id}`, hash: CLIENT_NOTES_ANCHOR }}
+                              className="cell-service-note-link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Zobacz wszystkie
+                            </Link>
                           </div>
                         )}
                       </td>

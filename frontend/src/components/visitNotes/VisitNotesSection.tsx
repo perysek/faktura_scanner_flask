@@ -21,6 +21,9 @@ const PAGE_SIZE = 10;
 // stamp needs ~116px = 17%, the date ~78px, two icons ~80px.
 const COL_WIDTHS = [11.5, 11, 14, 17, 12, 22.5, 12];
 const COL_WIDTHS_NO_ACTIONS = [11.5, 11, 14, 17, 12, 34.5];
+/** The client page's notes section id: `/klienci/:id#uwagi-z-wizyt` lands on it
+ * (the visits list's "Zobacz wszystkie" link). */
+export const CLIENT_NOTES_ANCHOR = 'uwagi-z-wizyt';
 /** The server never returns more than this per request (MAX_PAGE_SIZE). */
 const MAX_REFETCH = 50;
 
@@ -43,6 +46,8 @@ export interface VisitNotesSectionProps {
   title?: string;
   /** Shown when there are no notes; defaults to the client page's wording. */
   emptyText?: string;
+  /** Element id of the section card, for in-page links (#…). */
+  id?: string;
 }
 
 /**
@@ -60,6 +65,7 @@ export function VisitNotesSection({
   variant,
   title = 'Uwagi i zalecenia z wizyt',
   emptyText = 'Brak uwag z wizyt.',
+  id,
 }: VisitNotesSectionProps) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -150,7 +156,7 @@ export function VisitNotesSection({
   const showActions = notes.some((n) => n.can_edit);
 
   return (
-    <div className={`${host.card} vn-section`}>
+    <div className={`${host.card} vn-section`} id={id}>
       <div className={host.header}>
         <host.Tag className={host.title}>{title}</host.Tag>
         {status === 'ready' && total > 0 && <span className="vn-count">{total} wpisów łącznie</span>}
