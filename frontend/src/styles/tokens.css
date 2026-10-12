@@ -151,6 +151,7 @@
   --z-toolbar: 10;
   --z-bar: 15;
   --z-tabbar: 30;
+  --z-page-nav: 35;          /* a page's own fixed bottom bars (Wizyty strip): over the tab bar, under the drawer */
   --z-drawer: 40;
   --z-toast: 9997;
 }

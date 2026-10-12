@@ -6,7 +6,7 @@ import { formatPhone } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { useKeyboardInset } from '../../lib/useKeyboardInset';
-import { useHideWhileScrolling } from '../../lib/useHideWhileScrolling';
+import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import { filterByLabel, SEARCH_DEBOUNCE_MS } from '../../lib/searchOptions';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentsApi } from '../../lib/api/appointments';
@@ -312,10 +312,14 @@ export function MobileWizytyCalendarView({
   // animation gets to play before the sheet disappears.
   const [employeePopupMounted, setEmployeePopupMounted] = useState(false);
   const [employeePopupOpen, setEmployeePopupOpen] = useState(false);
-  // Both bottom bars (week strip + actions row, one fixed container) slide away while the cards are
-  // being scrolled and come back a moment after it stops. Held open while the month grid or the
-  // employee sheet is up: the user is working in it, not reading cards.
-  const navHidden = useHideWhileScrolling(monthExpanded || employeePopupMounted);
+  // Both bottom bars (week strip + actions row, one fixed container) behave like the Klienci /
+  // Pracownicy bottom bar: when a scroll stops, scrolling down slides them out and scrolling up slides
+  // them back in. Only the user's own scrolling counts (`requireGesture`): this page also scrolls
+  // itself (jump to the next visit, a day tap, the up/down jump buttons) and must not hide the bars
+  // under the finger that just tapped them. Held open while the month grid or the employee sheet is
+  // up: the user is working in it, not reading cards.
+  const navPinned = monthExpanded || employeePopupMounted;
+  const navHidden = useHideOnScroll(120, 80, navPinned, true) && !navPinned;
   function openEmployeePopup() {
     // While "Dane własne" is on, the server ignores any employee_id filter
     // client-side anyway (it hard-scopes every query to the superuser's own
@@ -861,6 +865,10 @@ export function MobileWizytyCalendarView({
           </div>
         )}
 
+        {/* While the month grid is open the strip slides down out of sight and its row collapses, so
+            the grid above it rides down into the space it leaves (Appointments.css). Kept mounted, so
+            closing the grid plays the same motion back. */}
+        <div className={`mob-strip-collapse${monthExpanded ? ' mob-strip-collapse--hidden' : ''}`} aria-hidden={monthExpanded || undefined}>
         <div className="mob-strip-wrap">
           <button type="button" className="mob-cal-nav-btn" onClick={() => setWeekAnchor((cur) => addDays(cur, -7))} aria-label="Poprzedni tydzień">
             <Icon name="chevron_left" />
@@ -891,6 +899,7 @@ export function MobileWizytyCalendarView({
           <button type="button" className="mob-cal-nav-btn" onClick={() => setWeekAnchor((cur) => addDays(cur, 7))} aria-label="Następny tydzień">
             <Icon name="chevron_right" />
           </button>
+        </div>
         </div>
 
         {/* Bottom-most row: "+" fixed-width on the left, employee selector

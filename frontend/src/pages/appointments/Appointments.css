@@ -660,7 +660,10 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   /* One height for the prev/next buttons AND the day buttons between them, so the week row is exactly as
      tall as its buttons (the day buttons were 56px beside 44px arrows, which set the row's height). */
   --mob-nav-btn: 44px;
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  /* Below the menu drawer (--z-drawer 40) and its backdrop (39). It used to be a hard-coded 40: a tie
+     with the drawer, which DOM order broke in this bar's favour (it renders later), so the opened
+     drawer slid UNDER these bars while still covering the tab bar (30). */
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-page-nav);
   display: flex; flex-direction: column; gap: 0.5rem;
   background: var(--color-surface); border-top: 1px solid var(--color-border);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
@@ -669,8 +672,8 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   transition: transform 0.25s ease;
 }
 
-/* Both rows slide away while the cards are scrolled and return when it stops
-   (useHideWhileScrolling). At rest there must be NO transform on this element — not even
+/* Both rows slide away when a scroll down stops and return when a scroll up stops
+   (useHideOnScroll, as on Klienci / Pracownicy). At rest there must be NO transform on this element — not even
    translateY(0): the employee sheet inside is `position: fixed`, and any transform on an
    ancestor re-bases a fixed descendant onto that ancestor. The hook is paused while the
    sheet (or the month grid) is open, so it is never in this state with the sheet up.
@@ -691,6 +694,24 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
   }
 }
 
+/* Month grid open: the week strip slides down out of sight while its row collapses. The bar is one
+   bottom-anchored column, so the grid stacked on top of the strip rides down with it until the strip's
+   space is fully taken. `grid-template-rows` 1fr → 0fr animates the row's real height (the clip is
+   on this wrapper); the negative margin takes back the column gap the empty row would still hold.
+   Visibility flips only after the motion, so the hidden strip's buttons can't be tabbed to. */
+.mob-strip-collapse {
+  display: grid; grid-template-rows: 1fr; overflow: hidden;
+  transition: grid-template-rows var(--dur-snap) var(--ease-out-expo), margin-top var(--dur-snap) var(--ease-out-expo);
+}
+.mob-strip-collapse > .mob-strip-wrap { min-height: 0; transition: transform var(--dur-snap) var(--ease-out-expo); }
+.mob-strip-collapse--hidden { grid-template-rows: 0fr; margin-top: -0.5rem; }
+.mob-strip-collapse--hidden > .mob-strip-wrap {
+  transform: translateY(100%); visibility: hidden;
+  transition: transform var(--dur-snap) var(--ease-out-expo), visibility 0s linear var(--dur-snap);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mob-strip-collapse, .mob-strip-collapse > .mob-strip-wrap, .mob-strip-collapse--hidden > .mob-strip-wrap { transition: none; }
+}
 .mob-strip-wrap { display: flex; align-items: center; gap: 0.375rem; }
 /* 6 columns — Mon–Sat only (mod #1, no Sunday column). */
 .mob-week-strip { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
@@ -769,7 +790,8 @@ table.stack-cards tbody tr.weekend-row { background: #f8fafc; }
    positioned sheet trying to grow upward past that box; fixed positioning
    escapes it and anchors straight to the real viewport, covering the whole
    `.mob-fixed-nav` bar while open (there's nothing to interact with under
-   it anyway). z-index above `.mob-fixed-nav`'s 40. Overlay dim matches
+   it anyway). Its z-index only orders it inside `.mob-fixed-nav`'s own stacking context
+   (--z-page-nav), which still covers the tab bar. Overlay dim matches
    `.modal-overlay`'s own tone for consistency; safe-area padding matches
    `.mob-fixed-nav`'s own iOS home-indicator handling. */
 .mob-emp-popup-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.35); }

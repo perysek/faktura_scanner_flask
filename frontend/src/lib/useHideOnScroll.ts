@@ -13,6 +13,11 @@ type Timer = ReturnType<typeof setTimeout>;
  * for scrolling the PAGE did not ask for — the A–Z index jumps the list up and down under a held
  * finger, and read as scrolling each jump would flip the bar every ~120ms. Resuming forgets the
  * distance scrolled meanwhile (so the jump never counts as a gesture) and shows the element.
+ *
+ * `requireGesture` (default false) only lets a scroll the USER caused decide: `gesture()` (a touch drag
+ * or a wheel tick) arms the next decision. A scroll the page did itself (`scrollIntoView`, a jump
+ * button's smooth `scrollTo`) settles with nothing armed, so it just moves the baseline and the element
+ * stays as it is. A plain tap is a touchstart/touchend with no touchmove, so it never arms it either.
  */
 export function createHideOnScroll(
   getY: () => number,
@@ -21,10 +26,13 @@ export function createHideOnScroll(
   revealAfterPx = 80,
   schedule: (fn: () => void, ms: number) => Timer = setTimeout,
   cancel: (t: Timer) => void = clearTimeout,
+  requireGesture = false,
 ) {
   let lastY = getY();
   let timer: Timer | null = null;
   let paused = false;
+  // A user gesture is behind the scrolling since the last decision (always true without `requireGesture`).
+  let intent = !requireGesture;
 
   function drop() {
     if (timer) cancel(timer);
@@ -38,6 +46,11 @@ export function createHideOnScroll(
       timer = schedule(() => {
         timer = null;
         const y = getY();
+        if (!intent) {
+          lastY = y;
+          return;
+        }
+        intent = !requireGesture;
         const delta = y - lastY;
         if (Math.abs(delta) > 8) {
           onChange(delta > 0 && y > revealAfterPx);
@@ -45,11 +58,16 @@ export function createHideOnScroll(
         }
       }, delayMs);
     },
+    /** A touch drag or wheel tick: the user, not the page, is scrolling. Only matters with `requireGesture`. */
+    gesture() {
+      if (!paused) intent = true;
+    },
     setPaused(next: boolean) {
       if (next === paused) return;
       paused = next;
       drop();
       lastY = getY();
+      intent = !requireGesture;
       if (!next) onChange(false);
     },
     dispose: drop,
@@ -75,8 +93,11 @@ export function createHideOnScroll(
  * `paused` (default false) suspends it while true — scroll events are ignored — and on the way back
  * to false the caller is shown again, with the distance scrolled in between not counted. See
  * `createHideOnScroll`.
+ *
+ * `requireGesture` (default false): only scrolling the user caused (touch drag, wheel) decides — for a
+ * page that also scrolls itself. See `createHideOnScroll`.
  */
-export function useHideOnScroll(delayMs = 120, revealAfterPx = 80, paused = false): boolean {
+export function useHideOnScroll(delayMs = 120, revealAfterPx = 80, paused = false, requireGesture = false): boolean {
   const [hidden, setHidden] = useState(false);
   const controllerRef = useRef<ReturnType<typeof createHideOnScroll> | null>(null);
   const pausedRef = useRef(paused);
@@ -85,18 +106,24 @@ export function useHideOnScroll(delayMs = 120, revealAfterPx = 80, paused = fals
   useEffect(() => {
     const scroller: HTMLElement | Window = document.getElementById('main-content') ?? window;
     const getY = () => (scroller instanceof Window ? scroller.scrollY : scroller.scrollTop);
-    const controller = createHideOnScroll(getY, setHidden, delayMs, revealAfterPx);
+    const controller = createHideOnScroll(getY, setHidden, delayMs, revealAfterPx, setTimeout, clearTimeout, requireGesture);
     controller.setPaused(pausedRef.current);
     controllerRef.current = controller;
 
     const onScroll = () => controller.onScroll();
-    scroller.addEventListener('scroll', onScroll, { passive: true });
+    const onGesture = () => controller.gesture();
+    const passive = { passive: true } as const;
+    scroller.addEventListener('scroll', onScroll, passive);
+    scroller.addEventListener('wheel', onGesture, passive);
+    scroller.addEventListener('touchmove', onGesture, passive);
     return () => {
       scroller.removeEventListener('scroll', onScroll);
+      scroller.removeEventListener('wheel', onGesture);
+      scroller.removeEventListener('touchmove', onGesture);
       controller.dispose();
       controllerRef.current = null;
     };
-  }, [delayMs, revealAfterPx]);
+  }, [delayMs, revealAfterPx, requireGesture]);
 
   // Layout effect: on resume the bar is shown before the next paint, not a frame later.
   useLayoutEffect(() => {
