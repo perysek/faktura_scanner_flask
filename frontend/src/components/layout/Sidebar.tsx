@@ -30,11 +30,12 @@ function SidebarNavLink({ link }: { link: NavLinkConfig }) {
       to={link.to}
       end
       className={({ isActive }) =>
-        `sidebar-link ${isActive ? 'sidebar-link--active' : 'sidebar-link--default'}${link.mobileHide ? ' nav-mobile-hide' : ''}`
+        `sidebar-link ${isActive ? 'sidebar-link--active' : 'sidebar-link--default'}${link.variant === 'cta' ? ' sidebar-cta' : ''}${link.mobileHide ? ' nav-mobile-hide' : ''}`
       }
     >
-      <NavIcon path={link.iconPath} />
+      {!link.iconAfter && <NavIcon path={link.iconPath} />}
       {link.label}
+      {link.iconAfter && <NavIcon path={link.iconPath} />}
     </NavLink>
   );
 }

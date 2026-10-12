@@ -20,6 +20,11 @@ export interface NavLinkConfig {
   /** Density trim for the flattened mobile list — NEVER for access control
    * (DESIGN.md §13.5/§16). */
   mobileHide?: boolean;
+  /** Draw the icon AFTER the label instead of before it. */
+  iconAfter?: boolean;
+  /** 'cta' renders the row as the bordered full-width action button
+   * (`.sidebar-cta`) instead of a plain nav row. */
+  variant?: 'cta';
   visible: (ctx: NavVisibilityCtx) => boolean;
 }
 
@@ -208,6 +213,10 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
   {
     id: 'korekta',
     title: 'Korekta danych',
+    // Hidden for EVERY user for now, regardless of the 'data_correction'
+    // grant (sidebar only — the /korekta/* routes themselves are unchanged).
+    // Delete this line to bring the section back under its per-link rules.
+    visible: () => false,
     links: [
       {
         label: 'Edycja wizyt',
@@ -293,12 +302,23 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
  */
 export const NAV_STANDALONE_LINKS: NavLinkConfig[] = [
   {
-    label: 'Instrukcja operacyjna',
+    label: 'W co mam kliknąć?',
     to: '/instrukcja-recepcja',
     // Plain-language onboarding guide for the front desk (public/manual/instrukcja-recepcja.html).
     // Like the other manuals it documents the app for everyone, so no role or module gate.
+    // Question-mark-in-circle glyph, drawn after the label.
     iconPath:
-      'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+      'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    iconAfter: true,
     visible: () => true,
+  },
+  {
+    // Persistent one-click entry to the new-visit form, whatever page is open.
+    // Same gate as NewVisitFab: write access to 'appointments'.
+    label: 'Nowa rezerwacja',
+    to: '/wizyty/nowa',
+    iconPath: 'M12 4v16m8-8H4',
+    variant: 'cta',
+    visible: (ctx) => ctx.hasModuleWrite('appointments'),
   },
 ];

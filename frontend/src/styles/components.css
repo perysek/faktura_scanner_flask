@@ -1484,6 +1484,21 @@ table.stack-cards td.cell-hide-lg { display: none; }
    1px --sidebar-border as the logo block's bottom edge, but it lives inside .sidebar-nav's
    padding, so it stops 1rem short of the sidebar edges instead of running edge to edge. */
 .sidebar-nav-standalone { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--sidebar-border); }
+/* Standalone rows start their text at the section headers' 0.5rem inset (not the 0.75rem of a
+   section's own links), so 'W co mam kliknąć?' lines up with FINANSE / SALON / ... above it. */
+.sidebar-nav-standalone .sidebar-link { padding-left: 0.5rem; }
+/* "+ Nowa rezerwacja": full-width bordered action under the standalone links. The 3px border
+   eats into the inset, so the padding subtracts it to keep the "+" on the same 0.5rem line. */
+.sidebar-nav-standalone .sidebar-cta {
+  margin-top: 0.5rem;
+  padding-left: calc(0.5rem - 3px);
+  border: 3px solid var(--sidebar-active-border);
+  color: var(--sidebar-text-active);
+  font-weight: 600;
+}
+.sidebar-nav-standalone .sidebar-cta .sidebar-nav-icon { color: var(--color-accent); }
+.sidebar-nav-standalone .sidebar-cta:hover { background: var(--sidebar-active-bg); }
+.sidebar-nav-standalone .sidebar-cta.sidebar-link--active { box-shadow: none; }
 .sidebar-section { position: relative; margin-top: 0.25rem; }
 .sidebar-section-header {
   width: 100%;
