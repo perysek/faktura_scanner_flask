@@ -22,9 +22,12 @@ export interface NavLinkConfig {
   mobileHide?: boolean;
   /** Draw the icon AFTER the label instead of before it. */
   iconAfter?: boolean;
-  /** 'cta' renders the row as the bordered full-width action button
-   * (`.sidebar-cta`) instead of a plain nav row. */
+  /** 'cta' renders the row as the app's primary button (`<ButtonLink
+   * variant="primary">`, DESIGN.md §6) stretched full width (`.sidebar-cta`)
+   * instead of a plain nav row; its icon is then the `glyph` below. */
   variant?: 'cta';
+  /** Glyph-icon name (lib/icons/paths.ts) for a 'cta' row. */
+  glyph?: string;
   visible: (ctx: NavVisibilityCtx) => boolean;
 }
 
@@ -302,7 +305,7 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
  */
 export const NAV_STANDALONE_LINKS: NavLinkConfig[] = [
   {
-    label: 'W co mam kliknąć?',
+    label: 'Gdzie teraz mam kliknąć',
     to: '/instrukcja-recepcja',
     // Plain-language onboarding guide for the front desk (public/manual/instrukcja-recepcja.html).
     // Like the other manuals it documents the app for everyone, so no role or module gate.
@@ -315,10 +318,11 @@ export const NAV_STANDALONE_LINKS: NavLinkConfig[] = [
   {
     // Persistent one-click entry to the new-visit form, whatever page is open.
     // Same gate as NewVisitFab: write access to 'appointments'.
-    label: 'Nowa rezerwacja',
+    label: 'Dodaj wizytę',
     to: '/wizyty/nowa',
     iconPath: 'M12 4v16m8-8H4',
     variant: 'cta',
+    glyph: 'add',
     visible: (ctx) => ctx.hasModuleWrite('appointments'),
   },
 ];

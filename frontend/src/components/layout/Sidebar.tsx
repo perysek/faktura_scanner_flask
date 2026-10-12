@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
+import { ButtonLink } from '../ui/Button';
 import { NAV_SECTIONS, NAV_STANDALONE_LINKS } from './navConfig';
 import type { NavLinkConfig } from './navConfig';
 import { NavIcon } from './NavIcon';
@@ -25,12 +26,19 @@ export interface SidebarProps {
 /** One nav row — shared by the accordion sections and the top-level links so
  * the two can never drift apart in markup or active-state classes. */
 function SidebarNavLink({ link }: { link: NavLinkConfig }) {
+  if (link.variant === 'cta') {
+    return (
+      <ButtonLink variant="primary" icon={link.glyph} to={link.to} className="sidebar-cta">
+        {link.label}
+      </ButtonLink>
+    );
+  }
   return (
     <NavLink
       to={link.to}
       end
       className={({ isActive }) =>
-        `sidebar-link ${isActive ? 'sidebar-link--active' : 'sidebar-link--default'}${link.variant === 'cta' ? ' sidebar-cta' : ''}${link.mobileHide ? ' nav-mobile-hide' : ''}`
+        `sidebar-link ${isActive ? 'sidebar-link--active' : 'sidebar-link--default'}${link.mobileHide ? ' nav-mobile-hide' : ''}`
       }
     >
       {!link.iconAfter && <NavIcon path={link.iconPath} />}

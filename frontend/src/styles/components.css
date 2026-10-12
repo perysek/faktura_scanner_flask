@@ -1487,18 +1487,9 @@ table.stack-cards td.cell-hide-lg { display: none; }
 /* Standalone rows start their text at the section headers' 0.5rem inset (not the 0.75rem of a
    section's own links), so 'W co mam kliknąć?' lines up with FINANSE / SALON / ... above it. */
 .sidebar-nav-standalone .sidebar-link { padding-left: 0.5rem; }
-/* "+ Nowa rezerwacja": full-width bordered action under the standalone links. The 3px border
-   eats into the inset, so the padding subtracts it to keep the "+" on the same 0.5rem line. */
-.sidebar-nav-standalone .sidebar-cta {
-  margin-top: 0.5rem;
-  padding-left: calc(0.5rem - 3px);
-  border: 3px solid var(--sidebar-active-border);
-  color: var(--sidebar-text-active);
-  font-weight: 600;
-}
-.sidebar-nav-standalone .sidebar-cta .sidebar-nav-icon { color: var(--color-accent); }
-.sidebar-nav-standalone .sidebar-cta:hover { background: var(--sidebar-active-bg); }
-.sidebar-nav-standalone .sidebar-cta.sidebar-link--active { box-shadow: none; }
+/* "+ Dodaj wizytę": the stock .refined-btn-primary (same as "Dodaj klienta" on Klienci), only
+   stretched to the nav's full width. */
+.sidebar-nav-standalone .sidebar-cta { display: flex; width: 100%; margin-top: 0.5rem; }
 .sidebar-section { position: relative; margin-top: 0.25rem; }
 .sidebar-section-header {
   width: 100%;
