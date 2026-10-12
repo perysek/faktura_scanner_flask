@@ -1,0 +1,13 @@
+VISITS PAGES UI-issues and to-dos list (with page-view, area position):
+@wizyty list page-view
+# table-column 'pracownik': employee name format change from "Aneta Kozłowska" format-type to "A.Kozłowska" (example of pattern)
+# remove table-column 'aktualne uwagi i zalecenia' and last visit-note place in column 'usługa' rows, below service-name. Make minimum padding-top, 0.5x of service-text font-size, max 2 lines, overflow with "..."
+# re-adjust columns width ratio with gained width-space by above items and considering column content size
+# column ocena row-data, for rows where no-rating, change display from '-' to 5-stars-display 0-rating (empty all 5stars)
+# scroll-top, scroll-bottom float-btns change to single btn with aria-icon up/down arrowed. When table scroll position not at top or bottom - scroll-btn fades-out. Fade in visible only when scroll top/bottom position.
+
+<Done 12102026>
+
+
+Tasks to-do 12102026
+in visits-month-calendar page-view, day-columns widthsa have various widhts and heights auto-sized to fit the cell full text lenght and visits-line-bars. Make each column same fixed, equally responsive size, so that each day-cell has same width/height. To have more avialable viewport width, remove last column 'sunday' (0 visits on sundays - salon is closed) and to gain some height, move 'przychód' counts to day-number cell-header alligned right-end and add some custom styling, colors, circles, shade, outlines, curves /be creative

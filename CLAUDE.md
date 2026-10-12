@@ -14,41 +14,6 @@ Ask ONE tight question (or a short numbered list). Never proceed on a vague prom
 
 Verify every UI/GUI change with the `/browse` skill, and always on the **deployed live production URL only**. Deploy first, then verify there; never verify against a local dev server or localhost.
 
-### Available skills
-
-- `/office-hours` - Office hours
-- `/plan-ceo-review` - Plan CEO review
-- `/plan-eng-review` - Plan engineering review
-- `/plan-design-review` - Plan design review
-- `/design-consultation` - Design consultation
-- `/design-shotgun` - Design shotgun
-- `/design-html` - Design HTML
-- `/review` - Code review
-- `/ship` - Ship
-- `/land-and-deploy` - Land and deploy
-- `/canary` - Canary
-- `/benchmark` - Benchmark
-- `/browse` - Browser verification of UI/GUI changes on the live production URL
-- `/connect-chrome` - Connect Chrome
-- `/qa` - QA
-- `/qa-only` - QA only
-- `/design-review` - Design review
-- `/setup-browser-cookies` - Setup browser cookies
-- `/setup-deploy` - Setup deploy
-- `/retro` - Retro
-- `/investigate` - Investigate
-- `/document-release` - Document release
-- `/codex` - Codex
-- `/cso` - CSO
-- `/autoplan` - Autoplan
-- `/plan-devex-review` - Plan DevEx review
-- `/devex-review` - DevEx review
-- `/careful` - Careful mode
-- `/freeze` - Freeze
-- `/guard` - Guard
-- `/unfreeze` - Unfreeze
-- `/learn` - Learn
-
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill
@@ -68,36 +33,3 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
-
-## Design system (canonical)
-
-One design language ("System B" / refined): **flat fills, 2–3px radii, CSS-variable
-tokens, Inter, glyph icons over icon-fonts**. Full token reference:
-`plans/260610-ui-usability-fixes/DESIGN-TOKENS.md`.
-
-Rules:
-- Tokens live in `static/css/input.css :root` (`--color-*`, `--radius-sm/md`).
-  Never reintroduce `rounded-xl`/`rounded-2xl`/`bg-gradient-to-*`/raw `slate-*`
-  buttons in authenticated templates.
-- CSS build: edit `static/css/input.css`, run `npm run build:css`. **Never hand-edit
-  `static/css/output.css`** (generated, gitignored, rebuilt on the server at deploy).
-- Buttons: global `.refined-btn-primary/secondary` (flat), `.refined-btn-ghost/danger`,
-  `.refined-btn-sm`, or `.form-btn-*`. Forms:
-  `.form-input/.form-select/.form-textarea/.form-label/.form-card`.
-- Icons: **inline SVG only** via `{% from 'components/icons.html' import icon %}` →
-  `{{ icon('save', class='…') }}`, or `Icons.svg('save', 'class')` in JS. **Never**
-  the Material Icons font (removed). Sizes by font-size (1em); color via
-  `currentColor`. Add a glyph by fetching its Material Symbols path into both
-  `components/icons.html` and `static/js/icons.js`.
-- Sortable tables: `<th class="th-sortable" aria-sort="…">` wrapping a
-  `.th-sort-btn` `<button>` + `.th-sort-icon` glyph (▲/▼). Sync `aria-sort` in the
-  page's sort JS. (Note: the global `table-utils.js` was deleted — each list page
-  owns its sorter.)
-- Mobile: every routed page gets a header title (< lg) from the `page_title`
-  processor (`config/page_titles.py` — add new endpoints there) or an explicit
-  `{% block mobile_title %}Label{% endblock %}`. Wide tables opt into the shared
-  **`.stack-cards`** component (`input.css @layer components`): add `stack-cards` to
-  the `<table>`, `data-label` per `<td>`, `cell-name`/`cell-actions`/`cell-hide-sm`/
-  `cell-empty` markers. Full recipe in DESIGN-TOKENS.md.
-- Form controls must compute ≥16px font-size at ≤1023px (global guard in input.css
-  — do not override with !important page styles).

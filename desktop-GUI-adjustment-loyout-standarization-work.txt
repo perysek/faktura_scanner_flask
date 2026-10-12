@@ -1,0 +1,36 @@
+Created by: Piotr Peresiak
+Document type: TODOs definition
+Scope: desktop-view side-bar, desktop-view pages/subpages
+Subject: Side-bar nav-links re-organization and cleanup, pages layout optimizations
+
+Goal: Side-bar nav-links nav-grouped by nav-section names (business areas) AND across-pages layout consistency optimized for best-intuitive-confident UX and look general attractiveness
+
+TASK-ITEMS grouped by GUI sections:
+A#side-bar##
+A.1# Remove dead, stale, redundant nav-links: 'import dokumentów', 'import danych', 'instrukcja obsługi (smartfon)', 'profil'
+A.2# Rename display-name of navlinks
+. → 'Koszty' → 'Panel danych'
+. → 'Lista faktur' → 'Koszty'
+. → 'Lista sprzedawców' → 'Dostawcy'
+. → 'Analiza biznesowa' → Analityka biznesowa'
+. → 'Ustawienia SMS' → 'Komunikacja SMS'
+. → 'Instrukcja obsługi' → 'Podręcznik aplikacji'
+. → 'Instrukcja dla recepcji' → 'Instrukcja operacyjna'
+
+A.3# Move navlinks to different sections as below:
+#section ZARZĄDZANIE
+'usługi' and 'kategorie usług' → SALON
+#section SYSTEM
+'Komunikacja SMS' → SALON
+'Instrukcja operacyjna' → main nav-bar menu (outside sections)
+
+A.4# Rename section:
+ZARZĄDZANIE → PERSONEL
+SYSTEM → APLIKACJA
+
+A.5# In user-bottom-bar, on user-widget (avatar circle, user name and role text-labels) change current on-hover behavior to elevate+shade animated transition AND change on-hover bg-color to transparent. Apply the same to theme-button and logout button
+
+B# Page-view botton footer row
+B.1 Above foother align left, add hide-unhide ("<" / ">") aria icon-button with no-background which on-click make side-bar slide-left-out / slide-right-in toggling
+
+DONE 10102026
