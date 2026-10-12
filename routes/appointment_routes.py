@@ -278,6 +278,10 @@ def _canonical_time(value) -> str:
 
 appointment_bp = Blueprint('appointments', __name__)
 
+# Visits list (`include_notes=1`): rows in these statuses show the client's newest
+# note; every other status shows only the visit's own note.
+_NOTE_FROM_CLIENT_STATUSES = frozenset({'scheduled', 'confirmed', 'in_progress'})
+
 
 def _parse_date(date_str):
     """Parse date string (YYYY-MM-DD) to date object"""
@@ -334,17 +338,29 @@ def get_appointments():
 
         appointments = [dict(row) for row in rows]
 
-        # Opt-in ("Aktualne uwagi i zalecenia" column of the desktop list): the single
-        # newest visit note of each row's client, one batched query. Calendars never
-        # ask for it, so they never pay for it. Two are fetched only to tell whether the
-        # client has more than the one shown (`has_more_notes` → the list's "Więcej >").
+        # Opt-in (the note under the service in the desktop list); calendars never ask
+        # for it, so they never pay for it. Which note a row shows depends on its status:
+        #   * upcoming (scheduled / confirmed / in_progress): the client's newest note,
+        #     i.e. the recommendation left after an earlier visit;
+        #   * everything else (completed, and cancelled / no_show / rescheduled, which
+        #     can't carry notes, so stay empty): only that visit's OWN note.
+        # Two client notes are fetched only to tell whether the client has more than
+        # the one shown (`has_more_notes` → the list's "Więcej >"). Two batched queries.
         if request.args.get('include_notes') == '1':
+            note_service = VisitNoteService()
+            scope = visit_note_scope(current_user)
             client_ids = list(dict.fromkeys(a['client_id'] for a in appointments))
-            latest = VisitNoteService().recent_by_client(client_ids, visit_note_scope(current_user), 2)
+            latest = note_service.recent_by_client(client_ids, scope, 2)
+            own_ids = [a['id'] for a in appointments if a.get('status') not in _NOTE_FROM_CLIENT_STATUSES]
+            own = note_service.latest_by_appointment(own_ids, scope)
             for a in appointments:
                 notes = latest.get(a['client_id'])
-                a['latest_note'] = notes[0] if notes else None
-                a['has_more_notes'] = bool(notes) and len(notes) > 1
+                has_more = bool(notes) and len(notes) > 1
+                if a.get('status') in _NOTE_FROM_CLIENT_STATUSES:
+                    a['latest_note'] = notes[0] if notes else None
+                else:
+                    a['latest_note'] = own.get(a['id'])
+                a['has_more_notes'] = a['latest_note'] is not None and has_more
 
         # Batch-load SMS state for the visible appointments
         sms_sent_map: dict = {}

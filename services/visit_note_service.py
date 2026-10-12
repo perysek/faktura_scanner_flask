@@ -137,6 +137,15 @@ class VisitNoteService:
             grouped.setdefault(row['client_id'], []).append(entry)
         return grouped
 
+    def latest_by_appointment(self, appointment_ids: List[int],
+                              scope: VisitNoteScope) -> Dict[int, Dict[str, Optional[str]]]:
+        """``{appointment_id: {text, at}}`` — each listed visit's own newest note."""
+        if not scope.has_access or not appointment_ids:
+            return {}
+        rows = self.notes.latest_for_appointments(list(appointment_ids), scope.own_employee_id)
+        return {row['appointment_id']: {'text': row['note_text'], 'at': iso_local(row['updated_at'])}
+                for row in rows}
+
     # ── writes ───────────────────────────────────────────────────────────────
 
     def create(self, appointment_id: int, raw_text: Any, scope: VisitNoteScope, user) -> Dict[str, Any]:

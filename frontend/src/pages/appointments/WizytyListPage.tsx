@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useNavigationType } from 'react-router-dom';
+import { saveWizytyListReturn, takeWizytyListReturn } from '../../lib/wizytyListReturn';
 import './Appointments.css';
 import { appointmentsApi } from '../../lib/api/appointments';
 import { useAuth } from '../../contexts/AuthContext';
@@ -103,8 +104,23 @@ export function WizytyListPage() {
   // mount used to land on today + the user's own employee, discarding whatever
   // was picked. Read ONCE, synchronously, so the very first render already has
   // the right day/strip/employee (no flash of "today"). See lib/wizytyListState.
-  const [restored] = useState(() => (isMobile ? readWizytyListState() : null));
+  // Desktop: coming BACK (history POP) from the client page opened by "Więcej >"
+  // brings the list back exactly as it was left (lib/wizytyListReturn). Any other
+  // mount just discards a leftover snapshot.
+  const navigationType = useNavigationType();
+  const [returnSnap] = useState(() => {
+    const snap = takeWizytyListReturn();
+    return !isMobile && navigationType === 'POP' ? snap : null;
+  });
+  const [restored] = useState(() => {
+    if (returnSnap) return returnSnap.mode === 'chain' ? { date: returnSnap.chainDates[0], chain: returnSnap.chainDates, employeeId: returnSnap.employeeId } : null;
+    return isMobile ? readWizytyListState() : null;
+  });
   const [weekStart, setWeekStart] = useState(() => {
+    if (returnSnap && !restored) {
+      const [y, m, d] = returnSnap.weekStart.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
     if (!restored) return getMonday(new Date());
     const [y, m, d] = restored.date.split('-').map(Number);
     return getMonday(new Date(y, m - 1, d));
@@ -130,8 +146,8 @@ export function WizytyListPage() {
   const monthFetchRef = useRef(new Map<string, Map<string, AppointmentListItem[]>>());
 
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
-  const [employeeId, setEmployeeId] = useState<number | null>(restored ? restored.employeeId : null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [employeeId, setEmployeeId] = useState<number | null>(restored ? restored.employeeId : (returnSnap?.employeeId ?? null));
+  const [searchQuery, setSearchQuery] = useState(returnSnap?.searchQuery ?? '');
   // Default the "Pracownik" filter once /auth/me resolves: "Wszyscy" for a
   // superuser, the logged-in user's own linked employee for everyone else.
   // Guarded to fire exactly once so it never clobbers a selection the user
@@ -158,7 +174,7 @@ export function WizytyListPage() {
     // A remembered employee wins over the "own employee" default, except in
     // "Dane własne" mode: there the server hard-scopes every query to the
     // superuser's own employee, so any other remembered name would be a lie.
-    if (restored && !auth.ownDataActive) return;
+    if ((restored || returnSnap) && !auth.ownDataActive) return;
     // Superusers open on "Wszyscy" (employeeId stays null = everyone's visits, income
     // summed). Not in "Dane własne" mode: the server pins every query to their own
     // employee there, so that case still falls through to the own-employee default.
@@ -166,7 +182,7 @@ export function WizytyListPage() {
     if (auth.linkedEmployeeId !== null) setEmployeeId(auth.linkedEmployeeId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isLoading, auth.linkedEmployeeId, auth.ownDataActive]);
-  const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>({ column: 'appointment_date', dir: 'asc' });
+  const [sort, setSort] = useState<{ column: SortColumn; dir: 'asc' | 'desc' }>(() => (returnSnap ? { column: returnSnap.sort.column as SortColumn, dir: returnSnap.sort.dir } : { column: 'appointment_date', dir: 'asc' }));
 
   const [rescheduleTarget, setRescheduleTarget] = useState<AppointmentListItem | null>(null);
   // Desktop row action "Dodaj uwagę" (completed visits only): the visit being annotated.
@@ -490,6 +506,33 @@ export function WizytyListPage() {
     }
   }
 
+  // "Więcej >" → client page: remember exactly what the list shows, for the way back.
+  function rememberListForReturn() {
+    saveWizytyListReturn({
+      weekStart: iso(weekStart),
+      mode,
+      chainDates,
+      employeeId,
+      searchQuery,
+      sort,
+      tableScrollTop: tableContainerRef.current?.scrollTop ?? 0,
+      mainScrollTop: document.getElementById('main-content')?.scrollTop ?? 0,
+    });
+  }
+
+  // Back from the client page: put the scroll back once the restored rows are on screen.
+  const scrollRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!returnSnap || scrollRestoredRef.current) return;
+    if (mode === 'week' ? weekLoading : chainLoading) return;
+    scrollRestoredRef.current = true;
+    requestAnimationFrame(() => {
+      if (tableContainerRef.current) tableContainerRef.current.scrollTop = returnSnap.tableScrollTop;
+      const main = document.getElementById('main-content');
+      if (main) main.scrollTop = returnSnap.mainScrollTop;
+    });
+  }, [returnSnap, mode, weekLoading, chainLoading]);
+
   function handleRowClick(appt: AppointmentListItem, event: MouseEvent) {
     if ((event.target as HTMLElement).closest('.status-badge') || (event.target as HTMLElement).closest('.action-icon-btn')) return;
     navigate(`/wizyty/${appt.id}`);
@@ -675,8 +718,12 @@ export function WizytyListPage() {
                             {appt.has_more_notes && (
                               <Link
                                 to={{ pathname: `/klienci/${appt.client_id}`, hash: CLIENT_NOTES_ANCHOR }}
+                                state={{ fromVisitsList: true }}
                                 className="cell-service-note-link"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  rememberListForReturn();
+                                }}
                               >
                                 Więcej &gt;
                               </Link>

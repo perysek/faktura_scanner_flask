@@ -153,6 +153,25 @@ class VisitNoteRepository(BaseRepository):
         """
         return self._fetch_all(query, tuple([list(client_ids)] + scope_params + [per_client]))
 
+    def latest_for_appointments(self, appointment_ids: List[int],
+                                own_employee_id: Optional[int]) -> List[Any]:
+        """The newest note of each listed visit — ONE query (DISTINCT ON).
+
+        Backs the visits list's finished rows, which show THEIR OWN note only (not
+        the client's latest one). Visits without a note simply have no row.
+        """
+        if not appointment_ids:
+            return []
+        scope_sql, scope_params = self._scope(own_employee_id)
+        query = f"""
+            SELECT DISTINCT ON (n.appointment_id) n.appointment_id, n.note_text, n.updated_at
+            FROM visit_notes n
+            JOIN appointments a ON a.id = n.appointment_id AND a.is_deleted = FALSE
+            WHERE n.is_deleted = FALSE AND n.appointment_id = ANY(%s) {scope_sql}
+            ORDER BY n.appointment_id, n.updated_at DESC, n.id DESC
+        """
+        return self._fetch_all(query, tuple([list(appointment_ids)] + scope_params))
+
     def get_with_visit(self, note_id: int) -> Optional[Any]:
         """A live note with the visit facts the service needs to authorize a write."""
         query = """

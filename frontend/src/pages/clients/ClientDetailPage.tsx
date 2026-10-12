@@ -81,7 +81,10 @@ export function ClientDetailPage() {
   const canOpenVisits = auth.hasModuleAccess('appointments');
   const isMobile = useIsMobile(640);
   const mobileBarHidden = useHideOnScroll();
-  useEscapeBack('/klienci');
+  // Opened from the visits list's "Więcej >": "Powrót" goes BACK (history POP) so the
+  // list restores its week/filters/scroll (lib/wizytyListReturn); otherwise → clients list.
+  const fromVisitsList = !!(useLocation().state as { fromVisitsList?: boolean } | null)?.fromVisitsList;
+  useEscapeBack(fromVisitsList ? undefined : '/klienci');
 
   const clientState = useApiData(() => clientsApi.get(clientId), [clientId]);
   const preferencesState = useApiData(() => clientsApi.preferences(clientId), [clientId]);
@@ -580,9 +583,15 @@ export function ClientDetailPage() {
             </div>
           )}
           <div className={`mw-bar${mobileBarHidden ? ' mw-bar--hidden' : ''}`}>
-            <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
-              Powrót
-            </ButtonLink>
+            {fromVisitsList ? (
+              <Button variant="secondary" icon="arrow_back" onClick={() => navigate(-1)}>
+                Powrót
+              </Button>
+            ) : (
+              <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
+                Powrót
+              </ButtonLink>
+            )}
             {canWrite && (
               <ButtonLink variant="primary" icon="edit" to={`/klienci/${client.id}/edytuj`}>
                 Edytuj
@@ -598,9 +607,15 @@ export function ClientDetailPage() {
                 Edytuj klienta
               </ButtonLink>
             )}
-            <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
-              Powrót do listy
-            </ButtonLink>
+            {fromVisitsList ? (
+              <Button variant="secondary" icon="arrow_back" onClick={() => navigate(-1)}>
+                Powrót do wizyt
+              </Button>
+            ) : (
+              <ButtonLink variant="secondary" icon="arrow_back" to="/klienci">
+                Powrót do listy
+              </ButtonLink>
+            )}
             {canWrite && (
               <Button variant="danger" icon="delete" onClick={handleDeleteOrDeactivate}>
                 {client.is_active ? 'Dezaktywuj' : 'Usuń'}

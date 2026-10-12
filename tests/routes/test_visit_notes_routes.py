@@ -85,6 +85,7 @@ def env(app):
     notes.count_for_client.return_value = 0
     notes.eligible_visits.return_value = []
     notes.recent_for_clients.return_value = []
+    notes.latest_for_appointments.return_value = []
     notes.get_with_visit.return_value = _note_row()
     appts.get_by_id.return_value = _appt()
     with patch('services.visit_note_service.VisitNoteRepository', return_value=notes), \
@@ -592,29 +593,66 @@ class TestAppointmentsListIntegration:
     def _get(self, env, query=''):
         return env.c.get(f'/api/appointments?start_date=2026-10-01&end_date=2026-10-07{query}', headers=XHR)
 
-    def test_attaches_the_clients_single_latest_note(self, env):
+    def test_upcoming_rows_get_the_clients_latest_note(self, env):
         with _as(_user(), FULL):
             appts = {a['id']: a for a in self._get(env, '&include_notes=1').get_json()['appointments']}
         # exact shape on purpose: the service name is opt-in for the clients list only,
         # so the visits list payload must stay {text, at}
-        assert appts[1]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
-        assert appts[3]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}  # same client
+        assert appts[3]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
         assert appts[2]['latest_note'] is None
-        assert appts[1]['has_more_notes'] is False
+        assert appts[3]['has_more_notes'] is False
         assert appts[2]['has_more_notes'] is False
         assert env.notes.recent_for_clients.call_args.args == ([5, 6], None, 2)
         assert env.notes.recent_for_clients.call_count == 1
+
+    def test_finished_row_shows_only_its_own_note(self, env):
+        # client 5's newest note belongs to ANOTHER visit: the completed row stays empty
+        with _as(_user(), FULL):
+            appts = {a['id']: a for a in self._get(env, '&include_notes=1').get_json()['appointments']}
+        assert appts[1]['latest_note'] is None
+        assert appts[1]['has_more_notes'] is False
+        # only the non-upcoming row is looked up by visit, in one query
+        assert env.notes.latest_for_appointments.call_args.args == ([1], None)
+        assert env.notes.latest_for_appointments.call_count == 1
+
+    def test_finished_row_with_its_own_note(self, env):
+        env.notes.latest_for_appointments.return_value = [
+            {'appointment_id': 1, 'note_text': 'Własna', 'updated_at': datetime(2026, 9, 1, 6, 15)}]
+        with _as(_user(), FULL):
+            appts = {a['id']: a for a in self._get(env, '&include_notes=1').get_json()['appointments']}
+        assert appts[1]['latest_note'] == {'text': 'Własna', 'at': '2026-09-01T08:15:00'}
+        assert appts[3]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
+
+    @pytest.mark.parametrize('status', ['in_progress', 'confirmed'])
+    def test_other_upcoming_statuses_use_the_clients_note(self, env, status):
+        env.appt_repo.get_by_date_range.return_value = [
+            {'id': 4, 'client_id': 5, 'employee_id': 7, 'status': status}]
+        with _as(_user(), FULL):
+            appts = self._get(env, '&include_notes=1').get_json()['appointments']
+        assert appts[0]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
+        env.notes.latest_for_appointments.assert_not_called()
+
+    @pytest.mark.parametrize('status', ['cancelled', 'no_show', 'rescheduled'])
+    def test_non_upcoming_statuses_never_borrow_the_clients_note(self, env, status):
+        env.appt_repo.get_by_date_range.return_value = [
+            {'id': 4, 'client_id': 5, 'employee_id': 7, 'status': status}]
+        with _as(_user(), FULL):
+            appts = self._get(env, '&include_notes=1').get_json()['appointments']
+        assert appts[0]['latest_note'] is None
 
     def test_flags_a_client_with_more_than_one_note(self, env):
         env.notes.recent_for_clients.return_value = [
             {'client_id': 5, 'note_text': 'Najnowsza', 'updated_at': datetime(2026, 10, 1, 6, 15)},
             {'client_id': 5, 'note_text': 'Starsza', 'updated_at': datetime(2026, 9, 1, 6, 15)}]
+        env.notes.latest_for_appointments.return_value = [
+            {'appointment_id': 1, 'note_text': 'Starsza', 'updated_at': datetime(2026, 9, 1, 6, 15)}]
         with _as(_user(), FULL):
             appts = {a['id']: a for a in self._get(env, '&include_notes=1').get_json()['appointments']}
-        # only the newest is shown; the second just says "there is more"
-        assert appts[1]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
-        assert appts[1]['has_more_notes'] is True
-        assert appts[3]['has_more_notes'] is True  # same client
+        # only one note is shown; the flag just says "there is more"
+        assert appts[3]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
+        assert appts[3]['has_more_notes'] is True
+        assert appts[1]['latest_note'] == {'text': 'Starsza', 'at': '2026-09-01T08:15:00'}
+        assert appts[1]['has_more_notes'] is True  # same client, the other note exists
         assert appts[2]['has_more_notes'] is False
 
     def test_payload_unchanged_without_the_flag(self, env):
@@ -627,3 +665,4 @@ class TestAppointmentsListIntegration:
         with _as(_user(), OWN_DATA, own_employee_id=7):
             self._get(env, '&include_notes=1')
         assert env.notes.recent_for_clients.call_args.args[1] == 7
+        assert env.notes.latest_for_appointments.call_args.args[1] == 7
