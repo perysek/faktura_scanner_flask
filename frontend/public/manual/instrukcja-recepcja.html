@@ -56,9 +56,34 @@ kbd{background:var(--paper);border:1px solid var(--side-bd);border-bottom-width:
 .skip:focus{left:8px}
 
 /* layout */
-.wrap{display:grid;grid-template-columns:304px minmax(0,1fr);max-width:1480px;margin:0 auto;min-height:100vh}
-.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:26px 18px 40px;background:var(--side);border-right:1px solid var(--side-bd);scrollbar-width:thin}
+/* TOC on the RIGHT: DOM order stays nav-first (a11y / phone stack), the grid just swaps the columns. */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 304px;max-width:1480px;margin:0 auto;min-height:100vh}
+.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:26px 18px 40px;background:var(--side);border-left:1px solid var(--side-bd);order:2}
 .toc .brand{font:700 16px/1.25 var(--font);margin:0 6px 2px}
+
+/* TOC scrollbar: theme-tinted pill instead of the native grey slab. Chrome 121+ IGNORES the
+   ::-webkit-scrollbar rules whenever scrollbar-width/-color is set, so the standard properties are
+   only applied to engines without the pseudo-elements (Firefox), via @supports below.
+   - rest: thin muted pill (4px visible inside a 4px border painted in the panel colour)
+   - panel hover: pill widens, takes the accent gradient, a hairline rail appears behind it
+   - thumb hover/drag: widest, darker accent, inset highlight + shade = raised look
+   - fades: the panel's top/bottom edges mask-fade the list so it reads as "more below/above";
+     the fade bands sit inside the panel padding, and the track margin keeps the thumb out of them. */
+.toc{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 20px,#000 calc(100% - 32px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 20px,#000 calc(100% - 32px),transparent 100%)}
+.toc::-webkit-scrollbar{width:12px}
+.toc::-webkit-scrollbar-button{display:none;width:0;height:0}
+.toc::-webkit-scrollbar-corner{background:transparent}
+.toc::-webkit-scrollbar-track{background:transparent;margin:20px 0 32px}
+.toc:hover::-webkit-scrollbar-track{background:linear-gradient(to right,transparent 5px,color-mix(in srgb,var(--side-bd) 85%,transparent) 5px 7px,transparent 7px)}
+.toc::-webkit-scrollbar-thumb{min-height:48px;border-radius:999px;border:4px solid var(--side);background:color-mix(in srgb,var(--side-head) 32%,transparent)}
+.toc:hover::-webkit-scrollbar-thumb{border-width:3px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 65%,#fff),var(--accent));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(0,0,0,.14)}
+.toc::-webkit-scrollbar-thumb:hover{border-width:2px;background:linear-gradient(180deg,var(--accent),var(--accent-d));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 2px rgba(0,0,0,.22)}
+.toc::-webkit-scrollbar-thumb:active{border-width:2px;background:var(--accent-d);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+@supports not selector(::-webkit-scrollbar){
+  .toc{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--side-head) 35%,transparent) transparent;transition:scrollbar-color .2s}
+  .toc:hover{scrollbar-color:var(--accent) transparent}
+}
+@media (max-width:1000px){.toc{-webkit-mask-image:none;mask-image:none}}
 .toc .brand small{display:block;font-weight:500;font-size:13px;color:var(--side-head);margin-top:3px}
 .toc-btn{display:none}
 .srch{margin:16px 0 8px;position:relative}
@@ -216,6 +241,7 @@ dl.gl{margin:1em 0;max-width:80ch}dl.gl dt{font-weight:700;margin-top:1em}dl.gl 
 .status-key li{margin:0;display:flex;align-items:center;gap:8px;font-size:.95em}
 .endnote{margin-top:4em;padding-top:1.4em;border-top:1px solid var(--border);color:var(--ink2);font-size:.95em;max-width:80ch}
 .up{position:fixed;right:20px;bottom:20px;width:46px;height:46px;border-radius:50%;border:1px solid var(--side-bd);background:var(--paper);color:var(--ink);cursor:pointer;display:none;align-items:center;justify-content:center}
+@media(min-width:1001px){.up{right:calc(max(0px,(100vw - 1480px)/2) + 304px + 20px)}}
 .up.on{display:flex}.up .ic{width:22px;height:22px}
 
 /* lightbox (native dialog) */
@@ -233,7 +259,7 @@ dialog#lb::backdrop{background:rgba(15,12,8,.88)}
 }
 @media (max-width:1000px){
   .wrap{display:block}
-  .toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--side-bd);padding:16px 16px 14px}
+  .toc{position:static;height:auto;border-left:0;border-bottom:1px solid var(--side-bd);padding:16px 16px 14px}
   html.js .toc-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px 14px;border:1px solid var(--side-bd);border-radius:3px;background:var(--paper);color:var(--ink);font:650 16px/1.2 var(--font);cursor:pointer}
   html.js .toc-list{display:none}
   html.js .toc.open .toc-list{display:block}

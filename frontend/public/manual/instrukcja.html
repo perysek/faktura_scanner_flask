@@ -100,7 +100,7 @@ dl.gl{margin:1em 0}dl.gl dt{font-weight:700;margin-top:.8em}dl.gl dd{margin:.1em
 
 /* TOC on the RIGHT: DOM order stays nav-first (a11y / phone stack), the grid just swaps the columns. */
 .wrap{display:grid;grid-template-columns:minmax(0,1fr) 292px;max-width:1400px;margin:0 auto;min-height:100vh}
-.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:22px 16px 40px;background:var(--side);border-left:1px solid var(--side-bd);scrollbar-width:thin;order:2}
+.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:22px 16px 40px;background:var(--side);border-left:1px solid var(--side-bd);order:2}
 .toc .brand{font:700 15px/1.2 var(--font);letter-spacing:.01em;margin:0 6px 2px}.toc .brand small{display:block;font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--side-head);margin-top:3px}
 .srch{margin:14px 0 8px;position:relative}.srch input{width:100%;padding:9px 10px 9px 32px;border:1px solid var(--side-bd);border-radius:3px;background:var(--paper);color:var(--ink);font:inherit;font-size:13.5px}
 .srch svg{position:absolute;left:9px;top:10px;width:15px;height:15px;color:var(--ink3)}
@@ -113,6 +113,30 @@ dl.gl{margin:1em 0}dl.gl dt{font-weight:700;margin-top:.8em}dl.gl dd{margin:.1em
 .toc a.l.on{border-left-color:var(--accent);background:var(--accent-m);color:var(--ink);font-weight:600}
 .toc a.l.s{padding-left:24px;font-size:12.5px;color:var(--ink3)}
 .toc .foot{margin:24px 6px 0;font-size:12px;color:var(--side-head);line-height:1.5}
+
+/* TOC scrollbar: theme-tinted pill instead of the native grey slab. Chrome 121+ IGNORES the
+   ::-webkit-scrollbar rules whenever scrollbar-width/-color is set, so the standard properties are
+   only applied to engines without the pseudo-elements (Firefox), via @supports below.
+   - rest: thin muted pill (4px visible inside a 4px border painted in the panel colour)
+   - panel hover: pill widens, takes the accent gradient, a hairline rail appears behind it
+   - thumb hover/drag: widest, darker accent, inset highlight + shade = raised look
+   - fades: the panel's top/bottom edges mask-fade the list so it reads as "more below/above";
+     the fade bands sit inside the panel padding, and the track margin keeps the thumb out of them. */
+.toc{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 32px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 32px),transparent 100%)}
+.toc::-webkit-scrollbar{width:12px}
+.toc::-webkit-scrollbar-button{display:none;width:0;height:0}
+.toc::-webkit-scrollbar-corner{background:transparent}
+.toc::-webkit-scrollbar-track{background:transparent;margin:18px 0 32px}
+.toc:hover::-webkit-scrollbar-track{background:linear-gradient(to right,transparent 5px,color-mix(in srgb,var(--side-bd) 85%,transparent) 5px 7px,transparent 7px)}
+.toc::-webkit-scrollbar-thumb{min-height:48px;border-radius:999px;border:4px solid var(--side);background:color-mix(in srgb,var(--side-head) 32%,transparent)}
+.toc:hover::-webkit-scrollbar-thumb{border-width:3px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 65%,#fff),var(--accent));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(0,0,0,.14)}
+.toc::-webkit-scrollbar-thumb:hover{border-width:2px;background:linear-gradient(180deg,var(--accent),var(--accent-d));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 2px rgba(0,0,0,.22)}
+.toc::-webkit-scrollbar-thumb:active{border-width:2px;background:var(--accent-d);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+@supports not selector(::-webkit-scrollbar){
+  .toc{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--side-head) 35%,transparent) transparent;transition:scrollbar-color .2s}
+  .toc:hover{scrollbar-color:var(--accent) transparent}
+}
+@media (max-width:1000px){.toc{-webkit-mask-image:none;mask-image:none}}
 main{padding:40px 56px 120px;min-width:0;max-width:1060px}
 .hero{padding:6px 0 28px;border-bottom:1px solid var(--border);margin-bottom:8px}
 .hero h1{font-size:2.5em;letter-spacing:-.025em;margin:.1em 0 .25em}
