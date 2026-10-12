@@ -98,7 +98,7 @@ export function ClientDetailPage() {
   const [filteredServices, setFilteredServices] = useState<Array<{ value: string; label: string }> | null>(null);
   const [filteredEmployees, setFilteredEmployees] = useState<Array<{ value: string; label: string }> | null>(null);
 
-  // `#uwagi-z-wizyt` (the visits list's "Zobacz wszystkie"): bring the notes section's top
+  // `#uwagi-z-wizyt` (the visits list's "Więcej >"): bring the notes section's top
   // edge to the top of the scroll area, as far as the page can scroll. Only once everything
   // ABOVE it has loaded (client, preferences, visit history), or a late card would push the
   // section back down. Once per client, so later re-renders never yank the page around.

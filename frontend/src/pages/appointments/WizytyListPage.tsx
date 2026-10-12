@@ -666,18 +666,21 @@ export function WizytyListPage() {
                           </span>
                         </div>
                         {/* The client's latest visit note under the service (replaces the old "Aktualne
-                            uwagi i zalecenia" column): max 2 lines. Hovering (or tabbing to) it shows
-                            "Zobacz wszystkie" → the client page, scrolled to its notes section. */}
+                            uwagi i zalecenia" column): max 2 lines. When the client has more notes,
+                            hovering (or tabbing to) it shows "Więcej >" → the client page, scrolled
+                            to its notes section. */}
                         {appt.latest_note && (
                           <div className="cell-service-note">
-                            <NotesDigest notes={[appt.latest_note]} />
-                            <Link
-                              to={{ pathname: `/klienci/${appt.client_id}`, hash: CLIENT_NOTES_ANCHOR }}
-                              className="cell-service-note-link"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Zobacz wszystkie
-                            </Link>
+                            <NotesDigest notes={[appt.latest_note]} label="Zalecenie po wizycie:" />
+                            {appt.has_more_notes && (
+                              <Link
+                                to={{ pathname: `/klienci/${appt.client_id}`, hash: CLIENT_NOTES_ANCHOR }}
+                                className="cell-service-note-link"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Więcej &gt;
+                              </Link>
+                            )}
                           </div>
                         )}
                       </td>

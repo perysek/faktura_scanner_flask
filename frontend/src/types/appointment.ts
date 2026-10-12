@@ -93,6 +93,8 @@ export interface AppointmentListItem {
   /** Only on GET /api/appointments?include_notes=1: the newest visit note of this
    * row's CLIENT (any of their visits), or null when they have none. */
   latest_note?: RecentNote | null;
+  /** Same request only: the client has more than that one note (→ "Więcej >"). */
+  has_more_notes?: boolean;
 }
 
 export interface AppointmentsListResponse {

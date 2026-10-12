@@ -22,7 +22,7 @@ const PAGE_SIZE = 10;
 const COL_WIDTHS = [11.5, 11, 14, 17, 12, 22.5, 12];
 const COL_WIDTHS_NO_ACTIONS = [11.5, 11, 14, 17, 12, 34.5];
 /** The client page's notes section id: `/klienci/:id#uwagi-z-wizyt` lands on it
- * (the visits list's "Zobacz wszystkie" link). */
+ * (the visits list's "Więcej >" link). */
 export const CLIENT_NOTES_ANCHOR = 'uwagi-z-wizyt';
 /** The server never returns more than this per request (MAX_PAGE_SIZE). */
 const MAX_REFETCH = 50;

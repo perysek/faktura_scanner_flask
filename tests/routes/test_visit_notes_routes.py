@@ -600,8 +600,22 @@ class TestAppointmentsListIntegration:
         assert appts[1]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
         assert appts[3]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}  # same client
         assert appts[2]['latest_note'] is None
-        assert env.notes.recent_for_clients.call_args.args == ([5, 6], None, 1)
+        assert appts[1]['has_more_notes'] is False
+        assert appts[2]['has_more_notes'] is False
+        assert env.notes.recent_for_clients.call_args.args == ([5, 6], None, 2)
         assert env.notes.recent_for_clients.call_count == 1
+
+    def test_flags_a_client_with_more_than_one_note(self, env):
+        env.notes.recent_for_clients.return_value = [
+            {'client_id': 5, 'note_text': 'Najnowsza', 'updated_at': datetime(2026, 10, 1, 6, 15)},
+            {'client_id': 5, 'note_text': 'Starsza', 'updated_at': datetime(2026, 9, 1, 6, 15)}]
+        with _as(_user(), FULL):
+            appts = {a['id']: a for a in self._get(env, '&include_notes=1').get_json()['appointments']}
+        # only the newest is shown; the second just says "there is more"
+        assert appts[1]['latest_note'] == {'text': 'Najnowsza', 'at': '2026-10-01T08:15:00'}
+        assert appts[1]['has_more_notes'] is True
+        assert appts[3]['has_more_notes'] is True  # same client
+        assert appts[2]['has_more_notes'] is False
 
     def test_payload_unchanged_without_the_flag(self, env):
         with _as(_user(), FULL):

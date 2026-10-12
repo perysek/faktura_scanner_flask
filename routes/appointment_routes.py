@@ -336,13 +336,15 @@ def get_appointments():
 
         # Opt-in ("Aktualne uwagi i zalecenia" column of the desktop list): the single
         # newest visit note of each row's client, one batched query. Calendars never
-        # ask for it, so they never pay for it.
+        # ask for it, so they never pay for it. Two are fetched only to tell whether the
+        # client has more than the one shown (`has_more_notes` → the list's "Więcej >").
         if request.args.get('include_notes') == '1':
             client_ids = list(dict.fromkeys(a['client_id'] for a in appointments))
-            latest = VisitNoteService().recent_by_client(client_ids, visit_note_scope(current_user), 1)
+            latest = VisitNoteService().recent_by_client(client_ids, visit_note_scope(current_user), 2)
             for a in appointments:
                 notes = latest.get(a['client_id'])
                 a['latest_note'] = notes[0] if notes else None
+                a['has_more_notes'] = bool(notes) and len(notes) > 1
 
         # Batch-load SMS state for the visible appointments
         sms_sent_map: dict = {}

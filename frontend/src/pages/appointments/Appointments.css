@@ -147,7 +147,9 @@
   color: #7d6214;
   color: color-mix(in srgb, var(--color-accent-deep) 78%, #000);
 }
-/* Hover hint = a real link, "Zobacz wszystkie" → the client page at its notes section. A small
+.cell-service-note .vn-digest-label { font-weight: 700; }
+/* Hover hint = a real link, "Więcej >" → the client page at its notes section; rendered only when
+   the client has more than the one note shown (`has_more_notes`). A small
    chip over the note's bottom-right corner, so it never leaves the cell (the table box would
    clip it) and never changes the row height. Shown while the note is hovered or the link has
    keyboard focus; opacity (not visibility) keeps it in the tab order. */
