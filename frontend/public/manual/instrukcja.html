@@ -137,6 +137,15 @@ dl.gl{margin:1em 0}dl.gl dt{font-weight:700;margin-top:.8em}dl.gl dd{margin:.1em
   .toc:hover{scrollbar-color:var(--accent) transparent}
 }
 @media (max-width:1000px){.toc{-webkit-mask-image:none;mask-image:none}}
+/* Page (window) scrollbar: it sits flush against the TOC panel now that the panel is on the
+   right, so it gets the same pill language: muted at rest, accent + raised on hover/drag. */
+html::-webkit-scrollbar{width:12px}
+html::-webkit-scrollbar-button{display:none;width:0;height:0}
+html::-webkit-scrollbar-track{background:var(--bg)}
+html::-webkit-scrollbar-thumb{min-height:56px;border-radius:999px;border:3px solid var(--bg);background:color-mix(in srgb,var(--ink3) 45%,transparent)}
+html::-webkit-scrollbar-thumb:hover{border-width:2px;background:linear-gradient(180deg,var(--accent),var(--accent-d));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 2px rgba(0,0,0,.22)}
+html::-webkit-scrollbar-thumb:active{border-width:2px;background:var(--accent-d);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+@supports not selector(::-webkit-scrollbar){html{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink3) 45%,transparent) var(--bg)}}
 main{padding:40px 56px 120px;min-width:0;max-width:1060px}
 .hero{padding:6px 0 28px;border-bottom:1px solid var(--border);margin-bottom:8px}
 .hero h1{font-size:2.5em;letter-spacing:-.025em;margin:.1em 0 .25em}
