@@ -1,0 +1,10 @@
+# Binary assets: never touch line endings (a stray LF->CRLF once corrupted logo-inline.webp).
+*.webp binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.pdf  binary
