@@ -6,10 +6,24 @@
   .appt-form-layout { grid-template-columns: 1fr; }
 }
 
-/* Godzina rozpoczęcia (slots) + Usługi cards, create-mode only — grouped so
-   mobile can flip their visual order (Usługi above the slot grid) without
-   disturbing where the pair sits relative to the surrounding form sections. */
+/* Usługi + Godzina rozpoczęcia cards, create-mode only. Usługi now comes first in
+   the markup at every width (it used to be flipped on phones only via
+   column-reverse): the slot grid needs the services' total duration. */
 .time-and-services { display: flex; flex-direction: column; }
+
+/* Create-mode step gating (StepGate in WizytaFormPage.tsx): a section whose required
+   predecessors are still empty is faded grey and `inert` (no clicks, no Tab stops). */
+.appt-form-page .appt-step { transition: opacity 0.25s ease, filter 0.25s ease; }
+.appt-form-page .appt-step--locked { opacity: 0.4; filter: grayscale(1); pointer-events: none; user-select: none; }
+
+/* Create-mode header: title with the subtitle under it (same spacing as Pracownicy)
+   and "Wyczyść pola" at the right end of the form's MAIN column — the header uses
+   the same 1fr | 300px track as .appt-form-layout, so it stops where the form does. */
+.appt-form-page .page-header .appt-form-header-main { width: 100%; justify-content: space-between; align-items: flex-end; flex-wrap: nowrap; }
+@media (min-width: 769px) {
+  .appt-form-page .appt-form-header { display: grid; grid-template-columns: 1fr 300px; column-gap: 1rem; max-width: 900px; }
+  .appt-form-page .page-header .appt-form-header-main { grid-column: 1; }
+}
 /* The shared `.form-card` carries no margin, so the form's cards (Klient i pracownik, Data i
    godzina, Usługi, Uwagi) sat flush at 0px on desktop. 1rem between them; phones already get
    an explicit 0.75rem gap in the mobile block below, so this is >=641px only. The actions row
@@ -17,9 +31,6 @@
 @media (min-width: 641px) {
   .appt-form-page .appt-form-layout > form > * + *:not(.appt-form-actions-wrap) { margin-top: 1rem; }
   .appt-form-page .time-and-services { gap: 1rem; }
-}
-@media (max-width: 768px) {
-  .time-and-services { flex-direction: column-reverse; }
 }
 
 /* Time-slot grid (create-mode) — CSS grid (not flex-wrap) so every column

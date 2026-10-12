@@ -1,5 +1,5 @@
-import { useCallback, useId, useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent, RefObject } from 'react';
+import { useCallback, useId, useImperativeHandle, useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent, Ref, RefObject } from 'react';
 import { Icon } from '../../lib/icons/Icon';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
@@ -9,6 +9,13 @@ export interface SearchableSelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+}
+
+/** Imperative control for keyboard-driven forms (WizytaFormPage's Enter-to-next-field flow). */
+export interface SearchableSelectHandle {
+  /** Focus the trigger and open the panel with its search box ready for typing. */
+  open: () => void;
+  focus: () => void;
 }
 
 export interface SearchableSelectProps {
@@ -31,6 +38,9 @@ export interface SearchableSelectProps {
   emptyText?: string;
   /** Accessible name for label-less uses (filters); the selected value is appended. */
   'aria-label'?: string;
+  /** Called after an option was picked (Enter or click) and the panel closed. */
+  onPicked?: (value: string) => void;
+  handleRef?: Ref<SearchableSelectHandle>;
 }
 
 const MAX_PANEL_PX = 340;
@@ -298,6 +308,8 @@ export function SearchableSelect({
   searchPlaceholder = 'Szukaj…',
   emptyText = 'Brak wyników',
   'aria-label': ariaLabel,
+  onPicked,
+  handleRef,
 }: SearchableSelectProps) {
   const generatedId = useId();
   const listboxId = `${id ?? generatedId}-listbox`;
@@ -322,9 +334,23 @@ export function SearchableSelect({
     setIsOpen(true);
   }
 
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      open: () => {
+        if (disabled) return;
+        triggerRef.current?.focus({ preventScroll: false });
+        setIsOpen(true);
+      },
+      focus: () => triggerRef.current?.focus(),
+    }),
+    [disabled],
+  );
+
   function handlePick(next: string) {
     onChange(next);
     close(true);
+    onPicked?.(next);
   }
 
   return (

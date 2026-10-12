@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { AuthLayout } from './AuthLayout';
+import { isPhoneViewport } from '../../components/routing/HomeRedirect';
 
 interface FlashState {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -38,7 +39,8 @@ export function Login() {
   // `next` still wins when the user was bounced here from a specific
   // protected page (ProtectedRoute.tsx sets it), so deep links keep working.
   if (!auth.isLoading && auth.user) {
-    return <Navigate to={next || '/profil'} replace />;
+    // Desktop: `/` (HomeRedirect → today's day calendar); phones keep Profil.
+    return <Navigate to={next || (isPhoneViewport() ? '/profil' : '/')} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

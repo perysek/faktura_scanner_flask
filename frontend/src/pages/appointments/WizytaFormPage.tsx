@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { FormEvent, KeyboardEvent, ReactNode, RefObject } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import './Appointments.css';
 import './WizytaFormPage.css';
@@ -11,7 +11,9 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { useConfirm } from '../../components/feedback/ConfirmProvider';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { FormActions, FormSection, SearchableSelectField, SelectField, TextareaField, TextField } from '../../components/ui/form';
+import { DatePickerField, FormActions, FormSection, SearchableSelectField, SelectField, TextareaField, TextField } from '../../components/ui/form';
+import type { SearchableSelectHandle } from '../../components/ui/SearchableSelect';
+import type { DatePickerHandle } from '../../components/ui/DatePicker';
 import { useEscapeAction } from '../../lib/a11y/escapeScope';
 import { useIsMobile } from './MobileWizytyCalendarView';
 import { formatPLN } from '../../lib/format';
@@ -34,6 +36,29 @@ interface ClientOption {
 const STATUS_OPTIONS = (Object.keys(STATUS_LABELS) as AppointmentStatus[])
   .filter((v) => v !== 'rescheduled')
   .map((v) => ({ value: v, label: STATUS_LABELS[v] }));
+
+/** Create-mode keyboard flow: Enter (or a pick) moves to the next field, in this order. */
+type FlowField = 'client' | 'employee' | 'date' | 'services' | 'time' | 'notes' | 'submit';
+const FLOW: FlowField[] = ['client', 'employee', 'date', 'services', 'time', 'notes', 'submit'];
+/** A focus request that can't be met yet (e.g. slots still loading) is dropped after this. */
+const FOCUS_REQUEST_TTL_MS = 4000;
+
+/**
+ * One form section that stays greyed out and unreachable (`inert`: no clicks, no
+ * Tab stops) until the REQUIRED fields above it are filled. Optional fields never
+ * gate anything.
+ */
+function StepGate({ locked, className, children }: { locked: boolean; className?: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (ref.current) ref.current.inert = locked;
+  }, [locked]);
+  return (
+    <div ref={ref} className={`appt-step${locked ? ' appt-step--locked' : ''}${className ? ` ${className}` : ''}`} aria-disabled={locked || undefined}>
+      {children}
+    </div>
+  );
+}
 
 function todayIso(): string {
   const n = new Date();
@@ -118,7 +143,14 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
         setEmployeeServices(main);
         const wanted = pendingServiceRef.current;
         pendingServiceRef.current = null;
-        if (wanted !== null && main.some((s) => s.service_id === wanted)) setSelectedServiceIds(new Set([wanted]));
+        // Keep only services the NEW employee offers: a choice made for the previous
+        // employee must not ride along invisibly (and unlock the time step).
+        setSelectedServiceIds((prev) => {
+          const offered = new Set(main.map((s) => s.service_id));
+          const keep = new Set([...prev].filter((sid) => offered.has(sid)));
+          if (wanted !== null && offered.has(wanted)) keep.add(wanted);
+          return keep;
+        });
       })
       .catch(() => setEmployeeServices([]));
   }, [mode, employeeId]);
@@ -422,14 +454,153 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
   // keydown handler (DESIGN.md §11.2). Edit-mode gets it from <FormActions>.
   useEscapeAction(() => navigate(backUrl()), mode === 'create');
 
+  // ── Create-mode step gating + keyboard flow ──────────────────────────────
+  // Each section unlocks once the REQUIRED fields above it are filled; Uwagi is
+  // optional, so it never gates the save button. On desktop, Enter in a field
+  // (or picking a value) moves focus to the next field and opens its panel ready
+  // for typing. Phones get the gating but not the auto-opening panels.
+  const flowOn = mode === 'create' && !isMobile;
+  const gate = mode === 'create';
+  const selectedCount = employeeServices.filter((s) => selectedServiceIds.has(s.service_id)).length;
+  const dateOpen = !gate || (!!clientId && !!employeeId);
+  const servicesOpen = dateOpen && (!gate || !!date);
+  const timeOpen = servicesOpen && (!gate || selectedCount > 0);
+  const notesOpen = timeOpen && (!gate || !!time);
+
+  const clientSelRef = useRef<SearchableSelectHandle>(null);
+  const employeeSelRef = useRef<SearchableSelectHandle>(null);
+  const datePickRef = useRef<DatePickerHandle>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const slotsRef = useRef<HTMLDivElement>(null);
+  const [focusReq, setFocusReq] = useState<{ field: FlowField; at: number } | null>(null);
+
+  function requestFocus(field: FlowField) {
+    setFocusReq({ field, at: Date.now() });
+  }
+  function advance(from: FlowField) {
+    if (!flowOn) return;
+    const next = FLOW[FLOW.indexOf(from) + 1];
+    if (next) requestFocus(next);
+  }
+
+  /** Focus `field` (opening its panel); false while it can't take focus yet. */
+  function tryFocus(field: FlowField): boolean {
+    switch (field) {
+      case 'client':
+        clientSelRef.current?.open();
+        return true;
+      case 'employee':
+        employeeSelRef.current?.open();
+        return true;
+      case 'date':
+        if (!dateOpen) return false;
+        datePickRef.current?.open();
+        return true;
+      case 'services': {
+        const boxes = [...(servicesRef.current?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? [])];
+        if (!servicesOpen || boxes.length === 0) return false;
+        (boxes.find((b) => b.checked) ?? boxes[0]).focus();
+        return true;
+      }
+      case 'time': {
+        const btns = [...(slotsRef.current?.querySelectorAll<HTMLButtonElement>('button.slot-btn:not(:disabled)') ?? [])];
+        if (!timeOpen || btns.length === 0) return false;
+        (btns.find((b) => b.classList.contains('selected')) ?? btns[0]).focus();
+        return true;
+      }
+      case 'notes': {
+        const el = document.getElementById('appt-notes');
+        if (!notesOpen || !el) return false;
+        el.focus();
+        return true;
+      }
+      case 'submit': {
+        const btn = document.getElementById('appt-submit') as HTMLButtonElement | null;
+        if (!btn || btn.disabled) return false;
+        btn.focus();
+        return true;
+      }
+    }
+  }
+
+  // After every commit that could make the pending target focusable (a step
+  // unlocking, slots/services arriving). StepGate drops `inert` in a layout
+  // effect, which always runs before this.
+  useEffect(() => {
+    if (!focusReq) return;
+    if (Date.now() - focusReq.at > FOCUS_REQUEST_TTL_MS || tryFocus(focusReq.field)) setFocusReq(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusReq, dateOpen, servicesOpen, timeOpen, notesOpen, slots, employeeServices, canSaveCreate]);
+
+  // First load: straight into the first empty required field.
+  useEffect(() => {
+    if (flowOn) requestFocus(!clientId ? 'client' : !employeeId ? 'employee' : 'date');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleServiceKeyDown(event: KeyboardEvent<HTMLInputElement>, sid: number) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      // Enter with nothing ticked yet means "this one, and move on".
+      if (selectedCount === 0) toggleCreateService(sid);
+      advance('services');
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const boxes = [...(servicesRef.current?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? [])];
+      const i = boxes.indexOf(event.currentTarget);
+      boxes[Math.max(0, Math.min(boxes.length - 1, i + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+    }
+  }
+
+  function handleSlotSelect(t: string) {
+    setTime(t);
+    advance('time');
+  }
+
+  function handleNotesKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter = next (the save button); Shift+Enter still breaks the line.
+    if (mode === 'create' && event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      advance('notes');
+    }
+  }
+
+  function clearForm() {
+    setClientId('');
+    setEmployeeId('');
+    setSelectedServiceIds(new Set());
+    setDate(todayIso());
+    setTime('');
+    setNotes('');
+    requestFocus('client');
+  }
+
   return (
     <div className="refined-page appt-form-page animate-fade-up">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{mode === 'create' ? 'Nowa wizyta' : `Edytuj wizytę #${appointmentId}`}</h1>
-          <p className="page-subtitle">{mode === 'create' ? 'Wypełnij formularz, aby zarezerwować wizytę' : 'Zaktualizuj dane wizyty'}</p>
-        </div>
-      </header>
+      {mode === 'create' ? (
+        // Subtitle under the title; "Wyczyść pola" at the right end of the form's
+        // main column (not above the Podsumowanie card).
+        <header className="page-header appt-form-header">
+          <div className="appt-form-header-main">
+            <div>
+              <h1 className="page-title">Nowa wizyta</h1>
+              <p className="page-subtitle">Wypełnij formularz, aby zarezerwować wizytę</p>
+            </div>
+            {!isMobile && (
+              <Button variant="secondary" small icon="undo" onClick={clearForm}>
+                Wyczyść pola
+              </Button>
+            )}
+          </div>
+        </header>
+      ) : (
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">Edytuj wizytę #{appointmentId}</h1>
+            <p className="page-subtitle">Zaktualizuj dane wizyty</p>
+          </div>
+        </header>
+      )}
 
       {mode === 'edit' && confirmationStatus === 'confirmed' && <div className="confirm-chip confirm-chip--ok">✓ Klient potwierdził przez SMS</div>}
       {mode === 'edit' && confirmationStatus === 'declined' && <div className="confirm-chip confirm-chip--bad">✕ Klient odmówił przez SMS</div>}
@@ -446,6 +617,8 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
               options={clients.map((c) => ({ value: String(c.id), label: c.label }))}
               value={clientId}
               onChange={setClientId}
+              handleRef={clientSelRef}
+              onPicked={() => advance('client')}
             />
             <SearchableSelectField
               label="Pracownik"
@@ -456,29 +629,35 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
               options={employees.map((e) => ({ value: String(e.id), label: e.position ? `${e.full_name} — ${e.position}` : e.full_name }))}
               value={employeeId}
               onChange={setEmployeeId}
+              handleRef={employeeSelRef}
+              onPicked={() => advance('employee')}
             />
             {mode === 'edit' && <SelectField label="Status" id="status-select" options={STATUS_OPTIONS} value={status} onChange={(e) => setStatus(e.target.value as AppointmentStatus)} />}
           </FormSection>
 
-          <FormSection legend="Data i godzina">
-            <TextField label="Data wizyty" required id="appt-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            {mode === 'edit' && <TextField label="Godzina rozpoczęcia" required id="appt-time" type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} />}
-          </FormSection>
+          <StepGate locked={!dateOpen}>
+            <FormSection legend="Data i godzina">
+              {flowOn ? (
+                <DatePickerField label="Data wizyty" required id="appt-date" value={date} onChange={setDate} handleRef={datePickRef} onPicked={() => advance('date')} />
+              ) : (
+                <TextField label="Data wizyty" required id="appt-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              )}
+              {mode === 'edit' && <TextField label="Godzina rozpoczęcia" required id="appt-time" type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} />}
+            </FormSection>
+          </StepGate>
 
           {mode === 'create' ? (
+            // Usługi BEFORE Godzina rozpoczęcia: the slot grid needs the services'
+            // total duration to know which start times really fit.
             <div className="time-and-services">
-              <div className="form-card time-slot-card">
-                <h3 className="card-title">Godzina rozpoczęcia</h3>
-                <SlotGrid slots={slots} selected={time} onSelect={setTime} interactive={slotGridReady} />
-              </div>
-              <div className="form-card services-card">
+              <StepGate locked={!servicesOpen} className="form-card services-card">
                 <h3 className="card-title">Usługi</h3>
                 {!employeeId ? (
                   <p className="svc-empty">Wybierz pracownika, aby zobaczyć dostępne usługi.</p>
                 ) : employeeServices.length === 0 ? (
                   <p className="svc-empty">Brak przypisanych usług dla tego pracownika.</p>
                 ) : (
-                  <div className="svc-picker">
+                  <div className="svc-picker" ref={servicesRef}>
                     {employeeServices.map((s) => {
                       const selected = selectedServiceIds.has(s.service_id);
                       return (
@@ -486,7 +665,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
                         // drawn, and a selected row is filled instead (--selected). Both stay in the markup —
                         // desktop shows them, and the checkbox is what a screen reader announces.
                         <label key={s.service_id} className={`svc-option${selected ? ' svc-option--selected' : ''}`}>
-                          <input type="checkbox" checked={selected} onChange={() => toggleCreateService(s.service_id)} />
+                          <input type="checkbox" checked={selected} onChange={() => toggleCreateService(s.service_id)} onKeyDown={(e) => handleServiceKeyDown(e, s.service_id)} />
                           <span className="svc-name">{s.service_name}</span>
                           <span className="svc-dur">{s.effective_duration} min</span>
                           <span className="svc-price">{formatPLN(s.effective_price)}</span>
@@ -495,7 +674,11 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
                     })}
                   </div>
                 )}
-              </div>
+              </StepGate>
+              <StepGate locked={!timeOpen} className="form-card time-slot-card">
+                <h3 className="card-title">Godzina rozpoczęcia</h3>
+                <SlotGrid gridRef={slotsRef} slots={slots} selected={time} onSelect={handleSlotSelect} interactive={slotGridReady} />
+              </StepGate>
             </div>
           ) : (
             <div className="form-card">
@@ -553,9 +736,20 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
             </div>
           )}
 
-          <FormSection legend="Uwagi">
-            <TextareaField label="Uwagi" id="appt-notes" fullWidth rows={3} placeholder="Opcjonalne uwagi do wizyty..." value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </FormSection>
+          <StepGate locked={!notesOpen}>
+            <FormSection legend="Uwagi">
+              <TextareaField
+                label="Uwagi"
+                id="appt-notes"
+                fullWidth
+                rows={3}
+                placeholder={mode === 'create' ? 'Opcjonalne uwagi do wizyty… (Enter = dalej, Shift+Enter = nowa linia)' : 'Opcjonalne uwagi do wizyty...'}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onKeyDown={handleNotesKeyDown}
+              />
+            </FormSection>
+          </StepGate>
 
           {mode === 'edit' && (
             <div className="appt-form-actions-wrap mw-bar">
@@ -591,7 +785,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
             </div>
             {!isMobile && (
               <>
-                <Button variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit} style={{ width: '100%', justifyContent: 'center' }}>
+                <Button id="appt-submit" variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit} style={{ width: '100%', justifyContent: 'center' }}>
                   Zarezerwuj wizytę
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => navigate(backUrl())} style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}>
@@ -613,7 +807,7 @@ export function WizytaFormPage({ mode }: WizytaFormPageProps) {
             <Button type="button" variant="secondary" onClick={() => navigate(backUrl())}>
               Anuluj
             </Button>
-            <Button variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit}>
+            <Button id="appt-submit" variant="primary" icon="check" isLoading={isSubmitting} loadingText="Zapisywanie…" disabled={!canSaveCreate} onClick={handleCreateSubmit}>
               Zarezerwuj
             </Button>
           </div>
@@ -675,10 +869,39 @@ for (let h = 7; h < 21; h++) {
   }
 }
 
-function SlotGrid({ slots, selected, onSelect, interactive }: { slots: AvailableSlot[]; selected: string; onSelect: (t: string) => void; interactive: boolean }) {
+function SlotGrid({
+  gridRef,
+  slots,
+  selected,
+  onSelect,
+  interactive,
+}: {
+  gridRef?: RefObject<HTMLDivElement>;
+  slots: AvailableSlot[];
+  selected: string;
+  onSelect: (t: string) => void;
+  interactive: boolean;
+}) {
   const slotsByTime = useMemo(() => new Map(slots.map((s) => [s.start_time.slice(0, 5), s])), [slots]);
+  // Arrow keys walk the bookable slots: ←/→ one slot, ↑/↓ one row (the grid's live
+  // column count, it is auto-fill). Enter is the focused button's own click.
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const grid = event.currentTarget;
+    const all = [...grid.querySelectorAll<HTMLButtonElement>('button.slot-btn')];
+    const from = all.indexOf(document.activeElement as HTMLButtonElement);
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+    const step = ({ ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols } as Record<string, number>)[event.key];
+    if (from < 0 || !step) return;
+    event.preventDefault();
+    for (let i = from + step; i >= 0 && i < all.length; i += step) {
+      if (!all[i].disabled) {
+        all[i].focus();
+        return;
+      }
+    }
+  }
   return (
-    <div className="slot-grid">
+    <div className="slot-grid" ref={gridRef} onKeyDown={handleKeyDown}>
       {SLOT_TIMES.map((t) => {
         const info = slotsByTime.get(t);
         // No `info` at all means the fetched grid doesn't cover this start

@@ -3,6 +3,15 @@ import { appointmentsApi } from '../../lib/api/appointments';
 import { Icon } from '../../lib/icons/Icon';
 
 const COLLAPSE_KEY = 'wizyty.sidebar.collapsed';
+
+/** App landing (HomeRedirect): show the 3-month panel expanded, whatever was left collapsed. */
+export function expandMonthSidebar(): void {
+  try {
+    localStorage.removeItem(COLLAPSE_KEY);
+  } catch {
+    /* storage unavailable: the panel already defaults to expanded */
+  }
+}
 const WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
 const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 

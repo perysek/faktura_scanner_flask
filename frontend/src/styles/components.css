@@ -281,6 +281,35 @@
   pointer-events: none;
 }
 
+/* DatePicker (components/ui/DatePicker.tsx) — month grid under the trigger, keyboard-first. */
+.dpk-root { position: relative; width: 100%; }
+.dpk-root:focus-within > .dpk-trigger { outline: none; border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
+.dpk-panel {
+  position: absolute; z-index: 50; top: calc(100% + 4px); left: 0;
+  width: 17.5rem; padding: 0.625rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+}
+.dpk-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.375rem; }
+.dpk-month { font-size: 0.8125rem; font-weight: 600; color: var(--color-ink); }
+.dpk-nav { display: inline-flex; padding: 0.25rem; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink-muted); cursor: pointer; }
+.dpk-nav:hover { background: var(--color-surface); color: var(--color-ink); }
+.dpk-nav .icon { width: 1.125rem; height: 1.125rem; }
+.dpk-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; outline: none; border-radius: var(--radius-sm); }
+.dpk-grid:focus-visible { box-shadow: var(--shadow-focus); }
+.dpk-weekday { text-align: center; font-size: 0.6875rem; font-weight: 500; color: var(--color-ink-subtle); padding: 0.25rem 0; }
+.dpk-day {
+  display: flex; align-items: center; justify-content: center; height: 2rem;
+  font-size: 0.8125rem; color: var(--color-ink); border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid transparent;
+}
+.dpk-day:hover { background: var(--color-surface); }
+.dpk-day.is-outside { color: var(--color-ink-subtle); opacity: 0.55; }
+.dpk-day.is-today { border-color: var(--color-ink-muted); font-weight: 600; }
+.dpk-day.is-selected { background: var(--color-surface); font-weight: 600; }
+.dpk-day.is-cursor { background: var(--color-ink); color: var(--color-on-ink); opacity: 1; }
+.dpk-hint { margin: 0.5rem 0 0; font-size: 0.6875rem; color: var(--color-ink-subtle); text-align: center; }
+
 .ssel-panel {
   position: fixed;
   z-index: 10000;
@@ -1490,6 +1519,25 @@ table.stack-cards td.cell-hide-lg { display: none; }
 /* "+ Dodaj wizytę": the stock .refined-btn-primary (same as "Dodaj klienta" on Klienci), only
    stretched to the nav's full width. */
 .sidebar-nav-standalone .sidebar-cta { display: flex; width: 100%; margin-top: 0.5rem; }
+/* "+ Dodaj wizytę" while its own page (/wizyty/nowa) is open: dissolves out (blur +
+   shrink + fade, 0.3s), then `visibility` drops it from hit-testing once faded. Leaving
+   the page plays it back in from the same blurred state. Background/border/shadow keep
+   the button's own hover timing. */
+.sidebar-nav-standalone .sidebar-cta {
+  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s linear 0s, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sidebar-nav-standalone .sidebar-cta.sidebar-cta--away {
+  opacity: 0;
+  filter: blur(6px);
+  transform: scale(0.9);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease, visibility 0s linear 0.3s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav-standalone .sidebar-cta.sidebar-cta--away { filter: none; transform: none; }
+}
 .sidebar-section { position: relative; margin-top: 0.25rem; }
 .sidebar-section-header {
   width: 100%;

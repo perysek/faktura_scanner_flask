@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { ProtectedRoute } from './components/routing/ProtectedRoute';
 import { Login } from './pages/auth/Login';
@@ -9,6 +9,7 @@ import { ClientsListPage } from './pages/clients/ClientsListPage';
 import { ClientFormPage } from './pages/clients/ClientFormPage';
 import { ClientDetailPage } from './pages/clients/ClientDetailPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { HomeRedirect } from './components/routing/HomeRedirect';
 import { SellersListPage } from './pages/sellers/SellersListPage';
 import { SellerFormPage } from './pages/sellers/SellerFormPage';
 import { ServicesListPage } from './pages/services/ServicesListPage';
@@ -72,7 +73,7 @@ export const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
+          { index: true, element: <HomeRedirect /> },
 
           // No module gate on the backend (@login_required only) — any
           // authenticated user (D14 point 5). Faza 2, moduł Dashboard/Pulpit.

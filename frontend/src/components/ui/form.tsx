@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
 import { SearchableSelect } from './SearchableSelect';
 import type { SearchableSelectProps } from './SearchableSelect';
+import { DatePicker } from './DatePicker';
+import type { DatePickerProps } from './DatePicker';
 import { useEscapeAction } from '../../lib/a11y/escapeScope';
 
 /**
@@ -138,6 +140,25 @@ export function SearchableSelectField({ label, error, helper, fullWidth, id, req
   return (
     <FieldWrapper id={fieldId} label={label} required={required} error={error} helper={helper} fullWidth={fullWidth}>
       <SearchableSelect id={fieldId} required={required} invalid={!!error} {...rest} />
+    </FieldWrapper>
+  );
+}
+
+export interface DatePickerFieldProps extends Omit<DatePickerProps, 'id' | 'invalid'> {
+  label: string;
+  error?: string;
+  helper?: string;
+  fullWidth?: boolean;
+  id?: string;
+}
+
+/** Keyboard-first date field (month grid on open) — see DatePicker.tsx. */
+export function DatePickerField({ label, error, helper, fullWidth, id, required, ...rest }: DatePickerFieldProps) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
+  return (
+    <FieldWrapper id={fieldId} label={label} required={required} error={error} helper={helper} fullWidth={fullWidth}>
+      <DatePicker id={fieldId} required={required} invalid={!!error} {...rest} />
     </FieldWrapper>
   );
 }

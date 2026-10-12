@@ -26,9 +26,20 @@ export interface SidebarProps {
 /** One nav row — shared by the accordion sections and the top-level links so
  * the two can never drift apart in markup or active-state classes. */
 function SidebarNavLink({ link }: { link: NavLinkConfig }) {
+  const { pathname } = useLocation();
   if (link.variant === 'cta') {
+    // On the page it opens, the CTA dissolves away (0.3s, space kept so nothing
+    // below jumps) and materialises back as soon as you leave it.
+    const away = pathname === link.to;
     return (
-      <ButtonLink variant="primary" icon={link.glyph} to={link.to} className="sidebar-cta">
+      <ButtonLink
+        variant="primary"
+        icon={link.glyph}
+        to={link.to}
+        className={`sidebar-cta${away ? ' sidebar-cta--away' : ''}`}
+        tabIndex={away ? -1 : undefined}
+        aria-hidden={away || undefined}
+      >
         {link.label}
       </ButtonLink>
     );
