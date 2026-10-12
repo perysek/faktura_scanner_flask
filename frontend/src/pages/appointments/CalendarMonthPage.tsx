@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useAppointmentsChanged } from '../../lib/appointments/appointmentEvents';
 import { clientLabel } from '../../lib/appointments/clientLabel';
 import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
-import { IncomeFooter } from './IncomeFooter';
+import { IncomePill } from './IncomeFooter';
 import { IncomeBanner } from './IncomeBanner';
 import { ViewSwitcher } from './ViewSwitcher';
 import { NewVisitFab } from './NewVisitFab';
@@ -16,7 +16,9 @@ import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, EmployeeOption } from '../../types/appointment';
 
 const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
-const WEEKDAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
+// Mon–Sat only: the salon is closed on Sundays, so the grid drops that column to give
+// the six working days the width.
+const WEEKDAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'];
 
 function iso(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -128,6 +130,14 @@ export function CalendarMonthPage() {
     const d = new Date(year, month + 1, i);
     cells.push({ dateStr: iso(d.getFullYear(), d.getMonth(), d.getDate()), day: d.getDate(), outside: true });
   }
+  // Drop every Sunday (7th slot of each week), then any week left with no in-month day —
+  // a month starting on a Sunday would otherwise open with a row of last month's filler.
+  const workCells = cells
+    .filter((_, i) => i % 7 !== 6)
+    .filter((_, i, arr) => {
+      const rowStart = i - (i % 6);
+      return arr.slice(rowStart, rowStart + 6).some((c) => !c.outside);
+    });
 
   function goMonth(offset: number) {
     const d = new Date(year, month + offset, 1);
@@ -175,21 +185,22 @@ export function CalendarMonthPage() {
         <p className="empty-text">Ładowanie...</p>
       ) : (
         <>
-          <div className="month-card-weekdays" style={{ marginBottom: '0.25rem' }}>
+          <div className="month-grid-weekdays">
             {WEEKDAYS.map((w) => (
-              <span key={w} style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-ink-subtle)', fontWeight: 500 }}>
-                {w}
-              </span>
+              <span key={w}>{w}</span>
             ))}
           </div>
           <div className="month-grid">
-            {cells.map((cell) => {
+            {workCells.map((cell) => {
               const dayAppts = (byDate.get(cell.dateStr) ?? []).filter((a) => a.status !== 'cancelled' && a.status !== 'no_show' && a.status !== 'rescheduled');
               const visible = dayAppts.slice(0, 3);
               const more = dayAppts.length - visible.length;
               return (
                 <div key={cell.dateStr} className={`month-cell${cell.outside ? ' outside' : ''}${cell.dateStr === today ? ' today' : ''}`} onClick={() => navigate(`/wizyty/kalendarz?date=${cell.dateStr}`)}>
-                  <span className="month-cell-num">{cell.day}</span>
+                  <div className="month-cell-head">
+                    <span className="month-cell-num">{cell.day}</span>
+                    {showIncome && !cell.outside && <IncomePill income={income.forDay(cell.dateStr, employeeId)} />}
+                  </div>
                   {visible.map((a) => {
                     const stylistFirst = a.employee_name?.split(' ')[0] ?? '—';
                     return (
@@ -203,7 +214,6 @@ export function CalendarMonthPage() {
                     );
                   })}
                   {more > 0 && <span className="month-cell-more">+{more} więcej</span>}
-                  {showIncome && !cell.outside && <IncomeFooter income={income.forDay(cell.dateStr, employeeId)} />}
                 </div>
               );
             })}

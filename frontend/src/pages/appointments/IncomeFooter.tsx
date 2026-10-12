@@ -1,5 +1,7 @@
+import type { CSSProperties } from 'react';
 import type { DayIncome } from '../../lib/appointments/useIncomeSummary';
 import { formatPLN, formatZl } from '../../lib/format';
+import { completedPercent } from './IncomeBanner';
 
 interface IncomeFooterProps {
   income: DayIncome | null;
@@ -27,5 +29,30 @@ export function IncomeFooter({ income, dashWhenEmpty = false }: IncomeFooterProp
         <strong className="inc-actual">{formatZl(income.actual)}</strong> / {formatZl(income.expected)} zł
       </span>
     </div>
+  );
+}
+
+/** Month-cell variant: a compact capsule in the day-number header row, right-aligned.
+ * A small ring shows the share of the day's visits already completed (same measure as
+ * the banner's "wg % zakończonych"), then "actual / expected". Three tones: nothing
+ * recorded yet (neutral), partly recorded (accent), everything recorded (success). The
+ * "Przychód" label lives in the tooltip/aria-label — the cell has no room for it. */
+export function IncomePill({ income }: { income: DayIncome | null }) {
+  if (!income || (income.actual === 0 && income.expected === 0)) return null;
+  const pct = completedPercent(income);
+  const tone = income.actual <= 0 ? 'pending' : income.actual >= income.expected ? 'done' : 'partial';
+  return (
+    <span
+      className={`inc-pill inc-pill--${tone}`}
+      aria-label={`Przychód: ${formatZl(income.actual)} zł z ${formatZl(income.expected)} zł oczekiwanych`}
+      title={`Przychód zapisany: ${formatPLN(income.actual)} · oczekiwany: ${formatPLN(income.expected)} · zakończone wizyty: ${income.completed} z ${income.total}`}
+    >
+      <span className="inc-pill-ring" style={{ '--pct': pct } as CSSProperties} aria-hidden="true" />
+      <span className="inc-pill-values">
+        <strong className="inc-pill-actual">{formatZl(income.actual)}</strong>
+        <span className="inc-pill-sep">/</span>
+        {formatZl(income.expected)}
+      </span>
+    </span>
   );
 }
