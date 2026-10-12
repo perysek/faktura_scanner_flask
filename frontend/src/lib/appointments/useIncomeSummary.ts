@@ -8,6 +8,15 @@ import { useAppointmentsChanged } from './appointmentEvents';
 export interface DayIncome {
   actual: number;
   expected: number;
+  /** Completed visits / all visits counted into `expected` — the "wg % zakończonych" bar. */
+  completed: number;
+  total: number;
+}
+
+export const EMPTY_INCOME: DayIncome = { actual: 0, expected: 0, completed: 0, total: 0 };
+
+export function addIncome(a: DayIncome, b: DayIncome): DayIncome {
+  return { actual: a.actual + b.actual, expected: a.expected + b.expected, completed: a.completed + b.completed, total: a.total + b.total };
 }
 
 export interface IncomeSummary {
@@ -25,6 +34,11 @@ export interface IncomeSummary {
    * employee or (null) all rows sent. Zeros — never null — when the range is empty, so
    * a banner can show "0 / 0 zł". Only covers days inside the range the hook fetched. */
   forRange: (startDate: string, endDate: string, employeeId: number | null) => DayIncome;
+}
+
+function rowIncome(r: IncomeSummaryResponse['rows'][number]): DayIncome {
+  // `?? 0`: a server that predates the counts still renders (bar at 0%).
+  return { actual: r.actual, expected: r.expected, completed: r.visits_completed ?? 0, total: r.visits_total ?? 0 };
 }
 
 /** Live "Przychód: actual / expected" for a date range. One request returns every
@@ -68,7 +82,7 @@ export function useIncomeSummary(startDate: string | null, endDate: string | nul
   return useMemo<IncomeSummary>(() => {
     const scope = data?.scope ?? null;
     const own = data?.own_employee_id ?? null;
-    const byDate = new Map<string, Array<{ employee_id: number; actual: number; expected: number }>>();
+    const byDate = new Map<string, IncomeSummaryResponse['rows']>();
     for (const r of data?.rows ?? []) {
       const bucket = byDate.get(r.date);
       if (bucket) bucket.push(r);
@@ -80,24 +94,19 @@ export function useIncomeSummary(startDate: string | null, endDate: string | nul
       forDay: (date, employeeId) => {
         const rows = (byDate.get(date) ?? []).filter((r) => employeeId === null || r.employee_id === employeeId);
         if (rows.length === 0) return null;
-        return {
-          actual: rows.reduce((s, r) => s + r.actual, 0),
-          expected: rows.reduce((s, r) => s + r.expected, 0),
-        };
+        return rows.reduce<DayIncome>((sum, r) => addIncome(sum, rowIncome(r)), EMPTY_INCOME);
       },
       forRange: (startDate, endDate, employeeId) => {
-        let actual = 0;
-        let expected = 0;
+        let total = EMPTY_INCOME;
         // ISO dates compare correctly as plain strings.
         for (const [date, rows] of byDate) {
           if (date < startDate || date > endDate) continue;
           for (const r of rows) {
             if (employeeId !== null && r.employee_id !== employeeId) continue;
-            actual += r.actual;
-            expected += r.expected;
+            total = addIncome(total, rowIncome(r));
           }
         }
-        return { actual, expected };
+        return total;
       },
     };
   }, [data]);

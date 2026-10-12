@@ -125,6 +125,10 @@ class IncomeRepository:
           dokładnie ``AppointmentStatus.EXCLUDED_FROM_SCHEDULE``.
 
         Dzięki temu gdy dzień się domknie, actual == expected.
+
+        * ``visits_completed`` / ``visits_total`` — liczba wizyt 'completed' oraz
+          wszystkich liczonych do ``expected`` (completed + aktywne), pod pasek
+          "wg % zakończonych" w bannerze sumy przychodu.
         """
         params: list = [start_date.isoformat(), end_date.isoformat()]
         employee_filter = ""
@@ -146,7 +150,9 @@ class IncomeRepository:
                     WHEN a.status = '{completed}' THEN COALESCE(ir.net_amount, a.total_price, 0)
                     WHEN a.status IN ({active}) THEN COALESCE(a.total_price, 0)
                     ELSE 0
-                END), 0) AS expected
+                END), 0) AS expected,
+                COUNT(*) FILTER (WHERE a.status = '{completed}') AS visits_completed,
+                COUNT(*) FILTER (WHERE a.status = '{completed}' OR a.status IN ({active})) AS visits_total
             FROM appointments a
             LEFT JOIN LATERAL (
                 SELECT SUM(net_amount) AS net_amount

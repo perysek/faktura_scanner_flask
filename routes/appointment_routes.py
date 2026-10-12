@@ -455,6 +455,8 @@ def get_income_summary():
                     'employee_id': r['employee_id'],
                     'actual': round(float(r['actual']), 2),
                     'expected': round(float(r['expected']), 2),
+                    'visits_completed': int(r.get('visits_completed') or 0),
+                    'visits_total': int(r.get('visits_total') or 0),
                 }
                 for r in rows
             ],

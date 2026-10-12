@@ -167,18 +167,32 @@ function SearchableSelectPanel({ triggerRef, listboxId, options, value, searchPl
       if (event.target instanceof Node && panelRef.current?.contains(event.target)) return;
       reposition();
     }
+    // An ancestor's entrance animation (`.animate-fade-up` on the page root) holds
+    // a transform while it runs, so the panel was placed in THAT element's
+    // coordinates; once the animation ends the transform is gone and the panel
+    // would jump by the page's offset (onto the sidebar). Re-anchor when it does.
+    function onAncestorMotionEnd(event: Event) {
+      const trigger = triggerRef.current;
+      if (trigger && event.target instanceof Node && event.target !== trigger && event.target.contains(trigger)) reposition();
+    }
     const vv = window.visualViewport;
     window.addEventListener('scroll', onViewportChange, true);
     window.addEventListener('resize', onViewportChange);
     vv?.addEventListener('resize', onViewportChange);
     vv?.addEventListener('scroll', onViewportChange);
+    document.addEventListener('animationend', onAncestorMotionEnd, true);
+    document.addEventListener('animationcancel', onAncestorMotionEnd, true);
+    document.addEventListener('transitionend', onAncestorMotionEnd, true);
     return () => {
       window.removeEventListener('scroll', onViewportChange, true);
       window.removeEventListener('resize', onViewportChange);
       vv?.removeEventListener('resize', onViewportChange);
       vv?.removeEventListener('scroll', onViewportChange);
+      document.removeEventListener('animationend', onAncestorMotionEnd, true);
+      document.removeEventListener('animationcancel', onAncestorMotionEnd, true);
+      document.removeEventListener('transitionend', onAncestorMotionEnd, true);
     };
-  }, [reposition]);
+  }, [reposition, triggerRef]);
 
   useEffect(() => {
     function onDocClick(event: MouseEvent) {

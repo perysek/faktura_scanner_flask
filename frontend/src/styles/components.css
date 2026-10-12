@@ -283,6 +283,7 @@
 
 /* DatePicker (components/ui/DatePicker.tsx) — month grid under the trigger, keyboard-first. */
 .dpk-root { position: relative; width: 100%; }
+.dpk-root--icon { width: auto; display: inline-flex; }
 .dpk-root:focus-within > .dpk-trigger { outline: none; border-color: var(--color-ink-muted); box-shadow: var(--shadow-focus); }
 .dpk-panel {
   position: absolute; z-index: 50; top: calc(100% + 4px); left: 0;

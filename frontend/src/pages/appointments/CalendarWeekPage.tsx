@@ -15,7 +15,9 @@ import { EmployeeFilter } from './EmployeeFilter';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { AppointmentListItem, CalendarAbsence, EmployeeOption } from '../../types/appointment';
 
-const LANE_START_MIN = 7 * 60;
+// 8:00 start (the 7:00 row was dropped to give each hour more height). A visit
+// starting earlier is clamped to the top edge, never hidden.
+const LANE_START_MIN = 8 * 60;
 const LANE_END_MIN = 22 * 60;
 // Fallback/mobile lane height in px — was a hardcoded constant the whole
 // grid rendered at regardless of viewport (fix #5, implementation-log.md
@@ -25,7 +27,7 @@ const LANE_END_MIN = 22 * 60;
 // viewport`-bounded) replaces it, so the grid always fits with zero page
 // scroll instead of overflowing a fixed 900px.
 const LANE_HEIGHT_FALLBACK = 900;
-const HOURS = Array.from({ length: 16 }, (_, i) => 7 + i);
+const HOURS = Array.from({ length: 15 }, (_, i) => 8 + i); // 8..22
 const DAY_NAMES = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 
 function toMinutes(t: string): number {
@@ -67,7 +69,8 @@ function formatDateShort(dateStr: string): string {
 
 /**
  * Kalendarz — widok tygodnia. Ported z templates/appointments/calendar_week.html.
- * Jeden pracownik naraz (jak oryginał — `selectEmployee`), 7 kolumn dni. BEZ
+ * Jeden pracownik naraz (jak oryginał — `selectEmployee`), kolumny Pon–Sob
+ * (Nd tylko gdy w tym tygodniu jest wizyta w niedzielę), godziny 8–22. BEZ
  * bocznego paska month-cards (spec obejmuje tylko dzień + listę).
  */
 export function CalendarWeekPage() {
@@ -120,14 +123,20 @@ export function CalendarWeekPage() {
   }, [load]);
   useAppointmentsChanged(() => load(true));
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Mon–Sat: Sunday's column is dropped so the six working days get its width.
+  // It comes back only for a week that actually has a Sunday visit, so nothing booked
+  // there can silently disappear from the grid.
+  const sundayIso = iso(addDays(weekStart, 6));
+  const showSunday = appointments.some((a) => a.appointment_date === sundayIso);
+  const days = Array.from({ length: showSunday ? 7 : 6 }, (_, i) => addDays(weekStart, i));
+  const lastDay = days[days.length - 1];
 
   return (
     <div className="refined-page page-fills-viewport fade-in" style={{ display: 'flex', flexDirection: 'column', position: 'relative' /* anchor of the NewVisitFab */ }}>
       <header className="page-header">
         <div>
           <h1 className="page-title">Wizyty</h1>
-          <p className="page-subtitle">Tydzień {formatDateShort(iso(weekStart))} – {formatDateShort(iso(addDays(weekStart, 6)))}</p>
+          <p className="page-subtitle">Tydzień {formatDateShort(iso(weekStart))} – {formatDateShort(iso(lastDay))}</p>
         </div>
         <div>
           <PastVisitsScanner />
@@ -179,7 +188,7 @@ export function CalendarWeekPage() {
               viewport`, DESIGN.md §20.2, on desktop). `laneHeight` is this
               row's OWN measured pixel height (useElementHeight, ref below) —
               feeding back into every child's `top`/`height` math so the full
-              7am–10pm range always exactly fills whatever space is actually
+              8am–10pm range always exactly fills whatever space is actually
               available, instead of a fixed 900px taller than the viewport. */}
           <div ref={laneRef} style={{ display: 'flex', flex: 1, minHeight: 0 }}>
             <div style={{ width: '3rem', flexShrink: 0, position: 'relative' }}>
@@ -200,7 +209,7 @@ export function CalendarWeekPage() {
                       <div key={h} className="cal-hour-line" style={{ top: hourTop(h, laneHeight) }} />
                     ))}
                     {dayAbsences.map((ab, idx) => {
-                      const pos = position(ab.time_from ?? '07:00', ab.time_to ?? '22:00', laneHeight);
+                      const pos = position(ab.time_from ?? '08:00', ab.time_to ?? '22:00', laneHeight);
                       return (
                         <div key={idx} className={`wk-absence${ab.status === 'pending' ? ' wk-absence--pending' : ''}`} style={{ top: pos.top, height: pos.height }}>
                           {ab.category_name}

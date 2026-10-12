@@ -104,6 +104,9 @@ export function CalendarMonthPage() {
       if (!m.has(a.appointment_date)) m.set(a.appointment_date, []);
       m.get(a.appointment_date)!.push(a);
     }
+    // The list API answers newest-first; a day cell reads top-down from the first visit
+    // of the day ('HH:MM:SS' compares correctly as a string).
+    for (const list of m.values()) list.sort((x, y) => x.start_time.localeCompare(y.start_time) || x.id - y.id);
     return m;
   }, [appointments]);
 

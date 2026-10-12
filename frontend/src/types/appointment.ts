@@ -280,6 +280,9 @@ export interface IncomeSummaryRow {
   employee_id: number;
   actual: number;
   expected: number;
+  /** Visits 'completed' / visits counted into `expected` (completed + still planned). */
+  visits_completed: number;
+  visits_total: number;
 }
 
 export interface IncomeSummaryResponse {

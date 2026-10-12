@@ -5,8 +5,8 @@ import { clientLabel } from '../../lib/appointments/clientLabel';
 import { initials } from './pastVisitsShared';
 import type { AppointmentListItem } from '../../types/appointment';
 
-/** The day/week lanes span 07:00–22:00 and one calendar tick is 30 minutes. */
-const LANE_MINUTES = 15 * 60;
+/** The day/week lanes span 08:00–22:00 (CalendarDayPage / CalendarWeekPage LANE_START_MIN) and one calendar tick is 30 minutes. */
+const LANE_MINUTES = 14 * 60;
 const TICK_MINUTES = 30;
 /** Two text lines at the bar font size (+ 1px padding top/bottom) need ≈ 36px. Anything shorter
  * than this (even a longer-than-30-min visit squeezed by a short viewport) falls back to the

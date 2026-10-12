@@ -17,7 +17,8 @@ import { CalendarMonthSidebar } from './CalendarMonthSidebar';
 import { STATUS_LABELS } from '../../types/appointment';
 import type { MultiEmployeeScheduleResponse } from '../../types/appointment';
 
-const LANE_START_MIN = 7 * 60;
+// 8:00 start, same as the week view (7:00 row dropped for taller hours).
+const LANE_START_MIN = 8 * 60;
 const LANE_END_MIN = 22 * 60;
 // Fallback/mobile lane height — see CalendarWeekPage.tsx's identical constant
 // for the full rationale (fix #6, implementation-log.md 2026-08-19).
@@ -54,7 +55,7 @@ function formatLong(dateStr: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-const HOURS = Array.from({ length: 16 }, (_, i) => 7 + i); // 7..22
+const HOURS = Array.from({ length: 15 }, (_, i) => 8 + i); // 8..22
 
 /**
  * Kalendarz — widok dnia. Ported z templates/appointments/calendar.html.
@@ -199,7 +200,7 @@ export function CalendarDayPage() {
             {/* Lane row — `flex: 1; minHeight: 0` claims all remaining height
                 inside `.table-container` (bounded by `.page-fills-viewport`
                 on desktop). `laneHeight` is this row's own measured pixel
-                height (useElementHeight, ref below), so the 7am–10pm range
+                height (useElementHeight, ref below), so the 8am–10pm range
                 always exactly fills whatever space is actually available. */}
             <div ref={laneRef} style={{ display: 'flex', flex: 1, minHeight: 0 }}>
               <div style={{ width: '3rem', flexShrink: 0, position: 'relative' }}>
@@ -219,7 +220,7 @@ export function CalendarDayPage() {
                         <div key={h} className="cal-hour-line" style={{ top: hourTop(h, laneHeight) }} />
                       ))}
                       {absences.map((ab) => {
-                        const pos = position(ab.time_from ?? '07:00', ab.time_to ?? '22:00', laneHeight);
+                        const pos = position(ab.time_from ?? '08:00', ab.time_to ?? '22:00', laneHeight);
                         return (
                           <div key={ab.id} className={`day-absence${ab.status === 'pending' ? ' day-absence--pending' : ''}`} style={{ top: pos.top, height: pos.height }}>
                             {ab.category_name}

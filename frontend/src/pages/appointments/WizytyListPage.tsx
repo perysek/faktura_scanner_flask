@@ -8,9 +8,10 @@ import { appointmentsApi } from '../../lib/api/appointments';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
+import { DatePicker } from '../../components/ui/DatePicker';
 import { formatPLN } from '../../lib/format';
 import { empColor } from '../../lib/appointments/employeeColor';
-import { useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
+import { addIncome, EMPTY_INCOME, useIncomeSummary } from '../../lib/appointments/useIncomeSummary';
 import { ViewSwitcher } from './ViewSwitcher';
 import { EmployeeFilter } from './EmployeeFilter';
 import { IncomeBanner } from './IncomeBanner';
@@ -445,9 +446,9 @@ export function WizytyListPage() {
     return incomeDays.reduce(
       (sum, d) => {
         const day = income.forDay(d, employeeId);
-        return day ? { actual: sum.actual + day.actual, expected: sum.expected + day.expected } : sum;
+        return day ? addIncome(sum, day) : sum;
       },
-      { actual: 0, expected: 0 },
+      EMPTY_INCOME,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, income, employeeId, mode, chainDates, weekFrom, weekTo]);
@@ -538,7 +539,11 @@ export function WizytyListPage() {
     navigate(`/wizyty/${appt.id}`);
   }
 
-  const rangeLabel = mode === 'chain' ? `${chainDates.length} dzień/dni z wizytami` : `${formatDateShort(iso(weekStart))} – ${formatDateShort(iso(addDays(weekStart, 6)))}`;
+  // Subtitle carries the range now (the separate range label after the nav buttons is gone).
+  const sortedChain = mode === 'chain' && chainDates.length > 0 ? [...chainDates].sort() : null;
+  const subtitle = sortedChain
+    ? `Dni z bocznego paska: ${formatDateShort(sortedChain[0])}${sortedChain.length > 1 ? ` - ${formatDateShort(sortedChain[sortedChain.length - 1])}` : ''}`
+    : `Lista tygodnia w dniach: ${formatDateShort(iso(weekStart))} - ${formatDateShort(iso(addDays(weekStart, 6)))}`;
   // `className` sizes the column (Appointments.css "Visits list column widths"): `col-fit`
   // shrinks to its content, Klient / Usługa share what is left.
   const columns: Array<{ column: SortColumn; label: string; align?: 'right'; className: string }> = [
@@ -575,7 +580,7 @@ export function WizytyListPage() {
         <header className="page-header">
           <div>
             <h1 className="page-title">Wizyty</h1>
-            <p className="page-subtitle">{mode === 'chain' ? 'Widok dnia z bocznego paska' : 'Tydzień wizyt'}</p>
+            <p className="page-subtitle">{subtitle}</p>
           </div>
           <div>
             <ViewSwitcher active="list" date={iso(weekStart)} employeeId={employeeId} />
@@ -600,18 +605,17 @@ export function WizytyListPage() {
                 wrap pattern every few pixels of width (audit finding #1,
                 mobile-audit-wizyty-list.md). */}
             <div className="date-nav-controls">
-              <button type="button" className="nav-btn" onClick={() => goWeek(-1)}>
-                ← Poprzedni
+              <button type="button" className="nav-btn nav-btn--icon" onClick={() => goWeek(-1)} aria-label="Poprzedni tydzień" title="Poprzedni tydzień">
+                <Icon name="chevron_left" />
               </button>
-              <input type="date" className="date-nav-date" aria-label="Wybierz tydzień" value={iso(weekStart)} onChange={(e) => onDateInputChange(e.target.value)} />
+              <DatePicker variant="icon" aria-label="Wybierz tydzień" value={iso(weekStart)} onChange={onDateInputChange} />
               <button type="button" className="nav-btn" onClick={goToday}>
-                Dziś
+                Tydzień bieżący
               </button>
-              <button type="button" className="nav-btn" onClick={() => goWeek(1)}>
-                Następny →
+              <button type="button" className="nav-btn nav-btn--icon" onClick={() => goWeek(1)} aria-label="Następny tydzień" title="Następny tydzień">
+                <Icon name="chevron_right" />
               </button>
             </div>
-            <span className="date-nav-range">{rangeLabel}</span>
             <div className="empf-divider" />
             <span className="empf-label">Pracownik:</span>
             <EmployeeFilter employees={employees} selectedId={employeeId} onSelect={setEmployeeId} allowAll />

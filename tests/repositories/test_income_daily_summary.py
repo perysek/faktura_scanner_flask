@@ -56,6 +56,15 @@ class TestDailySummarySql:
         for excluded in ('cancelled', 'no_show', 'rescheduled'):
             assert excluded not in expected
 
+    def test_visit_counts_cover_completed_and_the_same_set_as_expected(self, app):
+        _, sql, _ = _run(app)
+        assert "COUNT(*) FILTER (WHERE a.status = 'completed') AS visits_completed" in sql
+        total = sql.split('AS visits_completed,')[1].split('AS visits_total')[0]
+        assert "a.status = 'completed'" in total
+        assert "a.status IN ('confirmed', 'in_progress', 'scheduled')" in total
+        for excluded in ('cancelled', 'no_show', 'rescheduled'):
+            assert excluded not in total
+
     def test_soft_deleted_visits_and_income_are_ignored(self, app):
         _, sql, _ = _run(app)
         assert 'a.is_deleted = FALSE' in sql

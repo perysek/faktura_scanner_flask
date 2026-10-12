@@ -126,20 +126,23 @@ export function CalendarMonthSidebar({ selectedDate, onDayClick }: CalendarMonth
 
   return (
     <div className={`cal-sidebar-col${collapsed ? ' collapsed' : ''}`}>
+      {/* Order: previous 3 months, next 3 months, then the hide/show toggle LAST —
+          pinned to the panel's right edge, which is the page's right edge, so it
+          sits on the same spot collapsed or expanded and never jumps under the cursor. */}
       <div className="cal-sidebar-topbar">
         {!collapsed && (
-          <button type="button" className="cal-sidebar-nav-btn" onClick={() => shiftMonths(-3)} aria-label="Poprzednie 3 miesiące" title="Poprzednie 3 miesiące">
-            <Icon name="expand_more" className="icon-flip" />
-          </button>
+          <>
+            <button type="button" className="cal-sidebar-nav-btn" onClick={() => shiftMonths(-3)} aria-label="Poprzednie 3 miesiące" title="Poprzednie 3 miesiące">
+              <Icon name="expand_more" className="icon-flip" />
+            </button>
+            <button type="button" className="cal-sidebar-nav-btn" onClick={() => shiftMonths(3)} aria-label="Następne 3 miesiące" title="Następne 3 miesiące">
+              <Icon name="expand_more" />
+            </button>
+          </>
         )}
         <button type="button" className="cal-sidebar-toggle" onClick={toggleCollapsed} aria-label={collapsed ? 'Rozwiń pasek boczny' : 'Zwiń pasek boczny'} title={collapsed ? 'Rozwiń' : 'Zwiń'}>
           <Icon name="chevron_left" />
         </button>
-        {!collapsed && (
-          <button type="button" className="cal-sidebar-nav-btn" onClick={() => shiftMonths(3)} aria-label="Następne 3 miesiące" title="Następne 3 miesiące">
-            <Icon name="expand_more" />
-          </button>
-        )}
       </div>
       {!collapsed && (
         <div className="cal-sidebar-body">

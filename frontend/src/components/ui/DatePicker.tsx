@@ -20,6 +20,11 @@ export interface DatePickerProps {
   disabled?: boolean;
   invalid?: boolean;
   handleRef?: Ref<DatePickerHandle>;
+  /** `icon`: a square calendar-icon button (toolbar use, e.g. the Wizyty list's week
+   * picker) instead of the full-width field showing the date. Same grid either way. */
+  variant?: 'field' | 'icon';
+  /** Accessible name of the icon trigger (it has no visible text). */
+  'aria-label'?: string;
 }
 
 const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -58,7 +63,7 @@ function displayLabel(value: string): string {
  * opened programmatically on focus (showPicker() needs a fresh user gesture)
  * nor driven consistently across browsers.
  */
-export function DatePicker({ id, value, onChange, onPicked, required, disabled, invalid, handleRef }: DatePickerProps) {
+export function DatePicker({ id, value, onChange, onPicked, required, disabled, invalid, handleRef, variant = 'field', 'aria-label': ariaLabel }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -135,15 +140,17 @@ export function DatePicker({ id, value, onChange, onPicked, required, disabled, 
   const cursorIso = iso(cursor);
 
   return (
-    <div className="dpk-root" ref={rootRef}>
+    <div className={`dpk-root${variant === 'icon' ? ' dpk-root--icon' : ''}`} ref={rootRef}>
       <button
         type="button"
         ref={triggerRef}
         id={id}
-        className={`ssel-trigger form-select dpk-trigger${invalid ? ' error' : ''}`}
+        className={variant === 'icon' ? 'nav-btn nav-btn--icon dpk-icon-trigger' : `ssel-trigger form-select dpk-trigger${invalid ? ' error' : ''}`}
         disabled={disabled}
         aria-haspopup="grid"
         aria-expanded={isOpen}
+        aria-label={variant === 'icon' ? `${ariaLabel ?? 'Wybierz datę'}: ${displayLabel(value)}` : undefined}
+        title={variant === 'icon' ? ariaLabel : undefined}
         onClick={() => (isOpen ? close(true) : open())}
         onKeyDown={(event) => {
           if (!isOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -152,8 +159,14 @@ export function DatePicker({ id, value, onChange, onPicked, required, disabled, 
           }
         }}
       >
-        <span className={`ssel-value${value ? '' : ' is-placeholder'}`}>{displayLabel(value) || 'Wybierz datę'}</span>
-        <Icon name="calendar_today" className="ssel-chevron" />
+        {variant === 'icon' ? (
+          <Icon name="calendar_today" />
+        ) : (
+          <>
+            <span className={`ssel-value${value ? '' : ' is-placeholder'}`}>{displayLabel(value) || 'Wybierz datę'}</span>
+            <Icon name="calendar_today" className="ssel-chevron" />
+          </>
+        )}
       </button>
       {required && <input className="ssel-required-proxy" tabIndex={-1} aria-hidden="true" required value={value} onChange={() => {}} />}
 

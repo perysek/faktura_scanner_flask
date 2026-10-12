@@ -17,7 +17,7 @@ XHR = {'X-Requested-With': 'XMLHttpRequest'}
 URL = '/api/appointments/income-summary'
 RANGE = {'start_date': '2026-10-01', 'end_date': '2026-10-07'}
 
-ROW = {'day': date(2026, 10, 1), 'employee_id': 8, 'actual': 120, 'expected': 300.5}
+ROW = {'day': date(2026, 10, 1), 'employee_id': 8, 'actual': 120, 'expected': 300.5, 'visits_completed': 1, 'visits_total': 3}
 
 
 def _user(role='stylist', uid=5):
@@ -65,7 +65,7 @@ class TestSuperuserFullGrant:
         with stack:
             body = _get(api).get_json()
         assert body['scope'] == 'all'
-        assert body['rows'] == [{'date': '2026-10-01', 'employee_id': 8, 'actual': 120.0, 'expected': 300.5}]
+        assert body['rows'] == [{'date': '2026-10-01', 'employee_id': 8, 'actual': 120.0, 'expected': 300.5, 'visits_completed': 1, 'visits_total': 3}]
         repo.get_daily_summary.assert_called_once_with(date(2026, 10, 1), date(2026, 10, 7), None)
 
     def test_employee_filter_is_passed_through(self, api):
