@@ -11,11 +11,12 @@ Dwie ścieżki z modala rozwiązywania konfliktów (ConflictResolutionModal.tsx)
 
 2. "Zatwierdź mimo to" — każda wizyta bez rozwiązania trafia do
    `absence_conflict_pending` z valid_for = start wizyty − AUTO_CANCEL_OFFSET_HOURS,
-   a równolegle do `sms_events` idzie `absence_cancellation` na ten sam moment.
-   Tick schedulera (process_due) najpierw anuluje takie wizyty, o ile wciąż kolidują
-   z nieobecnością — dopiero potem send_due_event_sms() wysyła SMS-y. Wizyty
-   rozwiązane w międzyczasie (zmiana stylistki/terminu w Wizytach) są pomijane, a ich
-   SMS o odwołaniu wycofany.
+   a równolegle do `sms_events` idzie `absence_cancellation` na ten sam moment — jako
+   'held' (żaden scheduler go nie wyśle sam). Tick (process_due) anuluje wizytę, o ile
+   wciąż koliduje z nieobecnością, i dopiero wtedy zwalnia SMS ('scheduled', teraz).
+   Wizyty rozwiązane w międzyczasie są pomijane, a ich SMS wycofany. Held/release
+   zamiast kolejności w ticku, bo SMS-y dla współdzielonej bazy wysyła ten scheduler,
+   który ma advisory lock — dziś legacy app :8083, który o auto-anulowaniu nic nie wie.
 """
 import logging
 from datetime import date, datetime, time, timedelta, timezone
@@ -134,7 +135,7 @@ class AbsenceConflictDeferralService:
                 continue
             seen.add(appt_id)
             valid_for = compute_valid_for(c['date'], c['start_time'])
-            event_id = self.event_repo.create(appt_id, 'absence_cancellation', valid_for)
+            event_id = self.event_repo.create(appt_id, 'absence_cancellation', valid_for, status='held')
             row_id = self.pending_repo.create(
                 absence_id=absence_id, appointment_id=appt_id, employee_id=employee_id,
                 appointment_date=_as_date(c['date']), start_time=_as_time(c['start_time']),
@@ -163,8 +164,7 @@ class AbsenceConflictDeferralService:
 
     def process_due(self) -> dict:
         """Auto-cancel visits whose `valid_for` has passed and that still collide with the
-        approved absence. Must run BEFORE SmsService.send_due_event_sms() in the same tick so
-        the queued cancellation SMS goes out after the visit is actually cancelled."""
+        approved absence, then release their held cancellation SMS."""
         cancelled = resolved = failed = 0
         for row in self.pending_repo.get_due():
             try:
@@ -182,6 +182,8 @@ class AbsenceConflictDeferralService:
                     resolved_by_user_id=row['created_by_user_id'],
                 )
                 self.pending_repo.mark(row['id'], 'auto_cancelled')
+                if row.get('sms_event_id'):
+                    self.event_repo.release(row['sms_event_id'])
                 cancelled += 1
             except Exception as exc:
                 logger.exception('absence auto-cancel failed pending_id=%s appt=%s',

@@ -59,7 +59,8 @@ class TestDeferUnresolved:
         out = svc.defer_unresolved(3, 42, [_conflict()], created_by_user_id=9)
 
         vf = datetime(2026, 11, 18, 10, 0, tzinfo=WARSAW_TZ)
-        d['event_repo'].create.assert_called_once_with(11, 'absence_cancellation', vf)
+        # held: no scheduler (incl. the legacy app's) may send it before the visit is cancelled
+        d['event_repo'].create.assert_called_once_with(11, 'absence_cancellation', vf, status='held')
         kwargs = d['pending_repo'].create.call_args.kwargs
         assert kwargs['absence_id'] == 3 and kwargs['appointment_id'] == 11 and kwargs['employee_id'] == 42
         assert kwargs['valid_for'] == vf and kwargs['sms_event_id'] == 501 and kwargs['created_by_user_id'] == 9
@@ -136,7 +137,8 @@ class TestProcessDue:
         res = d['resolution_repo'].create.call_args.kwargs
         assert res['resolution_type'] == 'cancelled' and res['resolved_by_user_id'] == 9
         d['pending_repo'].mark.assert_called_once_with(70, 'auto_cancelled')
-        d['event_repo'].mark_skipped.assert_not_called()    # the cancellation SMS must still go
+        d['event_repo'].release.assert_called_once_with(501)   # only now may the text go out
+        d['event_repo'].mark_skipped.assert_not_called()
 
     def test_visit_resolved_meanwhile_is_left_alone_and_its_sms_withdrawn(self):
         svc, d = _svc()
@@ -146,6 +148,7 @@ class TestProcessDue:
 
         assert svc.process_due() == {'cancelled': 0, 'resolved': 1, 'failed': 0}
         d['appointment_service'].cancel_appointment.assert_not_called()
+        d['event_repo'].release.assert_not_called()
         d['event_repo'].mark_skipped.assert_called_once()
         assert d['event_repo'].mark_skipped.call_args.args[0] == 501
         d['pending_repo'].mark.assert_called_once_with(70, 'resolved')
@@ -170,3 +173,4 @@ class TestProcessDue:
         assert svc.process_due() == {'cancelled': 0, 'resolved': 0, 'failed': 1}
         d['event_repo'].mark_skipped.assert_called_once()
         assert d['pending_repo'].mark.call_args.args[:2] == (70, 'failed')
+        d['event_repo'].release.assert_not_called()

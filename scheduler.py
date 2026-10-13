@@ -27,9 +27,38 @@ _lock_conn = None
 # Arbitrary, app-unique 32-bit key identifying the SMS-scheduler advisory lock.
 _SCHEDULER_LOCK_KEY = 728193
 
+# Separate lock for the absence auto-cancel job. NOT the SMS lock: the legacy :8083 app shares
+# the database and usually holds 728193, but has no auto-cancel code — with one shared lock the
+# job would never run anywhere. Own lock => exactly one process of THIS app runs it.
+_AUTO_CANCEL_LOCK_KEY = 728194
+_auto_cancel_lock_conn = None
+
 # How often the auto-send job fires. The "Oczekujące" SMS views derive "will be sent at" from this
 # cadence (services/sms_queue_service.py), so there is exactly one place that says 15.
 TICK_MINUTES = 15
+
+
+def _acquire_auto_cancel_lock() -> bool:
+    """Same contract as _acquire_scheduler_lock(), for the auto-cancel job — but fails CLOSED:
+    two processes cancelling the same visit would mark the second attempt failed and withdraw
+    the client's cancellation SMS; a missed tick is simply retried at the next start."""
+    global _auto_cancel_lock_conn
+    try:
+        conn = psycopg2.connect(get_database_url(), connect_timeout=5)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (_AUTO_CANCEL_LOCK_KEY,))
+        got = bool(cur.fetchone()[0])
+        cur.close()
+        if got:
+            _auto_cancel_lock_conn = conn
+            return True
+        conn.close()
+        return False
+    except Exception:
+        logging.warning("Could not acquire absence auto-cancel advisory lock; job not started.",
+                        exc_info=True)
+        return False
 
 
 def _acquire_scheduler_lock() -> bool:
@@ -63,8 +92,8 @@ def _acquire_scheduler_lock() -> bool:
 
 def _run_absence_auto_cancel():
     """Auto-cancel visits left unresolved by "Zatwierdź mimo to" once their `valid_for` has
-    passed. Runs regardless of the SMS switch (a visit must be cancelled even with SMS off) and
-    BEFORE the event queue, so the queued cancellation text follows the actual cancellation."""
+    passed. Its own job (own lock), independent of the SMS switch and of which process sends
+    SMS: the cancellation text is parked 'held' and released only after the visit is cancelled."""
     try:
         from services.absence_conflict_deferral_service import AbsenceConflictDeferralService
         result = AbsenceConflictDeferralService().process_due()
@@ -75,10 +104,13 @@ def _run_absence_auto_cancel():
         logging.exception("Absence auto-cancel tick failed")
 
 
-def _run_auto_reminders(app):
+def _run_absence_auto_cancel_job(app):
     with app.app_context():
         _run_absence_auto_cancel()
 
+
+def _run_auto_reminders(app):
+    with app.app_context():
         from repositories.sms.sms_repository import SmsSettingsRepository
         settings = SmsSettingsRepository().get_settings() or {}
         if not settings.get('is_active'):
@@ -105,24 +137,39 @@ def _run_auto_reminders(app):
 def start_scheduler(app):
     global _scheduler
 
-    # Only the process that wins the advisory lock runs the scheduler.
-    if not _acquire_scheduler_lock():
+    # Each job runs only in the process that wins its own advisory lock.
+    run_sms = _acquire_scheduler_lock()
+    if not run_sms:
         logging.info("SMS scheduler not started: another process holds the "
                      "advisory lock (this is expected with >1 worker).")
+    run_auto_cancel = _acquire_auto_cancel_lock()
+    if not (run_sms or run_auto_cancel):
         return
 
     _scheduler = BackgroundScheduler(timezone='Europe/Warsaw')
-    _scheduler.add_job(
-        func=_run_auto_reminders,
-        args=[app],
-        trigger=IntervalTrigger(minutes=TICK_MINUTES),
-        id='sms_auto_send',
-        replace_existing=True,
-        max_instances=1,
-        coalesce=True,
-    )
+    if run_sms:
+        _scheduler.add_job(
+            func=_run_auto_reminders,
+            args=[app],
+            trigger=IntervalTrigger(minutes=TICK_MINUTES),
+            id='sms_auto_send',
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+    if run_auto_cancel:
+        _scheduler.add_job(
+            func=_run_absence_auto_cancel_job,
+            args=[app],
+            trigger=IntervalTrigger(minutes=TICK_MINUTES),
+            id='absence_auto_cancel',
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
     _scheduler.start()
-    logging.info("SMS auto-send scheduler started (interval=%dmin, advisory-locked)", TICK_MINUTES)
+    logging.info("Scheduler started (interval=%dmin): sms_auto_send=%s absence_auto_cancel=%s",
+                 TICK_MINUTES, run_sms, run_auto_cancel)
 
 
 def next_tick_local():
@@ -139,9 +186,15 @@ def next_tick_local():
 
 
 def stop_scheduler():
-    global _scheduler, _lock_conn
+    global _scheduler, _lock_conn, _auto_cancel_lock_conn
     if _scheduler and _scheduler.running:
         _scheduler.shutdown(wait=False)
+    if _auto_cancel_lock_conn is not None:
+        try:
+            _auto_cancel_lock_conn.close()
+        except Exception:
+            pass
+        _auto_cancel_lock_conn = None
     # Release the advisory lock by closing its dedicated connection.
     if _lock_conn is not None:
         try:

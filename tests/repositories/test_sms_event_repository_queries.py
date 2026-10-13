@@ -48,3 +48,23 @@ class TestOneDefinitionOfPending:
 
     def test_the_shared_filter_is_exactly_scheduled_and_visit_not_deleted(self):
         assert module.PENDING_EVENT_FILTER == "e.status = 'scheduled' AND a.is_deleted IS NOT TRUE"
+
+
+class TestHeldEvents:
+    """A 'held' event (absence auto-cancel notice) is invisible to every scheduler until released."""
+
+    def test_held_is_not_due(self):
+        assert "e.status = 'scheduled'" in _sql('get_due')
+
+    def test_release_only_flips_held_events_and_makes_them_due_now(self):
+        with patch.object(SmsEventRepository, '_execute') as ex:
+            ex.return_value.rowcount = 1
+            assert SmsEventRepository().release(7) is True
+        sql, params = ex.call_args.args
+        assert "status = 'held'" in sql and "status = 'scheduled'" in sql and 'scheduled_at = NOW()' in sql
+        assert params == (7,)
+
+    def test_create_defaults_to_scheduled(self):
+        with patch.object(SmsEventRepository, '_execute_insert', return_value=1) as ins:
+            SmsEventRepository().create(1, 'x', None)
+        assert ins.call_args.args[1][-1] == 'scheduled'

@@ -23,13 +23,27 @@ class SmsEventRepository(BaseRepository):
         super().__init__('sms_events')
 
     def create(self, appointment_id: int, event_type: str,
-               scheduled_at: datetime) -> int:
-        """Insert an sms_events row. Returns the new id."""
+               scheduled_at: datetime, status: str = 'scheduled') -> int:
+        """Insert an sms_events row. Returns the new id.
+
+        status='held' parks a CONDITIONAL text: no scheduler picks it up (get_due wants
+        'scheduled' — in this app AND in the legacy :8083 app sharing the table, which owns the
+        scheduler lock and ignores is_enabled) until release() flips it. Used for the
+        auto-cancel notice of absence_conflict_pending: it may only go out once the visit has
+        really been cancelled."""
         sql = """
-            INSERT INTO sms_events (appointment_id, event_type, scheduled_at)
-            VALUES (%s, %s, %s)
+            INSERT INTO sms_events (appointment_id, event_type, scheduled_at, status)
+            VALUES (%s, %s, %s, %s)
         """
-        return self._execute_insert(sql, (appointment_id, event_type, scheduled_at))
+        return self._execute_insert(sql, (appointment_id, event_type, scheduled_at, status))
+
+    def release(self, event_id: int) -> bool:
+        """Turn a 'held' event into a due 'scheduled' one (sent at the next scheduler tick)."""
+        sql = """
+            UPDATE sms_events SET status = 'scheduled', scheduled_at = NOW()
+            WHERE id = %s AND status = 'held'
+        """
+        return self._execute(sql, (event_id,)).rowcount > 0
 
     def get_due(self) -> List[dict]:
         """Return the pending events (see PENDING_EVENT_FILTER) whose scheduled_at has come."""
