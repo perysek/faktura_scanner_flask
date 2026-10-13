@@ -163,18 +163,40 @@
 .action-icon-btn.danger-reveal:hover { color: var(--color-error); background: rgba(155, 44, 44, 0.1); }
 
 /* ConflictResolutionModal (reassign/reschedule/cancel-for-absence, 2026-08-25) */
-.crm-history-link {
-  display: inline-block;
-  margin-top: 0.75rem;
-  padding: 0;
+/* Conflict table + "Historia rozwiązań" table share one row geometry: fixed layout,
+   one-line cells. A resolution moves a row from the top table to the bottom one, so
+   the combined height (top + separator + bottom) stays the same. */
+.crm-table { table-layout: fixed; width: 100%; }
+.crm-table th,
+.crm-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crm-table .cell-actions { overflow: visible; }
+.crm-col-date { width: 6.75rem; }
+.crm-col-time { width: 7.5rem; }
+.crm-col-actions { width: 7.5rem; }
+
+.crm-separator { border: 0; border-top: 1px solid var(--color-border); margin: 1rem 0 0.75rem; }
+.crm-history-head {
+  margin-bottom: 0.5rem;
   font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--color-ink-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-decoration: underline;
 }
-.crm-history-link:hover { color: var(--color-ink); }
+.crm-history-empty { margin: 0; font-size: 0.8125rem; color: var(--color-ink-subtle); }
+
+/* "Anuluj wizytę" — first click arms (solid red), second click cancels. */
+.action-icon-btn.crm-cancel-btn.is-armed { color: #fff; background: var(--color-error); }
+.action-icon-btn.crm-cancel-btn.is-armed:hover { color: #fff; background: var(--color-error); }
+
+/* "Wyślij wiadomość" — marked = green + bold glyph (stroke thickens the filled path). */
+.action-icon-btn.crm-msg-btn.is-marked,
+.action-icon-btn.crm-msg-btn.is-marked:hover { color: var(--color-success); background: rgba(45, 106, 79, 0.1); }
+.action-icon-btn.crm-msg-btn.is-marked svg path { stroke: currentColor; stroke-width: 40; stroke-linejoin: round; }
+.refined-btn-secondary.crm-msg-btn.is-marked { color: var(--color-success); border-color: var(--color-success); font-weight: 700; }
+.action-icon-btn:disabled,
+.crm-msg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.crm-sms-note { margin: 0.5rem 0 0; font-size: 0.75rem; color: var(--color-success); }
 
 .crm-candidate-row { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
 .crm-warning-icon { display: inline-flex; color: #b45309; }
@@ -447,6 +469,8 @@
   .ab-phone-page .crm-conflict-who { font-size: 0.9375rem; font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
   .ab-phone-page .crm-conflict-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.625rem; }
   .ab-phone-page .crm-conflict-actions > * { width: 100%; min-height: 3rem; padding-left: 0.5rem; padding-right: 0.5rem; font-size: 0.875rem; }
+  .ab-phone-page .crm-conflict-actions--3 { grid-template-columns: 1fr 1fr 1fr; }
+  .ab-phone-page .crm-conflict-actions--1 { grid-template-columns: 1fr; }
 
   .ab-phone-page .crm-candidate-card {
     display: flex;
@@ -469,7 +493,6 @@
   .ab-phone-page .crm-checkbox-row input { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin: 0.0625rem 0 0; accent-color: var(--color-ink); }
   .ab-phone-page .crm-slots { gap: 0.5rem; }
   .ab-phone-page .crm-slot-btn { min-width: 5.75rem; min-height: 2.75rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
-  .ab-phone-page .crm-history-link { min-height: 2.75rem; margin-top: 0; }
 
   .ab-phone-page .modal-content--sheet .modal-body .form-actions.crm-actions {
     position: sticky;

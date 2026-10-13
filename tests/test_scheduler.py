@@ -78,3 +78,51 @@ class TestStopScheduler:
         scheduler.stop_scheduler()
         conn.close.assert_called_once()
         assert scheduler._lock_conn is None
+
+
+class TestAbsenceAutoCancelTick:
+    """Auto-cancel of visits parked by "Zatwierdź mimo to" runs every tick, even with SMS off,
+    and BEFORE the event queue (so the cancellation text follows the actual cancellation)."""
+
+    def _app(self):
+        app = MagicMock()
+        app.app_context.return_value.__enter__ = MagicMock(return_value=None)
+        app.app_context.return_value.__exit__ = MagicMock(return_value=False)
+        return app
+
+    def test_runs_even_when_sms_is_switched_off(self):
+        deferral = MagicMock()
+        deferral.process_due.return_value = {'cancelled': 0, 'resolved': 0, 'failed': 0}
+        settings_repo = MagicMock()
+        settings_repo.get_settings.return_value = {'is_active': False}
+        with patch('services.absence_conflict_deferral_service.AbsenceConflictDeferralService', return_value=deferral), \
+             patch('repositories.sms.sms_repository.SmsSettingsRepository', return_value=settings_repo):
+            scheduler._run_auto_reminders(self._app())
+        deferral.process_due.assert_called_once()
+
+    def test_runs_before_the_sms_event_queue(self):
+        order = []
+        deferral = MagicMock()
+        deferral.process_due.side_effect = lambda: order.append('auto_cancel') or {'cancelled': 1, 'resolved': 0, 'failed': 0}
+        settings_repo = MagicMock()
+        settings_repo.get_settings.return_value = {'is_active': True}
+        sms = MagicMock()
+        sms.send_due_reminders.return_value = {'sent': 0, 'failed': 0, 'skipped': 0}
+        sms.send_due_event_sms.side_effect = lambda _u: order.append('events') or {'sent': 0, 'failed': 0, 'skipped': 0}
+        with patch('services.absence_conflict_deferral_service.AbsenceConflictDeferralService', return_value=deferral), \
+             patch('repositories.sms.sms_repository.SmsSettingsRepository', return_value=settings_repo), \
+             patch('services.sms_service.SmsService', return_value=sms):
+            scheduler._run_auto_reminders(self._app())
+        assert order == ['auto_cancel', 'events']
+
+    def test_a_crashing_auto_cancel_does_not_stop_the_sms_tick(self):
+        settings_repo = MagicMock()
+        settings_repo.get_settings.return_value = {'is_active': True}
+        sms = MagicMock()
+        sms.send_due_reminders.return_value = {'sent': 0, 'failed': 0, 'skipped': 0}
+        sms.send_due_event_sms.return_value = {'sent': 0, 'failed': 0, 'skipped': 0}
+        with patch('services.absence_conflict_deferral_service.AbsenceConflictDeferralService', side_effect=Exception('boom')), \
+             patch('repositories.sms.sms_repository.SmsSettingsRepository', return_value=settings_repo), \
+             patch('services.sms_service.SmsService', return_value=sms):
+            scheduler._run_auto_reminders(self._app())
+        sms.send_due_event_sms.assert_called_once()

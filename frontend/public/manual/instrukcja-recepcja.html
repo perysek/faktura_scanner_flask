@@ -1069,8 +1069,8 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 </div>
 <ul>
 <li>Przycisk <b class="ui">Zatwierdź</b> jest szary, dopóki każda wizyta z listy nie zostanie rozwiązana.</li>
-<li>Czerwony przycisk <b class="ui">Zatwierdź mimo to</b> zatwierdza nieobecność bez rozwiązania konfliktów. Wizyty zostają wtedy w kalendarzu nieobecnego pracownika. Używa się go tylko świadomie.</li>
-<li>Każde rozstrzygnięcie zapisuje się w rejestrze, dostępnym przez link <b class="ui">Historia rozwiązań</b> w oknie.</li>
+<li>Czerwony przycisk <b class="ui">Zatwierdź mimo to</b> zatwierdza nieobecność bez rozwiązania pozostałych konfliktów. Każda nierozwiązana wizyta zostanie automatycznie anulowana 48 h przed terminem, a klient dostanie SMS — chyba że wcześniej zmienisz jej stylistę lub termin. Używa się go tylko świadomie.</li>
+<li>Każde rozstrzygnięcie przenosi wiersz do tabeli <b class="ui">Historia rozwiązań</b> pod listą konfliktów. Ikona <b class="ui">Wyślij wiadomość</b> zaznacza na zielono SMS do klienta; wiadomości wychodzą po kliknięciu <b class="ui">Zatwierdź wniosek i rozwiąż konflikty</b> (lub <b class="ui">Zatwierdź mimo to</b>).</li>
 </ul>
 <aside class="note note-warn"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-warning_amber"/></svg><b>Po rozwiązaniu konfliktów zadzwoń do klientów</b></div><div class="note-b"><p>Przy zmianie pracownika albo terminu aplikacja nie wysyła klientowi własnej wiadomości. SMS dostaje nowy pracownik, a klient tylko wtedy, gdy wizyta jest odwoływana. Klient może więc nie wiedzieć o zmianie, dopóki do niego nie zadzwonisz.</p></div></aside>
 <div class="trouble"><p class="trouble-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-error_outline"/></svg>Gdy coś się nie zgadza w nieobecnościach</p><dl><dt>Nie mogę zatwierdzić albo odrzucić wniosku</dt>
@@ -1265,7 +1265,7 @@ try{var p=window.parent;if(p&&p!==window){new MutationObserver(function(){var v=
 <tr><th scope="row">Etapy Zakończona, Anulowana, Nieobecność</th><td>To ostatnie etapy wizyty. Liczniki klienta rosną na stałe.</td><td>Sprawdź nazwisko i godzinę przed kliknięciem.</td></tr>
 <tr><th scope="row">Aktualizuj preferencje (lista klientów)</th><td>Przelicza i kasuje automatyczne preferencje wszystkich klientów naraz.</td><td>Nie klikaj, jeśli właścicielka o to nie prosiła.</td></tr>
 <tr><th scope="row">Zapisz mimo to (okno duplikatu klienta)</th><td>Powstaje druga karta tej samej osoby.</td><td>Najpierw kliknij Zobacz i sprawdź istniejącego klienta.</td></tr>
-<tr><th scope="row">Zatwierdź mimo to (okno konfliktów nieobecności)</th><td>Nieobecność jest zatwierdzona, a wizyty klientów zostają u nieobecnego pracownika.</td><td>Rozwiąż każdą wizytę z listy.</td></tr>
+<tr><th scope="row">Zatwierdź mimo to (okno konfliktów nieobecności)</th><td>Nieobecność jest zatwierdzona, a nierozwiązane wizyty zostaną automatycznie anulowane 48 h przed terminem (z SMS do klienta).</td><td>Rozwiąż każdą wizytę z listy, zanim minie ten termin.</td></tr>
 </tbody></table></div>
 <aside class="note note-tip"><div class="note-h"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-info"/></svg><b>Gdy zrobisz pomyłkę</b></div><div class="note-b"><p>Powiedz o niej od razu właścicielce i podaj nazwisko klienta, dzień oraz godzinę wizyty. Im szybciej, tym łatwiej to naprawić. Ślad każdej zmiany zostaje w Historii zmian, więc nic nie ginie bez wiedzy właścicielki.</p></div></aside>
 </section>

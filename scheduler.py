@@ -61,8 +61,24 @@ def _acquire_scheduler_lock() -> bool:
         return True
 
 
+def _run_absence_auto_cancel():
+    """Auto-cancel visits left unresolved by "Zatwierdź mimo to" once their `valid_for` has
+    passed. Runs regardless of the SMS switch (a visit must be cancelled even with SMS off) and
+    BEFORE the event queue, so the queued cancellation text follows the actual cancellation."""
+    try:
+        from services.absence_conflict_deferral_service import AbsenceConflictDeferralService
+        result = AbsenceConflictDeferralService().process_due()
+        if any(result.values()):
+            logging.info("Absence auto-cancel: cancelled=%s resolved=%s failed=%s",
+                         result['cancelled'], result['resolved'], result['failed'])
+    except Exception:
+        logging.exception("Absence auto-cancel tick failed")
+
+
 def _run_auto_reminders(app):
     with app.app_context():
+        _run_absence_auto_cancel()
+
         from repositories.sms.sms_repository import SmsSettingsRepository
         settings = SmsSettingsRepository().get_settings() or {}
         if not settings.get('is_active'):

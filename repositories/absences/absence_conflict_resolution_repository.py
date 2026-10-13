@@ -47,6 +47,7 @@ class AbsenceConflictResolutionRepository:
         query = """
             SELECT
                 acr.*,
+                a.appointment_date, a.start_time, a.end_time,
                 c.first_name || ' ' || c.last_name AS client_name,
                 (SELECT s.name FROM appointment_services aps
                  JOIN services s ON s.id = aps.service_id
@@ -62,7 +63,7 @@ class AbsenceConflictResolutionRepository:
             LEFT JOIN employees new_e ON new_e.id = acr.new_employee_id
             LEFT JOIN users u ON u.id = acr.resolved_by_user_id
             WHERE acr.absence_id = %s
-            ORDER BY acr.resolved_at DESC
+            ORDER BY acr.resolved_at DESC, acr.id DESC
         """
         with get_db_connection() as conn:
             cursor = conn.cursor()

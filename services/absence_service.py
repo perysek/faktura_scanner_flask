@@ -34,6 +34,8 @@ def format_appt_conflict(row) -> dict:
         'end_time': str(row['end_time']),
         'client_name': row['client_name'],
         'service_name': row['service_name'],
+        # The modal offers "Anuluj wizytę" only for scheduled/confirmed visits.
+        'status': row.get('appointment_status') if hasattr(row, 'get') else None,
     }
 
 

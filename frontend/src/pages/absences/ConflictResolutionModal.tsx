@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../lib/icons/Icon';
 import { useIsMobile } from '../appointments/MobileWizytyCalendarView';
 import { formatPeriodPhone } from './absenceFormat';
-import type { AppointmentConflict, ConflictResolution } from '../../types/absence';
+import type { AppointmentConflict, ConflictResolution, ResolutionSmsType, ResolutionsResult } from '../../types/absence';
 import type { AvailableSlot, ReassignmentCandidate, SmsAvailability } from '../../types/appointment';
 
 interface Props {
@@ -46,6 +46,19 @@ const RESOLUTION_TYPE_LABEL: Record<string, string> = {
   cancelled: 'Anulowano wizytę',
 };
 
+/** Which client SMS "Wyślij wiadomość" queues for a resolved row. */
+function smsTypeFor(r: ConflictResolution): ResolutionSmsType {
+  return r.resolution_type === 'cancelled' ? 'absence_cancellation' : 'absence_visit_update';
+}
+
+/** Only scheduled/confirmed visits can be cancelled from the conflict table (an older
+ * payload without `status` keeps the button — the server re-validates the transition). */
+function isCancellable(c: AppointmentConflict) {
+  return !c.status || c.status === 'scheduled' || c.status === 'confirmed';
+}
+
+const QUICK_CANCEL_REASON = 'Brak dostępnego zastępstwa — nieobecność pracownika';
+
 function resolutionDetail(r: ConflictResolution) {
   if (r.resolution_type === 'reassigned') return `${r.previous_employee_name ?? '—'} → ${r.new_employee_name ?? '—'}`;
   if (r.resolution_type === 'rescheduled') return `${r.previous_date ?? ''} ${r.previous_start_time ?? ''} → ${r.new_date ?? ''} ${r.new_start_time ?? ''}`;
@@ -78,8 +91,15 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
   const [step, setStep] = useState<Step>('list');
   const [conflicts, setConflicts] = useState<AppointmentConflict[]>(initialConflicts);
   const [activeConflict, setActiveConflict] = useState<AppointmentConflict | null>(null);
-  const [hasHistory, setHasHistory] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  // "Historia rozwiązań" now lives in the main modal, under the conflict table: every
+  // resolution moves a row from the top table to this one.
+  const [resolutions, setResolutions] = useState<ConflictResolution[]>([]);
+  const [resolutionSms, setResolutionSms] = useState<ResolutionsResult['sms'] | null>(null);
+  // "Wyślij wiadomość" marks — staged here, queued server-side only when the absence is approved.
+  const [smsMarked, setSmsMarked] = useState<Set<number>>(() => new Set());
+  // Two-click guard on the table's "Anuluj wizytę" icon: first click arms, second cancels.
+  const [armedCancelId, setArmedCancelId] = useState<number | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [approving, setApproving] = useState<'true' | 'force' | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -105,22 +125,38 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
   // mid-request (legacy's `if (ctx.currentStep !== 'reassign') return;` guard).
   const requestToken = useRef(0);
 
+  async function loadResolutions(id: number) {
+    try {
+      const r = await absencesApi.resolutions(id);
+      if (r.success) {
+        setResolutions(r.resolutions);
+        setResolutionSms(r.sms ?? null);
+      }
+    } catch {
+      /* history is informational — a failed fetch leaves the last known list */
+    }
+  }
+
   useEffect(() => {
     if (!isOpen || absenceId == null) return;
     setStep('list');
     setConflicts(initialConflicts);
     setActiveConflict(null);
-    setHasHistory(false);
-    // Background check — doesn't block the list step, doesn't clobber a step
-    // the user already moved to by the time it resolves.
-    absencesApi
-      .resolutions(absenceId)
-      .then((r) => {
-        if (r.success && r.resolutions.length > 0) setHasHistory(true);
-      })
-      .catch(() => {});
+    setResolutions([]);
+    setResolutionSms(null);
+    setSmsMarked(new Set());
+    setArmedCancelId(null);
+    // Background load — doesn't block the list step.
+    loadResolutions(absenceId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, absenceId]);
+
+  // Disarm the cancel icon if the second click doesn't come within a few seconds.
+  useEffect(() => {
+    if (armedCancelId == null) return;
+    const t = window.setTimeout(() => setArmedCancelId(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [armedCancelId]);
 
   function backToList() {
     requestToken.current++;
@@ -135,13 +171,62 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
     } catch {
       /* keep the stale list rather than crash the modal */
     }
+    await loadResolutions(absenceId!);
     backToList();
+  }
+
+  function toggleSms(appointmentId: number) {
+    setSmsMarked((prev) => {
+      const next = new Set(prev);
+      if (next.has(appointmentId)) next.delete(appointmentId);
+      else next.add(appointmentId);
+      return next;
+    });
+  }
+
+  /** Marks that still point at a visible history row (the server ignores unknown ids anyway —
+   * this just keeps the payload honest). */
+  function markedIds() {
+    const visible = new Set(resolutions.map((r) => r.appointment_id));
+    return [...smsMarked].filter((id) => visible.has(id));
+  }
+
+  async function quickCancel(c: AppointmentConflict) {
+    if (armedCancelId !== c.appointment_id) {
+      setArmedCancelId(c.appointment_id);
+      return;
+    }
+    setArmedCancelId(null);
+    setCancellingId(c.appointment_id);
+    try {
+      const res = await appointmentsApi.cancelForAbsence(c.appointment_id, {
+        absence_id: absenceId!,
+        cancellation_reason: QUICK_CANCEL_REASON,
+        // The client notice is opt-in from the history table ("Wyślij wiadomość").
+        send_sms: false,
+        bulk: false,
+      });
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success('Wizyta anulowana');
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Błąd anulowania wizyty');
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  function smsSummary(queued: number) {
+    return queued > 0 ? ` SMS w kolejce: ${queued}.` : '';
   }
 
   async function handleTrueApprove() {
     setApproving('true');
     try {
-      const result = await absencesApi.approve(absenceId!);
+      const result = await absencesApi.approve(absenceId!, markedIds());
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -152,7 +237,7 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
         setConflicts(result.conflicts ?? []);
         return;
       }
-      toast.success('Wniosek zatwierdzony');
+      toast.success(`Wniosek zatwierdzony.${smsSummary(result.sms_queued?.length ?? 0)}`);
       onApproved();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Błąd zatwierdzania wniosku');
@@ -164,12 +249,20 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
   async function handleForceApprove() {
     setApproving('force');
     try {
-      const result = await absencesApi.forceApprove(absenceId!);
+      const result = await absencesApi.forceApprove(absenceId!, markedIds());
       if (!result.success) {
         toast.error(result.error);
         return;
       }
-      toast.success('Wniosek zatwierdzony mimo konfliktów');
+      if (result.defer_error) {
+        // Approved, but the unresolved visits were NOT parked for auto-cancel — say so loudly.
+        toast.error(`Wniosek zatwierdzony, ale nie zaplanowano auto-anulowania wizyt: ${result.defer_error}`);
+      } else {
+        const n = result.deferred?.length ?? 0;
+        toast.success(
+          `Wniosek zatwierdzony mimo konfliktów.${n > 0 ? ` Nierozwiązane wizyty (${n}) zostaną automatycznie anulowane 48 h przed terminem.` : ''}${smsSummary(result.sms_queued?.length ?? 0)}`,
+        );
+      }
       onApproved();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Błąd zatwierdzania');
@@ -331,7 +424,8 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
               <p style={{ color: 'var(--color-success)', fontSize: '0.8125rem', marginBottom: '1rem' }}>Wszystkie konflikty rozwiązane — możesz zatwierdzić wniosek.</p>
             ) : (
               <p style={{ color: 'var(--color-ink-subtle)', fontSize: '0.8125rem', marginBottom: '1rem' }}>
-                Zatwierdzenie tej nieobecności koliduje z poniższymi wizytami klientów. Zmień stylistę lub termin każdej z nich, albo zatwierdź mimo to.
+                Zatwierdzenie tej nieobecności koliduje z poniższymi wizytami klientów. Zmień stylistę, termin albo anuluj każdą z nich. „Zatwierdź mimo to” zostawia
+                nierozwiązane wizyty do automatycznego anulowania 48 h przed terminem (z SMS do klienta).
               </p>
             )}
             {conflicts.length > 0 && isMobile && (
@@ -343,13 +437,25 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                     </div>
                     <div className="crm-conflict-who">{c.client_name ?? '—'}</div>
                     <div className="ab-card-meta">{c.service_name ?? '—'}</div>
-                    <div className="crm-conflict-actions">
+                    <div className="crm-conflict-actions crm-conflict-actions--3">
                       <Button variant="secondary" icon="person_search" onClick={() => openReassign(c)}>
-                        Zmień stylistę
+                        Stylista
                       </Button>
                       <Button variant="secondary" icon="edit_calendar" onClick={() => openReschedule(c)}>
-                        Zmień termin
+                        Termin
                       </Button>
+                      {isCancellable(c) && (
+                        <Button
+                          variant={armedCancelId === c.appointment_id ? 'danger' : 'secondary'}
+                          icon="event_busy"
+                          disabled={cancellingId !== null}
+                          isLoading={cancellingId === c.appointment_id}
+                          loadingText="…"
+                          onClick={() => quickCancel(c)}
+                        >
+                          {armedCancelId === c.appointment_id ? 'Na pewno?' : 'Anuluj'}
+                        </Button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -357,7 +463,14 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
             )}
             {conflicts.length > 0 && !isMobile && (
               <div className="table-container">
-                <table className="refined-table">
+                <table className="refined-table crm-table">
+                  <colgroup>
+                    <col className="crm-col-date" />
+                    <col className="crm-col-time" />
+                    <col />
+                    <col />
+                    <col className="crm-col-actions" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Data</th>
@@ -374,8 +487,8 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                         <td>
                           {c.start_time.slice(0, 5)} – {c.end_time.slice(0, 5)}
                         </td>
-                        <td>{c.client_name ?? '—'}</td>
-                        <td>{c.service_name ?? '—'}</td>
+                        <td title={c.client_name ?? undefined}>{c.client_name ?? '—'}</td>
+                        <td title={c.service_name ?? undefined}>{c.service_name ?? '—'}</td>
                         <td className="cell-actions">
                           <div className="action-icons">
                             <button type="button" className="action-icon-btn" title="Zmień stylistę" aria-label="Zmień stylistę" onClick={() => openReassign(c)}>
@@ -384,6 +497,18 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                             <button type="button" className="action-icon-btn" title="Zmień termin" aria-label="Zmień termin" onClick={() => openReschedule(c)}>
                               <Icon name="edit_calendar" />
                             </button>
+                            {isCancellable(c) && (
+                              <button
+                                type="button"
+                                className={`action-icon-btn danger crm-cancel-btn${armedCancelId === c.appointment_id ? ' is-armed' : ''}`}
+                                title={armedCancelId === c.appointment_id ? 'Kliknij ponownie, aby anulować wizytę' : 'Anuluj wizytę'}
+                                aria-label={armedCancelId === c.appointment_id ? 'Potwierdź anulowanie wizyty' : 'Anuluj wizytę'}
+                                disabled={cancellingId !== null}
+                                onClick={() => quickCancel(c)}
+                              >
+                                <Icon name="event_busy" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -392,17 +517,114 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
                 </table>
               </div>
             )}
-            {hasHistory && (
-              <button type="button" className="crm-history-link" onClick={() => setHistoryOpen(true)}>
-                Historia rozwiązań →
-              </button>
+
+            {/* Resolved conflicts — every resolution moves its row from the table above into
+                this one, so the combined height stays put. */}
+            <hr className="crm-separator" />
+            <div className="crm-history-head">Historia rozwiązań</div>
+            {resolutions.length === 0 ? (
+              <p className="crm-history-empty">Brak rozwiązanych konfliktów.</p>
+            ) : isMobile ? (
+              <ul className="crm-conflicts">
+                {resolutions.map((r) => {
+                  const sms = resolutionSms?.[smsTypeFor(r)];
+                  const marked = smsMarked.has(r.appointment_id);
+                  return (
+                    <li key={r.id} className="crm-conflict">
+                      <div className="crm-conflict-when">
+                        {formatPeriodPhone({ date_from: r.date, date_to: r.date, time_from: r.start_time, time_to: r.end_time })}
+                      </div>
+                      <div className="crm-conflict-who">{r.client_name ?? '—'}</div>
+                      <div className="ab-card-meta">
+                        {RESOLUTION_TYPE_LABEL[r.resolution_type] ?? r.resolution_type} · {resolutionDetail(r)}
+                      </div>
+                      <div className="crm-conflict-actions crm-conflict-actions--1">
+                        <Button
+                          variant="secondary"
+                          icon={marked ? 'check' : 'send'}
+                          className={`crm-msg-btn${marked ? ' is-marked' : ''}`}
+                          disabled={!sms?.available}
+                          aria-pressed={marked}
+                          title={sms?.available ? undefined : sms?.reason}
+                          onClick={() => toggleSms(r.appointment_id)}
+                        >
+                          {marked ? 'Wiadomość zaplanowana' : 'Wyślij wiadomość'}
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="table-container">
+                <table className="refined-table crm-table">
+                  <colgroup>
+                    <col className="crm-col-date" />
+                    <col className="crm-col-time" />
+                    <col />
+                    <col />
+                    <col />
+                    <col className="crm-col-actions" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Godzina</th>
+                      <th>Klient</th>
+                      <th>Usługa</th>
+                      <th>Rozwiązanie</th>
+                      <th style={{ textAlign: 'right' }}>Akcje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resolutions.map((r) => {
+                      const sms = resolutionSms?.[smsTypeFor(r)];
+                      const marked = smsMarked.has(r.appointment_id);
+                      const detail = `${RESOLUTION_TYPE_LABEL[r.resolution_type] ?? r.resolution_type}: ${resolutionDetail(r)}`;
+                      const meta = [r.resolved_by_name, r.resolved_at].filter(Boolean).join(' · ');
+                      return (
+                        <tr key={r.id}>
+                          <td>{r.date}</td>
+                          <td>
+                            {r.start_time} – {r.end_time}
+                          </td>
+                          <td title={r.client_name ?? undefined}>{r.client_name ?? '—'}</td>
+                          <td title={r.service_name ?? undefined}>{r.service_name ?? '—'}</td>
+                          <td title={meta ? `${detail}\n${meta}` : detail}>{detail}</td>
+                          <td className="cell-actions">
+                            <div className="action-icons">
+                              <button
+                                type="button"
+                                className={`action-icon-btn crm-msg-btn${marked ? ' is-marked' : ''}`}
+                                title={!sms?.available ? sms?.reason || 'SMS niedostępny' : marked ? 'Wiadomość zaplanowana — kliknij, aby cofnąć' : 'Wyślij wiadomość'}
+                                aria-label="Wyślij wiadomość"
+                                aria-pressed={marked}
+                                disabled={!sms?.available}
+                                onClick={() => toggleSms(r.appointment_id)}
+                              >
+                                <Icon name="send" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
+            {smsMarked.size > 0 && (
+              <p className="crm-sms-note" role="status">
+                Zaznaczone wiadomości ({smsMarked.size}) trafią do kolejki SMS po zatwierdzeniu wniosku.
+              </p>
+            )}
+
             <div className={`form-actions crm-actions${conflicts.length === 0 ? ' crm-actions--resolved' : ''}`}>
               <Button variant="primary" className="crm-act-approve" disabled={conflicts.length > 0 || approving !== null} isLoading={approving === 'true'} loadingText="Zatwierdzanie…" onClick={handleTrueApprove}>
-                Zatwierdź
+                Zatwierdź wniosek i rozwiąż konflikty
               </Button>
               {/* "Mimo to" only means something while conflicts remain: with none left
-                  the plain Zatwierdź is the one honest way to approve. */}
+                  the primary button is the one honest way to approve. */}
               {conflicts.length > 0 && (
                 <Button variant="danger" className="crm-act-force" disabled={approving !== null} isLoading={approving === 'force'} loadingText="Zatwierdzanie…" onClick={handleForceApprove}>
                   Zatwierdź mimo to
@@ -577,79 +799,6 @@ export function ConflictResolutionModal({ isOpen, absenceId, employeeId, initial
         )}
       </Modal>
 
-      <ResolutionHistoryModal isOpen={historyOpen} absenceId={absenceId} onClose={() => setHistoryOpen(false)} />
     </>
-  );
-}
-
-/** Read-only leaf view (its own Modal, not a step) — ported from
- * `static/js/absences.js`'s `showResolutionHistory()`. */
-function ResolutionHistoryModal({ isOpen, absenceId, onClose }: { isOpen: boolean; absenceId: number; onClose: () => void }) {
-  const isMobile = useIsMobile(640);
-  const [resolutions, setResolutions] = useState<ConflictResolution[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setLoading(true);
-    absencesApi
-      .resolutions(absenceId)
-      .then((r) => setResolutions(r.resolutions))
-      .catch(() => setResolutions([]))
-      .finally(() => setLoading(false));
-  }, [isOpen, absenceId]);
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Historia rozwiązań" size="large" variant="sheet">
-      {loading ? (
-        <p className="empty-text">Ładowanie…</p>
-      ) : resolutions.length === 0 ? (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-ink-subtle)' }}>Brak zapisanej historii.</p>
-      ) : isMobile ? (
-        <ul className="crm-conflicts">
-          {resolutions.map((r) => (
-            <li key={r.id} className="crm-conflict">
-              <div className="crm-conflict-who">
-                {r.client_name ?? '—'} · {r.service_name ?? '—'}
-              </div>
-              <div className="crm-conflict-when">{RESOLUTION_TYPE_LABEL[r.resolution_type] ?? r.resolution_type}</div>
-              <div className="ab-card-meta">{resolutionDetail(r)}</div>
-              <div className="ab-card-meta">
-                {r.resolved_by_name ?? '—'}
-                {r.resolved_at ? ` · ${r.resolved_at}` : ''}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="table-container">
-          <table className="refined-table">
-            <tbody>
-              {resolutions.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    {r.client_name ?? '—'} — {r.service_name ?? '—'}
-                  </td>
-                  <td>{RESOLUTION_TYPE_LABEL[r.resolution_type] ?? r.resolution_type}</td>
-                  <td>{resolutionDetail(r)}</td>
-                  <td style={{ fontSize: '0.75rem', color: 'var(--color-ink-subtle)' }}>
-                    {r.resolved_by_name ?? '—'}
-                    <br />
-                    {r.resolved_at ?? ''}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <div className="form-actions">
-        <Button variant="secondary" onClick={onClose}>
-          Zamknij
-        </Button>
-      </div>
-    </Modal>
   );
 }

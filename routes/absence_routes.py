@@ -147,6 +147,23 @@ def _send_absence_cancellation_sms(appointment_id: int) -> dict:
         return {'status': 'failed', 'error': str(exc)}
 
 
+def _queue_marked_sms(absence_id: int) -> list:
+    """Queue the client SMS the supervisor marked with "Wyślij wiadomość" in the modal's
+    "Historia rozwiązań" table (request JSON `sms_appointment_ids`). Called only once the
+    absence is approved. Never raises — the approval already happened."""
+    data = request.get_json(silent=True) or {}
+    ids = data.get('sms_appointment_ids') or []
+    if not isinstance(ids, list) or not ids:
+        return []
+    try:
+        from services.absence_conflict_deferral_service import AbsenceConflictDeferralService
+        return AbsenceConflictDeferralService().queue_resolution_sms(
+            absence_id, [int(i) for i in ids if str(i).isdigit()])
+    except Exception:
+        logger.exception('_queue_marked_sms failed absence=%s', absence_id)
+        return []
+
+
 # ── employee self-service ─────────────────────────────────────────────────────
 
 @absence_bp.route('/my-absences')
@@ -412,6 +429,8 @@ def approve_request(absence_id: int):
         return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
     try:
         result = _svc().approve(absence_id, emp_id)
+        if result.get('status') == 'approved':
+            result['sms_queued'] = _queue_marked_sms(absence_id)
         return jsonify({'success': True, **result})
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -425,10 +444,29 @@ def force_approve(absence_id: int):
     if emp_id is None and current_user.role not in ('superuser', 'admin'):
         return jsonify({'success': False, 'error': 'Brak przypisanego pracownika'}), 403
     try:
-        _svc().force_approve(absence_id, emp_id)
-        return jsonify({'success': True, 'status': 'approved'})
+        svc = _svc()
+        # Read what is still unresolved BEFORE the status flips — live conflicts exist only
+        # for a pending request.
+        unresolved = svc.get_live_conflicts(absence_id)
+        absence = svc.absence_repo.get_by_id(absence_id)
+        svc.force_approve(absence_id, emp_id)
     except (AbsenceError, AppError) as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+
+    # The absence IS approved from here on — a failure below must not read as "not approved".
+    deferred, defer_error = [], ''
+    try:
+        from services.absence_conflict_deferral_service import AbsenceConflictDeferralService
+        deferred = AbsenceConflictDeferralService().defer_unresolved(
+            absence_id, absence['employee_id'] if absence else None, unresolved, current_user.id)
+    except Exception as exc:
+        logger.exception('force_approve: deferring unresolved conflicts failed absence=%s', absence_id)
+        defer_error = str(exc)
+    return jsonify({
+        'success': True, 'status': 'approved',
+        'deferred': deferred, 'defer_error': defer_error,
+        'sms_queued': _queue_marked_sms(absence_id),
+    })
 
 
 @absence_bp.route('/absences/<int:absence_id>/reject', methods=['POST'])
@@ -508,8 +546,23 @@ def resolution_history(absence_id: int):
             'cancellation_reason': r['cancellation_reason'],
             'resolved_by_name': r['resolved_by_name'],
             'resolved_at': r['resolved_at'].strftime('%d.%m.%Y %H:%M') if r['resolved_at'] else None,
+            'appointment_id': r['appointment_id'],
+            # The visit's slot as it collided with the absence (cancel keeps it; reassign
+            # keeps it; reschedule stores it as previous_*) — the history table's Data/Godzina.
+            'date': str(r['previous_date'] or r['appointment_date']),
+            'start_time': str(r['previous_start_time'] or r['start_time'])[:5],
+            'end_time': str(r['previous_end_time'] or r['end_time'])[:5],
         })
-    return jsonify({'success': True, 'resolutions': resolutions})
+    # "Wyślij wiadomość" is only offered when that client SMS can actually go out (P2-7).
+    try:
+        from services.sms_service import SmsService
+        sms_svc = SmsService()
+        sms = {key: sms_svc.type_status(key) for key in ('absence_cancellation', 'absence_visit_update')}
+    except Exception:
+        logger.exception('resolution_history: type_status failed')
+        unavailable = {'available': False, 'reason': 'Nie udało się sprawdzić ustawień SMS.'}
+        sms = {'absence_cancellation': unavailable, 'absence_visit_update': unavailable}
+    return jsonify({'success': True, 'resolutions': resolutions, 'sms': sms})
 
 
 @absence_bp.route('/absences/manual', methods=['POST'])

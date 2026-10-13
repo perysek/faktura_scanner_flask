@@ -38,9 +38,13 @@ class TestSmsHardeningMigration:
     def test_sits_directly_on_the_visit_notes_revision(self):
         assert _rev().down_revision == _PREVIOUS
 
-    def test_is_the_current_head(self):
+    def test_is_on_the_line_to_the_current_head(self):
+        # Later revisions stack on top of it (e.g. f3c7a1d9e2b4, absence_conflict_pending);
+        # what matters is that the single head still descends from it.
         script = ScriptDirectory.from_config(Config(str(_ROOT / 'alembic.ini')))
-        assert script.get_heads() == [_REVISION]
+        heads = script.get_heads()
+        assert len(heads) == 1
+        assert _REVISION in {r.revision for r in script.walk_revisions('base', heads[0])}
 
     def test_upgrade_is_additive_only(self):
         up = _upgrade()

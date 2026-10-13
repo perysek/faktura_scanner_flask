@@ -61,6 +61,8 @@ export interface AppointmentConflict {
   end_time: string;
   client_name: string | null;
   service_name: string | null;
+  /** Visit status — the modal offers "Anuluj wizytę" only for scheduled/confirmed. */
+  status?: string | null;
 }
 
 export interface ApproveResult {
@@ -122,4 +124,27 @@ export interface ConflictResolution {
   /** Pre-formatted `dd.mm.YYYY HH:MM` — the backend formats this server-side,
    * not an ISO string to parse client-side. */
   resolved_at: string | null;
+  appointment_id: number;
+  /** The slot as it collided with the absence (YYYY-MM-DD / HH:MM) — history-table Data/Godzina. */
+  date: string;
+  start_time: string;
+  end_time: string;
+}
+
+/** SMS type each resolution would send via "Wyślij wiadomość". */
+export type ResolutionSmsType = 'absence_cancellation' | 'absence_visit_update';
+
+export interface ResolutionsResult {
+  success: true;
+  resolutions: ConflictResolution[];
+  sms: Record<ResolutionSmsType, { available: boolean; reason: string }>;
+}
+
+/** What approve / force-approve did beyond flipping the status. */
+export interface ApproveExtras {
+  /** "Wyślij wiadomość" marks that went into the scheduler's SMS queue. */
+  sms_queued?: Array<{ appointment_id: number; event_type: string; event_id: number }>;
+  /** Force-approve only: unresolved visits parked for auto-cancel at `valid_for`. */
+  deferred?: Array<{ appointment_id: number; valid_for: string }>;
+  defer_error?: string;
 }

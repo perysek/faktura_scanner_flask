@@ -3,11 +3,12 @@ import type {
   AbsenceCategory,
   AbsenceRecord,
   AbsenceSupervisor,
+  ApproveExtras,
   ApproveResult,
   BalanceCheckResult,
   BalanceSummaryEntry,
-  ConflictResolution,
   LiveConflictsResult,
+  ResolutionsResult,
 } from '../../types/absence';
 
 export interface SubmitAbsencePayload {
@@ -63,9 +64,14 @@ export const absencesApi = {
       '/api/absences/management',
     ),
 
-  approve: (id: number) => api.post<{ success: true } & ApproveResult | { success: false; error: string }>(`/absences/${id}/approve`),
+  /** `smsAppointmentIds` — visits marked "Wyślij wiadomość" in the conflict modal; queued only
+   * once the absence is actually approved. */
+  approve: (id: number, smsAppointmentIds: number[] = []) =>
+    api.post<({ success: true } & ApproveResult & ApproveExtras) | { success: false; error: string }>(`/absences/${id}/approve`, { sms_appointment_ids: smsAppointmentIds }),
 
-  forceApprove: (id: number) => api.post<{ success: true; status: string } | { success: false; error: string }>(`/absences/${id}/approve/force`),
+  /** Unresolved conflicts are parked server-side for auto-cancel 48 h before each visit. */
+  forceApprove: (id: number, smsAppointmentIds: number[] = []) =>
+    api.post<({ success: true; status: string } & ApproveExtras) | { success: false; error: string }>(`/absences/${id}/approve/force`, { sms_appointment_ids: smsAppointmentIds }),
 
   reject: (id: number, reason: string) => api.post<{ success: true; status: string } | { success: false; error: string }>(`/absences/${id}/reject`, { rejection_reason: reason }),
 
@@ -97,7 +103,7 @@ export const absencesApi = {
    * separate client-side "resolved" bookkeeping. */
   conflicts: (absenceId: number) => api.get<LiveConflictsResult | { success: false; error: string }>(`/absences/${absenceId}/conflicts`),
 
-  resolutions: (absenceId: number) => api.get<{ success: true; resolutions: ConflictResolution[] }>(`/absences/${absenceId}/resolutions`),
+  resolutions: (absenceId: number) => api.get<ResolutionsResult>(`/absences/${absenceId}/resolutions`),
 
   /** GET /api/absence-balances/summary — {employee_id: BalanceSummaryEntry}.
    * Powers the inline balance-hint next to employee names (Wnioski +

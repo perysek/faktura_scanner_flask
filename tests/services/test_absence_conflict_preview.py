@@ -43,6 +43,7 @@ class TestPreviewConflicts:
                 'appointment_id': 42, 'date': '2026-07-20',
                 'start_time': '10:00:00', 'end_time': '11:00:00',
                 'client_name': 'Anna Nowak', 'service_name': 'Manicure',
+                'status': None,   # row carried no appointment_status
             }]
             svc.absence_repo.get_overlapping_appointments.assert_called_once_with(
                 5, date(2026, 7, 20), date(2026, 7, 20), time(9, 0), time(12, 0)
