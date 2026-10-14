@@ -21,12 +21,32 @@ const ROLE_LABELS: Record<string, string> = {
 export interface SidebarProps {
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  /** Opens the support-ticket pop-out (nav rows with `opens: 'support'`). */
+  onOpenSupport: () => void;
 }
 
 /** One nav row — shared by the accordion sections and the top-level links so
  * the two can never drift apart in markup or active-state classes. */
-function SidebarNavLink({ link }: { link: NavLinkConfig }) {
+function SidebarNavLink({ link, onOpen }: { link: NavLinkConfig; onOpen?: () => void }) {
   const { pathname } = useLocation();
+  const text = link.sublabel ? (
+    <span className="sidebar-link-stack">
+      <span>{link.label}</span>
+      <span className="sidebar-link-sublabel">{link.sublabel}</span>
+    </span>
+  ) : (
+    link.label
+  );
+  if (link.opens) {
+    // Overlay rows: same look as a link, but a <button> — nothing to navigate to.
+    return (
+      <button type="button" className="sidebar-link sidebar-link--default sidebar-link--button" aria-haspopup="dialog" onClick={onOpen}>
+        {!link.iconAfter && <NavIcon path={link.iconPath} />}
+        {text}
+        {link.iconAfter && <NavIcon path={link.iconPath} />}
+      </button>
+    );
+  }
   if (link.variant === 'cta') {
     // On the page it opens, the CTA dissolves away (0.3s, space kept so nothing
     // below jumps) and materialises back as soon as you leave it.
@@ -53,14 +73,7 @@ function SidebarNavLink({ link }: { link: NavLinkConfig }) {
       }
     >
       {!link.iconAfter && <NavIcon path={link.iconPath} />}
-      {link.sublabel ? (
-        <span className="sidebar-link-stack">
-          <span>{link.label}</span>
-          <span className="sidebar-link-sublabel">{link.sublabel}</span>
-        </span>
-      ) : (
-        link.label
-      )}
+      {text}
       {link.iconAfter && <NavIcon path={link.iconPath} />}
     </NavLink>
   );
@@ -70,7 +83,7 @@ function SidebarNavLink({ link }: { link: NavLinkConfig }) {
  * App-shell sidebar — DESIGN.md §13. Data-driven from `navConfig.ts`;
  * NEVER hardcode a link here (§13.5).
  */
-export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ isMobileOpen, onCloseMobile, onOpenSupport }: SidebarProps) {
   const auth = useAuth();
   const location = useLocation();
   const asideRef = useRef<HTMLElement>(null);
@@ -176,7 +189,14 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
           {visibleStandaloneLinks.length > 0 && (
             <div className="sidebar-nav-standalone">
               {visibleStandaloneLinks.map((link) => (
-                <SidebarNavLink key={link.to} link={link} />
+                <SidebarNavLink
+                  key={link.to}
+                  link={link}
+                  onOpen={() => {
+                    onCloseMobile();
+                    onOpenSupport();
+                  }}
+                />
               ))}
             </div>
           )}

@@ -1,8 +1,8 @@
 # Wiadomości do administratora serwisu — proposal
 
-**Status:** Proposal, not started. The sidebar row and the `/wiadomosci` route with a placeholder page are live in code (2026-10-13). Everything below is design only.
+**Status:** Frontend-only pop-out form live on staging (2026-10-14): the sidebar row opens `SupportTicketModal` (Zgłoś problem / Podziel się pomysłem, Czego dotyczy, message, up to 3 screenshots) anchored to <main>'s bottom-left corner. The `/wiadomosci` placeholder page and route were removed. Sending only shows the confirmation; no API, inbox or conversation view yet. Everything else below is design only.
 
-**Entry point:** sidebar standalone row *Klikam w to co trzeba / ale coś mi nie pasuje* → `/wiadomosci` (`SupportMessagesPage.tsx`).
+**Entry point:** sidebar standalone row *Klikam w to co trzeba / ale coś mi nie pasuje* → pop-out `SupportTicketModal.tsx` (no route).
 
 ---
 

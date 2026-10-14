@@ -4,6 +4,7 @@ import { pageTitleFor } from '../../config/pageTitles';
 import { Icon } from '../../lib/icons/Icon';
 import { Sidebar } from './Sidebar';
 import { BottomTabBar, showsTabBar } from './BottomTabBar';
+import { SupportTicketModal } from '../support/SupportTicketModal';
 
 /**
  * App shell — DESIGN.md §12. Fixed-height viewport frame (`.app-shell`);
@@ -16,6 +17,7 @@ export function AppShell() {
   // `isMobileOpen`: below that width the sidebar is the off-canvas drawer and
   // the CSS for `.app-shell--sidebar-hidden` is not applied at all.
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const isFirstMount = useRef(true);
 
@@ -49,7 +51,7 @@ export function AppShell() {
 
   return (
     <div className={`app-shell${tabBar ? ' app-shell--tabbar' : ''}${isSidebarHidden ? ' app-shell--sidebar-hidden' : ''}`}>
-      <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} />
+      <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} onOpenSupport={() => setIsSupportOpen(true)} />
       <div className="app-shell-main">
         <header className="app-shell-header">
           <button
@@ -100,6 +102,7 @@ export function AppShell() {
           &copy; {new Date().getFullYear()} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.
         </footer>
       </div>
+      {isSupportOpen && <SupportTicketModal onClose={() => setIsSupportOpen(false)} />}
     </div>
   );
 }
