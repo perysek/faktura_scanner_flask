@@ -46,6 +46,7 @@ import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
 import { AnalyticsDashboardPage } from './pages/analytics/AnalyticsDashboardPage';
 import { DataImportPage } from './pages/dataImport/DataImportPage';
 import { HistoryPage } from './pages/history/HistoryPage';
+import { SupportMessagesPage } from './pages/support/SupportMessagesPage';
 import { hasFullEmployeesGrant } from './components/layout/navConfig';
 
 /**
@@ -92,6 +93,9 @@ export const router = createBrowserRouter([
             element: <ManualPage src="/manual/instrukcja-smartfon.html" title="Instrukcja obsługi (smartfon)" other={{ to: '/instrukcja', label: '🖥 Wersja na komputer' }} />,
           },
           { path: 'profil', element: <ProfilePage /> },
+          // Wiadomości do administratora serwisu — any authenticated user can write in
+          // (plans/261013-support-tickets/plan.md). Placeholder page for now.
+          { path: 'wiadomosci', element: <SupportMessagesPage /> },
 
           // requireModule="invoices" — includes historia/ustawienia/email,
           // which the sidebar mis-labels 'reports'/'settings' (D14 pts 1-2).

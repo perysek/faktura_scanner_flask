@@ -38,6 +38,7 @@ export const PAGE_TITLE_ENTRIES: Array<[string, string]> = [
   ['/instrukcja-smartfon', 'Instrukcja (smartfon)'],
   ['/instrukcja', 'Instrukcja obsługi'],
   ['/profil', 'Profil'],
+  ['/wiadomosci', 'Wiadomości'],
 ];
 
 export function pageTitleFor(pathname: string): string {

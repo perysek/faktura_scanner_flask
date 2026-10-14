@@ -53,7 +53,14 @@ function SidebarNavLink({ link }: { link: NavLinkConfig }) {
       }
     >
       {!link.iconAfter && <NavIcon path={link.iconPath} />}
-      {link.label}
+      {link.sublabel ? (
+        <span className="sidebar-link-stack">
+          <span>{link.label}</span>
+          <span className="sidebar-link-sublabel">{link.sublabel}</span>
+        </span>
+      ) : (
+        link.label
+      )}
       {link.iconAfter && <NavIcon path={link.iconPath} />}
     </NavLink>
   );

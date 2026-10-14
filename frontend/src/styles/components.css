@@ -1515,8 +1515,14 @@ table.stack-cards td.cell-hide-lg { display: none; }
    padding, so it stops 1rem short of the sidebar edges instead of running edge to edge. */
 .sidebar-nav-standalone { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--sidebar-border); }
 /* Standalone rows start their text at the section headers' 0.5rem inset (not the 0.75rem of a
-   section's own links), so 'W co mam kliknąć?' lines up with FINANSE / SALON / ... above it. */
+   section's own links), so 'W co mam kliknąć' lines up with FINANSE / SALON / ... above it. */
 .sidebar-nav-standalone .sidebar-link { padding-left: 0.5rem; }
+/* Two-line label ('Klikam w to co trzeba' / 'ale coś mi nie pasuje'): line 1 keeps the row's own
+   type, line 2 is 60% of it. line-height 1.1 + no gap is the tightest the descenders of line 1
+   allow without touching line 2's ascenders. Both lines end flush at the box's right edge, and the
+   trailing icon sits right after that edge (same spot as the '?' glyph on the row above). */
+.sidebar-link-stack { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.sidebar-link-sublabel { font-size: 0.6em; }
 /* "+ Dodaj wizytę": the stock .refined-btn-primary (same as "Dodaj klienta" on Klienci), only
    stretched to the nav's full width. */
 .sidebar-nav-standalone .sidebar-cta { display: flex; width: 100%; margin-top: 0.5rem; }
