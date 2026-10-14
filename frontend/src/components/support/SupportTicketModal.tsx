@@ -17,25 +17,47 @@ import { SelectField, TextareaField } from '../ui/form';
 
 type TicketKind = 'problem' | 'idea';
 
-const KIND_COPY: Record<TicketKind, { emoji: string; title: string; lead: string; placeholder: string }> = {
+const KIND_COPY: Record<TicketKind, { title: string; lead: string; placeholder: string }> = {
   problem: {
-    emoji: '🚨',
     title: 'Zgłoś problem',
     lead: 'Coś nie działa? Błędy, dziwne zachowanie albo kłopot z ustawieniami: napisz tutaj.',
     placeholder:
       'Opisz, co klikasz i co się dzieje, np. „Dodaję wizytę na 15:00, klikam Zapisz i nic się nie dzieje”. Zdjęcie ekranu możesz dołączyć poniżej.',
   },
   idea: {
-    emoji: '💡',
     title: 'Podziel się pomysłem',
     lead: 'Masz pomysł, co by Ci ułatwiło pracę? Każdy pomysł czytamy.',
     placeholder: 'Napisz, co by Ci ułatwiło pracę i jak to sobie wyobrażasz.',
   },
 };
 
-/** Area options, named after the app's own sidebar sections. `prefixes` pre-selects
- * the area from the page the form was opened on (plan §3 step 2). */
-const AREAS: Array<{ value: string; label: string; prefixes: string[] }> = [
+interface AreaOption {
+  value: string;
+  label: string;
+  /** Routes that pre-select this area when the form is opened on them (plan §3 step 2).
+   * First match in list order wins, so '/wizyty/nowa' must sit above '/wizyty'. */
+  prefixes: string[];
+}
+
+/** 'Zgłoś problem' areas — Piotr's list (2026-10-14). No catch-all on purpose: when the
+ * current page maps to none of them, the user has to pick one. */
+const PROBLEM_AREAS: AreaOption[] = [
+  { value: 'sms', label: 'Wysyłki SMS', prefixes: ['/ustawienia/sms'] },
+  { value: 'rezerwacje', label: 'Rezerwacje wizyt', prefixes: ['/wizyty/nowa'] },
+  { value: 'obsluga-wizyt', label: 'Obsługa wizyt', prefixes: ['/wizyty', '/korekta'] },
+  { value: 'formularze', label: 'Formularze online klienta', prefixes: [] },
+  { value: 'nieobecnosci', label: 'Nieobecności', prefixes: ['/nieobecnosci', '/bilanse-urlopow', '/moje-nieobecnosci'] },
+  { value: 'faktury', label: 'Faktury', prefixes: ['/faktury', '/sprzedawcy'] },
+  { value: 'przychody', label: 'Przychody', prefixes: ['/dashboard', '/analiza-biznesowa', '/wskazniki-biznesowe'] },
+  { value: 'kalendarz', label: 'Kalendarz i konflikty', prefixes: [] },
+  { value: 'personel', label: 'Zarządzanie personelem', prefixes: ['/pracownicy', '/formy-zatrudnienia'] },
+  { value: 'wynagrodzenia', label: 'Wynagrodzenia', prefixes: [] },
+  { value: 'uzytkownicy', label: 'Użytkownicy i poziomy dostępu', prefixes: ['/uzytkownicy', '/poziomy-dostepu', '/profil'] },
+  { value: 'konfiguracja', label: 'Konfiguracja i ustawienia', prefixes: ['/ustawienia', '/uslugi', '/kategorie-uslug', '/historia'] },
+];
+
+/** 'Podziel się pomysłem' areas, named after the app's own sidebar sections. */
+const IDEA_AREAS: AreaOption[] = [
   { value: 'wizyty', label: 'Wizyty', prefixes: ['/wizyty', '/korekta'] },
   { value: 'klienci', label: 'Klienci', prefixes: ['/klienci'] },
   { value: 'uslugi', label: 'Usługi i kategorie', prefixes: ['/uslugi', '/kategorie-uslug'] },
@@ -48,9 +70,12 @@ const AREAS: Array<{ value: string; label: string; prefixes: string[] }> = [
   { value: 'inne', label: 'Inne / nie wiem', prefixes: [] },
 ];
 
-function areaForPath(pathname: string): string {
-  const match = AREAS.find((area) => area.prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
-  return match?.value ?? 'inne';
+const AREAS_BY_KIND: Record<TicketKind, AreaOption[]> = { problem: PROBLEM_AREAS, idea: IDEA_AREAS };
+
+/** Pre-selected area for this page; '' (= "Wybierz…") for a problem with no match, 'inne' for an idea. */
+function areaForPath(kind: TicketKind, pathname: string): string {
+  const match = AREAS_BY_KIND[kind].find((area) => area.prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
+  return match?.value ?? (kind === 'idea' ? 'inne' : '');
 }
 
 const MAX_PHOTOS = 3;
@@ -71,7 +96,8 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
   const closingRef = useRef(false);
 
   const [kind, setKind] = useState<TicketKind>('problem');
-  const [area, setArea] = useState(() => areaForPath(pathname));
+  const [area, setArea] = useState(() => areaForPath('problem', pathname));
+  const [areaError, setAreaError] = useState<string | undefined>();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const [error, setError] = useState<string | undefined>();
@@ -149,6 +175,11 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (!area) {
+      setAreaError('Wybierz, czego dotyczy zgłoszenie');
+      panelRef.current?.querySelector('select')?.focus();
+      return;
+    }
     if (text.trim().length < MIN_TEXT && photos.length === 0) {
       setError('Napisz chociaż jedno zdanie albo dodaj zdjęcie ekranu 🙂');
       panelRef.current?.querySelector('textarea')?.focus();
@@ -184,8 +215,7 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
       >
         <div className="ticket-head">
           <h2 id="ticket-title" className="ticket-title">
-            <span className="ticket-emoji" aria-hidden="true">{sent ? '🙌' : copy.emoji}</span>
-            {sent ? 'Dostaliśmy!' : copy.title}
+            {sent ? 'Dostaliśmy! 🙌' : copy.title}
           </h2>
           <button type="button" className="modal-close" onClick={close} aria-label="Zamknij">
             <Icon name="close" size="1.125rem" />
@@ -226,7 +256,13 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
                   role="radio"
                   aria-checked={kind === k}
                   className={`ticket-tab${kind === k ? ' ticket-tab--active' : ''}`}
-                  onClick={() => setKind(k)}
+                  onClick={() => {
+                    if (k === kind) return;
+                    // Each kind has its own area list: re-pick from the current page.
+                    setKind(k);
+                    setArea(areaForPath(k, pathname));
+                    setAreaError(undefined);
+                  }}
                 >
                   {KIND_COPY[k].title}
                 </button>
@@ -237,8 +273,13 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
               <SelectField
                 label="Czego dotyczy"
                 value={area}
-                onChange={(event) => setArea(event.target.value)}
-                options={AREAS.map(({ value, label }) => ({ value, label }))}
+                onChange={(event) => {
+                  setArea(event.target.value);
+                  setAreaError(undefined);
+                }}
+                options={AREAS_BY_KIND[kind].map(({ value, label }) => ({ value, label }))}
+                placeholder={kind === 'problem' ? 'Wybierz…' : undefined}
+                error={areaError}
               />
             </div>
 
@@ -296,8 +337,8 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
               >
                 <Icon name="attach_file" size="1.375rem" />
               </button>
-              <Button type="submit" variant="primary">
-                Wyślij wiadomość
+              <Button type="submit" variant="primary" icon="forward_to_inbox">
+                Wyślij zgłoszenie
               </Button>
             </div>
           </form>
