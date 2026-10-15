@@ -14,12 +14,7 @@ export function hasFullEmployeesGrant(ctx: NavVisibilityCtx): boolean {
 
 export interface NavLinkConfig {
   label: string;
-  /** Optional second line under `label`, set at 60% of its size
-   * (`.sidebar-link-sublabel`). Turns the text into a right-aligned 2-line box. */
-  sublabel?: string;
   to: string;
-  /** Row opens an overlay instead of navigating — `to` is then only the React key. */
-  opens?: 'support';
   /** 24×24 stroke path(s) — DESIGN.md §9's NavIcon system. */
   iconPath: string | string[];
   /** Density trim for the flattened mobile list — NEVER for access control
@@ -317,19 +312,6 @@ export const NAV_STANDALONE_LINKS: NavLinkConfig[] = [
     // Question-mark-in-circle glyph, drawn after the label.
     iconPath:
       'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    iconAfter: true,
-    visible: () => true,
-  },
-  {
-    label: 'Klikam w to co trzeba',
-    sublabel: 'ale coś mi nie pasuje',
-    to: 'support-ticket',
-    opens: 'support',
-    // Opens the ticket pop-out (SupportTicketModal) — bug reports and ideas for the
-    // service administrator, plans/261013-support-tickets/plan.md. Every logged-in user
-    // can write in, so no gate.
-    // Arrow-left glyph, drawn after the 2-line text box.
-    iconPath: 'M10 19l-7-7m0 0l7-7m-7 7h18',
     iconAfter: true,
     visible: () => true,
   },

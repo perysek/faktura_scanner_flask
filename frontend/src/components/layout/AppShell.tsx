@@ -4,6 +4,7 @@ import { pageTitleFor } from '../../config/pageTitles';
 import { Icon } from '../../lib/icons/Icon';
 import { Sidebar } from './Sidebar';
 import { BottomTabBar, showsTabBar } from './BottomTabBar';
+import { SupportFab } from '../support/SupportFab';
 import { SupportTicketModal } from '../support/SupportTicketModal';
 
 /**
@@ -51,7 +52,7 @@ export function AppShell() {
 
   return (
     <div className={`app-shell${tabBar ? ' app-shell--tabbar' : ''}${isSidebarHidden ? ' app-shell--sidebar-hidden' : ''}`}>
-      <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} onOpenSupport={() => setIsSupportOpen(true)} />
+      <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} />
       <div className="app-shell-main">
         <header className="app-shell-header">
           <button
@@ -102,6 +103,7 @@ export function AppShell() {
           &copy; {new Date().getFullYear()} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.
         </footer>
       </div>
+      <SupportFab hidden={isSupportOpen} onOpen={() => setIsSupportOpen(true)} />
       {isSupportOpen && <SupportTicketModal onClose={() => setIsSupportOpen(false)} />}
     </div>
   );

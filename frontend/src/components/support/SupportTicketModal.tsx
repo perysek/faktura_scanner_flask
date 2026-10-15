@@ -6,11 +6,12 @@ import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
 import { Icon } from '../../lib/icons/Icon';
 import { Button } from '../ui/Button';
 import { TextareaField } from '../ui/form';
+import { supportCorner } from './supportCorner';
 
 /**
- * "Napisz do administratora" — the ticket form opened by the sidebar row
- * 'Klikam w to co trzeba / ale coś mi nie pasuje'. Pops out of the bottom-left
- * corner of <main> (1×1px → 30vw × 60vh). FRONTEND ONLY for now: sending shows
+ * "Napisz do administratora" — the ticket form opened by the phone FAB
+ * (SupportFab). Pops out of the FAB's spot, the bottom-left corner of <main>
+ * (1×1px → 30vw × 60vh). FRONTEND ONLY for now: sending shows
  * the confirmation but nothing reaches the server yet — the API, inbox and
  * conversation view are designed in plans/261013-support-tickets/plan.md.
  *
@@ -92,8 +93,6 @@ const MIN_TEXT = 10;
 const MIN_SHOT_PX = 12;
 const POP_IN_MS = 420;
 const POP_OUT_MS = 220;
-/** Gap between the panel and <main>'s bottom-left corner. */
-const ANCHOR_GAP_PX = 16;
 
 /** A marked piece of the page, attached to the ticket as a PNG. */
 interface Shot {
@@ -264,17 +263,11 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
   shotsRef.current = shots;
   useEffect(() => () => shotsRef.current.forEach((shot) => URL.revokeObjectURL(shot.url)), []);
 
-  // Anchor to <main>'s bottom-left corner, measured once at open — the sidebar,
-  // footer and mobile tab bar all sit outside <main>, so this clears every one of them.
+  // Anchor to <main>'s bottom-left corner (the FAB's spot), measured once at open — the
+  // sidebar, footer and mobile tab bar all sit outside <main>, so this clears every one of them.
   const [anchor] = useState<CSSProperties>(() => {
-    const main = document.getElementById('main-content');
-    if (!main) return { left: ANCHOR_GAP_PX, bottom: ANCHOR_GAP_PX };
-    const rect = main.getBoundingClientRect();
-    return {
-      left: rect.left + ANCHOR_GAP_PX,
-      bottom: window.innerHeight - rect.bottom + ANCHOR_GAP_PX,
-      '--ticket-anchor-left': `${rect.left + ANCHOR_GAP_PX}px`,
-    } as CSSProperties;
+    const { left, bottom } = supportCorner();
+    return { left, bottom, '--ticket-anchor-left': `${left}px` } as CSSProperties;
   });
 
   useEscapeClaim(true);
@@ -433,8 +426,8 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
         {sent ? (
           <div className="ticket-sent">
             <p className="ticket-lead">
-              Odpiszemy tutaj: zobaczysz kropkę przy <strong>Klikam w to co trzeba</strong>. Zwykle odpowiadamy w ciągu
-              jednego dnia roboczego.
+              Odpiszemy tutaj: zobaczysz kropkę na okrągłym przycisku z telefonem w lewym dolnym rogu. Zwykle
+              odpowiadamy w ciągu jednego dnia roboczego.
             </p>
             <p className="ticket-preview-note">
               <Icon name="info_outline" size="1rem" />
