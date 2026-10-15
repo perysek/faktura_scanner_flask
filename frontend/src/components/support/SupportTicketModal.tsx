@@ -375,7 +375,7 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!area) {
-      setAreaError('Wybierz, czego dotyczy zgłoszenie');
+      setAreaError('Wybierz temat zgłoszenia');
       panelRef.current?.querySelector('select')?.focus();
       return;
     }
@@ -470,9 +470,13 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
               ))}
             </div>
 
-            {/* Select first (exactly as wide as the 'Zgłoś problem' tab above it), then its
-                label pointing back at it, then 'Zaznacz miejsce'. */}
+            {/* 'Wybierz temat' sits right on top of the select; the select is exactly as wide as
+                the 'Zgłoś problem' tab and 'Zaznacz miejsce' as the 'Podziel się pomysłem' tab,
+                both the select's height. */}
             <div className="ticket-area">
+              <label htmlFor="ticket-area" className="ticket-area-label">
+                Wybierz temat
+              </label>
               <select
                 id="ticket-area"
                 className={`form-select${areaError ? ' error' : ''}`}
@@ -491,21 +495,15 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
                   </option>
                 ))}
               </select>
-              <div className="ticket-area-side">
-                <label htmlFor="ticket-area" className="ticket-area-label">
-                  <span aria-hidden="true">← </span>Czego dotyczy
-                </label>
-                <Button
-                  small
-                  icon="center_focus_weak"
-                  className="ticket-mark"
-                  disabled={shotsFull}
-                  title={shotsFull ? `Maksymalnie ${MAX_SHOTS} zaznaczenia` : 'Pokaż na ekranie, o które miejsce chodzi'}
-                  onClick={startPicking}
-                >
-                  Zaznacz miejsce
-                </Button>
-              </div>
+              <Button
+                icon="center_focus_weak"
+                className="ticket-mark"
+                disabled={shotsFull}
+                title={shotsFull ? `Maksymalnie ${MAX_SHOTS} zaznaczenia` : 'Pokaż na ekranie, o które miejsce chodzi'}
+                onClick={startPicking}
+              >
+                Zaznacz miejsce
+              </Button>
               {areaError && (
                 <span id="ticket-area-error" className="form-error-text" role="alert">
                   {areaError}
