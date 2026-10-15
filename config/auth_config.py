@@ -60,6 +60,7 @@ MODULE_PERMISSIONS = {
     'data_import': ['superuser', 'admin'],
     'absences': ['superuser', 'admin'],  # full management (categories CRUD + global list)
     'service_prices': ['superuser', 'admin', 'accountant'],  # accountant = read-only (view history)
+    'income': ['superuser', 'admin'],  # Finanse → Przychody (rejestr przychodów + statystyki)
 }
 
 def role_required(*roles):

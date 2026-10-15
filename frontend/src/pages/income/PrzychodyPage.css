@@ -1,0 +1,115 @@
+/* Finanse → Przychody (PrzychodyPage.tsx). The table, filter pills, search box,
+ * amount/date cells and row actions deliberately reuse Koszty's own classes
+ * (FakturyListPage.css, imported by the page) so the two registers look and
+ * behave identically — this file only adds what Koszty does not have: the
+ * period bar, the stats-card row, the "nowy" badge and payment-method chips. */
+
+/* ── Period bar: prev / Teraz / next · Okres select · Od · Do ───────────── */
+.income-period-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+  flex-shrink: 0;
+}
+.income-period-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  padding: 0.25rem;
+}
+.income-period-nav .refined-btn-secondary { display: inline-flex; align-items: center; justify-content: center; }
+.income-period-nav svg { width: 1rem; height: 1rem; }
+.income-period-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.income-period-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-subtle);
+}
+.income-period-select { min-width: 9.5rem; }
+.income-period-date { width: 14rem; }
+.income-period-desc {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted);
+  text-transform: capitalize;
+}
+
+/* ── Stats row — global .stat-card look, but its own grid: the global
+ * .stats-grid hides itself below 640px, and on this page the cards ARE the
+ * point, so they stay on phones (two columns, then one). ───────────────── */
+.income-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+.income-stat {
+  padding: 1rem 1.125rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.income-stat .stat-icon { width: 2.5rem; height: 2.5rem; flex-shrink: 0; }
+.income-stat .stat-icon svg { width: 1.25rem; height: 1.25rem; }
+.income-stat .stat-value { margin-top: 0.25rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.income-stat-sub { margin-top: 0.25rem; font-size: 0.75rem; color: var(--color-ink-subtle); }
+.income-stat--lost { grid-column: span 2; }
+.income-stat-body { flex: 1; min-width: 0; }
+.income-lost-list { list-style: none; margin: 0.375rem 0 0; padding: 0; display: grid; gap: 0.125rem; }
+.income-lost-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+.income-lost-value { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--color-ink); }
+.income-lost-count { color: var(--color-ink-subtle); }
+
+/* ── Table extras ─────────────────────────────────────────────────────── */
+.income-date { white-space: nowrap; }
+.income-new-badge {
+  display: inline-block;
+  margin-left: 0.375rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+  background: var(--color-pink-bg);
+  color: var(--color-pink);
+}
+.income-method {
+  display: inline-flex;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+.income-method--cash { background: rgba(45, 106, 79, 0.08); color: var(--color-success); }
+.income-method--card { background: rgba(59, 130, 246, 0.08); color: var(--color-status-scheduled); }
+
+@media (max-width: 1100px) {
+  .income-stat--lost { grid-column: auto; }
+}
+@media (max-width: 640px) {
+  .income-period-bar { gap: 0.5rem; }
+  .income-period-field { flex: 1 1 45%; }
+  .income-period-select, .income-period-date { width: 100%; min-width: 0; }
+  .income-stats { grid-template-columns: 1fr 1fr; }
+  .income-stat--lost { grid-column: 1 / -1; }
+  .income-stat .stat-icon { display: none; }
+  .income-stat .stat-value { font-size: 1.05rem; }
+  .income-page .filter-pills { flex-wrap: wrap; }
+}

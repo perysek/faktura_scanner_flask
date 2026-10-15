@@ -30,3 +30,54 @@ export interface IncomeSummaryResponse {
   year: number;
   month: number;
 }
+
+/** `GET /api/income/ledger` — strona Finanse → Przychody (routes/income_routes.py
+ * `get_income_ledger`, repositories/appointments/income_repository.py `get_ledger`
+ * / `get_lost_summary`). `gross_amount` = kwota zapłacona przez klienta (po
+ * rabacie); `net_amount` = brutto − `employee_share` (prowizja pracownika). */
+export interface IncomeLedgerRecord {
+  id: number;
+  appointment_id: number;
+  /** Data wpływu, YYYY-MM-DD. */
+  payment_date: string;
+  appointment_date: string;
+  client_id: number;
+  client_name: string;
+  employee_id: number;
+  employee_name: string;
+  gross_amount: number;
+  employee_share: number;
+  net_amount: number;
+  payment_method: string | null;
+  is_new_client: boolean;
+}
+
+export interface IncomeLostBucket {
+  visits: number;
+  amount: number;
+}
+
+export interface IncomeLedgerStats {
+  count: number;
+  total_gross: number;
+  total_net: number;
+  avg_gross: number;
+  new_client_gross: number;
+  new_client_visits: number;
+  new_client_pct: number;
+  lost: {
+    client_cancel: IncomeLostBucket;
+    no_show: IncomeLostBucket;
+    salon_cancel: IncomeLostBucket;
+    visits: number;
+    amount: number;
+  };
+}
+
+export interface IncomeLedgerResponse {
+  success: true;
+  start_date: string;
+  end_date: string;
+  records: IncomeLedgerRecord[];
+  stats: IncomeLedgerStats;
+}

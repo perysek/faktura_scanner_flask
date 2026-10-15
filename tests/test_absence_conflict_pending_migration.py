@@ -26,8 +26,14 @@ def test_sits_on_the_sms_hardening_revision():
     assert _script().get_revision(_REVISION).down_revision == 'e2a6c9d4f1b7'
 
 
-def test_is_the_current_head():
-    assert _script().get_heads() == [_REVISION]
+def test_is_on_the_line_to_the_current_head():
+    # Was "is the current head" — true only until the next migration lands
+    # (a7c4e1f9b3d2, the 'income' module). What matters is that the single head
+    # still descends from it (same rule as test_sms_hardening_migration.py).
+    script = _script()
+    heads = script.get_heads()
+    assert len(heads) == 1
+    assert _REVISION in {r.revision for r in script.walk_revisions('base', heads[0])}
 
 
 def test_upgrade_is_additive_only():

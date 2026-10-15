@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import './Appointments.css';
 import './WizytaDetailPage.css';
 import { useApiData } from '../../lib/useApiData';
@@ -48,7 +48,13 @@ export function WizytaDetailPage() {
   const canWrite = auth.hasModuleWrite('appointments');
   const isMobile = useIsMobile(640);
   const mobileBarHidden = useHideOnScroll();
-  useEscapeBack('/wizyty');
+  // Opened from another register (e.g. Finanse → Przychody) — "Powrót" goes back
+  // there, with that page's own URL (period/filters/sort) intact.
+  const location = useLocation();
+  const returnState = location.state as { returnTo?: string; returnLabel?: string } | null;
+  const backHref = returnState?.returnTo?.startsWith('/') ? returnState.returnTo : '/wizyty';
+  const backLabel = backHref === '/wizyty' ? 'Powrót do listy' : (returnState?.returnLabel ?? 'Powrót');
+  useEscapeBack(backHref);
 
   const detailState = useApiData(() => appointmentsApi.get(appointmentId), [appointmentId]);
   const [completeOpen, setCompleteOpen] = useState(false);
@@ -104,7 +110,7 @@ export function WizytaDetailPage() {
     try {
       await appointmentsApi.delete(appointmentId);
       toast.success('Wizyta usunięta');
-      navigate('/wizyty');
+      navigate(backHref);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Błąd usuwania wizyty');
     }
@@ -181,8 +187,8 @@ export function WizytaDetailPage() {
               Edytuj
             </ButtonLink>
           )}
-          <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
-            Powrót do listy
+          <ButtonLink variant="secondary" icon="arrow_back" to={backHref}>
+            {backLabel}
           </ButtonLink>
           {canWrite && (
             <Button variant="ghost" icon="delete" onClick={handleDelete}>
@@ -331,7 +337,7 @@ export function WizytaDetailPage() {
 
       {isMobile && (
         <div className={`mw-bar mw-bar--wrap${mobileBarHidden ? ' mw-bar--hidden' : ''}`}>
-          <ButtonLink variant="secondary" icon="arrow_back" to="/wizyty">
+          <ButtonLink variant="secondary" icon="arrow_back" to={backHref}>
             Powrót
           </ButtonLink>
           {canEditAppt && (

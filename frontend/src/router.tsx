@@ -46,6 +46,7 @@ import { KpiMatrixPage } from './pages/analytics/KpiMatrixPage';
 import { AnalyticsDashboardPage } from './pages/analytics/AnalyticsDashboardPage';
 import { DataImportPage } from './pages/dataImport/DataImportPage';
 import { HistoryPage } from './pages/history/HistoryPage';
+import { PrzychodyPage } from './pages/income/PrzychodyPage';
 import { hasFullEmployeesGrant } from './components/layout/navConfig';
 
 /**
@@ -139,6 +140,13 @@ export const router = createBrowserRouter([
               { path: 'analiza-biznesowa', element: <AnalyticsDashboardPage /> },
               { path: 'wskazniki-biznesowe', element: <KpiMatrixPage /> },
             ],
+          },
+
+          // Finanse → Przychody — own 'income' module (Poziomy dostępu → "Przychody",
+          // one on/off switch). Same gate as the backend's /api/income/ledger.
+          {
+            element: <ProtectedRoute requireModule="income" />,
+            children: [{ path: 'przychody', element: <PrzychodyPage /> }],
           },
 
           // Klienci — Faza 1, fully built.

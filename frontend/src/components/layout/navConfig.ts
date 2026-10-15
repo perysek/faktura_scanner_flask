@@ -75,17 +75,29 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
     // entry to those two pages, but their own route guard (unchanged) still
     // lets them in by direct URL if they have 'appointments'. Deliberate,
     // scoped to what was asked (hide the section in the sidebar).
-    visible: (ctx) => ctx.hasModuleAccess('invoices'),
+    // Przychody has its own module ('income'), so a role with only that grant
+    // must still get the section — every OTHER link below now carries the
+    // 'invoices' requirement itself, so what they show is exactly as before.
+    visible: (ctx) => ctx.hasModuleAccess('invoices') || ctx.hasModuleAccess('income'),
     links: [
       {
         label: 'Panel danych',
         to: '/dashboard',
         mobileHide: true,
         // main.dashboard has NO module decorator (@login_required only) —
-        // real gate is "any authenticated user" (D14 point 5).
+        // real gate is "any authenticated user" (D14 point 5). The sidebar row
+        // keeps its old reach (only shown with 'invoices') now that the section
+        // gate also opens for an 'income'-only role.
         iconPath:
           'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
-        visible: () => true,
+        visible: (ctx) => ctx.hasModuleAccess('invoices'),
+      },
+      {
+        label: 'Przychody',
+        to: '/przychody',
+        // Own module, toggled on Poziomy dostępu → Edytuj rolę → "Przychody".
+        iconPath: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
+        visible: (ctx) => ctx.hasModuleAccess('income'),
       },
       {
         label: 'Koszty',
@@ -109,7 +121,7 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         // (@main_bp.route('/analytics')) requires 'appointments' (D14 pt. 3).
         iconPath:
           'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-        visible: (ctx) => ctx.hasModuleAccess('appointments'),
+        visible: (ctx) => ctx.hasModuleAccess('invoices') && ctx.hasModuleAccess('appointments'),
       },
       {
         label: 'Wskaźniki biznesowe',
@@ -118,7 +130,7 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         // Same real gate as above — 'appointments', not 'invoices' (D14 pt. 3).
         iconPath:
           'M9 17V9m0 8H5a2 2 0 01-2-2V9a2 2 0 012-2h4m0 10h6m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v12m0 0h4a2 2 0 002-2v-4a2 2 0 00-2-2h-4',
-        visible: (ctx) => ctx.hasModuleAccess('appointments'),
+        visible: (ctx) => ctx.hasModuleAccess('invoices') && ctx.hasModuleAccess('appointments'),
       },
     ],
   },

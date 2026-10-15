@@ -14,6 +14,10 @@ const COMMON_FLAGS: FlagDef[] = [
   { key: 'own_data', label: 'Tylko własne dane', hint: 'Widzi wyłącznie swoje rekordy' },
 ];
 
+/** Modules that are a plain on/off page grant — just the master switch, no
+ * read-only/own-data rows (there is nothing to restrict on a read-only report). */
+const SWITCH_ONLY_MODULES = new Set(['income']);
+
 const MODULE_FLAGS: Record<string, FlagDef[]> = {
   services: [{ key: 'can_edit_price_history', label: 'Edycja historii cen', hint: 'Może poprawiać wpisy w historii zmian ceny' }],
   appointments: [{ key: 'can_send_sms', label: 'Wysyłanie SMS', hint: 'Ręczne SMS-y z widoku wizyty' }],
@@ -44,7 +48,7 @@ export function PermissionGrid({ modules, names, flags, onChange }: Props) {
       {modules.map((mod) => {
         const f = flags[mod] ?? EMPTY_FLAGS;
         const label = names[mod] ?? mod;
-        const flagDefs = [...COMMON_FLAGS, ...(MODULE_FLAGS[mod] ?? [])];
+        const flagDefs = SWITCH_ONLY_MODULES.has(mod) ? [] : [...COMMON_FLAGS, ...(MODULE_FLAGS[mod] ?? [])];
         return (
           <section key={mod} className={`perm-module${f.has_access ? ' is-on' : ''}`} aria-label={label}>
             <label className="perm-row perm-row--main">
@@ -54,6 +58,7 @@ export function PermissionGrid({ modules, names, flags, onChange }: Props) {
               </span>
               <Switch checked={f.has_access} onChange={(e) => onChange(mod, 'has_access', e.target.checked)} aria-label={`Dostęp do modułu: ${label}`} />
             </label>
+            {flagDefs.length > 0 && (
             <div className="perm-flags">
               {flagDefs.map((def) => (
                 <label key={def.key} className="perm-row perm-row--flag">
@@ -65,6 +70,7 @@ export function PermissionGrid({ modules, names, flags, onChange }: Props) {
                 </label>
               ))}
             </div>
+            )}
           </section>
         );
       })}

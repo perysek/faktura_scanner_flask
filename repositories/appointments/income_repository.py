@@ -108,6 +108,96 @@ class IncomeRepository:
             cursor.execute(query, tuple(params))
             return cursor.fetchall()
 
+    def get_ledger(self, start_date: date, end_date: date) -> List[Any]:
+        """Rejestr przychodów (strona "Przychody") — jeden wiersz na rekord przychodu
+        z ``payment_date`` (data wpływu) w zakresie [start_date, end_date].
+
+        * ``gross_amount`` — kwota zapłacona przez klienta (``ir.net_amount``, czyli
+          już po rabacie — w tej tabeli "net" oznacza "po rabacie", nie "bez prowizji").
+        * ``employee_share`` — prowizja pracownika (``ir.commission_total``).
+        * ``net_amount`` — to, co zostaje salonowi: brutto − udział pracownika.
+        * ``is_new_client`` — pierwsza zakończona wizyta klienta: brak wcześniejszej
+          zakończonej wizyty w systemie ORAZ ``clients.first_visit_date`` (dla klientów
+          importowanych z historią spoza systemu) nie wcześniejsza niż ta wizyta.
+        """
+        excl_sql, excl_params = emp_exclusion_sql('ir.employee_id')
+        completed = AppointmentStatus.COMPLETED
+        query = f"""
+            SELECT
+                ir.id, ir.appointment_id, ir.payment_date, a.appointment_date,
+                ir.client_id, c.first_name || ' ' || c.last_name AS client_name,
+                ir.employee_id, e.first_name || ' ' || e.last_name AS employee_name,
+                ir.net_amount AS gross_amount,
+                ir.commission_total AS employee_share,
+                ir.net_amount - ir.commission_total AS net_amount,
+                ir.payment_method,
+                (
+                    (c.first_visit_date IS NULL OR c.first_visit_date >= a.appointment_date)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM appointments p
+                        WHERE p.client_id = a.client_id
+                          AND p.status = '{completed}'
+                          AND p.is_deleted = FALSE
+                          AND p.id <> a.id
+                          AND (p.appointment_date, p.start_time, p.id) < (a.appointment_date, a.start_time, a.id)
+                    )
+                ) AS is_new_client
+            FROM income_records ir
+            JOIN appointments a ON a.id = ir.appointment_id
+            JOIN clients c ON c.id = ir.client_id
+            JOIN employees e ON e.id = ir.employee_id
+            WHERE ir.is_deleted = FALSE AND a.is_deleted = FALSE
+              AND ir.payment_date BETWEEN %s AND %s {excl_sql}
+            ORDER BY ir.payment_date DESC, a.start_time DESC, ir.id DESC
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (start_date.isoformat(), end_date.isoformat(), *excl_params))
+            return cursor.fetchall()
+
+    def get_lost_summary(self, start_date: date, end_date: date) -> List[Any]:
+        """Wartość brutto wizyt niezrealizowanych w zakresie (wg daty wizyty), per powód.
+
+        * ``no_show`` — status 'no_show' (klient nie przyszedł).
+        * ``salon_cancel`` — anulowana przez salon w rozwiązaniu konfliktu z wnioskiem
+          o nieobecność (ręcznie w modalu albo auto-anulowanie po "Zatwierdź mimo to" —
+          oba piszą ``absence_conflict_resolutions.resolution_type = 'cancelled'``).
+        * ``client_cancel`` — każda inna anulowana wizyta.
+
+        Wartość wizyty = ``total_price``; gdy 0/NULL — suma cen jej usług.
+        """
+        excl_sql, excl_params = emp_exclusion_sql('a.employee_id')
+        cancelled = AppointmentStatus.CANCELLED
+        no_show = AppointmentStatus.NO_SHOW
+        query = f"""
+            SELECT kind, COUNT(*) AS visits, COALESCE(SUM(value), 0) AS amount
+            FROM (
+                SELECT
+                    CASE
+                        WHEN a.status = '{no_show}' THEN 'no_show'
+                        WHEN EXISTS (
+                            SELECT 1 FROM absence_conflict_resolutions r
+                            WHERE r.appointment_id = a.id AND r.resolution_type = 'cancelled'
+                        ) THEN 'salon_cancel'
+                        ELSE 'client_cancel'
+                    END AS kind,
+                    COALESCE(
+                        NULLIF(a.total_price, 0),
+                        (SELECT SUM(s.price_charged) FROM appointment_services s WHERE s.appointment_id = a.id),
+                        0
+                    ) AS value
+                FROM appointments a
+                WHERE a.is_deleted = FALSE
+                  AND a.status IN ('{cancelled}', '{no_show}')
+                  AND a.appointment_date BETWEEN %s AND %s {excl_sql}
+            ) lost
+            GROUP BY kind
+        """
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (start_date.isoformat(), end_date.isoformat(), *excl_params))
+            return cursor.fetchall()
+
     def get_daily_summary(self, start_date: date, end_date: date,
                           employee_id: Optional[int] = None) -> List[Any]:
         """Przychód per (dzień wizyty, pracownik): zapisany vs oczekiwany.
