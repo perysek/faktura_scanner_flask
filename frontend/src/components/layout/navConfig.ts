@@ -145,6 +145,15 @@ export const NAV_SECTIONS: NavSectionConfig[] = [
         visible: (ctx) => ctx.hasModuleAccess('appointments'),
       },
       {
+        // caldis.pl import. Same gate as router.tsx's requireModule="data_import" and
+        // every /api/import/* endpoint (module_permission_required('data_import')).
+        label: 'Import wizyt',
+        to: '/import-danych',
+        mobileHide: true,
+        iconPath: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
+        visible: (ctx) => ctx.hasModuleAccess('data_import'),
+      },
+      {
         label: 'Klienci',
         to: '/klienci',
         iconPath:
