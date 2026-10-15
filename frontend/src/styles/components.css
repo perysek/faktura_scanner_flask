@@ -1760,7 +1760,10 @@ table.stack-cards td.cell-hide-lg { display: none; }
   z-index: 9999;
   background-color: rgba(0, 0, 0, 0.18);
   animation: modal-backdrop-in 0.2s var(--ease-out-expo) forwards;
+  transition: background-color 0.2s ease;
 }
+/* 'Zaznacz miejsce': the panel is tucked into its corner and the page shows through unshaded. */
+.ticket-overlay--picking { background-color: transparent; }
 .ticket-pop {
   position: fixed;
   width: 30vw;
@@ -1816,10 +1819,14 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .ticket-tab--active:hover { background: var(--color-accent-muted); border-color: var(--color-accent); }
 .ticket-tab:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
-/* 'Czego dotyczy' — label left, select right (SelectField's wrapper, laid out inline). */
-.ticket-area > div { display: grid; grid-template-columns: auto minmax(0, 16rem); align-items: center; gap: 1rem; }
-.ticket-area .form-label { margin: 0; font-size: 0.875rem; color: var(--color-ink); }
-.ticket-area .form-error-text { grid-column: 1 / -1; justify-self: end; }
+/* Same 1fr 1fr grid + gap as .ticket-tabs, so the select is exactly as wide as the
+   'Zgłoś problem' tab above it; '← Czego dotyczy' + 'Zaznacz miejsce' share the second column. */
+.ticket-area { display: grid; grid-template-columns: 1fr 1fr; column-gap: 0.75rem; row-gap: 0.375rem; align-items: center; }
+.ticket-area .form-select { width: 100%; min-width: 0; }
+.ticket-area-side { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; min-width: 0; }
+.ticket-area-label { font-size: 0.875rem; font-weight: 500; color: var(--color-ink); white-space: nowrap; }
+.ticket-area-side .ticket-mark { margin-left: auto; white-space: nowrap; }
+.ticket-area .form-error-text { grid-column: 1 / -1; }
 
 /* Message box fills whatever height is left; its label is for screen readers only. */
 .ticket-text { flex: 1; min-height: 6rem; display: flex; }
@@ -1843,6 +1850,10 @@ table.stack-cards td.cell-hide-lg { display: none; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
 }
+.ticket-shot-thumb {
+  width: 2.25rem; height: 1.75rem; margin-left: -0.375rem; object-fit: cover;
+  border: 1px solid var(--color-border); border-radius: 3px; background: var(--color-surface);
+}
 .ticket-photo-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 11rem; }
 .ticket-photo-remove {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1852,15 +1863,12 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .ticket-photo-remove:hover { color: var(--color-ink); background: var(--color-surface); }
 
 .ticket-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; margin-top: auto; }
-.ticket-attach {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem; border: none; background: transparent;
-  color: var(--color-ink-muted); cursor: pointer; border-radius: var(--radius-sm);
-  transition: color 0.15s ease, background-color 0.15s ease;
+.ticket-shot-hint {
+  display: inline-flex; align-items: center; gap: 0.375rem; margin: 0; text-align: right;
+  font-size: 0.8125rem; line-height: 1.35; color: var(--color-ink-muted);
 }
-.ticket-attach:hover { color: var(--color-ink); background: var(--color-surface-warm); }
-.ticket-attach:disabled { opacity: 0.4; cursor: not-allowed; }
-.ticket-attach:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.ticket-shot-hint--ok { color: var(--color-success); }
+.ticket-shot-hint--error { color: var(--color-error); }
 .ticket-actions .refined-btn-primary { min-height: 2.75rem; padding-inline: 1.25rem; }
 
 .ticket-preview-note {
@@ -1870,6 +1878,68 @@ table.stack-cards td.cell-hide-lg { display: none; }
   border: 1px solid var(--color-info-border); border-radius: var(--radius-sm);
 }
 .ticket-preview-note .icon { flex-shrink: 0; margin-top: 0.125rem; }
+
+/* 'Zaznacz miejsce' picking layer. Hover: a warm light follows the pointer and the rest
+   of the page dims a touch. Hold: it narrows into an ocean-blue spotlight while the
+   rectangle is drawn. Registered properties let the gradient itself transition. */
+@property --spot-r { syntax: '<length>'; inherits: false; initial-value: 260px; }
+@property --spot-core { syntax: '<color>'; inherits: false; initial-value: rgba(255, 251, 235, 0.42); }
+@property --spot-mid { syntax: '<color>'; inherits: false; initial-value: rgba(255, 251, 235, 0.14); }
+@property --spot-edge { syntax: '<color>'; inherits: false; initial-value: rgba(15, 23, 42, 0.1); }
+.spot-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  background: radial-gradient(
+    circle var(--spot-r) at var(--spot-x, 50%) var(--spot-y, 50%),
+    var(--spot-core) 0%,
+    var(--spot-mid) 42%,
+    transparent 72%,
+    var(--spot-edge) 100%
+  );
+  transition: --spot-r 0.22s ease, --spot-core 0.22s ease, --spot-mid 0.22s ease, --spot-edge 0.22s ease;
+}
+.spot-layer--drag {
+  --spot-r: 110px;
+  --spot-core: rgba(186, 230, 253, 0.5);
+  --spot-mid: rgba(14, 165, 233, 0.2);
+  --spot-edge: rgba(8, 47, 73, 0.16);
+}
+.spot-box {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  border: 2px solid var(--color-chart-sky, #0ea5e9);
+  border-radius: 2px;
+  background: rgba(14, 165, 233, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 0 18px rgba(14, 165, 233, 0.45);
+  pointer-events: none;
+}
+.spot-layer--drag .spot-box { display: block; }
+.spot-hint {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  color: var(--color-on-ink);
+  background: var(--color-ink);
+  border-radius: 999px;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.spot-layer--drag .spot-hint { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .spot-layer { transition: none; }
+}
 
 /* Phones: 30vw is ~120px, so the panel spans <main> edge to edge (same gap both sides)
    and stays anchored above the bottom tab bar. */
@@ -1881,5 +1951,4 @@ table.stack-cards td.cell-hide-lg { display: none; }
     min-height: 0;
     padding: 1rem 1.125rem;
   }
-  .ticket-area > div { grid-template-columns: auto minmax(0, 1fr); }
 }
