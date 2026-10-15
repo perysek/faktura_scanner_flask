@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
 import { ButtonLink } from '../ui/Button';
+import { SupportLauncher } from '../support/SupportLauncher';
 import { NAV_SECTIONS, NAV_STANDALONE_LINKS } from './navConfig';
 import type { NavLinkConfig } from './navConfig';
 import { NavIcon } from './NavIcon';
@@ -21,6 +22,9 @@ const ROLE_LABELS: Record<string, string> = {
 export interface SidebarProps {
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  /** The ticket pop-out is open: the phone button hides until it closes. */
+  isSupportOpen: boolean;
+  onOpenSupport: () => void;
 }
 
 /** One nav row — shared by the accordion sections and the top-level links so
@@ -63,7 +67,7 @@ function SidebarNavLink({ link }: { link: NavLinkConfig }) {
  * App-shell sidebar — DESIGN.md §13. Data-driven from `navConfig.ts`;
  * NEVER hardcode a link here (§13.5).
  */
-export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ isMobileOpen, onCloseMobile, isSupportOpen, onOpenSupport }: SidebarProps) {
   const auth = useAuth();
   const location = useLocation();
   const asideRef = useRef<HTMLElement>(null);
@@ -174,6 +178,16 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
             </div>
           )}
         </nav>
+
+        {/* Outside the scrolling nav, so it stays put at the nav area's bottom-right, right above
+            the user bar, however long the menu is. */}
+        <SupportLauncher
+          hidden={isSupportOpen}
+          onOpen={() => {
+            onCloseMobile();
+            onOpenSupport();
+          }}
+        />
 
         {/* "Widok administratora"/"Dane własne" toggles removed — admin view
             is now permanently ON for every superuser (config/admin_view.py),

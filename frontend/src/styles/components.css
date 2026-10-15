@@ -1735,16 +1735,19 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .theme-swatch[data-swatch='graphite'] { background: linear-gradient(135deg, #eeeef0 50%, #6b4c6f 50%); }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   SUPPORT TICKET POP-OUT (SupportTicketModal.tsx) — opened from the phone FAB
-   (SupportFab.tsx). Both sit on <main>'s bottom-left corner (left/bottom set inline
-   from supportCorner()); the 1×1px → full-size pop is a Web Animations scale with
+   SUPPORT TICKET POP-OUT (SupportTicketModal.tsx) — opened from the sidebar's phone
+   button (SupportLauncher.tsx). Grows from <main>'s left edge at that button's height
+   (left/bottom set inline from supportCorner()); the 1×1px → full-size pop is a Web Animations scale with
    transform-origin bottom left, so the CSS only owns the resting state.
    ═══════════════════════════════════════════════════════════════════════ */
-/* Same black circle as the other floating buttons (.appt-fab, .scroll-top-btn). While the
-   pop-out is open it shrinks away into its corner; it grows back once the panel is gone. */
+/* Phone button row between the scrolling nav and the user bar: no border of its own, so it reads
+   as the bottom of the nav area, button flush right on the nav's 1rem inset. Same black circle as
+   the app's other round buttons (.appt-fab, .scroll-top-btn); while the pop-out is open it shrinks
+   away, and grows back once the panel is gone. */
+.sidebar-support { display: flex; justify-content: flex-end; flex-shrink: 0; padding: 0.25rem 1rem 0.75rem; }
+.support-fab-slot { position: relative; display: inline-flex; }
 .support-fab {
-  position: fixed;
-  z-index: var(--z-tabbar); /* under the drawer + its backdrop, like .appt-fab */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1757,7 +1760,6 @@ table.stack-cards td.cell-hide-lg { display: none; }
   border-radius: 50%;
   box-shadow: var(--shadow-lg);
   cursor: pointer;
-  transform-origin: bottom left;
   transition: transform 0.2s ease, opacity 0.2s ease, visibility 0.2s, box-shadow 0.2s ease;
 }
 .support-fab .icon { width: 1.375rem; height: 1.375rem; }
@@ -1765,22 +1767,25 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .support-fab:focus-visible { outline: none; box-shadow: var(--shadow-focus), var(--shadow-lg); }
 .support-fab--hidden,
 .support-fab--hidden:hover { opacity: 0; visibility: hidden; transform: scale(0.2); pointer-events: none; }
-/* Hover/focus hint, to the right of the button (the button hugs the left edge). */
+/* Hover/focus hint, to the LEFT of the button (it sits at the sidebar's right edge), wrapping
+   within the sidebar's width instead of spilling over the page. */
 .support-fab-hint {
   position: absolute;
-  left: calc(100% + 0.625rem);
+  right: calc(100% + 0.625rem);
   top: 50%;
+  width: max-content;
+  max-width: 11.5rem;
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.3;
-  white-space: nowrap;
+  text-align: right;
   color: var(--color-on-ink);
   background: var(--color-ink);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
   opacity: 0;
-  transform: translate(-0.25rem, -50%);
+  transform: translate(0.25rem, -50%);
   transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
 }
@@ -1832,7 +1837,7 @@ table.stack-cards td.cell-hide-lg { display: none; }
 }
 .ticket-lead { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--color-ink-muted); }
 .ticket-lead a { color: var(--color-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
-.ticket-form, .ticket-sent { display: flex; flex-direction: column; gap: 1rem; flex: 1; min-height: 0; }
+.ticket-form { display: flex; flex-direction: column; gap: 1rem; flex: 1; min-height: 0; }
 
 /* Two-way switch: 'Zgłoś problem' / 'Podziel się pomysłem'. Active = accent outline on a
    muted accent wash (the screenshot's purple pill, in the app's gold). */
@@ -1910,13 +1915,11 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .ticket-shot-hint--error { color: var(--color-error); }
 .ticket-actions .refined-btn-primary { min-height: 2.75rem; padding-inline: 1.25rem; }
 
-.ticket-preview-note {
-  display: flex; gap: 0.5rem; align-items: flex-start; margin: 0;
-  padding: 0.75rem; font-size: 0.8125rem; line-height: 1.45;
-  color: var(--color-info-text); background: var(--color-info-bg);
-  border: 1px solid var(--color-info-border); border-radius: var(--radius-sm);
-}
-.ticket-preview-note .icon { flex-shrink: 0; margin-top: 0.125rem; }
+/* 'Wyślij zgłoszenie' → 'Zakończ i zamknij' in place: both faces share one grid cell, so the
+   button is always as wide as the wider face (the send one, with its icon). */
+.ticket-send-stack { display: grid; }
+.ticket-send-face { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; } /* = .refined-btn-* gap */
+.ticket-send-face--off { visibility: hidden; }
 
 /* 'Zaznacz miejsce' picking layer. Hover: a warm light follows the pointer and the rest
    of the page dims a touch. Hold: it narrows into an ocean-blue spotlight while the

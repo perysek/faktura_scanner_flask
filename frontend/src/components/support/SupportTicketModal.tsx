@@ -9,9 +9,9 @@ import { TextareaField } from '../ui/form';
 import { supportCorner } from './supportCorner';
 
 /**
- * "Napisz do administratora" — the ticket form opened by the phone FAB
- * (SupportFab). Pops out of the FAB's spot, the bottom-left corner of <main>
- * (1×1px → 30vw × 60vh). FRONTEND ONLY for now: sending shows
+ * "Napisz do administratora" — the ticket form opened by the sidebar's phone
+ * button (SupportLauncher). Pops out from <main>'s left edge at that button's
+ * height (1×1px → 30vw × 60vh), see supportCorner(). FRONTEND ONLY for now: sending shows
  * the confirmation but nothing reaches the server yet — the API, inbox and
  * conversation view are designed in plans/261013-support-tickets/plan.md.
  *
@@ -314,11 +314,11 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
   useLayoutEffect(popIn, [popIn]);
 
   // Focus trap lands on the first focusable (the close ×); the message box is
-  // where the user actually wants to start typing.
-  // After sending, the submit button is gone — move focus to "Wróć do pracy".
+  // where the user actually wants to start typing. After sending, focus stays on
+  // the same button, now 'Zakończ i zamknij'.
   useEffect(() => {
-    panelRef.current?.querySelector<HTMLElement>(sent ? '.ticket-sent button' : 'textarea')?.focus();
-  }, [sent]);
+    panelRef.current?.querySelector<HTMLElement>('textarea')?.focus();
+  }, []);
 
   function close() {
     if (closingRef.current) return;
@@ -416,30 +416,13 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
       >
         <div className="ticket-head">
           <h2 id="ticket-title" className="ticket-title">
-            {sent ? 'Dostaliśmy! 🙌' : TITLE}
+            {TITLE}
           </h2>
           <button type="button" className="modal-close" onClick={close} aria-label="Zamknij">
             <Icon name="close" size="1.125rem" />
           </button>
         </div>
 
-        {sent ? (
-          <div className="ticket-sent">
-            <p className="ticket-lead">
-              Odpiszemy tutaj: zobaczysz kropkę na okrągłym przycisku z telefonem w lewym dolnym rogu. Zwykle
-              odpowiadamy w ciągu jednego dnia roboczego.
-            </p>
-            <p className="ticket-preview-note">
-              <Icon name="info_outline" size="1rem" />
-              Wersja podglądowa: wiadomość nie trafiła jeszcze do administratora. Wysyłka ruszy razem z backendem.
-            </p>
-            <div className="ticket-actions">
-              <Button variant="primary" onClick={close}>
-                Wróć do pracy
-              </Button>
-            </div>
-          </div>
-        ) : (
           <form className="ticket-form" onSubmit={handleSubmit} noValidate>
             <p className="ticket-lead">
               {copy.lead} Nie wiesz, jak coś zrobić? Zajrzyj do{' '}
@@ -545,18 +528,37 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
             )}
 
             <div className="ticket-actions">
-              {shotHint && (
-                <p className={`ticket-shot-hint ticket-shot-hint--${shotHint.tone}`} role="status">
-                  {shotHint.tone === 'ok' && <Icon name="check_circle" size="1rem" />}
-                  {shotHint.text}
+              {sent ? (
+                <p className="ticket-shot-hint ticket-shot-hint--ok" role="status">
+                  <Icon name="check_circle" size="1rem" />
+                  Wiadomość została wysłana
                 </p>
+              ) : (
+                shotHint && (
+                  <p className={`ticket-shot-hint ticket-shot-hint--${shotHint.tone}`} role="status">
+                    {shotHint.tone === 'ok' && <Icon name="check_circle" size="1rem" />}
+                    {shotHint.text}
+                  </p>
+                )
               )}
-              <Button type="submit" variant="primary" icon="forward_to_inbox">
-                Wyślij zgłoszenie
+              {/* After sending, the form stays as it was and this same button closes it. Both
+                  faces sit in one grid cell, so the button keeps the 'Wyślij' face's width. */}
+              <Button
+                type={sent ? 'button' : 'submit'}
+                variant="primary"
+                className="ticket-send"
+                onClick={sent ? close : undefined}
+              >
+                <span className="ticket-send-stack">
+                  <span className={`ticket-send-face${sent ? ' ticket-send-face--off' : ''}`}>
+                    <Icon name="forward_to_inbox" />
+                    Wyślij zgłoszenie
+                  </span>
+                  <span className={`ticket-send-face${sent ? '' : ' ticket-send-face--off'}`}>Zakończ i zamknij</span>
+                </span>
               </Button>
             </div>
           </form>
-        )}
       </div>
       {pickFrom && <SpotPicker start={pickFrom} onPick={handlePick} onCancel={stopPicking} />}
     </div>
