@@ -1921,6 +1921,114 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .ticket-send-face { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; } /* = .refined-btn-* gap */
 .ticket-send-face--off { visibility: hidden; }
 
+/* ── 'Twoje rozmowy' (SupportConversations.tsx): the sender's side of the conversation with
+   the administrator, inside the same pop-out. Bubbles follow plan 261013 §4: the user's on
+   the right on the accent wash, the administrator's on the left on the warm surface,
+   status changes as grey centred lines. */
+.ticket-head .ticket-title { flex: 1; min-width: 0; flex-wrap: wrap; row-gap: 0.25rem; overflow-wrap: anywhere; }
+.ticket-back {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 2rem; height: 2rem; margin: -0.125rem 0 0 -0.375rem; padding: 0;
+  color: var(--color-ink-muted); background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer;
+}
+.ticket-back:hover { color: var(--color-ink); background: var(--color-surface); }
+.ticket-back:focus-visible, .ticket-convos-btn:focus-visible, .convo-item:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.ticket-title-status { font-family: var(--font-body); }
+.ticket-convos-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 0.375rem; flex-shrink: 0;
+  margin-top: 0.125rem; padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem; font-weight: 500; color: var(--color-ink-muted);
+  background: transparent; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer;
+}
+.ticket-convos-btn:hover { color: var(--color-ink); border-color: var(--color-ink-subtle); }
+.ticket-convos-badge {
+  min-width: 1.125rem; height: 1.125rem; padding: 0 0.3rem; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.6875rem; font-weight: 700; color: #fff; background: var(--color-status-cancelled); border-radius: 999px;
+}
+/* Red "new answer" dots: phone button (sidebar) and the phone header's hamburger. */
+.support-fab-dot, .mobile-menu-dot {
+  position: absolute; top: 0.125rem; right: 0.125rem; width: 0.625rem; height: 0.625rem;
+  background: var(--color-status-cancelled); border: 2px solid var(--color-surface-elevated); border-radius: 50%;
+}
+.mobile-menu-btn { position: relative; }
+.mobile-menu-dot { top: 0.25rem; right: 0.25rem; }
+
+.convo-scroll { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -0.5rem; padding: 0 0.5rem; }
+.convo-empty { margin: auto 0; padding: 1.5rem 0; text-align: center; font-size: 0.875rem; line-height: 1.5; color: var(--color-ink-muted); }
+.convo-empty p { margin: 0 0 1rem; }
+.convo-empty--error { color: var(--color-error); }
+.convo-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.convo-item {
+  display: flex; align-items: flex-start; gap: 0.75rem; width: 100%; padding: 0.75rem;
+  text-align: left; color: var(--color-ink); background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm); cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.convo-item:hover { border-color: var(--color-border); background: var(--color-surface); }
+.convo-item--unread { border-color: var(--color-accent); background: var(--color-accent-muted); }
+.convo-kind {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 2rem; height: 2rem; border-radius: 50%;
+}
+.convo-kind--problem { color: var(--color-status-cancelled-dark); background: var(--color-status-cancelled-bg); }
+.convo-kind--idea { color: var(--color-warning); background: var(--color-status-rescheduled-bg); }
+.convo-item-main { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 0; }
+.convo-item-title { font-size: 0.875rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.convo-item--unread .convo-item-title { font-weight: 700; }
+.convo-item-last {
+  font-size: 0.8125rem; color: var(--color-ink-muted);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.convo-item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.375rem; flex-shrink: 0; }
+.convo-item-time { font-size: 0.75rem; color: var(--color-ink-subtle); white-space: nowrap; }
+.convo-dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; background: var(--color-status-cancelled); }
+.convo-status {
+  align-self: flex-start; display: inline-flex; align-items: center; padding: 0.125rem 0.5rem;
+  font-size: 0.75rem; font-weight: 500; line-height: 1.4; border-radius: 999px; white-space: nowrap;
+}
+.convo-status--neutral { color: var(--color-ink-muted); background: var(--color-surface-warm); }
+.convo-status--info { color: var(--color-status-scheduled); background: var(--color-status-scheduled-bg); }
+.convo-status--warn { color: var(--color-status-rescheduled); background: var(--color-status-rescheduled-bg); }
+.convo-status--ok { color: var(--color-status-confirmed-dark); background: var(--color-status-confirmed-bg); }
+.convo-status--muted { color: var(--color-ink-subtle); background: var(--color-surface); }
+
+.convo-thread { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; min-height: 0; }
+.convo-messages {
+  flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.625rem;
+  margin: 0 -0.5rem; padding: 0.25rem 0.5rem;
+}
+.convo-event { margin: 0.25rem 0; text-align: center; font-size: 0.75rem; color: var(--color-ink-subtle); }
+.convo-bubble-row { display: flex; }
+.convo-bubble-row--mine { justify-content: flex-end; }
+.convo-bubble {
+  display: flex; flex-direction: column; gap: 0.25rem; max-width: 85%; padding: 0.5rem 0.75rem;
+  font-size: 0.875rem; line-height: 1.45; border-radius: 0.75rem;
+}
+.convo-bubble--mine { background: var(--color-accent-muted); border: 1px solid var(--color-accent); border-bottom-right-radius: var(--radius-sm); }
+.convo-bubble--admin { background: var(--color-surface-warm); border: 1px solid var(--color-border); border-bottom-left-radius: var(--radius-sm); }
+.convo-bubble-author { font-size: 0.75rem; font-weight: 600; color: var(--color-ink-muted); }
+.convo-bubble-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--color-ink); }
+.convo-bubble-time { align-self: flex-end; font-size: 0.6875rem; color: var(--color-ink-subtle); }
+.convo-bubble-shots { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.convo-bubble-shots img {
+  display: block; width: 5.5rem; height: 4rem; object-fit: cover; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+}
+.convo-reply { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border-subtle); }
+.convo-reply-text { min-height: 3.5rem; max-height: 9rem; resize: vertical; font-size: 0.875rem; line-height: 1.45; }
+.convo-reply-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+.convo-reply-actions > :first-child { margin-right: auto; }
+.convo-resolved {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem; color: var(--color-status-confirmed-dark);
+  background: var(--color-status-confirmed-bg); border-radius: var(--radius-sm);
+}
+.convo-resolved > span { margin-right: auto; font-weight: 500; }
+.convo-closed {
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding-top: 0.75rem; text-align: center;
+  font-size: 0.875rem; color: var(--color-ink-muted); border-top: 1px solid var(--color-border-subtle);
+}
+.convo-closed p { margin: 0; }
+
 /* 'Zaznacz miejsce' picking layer. Hover: a warm light follows the pointer and the rest
    of the page dims a touch. Hold: it narrows into an ocean-blue spotlight while the
    rectangle is drawn. Registered properties let the gradient itself transition. */

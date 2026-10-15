@@ -136,6 +136,7 @@ class TestValidation:
 def test_income_module_is_registered_for_the_role_editor():
     from repositories.roles.role_repository import ALL_MODULES, MODULE_DISPLAY_NAMES
     from config.auth_config import MODULE_PERMISSIONS
-    assert ALL_MODULES[-1] == 'income'  # rendered last = below the existing sections
+    # Rendered below the sections that existed before it (later modules, e.g. support_tickets, may follow).
+    assert ALL_MODULES.index('income') == ALL_MODULES.index('service_prices') + 1
     assert MODULE_DISPLAY_NAMES['income'] == 'Przychody'
     assert MODULE_PERMISSIONS['income'] == ['superuser', 'admin']

@@ -25,6 +25,8 @@ export interface SidebarProps {
   /** The ticket pop-out is open: the phone button hides until it closes. */
   isSupportOpen: boolean;
   onOpenSupport: () => void;
+  /** Conversations with an unread administrator answer (red dot on the phone button). */
+  supportUnread?: number;
 }
 
 /** One nav row — shared by the accordion sections and the top-level links so
@@ -67,7 +69,7 @@ function SidebarNavLink({ link }: { link: NavLinkConfig }) {
  * App-shell sidebar — DESIGN.md §13. Data-driven from `navConfig.ts`;
  * NEVER hardcode a link here (§13.5).
  */
-export function Sidebar({ isMobileOpen, onCloseMobile, isSupportOpen, onOpenSupport }: SidebarProps) {
+export function Sidebar({ isMobileOpen, onCloseMobile, isSupportOpen, onOpenSupport, supportUnread = 0 }: SidebarProps) {
   const auth = useAuth();
   const location = useLocation();
   const asideRef = useRef<HTMLElement>(null);
@@ -183,6 +185,7 @@ export function Sidebar({ isMobileOpen, onCloseMobile, isSupportOpen, onOpenSupp
             the user bar, however long the menu is. */}
         <SupportLauncher
           hidden={isSupportOpen}
+          unread={supportUnread}
           onOpen={() => {
             onCloseMobile();
             onOpenSupport();

@@ -16,7 +16,7 @@ const COMMON_FLAGS: FlagDef[] = [
 
 /** Modules that are a plain on/off page grant — just the master switch, no
  * read-only/own-data rows (there is nothing to restrict on a read-only report). */
-const SWITCH_ONLY_MODULES = new Set(['income']);
+const SWITCH_ONLY_MODULES = new Set(['income', 'support_tickets']);
 
 const MODULE_FLAGS: Record<string, FlagDef[]> = {
   services: [{ key: 'can_edit_price_history', label: 'Edycja historii cen', hint: 'Może poprawiać wpisy w historii zmian ceny' }],

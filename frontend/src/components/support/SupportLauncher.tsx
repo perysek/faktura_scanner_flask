@@ -9,6 +9,8 @@ export interface SupportLauncherProps {
   /** True while the ticket pop-out is on screen: the button steps aside and comes back on close. */
   hidden: boolean;
   onOpen: () => void;
+  /** Conversations with an unread administrator answer → red dot + a different hint. */
+  unread?: number;
 }
 
 /**
@@ -16,7 +18,8 @@ export interface SupportLauncherProps {
  * the user bar: the entry point to SupportTicketModal, which pops out at this
  * button's height.
  */
-export function SupportLauncher({ hidden, onOpen }: SupportLauncherProps) {
+export function SupportLauncher({ hidden, onOpen, unread = 0 }: SupportLauncherProps) {
+  const hint = unread > 0 ? `Administrator odpisał (${unread}) — kliknij, żeby przeczytać` : HINT;
   return (
     <div className="sidebar-support">
       {/* The wrapper is never transformed, so it measures true even while the button is shrunk away. */}
@@ -24,14 +27,15 @@ export function SupportLauncher({ hidden, onOpen }: SupportLauncherProps) {
         <button
           type="button"
           className={`support-fab${hidden ? ' support-fab--hidden' : ''}`}
-          aria-label={HINT}
+          aria-label={hint}
           aria-haspopup="dialog"
           tabIndex={hidden ? -1 : undefined}
           onClick={onOpen}
         >
           <Icon name="call" />
+          {unread > 0 && <span className="support-fab-dot" aria-hidden="true" />}
           <span className="support-fab-hint" aria-hidden="true">
-            {HINT}
+            {hint}
           </span>
         </button>
       </span>

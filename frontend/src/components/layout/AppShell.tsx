@@ -5,6 +5,8 @@ import { Icon } from '../../lib/icons/Icon';
 import { Sidebar } from './Sidebar';
 import { BottomTabBar, showsTabBar } from './BottomTabBar';
 import { SupportTicketModal } from '../support/SupportTicketModal';
+import { recordRoute } from '../../lib/support/diagnostics';
+import { useSupportUnread } from '../../lib/support/useSupportUnread';
 
 /**
  * App shell — DESIGN.md §12. Fixed-height viewport frame (`.app-shell`);
@@ -20,6 +22,12 @@ export function AppShell() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const isFirstMount = useRef(true);
+  const support = useSupportUnread();
+
+  // Route history for the support-ticket snapshot (lib/support/diagnostics.ts).
+  useEffect(() => {
+    recordRoute(`${location.pathname}${location.search}`);
+  }, [location.pathname, location.search]);
 
   // SPA route-change focus management (§11.4): a client-side navigation
   // never fires a browser "page load" event, so screen readers get no
@@ -56,6 +64,7 @@ export function AppShell() {
         onCloseMobile={() => setIsMobileOpen(false)}
         isSupportOpen={isSupportOpen}
         onOpenSupport={() => setIsSupportOpen(true)}
+        supportUnread={support.unread}
       />
       <div className="app-shell-main">
         <header className="app-shell-header">
@@ -67,6 +76,7 @@ export function AppShell() {
             aria-controls="sidebar"
             onClick={() => setIsMobileOpen((open) => !open)}
           >
+            {support.unread > 0 && <span className="mobile-menu-dot" aria-label="Nowa odpowiedź administratora" />}
             <svg width="1.5rem" height="1.5rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -107,7 +117,16 @@ export function AppShell() {
           &copy; {new Date().getFullYear()} MyWay Beauty Salon. Wszelkie prawa zastrzeżone.
         </footer>
       </div>
-      {isSupportOpen && <SupportTicketModal onClose={() => setIsSupportOpen(false)} />}
+      {isSupportOpen && (
+        <SupportTicketModal
+          unread={support.unread}
+          onActivity={support.refresh}
+          onClose={() => {
+            setIsSupportOpen(false);
+            support.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

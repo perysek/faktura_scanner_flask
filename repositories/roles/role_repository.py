@@ -5,7 +5,7 @@ from typing import Any, Optional
 from config.database import get_db_connection
 
 # All known modules (must match auth_config.MODULE_PERMISSIONS keys)
-ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction', 'data_import', 'absences', 'service_prices', 'income']
+ALL_MODULES = ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction', 'data_import', 'absences', 'service_prices', 'income', 'support_tickets']
 
 MODULE_DISPLAY_NAMES = {
     'invoices':         'Faktury / Koszty',
@@ -20,6 +20,7 @@ MODULE_DISPLAY_NAMES = {
     'absences':         'Nieobecnosci',
     'service_prices':   'Ceny usług (historia)',
     'income':           'Przychody',
+    'support_tickets':  'Zgłoszenia — panel obsługi',
 }
 
 

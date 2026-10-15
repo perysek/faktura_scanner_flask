@@ -1,19 +1,27 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { useEscapeClaim } from '../../lib/a11y/escapeScope';
 import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
+import { ApiError } from '../../lib/api/client';
+import { supportApi, USER_STATUS } from '../../lib/api/support';
+import type { TicketThread } from '../../lib/api/support';
 import { Icon } from '../../lib/icons/Icon';
+import { collectContext } from '../../lib/support/diagnostics';
 import { Button } from '../ui/Button';
 import { TextareaField } from '../ui/form';
+import { ConversationList, ConversationThread } from './SupportConversations';
+import type { ReplyShots } from './SupportConversations';
 import { supportCorner } from './supportCorner';
 
 /**
  * "Napisz do administratora" — the ticket form opened by the sidebar's phone
  * button (SupportLauncher). Pops out from <main>'s left edge at that button's
- * height (1×1px → 30vw × 60vh), see supportCorner(). FRONTEND ONLY for now: sending shows
- * the confirmation but nothing reaches the server yet — the API, inbox and
- * conversation view are designed in plans/261013-support-tickets/plan.md.
+ * height (1×1px → 30vw × 60vh), see supportCorner(). Sending POSTs the ticket
+ * (kind, area, text, screenshots + the technical snapshot from
+ * lib/support/diagnostics.ts) to /api/support/tickets; the administrator answers
+ * from the issues app, and the answer shows up under 'Twoje rozmowy' here.
  *
  * 'Zaznacz miejsce' tucks the panel back into its corner and turns the pointer
  * into a light: hold + drag draws a rectangle, release grabs that part of the
@@ -239,10 +247,18 @@ function SpotPicker({ start, onPick, onCancel }: SpotPickerProps) {
 
 export interface SupportTicketModalProps {
   onClose: () => void;
+  /** Conversations with an unread administrator answer — the pop-out then opens on them. */
+  unread?: number;
+  /** Something changed server-side (sent, read, replied): re-check the unread badge. */
+  onActivity?: () => void;
 }
 
-export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
+type View = { name: 'new' } | { name: 'list' } | { name: 'thread'; id: number; title?: string; status?: TicketThread['status'] };
+
+export function SupportTicketModal({ onClose, unread = 0, onActivity }: SupportTicketModalProps) {
   const { pathname } = useLocation();
+  const auth = useAuth();
+  const [view, setView] = useState<View>(() => (unread > 0 ? { name: 'list' } : { name: 'new' }));
   const panelRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
   const tuckRef = useRef<Animation | null>(null);
@@ -257,6 +273,10 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
   const [pickFrom, setPickFrom] = useState<Point | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | undefined>();
+  const onActivityRef = useRef(onActivity);
+  onActivityRef.current = onActivity;
 
   // Thumbnail object URLs live until the panel unmounts.
   const shotsRef = useRef(shots);
@@ -318,7 +338,7 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
   // the same button, now 'Zakończ i zamknij'.
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>('textarea')?.focus();
-  }, []);
+  }, [view.name]);
 
   function close() {
     if (closingRef.current) return;
@@ -372,8 +392,23 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
     setShotHint(undefined);
   }
 
-  function handleSubmit(event: FormEvent) {
+  const clearShots = useCallback(() => {
+    setShots((current) => {
+      current.forEach((shot) => URL.revokeObjectURL(shot.url));
+      return [];
+    });
+    setShotHint(undefined);
+  }, []);
+
+  function go(next: View) {
+    // Screenshots marked for one conversation never ride along into another.
+    if (shots.length) clearShots();
+    setView(next);
+  }
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (sent || sending) return;
     if (!area) {
       setAreaError('Wybierz temat zgłoszenia');
       panelRef.current?.querySelector('select')?.focus();
@@ -384,10 +419,44 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
       panelRef.current?.querySelector('textarea')?.focus();
       return;
     }
-    // TODO(plan 261013 §8): POST /api/support/tickets with kind, area, text,
-    // shots + the auto-captured context (§6). Frontend-only until then.
-    setSent(true);
+    setSending(true);
+    setSendError(undefined);
+    const areaLabel = AREAS_BY_KIND[kind].find((a) => a.value === area)?.label ?? area;
+    // Frozen BEFORE the request, so the snapshot shows the page as the user saw it.
+    const context = collectContext(
+      auth.user && {
+        ...auth.user,
+        permissions: Object.fromEntries(
+          ['invoices', 'appointments', 'clients', 'employees', 'services', 'settings', 'reports', 'data_correction', 'data_import', 'absences', 'service_prices', 'income', 'support_tickets'].map((m) => [m, auth.moduleFlags(m)]),
+        ),
+        is_superuser: auth.isSuperuser,
+        linked_employee_id: auth.linkedEmployeeId,
+        own_data_active: auth.ownDataActive,
+      },
+      { form: { kind, area, area_label: areaLabel, opened_on: pathname, screenshots: shots.length } },
+    );
+    try {
+      await supportApi.create(
+        { kind, area, area_label: areaLabel, body: text.trim(), context: JSON.stringify(context) },
+        shots.map((shot) => shot.file),
+      );
+      setSent(true);
+      onActivityRef.current?.();
+    } catch (err) {
+      setSendError(err instanceof ApiError ? err.message : 'Nie udało się wysłać. Spróbuj jeszcze raz.');
+    } finally {
+      setSending(false);
+    }
   }
+
+  const replyShots: ReplyShots = {
+    files: shots.map((shot) => shot.file),
+    urls: shots.map((shot) => shot.url),
+    full: shots.length >= MAX_SHOTS,
+    onPick: startPicking,
+    onRemove: removeShot,
+    onClear: clearShots,
+  };
 
   const copy = KIND_COPY[kind];
   const shotsFull = shots.length >= MAX_SHOTS;
@@ -415,14 +484,59 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
         aria-labelledby="ticket-title"
       >
         <div className="ticket-head">
+          {view.name !== 'new' && (
+            <button
+              type="button"
+              className="ticket-back"
+              aria-label={view.name === 'thread' ? 'Wróć do listy rozmów' : 'Wróć do formularza'}
+              onClick={() => go(view.name === 'thread' ? { name: 'list' } : { name: 'new' })}
+            >
+              <Icon name="arrow_back" size="1.125rem" />
+            </button>
+          )}
           <h2 id="ticket-title" className="ticket-title">
-            {TITLE}
+            {view.name === 'new' ? TITLE : view.name === 'list' ? 'Twoje rozmowy' : (view.title ?? 'Rozmowa')}
+            {view.name === 'thread' && view.status && (
+              <span className={`convo-status convo-status--${USER_STATUS[view.status].tone} ticket-title-status`}>
+                {USER_STATUS[view.status].label}
+              </span>
+            )}
           </h2>
+          {view.name === 'new' && (
+            <button type="button" className="ticket-convos-btn" onClick={() => go({ name: 'list' })}>
+              <Icon name="forum" size="1rem" />
+              Twoje rozmowy
+              {unread > 0 && (
+                <span className="ticket-convos-badge" aria-label={`${unread} nowe odpowiedzi`}>
+                  {unread}
+                </span>
+              )}
+            </button>
+          )}
           <button type="button" className="modal-close" onClick={close} aria-label="Zamknij">
             <Icon name="close" size="1.125rem" />
           </button>
         </div>
 
+        {view.name === 'list' && (
+          <div className="convo-scroll">
+            <ConversationList onOpen={(id) => go({ name: 'thread', id })} onNew={() => go({ name: 'new' })} />
+          </div>
+        )}
+        {view.name === 'thread' && (
+          <ConversationThread
+            key={view.id}
+            id={view.id}
+            shots={replyShots}
+            onNew={() => go({ name: 'new' })}
+            onLoaded={(t) => {
+              setView((v) => (v.name === 'thread' && v.id === t.id && (v.title !== t.title || v.status !== t.status) ? { ...v, title: t.title, status: t.status } : v));
+              onActivityRef.current?.();
+            }}
+          />
+        )}
+
+        {view.name === 'new' && (
           <form className="ticket-form" onSubmit={handleSubmit} noValidate>
             <p className="ticket-lead">
               {copy.lead} Nie wiesz, jak coś zrobić? Zajrzyj do{' '}
@@ -499,6 +613,8 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
                 label="Treść wiadomości"
                 placeholder={copy.placeholder}
                 value={text}
+                readOnly={sent}
+                maxLength={5000}
                 onChange={(event) => {
                   setText(event.target.value);
                   if (error) setError(undefined);
@@ -533,6 +649,14 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
                   <Icon name="check_circle" size="1rem" />
                   Wiadomość została wysłana
                 </p>
+              ) : sending ? (
+                <p className="ticket-shot-hint ticket-shot-hint--busy" role="status">
+                  Wysyłam…
+                </p>
+              ) : sendError ? (
+                <p className="ticket-shot-hint ticket-shot-hint--error" role="alert">
+                  {sendError}
+                </p>
               ) : (
                 shotHint && (
                   <p className={`ticket-shot-hint ticket-shot-hint--${shotHint.tone}`} role="status">
@@ -547,6 +671,8 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
                 type={sent ? 'button' : 'submit'}
                 variant="primary"
                 className="ticket-send"
+                disabled={sending}
+                aria-busy={sending || undefined}
                 onClick={sent ? close : undefined}
               >
                 <span className="ticket-send-stack">
@@ -559,6 +685,7 @@ export function SupportTicketModal({ onClose }: SupportTicketModalProps) {
               </Button>
             </div>
           </form>
+        )}
       </div>
       {pickFrom && <SpotPicker start={pickFrom} onPick={handlePick} onCancel={stopPicking} />}
     </div>

@@ -61,6 +61,7 @@ MODULE_PERMISSIONS = {
     'absences': ['superuser', 'admin'],  # full management (categories CRUD + global list)
     'service_prices': ['superuser', 'admin', 'accountant'],  # accountant = read-only (view history)
     'income': ['superuser', 'admin'],  # Finanse → Przychody (rejestr przychodów + statystyki)
+    'support_tickets': ['superuser'],  # Zgłoszenia — panel obsługi (issues.my-way-solutions.com)
 }
 
 def role_required(*roles):

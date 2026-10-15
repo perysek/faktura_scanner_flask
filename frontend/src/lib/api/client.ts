@@ -13,6 +13,7 @@
  */
 
 import { notifyAppointmentsChanged } from '../appointments/appointmentEvents';
+import { recordApiCall } from '../support/diagnostics';
 
 export class ApiError extends Error {
   status: number;
@@ -74,6 +75,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   let response: Response;
+  const started = performance.now();
   try {
     response = await fetch(path, {
       method,
@@ -84,6 +86,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   } catch {
     // Network failure (server unreachable, offline, …) — same fallback string
     // used verbatim across the auth screens (DESIGN.md §18).
+    recordApiCall({ method, path, status: 0, ms: performance.now() - started, error: 'Brak połączenia (fetch rzucił wyjątek)' });
     throw new ApiError(0, 'Nie udało się połączyć z serwerem');
   }
 
@@ -97,7 +100,21 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   // fix, 2026-08-17.
   const contentType = response.headers.get('content-type') ?? '';
   const text = await response.text();
-  const data = text && contentType.includes('application/json') ? JSON.parse(text) : {};
+  let data: Record<string, unknown> = {};
+  try {
+    data = text && contentType.includes('application/json') ? JSON.parse(text) : {};
+  } finally {
+    // Every call lands in the support-ticket diagnostics ring buffer (lib/support/diagnostics.ts).
+    recordApiCall({
+      method,
+      path,
+      status: response.status,
+      ms: performance.now() - started,
+      data,
+      rawText: text,
+      error: response.ok ? undefined : ((data?.error as string | undefined) ?? undefined),
+    });
+  }
 
   if (!response.ok) {
     const message = (data && (data.error as string)) || `Błąd serwera (${response.status})`;
@@ -108,7 +125,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   // blocks and income footers show — tell them (see appointmentEvents.ts).
   if (method !== 'GET' && path.startsWith('/api/appointments')) notifyAppointmentsChanged();
 
-  return data as T;
+  return data as unknown as T;
 }
 
 export const api = {

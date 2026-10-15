@@ -7,6 +7,10 @@ import { ToastProvider } from './components/feedback/ToastProvider';
 import { ConfirmProvider } from './components/feedback/ConfirmProvider';
 import { StatusEventsPoller } from './components/feedback/StatusEventsPoller';
 import { router } from './router';
+import { installDiagnostics } from './lib/support/diagnostics';
+
+// Console/uncaught-error capture for support tickets — before anything else can log.
+installDiagnostics();
 
 // Mounted once at the app root, per DESIGN.md §8: AuthContext (session/
 // permissions), ToastProvider, ConfirmProvider — the system's only global
