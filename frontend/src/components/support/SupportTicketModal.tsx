@@ -503,11 +503,16 @@ export function SupportTicketModal({ onClose, unread = 0, onActivity }: SupportT
             )}
           </h2>
           {view.name === 'new' && (
-            <button type="button" className="ticket-convos-btn" onClick={() => go({ name: 'list' })}>
-              <Icon name="forum" size="1rem" />
-              Twoje rozmowy
+            <button
+              type="button"
+              className="ticket-convos-btn"
+              title="Twoje rozmowy"
+              aria-label={unread > 0 ? `Twoje rozmowy — nowe odpowiedzi: ${unread}` : 'Twoje rozmowy'}
+              onClick={() => go({ name: 'list' })}
+            >
+              <Icon name="forum" size="1.125rem" />
               {unread > 0 && (
-                <span className="ticket-convos-badge" aria-label={`${unread} nowe odpowiedzi`}>
+                <span className="ticket-convos-badge" aria-hidden="true">
                   {unread}
                 </span>
               )}

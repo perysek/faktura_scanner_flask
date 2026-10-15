@@ -1935,13 +1935,13 @@ table.stack-cards td.cell-hide-lg { display: none; }
 .ticket-back:focus-visible, .ticket-convos-btn:focus-visible, .convo-item:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .ticket-title-status { font-family: var(--font-body); }
 .ticket-convos-btn {
-  position: relative; display: inline-flex; align-items: center; gap: 0.375rem; flex-shrink: 0;
-  margin-top: 0.125rem; padding: 0.375rem 0.625rem;
-  font-size: 0.8125rem; font-weight: 500; color: var(--color-ink-muted);
-  background: transparent; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 2rem; height: 2rem; margin-top: -0.125rem; padding: 0;
+  color: var(--color-ink-muted); background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer;
 }
-.ticket-convos-btn:hover { color: var(--color-ink); border-color: var(--color-ink-subtle); }
+.ticket-convos-btn:hover { color: var(--color-ink); background: var(--color-surface); }
 .ticket-convos-badge {
+  position: absolute; top: -0.25rem; right: -0.25rem;
   min-width: 1.125rem; height: 1.125rem; padding: 0 0.3rem; display: inline-flex; align-items: center; justify-content: center;
   font-size: 0.6875rem; font-weight: 700; color: #fff; background: var(--color-status-cancelled); border-radius: 999px;
 }

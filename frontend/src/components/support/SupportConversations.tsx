@@ -40,7 +40,10 @@ function eventText(message: TicketMessage): string | null {
   if (message.event !== 'status' || !message.meta?.to) return null;
   const to = message.meta.to as keyof typeof USER_STATUS;
   if (to === 'closed') return CLOSE_REASON_TEXT[message.meta.reason ?? 'done'] ?? 'Rozmowa zakończona.';
-  if (to === 'in_progress' && message.meta.by === 'user') return 'Rozmowa wznowiona';
+  if (to === 'in_progress' && message.meta.by === 'user') {
+    // Answering a question just continues the conversation; only a resolved/closed one is "reopened".
+    return message.meta.from === 'resolved' || message.meta.from === 'closed' ? 'Rozmowa wznowiona' : null;
+  }
   return USER_STATUS[to] ? `${USER_STATUS[to].label}` : null;
 }
 
